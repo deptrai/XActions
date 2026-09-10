@@ -14,7 +14,7 @@ export class ChototClient extends AbstractApiClient {
   /** @type {string} */
   platform = 'chotot';
 
-  /** @type {'got' | 'fetch'} */
+  /** @type {'undici' | 'got'} */
   client = 'got';
 
   /** @type {boolean} */
@@ -68,6 +68,7 @@ export class ChototClient extends AbstractApiClient {
       ...(options.headers || {}),
     };
 
+    /** @type {unknown} */
     const response = await this.request('GET', urlObj.toString(), {
       headers,
       requiresAuth: false,
@@ -75,6 +76,9 @@ export class ChototClient extends AbstractApiClient {
       ...options,
     });
 
-    return response?.data !== undefined ? response.data : response;
+    if (response && typeof response === 'object' && 'data' in response) {
+      return (/** @type {{ data: unknown }} */ (response)).data;
+    }
+    return response;
   }
 }

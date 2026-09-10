@@ -125,7 +125,7 @@ export function normalizeShopeeReview(rawReview, itemId) {
     platform: 'shopee',
     externalId: reviewId,
     postId: `shopee:${itemId}`,
-    parentCommentId: null,
+    parentCommentId: undefined,
     depth: 0,
     authorId: String(rawReview.userid || ''),
     authorName,

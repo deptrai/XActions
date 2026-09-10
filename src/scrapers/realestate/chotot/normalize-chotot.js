@@ -19,7 +19,7 @@ mGST71D8+i5HGtOOFoRyP6qK6ex1qfEROzWsmVDA00aHLlQcKOLaHvT/DB30aeUs
 ZoL/kQo100XccufpHESrits0mEuoyza4CCFM04F3pDOXAgMBAAE=
 -----END PUBLIC KEY-----`;
 
-export const CATEGORY_CONFIG = {
+export const CATEGORY_CONFIG = /** @type {Record<string, any>} */ ({
   bds: {
     cg: 1000,
     detail_origin: 'https://www.nhatot.com',
@@ -68,14 +68,14 @@ export const CATEGORY_CONFIG = {
     supported_listing_types: { sell: 's' },
     default_listing_type: 'sell',
   },
-};
+});
 
-export const PROPERTY_TYPE_CG_MAP = {
+export const PROPERTY_TYPE_CG_MAP = /** @type {Record<string, number>} */ ({
   apartment: 1010,
   house: 1020,
   office: 1030,
   land: 1040,
-};
+});
 
 /**
  * Get category configuration by slug or cg number
@@ -198,7 +198,7 @@ export function normalizeChototListing(ad = {}, categorySlug = 'bds', phone = nu
     repostsCount: 0,
     repliesCount: 0,
     viewsCount: 0,
-    publishedAt: ad.list_time ? new Date(ad.list_time).toISOString() : new Date().toISOString(),
+    publishedAt: (ad.list_time && !isNaN(new Date(ad.list_time).getTime())) ? new Date(ad.list_time) : new Date(),
     crawledAt: new Date(),
     metadata: {
       listId,

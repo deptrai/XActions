@@ -5,12 +5,12 @@
  * @license Apache-2.0
  */
 
-const TYPE_WORKING_MAP = {
+const TYPE_WORKING_MAP = /** @type {Record<number, string>} */ ({
   1: 'full_time',
   2: 'part_time',
   3: 'contract',
   4: 'intern',
-};
+});
 
 /**
  * Coerce salary values to an integer or null.
@@ -152,7 +152,7 @@ export function normalizeVietnamWorksJob(job = {}) {
     repostsCount: 0,
     repliesCount: 0,
     viewsCount: 0,
-    publishedAt: postedAt ? new Date(postedAt).toISOString() : new Date().toISOString(),
+    publishedAt: (postedAt && !isNaN(new Date(postedAt).getTime())) ? new Date(postedAt) : new Date(),
     crawledAt: new Date(),
     metadata: {
       jobId,

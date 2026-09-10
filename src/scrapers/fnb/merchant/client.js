@@ -113,12 +113,12 @@ export class FnbMerchantClient extends AbstractApiClient {
    */
   #resolveBaseUrl(targetPlatform, baseUrl) {
     if (baseUrl) return baseUrl.replace(/\/+$/, '');
-    return FNB_BASE_URLS[targetPlatform] || PASGO_BASE_URL;
+    return (/** @type {Record<string, string>} */ (FNB_BASE_URLS))[targetPlatform] || PASGO_BASE_URL;
   }
 
   /**
    * Default browser headers for VN F&B sites.
-   * @param {string} [url] — actual request URL; used to derive the Referer dynamically.
+   * @param {string} [url] - actual request URL; used to derive the Referer dynamically.
    * @returns {Record<string, string>}
    */
   getDefaultHeaders(url) {
@@ -160,22 +160,27 @@ export class FnbMerchantClient extends AbstractApiClient {
   }
 
   /**
-   * Build a search URL for the target platform.
-   * @param {Object} params
-   * @param {string} params.platform
-   * @param {string} [params.city]
-   * @param {string} [params.district]
-   * @param {number} [params.page]
-   * @param {number} [params.limit] — maximum items per page (not all platforms support arbitrary page size)
-   * @param {string} [params.kind]
-   * @param {number} [params.days]
+   * @param {string} targetPlatform
+   * @param {string} [urlOverride]
    * @returns {string}
    */
   #resolveBase(targetPlatform, urlOverride) {
     if (urlOverride) return urlOverride.replace(/\/+$/, '');
-    return FNB_BASE_URLS[targetPlatform] || this.baseUrl;
+    return (/** @type {Record<string, string>} */ (FNB_BASE_URLS))[targetPlatform] || this.baseUrl;
   }
 
+  /**
+   * Build a search URL for the target platform.
+   * @param {Object} [params]
+   * @param {string} [params.platform]
+   * @param {string} [params.city]
+   * @param {string} [params.district]
+   * @param {number} [params.page]
+   * @param {number} [params.limit] - maximum items per page (not all platforms support arbitrary page size)
+   * @param {string} [params.kind]
+   * @param {number} [params.days]
+   * @returns {string}
+   */
   #buildSearchUrl(params = {}) {
     const platform = params.platform || this.targetPlatform;
     const city = normalizeCitySlug(params.city || 'ha-noi', platform);
@@ -214,12 +219,14 @@ export class FnbMerchantClient extends AbstractApiClient {
 
   /**
    * Search restaurants.
-   * @param {Object} params
+   * @param {Object} [params]
    * @param {string} [params.platform]
    * @param {string} [params.city]
    * @param {string} [params.district]
    * @param {number} [params.page]
    * @param {number} [params.limit]
+   * @param {string} [params.kind]
+   * @param {number} [params.days]
    * @param {Object} [options]
    * @returns {Promise<any>}
    */
@@ -260,9 +267,9 @@ export class FnbMerchantClient extends AbstractApiClient {
 
   /**
    * Get restaurant detail.
-   * @param {Object} params
+   * @param {Object} [params]
    * @param {string} [params.platform]
-   * @param {string} params.id
+   * @param {string} [params.id]
    * @param {string} [params.slug]
    * @param {string} [params.city]
    * @param {Object} [options]

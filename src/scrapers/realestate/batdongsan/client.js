@@ -14,7 +14,7 @@ export class BatdongsanClient extends AbstractApiClient {
   /** @type {string} */
   platform = 'batdongsan';
 
-  /** @type {'got' | 'fetch'} */
+  /** @type {'undici' | 'got'} */
   client = 'got';
 
   /** @type {boolean} */
@@ -63,14 +63,14 @@ export class BatdongsanClient extends AbstractApiClient {
       ...(options.headers || {}),
     };
 
-    const response = await this.request('POST', url, {
+    const response = /** @type {{ body?: unknown; data?: unknown } | Buffer} */ (await this.request('POST', url, {
       headers,
       json: body,
       raw: true,
       requiresAuth: false,
       requiresProxy: this.requiresProxy,
       ...options,
-    });
+    }));
 
     if (Buffer.isBuffer(response)) return response;
     if (Buffer.isBuffer(response?.body)) return response.body;

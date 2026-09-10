@@ -12,6 +12,7 @@
 import cron from 'node-cron';
 import { defaultRetentionCleaner } from '../../src/store/retention-cleaner.js';
 
+/** @type {import('node-cron').ScheduledTask | null} */
 let cronTask = null;
 let isProcessing = false;
 let schedulerStarted = false;
@@ -38,9 +39,10 @@ async function resolvePrisma(prisma) {
  */
 export async function acquireRetentionLock(prisma) {
   const client = await resolvePrisma(prisma);
-  const [{ pg_try_advisory_lock: acquired }] = await client.$queryRaw`
+  const rows = /** @type {Array<{ pg_try_advisory_lock: boolean }>} */ (await client.$queryRaw`
     SELECT pg_try_advisory_lock(${RETENTION_ADVISORY_LOCK_KEY}::bigint) AS pg_try_advisory_lock
-  `;
+  `);
+  const acquired = rows?.[0]?.pg_try_advisory_lock;
   if (acquired) {
     isProcessing = true;
     return true;
@@ -80,6 +82,7 @@ export function getIsProcessing() {
  * @returns {Promise<{
  *   executed: boolean;
  *   skipped?: boolean;
+ *   reason?: string;
  *   result?: any;
  *   error?: string;
  * }>}

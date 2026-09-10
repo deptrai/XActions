@@ -10,8 +10,12 @@ import { generatePostId } from '../../core/types.js';
 import { parseVnPhone } from './schema.js';
 
 const TAG_RE = /<[^>]+>/g;
-const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+const ENTITIES = /** @type {Record<string, string>} */ ({ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' });
 
+/**
+ * @param {string} text
+ * @returns {string}
+ */
 function decodeEntities(text) {
   if (typeof text !== 'string') return '';
   return text.replace(/&(#?x?[0-9a-fA-F]+|amp|lt|gt|quot|apos|nbsp);/g, (m, entity) => {
@@ -25,11 +29,33 @@ function decodeEntities(text) {
   });
 }
 
+/**
+ * @param {string} html
+ * @returns {string}
+ */
 function stripTags(html) {
   if (typeof html !== 'string') return '';
   return decodeEntities(html.replace(TAG_RE, ' ').replace(/\s+/g, ' ').trim());
 }
 
+/**
+ * @typedef {Object} BuildPostItemInput
+ * @property {string} platform
+ * @property {string} externalId
+ * @property {string} [title]
+ * @property {(string | null | undefined)[]} [contentParts]
+ * @property {string} [authorId]
+ * @property {string} [authorName]
+ * @property {string} [postUrl]
+ * @property {string[]} [mediaUrls]
+ * @property {string | Date | null} [publishedAt]
+ * @property {Record<string, unknown>} [metadata]
+ */
+
+/**
+ * @param {BuildPostItemInput} input
+ * @returns {import('../../core/types.js').PostItem}
+ */
 function buildPostItem(input) {
   const {
     platform,
@@ -44,7 +70,8 @@ function buildPostItem(input) {
     metadata = {},
   } = input;
 
-  const resolvedTitle = title || metadata.facilityName || metadata.doctorName || externalId;
+  const meta = /** @type {Record<string, unknown>} */ (metadata || {});
+  const resolvedTitle = title || (typeof meta.facilityName === 'string' ? meta.facilityName : '') || (typeof meta.doctorName === 'string' ? meta.doctorName : '') || externalId;
 
   return {
     id: generatePostId(platform, externalId),
@@ -61,7 +88,7 @@ function buildPostItem(input) {
     repostsCount: 0,
     repliesCount: 0,
     viewsCount: 0,
-    publishedAt,
+    publishedAt: publishedAt instanceof Date ? publishedAt : (publishedAt ? new Date(publishedAt) : null),
     crawledAt: new Date(),
     metadata,
   };
@@ -69,7 +96,13 @@ function buildPostItem(input) {
 
 // ── Medpro ─────────────────────────────────────────────────────────────────
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform='medpro']
+ * @returns {import('../../core/types.js').PostItem[]}
+ */
 function extractMedproItems(html, sourcePlatform = 'medpro') {
+  /** @type {import('../../core/types.js').PostItem[]} */
   const items = [];
   const m = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
   if (!m) return items;
@@ -130,6 +163,11 @@ function extractMedproItems(html, sourcePlatform = 'medpro') {
   return items;
 }
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform='medpro']
+ * @returns {import('../../core/types.js').PostItem[]}
+ */
 function extractMedproDetail(html, sourcePlatform = 'medpro') {
   const listingItems = extractMedproItems(html, sourcePlatform);
   if (listingItems.length > 0) return listingItems.slice(0, 1);
@@ -181,7 +219,13 @@ function extractMedproDetail(html, sourcePlatform = 'medpro') {
 
 // ── Long Chau ──────────────────────────────────────────────────────────────
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform='nhathuoclongchau']
+ * @returns {import('../../core/types.js').PostItem[]}
+ */
 function extractLongChauItems(html, sourcePlatform = 'nhathuoclongchau') {
+  /** @type {import('../../core/types.js').PostItem[]} */
   const items = [];
   const m = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
   if (!m) return items;
@@ -241,6 +285,11 @@ function extractLongChauItems(html, sourcePlatform = 'nhathuoclongchau') {
   return items;
 }
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform='nhathuoclongchau']
+ * @returns {import('../../core/types.js').PostItem[]}
+ */
 function extractLongChauDetail(html, sourcePlatform = 'nhathuoclongchau') {
   const items = extractLongChauItems(html, sourcePlatform);
   return items.slice(0, 1);
@@ -248,7 +297,13 @@ function extractLongChauDetail(html, sourcePlatform = 'nhathuoclongchau') {
 
 // ── YouMed ─────────────────────────────────────────────────────────────────
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform='youmed']
+ * @returns {import('../../core/types.js').PostItem[]}
+ */
 function extractYouMedItems(html, sourcePlatform = 'youmed') {
+  /** @type {import('../../core/types.js').PostItem[]} */
   const items = [];
   const seen = new Set();
 
@@ -364,6 +419,12 @@ function extractYouMedItems(html, sourcePlatform = 'youmed') {
   return items;
 }
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform='youmed']
+ * @param {Record<string, unknown>} [options={}]
+ * @returns {import('../../core/types.js').PostItem[]}
+ */
 function extractYouMedDetail(html, sourcePlatform = 'youmed', options = {}) {
   const listingItems = extractYouMedItems(html, sourcePlatform);
   if (listingItems.length > 0) return listingItems.slice(0, 1);
@@ -376,7 +437,9 @@ function extractYouMedDetail(html, sourcePlatform = 'youmed', options = {}) {
   const canonicalMatch = html.match(/<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["']/i);
   const hrefMatch = html.match(/href=["'](\/dat-kham\/bac-si\/[^"']+)["']/i);
   const detailUrl = canonicalMatch ? canonicalMatch[1] : (hrefMatch ? `https://youmed.vn${hrefMatch[1]}` : '');
-  const externalId = options.id || options.slug || (detailUrl ? detailUrl.split('/').pop() || 'youmed-doctor' : 'youmed-doctor');
+  const optId = typeof options.id === 'string' ? options.id : '';
+  const optSlug = typeof options.slug === 'string' ? options.slug : '';
+  const externalId = optId || optSlug || (detailUrl ? detailUrl.split('/').pop() || 'youmed-doctor' : 'youmed-doctor');
 
   const specialtyMatch = html.match(/class=["'][^"']*specialt[^"']*["'][^>]*>([^<]+)/i);
   const specialty = specialtyMatch ? stripTags(specialtyMatch[1]).trim() : null;
@@ -416,10 +479,18 @@ function extractYouMedDetail(html, sourcePlatform = 'youmed', options = {}) {
 }
 
 /**
+ * @typedef {Object} HealthcareNormalizeOptions
+ * @property {string} [platform]
+ * @property {string} [sourcePlatform]
+ * @property {string} [id]
+ * @property {string} [slug]
+ */
+
+/**
  * Main normalizer entry point for healthcare results.
- * @param {string | Buffer | Object} data
+ * @param {string | Buffer | Record<string, unknown>} data
  * @param {string} [kind='search']
- * @param {Object} [options={}]
+ * @param {HealthcareNormalizeOptions & Record<string, unknown>} [options={}]
  * @returns {import('../../core/types.js').PostItem[]}
  */
 export function normalizeHealthcareResults(data, kind = 'search', options = {}) {
@@ -432,7 +503,8 @@ export function normalizeHealthcareResults(data, kind = 'search', options = {}) 
   } else if (Buffer.isBuffer(data)) {
     html = data.toString('utf-8');
   } else if (data && typeof data === 'object') {
-    html = typeof data.body === 'string' ? data.body : JSON.stringify(data);
+    const obj = /** @type {{ body?: unknown }} */ (data);
+    html = typeof obj.body === 'string' ? obj.body : JSON.stringify(data);
   }
 
   if (!html || html.length < 50) return [];

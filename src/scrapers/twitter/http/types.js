@@ -261,7 +261,11 @@
  *   check_after_secs?: number;
  *   state?: string;
  *   error?: { message?: string; };
- *   website?: string | null;
+ *   website?: string | Raw | null;
+ *   profile_bio?: Raw;
+ *   relationship_counts?: Raw;
+ *   privacy?: Raw;
+ *   verification?: Raw;
  *   joined?: string | null;
  *   birthday?: string | null;
  *   bio?: string | null;

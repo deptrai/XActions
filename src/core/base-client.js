@@ -32,8 +32,8 @@ import { globalProxyPool } from '../proxy/proxy-pool.js';
 /**
  * @typedef {Object} ProxyProviderLike
  * @property {() => boolean} isAllQuarantined
- * @property {(proxy: unknown, options?: Record<string, unknown>) => unknown} getProxyAgent
- * @property {(proxy?: string | Record<string, unknown>, durationMs?: number) => void} quarantine
+ * @property {(proxy: any, options?: Record<string, unknown>) => unknown} getProxyAgent
+ * @property {(proxy: string | Record<string, unknown>, durationMs?: number) => void} quarantine
  * @property {(options?: Record<string, unknown>) => (string | Record<string, unknown> | null)} [getProxy]
  * @property {(accountId: string, requiresResidential?: boolean, options?: { pool?: ('realtime' | 'bulk') }) => (string | Record<string, unknown> | null)} [getStickyProxy]
  * @property {(requiresResidential?: boolean) => (string | Record<string, unknown> | null)} [getNext]

@@ -11,23 +11,46 @@ import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error
 import { IP_LEGAL_BASE_URLS, GAZETTE_WEEKLY_PATH, normalizeApplicationNumber } from './schema.js';
 import { IpLegalPlatformResponseValidator } from './validator.js';
 
-async function normalizeRawBody(resp) {
-  if (!resp) return { status: 200, headers: {}, body: '', data: undefined };
+/**
+ * @typedef {Object} HttpResponseBody
+ * @property {() => { read: () => Promise<{ done: boolean; value?: Uint8Array }>; releaseLock?: () => void }} [getReader]
+ */
 
-  let raw = '';
-  if (typeof resp === 'string') {
+/**
+ * @typedef {Object} RawResponse
+ * @property {number} [status]
+ * @property {number} [statusCode]
+ * @property {Record<string, string>} [headers]
+ * @property {string | Buffer | HttpResponseBody | Record<string, unknown> | AsyncIterable<any> | null} [body]
+ * @property {unknown} [data]
+ * @property {() => Promise<string>} [text]
+ */
+
+/**
+ * @param {unknown} resp
+ * @returns {Promise<{ status: number; headers: Record<string, string>; body: string; data: unknown }>}
+ */
+async function normalizeRawBody(resp) {
+  if (!resp) return { status: 200, headers: {}, body: "", data: undefined };
+
+  const respObj = (resp && typeof resp === "object" && !Buffer.isBuffer(resp))
+    ? /** @type {RawResponse} */ (resp)
+    : null;
+
+  let raw = "";
+  if (typeof resp === "string") {
     raw = resp;
   } else if (Buffer.isBuffer(resp)) {
-    raw = resp.toString('utf-8');
-  } else if (typeof resp?.text === 'function') {
-    raw = await resp.text();
-  } else if (resp?.body !== undefined && resp.body !== null) {
-    if (typeof resp.body === 'string') {
-      raw = resp.body;
-    } else if (Buffer.isBuffer(resp.body)) {
-      raw = resp.body.toString('utf-8');
-    } else if (typeof resp.body?.getReader === 'function') {
-      const reader = resp.body.getReader();
+    raw = resp.toString("utf-8");
+  } else if (respObj && typeof respObj.text === "function") {
+    raw = await respObj.text();
+  } else if (respObj && respObj.body !== undefined && respObj.body !== null) {
+    if (typeof respObj.body === "string") {
+      raw = respObj.body;
+    } else if (Buffer.isBuffer(respObj.body)) {
+      raw = respObj.body.toString("utf-8");
+    } else if (typeof respObj.body === "object" && respObj.body !== null && "getReader" in respObj.body && typeof respObj.body.getReader === "function") {
+      const reader = respObj.body.getReader();
       const chunks = [];
       try {
         while (true) {
@@ -35,30 +58,30 @@ async function normalizeRawBody(resp) {
           if (done) break;
           if (value) chunks.push(Buffer.from(value));
         }
-        raw = Buffer.concat(chunks).toString('utf-8');
+        raw = Buffer.concat(chunks).toString("utf-8");
       } finally {
-        if (typeof reader.releaseLock === 'function') {
+        if (typeof reader.releaseLock === "function") {
           reader.releaseLock();
         }
       }
-    } else if (typeof resp.body?.[Symbol.asyncIterator] === 'function') {
+    } else if (typeof respObj.body === "object" && Symbol.asyncIterator in respObj.body && typeof respObj.body[Symbol.asyncIterator] === "function") {
       const chunks = [];
-      for await (const chunk of resp.body) {
+      for await (const chunk of /** @type {AsyncIterable<any>} */ (respObj.body)) {
         chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
       }
-      raw = Buffer.concat(chunks).toString('utf-8');
-    } else if (typeof resp.body === 'object') {
-      try { raw = JSON.stringify(resp.body); } catch { raw = ''; }
+      raw = Buffer.concat(chunks).toString("utf-8");
+    } else if (typeof respObj.body === "object") {
+      try { raw = JSON.stringify(respObj.body); } catch { raw = ""; }
     }
-  } else if (resp?.data !== undefined && resp.data !== null) {
-    raw = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
+  } else if (respObj && respObj.data !== undefined && respObj.data !== null) {
+    raw = typeof respObj.data === "string" ? respObj.data : JSON.stringify(respObj.data);
   }
 
   return {
-    status: resp.status || resp.statusCode || 200,
-    headers: resp.headers || {},
+    status: respObj?.status || respObj?.statusCode || 200,
+    headers: respObj?.headers || {},
     body: raw,
-    data: resp.data,
+    data: respObj?.data,
   };
 }
 
@@ -194,10 +217,11 @@ export class IpLegalClient extends AbstractApiClient {
 
   /**
    * Look up detail for a specific application number.
-   * @param {Object} params
-   * @param {string} params.id - Application number (e.g. "4-2026-11740")
-   * @param {Record<string, any>} [options={}]
-   * @returns {Promise<any>}
+   * @param {Object} [params={}]
+   * @param {string} [params.id] - Application number (e.g. "4-2026-11740")
+   * @param {string} [params.applicationNumber]
+   * @param {Record<string, unknown>} [options={}]
+   * @returns {Promise<unknown>}
    */
   async detail(params = {}, options = {}) {
     const rawId = params?.id || params?.applicationNumber;

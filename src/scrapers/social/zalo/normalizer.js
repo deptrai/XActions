@@ -77,8 +77,9 @@ export function normalizeZaloArticle(article, context = {}) {
 export function normalizeZaloFollower(user, context = {}) {
   const userId = String(user.user_id || user.id || '');
   const id = namespacedZaloId(userId);
-  const displayName = typeof user.display_name === 'string' ? user.display_name : (user.name || `Zalo User ${userId}`);
-  const avatar = typeof user.avatar === 'string' ? user.avatar : null;
+  const rawName = user.display_name || user.name;
+  const displayName = typeof rawName === 'string' && rawName ? rawName : `Zalo User ${userId}`;
+  const avatar = typeof user.avatar === 'string' ? user.avatar : undefined;
 
   return {
     id,
@@ -108,7 +109,7 @@ export function normalizeZaloOaProfile(oaData, context = {}) {
   const id = namespacedZaloId(oaId);
   const name = typeof oaData.name === 'string' ? oaData.name.trim() : `Zalo OA ${oaId}`;
   const bio = typeof oaData.description === 'string' ? stripHtml(oaData.description) : '';
-  const avatar = typeof oaData.avatar === 'string' ? oaData.avatar.trim() : null;
+  const avatar = typeof oaData.avatar === 'string' ? oaData.avatar.trim() : undefined;
   const followersCount = typeof oaData.num_follower === 'number' ? oaData.num_follower : 0;
 
   return {

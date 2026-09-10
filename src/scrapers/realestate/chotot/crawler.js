@@ -26,6 +26,9 @@ export class ChototCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = false;
 
+  /** @type {ChototClient & import('../../../core/base-crawler.js').ClientLike} */
+  client;
+
   /**
    * @param {Record<string, any>} [options={}]
    */
@@ -35,6 +38,7 @@ export class ChototCrawler extends AbstractCrawler {
       client,
       ...options,
     });
+    this.client = client;
 
     this.registerAction({
       action: 'search_listings',
@@ -94,6 +98,7 @@ export class ChototCrawler extends AbstractCrawler {
     const limit = Math.max(1, Number(args.limit) || 20);
     const offset = (page - 1) * limit;
 
+    /** @type {Record<string, any>} */
     const params = {
       cg,
       limit,
@@ -135,7 +140,7 @@ export class ChototCrawler extends AbstractCrawler {
         await this.store.storeBatch(listings, { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[ChototCrawler] Failed to persist listings batch:', err.message);
+          console.warn('[ChototCrawler] Failed to persist listings batch:', err instanceof Error ? err.message : String(err));
         }
       }
     }
@@ -180,14 +185,17 @@ export class ChototCrawler extends AbstractCrawler {
     }
 
     const listing = normalizeChototListing(ad, args.category || 'bds', phone);
-    listing.metadata.sourceMethod = 'listing_detail';
+    listing.metadata = {
+      ...(listing.metadata || {}),
+      sourceMethod: 'listing_detail',
+    };
 
     if (this.store && typeof this.store.storeBatch === 'function') {
       try {
         await this.store.storeBatch([listing], { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[ChototCrawler] Failed to persist listing detail:', err.message);
+          console.warn('[ChototCrawler] Failed to persist listing detail:', err instanceof Error ? err.message : String(err));
         }
       }
     }

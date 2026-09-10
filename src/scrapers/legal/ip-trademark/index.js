@@ -35,14 +35,22 @@ export const IP_LEGAL_ACTION_MAP = Object.freeze({
   detail: 'detail',
 });
 
+/**
+ * @param {string} action
+ * @param {Record<string, unknown>} [options={}]
+ * @param {Record<string, unknown>} [deps={}]
+ * @returns {Promise<unknown>}
+ */
 export async function scrapeIpLegal(action, options = {}, deps = {}) {
-  const mappedAction = IP_LEGAL_ACTION_MAP[action] || action;
+  const actionMap = /** @type {Record<string, string>} */ (IP_LEGAL_ACTION_MAP);
+  const mappedAction = actionMap[action] || action;
   const crawler = new IpLegalCrawler({ ...options, ...deps });
   try {
     await crawler.init();
     return await crawler.start({ action: mappedAction, args: options });
   } finally {
-    if (options.autoClose !== false) {
+    const opts = /** @type {{ autoClose?: boolean }} */ (options);
+    if (opts.autoClose !== false) {
       await crawler.cleanup().catch(() => {});
     }
   }

@@ -103,7 +103,7 @@ export class TikTokShopClient extends AbstractApiClient {
         throw new PlatformError({
           type: ErrorTypes.AUTH_EXPIRED,
           code: 'XACT_4030',
-          message: `TikTok Shop signing failed: ${err?.message || err}`,
+          message: `TikTok Shop signing failed: ${err instanceof Error ? err.message : String(err)}`,
           suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
           platform: 'tiktokshop',
           cause: err,

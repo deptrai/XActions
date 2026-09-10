@@ -164,8 +164,9 @@ export class TwitterCrawler extends AbstractCrawler {
       example: { tweetId: '1234567890', limit: 100 },
       outputType: '{ likers: ProfileItem[], pageInfo: any }',
       requiresAuth: true,
-      checkpointResolver: (args) => {
-        const tweetId = resolveTweetId(args?.tweetId || args?.url || '');
+      checkpointResolver: (/** @type {Record<string, unknown>} */ args) => {
+        const rawId = typeof args?.tweetId === 'string' ? args.tweetId : (typeof args?.url === 'string' ? args.url : '');
+        const tweetId = resolveTweetId(rawId);
         if (!tweetId) return null;
         return {
           targetType: 'likes',
@@ -196,12 +197,15 @@ export class TwitterCrawler extends AbstractCrawler {
       example: { limit: 50 },
       outputType: '{ posts: PostItem[], pageInfo: any }',
       requiresAuth: true,
-      checkpointResolver: (args) => ({
-        targetType: 'bookmarks',
-        targetKey: args?.accountId || 'self',
-        cursorField: 'cursor',
-        fallbackCursorFields: ['after'],
-      }),
+      checkpointResolver: (/** @type {Record<string, unknown>} */ args) => {
+        const targetKey = typeof args?.accountId === 'string' ? args.accountId : 'self';
+        return {
+          targetType: 'bookmarks',
+          targetKey,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.bookmarks(args, session),
     });
 
@@ -225,8 +229,9 @@ export class TwitterCrawler extends AbstractCrawler {
       example: { username: 'elonmusk', limit: 100 },
       outputType: '{ followers: ProfileItem[], pageInfo: any }',
       requiresAuth: true,
-      checkpointResolver: (args) => {
-        const username = resolveUsername(args?.username || args?.url || '');
+      checkpointResolver: (/** @type {Record<string, unknown>} */ args) => {
+        const rawUser = typeof args?.username === 'string' ? args.username : (typeof args?.url === 'string' ? args.url : '');
+        const username = resolveUsername(rawUser);
         if (!username) return null;
         return {
           targetType: 'followers',
@@ -246,8 +251,9 @@ export class TwitterCrawler extends AbstractCrawler {
       example: { username: 'elonmusk', limit: 100 },
       outputType: '{ following: ProfileItem[], pageInfo: any }',
       requiresAuth: true,
-      checkpointResolver: (args) => {
-        const username = resolveUsername(args?.username || args?.url || '');
+      checkpointResolver: (/** @type {Record<string, unknown>} */ args) => {
+        const rawUser = typeof args?.username === 'string' ? args.username : (typeof args?.url === 'string' ? args.url : '');
+        const username = resolveUsername(rawUser);
         if (!username) return null;
         return {
           targetType: 'following',
@@ -290,8 +296,9 @@ export class TwitterCrawler extends AbstractCrawler {
       example: { listUrl: 'https://x.com/i/lists/1234567890123456789', limit: 100 },
       outputType: '{ members: ProfileItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       requiresAuth: true,
-      checkpointResolver: (args) => {
-        const listId = args?.listId || (args?.listUrl ? args.listUrl.match(/lists\/(\d+)/)?.[1] : null);
+      checkpointResolver: (/** @type {Record<string, unknown>} */ args) => {
+        const listUrl = typeof args?.listUrl === 'string' ? args.listUrl : '';
+        const listId = typeof args?.listId === 'string' ? args.listId : (listUrl ? listUrl.match(/lists\/(\d+)/)?.[1] : null);
         if (!listId) return null;
         return {
           targetType: 'list_members',
@@ -334,9 +341,10 @@ export class TwitterCrawler extends AbstractCrawler {
       example: { username: 'elonmusk', type: 'video', limit: 20 },
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       requiresAuth: false,
-      checkpointResolver: (args) => {
-        if (args?.tweetId || args?.url) {
-          const tweetId = resolveTweetId(args?.tweetId || args?.url || '');
+      checkpointResolver: (/** @type {Record<string, unknown>} */ args) => {
+        const rawTweet = typeof args?.tweetId === 'string' ? args.tweetId : (typeof args?.url === 'string' ? args.url : '');
+        if (rawTweet) {
+          const tweetId = resolveTweetId(rawTweet);
           if (!tweetId) return null;
           return {
             targetType: 'media',
@@ -345,7 +353,8 @@ export class TwitterCrawler extends AbstractCrawler {
             fallbackCursorFields: ['after'],
           };
         }
-        const username = resolveUsername(args?.username || args?.url || '');
+        const rawUser = typeof args?.username === 'string' ? args.username : (typeof args?.url === 'string' ? args.url : '');
+        const username = resolveUsername(rawUser);
         if (!username) return null;
         return {
           targetType: 'media',
@@ -1156,7 +1165,7 @@ export class TwitterCrawler extends AbstractCrawler {
     const accountRecord = accountId && this.accountPool?.getAccount
       ? this.accountPool.getAccount(accountId, this.platform)
       : null;
-    const poolCredentials = accountRecord?.credentials || null;
+    const poolCredentials = (accountRecord?.credentials && typeof accountRecord.credentials === 'object') ? /** @type {Record<string, any>} */ (accountRecord.credentials) : null;
     const cookieSources = [session?.cookies, managerCookies, poolCredentials?.cookies, this.client?.cookies];
     for (const source of cookieSources) {
       if (!source) continue;
@@ -1910,7 +1919,8 @@ export class TwitterCrawler extends AbstractCrawler {
     for (const post of normalized.posts) {
       if (seen.has(post.id)) continue;
       seen.add(post.id);
-      if (state && state !== 'all' && post.metadata?.spaceState && post.metadata.spaceState !== state) continue;
+      const postMeta = /** @type {Record<string, any>} */ (post.metadata || {});
+      if (state && state !== 'all' && postMeta.spaceState && postMeta.spaceState !== state) continue;
       allPosts.push(post);
       if (allPosts.length >= limit) break;
     }
@@ -1934,6 +1944,7 @@ export class TwitterCrawler extends AbstractCrawler {
    * @returns {{ posts: import('../../../core/types.js').PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }}
    */
   #extractSpacesFromSearchTimeline(response, context = {}) {
+    const ctx = /** @type {Record<string, any>} */ (context || {});
     const parsed = parseSearchTimeline(response, { sourceMethod: 'spaces' });
     const posts = [];
     for (const post of parsed.posts) {
@@ -1944,7 +1955,7 @@ export class TwitterCrawler extends AbstractCrawler {
           metadata: {
             ...meta,
             isSpace: true,
-            spaceState: meta.spaceState || context.state || 'live',
+            spaceState: meta.spaceState || ctx.state || 'live',
             participantCount: meta.participantCount || 0,
             sourceMethod: 'spaces',
           },
@@ -3050,7 +3061,7 @@ export class TwitterCrawler extends AbstractCrawler {
    * Generic handler for Twitter engagement mutations (like, unlike, retweet, undo_retweet).
    * @param {Record<string, any>} args
    * @param {Record<string, any>} session
-   * @param {'like' | 'unlike' | 'retweet' | 'undo_retweet'} actionName
+   * @param {'like' | 'unlike' | 'retweet' | 'undo_retweet' | 'bookmark' | 'unbookmark'} actionName
    * @param {{ queryId: string, operationName: string, buildVariables: (tweetId: string) => Record<string, any> }} mutationConfig
    * @returns {Promise<{ success: boolean }>}
    */
@@ -3300,7 +3311,8 @@ export class TwitterCrawler extends AbstractCrawler {
         cookies: session?.cookies,
       });
     } catch (err) {
-      const msg = String(err?.message || '').toLowerCase();
+      const errObj = err && typeof err === 'object' ? /** @type {Record<string, any>} */ (err) : null;
+      const msg = String(errObj?.message || err || '').toLowerCase();
       if (IDEMPOTENT_SOCIAL_MESSAGES.some((needle) => msg.includes(needle))) {
         console.log(`ℹ️ [WRITE] ${actionName} idempotent hit: "${msg}"`);
         return { success: true };
@@ -3554,6 +3566,7 @@ export class TwitterCrawler extends AbstractCrawler {
 
     const requestId = typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 
+    /** @type {Record<string, any>} */
     let payload;
     if (conversationId) {
       payload = {
@@ -3656,8 +3669,8 @@ export class TwitterCrawler extends AbstractCrawler {
       if (conversations.length >= limit) break;
 
       const rawParticipants = Array.isArray(conv?.participants) ? conv.participants : [];
-      const participantIds = rawParticipants.map((p) => (typeof p === 'string' ? p : String(p?.user_id || '')));
-      const participants = participantIds.map((uid) => {
+      const participantIds = rawParticipants.map((/** @type {any} */ p) => (typeof p === 'string' ? p : String(p?.user_id || '')));
+      const participants = participantIds.map((/** @type {string} */ uid) => {
         const u = rawUsers[uid] || {};
         return {
           id: String(uid),
@@ -3880,7 +3893,7 @@ export class TwitterCrawler extends AbstractCrawler {
     if (dryRun) {
       const count = userIds.length + usernames.length;
       console.log(`🔄 [DRY RUN] add_list_members: ${JSON.stringify({ listId, count })}`);
-      return { success: true, dryRun: true, listId, count };
+      return { success: true, dryRun: true, listId, count, addedCount: 0, batchCount: 0 };
     }
 
     const { accountId } = await this.#resolveSession(session);
@@ -3891,7 +3904,8 @@ export class TwitterCrawler extends AbstractCrawler {
         const uid = await this.#resolveTargetUserId({ username: u }, session);
         if (uid) userIds.push(uid);
       } catch (err) {
-        console.warn(`⚠️ [WRITE] Could not resolve username "${u}" for list: ${err.message}`);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn(`⚠️ [WRITE] Could not resolve username "${u}" for list: ${errMsg}`);
       }
     }
 
@@ -3960,7 +3974,7 @@ export class TwitterCrawler extends AbstractCrawler {
     if (dryRun) {
       const count = userIds.length + usernames.length;
       console.log(`🔄 [DRY RUN] remove_list_members: ${JSON.stringify({ listId, count })}`);
-      return { success: true, dryRun: true, listId, count };
+      return { success: true, dryRun: true, listId, count, removedCount: 0, batchCount: 0 };
     }
 
     const { accountId } = await this.#resolveSession(session);
@@ -3971,7 +3985,8 @@ export class TwitterCrawler extends AbstractCrawler {
         const uid = await this.#resolveTargetUserId({ username: u }, session);
         if (uid) userIds.push(uid);
       } catch (err) {
-        console.warn(`⚠️ [WRITE] Could not resolve username "${u}" for list: ${err.message}`);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn(`⚠️ [WRITE] Could not resolve username "${u}" for list: ${errMsg}`);
       }
     }
 

@@ -493,7 +493,8 @@ operationsQueue.on('failed', async (job, err) => {
         data: { status: 'failed', error: (err instanceof Error ? err.message : String(err)), retryCount: job.attemptsMade },
       });
     } catch (dbErr) {
-      console.warn(`⚠️ Failed to update operation ${operationId} status:`, dbErr.message);
+      const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+      console.warn(`⚠️ Failed to update operation ${operationId} status:`, msg);
     }
 
     global.io?.to(`job:${operationId}`).emit('job:failed', {

@@ -14,7 +14,7 @@ export class TopCvClient extends AbstractApiClient {
   /** @type {string} */
   platform = 'topcv';
 
-  /** @type {'got' | 'fetch'} */
+  /** @type {'undici' | 'got'} */
   client = 'got';
 
   /** @type {boolean} */
@@ -62,6 +62,7 @@ export class TopCvClient extends AbstractApiClient {
       ...(options.headers || {}),
     };
 
+    /** @type {any} */
     const response = await this.request('GET', url, {
       headers,
       requiresAuth: false,

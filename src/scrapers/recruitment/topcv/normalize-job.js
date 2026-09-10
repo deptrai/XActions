@@ -41,7 +41,9 @@ export function parseVietnameseSalary(text) {
   }
 
   const currency = text.includes('$') || lower.includes('usd') ? 'USD' : 'VND';
+  /** @type {number[]} */
   const numbers = [];
+  /** @type {number[]} */
   const units = [];
 
   const matches = text.match(SALARY_NUMBER_RE) || [];

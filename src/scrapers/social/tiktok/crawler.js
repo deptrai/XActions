@@ -33,8 +33,11 @@ export class TikTokCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = true;
 
-  /** @type {TikTokClient} */
+  /** @type {TikTokClient & import('../../../core/base-crawler.js').ClientLike} */
   client;
+
+  /** @type {import('../../../utils/redis-stream-publisher.js').RedisStreamPublisher | null} */
+  redisPublisher = null;
 
   /**
    * @param {Object} [deps]
@@ -47,16 +50,24 @@ export class TikTokCrawler extends AbstractCrawler {
    * @param {import('../../../utils/redis-stream-publisher.js').RedisStreamPublisher} [deps.redisPublisher]
    */
   constructor(deps = {}) {
-    const { client: explicitClient, ...clientDeps } = deps;
-    const client = explicitClient || new TikTokClient(/** @type {any} */ (clientDeps));
+    const { client: explicitClient, store, redisPublisher, proxyPool, ...clientDeps } = deps;
+    const resolvedProxyPool = proxyPool
+      ? /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (proxyPool))
+      : undefined;
+    const client = /** @type {TikTokClient & import('../../../core/base-crawler.js').ClientLike} */ (
+      explicitClient || new TikTokClient({ ...clientDeps, proxyPool: resolvedProxyPool })
+    );
     super({
-      ...deps,
       client,
+      store: deps.store ? /** @type {import('../../../core/base-crawler.js').StoreLike} */ (deps.store) : undefined,
+      sessionManager: deps.sessionManager,
+      governor: deps.governor,
+      accountPool: deps.accountPool,
       requiresAuth: true,
     });
 
     this.client = client;
-    this.redisPublisher = deps.redisPublisher;
+    this.redisPublisher = deps.redisPublisher || null;
 
     this.registerAction(/** @type {any} */ ({
       action: 'search',
@@ -67,8 +78,8 @@ export class TikTokCrawler extends AbstractCrawler {
       optionalArgs: ['count', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       example: { query: 'viral', count: 12 },
-      checkpointResolver: (args) => {
-        const query = args?.query ? String(args.query).trim() : '';
+      checkpointResolver: (/** @type {Record<string, unknown>} */ args) => {
+        const query = typeof args?.query === 'string' ? args.query.trim() : '';
         if (!query) return null;
         return {
           targetType: 'search',
@@ -89,8 +100,8 @@ export class TikTokCrawler extends AbstractCrawler {
       optionalArgs: ['count', 'cursor'],
       outputType: '{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       example: { tag: 'foryou', count: 30 },
-      checkpointResolver: (args) => {
-        const tag = String(args?.tag || '').replace(/^#+/, '').trim().toLowerCase();
+      checkpointResolver: (/** @type {Record<string, unknown>} */ args) => {
+        const tag = typeof args?.tag === 'string' ? args.tag.replace(/^#+/, '').trim().toLowerCase() : '';
         if (!tag) return null;
         return {
           targetType: 'hashtag_feed',
@@ -123,8 +134,8 @@ export class TikTokCrawler extends AbstractCrawler {
       optionalArgs: ['maxDepth', 'maxComments', 'after'],
       outputType: '{ comments: CommentItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }',
       example: { videoId: '7325759242735676680', maxDepth: 3, maxComments: 100 },
-      checkpointResolver: (args) => {
-        const videoId = args?.videoId ? String(args.videoId).trim() : '';
+      checkpointResolver: (/** @type {Record<string, unknown>} */ args) => {
+        const videoId = typeof args?.videoId === 'string' ? args.videoId.trim() : '';
         if (!videoId) return null;
         return {
           targetType: 'post_comments',

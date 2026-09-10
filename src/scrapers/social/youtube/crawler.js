@@ -23,8 +23,8 @@ export class YouTubeVNCrawler extends AbstractCrawler {
   /** @type {string} */
   platform = 'youtube';
 
-  /** @type {string} */
-  category = 'video';
+  /** @type {YouTubeClient} */
+  client = /** @type {YouTubeClient} */ (/** @type {unknown} */ (null));
 
   /** @type {boolean} */
   requiresAuth = false;
@@ -34,6 +34,9 @@ export class YouTubeVNCrawler extends AbstractCrawler {
 
   /**
    * @param {Object} [deps={}]
+   * @param {string} [deps.key]
+   * @param {boolean} [deps.requiresProxy]
+   * @param {any} [deps.eventPublisher]
    * @param {YouTubeClient} [deps.client]
    * @param {import('../../../core/base-store.js').AbstractStore} [deps.store]
    * @param {any} [deps.publisher]
@@ -60,10 +63,13 @@ export class YouTubeVNCrawler extends AbstractCrawler {
       requiresAuth: false,
     });
 
+    this.client = client;
+    this.category = 'video';
     this.publisher = deps.publisher || deps.eventPublisher || null;
     this.#registerActions();
   }
 
+  /** @param {import('../../../core/types.js').CrawlerCommand} command */
   async start(command) {
     if (command?.session && (command.session.apiKey || command.session.key)) {
       command.args = command.args || {};
@@ -97,7 +103,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
           order: { type: 'string', default: 'relevance' },
         },
       },
-      handler: (args) => this.search(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.search(args),
     });
 
     // 2. Trending Videos VN
@@ -111,13 +117,13 @@ export class YouTubeVNCrawler extends AbstractCrawler {
           maxResults: { type: 'number', default: 20 },
         },
       },
-      handler: (args) => this.trendingVn(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.trendingVn(args),
     });
 
     this.registerAction({
       action: 'trending',
       description: 'Alias for trending_vn',
-      handler: (args) => this.trendingVn(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.trendingVn(args),
     });
 
     // 3. Channel Videos
@@ -132,7 +138,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
         },
         required: ['channelId'],
       },
-      handler: (args) => this.channelVideos(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.channelVideos(args),
     });
 
     // 4. Channel Detail / Profile
@@ -148,19 +154,19 @@ export class YouTubeVNCrawler extends AbstractCrawler {
           forUsername: { type: 'string' },
         },
       },
-      handler: (args) => this.channelDetail(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.channelDetail(args),
     });
 
     this.registerAction({
       action: 'channel',
       description: 'Alias for channel_detail',
-      handler: (args) => this.channelDetail(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.channelDetail(args),
     });
 
     this.registerAction({
       action: 'profile',
       description: 'Alias for channel_detail',
-      handler: (args) => this.channelDetail(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.channelDetail(args),
     });
 
     // 5. Video Detail
@@ -175,19 +181,19 @@ export class YouTubeVNCrawler extends AbstractCrawler {
         },
         required: ['videoId'],
       },
-      handler: (args) => this.videoDetail(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.videoDetail(args),
     });
 
     this.registerAction({
       action: 'video',
       description: 'Alias for video_detail',
-      handler: (args) => this.videoDetail(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.videoDetail(args),
     });
 
     this.registerAction({
       action: 'detail',
       description: 'Alias for video_detail',
-      handler: (args) => this.videoDetail(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.videoDetail(args),
     });
 
     // 6. Video Comments
@@ -203,13 +209,13 @@ export class YouTubeVNCrawler extends AbstractCrawler {
         },
         required: ['videoId'],
       },
-      handler: (args) => this.videoComments(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.videoComments(args),
     });
 
     this.registerAction({
       action: 'comments',
       description: 'Alias for video_comments',
-      handler: (args) => this.videoComments(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.videoComments(args),
     });
   }
 
@@ -228,7 +234,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
     if (this.accountPool) {
       const accountId = args.accountId || session.accountId;
       if (accountId) {
-        const record = this.accountPool.getAccount(String(accountId), 'youtube');
+        const record = /** @type {{ credentials?: { apiKey?: string } } | null} */ (this.accountPool.getAccount(String(accountId), 'youtube'));
         if (record?.credentials?.apiKey) {
           this.client.setApiKey(String(record.credentials.apiKey));
           return;
@@ -236,7 +242,8 @@ export class YouTubeVNCrawler extends AbstractCrawler {
       }
       const available = this.accountPool.listAccounts ? this.accountPool.listAccounts('youtube') : [];
       if (available.length > 0) {
-        const first = available[0];
+        const firstId = available[0];
+        const first = firstId ? /** @type {{ credentials?: { apiKey?: string } } | null} */ (this.accountPool.getAccount(firstId, 'youtube')) : null;
         if (first?.credentials?.apiKey) {
           this.client.setApiKey(String(first.credentials.apiKey));
         }
@@ -252,11 +259,12 @@ export class YouTubeVNCrawler extends AbstractCrawler {
     if (!posts || !posts.length) return;
 
     if (this.store) {
+      const store = /** @type {Record<string, Function>} */ (/** @type {unknown} */ (this.store));
       if (typeof this.store.storeBatch === 'function') {
         await this.store.storeBatch(posts).catch(() => {});
-      } else if (typeof this.store.savePost === 'function') {
+      } else if (typeof store.savePost === 'function') {
         for (const item of posts) {
-          await this.store.savePost(item).catch(() => {});
+          await store.savePost(item).catch(() => {});
         }
       }
     }
@@ -275,9 +283,12 @@ export class YouTubeVNCrawler extends AbstractCrawler {
   async #persistProfiles(profiles) {
     if (!profiles || !profiles.length) return;
 
-    if (this.store && typeof this.store.saveProfile === 'function') {
-      for (const p of profiles) {
-        await this.store.saveProfile(p).catch(() => {});
+    if (this.store) {
+      const store = /** @type {Record<string, Function>} */ (/** @type {unknown} */ (this.store));
+      if (typeof store.saveProfile === 'function') {
+        for (const p of profiles) {
+          await store.saveProfile(p).catch(() => {});
+        }
       }
     }
   }
@@ -289,9 +300,12 @@ export class YouTubeVNCrawler extends AbstractCrawler {
   async #persistComments(comments) {
     if (!comments || !comments.length) return;
 
-    if (this.store && typeof this.store.saveComment === 'function') {
-      for (const c of comments) {
-        await this.store.saveComment(c).catch(() => {});
+    if (this.store) {
+      const store = /** @type {Record<string, Function>} */ (/** @type {unknown} */ (this.store));
+      if (typeof store.saveComment === 'function') {
+        for (const c of comments) {
+          await store.saveComment(c).catch(() => {});
+        }
       }
     }
   }
@@ -363,7 +377,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
    */
   async channelVideos(args = {}) {
     this.#resolveApiKey(args);
-    const channelId = args.channelId || args.channel || args.id;
+    const channelId = String(args.channelId || args.channel || args.id || '');
     const response = await this.client.getChannelVideos({
       ...args,
       channelId,

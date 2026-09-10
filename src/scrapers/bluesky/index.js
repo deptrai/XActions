@@ -48,6 +48,8 @@ const DEFAULT_SERVICE = 'https://public.api.bsky.app';
  * @typedef {Object} BlueskyScrapeOptions
  * @property {number} [limit]
  * @property {(progress: { scraped: number; limit: number }) => void} [onProgress]
+ * @property {string} [identifier]
+ * @property {string} [password]
  */
 
 /**
@@ -74,6 +76,7 @@ export async function createAgent(options = {}) {
     return { agent, type: 'sdk' };
   } catch {
     // Fallback to fetch-based client when @atproto/api is not installed
+    /** @type {BlueskyFetchClient} */
     const fetchClient = {
       service,
       identifier: options.identifier,
@@ -84,14 +87,14 @@ export async function createAgent(options = {}) {
     // Authenticate with app-password for endpoints that require auth (e.g. search)
     if (options.identifier && options.password) {
       try {
-        const session = await fetch(`${service}/xrpc/com.atproto.server.createSession`, {
+        const session = /** @type {{ accessJwt?: string } | null} */ (await fetch(`${service}/xrpc/com.atproto.server.createSession`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             identifier: options.identifier,
             password: options.password,
           }),
-        }).then((r) => (r.ok ? r.json() : null));
+        }).then((r) => (r.ok ? r.json() : null)));
         if (session?.accessJwt) {
           fetchClient.accessJwt = session.accessJwt;
         }
@@ -425,16 +428,16 @@ export async function searchTweets(client, query, options = {}) {
   // credentials are supplied, otherwise surface a clear actionable error.
   let effectiveClient = client;
   if (client.type === 'fetch' && options.identifier && options.password) {
-    effectiveClient = /** @type {any} */ (await createAgent({
+    effectiveClient = await createAgent({
       service: client.service,
       identifier: options.identifier,
       password: options.password,
-    }));
+    });
   } else if (client.type === 'fetch') {
     try {
       await xrpc(client, 'app.bsky.feed.searchPosts', { q: query, limit: 1 });
     } catch (err) {
-      const is403 = /\(403\)/.test(String(err?.message || err));
+      const is403 = /\(403\)/.test(err instanceof Error ? err.message : String(err));
       if (is403) {
         throw new Error(
           'Bluesky search requires authentication. Pass { identifier, password } (app-password) ' +

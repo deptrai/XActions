@@ -199,12 +199,8 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
   }
 
   /**
-   * @param {unknown} response
-   * @returns {boolean}
-   */
-  /**
    * Detect False 200 responses: HTML/JSON redirecting to /checkpoint/ or login form under 200.
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isFalse200(response) {
@@ -231,7 +227,11 @@ export class FacebookPlatformResponseValidator extends AbstractPlatformResponseV
     return false;
   }
 
-    isRateLimit(response) {
+  /**
+   * @param {unknown} response
+   * @returns {boolean}
+   */
+  isRateLimit(response) {
     const record = typeof response === 'object' && response ? /** @type {Record<string, unknown>} */ (response) : null;
     const status = typeof record?.status === 'number' ? record.status : (typeof record?.statusCode === 'number' ? record.statusCode : null);
     if (status === 429) {

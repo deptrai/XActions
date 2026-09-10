@@ -21,8 +21,8 @@ import { TelemetryContext } from './telemetry-context.js';
 /** @typedef {import('./account-pool.js').AccountPool} AccountPool */
 /** @typedef {import('./base-client.js').AbstractApiClient} AbstractApiClient */
 /** @typedef {import('./base-store.js').AbstractStore} AbstractStore */
-/** @typedef {AbstractApiClient & Record<string, Function>} ClientLike */
-/** @typedef {AbstractStore & Record<string, Function>} StoreLike */
+/** @typedef {AbstractApiClient} ClientLike */
+/** @typedef {AbstractStore} StoreLike */
 
 export class AbstractCrawler {
   /** @type {string} */
@@ -525,23 +525,23 @@ export class AbstractCrawler {
   async init() { throw new Error('Method not implemented: init()'); }
 
   /**
-   * @param {Object} args
+   * @param {Record<string, any>} [args]
    * @param {Record<string, any>} [session]
-   * @returns {Promise<PostItem[] | { posts: PostItem[], pageInfo: Record<string, any> }>}
-   */
-  async search(args, session) { throw new Error('Method not implemented: search()'); }
-
-  /**
-   * @param {Object} args
    * @returns {Promise<any>}
    */
-  async getPostDetail(args) { throw new Error('Method not implemented: getPostDetail()'); }
+  async search(args = {}, session = {}) { throw new Error('Method not implemented: search()'); }
 
   /**
-   * @param {Object} args
-   * @returns {Promise<CommentItem[]>}
+   * @param {Record<string, any>} [args]
+   * @returns {Promise<any>}
    */
-  async getComments(args) { throw new Error('Method not implemented: getComments()'); }
+  async getPostDetail(args = {}) { throw new Error('Method not implemented: getPostDetail()'); }
+
+  /**
+   * @param {Record<string, any>} [args]
+   * @returns {Promise<any>}
+   */
+  async getComments(args = {}) { throw new Error('Method not implemented: getComments()'); }
 
   /** @returns {Promise<void>} */
   async cleanup() { throw new Error('Method not implemented: cleanup()'); }

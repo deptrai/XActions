@@ -26,6 +26,9 @@ export class TopCvCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = false;
 
+  /** @type {TopCvClient & import('../../../core/base-crawler.js').ClientLike} */
+  client;
+
   /**
    * @param {Record<string, any>} [options={}]
    */
@@ -35,6 +38,7 @@ export class TopCvCrawler extends AbstractCrawler {
       client,
       ...options,
     });
+    this.client = client;
 
     this.registerAction({
       action: 'search_jobs',
@@ -101,7 +105,7 @@ export class TopCvCrawler extends AbstractCrawler {
         await this.store.storeBatch(jobs, { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[TopCvCrawler] Failed to persist jobs batch:', err.message);
+          console.warn('[TopCvCrawler] Failed to persist jobs batch:', err instanceof Error ? err.message : String(err));
         }
       }
     }
@@ -146,7 +150,7 @@ export class TopCvCrawler extends AbstractCrawler {
         await this.store.storeBatch([job], { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[TopCvCrawler] Failed to persist job detail:', err.message);
+          console.warn('[TopCvCrawler] Failed to persist job detail:', err instanceof Error ? err.message : String(err));
         }
       }
     }
@@ -237,7 +241,7 @@ export class TopCvCrawler extends AbstractCrawler {
         repostsCount: 0,
         repliesCount: 0,
         viewsCount: 0,
-        publishedAt: new Date().toISOString(),
+        publishedAt: new Date(),
         crawledAt: new Date(),
         metadata: {
           jobId,
@@ -330,7 +334,7 @@ export class TopCvCrawler extends AbstractCrawler {
       repostsCount: 0,
       repliesCount: 0,
       viewsCount: 0,
-      publishedAt: new Date().toISOString(),
+      publishedAt: new Date(),
       crawledAt: new Date(),
       metadata: {
         jobId: parsedJobId,

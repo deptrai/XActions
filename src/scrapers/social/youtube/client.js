@@ -44,7 +44,7 @@ export class YouTubeClient extends AbstractApiClient {
    * @param {string} [options.apiKey] - Google/YouTube Data API v3 key
    * @param {string} [options.key] - Alias for apiKey
    * @param {YouTubePlatformResponseValidator} [options.responseValidator]
-   * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [options.proxyPool]
+   * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool | import('../../../core/base-client.js').ProxyProviderLike} [options.proxyPool]
    * @param {import('../../../core/account-pool.js').AccountPool} [options.accountPool]
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [options.governor]
    * @param {boolean} [options.requiresAuth=false]
@@ -53,8 +53,10 @@ export class YouTubeClient extends AbstractApiClient {
    */
   constructor(options = {}) {
     const validator = options.responseValidator || new YouTubePlatformResponseValidator();
+    const { proxyPool, ...restOptions } = options;
     super({
-      ...options,
+      ...restOptions,
+      proxyPool: /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (proxyPool)),
       platform: 'youtube',
       responseValidator: validator,
       requiresAuth: options.requiresAuth ?? false,
@@ -102,18 +104,20 @@ export class YouTubeClient extends AbstractApiClient {
    * Send GET request through AbstractApiClient resilient pipeline.
    * @param {string} path
    * @param {Record<string, unknown>} [params={}]
-   * @param {Object} [options={}]
+   * @param {Record<string, unknown>} [options={}]
    * @returns {Promise<Record<string, unknown>>}
    */
   async get(path, params = {}, options = {}) {
-    const key = params.key || params.apiKey || options.apiKey || options.key || this.apiKey;
+    const opts = /** @type {Record<string, any>} */ (options);
+    const p = /** @type {Record<string, any>} */ (params);
+    const key = p.key || p.apiKey || opts.apiKey || opts.key || this.apiKey;
     const effectiveParams = { ...params };
     if (key) {
       effectiveParams.key = key;
     }
 
     const url = this.buildUrl(path, effectiveParams);
-    const headers = { ...(options.headers || {}) };
+    const headers = { ...(opts.headers || {}) };
     headers['accept'] = 'application/json';
 
     const reqOpts = {
@@ -214,15 +218,18 @@ export class YouTubeClient extends AbstractApiClient {
   /**
    * Get channel videos list.
    * Endpoint: GET /search?channelId=...
-   * @param {Object} options
-   * @param {string} options.channelId
+   * @param {Object} [options={}]
+   * @param {string} [options.channelId]
+   * @param {string} [options.channel] - Alias for channelId
+   * @param {string} [options.id] - Alias for channelId
    * @param {number} [options.maxResults=15]
    * @param {string} [options.pageToken]
    * @param {string} [options.order='date']
    * @returns {Promise<Record<string, unknown>>}
    */
   async getChannelVideos(options = {}) {
-    const channelId = options.channelId || options.channel || options.id;
+    const opts = /** @type {Record<string, any>} */ (options);
+    const channelId = opts.channelId || opts.channel || opts.id;
     if (!channelId) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
@@ -248,7 +255,7 @@ export class YouTubeClient extends AbstractApiClient {
   /**
    * Get channel profile details.
    * Endpoint: GET /channels?part=snippet,statistics,brandingSettings
-   * @param {Object} options
+   * @param {Object} [options={}]
    * @param {string} [options.channelId]
    * @param {string} [options.id] - Alias for channelId
    * @param {string} [options.forHandle]
@@ -257,6 +264,7 @@ export class YouTubeClient extends AbstractApiClient {
    */
   async getChannelDetail(options = {}) {
     const id = options.channelId || options.id;
+    /** @type {{ part: string; id?: string; forHandle?: string; forUsername?: string }} */
     const params = {
       part: 'snippet,statistics,brandingSettings',
     };
@@ -284,7 +292,7 @@ export class YouTubeClient extends AbstractApiClient {
   /**
    * Get detailed info for a single video.
    * Endpoint: GET /videos?part=snippet,contentDetails,statistics&id=...
-   * @param {Object} options
+   * @param {Object} [options={}]
    * @param {string} [options.videoId]
    * @param {string} [options.id] - Alias for videoId
    * @returns {Promise<Record<string, unknown>>}
@@ -312,7 +320,7 @@ export class YouTubeClient extends AbstractApiClient {
   /**
    * Get video comments and replies.
    * Endpoint: GET /commentThreads?part=snippet,replies&videoId=...
-   * @param {Object} options
+   * @param {Object} [options={}]
    * @param {string} [options.videoId]
    * @param {string} [options.id] - Alias for videoId
    * @param {number} [options.maxResults=20]
@@ -345,10 +353,11 @@ export class YouTubeClient extends AbstractApiClient {
       return await this.get('/commentThreads', params, options);
     } catch (err) {
       // If video has comments disabled, return graceful payload
+      const errObj = /** @type {Record<string, any>} */ (err);
       const text = (
-        String(err?.message || '') + ' ' +
-        String(err?.details?.rawResponse || '') + ' ' +
-        (typeof err?.details === 'object' ? JSON.stringify(err.details) : String(err?.details || ''))
+        String(errObj?.message || '') + ' ' +
+        String(errObj?.details?.rawResponse || '') + ' ' +
+        (typeof errObj?.details === 'object' ? JSON.stringify(errObj.details) : String(errObj?.details || ''))
       ).toLowerCase();
       if (text.includes('commentsdisabled') || text.includes('disabled comments')) {
         return {

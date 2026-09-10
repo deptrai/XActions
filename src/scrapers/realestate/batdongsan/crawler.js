@@ -14,7 +14,7 @@ import {
 } from './normalize-batdongsan.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 
-const CITY_ALIAS_MAP = {
+const CITY_ALIAS_MAP = /** @type {Record<string, string>} */ ({
   'ho-chi-minh': 'SG', 'hcm': 'SG', 'tp-hcm': 'SG', 'sai-gon': 'SG', 'sg': 'SG',
   'ha-noi': 'HN', 'hanoi': 'HN', 'hn': 'HN',
   'da-nang': 'DN', 'danang': 'DN', 'dn': 'DN',
@@ -23,7 +23,7 @@ const CITY_ALIAS_MAP = {
   'khanh-hoa': 'KH', 'kh': 'KH',
   'hai-phong': 'HP', 'hp': 'HP',
   'can-tho': 'CT', 'ct': 'CT',
-};
+});
 
 export class BatdongsanCrawler extends AbstractCrawler {
   /** @type {string} */
@@ -35,6 +35,9 @@ export class BatdongsanCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = false;
 
+  /** @type {BatdongsanClient & import('../../../core/base-crawler.js').ClientLike} */
+  client;
+
   /**
    * @param {Record<string, any>} [options={}]
    */
@@ -44,6 +47,7 @@ export class BatdongsanCrawler extends AbstractCrawler {
       client,
       ...options,
     });
+    this.client = client;
 
     this.registerAction({
       action: 'search_listings',
@@ -57,9 +61,11 @@ export class BatdongsanCrawler extends AbstractCrawler {
       checkpointResolver: (args) => {
         const rawCity = String(args?.city || 'SG').trim();
         const city = CITY_ALIAS_MAP[rawCity.toLowerCase()] || rawCity;
-        const category = (args?.category && CATE_CODES[args.category] !== undefined)
-          ? CATE_CODES[args.category]
-          : (CATE_CODES[args?.cate] || 0);
+        const rawCategory = args?.category != null ? String(args.category) : '';
+        const rawCate = args?.cate != null ? String(args.cate) : '';
+        const category = (rawCategory && CATE_CODES[rawCategory] !== undefined)
+          ? CATE_CODES[rawCategory]
+          : (CATE_CODES[rawCate] || 0);
         const ptype = args?.listingType === 'rent' || args?.ptype === 49 ? 49 : 38;
         return {
           targetType: 'listings',
@@ -95,12 +101,15 @@ export class BatdongsanCrawler extends AbstractCrawler {
     const page = Math.max(1, Number(args.page) || 1);
     const limit = Math.max(1, Number(args.limit) || 20);
 
-    const cateCode = (args.category && CATE_CODES[args.category] !== undefined)
-      ? CATE_CODES[args.category]
-      : (CATE_CODES[args.cate] || 0);
+    const rawCategory = args.category != null ? String(args.category) : '';
+    const rawCate = args.cate != null ? String(args.cate) : '';
+    const cateCode = (rawCategory && CATE_CODES[rawCategory] !== undefined)
+      ? CATE_CODES[rawCategory]
+      : (CATE_CODES[rawCate] || 0);
 
     const ptype = args.listingType === 'rent' || args.ptype === 49 ? 49 : 38;
 
+    /** @type {Record<string, any>} */
     const payload = {
       ptype,
       cate: cateCode,
@@ -123,7 +132,7 @@ export class BatdongsanCrawler extends AbstractCrawler {
         await this.store.storeBatch(listings, { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[BatdongsanCrawler] Failed to persist listings batch:', err.message);
+          console.warn('[BatdongsanCrawler] Failed to persist listings batch:', err instanceof Error ? err.message : String(err));
         }
       }
     }
@@ -198,14 +207,17 @@ export class BatdongsanCrawler extends AbstractCrawler {
     }
 
     const listing = normalizeBatdongsanListing(matched);
-    listing.metadata.sourceMethod = 'listing_detail';
+    listing.metadata = {
+      ...(listing.metadata || {}),
+      sourceMethod: 'listing_detail',
+    };
 
     if (this.store && typeof this.store.storeBatch === 'function') {
       try {
         await this.store.storeBatch([listing], { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[BatdongsanCrawler] Failed to persist listing detail:', err.message);
+          console.warn('[BatdongsanCrawler] Failed to persist listing detail:', err instanceof Error ? err.message : String(err));
         }
       }
     }

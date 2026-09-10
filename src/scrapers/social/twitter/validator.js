@@ -235,11 +235,17 @@ export class TwitterPlatformResponseValidator extends AbstractPlatformResponseVa
     return false;
   }
 
-    isRateLimit(response) {
-    if (response?.status === 429) return true;
+  /**
+   * @param {unknown} response
+   * @returns {boolean}
+   */
+  isRateLimit(response) {
+    const res = /** @type {Record<string, unknown> | null | undefined} */ (response && typeof response === 'object' ? response : null);
+    if (res?.status === 429) return true;
 
-    const root = response?.data !== undefined ? response.data : response;
-    const errors = root?.errors || root?.data?.errors || response?.errors;
+    const root = /** @type {Record<string, unknown> | null | undefined} */ (res?.data !== undefined ? res.data : res);
+    const rootData = root && typeof root.data === 'object' && root.data !== null ? /** @type {Record<string, unknown>} */ (root.data) : null;
+    const errors = root?.errors || rootData?.errors || res?.errors;
     if (Array.isArray(errors)) {
       for (const err of errors) {
         if (err?.code === 88) return true;

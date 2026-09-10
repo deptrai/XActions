@@ -45,6 +45,24 @@ export const CRAWL_PLATFORMS = Object.freeze([
 ]);
 
 /**
+ * @typedef {Object} RunRetentionPipelineResult
+ * @property {boolean} success
+ * @property {{
+ *   postsDeleted: number;
+ *   commentsDeleted: number;
+ *   checkpointsDeleted: number;
+ *   postsEligible?: number;
+ *   commentsEligible?: number;
+ *   checkpointsEligible?: number;
+ *   batchesExecuted: number;
+ *   durationMs: number;
+ *   cutoffDate: string;
+ *   dryRun: boolean;
+ *   error?: string;
+ * }} data
+ */
+
+/**
  * Validate and normalize a platform filter.
  * @param {string | undefined} platform
  * @returns {string | undefined}
@@ -698,18 +716,7 @@ export class RetentionCleaner {
   }
 
   /**
-   * Run full retention pipeline (raw posts/comments and checkpoints).
-   *
-   * @param {Object} [options]
-   * @param {number} [options.retentionDays]
-   * @param {number} [options.checkpointRetentionDays]
-   * @param {number} [options.batchSize]
-   * @param {number} [options.batchDelayMs]
-   * @param {boolean} [options.dryRun=false]
-   * @param {boolean} [options.cleanCheckpoints=true]
-   * @param {string} [options.platform]
-   * @param {import('@prisma/client').PrismaClient} [options.prisma]
-   * @returns {Promise<{
+   * @typedef {{
    *   success: boolean;
    *   data: {
    *     postsDeleted: number;
@@ -724,7 +731,22 @@ export class RetentionCleaner {
    *     dryRun: boolean;
    *     error?: string;
    *   };
-   * }>}
+   * }} RunRetentionPipelineResult
+   */
+
+  /**
+   * Run full retention pipeline (raw posts/comments and checkpoints).
+   *
+   * @param {Object} [options]
+   * @param {number} [options.retentionDays]
+   * @param {number} [options.checkpointRetentionDays]
+   * @param {number} [options.batchSize]
+   * @param {number} [options.batchDelayMs]
+   * @param {boolean} [options.dryRun=false]
+   * @param {boolean} [options.cleanCheckpoints=true]
+   * @param {string} [options.platform]
+   * @param {import('@prisma/client').PrismaClient} [options.prisma]
+   * @returns {Promise<RunRetentionPipelineResult>}
    */
   async runRetentionPipeline(options = {}) {
     const startTime = Date.now();

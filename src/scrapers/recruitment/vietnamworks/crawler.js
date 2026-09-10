@@ -23,6 +23,9 @@ export class VietnamWorksCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = false;
 
+  /** @type {VietnamWorksClient & import('../../../core/base-crawler.js').ClientLike} */
+  client;
+
   /**
    * @param {Record<string, any>} [options={}]
    */
@@ -32,6 +35,7 @@ export class VietnamWorksCrawler extends AbstractCrawler {
       client,
       ...options,
     });
+    this.client = client;
 
     this.registerAction({
       action: 'search_jobs',
@@ -80,6 +84,7 @@ export class VietnamWorksCrawler extends AbstractCrawler {
     const page = Math.max(1, Number(args.page) || 1);
     const limit = Math.max(1, Number(args.limit) || 20);
 
+    /** @type {Record<string, any>} */
     const body = {
       keyword,
       page,
@@ -91,20 +96,20 @@ export class VietnamWorksCrawler extends AbstractCrawler {
     if (args.salaryMax != null) body.salaryMax = Number(args.salaryMax);
     if (args.exp != null) body.yearsOfExperience = Number(args.exp);
     if (args.employmentType) {
-      const typeMap = { full_time: 1, part_time: 2, contract: 3, intern: 4 };
+      const typeMap = /** @type {Record<string, number>} */ ({ full_time: 1, part_time: 2, contract: 3, intern: 4 });
       if (typeMap[args.employmentType]) body.typeWorkingId = typeMap[args.employmentType];
     }
 
     const resp = await this.client.postJson('/job-search/v1.0/search', body);
     const rawList = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp?.items) ? resp.items : []);
-    const jobs = rawList.map((job) => normalizeVietnamWorksJob(job));
+    const jobs = rawList.map((/** @type {any} */ job) => normalizeVietnamWorksJob(job));
 
     if (this.store && typeof this.store.storeBatch === 'function') {
       try {
         await this.store.storeBatch(jobs, { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[VietnamWorksCrawler] Failed to persist jobs batch:', err.message);
+          console.warn('[VietnamWorksCrawler] Failed to persist jobs batch:', err instanceof Error ? err.message : String(err));
         }
       }
     }
@@ -145,7 +150,7 @@ export class VietnamWorksCrawler extends AbstractCrawler {
     });
 
     const rawList = Array.isArray(resp?.data) ? resp.data : [];
-    const matched = rawList.find((j) => String(j.jobId) === jobId) || rawList[0];
+    const matched = rawList.find((/** @type {any} */ j) => String(j?.jobId) === jobId) || rawList[0];
 
     if (!matched) {
       throw new PlatformError({
@@ -157,14 +162,17 @@ export class VietnamWorksCrawler extends AbstractCrawler {
     }
 
     const job = normalizeVietnamWorksJob(matched);
-    job.metadata.sourceMethod = 'job_detail';
+    job.metadata = {
+      ...(job.metadata || {}),
+      sourceMethod: 'job_detail',
+    };
 
     if (this.store && typeof this.store.storeBatch === 'function') {
       try {
         await this.store.storeBatch([job], { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[VietnamWorksCrawler] Failed to persist job detail:', err.message);
+          console.warn('[VietnamWorksCrawler] Failed to persist job detail:', err instanceof Error ? err.message : String(err));
         }
       }
     }

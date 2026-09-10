@@ -54,11 +54,14 @@ export class ThreadsCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = true;
 
-  /** @type {ThreadsClient} */
+  /** @type {ThreadsClient & import('../../../core/base-crawler.js').ClientLike} */
   client;
 
   /** @type {Record<string, string | null>} */
   docIds;
+
+  /** @type {import('../../../utils/redis-stream-publisher.js').RedisStreamPublisher | null} */
+  redisPublisher = null;
 
   /**
    * @param {Object} [deps]
@@ -73,15 +76,20 @@ export class ThreadsCrawler extends AbstractCrawler {
    */
   constructor(deps = {}) {
     const { client: explicitClient, ...clientDeps } = deps;
-    const client = explicitClient || new ThreadsClient(/** @type {any} */ (clientDeps));
+    const client = /** @type {ThreadsClient & import('../../../core/base-crawler.js').ClientLike} */ (
+      explicitClient || new ThreadsClient(clientDeps)
+    );
     super({
-      ...deps,
       client,
+      store: deps.store ? /** @type {import('../../../core/base-crawler.js').StoreLike} */ (deps.store) : undefined,
+      sessionManager: deps.sessionManager,
+      governor: deps.governor,
+      accountPool: deps.accountPool,
       requiresAuth: true,
     });
 
     this.client = client;
-    this.redisPublisher = deps.redisPublisher;
+    this.redisPublisher = deps.redisPublisher || null;
     this.docIds = {
       ...DEFAULT_THREADS_DOC_IDS,
       ...(deps.docIds || {}),
@@ -96,8 +104,8 @@ export class ThreadsCrawler extends AbstractCrawler {
       optionalArgs: ['count', 'cursor'],
       outputType: 'PostItem[]',
       example: { username: 'zuck', count: 20 },
-      checkpointResolver: (args) => {
-        const username = String(args?.username || '').replace(/^@/, '').trim().toLowerCase();
+      checkpointResolver: (/** @type {Record<string, unknown>} */ args) => {
+        const username = typeof args?.username === 'string' ? args.username.replace(/^@/, '').trim().toLowerCase() : '';
         if (!username) return null;
         return {
           targetType: 'user_feed',
@@ -117,8 +125,8 @@ export class ThreadsCrawler extends AbstractCrawler {
       optionalArgs: ['count', 'cursor', 'searchType'],
       outputType: 'PostItem[] | { posts: PostItem[], pageInfo: any }',
       example: { query: 'artificial intelligence', count: 20 },
-      checkpointResolver: (args) => {
-        const query = args?.query ? String(args.query).trim() : '';
+      checkpointResolver: (/** @type {Record<string, unknown>} */ args) => {
+        const query = typeof args?.query === 'string' ? args.query.trim() : '';
         if (!query) return null;
         return {
           targetType: 'search',
@@ -138,8 +146,8 @@ export class ThreadsCrawler extends AbstractCrawler {
       optionalArgs: ['maxDepth', 'maxComments', 'after'],
       outputType: 'CommentItem[]',
       example: { postId: 'CuZ7X9_sF9y', maxDepth: 3, maxComments: 100 },
-      checkpointResolver: (args) => {
-        const postId = args?.postId ? String(args.postId).trim() : '';
+      checkpointResolver: (/** @type {Record<string, unknown>} */ args) => {
+        const postId = typeof args?.postId === 'string' ? args.postId.trim() : '';
         if (!postId) return null;
         return {
           targetType: 'post_comments',

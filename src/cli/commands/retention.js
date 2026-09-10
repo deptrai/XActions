@@ -11,6 +11,30 @@
 import chalk from 'chalk';
 import { parseCliPositiveInt, parseCliNonNegativeInt, printCliError, disconnectPrismaUnlessShared } from '../shared.js';
 
+/**
+ * @typedef {Object} RetentionRunOptions
+ * @property {string} [days]
+ * @property {string} [checkpointDays]
+ * @property {string} [batchSize]
+ * @property {string} [delay]
+ * @property {boolean} [dryRun]
+ * @property {boolean} [checkpoints]
+ * @property {string} [platform]
+ * @property {boolean} [json]
+ */
+
+/**
+ * @typedef {Object} RetentionStatusOptions
+ * @property {string} [days]
+ * @property {string} [checkpointDays]
+ * @property {string} [platform]
+ * @property {boolean} [json]
+ */
+
+/**
+ * Register `xactions retention` CLI command.
+ * @param {import("commander").Command} program
+ */
 export function registerRetentionCommand(program) {
   const retentionCmd = program
     .command('retention')
@@ -28,7 +52,11 @@ export function registerRetentionCommand(program) {
     .option('--no-checkpoints', 'Skip checkpoint cleanup')
     .option('-p, --platform <platform>', 'Filter by platform')
     .option('--json', 'Output results as JSON')
-    .action(async (options) => {
+    .action(
+      /**
+       * @param {RetentionRunOptions} options
+       */
+      async (options) => {
       let prisma;
       try {
         const { default: sharedPrisma } = await import('../../../api/lib/prisma.js');
@@ -90,7 +118,7 @@ export function registerRetentionCommand(program) {
           }
         }
       } catch (error) {
-        printCliError(error, options);
+        printCliError(error instanceof Error ? error : new Error(String(error)), options);
       } finally {
         // The CLI imports the shared api/lib/prisma.js singleton; do not close it
         // because it is the same connection pool the rest of the process uses.
@@ -105,7 +133,11 @@ export function registerRetentionCommand(program) {
     .option('-c, --checkpoint-days <n>', 'Checkpoint retention threshold in days (default: 90)')
     .option('-p, --platform <platform>', 'Filter by platform')
     .option('--json', 'Output statistics as JSON')
-    .action(async (options) => {
+    .action(
+      /**
+       * @param {RetentionStatusOptions} options
+       */
+      async (options) => {
       let prisma;
       try {
         const { default: sharedPrisma } = await import('../../../api/lib/prisma.js');
@@ -152,7 +184,7 @@ export function registerRetentionCommand(program) {
           console.log(`  • By Status:             running: ${checkpoints.byStatus.running}, paused: ${checkpoints.byStatus.paused}, completed: ${checkpoints.byStatus.completed}, failed: ${checkpoints.byStatus.failed}, stalled: ${checkpoints.byStatus.stalled}`);
         }
       } catch (error) {
-        printCliError(error, options);
+        printCliError(error instanceof Error ? error : new Error(String(error)), options);
       } finally {
         // Shared singleton — do not fully disconnect, just release any local resources if needed.
         await disconnectPrismaUnlessShared(prisma, true);

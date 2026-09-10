@@ -30,28 +30,36 @@ export class BlueskyCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = false;
 
-  /** @type {BlueskyClient} */
+  /** @type {BlueskyClient & import('../../../core/base-crawler.js').ClientLike} */
   client;
+
+  /** @type {import('../../../utils/redis-stream-publisher.js').RedisStreamPublisher | null} */
+  redisPublisher = null;
 
   /**
    * @param {Object} [deps]
-   * @param {BlueskyClient} [deps.client]
+   * @param {BlueskyClient & import('../../../core/base-crawler.js').ClientLike} [deps.client]
    * @param {import('../../../core/base-store.js').AbstractStore} [deps.store]
    * @param {import('../../../core/session-manager.js').SessionManager} [deps.sessionManager]
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [deps.governor]
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
-   * @param {any} [deps.redisPublisher]
+   * @param {import('../../../utils/redis-stream-publisher.js').RedisStreamPublisher} [deps.redisPublisher]
    * @param {boolean} [deps.requiresAuth]
    * @param {boolean} [deps.requiresProxy]
    */
   constructor(deps = {}) {
     const { client: explicitClient, ...clientDeps } = deps;
-    const client = explicitClient || new BlueskyClient(/** @type {any} */ (clientDeps));
+    const client = /** @type {BlueskyClient & import('../../../core/base-crawler.js').ClientLike} */ (
+      explicitClient || new BlueskyClient(clientDeps)
+    );
 
     super({
-      ...deps,
       client,
+      store: deps.store ? /** @type {import('../../../core/base-crawler.js').StoreLike} */ (deps.store) : undefined,
+      sessionManager: deps.sessionManager,
+      governor: deps.governor,
+      accountPool: deps.accountPool,
       requiresAuth: deps.requiresAuth !== undefined ? deps.requiresAuth : false,
     });
 

@@ -94,7 +94,11 @@ export class ShopeePlatformResponseValidator extends AbstractPlatformResponseVal
     return false;
   }
 
-    isValidPayload(response) {
+  /**
+   * @param {any} response
+   * @returns {boolean}
+   */
+  isValidPayload(response) {
     if (this.isRateLimit(response) || this.isBotChallenge(response)) {
       return false;
     }

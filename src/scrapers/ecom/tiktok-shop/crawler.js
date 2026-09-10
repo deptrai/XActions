@@ -22,7 +22,7 @@ export class TikTokShopCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = false;
 
-  /** @type {TikTokShopClient} */
+  /** @type {TikTokShopClient & import('../../../core/base-crawler.js').ClientLike} */
   client;
 
   /**
@@ -117,7 +117,7 @@ export class TikTokShopCrawler extends AbstractCrawler {
       } catch (storeErr) {
         if (process.env.NODE_ENV !== 'production' && process.env.TIKTOK_SHOP_LOG_STORE !== 'false') {
           // eslint-disable-next-line no-console
-          console.warn(`[tiktokshop] storeBatch failed: ${storeErr?.message || storeErr}`);
+          console.warn(`[tiktokshop] storeBatch failed: ${storeErr instanceof Error ? storeErr.message : String(storeErr)}`);
         }
       }
     }
@@ -175,7 +175,7 @@ export class TikTokShopCrawler extends AbstractCrawler {
       } catch (storeErr) {
         if (process.env.NODE_ENV !== 'production' && process.env.TIKTOK_SHOP_LOG_STORE !== 'false') {
           // eslint-disable-next-line no-console
-          console.warn(`[tiktokshop] storeBatch failed for product_detail: ${storeErr?.message || storeErr}`);
+          console.warn(`[tiktokshop] storeBatch failed for product_detail: ${storeErr instanceof Error ? storeErr.message : String(storeErr)}`);
         }
       }
     }
@@ -235,7 +235,7 @@ export class TikTokShopCrawler extends AbstractCrawler {
       } catch (storeErr) {
         if (process.env.NODE_ENV !== 'production' && process.env.TIKTOK_SHOP_LOG_STORE !== 'false') {
           // eslint-disable-next-line no-console
-          console.warn(`[tiktokshop] storeBatch failed: ${storeErr?.message || storeErr}`);
+          console.warn(`[tiktokshop] storeBatch failed: ${storeErr instanceof Error ? storeErr.message : String(storeErr)}`);
         }
       }
     }

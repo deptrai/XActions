@@ -26,7 +26,7 @@ import { ensureBenchmarkTables } from '../../src/benchmark/ensure-tables.js';
  * @param {import('../services/benchmark/alerting.js').AlertDispatcher} [deps.alertDispatcher]
  * @param {import('../services/benchmark/requalification.js').RequalificationService} [deps.requalificationService]
  * @param {import('../services/benchmark/canary-runner.js').CanaryRunner} [deps.canaryRunner]
- * @returns {import('express').Router}
+ * @returns {import('express').IRouter}
  */
 export function createBenchmarkRouter(deps = {}) {
   const router = Router();

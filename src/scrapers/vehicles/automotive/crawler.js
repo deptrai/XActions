@@ -28,12 +28,16 @@ export class AutomotiveCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = false;
 
+  /** @type {AutomotiveClient & import('../../../core/base-crawler.js').ClientLike} */
+  client;
+
   /**
    * @param {Record<string, any>} [deps={}]
    */
   constructor(deps = {}) {
     const client = deps.client || new AutomotiveClient(deps);
     super({ client, ...deps, requiresAuth: deps.requiresAuth ?? false });
+    this.client = client;
 
     this.publisher = deps.publisher || deps.eventPublisher || null;
 
@@ -76,9 +80,9 @@ export class AutomotiveCrawler extends AbstractCrawler {
 
   /**
    * Extract PostItem[] from automotive response.
-   * @param {string | Object} data
+   * @param {string | Record<string, any>} data
    * @param {'search' | 'list' | 'detail'} kind
-   * @param {Object} context
+   * @param {Record<string, any>} [context]
    * @returns {PostItem[]}
    */
   #extractItems(data, kind, context = {}) {
@@ -210,8 +214,9 @@ export class AutomotiveCrawler extends AbstractCrawler {
 
   /** @returns {Promise<void>} */
   async cleanup() {
-    if (this.client && typeof this.client.cleanup === 'function') {
-      await this.client.cleanup().catch(() => {});
+    const client = /** @type {any} */ (this.client);
+    if (client && typeof client.cleanup === 'function') {
+      await client.cleanup().catch(() => {});
     }
   }
 }

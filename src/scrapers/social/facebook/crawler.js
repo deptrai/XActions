@@ -255,8 +255,11 @@ export class FacebookCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = true;
 
-  /** @type {FacebookClient} */
+  /** @type {FacebookClient & import('../../../core/base-crawler.js').ClientLike} */
   client;
+
+  /** @type {import('../../../utils/redis-stream-publisher.js').RedisStreamPublisher | null} */
+  redisPublisher = null;
 
   /** @type {Record<string, string>} */
   docIds;
@@ -270,20 +273,27 @@ export class FacebookCrawler extends AbstractCrawler {
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [deps.governor]
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
+   * @param {import('../../../utils/redis-stream-publisher.js').RedisStreamPublisher} [deps.redisPublisher]
    * @param {Record<string, string>} [deps.friendlyNames]
    * @param {string} [deps.cdpUrl]
    */
   constructor(deps = {}) {
     const { client: explicitClient, friendlyNames, ...clientDeps } = deps;
-    const client = explicitClient || new FacebookClient({ ...clientDeps, friendlyNames });
+    const client = /** @type {FacebookClient & import('../../../core/base-crawler.js').ClientLike} */ (
+      explicitClient || new FacebookClient({ ...clientDeps, friendlyNames })
+    );
     super({
-      ...deps,
       client,
+      store: deps.store ? /** @type {import('../../../core/base-crawler.js').StoreLike} */ (deps.store) : undefined,
+      sessionManager: deps.sessionManager,
+      governor: deps.governor,
+      accountPool: deps.accountPool,
       requiresAuth: true,
       cdpUrl: deps.cdpUrl || client.cdpUrl || undefined,
     });
 
     this.client = client;
+    this.redisPublisher = deps.redisPublisher || null;
     this.docIds = {
       ...DEFAULT_FB_DOC_IDS,
       ...(deps.docIds || {}),
@@ -421,8 +431,9 @@ export class FacebookCrawler extends AbstractCrawler {
       outputType: '{ followers: ProfileItem[], pageInfo?: any }',
       requiresAuth: false,
       checkpointResolver: (args) => {
-        const rawTarget = args?.username || args?.url;
-        const targetKey = resolveTargetKey(rawTarget);
+        const username = typeof args?.username === 'string' ? args.username : undefined;
+        const url = typeof args?.url === 'string' ? args.url : undefined;
+        const targetKey = resolveTargetKey(username || url);
         if (!targetKey) return null;
         return {
           targetType: 'followers',
@@ -443,8 +454,9 @@ export class FacebookCrawler extends AbstractCrawler {
       outputType: '{ following?: ProfileItem[], note?: string, pageInfo?: any }',
       requiresAuth: false,
       checkpointResolver: (args) => {
-        const rawTarget = args?.username || args?.url;
-        const targetKey = resolveTargetKey(rawTarget);
+        const username = typeof args?.username === 'string' ? args.username : undefined;
+        const url = typeof args?.url === 'string' ? args.url : undefined;
+        const targetKey = resolveTargetKey(username || url);
         if (!targetKey) return null;
         return {
           targetType: 'following',
@@ -465,10 +477,11 @@ export class FacebookCrawler extends AbstractCrawler {
       outputType: '{ members: ProfileItem[], pageInfo?: any }',
       requiresAuth: false,
       checkpointResolver: (args) => {
-        const rawTarget = args?.groupUrl || args?.groupId;
+        const groupUrl = typeof args?.groupUrl === 'string' ? args.groupUrl : undefined;
+        const groupIdArg = typeof args?.groupId === 'string' ? args.groupId : undefined;
         let groupId;
         try {
-          groupId = resolveGroupId(rawTarget);
+          groupId = resolveGroupId(groupUrl || groupIdArg);
         } catch {
           return null;
         }
@@ -1395,13 +1408,11 @@ export class FacebookCrawler extends AbstractCrawler {
               id: `facebook:${postId}`,
               platform: 'facebook',
               externalId: postId,
-              text,
+              content: text,
               authorId: String(args.pageId),
               authorName: String(args.pageId),
-              authorUsername: String(args.pageId),
-              createdAt: new Date(),
               crawledAt: new Date(),
-              url: `https://www.facebook.com/${args.pageId}`,
+              postUrl: `https://www.facebook.com/${args.pageId}`,
               likesCount: 0,
               repostsCount: 0,
               repliesCount: 0,
@@ -2665,7 +2676,7 @@ export class FacebookCrawler extends AbstractCrawler {
    * @param {string} targetType
    * @param {string} targetKey
    * @param {string | null} [cursor=null]
-   * @param {Array<import('../../../core/types.js').PostItem>} [items=[]]
+   * @param {Array<import('../../../core/types.js').PostItem & { storageRef?: string }>} [items=[]]
    * @param {boolean} [hasMore=false]
    * @returns {Promise<void>}
    */
@@ -2673,9 +2684,9 @@ export class FacebookCrawler extends AbstractCrawler {
     try {
       const firstItem = items && items.length > 0 ? items[0] : null;
       const storageRef = firstItem?.storageRef || firstItem?.id || undefined;
-      const storeWithCheckpoint = /** @type {any} */ (this.store);
+      const storeWithCheckpoint = /** @type {Record<string, unknown> | null} */ (this.store);
       if (storeWithCheckpoint && typeof storeWithCheckpoint.saveCheckpoint === 'function') {
-        await storeWithCheckpoint.saveCheckpoint({
+        await /** @type {Function} */ (storeWithCheckpoint.saveCheckpoint)({
           platform: 'facebook',
           targetType,
           targetKey,
@@ -2687,7 +2698,8 @@ export class FacebookCrawler extends AbstractCrawler {
         });
       }
 
-      const publisher = this.store?.publisher || this.redisPublisher;
+      const storeWithPublisher = /** @type {{ publisher?: { publish?: Function } } | null} */ (this.store);
+      const publisher = /** @type {{ publish?: Function } | null} */ (storeWithPublisher?.publisher || this.redisPublisher);
       if (publisher && typeof publisher.publish === 'function' && isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
         for (const item of items) {
           const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
@@ -2704,7 +2716,9 @@ export class FacebookCrawler extends AbstractCrawler {
         }
       }
 
-      const redisClient = /** @type {any} */ (this.store)?.redis || /** @type {any} */ (this.sessionManager)?.redis;
+      const storeObj = /** @type {Record<string, unknown> | null} */ (this.store);
+      const sessObj = /** @type {Record<string, unknown> | null} */ (this.sessionManager);
+      const redisClient = /** @type {import('../../../core/types.js').RedisClientLike | null} */ ((storeObj?.redis || sessObj?.redis) ?? null);
       if (redisClient && isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
         for (const item of items) {
           const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
@@ -2906,8 +2920,8 @@ export class FacebookCrawler extends AbstractCrawler {
    * @param {string} [args.url]
    * @param {number} [args.limit=20]
    * @param {string} [args.cursor]
-   * @param {Record<string, any>} [session={}]
-   * @returns {Promise<{ followers: import('../../../core/types.js').ProfileItem[], pageInfo?: any }>}
+   * @param {Record<string, unknown>} [session={}]
+   * @returns {Promise<{ followers: import('../../../core/types.js').ProfileItem[], pageInfo?: unknown, note?: string }>}
    */
   async followers(args, session = {}) {
     const rawTarget = args?.username || args?.url;
@@ -2996,13 +3010,15 @@ export class FacebookCrawler extends AbstractCrawler {
    */
   #isFollowingRestricted(err) {
     if (!(err instanceof PlatformError)) return false;
-    const details = /** @type {any} */ (err.details);
+    const details = /** @type {unknown} */ (err.details);
     if (Array.isArray(details)) {
-      return details.some(
-        (e) =>
-          e?.code === 1675030 ||
-          /following list is not available|not available|following list/i.test(String(e?.message || ''))
-      );
+      return details.some((e) => {
+        const entry = /** @type {Record<string, unknown>} */ (e);
+        return (
+          entry?.code === 1675030 ||
+          /following list is not available|not available|following list/i.test(String(entry?.message || ''))
+        );
+      });
     }
     return /following list is not available|not available/i.test(err.message);
   }

@@ -54,11 +54,15 @@ export class MastodonClient extends AbstractApiClient {
     const responseValidator = options.responseValidator || new MastodonPlatformResponseValidator();
 
     super({
-      ...options,
       platform: 'mastodon',
       responseValidator,
       requiresAuth: options.requiresAuth ?? false,
       requiresProxy: options.requiresProxy ?? false,
+      accountPool: options.accountPool,
+      governor: options.governor,
+      sessionManager: options.sessionManager,
+      proxyPool: /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (options.proxyPool)),
+      timeout: options.timeout,
     });
 
     const rawService = options.baseUrl || options.service || options.instance || DEFAULT_MASTODON_INSTANCE;
@@ -82,8 +86,9 @@ export class MastodonClient extends AbstractApiClient {
    * @returns {Promise<void>}
    */
   async init(session = {}) {
-    if (session.accessToken) {
-      this.accessToken = String(session.accessToken).trim();
+    const s = /** @type {{ accessToken?: string }} */ (session);
+    if (s.accessToken) {
+      this.accessToken = String(s.accessToken).trim();
     }
   }
 
@@ -112,7 +117,7 @@ export class MastodonClient extends AbstractApiClient {
   /**
    * Send a GET request through the AbstractApiClient pipeline.
    * @param {string} url
-   * @param {Object} [options={}]
+   * @param {{ headers?: Record<string, string>; accessToken?: string; [key: string]: any }} [options={}]
    * @returns {Promise<{ data: any, headers: Record<string, string>, linkMaxId: string | null }>}
    */
   async get(url, options = {}) {
@@ -325,8 +330,9 @@ export class MastodonClient extends AbstractApiClient {
   /**
    * Search content on Mastodon.
    * Endpoint: GET /api/v2/search
-   * @param {Object} options
-   * @param {string} options.query - Search query
+   * @param {Object} [options={}]
+   * @param {string} [options.query] - Search query
+   * @param {string} [options.q] - Search query alias
    * @param {'accounts' | 'statuses' | 'hashtags'} [options.type] - Search type filter
    * @param {number} [options.limit=20]
    * @param {string} [options.max_id]
@@ -335,7 +341,8 @@ export class MastodonClient extends AbstractApiClient {
    * @returns {Promise<{ accounts: Record<string, any>[], statuses: Record<string, any>[], hashtags: Record<string, any>[] }>}
    */
   async search(options = {}) {
-    const query = options.query || options.q;
+    const opts = /** @type {Record<string, any>} */ (options);
+    const query = opts.query || opts.q;
     if (!query || typeof query !== 'string' || !query.trim()) {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,

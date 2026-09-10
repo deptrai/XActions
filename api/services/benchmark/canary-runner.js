@@ -140,7 +140,7 @@ export class CanaryRunner {
   /**
    * Execute a single synthetic canary probe for a scraper.
    * @param {string} scraperId
-   * @param {Object} [options]
+   * @param {{ timeoutMs?: number }} [options]
    * @returns {Promise<Record<string, any>>}
    */
   async probe(scraperId, options = {}) {
@@ -193,7 +193,8 @@ export class CanaryRunner {
             await this.#prisma.scraperCanaryRun.create({ data: failureRecord });
           }
         } catch (dbErr) {
-          console.warn(`[CanaryRunner] Failed to persist probe account failure for ${scraperId}:`, dbErr.message);
+          const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+          console.warn(`[CanaryRunner] Failed to persist probe account failure for ${scraperId}:`, msg);
         }
 
         return failureRecord;
@@ -270,14 +271,15 @@ export class CanaryRunner {
       }
     } catch (err) {
       clearTimeout(timer);
+      const e = /** @type {Error} */ (err);
       latencyMs = Math.max(1, Date.now() - startTime);
-      if (err.name === 'AbortError' || latencyMs >= timeoutMs) {
+      if (e.name === 'AbortError' || latencyMs >= timeoutMs) {
         httpStatus = 504;
         latencyMs = timeoutMs;
         errorReason = `Probe timed out after ${timeoutMs}ms`;
       } else {
         httpStatus = 502;
-        errorReason = err.message || 'Probe transport failed';
+        errorReason = e.message || 'Probe transport failed';
       }
       isSuccess = false;
     }
@@ -315,7 +317,8 @@ export class CanaryRunner {
         await this.#prisma.scraperCanaryRun.create({ data: canaryRecord });
       }
     } catch (dbErr) {
-      console.warn(`[CanaryRunner] Failed to persist canary run for ${scraperId}:`, dbErr.message);
+      const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+      console.warn(`[CanaryRunner] Failed to persist canary run for ${scraperId}:`, msg);
     }
 
     return canaryRecord;
@@ -324,7 +327,7 @@ export class CanaryRunner {
   /**
    * Run synthetic canary probes across all configured scrapers.
    * @param {Object} [options]
-   * @returns {Promise<{ total: number, succeeded: number, failed: number, results: Array<Record<string, any>> }>}
+   * @returns {Promise<{ total: number, succeeded: number, failed: number, results: Array<Record<string, any>>, skipped?: boolean }>}
    */
   async probeAll(options = {}) {
     if (this.#isProbing) {
@@ -350,7 +353,8 @@ export class CanaryRunner {
           }
         } catch (err) {
           failed++;
-          results.push({ scraperId: id, isSuccess: false, errorReason: err.message });
+          const msg = err instanceof Error ? err.message : String(err);
+          results.push({ scraperId: id, isSuccess: false, errorReason: msg });
         }
       }
     } finally {

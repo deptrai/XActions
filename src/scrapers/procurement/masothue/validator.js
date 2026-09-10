@@ -94,7 +94,11 @@ export class MaSoThuePlatformResponseValidator extends AbstractPlatformResponseV
     return false;
   }
 
-    isValidPayload(response) {
+  /**
+   * @param {any} response
+   * @returns {boolean}
+   */
+  isValidPayload(response) {
     if (this.isRateLimit(response) || this.isBotChallenge(response) || this.isFalse200(response)) {
       return false;
     }

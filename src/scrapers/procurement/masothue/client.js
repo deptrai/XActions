@@ -77,11 +77,12 @@ export class MaSoThueClient extends AbstractApiClient {
       ...(options?.headers || {}),
     };
 
-    const resp = await super.request(method, url, {
+    const rawResp = await super.request(method, url, {
       ...options,
       headers,
     });
 
+    const resp = /** @type {Record<string, any>} */ (rawResp);
     // Normalize raw body to string for HTML parsing.
     if (resp?.body !== undefined && typeof resp.body !== 'string') {
       try {
@@ -116,7 +117,7 @@ export class MaSoThueClient extends AbstractApiClient {
    * @param {Object} [options={}]
    * @returns {Promise<{ status: number, data: string, body: string }>}
    */
-  async search(params = {}, options = {}) {
+  async search(/** @type {any} */ params = {}, options = {}) {
     const query = new URLSearchParams();
     if (params.q) query.set('q', params.q);
     if (params.type) query.set('type', params.type);
@@ -134,7 +135,7 @@ export class MaSoThueClient extends AbstractApiClient {
    * @param {Object} [options={}]
    * @returns {Promise<{ status: number, data: string, body: string }>}
    */
-  async searchByProvince(params = {}, options = {}) {
+  async searchByProvince(/** @type {any} */ params = {}, options = {}) {
     const provinceSlug = params.provinceSlug || '';
     const id = params.id || '1';
     const page = Number(params.page) > 1 ? `?page=${params.page}` : '';
@@ -151,7 +152,7 @@ export class MaSoThueClient extends AbstractApiClient {
    * @param {Object} [options={}]
    * @returns {Promise<{ status: number, data: string, body: string }>}
    */
-  async detail(params = {}, options = {}) {
+  async detail(/** @type {any} */ params = {}, options = {}) {
     const taxCode = String(params.taxCode || '');
     const slug = params.slug ? `-${params.slug}` : '';
 

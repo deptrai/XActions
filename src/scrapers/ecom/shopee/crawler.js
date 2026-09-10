@@ -22,7 +22,7 @@ export class ShopeeCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = false;
 
-  /** @type {ShopeeClient} */
+  /** @type {ShopeeClient & import('../../../core/base-crawler.js').ClientLike} */
   client;
 
   /**
@@ -132,8 +132,9 @@ export class ShopeeCrawler extends AbstractCrawler {
       if (products.length >= limit) break;
     }
 
-    if (this.store && typeof this.store.savePosts === 'function' && products.length > 0) {
-      await this.store.savePosts(products).catch(() => {});
+    const storeForSearch = /** @type {any} */ (this.store);
+    if (storeForSearch && typeof storeForSearch.savePosts === 'function' && products.length > 0) {
+      await storeForSearch.savePosts(products).catch(() => {});
     }
 
     const hasNext = Boolean(!response?.nomore && products.length > 0 && products.length === limit);
@@ -144,7 +145,7 @@ export class ShopeeCrawler extends AbstractCrawler {
           platform: 'shopee',
           targetType: 'search',
           targetKey: keyword,
-          lastCursor: hasNext ? String(page) : null,
+          lastCursor: hasNext ? String(page) : undefined,
           lastTimestamp: new Date(),
           lastCrawledAt: new Date(),
           status: hasNext ? 'has_more' : 'completed',
@@ -202,8 +203,9 @@ export class ShopeeCrawler extends AbstractCrawler {
       });
     }
 
-    if (this.store && typeof this.store.savePosts === 'function') {
-      await this.store.savePosts([product]).catch(() => {});
+    const storeForDetail = /** @type {any} */ (this.store);
+    if (storeForDetail && typeof storeForDetail.savePosts === 'function') {
+      await storeForDetail.savePosts([product]).catch(() => {});
     }
 
     return { product };
@@ -250,8 +252,9 @@ export class ShopeeCrawler extends AbstractCrawler {
       if (reviews.length >= limit) break;
     }
 
-    if (this.store && typeof this.store.saveComments === 'function' && reviews.length > 0) {
-      await this.store.saveComments(reviews).catch(() => {});
+    const storeForReviews = /** @type {any} */ (this.store);
+    if (storeForReviews && typeof storeForReviews.saveComments === 'function' && reviews.length > 0) {
+      await storeForReviews.saveComments(reviews).catch(() => {});
     }
 
     const hasNext = Boolean(reviews.length > 0 && reviews.length === limit);

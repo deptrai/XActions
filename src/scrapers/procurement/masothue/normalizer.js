@@ -11,6 +11,7 @@ import { resolveProvince } from './schema.js';
 const TAG_RE = /<[^>]+>/g;
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
+/** @param {any} text */
 function decodeEntities(text) {
   if (typeof text !== 'string') return '';
   return text.replace(/&(#?x?[0-9a-fA-F]+|amp|lt|gt|quot|apos|nbsp);/g, (m, entity) => {
@@ -20,15 +21,19 @@ function decodeEntities(text) {
         : parseInt(entity.slice(1), 10);
       return Number.isFinite(code) ? String.fromCodePoint(code) : m;
     }
-    return ENTITIES[entity] ?? m;
+    return /** @type {Record<string, string>} */ (ENTITIES)[/** @type {string} */ (entity)] ?? m;
   });
 }
 
+/** @param {any} html */
 function stripTags(html) {
   if (typeof html !== 'string') return '';
   return decodeEntities(html.replace(TAG_RE, ' ').replace(/\s+/g, ' ').trim());
 }
 
+/** @param {any} html
+ * @param {any} label
+ */
 function extractTableValue(html, label) {
   const lowerHtml = html.toLowerCase();
   const idx = lowerHtml.indexOf(label.toLowerCase());
@@ -41,6 +46,9 @@ function extractTableValue(html, label) {
   return value.replace(/^[:\s-]+|[:\s-]+$/g, '');
 }
 
+/** @param {any} html
+ * @param {any} taxCode
+ */
 function extractName(html, taxCode) {
   const h1Match = html.match(/<h1[^>]*>\s*([^<]+)<\/h1>/i) || html.match(/<h2[^>]*>\s*([^<]+)<\/h2>/i);
   if (h1Match) {
@@ -67,6 +75,10 @@ function extractName(html, taxCode) {
   return null;
 }
 
+/** @param {any} html
+ * @param {any} taxCode
+ * @param {any} province
+ */
 function extractDetail(html, taxCode, province) {
   const address = extractTableValue(html, 'Địa chỉ') || extractTableValue(html, 'Địa chỉ Thuế');
   const businessLines = extractTableValue(html, 'Ngành nghề chính');
@@ -100,6 +112,9 @@ function extractDetail(html, taxCode, province) {
   };
 }
 
+/** @param {any} html
+ * @param {any} province
+ */
 function extractListing(html, province) {
   const items = [];
   const seen = new Set();
@@ -189,10 +204,15 @@ function extractListing(html, province) {
   return items;
 }
 
+/**
+ * @param {any} html
+ * @param {any} kind
+ * @param {Record<string, any>} [options]
+ */
 export function normalizeMaSoThueResults(html, kind = 'search', options = {}) {
   if (typeof html !== 'string' || html.length < 100) return [];
 
-  const provinceInfo = resolveProvince(options.province) || {};
+  const provinceInfo = /** @type {Record<string, any>} */ (resolveProvince(options.province) || {});
   const provinceName = provinceInfo.name || options.province || '';
 
   if (kind === 'detail' && options.taxCode) {

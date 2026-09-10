@@ -10,6 +10,7 @@
 
 import { AbstractApiClient } from '../../../core/base-client.js';
 import { BlueskyPlatformResponseValidator } from './validator.js';
+import { BlueskyCrawler } from './crawler.js';
 import {
   PlatformError,
   AuthSessionExpiredError,
@@ -81,10 +82,18 @@ export function createBlueskyClient(options = {}) {
   return new BlueskyClient(options);
 }
 
+/**
+ * @param {BlueskyClient | Record<string, unknown>} [client]
+ * @param {Record<string, unknown>} [options={}]
+ * @returns {BlueskyCrawler}
+ */
 export function createBlueskyCrawler(client, options = {}) {
   const resolvedClient = client instanceof BlueskyClient ? client : new BlueskyClient(client || options || {});
   const resolvedOptions = client instanceof BlueskyClient ? options : (options || {});
-  return new BlueskyCrawler({ client: resolvedClient, ...resolvedOptions });
+  return new BlueskyCrawler({
+    client: /** @type {BlueskyClient & import('../../../core/base-crawler.js').ClientLike} */ (resolvedClient),
+    ...resolvedOptions,
+  });
 }
 
 export class BlueskyClient extends AbstractApiClient {
@@ -132,11 +141,12 @@ export class BlueskyClient extends AbstractApiClient {
     const responseValidator = options.responseValidator || new BlueskyPlatformResponseValidator();
 
     super({
-      ...options,
       platform: 'bluesky',
       responseValidator,
       requiresAuth: options.requiresAuth ?? false,
-      requiresProxy: options.requiresProxy ?? false,
+      accountPool: options.accountPool,
+      governor: options.governor,
+      proxyPool: /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (options.proxyPool)),
     });
 
     const rawService = options.baseUrl || options.service || DEFAULT_BLUESKY_SERVICE;
@@ -163,15 +173,16 @@ export class BlueskyClient extends AbstractApiClient {
    * @returns {Promise<void>}
    */
   async init(session = {}) {
-    if (session.identifier && session.password) {
+    const s = /** @type {Record<string, unknown>} */ (session);
+    if (typeof s.identifier === 'string' && typeof s.password === 'string') {
       await this.login({
-        identifier: session.identifier,
-        password: session.password,
+        identifier: s.identifier,
+        password: s.password,
       });
-    } else if (session.accessJwt) {
-      this.accessJwt = session.accessJwt;
-      this.refreshJwt = session.refreshJwt || null;
-      this.did = session.did || null;
+    } else if (typeof s.accessJwt === 'string') {
+      this.accessJwt = s.accessJwt;
+      this.refreshJwt = typeof s.refreshJwt === 'string' ? s.refreshJwt : null;
+      this.did = typeof s.did === 'string' ? s.did : null;
     }
   }
 
@@ -224,7 +235,7 @@ export class BlueskyClient extends AbstractApiClient {
     this.refreshJwt = sessionData.refreshJwt || null;
     this.did = sessionData.did || null;
 
-    return this.accessJwt;
+    return sessionData.accessJwt;
   }
 
   /**

@@ -14,7 +14,7 @@ export class VietnamWorksClient extends AbstractApiClient {
   /** @type {string} */
   platform = 'vietnamworks';
 
-  /** @type {'got' | 'fetch'} */
+  /** @type {'undici' | 'got'} */
   client = 'got';
 
   /** @type {boolean} */
@@ -63,6 +63,7 @@ export class VietnamWorksClient extends AbstractApiClient {
       ...(options.headers || {}),
     };
 
+    /** @type {any} */
     const response = await this.request('POST', url, {
       headers,
       json: body,

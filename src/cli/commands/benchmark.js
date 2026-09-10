@@ -11,11 +11,94 @@ import chalk from 'chalk';
 import { defaultHealthTierCache } from '../../benchmark/health-tier-cache.js';
 
 /**
+ * @typedef {Object} ScraperRawMetrics
+ * @property {number} [true_success_rate]
+ * @property {number} [latency_p95]
+ * @property {number} [false_200_rate]
+ * @property {number} [field_fill_rate]
+ * @property {number} [schema_integrity_rate]
+ * @property {number} [duplicate_ratio]
+ * @property {number} [proxy_bytes_per_1k]
+ * @property {number} [checkpoint_rate]
+ */
+
+/**
+ * @typedef {Object} ScraperMetricsSnapshot
+ * @property {ScraperRawMetrics} [raw]
+ * @property {boolean} [knockoutTriggered]
+ * @property {string[]} [knockoutReasons]
+ */
+
+/**
+ * @typedef {Object} ScraperHealthRecord
+ * @property {string} scraperId
+ * @property {string} platform
+ * @property {number} healthScore
+ * @property {string} tier
+ * @property {number} [stabilityScore]
+ * @property {number} [qualityScore]
+ * @property {number} [noiseScore]
+ * @property {number} [costScore]
+ * @property {number} [sampleCount]
+ * @property {number} [consecutiveCleanRuns]
+ * @property {Date|string|number} [evaluatedAt]
+ * @property {ScraperMetricsSnapshot|unknown} [metricsSnapshot]
+ */
+
+/**
+ * @typedef {Object} ScraperHealthHistoryEntry
+ * @property {number|null} [healthScore]
+ * @property {string} [tier]
+ * @property {Date|string|number} [evaluatedAt]
+ */
+
+/**
+ * @typedef {Object} ScraperAlertEntry
+ * @property {string} [scraper_id]
+ * @property {string} [scraperId]
+ * @property {string} [platform]
+ * @property {string} [previous_tier]
+ * @property {string} [current_tier]
+ * @property {number} [health_score]
+ * @property {number} [healthScore]
+ * @property {string} [reason]
+ * @property {Date|string|number} [evaluated_at]
+ */
+
+/**
+ * @typedef {Object} BenchmarkListOptions
+ * @property {string|number} [limit]
+ * @property {string} [tier]
+ * @property {string} [platform]
+ * @property {string} [format]
+ * @property {boolean} [json]
+ */
+
+/**
+ * @typedef {Object} BenchmarkDetailOptions
+ * @property {string} [format]
+ * @property {boolean} [json]
+ */
+
+/**
+ * @typedef {Object} BenchmarkAlertsOptions
+ * @property {string} [limit]
+ * @property {string} [format]
+ * @property {boolean} [json]
+ */
+
+/**
+ * @typedef {Object} BenchmarkCommandDeps
+ * @property {import("@prisma/client").PrismaClient} [prisma]
+ * @property {import("../../../api/services/benchmark/alerting.js").AlertDispatcher} [alertDispatcher]
+ */
+
+/**
  * Format a Tier letter with appropriate terminal colors.
- * @param {string} tier
+ * @param {string} [tier]
  * @returns {string}
  */
-export function formatTierBadge(tier) {
+export function formatTierBadge(tier = "") {
   switch (tier) {
     case 'A':
       return chalk.green.bold('A');
@@ -30,11 +113,11 @@ export function formatTierBadge(tier) {
 
 /**
  * Draw a mini ASCII progress bar.
- * @param {number} score 0 - 100
+ * @param {number} [score] 0 - 100
  * @param {number} [width=10]
  * @returns {string}
  */
-export function drawProgressBar(score, width = 10) {
+export function drawProgressBar(score = 0, width = 10) {
   const clamped = Math.min(Math.max(Number(score) || 0, 0), 100);
   const filled = Math.round((clamped / 100) * width);
   const empty = width - filled;
@@ -47,7 +130,7 @@ export function drawProgressBar(score, width = 10) {
 
 /**
  * Format a list of scraper health records into an ASCII table.
- * @param {Array<Record<string, any>>} records
+ * @param {Array<ScraperHealthRecord | import("@prisma/client").ScraperHealthScore>} [records=[]]
  * @returns {string}
  */
 export function formatBenchmarkTable(records = []) {
@@ -96,8 +179,8 @@ export function formatBenchmarkTable(records = []) {
 
 /**
  * Format in-depth scorecard detail for a single scraper.
- * @param {Record<string, any>} detail
- * @param {Array<Record<string, any>>} [history=[]]
+ * @param {ScraperHealthRecord | import("@prisma/client").ScraperHealthScore | null} detail
+ * @param {Array<ScraperHealthHistoryEntry>} [history=[]]
  * @returns {string}
  */
 export function formatScraperDetail(detail, history = []) {
@@ -105,9 +188,13 @@ export function formatScraperDetail(detail, history = []) {
     return chalk.red('❌ Scraper details unavailable.');
   }
 
-  const raw = detail.metricsSnapshot?.raw || {};
-  const knockoutTriggered = Boolean(detail.metricsSnapshot?.knockoutTriggered);
-  const knockoutReasons = detail.metricsSnapshot?.knockoutReasons || [];
+  const snapshot = /** @type {ScraperMetricsSnapshot | null | undefined} */ (
+    typeof detail.metricsSnapshot === 'object' ? detail.metricsSnapshot : null
+  );
+  const raw = snapshot?.raw || {};
+  const knockoutTriggered = Boolean(snapshot?.knockoutTriggered);
+  /** @type {string[]} */
+  const knockoutReasons = Array.isArray(snapshot?.knockoutReasons) ? snapshot.knockoutReasons : [];
 
   const lines = [
     chalk.bold.cyan(`\n═══════════════════ Scorecard: ${detail.scraperId} ═══════════════════`),
@@ -152,7 +239,7 @@ export function formatScraperDetail(detail, history = []) {
 
 /**
  * Format a list of benchmark alerts into an ASCII table.
- * @param {Array<Record<string, any>>} alerts
+ * @param {Array<ScraperAlertEntry>} [alerts=[]]
  * @returns {string}
  */
 export function formatAlertsTable(alerts = []) {
@@ -190,10 +277,12 @@ export function formatAlertsTable(alerts = []) {
 /**
  * Register `xactions benchmark` CLI command.
  * @param {import('commander').Command} program
- * @param {Object} [deps]
- * @param {import('@prisma/client').PrismaClient} [deps.prisma]
+ * @param {BenchmarkCommandDeps} [deps]
  */
 export function registerBenchmarkCommand(program, deps = {}) {
+  /**
+   * @param {BenchmarkListOptions} [options]
+   */
   const handleList = async (options = {}) => {
     let prisma = deps.prisma;
     if (!prisma) {
@@ -211,7 +300,7 @@ export function registerBenchmarkCommand(program, deps = {}) {
     }
 
     try {
-      const parsedLimit = parseInt(options.limit, 10);
+      const parsedLimit = typeof options.limit === 'string' ? parseInt(options.limit, 10) : Number(options.limit);
       const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 50;
       const rawRecords = await prisma.scraperHealthScore.findMany({
         distinct: ['scraperId'],
@@ -248,7 +337,7 @@ export function registerBenchmarkCommand(program, deps = {}) {
         console.log(formatBenchmarkTable(records));
       }
     } catch (err) {
-      console.error(chalk.red(`❌ Failed to retrieve benchmark scores: ${err.message}`));
+      console.error(chalk.red(`❌ Failed to retrieve benchmark scores: ${err instanceof Error ? err.message : String(err)}`));
     }
   };
 
@@ -275,7 +364,12 @@ export function registerBenchmarkCommand(program, deps = {}) {
     .description('Display detailed scorecard, 4-pillar breakdown, and knock-out diagnostics for a scraper')
     .option('--format <format>', 'Output format (table, json)', 'table')
     .option('--json', 'Alias for --format json', false)
-    .action(async (scraperId, options) => {
+    .action(
+      /**
+       * @param {string} scraperId
+       * @param {BenchmarkDetailOptions} options
+       */
+      async (scraperId, options) => {
       let prisma = deps.prisma;
       if (!prisma) {
         try {
@@ -313,7 +407,7 @@ export function registerBenchmarkCommand(program, deps = {}) {
           console.log(formatScraperDetail(detail, history));
         }
       } catch (err) {
-        console.error(chalk.red(`❌ Failed to fetch scraper scorecard: ${err.message}`));
+        console.error(chalk.red(`❌ Failed to fetch scraper scorecard: ${err instanceof Error ? err.message : String(err)}`));
       }
     });
 

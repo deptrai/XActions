@@ -61,12 +61,12 @@ export function parseLinkedInJobCard(chunk) {
   const dateMatch = chunk.match(/<time[^>]*datetime="([^"]*)"[^>]*>([\s\S]*?)<\/time>/i);
   let postedAt = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];
 
-  let publishedAtIso;
+  let publishedAt;
   try {
     const parsed = new Date(postedAt);
-    publishedAtIso = Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+    publishedAt = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
   } catch {
-    publishedAtIso = new Date().toISOString();
+    publishedAt = new Date();
   }
 
   return {
@@ -82,7 +82,7 @@ export function parseLinkedInJobCard(chunk) {
     repostsCount: 0,
     repliesCount: 0,
     viewsCount: 0,
-    publishedAt: publishedAtIso,
+    publishedAt,
     crawledAt: new Date(),
     metadata: {
       jobId,
@@ -146,7 +146,7 @@ export function parseLinkedInJobDetail(html, jobId) {
     repostsCount: 0,
     repliesCount: 0,
     viewsCount: 0,
-    publishedAt: new Date().toISOString(),
+    publishedAt: new Date(),
     crawledAt: new Date(),
     metadata: {
       jobId,

@@ -42,6 +42,10 @@ export {
   createYouTubeClient,
 };
 
+/**
+ * @param {YouTubeClient | Record<string, unknown> | null} [client]
+ * @param {Record<string, unknown>} [options={}]
+ */
 export function createYouTubeVNCrawler(client, options = {}) {
   const resolvedClient = client instanceof YouTubeClient ? client : new YouTubeClient(client || options || {});
   const resolvedOptions = client instanceof YouTubeClient ? options : (options || {});
@@ -57,7 +61,11 @@ export function createYouTubeVNCrawler(client, options = {}) {
 export async function scrapeYouTube(action, options = {}) {
   const crawler = createYouTubeVNCrawler(null, options);
   try {
-    return await crawler.start({ action, args: options, session: options.session });
+    return await crawler.start({
+      action,
+      args: options,
+      session: /** @type {Record<string, unknown> | undefined} */ (options.session),
+    });
   } finally {
     if (options.autoClose !== false) {
       await crawler.cleanup().catch(() => {});

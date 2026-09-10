@@ -8,6 +8,10 @@
 import { CATEGORIES } from '../../../core/types.js';
 import { normalizeApplicationNumber, parseVnDate } from './schema.js';
 
+/**
+ * @param {string} str
+ * @returns {string}
+ */
 function decodeHtmlEntities(str) {
   if (!str || typeof str !== 'string') return '';
   return str
@@ -28,6 +32,10 @@ function decodeHtmlEntities(str) {
     .trim();
 }
 
+/**
+ * @param {string} html
+ * @returns {string}
+ */
 function stripTags(html) {
   if (!html || typeof html !== 'string') return '';
   return decodeHtmlEntities(html.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
@@ -36,6 +44,7 @@ function stripTags(html) {
 /**
  * Extract articles from weekly gazette list HTML page.
  * @param {string} html
+ * @param {{ baseUrl?: string }} [options={}]
  * @returns {Array<{ title: string, url: string, date?: string }>}
  */
 export function extractGazetteArticles(html, options = {}) {
@@ -72,9 +81,10 @@ export function extractGazetteArticles(html, options = {}) {
 /**
  * Extract yearly summary links (such as .xlsx or .pdf files).
  * @param {string} html
+ * @param {number} [year]
  * @returns {Array<{ title: string, url: string, fileType: string }>}
  */
-export function extractYearlyDownloads(html) {
+export function extractYearlyDownloads(html, year) {
   if (!html || typeof html !== 'string') return [];
   const downloads = [];
   const seen = new Set();
@@ -197,7 +207,7 @@ export function extractWeeklyTableRows(html, options = {}) {
 /**
  * Main normalizer dispatch.
  * @param {any} data
- * @param {'search_gazette' | 'get_weekly_list' | 'yearly_summary' | 'detail'} kind
+ * @param {'search_gazette' | 'search' | 'get_weekly_list' | 'yearly_summary' | 'detail'} kind
  * @param {Record<string, any>} [options={}]
  * @returns {Array<import('../../../core/types.js').PostItem> | import('../../../core/types.js').PostItem | null}
  */
@@ -266,7 +276,7 @@ export function normalizeIpLegalResults(data, kind, options = {}) {
     const targetId = normalizeApplicationNumber(options.id);
     const tableItems = extractWeeklyTableRows(html, options);
     if (targetId) {
-      const found = tableItems.find((item) => item.metadata?.applicationNumber === targetId);
+      const found = tableItems.find((item) => (/** @type {Record<string, unknown> | undefined} */ (item.metadata))?.applicationNumber === targetId);
       if (found) return found;
 
       // Check if application number appears in text/attributes

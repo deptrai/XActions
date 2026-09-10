@@ -142,6 +142,7 @@ export class ThreadsClient extends AbstractApiClient {
    * @param {string} [deps.asbdId]
    * @param {number} [deps.tokenTtlMs]
    * @param {number} [deps.maxTokenFetchRetries]
+   * @param {boolean} [deps.requiresProxy]
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [deps.governor]
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
@@ -151,13 +152,16 @@ export class ThreadsClient extends AbstractApiClient {
   constructor(deps = {}) {
     const baseUrl = (deps.baseUrl || 'https://www.threads.net').replace(/\/+$/, '');
 
-    super(/** @type {any} */ ({
-      ...deps,
+    super({
       platform: 'threads',
       client: deps.client || 'got',
-      requiresProxy: deps.requiresProxy,
+      requiresProxy: deps.requiresProxy ?? !isLocalUrl(baseUrl),
       responseValidator: deps.responseValidator || new ThreadsPlatformResponseValidator(),
-    }));
+      proxyPool: /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (deps.proxyPool)),
+      governor: deps.governor,
+      accountPool: deps.accountPool,
+      sessionManager: deps.sessionManager,
+    });
     if (deps.requiresProxy === undefined) {
       this.requiresProxy = !isLocalUrl(baseUrl);
     }

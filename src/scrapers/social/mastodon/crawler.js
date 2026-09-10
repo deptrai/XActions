@@ -18,6 +18,11 @@ import {
 } from './normalizer.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 
+/**
+ * @param {MastodonClient | Record<string, unknown>} [client]
+ * @param {Record<string, unknown>} [options={}]
+ * @returns {MastodonCrawler}
+ */
 export function createMastodonCrawler(client, options = {}) {
   const resolvedClient = client instanceof MastodonClient ? client : new MastodonClient(client || options || {});
   const resolvedOptions = client instanceof MastodonClient ? options : (options || {});
@@ -34,8 +39,11 @@ export class MastodonCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = false;
 
-  /** @type {MastodonClient} */
+  /** @type {MastodonClient & import('../../../core/base-crawler.js').ClientLike} */
   client;
+
+  /** @type {any} */
+  redisPublisher = null;
 
   /**
    * @param {Object} [deps]
@@ -51,11 +59,16 @@ export class MastodonCrawler extends AbstractCrawler {
    */
   constructor(deps = {}) {
     const { client: explicitClient, ...clientDeps } = deps;
-    const client = explicitClient || new MastodonClient(/** @type {any} */ (clientDeps));
+    const client = /** @type {MastodonClient & import('../../../core/base-crawler.js').ClientLike} */ (
+      explicitClient || new MastodonClient(clientDeps)
+    );
 
     super({
-      ...deps,
       client,
+      store: deps.store ? /** @type {import('../../../core/base-crawler.js').StoreLike} */ (deps.store) : undefined,
+      sessionManager: deps.sessionManager,
+      governor: deps.governor,
+      accountPool: deps.accountPool,
       requiresAuth: deps.requiresAuth !== undefined ? deps.requiresAuth : false,
     });
 
@@ -336,7 +349,7 @@ export class MastodonCrawler extends AbstractCrawler {
    * Search content across Mastodon instance.
    * @param {Record<string, any>} args
    * @param {Record<string, any>} [session]
-   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], profiles: import('../../../core/types.js').ProfileItem[], hashtags: any[] }>}
+   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], profiles: import('../../../core/types.js').ProfileItem[], hashtags: any[], pageInfo: Record<string, any> }>}
    */
   async search(args = {}, session = {}) {
     await this.#maybeAuthenticate(args, session);
@@ -357,6 +370,10 @@ export class MastodonCrawler extends AbstractCrawler {
       posts,
       profiles,
       hashtags: res.hashtags,
+      pageInfo: {
+        end_cursor: null,
+        has_next_page: false,
+      },
     };
   }
 

@@ -40,18 +40,20 @@ export class IpLegalPlatformResponseValidator extends AbstractPlatformResponseVa
   platform = 'ipvietnam';
 
   constructor() {
-    super('ipvietnam');
+    super();
   }
 
   /**
    * Extract body text from response object, string, or Buffer.
-   * @param {any} response
+   * @param {unknown} response
    * @returns {string}
    */
   #getText(response) {
-    if (typeof response === 'string') return response.toLowerCase();
-
-    const raw = response?.body ?? response?.data ?? response;
+    if (typeof response === "string") return response.toLowerCase();
+    const resp = /** @type {{ body?: unknown; data?: unknown } | null} */ (
+      response && typeof response === "object" ? response : null
+    );
+    const raw = resp?.body ?? resp?.data ?? response;
     if (typeof raw === 'string') return raw.toLowerCase();
     if (Buffer.isBuffer(raw)) return raw.toString('utf-8').toLowerCase();
     if (raw !== null && raw !== undefined && typeof raw === 'object') {
@@ -66,11 +68,11 @@ export class IpLegalPlatformResponseValidator extends AbstractPlatformResponseVa
 
   /**
    * Check if response is an HTTP 429 or contains rate limit markers.
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isRateLimit(response) {
-    const status = response?.status ?? response?.statusCode;
+    const status = this._extractStatus(response);
     if (status === 429) return true;
 
     const text = this.#getText(response);
@@ -79,11 +81,11 @@ export class IpLegalPlatformResponseValidator extends AbstractPlatformResponseVa
 
   /**
    * Check for bot challenge or WAF block.
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isBotChallenge(response) {
-    const status = Number(response?.status ?? response?.statusCode);
+    const status = this._extractStatus(response);
     if (status === 403 || status === 503) return true;
 
     const text = this.#getText(response);
@@ -93,13 +95,13 @@ export class IpLegalPlatformResponseValidator extends AbstractPlatformResponseVa
   /**
    * Validate if payload is authentic legal IP gazette data.
    * Accepts either response object ({ status, body }) or raw body string.
-   * @param {any} response
-   * @param {Record<string, any>} [options={}]
+   * @param {unknown} response
+   * @param {Record<string, unknown>} [options={}]
    * @returns {boolean}
    */
   isValidPayload(response, options = {}) {
     let effectiveResponse = response;
-    if (typeof response === 'string' || Buffer.isBuffer(response)) {
+    if (typeof response === "string" || Buffer.isBuffer(response)) {
       effectiveResponse = { body: response, status: options?.status ?? 200 };
     }
 
@@ -107,7 +109,7 @@ export class IpLegalPlatformResponseValidator extends AbstractPlatformResponseVa
       return false;
     }
 
-    const status = effectiveResponse?.status ?? effectiveResponse?.statusCode ?? 200;
+    const status = this._extractStatus(effectiveResponse);
     if (status >= 400) return false;
 
     const text = this.#getText(effectiveResponse);
@@ -124,7 +126,7 @@ export class IpLegalPlatformResponseValidator extends AbstractPlatformResponseVa
   }
 
   /**
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isLoginWall(response) {
@@ -133,7 +135,7 @@ export class IpLegalPlatformResponseValidator extends AbstractPlatformResponseVa
   }
 
   /**
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isAuthExpired(response) {

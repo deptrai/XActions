@@ -66,17 +66,17 @@ function normalizeProxy(proxy) {
 /**
  * Script executed inside the TikTok page context to trigger a signed API request.
  * The platform's own fetch hook (webmssdk) rewrites the URL with anti-bot tokens.
- * @param {string} url
- * @param {string} [init]
+ * @param {string | { url?: string; init?: unknown }} arg1
+ * @param {string | Record<string, unknown>} [arg2]
  * @returns {Promise<string>}
  */
 function triggerSignedFetch(arg1, arg2) {
-  let url = typeof arg1 === 'string' ? arg1 : arg1?.url;
-  let init = typeof arg1 === 'object' && arg1?.init ? arg1.init : arg2;
+  let url = typeof arg1 === 'string' ? arg1 : (typeof arg1 === 'object' && arg1 !== null && 'url' in arg1 && typeof arg1.url === 'string' ? arg1.url : '');
+  let init = typeof arg1 === 'object' && arg1 !== null && 'init' in arg1 ? arg1.init : arg2;
   const options = init ? (typeof init === 'string' ? JSON.parse(init) : init) : { credentials: 'include', mode: 'cors' };
   return fetch(url, options).then(
     () => 'ok',
-    (err) => String(err?.message || err)
+    (err) => String(err instanceof Error ? err.message : err)
   );
 }
 

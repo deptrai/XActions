@@ -120,7 +120,7 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
       });
     }
 
-    const client = /** @type {B2BRegistryExtendedClient} */ (this.client);
+    const client = /** @type {B2BRegistryExtendedClient} */ (/** @type {unknown} */ (this.client));
     const response = await client.searchHosocongty({
       q,
       opt: args.opt,
@@ -158,7 +158,7 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
       });
     }
 
-    const client = /** @type {B2BRegistryExtendedClient} */ (this.client);
+    const client = /** @type {B2BRegistryExtendedClient} */ (/** @type {unknown} */ (this.client));
     const response = await client.searchTendersMuasamcong({
       keyword,
       searchType: args.searchType || 'bidding',
@@ -199,7 +199,7 @@ export class B2BRegistryExtendedCrawler extends AbstractCrawler {
       });
     }
 
-    const client = /** @type {B2BRegistryExtendedClient} */ (this.client);
+    const client = /** @type {B2BRegistryExtendedClient} */ (/** @type {unknown} */ (this.client));
 
     if (platform === 'muasamcong') {
       const response = await client.tenderDetailMuasamcong({ notifyNo: id, id: args.id });

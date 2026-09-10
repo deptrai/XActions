@@ -93,7 +93,7 @@ export function toPlainText(html) {
  * Parse a Mastodon target handle/URL into username and instance.
  * Supports:
  * - Clean username: "Gargron" (uses defaultInstance)
- * - Leading @: "@Gargron" (uses defaultInstance)
+ * - Leading at-symbol: "@Gargron" (uses defaultInstance)
  * - WebFinger handle: "@user@mastodon.social" or "user@mastodon.social"
  * - Profile URL: "https://mastodon.social/@Gargron" or "https://mastodon.social/users/Gargron"
  *

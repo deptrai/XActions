@@ -113,7 +113,7 @@ export function normalizeYouTubeChannel(channel, context = {}) {
     name,
     authorName: name,
     bio,
-    avatar,
+    avatar: avatar || undefined,
     profileUrl,
     followersCount,
     metadata: {

@@ -644,9 +644,11 @@ app.get('/a2a', (req, res) => {
 });
 
 // Platform hub routes
-app.get(['/platform', '/platforms', '/platforms/:platform'], (/** @type {import('express').Request} */ _req, /** @type {import('express').Response} */ res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/platform.html'));
-});
+for (const p of ['/platform', '/platforms', '/platforms/:platform']) {
+  app.get(p, (/** @type {import('express').Request} */ _req, /** @type {import('express').Response} */ res) => {
+    res.sendFile(path.join(__dirname, '../dashboard/platform.html'));
+  });
+}
 
 app.get('/facebook', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/facebook.html'));
@@ -657,9 +659,11 @@ app.get('/tweet-schedule', (req, res) => {
 });
 
 // Benchmark & Scraper Reliability Scorecard route (Epic 34 / Story 34.5)
-app.get(['/benchmark', '/benchmarks'], (/** @type {import('express').Request} */ _req, /** @type {import('express').Response} */ res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/benchmark.html'));
-});
+for (const p of ['/benchmark', '/benchmarks']) {
+  app.get(p, (/** @type {import('express').Request} */ _req, /** @type {import('express').Response} */ res) => {
+    res.sendFile(path.join(__dirname, '../dashboard/benchmark.html'));
+  });
+}
 
 // Error handling middleware — never expose stack traces or internal details in production
 app.use((/** @type {unknown} */ err, /** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res, /** @type {import('express').NextFunction} */ next) => {

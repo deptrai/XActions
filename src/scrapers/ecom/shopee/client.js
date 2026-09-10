@@ -68,7 +68,7 @@ export class ShopeeClient extends AbstractApiClient {
   /**
    * Search items on Shopee.
    * @param {Record<string, any>} params
-   * @param {Object} [options]
+   * @param {import('../../../core/base-client.js').RequestOptions} [options]
    * @returns {Promise<any>}
    */
   async searchItems(params = {}, options = {}) {
@@ -92,7 +92,7 @@ export class ShopeeClient extends AbstractApiClient {
    * Get product details by itemId and shopId.
    * @param {string|number} itemId
    * @param {string|number} shopId
-   * @param {Object} [options]
+   * @param {import('../../../core/base-client.js').RequestOptions} [options]
    * @returns {Promise<any>}
    */
   async getItemDetail(itemId, shopId, options = {}) {
@@ -109,7 +109,7 @@ export class ShopeeClient extends AbstractApiClient {
    * @param {string|number} itemId
    * @param {string|number} shopId
    * @param {Record<string, any>} [params={}]
-   * @param {Object} [options]
+   * @param {import('../../../core/base-client.js').RequestOptions} [options]
    * @returns {Promise<any>}
    */
   async getItemRatings(itemId, shopId, params = {}, options = {}) {

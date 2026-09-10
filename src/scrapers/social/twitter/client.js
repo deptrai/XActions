@@ -512,11 +512,13 @@ export class TwitterClient extends AbstractApiClient {
     };
 
     let body = options.body;
-    if (body && typeof body === 'object' && !Buffer.isBuffer(body) && typeof body.pipe !== 'function') {
-      if (headers['content-type'] === 'application/json' || headers['Content-Type'] === 'application/json') {
-        body = JSON.stringify(body);
+    const bodyRecord = typeof body === 'object' && body !== null ? /** @type {Record<string, any>} */ (body) : null;
+    if (bodyRecord && !Buffer.isBuffer(bodyRecord) && typeof bodyRecord.pipe !== 'function') {
+      const headerMap = /** @type {Record<string, string>} */ (headers);
+      if (headerMap['content-type'] === 'application/json' || headerMap['Content-Type'] === 'application/json') {
+        body = JSON.stringify(bodyRecord);
       } else {
-        body = new URLSearchParams(body).toString();
+        body = new URLSearchParams(bodyRecord).toString();
       }
     }
 

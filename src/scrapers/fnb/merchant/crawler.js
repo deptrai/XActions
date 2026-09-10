@@ -75,6 +75,11 @@ export class FnbMerchantCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = false;
 
+  /** @returns {FnbMerchantClient} */
+  get #fnbClient() {
+    return /** @type {FnbMerchantClient} */ (/** @type {unknown} */ (this.client));
+  }
+
   /**
    * @param {Record<string, any>} [deps={}]
    */
@@ -179,7 +184,7 @@ export class FnbMerchantCrawler extends AbstractCrawler {
     const limit = Math.min(100, Math.max(1, Number(args.limit) || 20));
 
     const searchArgs = { ...args, platform, page, limit };
-    const response = await this.client.searchRestaurants(searchArgs);
+    const response = await this.#fnbClient.searchRestaurants(searchArgs);
     const data = extractResponseBody(response, platform, 'search_restaurants');
 
     const posts = normalizeFnbMerchantResults(data, 'search', { platform });
@@ -210,7 +215,7 @@ export class FnbMerchantCrawler extends AbstractCrawler {
     const days = Math.max(1, Number(args.days) || 30);
 
     const searchArgs = { ...args, platform, page, limit, days };
-    const response = await this.client.getNewlyOpened(searchArgs);
+    const response = await this.#fnbClient.getNewlyOpened(searchArgs);
     const data = extractResponseBody(response, platform, 'newly_opened');
 
     const posts = normalizeFnbMerchantResults(data, 'newly_opened', { platform, days });
@@ -251,7 +256,7 @@ export class FnbMerchantCrawler extends AbstractCrawler {
     }
 
     const searchArgs = { ...args, platform, page, limit };
-    const response = await this.client.searchByDistrict(searchArgs);
+    const response = await this.#fnbClient.searchByDistrict(searchArgs);
     const data = extractResponseBody(response, platform, 'search_by_district');
 
     const posts = normalizeFnbMerchantResults(data, 'search_by_district', { platform, district: args.district });
@@ -289,7 +294,7 @@ export class FnbMerchantCrawler extends AbstractCrawler {
       });
     }
 
-    const response = await this.client.detail({ ...args, platform });
+    const response = await this.#fnbClient.detail({ ...args, platform });
     const data = extractResponseBody(response, platform, 'detail');
 
     const posts = normalizeFnbMerchantResults(data, 'detail', { platform });
@@ -343,8 +348,9 @@ export class FnbMerchantCrawler extends AbstractCrawler {
 
   /** @returns {Promise<void>} */
   async cleanup() {
-    if (this.client && typeof this.client.cleanup === 'function') {
-      await this.client.cleanup().catch(() => {});
+    const client = /** @type {{ cleanup?: () => Promise<unknown> } | null} */ (/** @type {unknown} */ (this.client));
+    if (client && typeof client.cleanup === 'function') {
+      await client.cleanup().catch(() => {});
     }
   }
 

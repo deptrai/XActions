@@ -139,13 +139,13 @@ export function extractBioEntities(legacy) {
 function extractBio(rawUser) {
   const profileBio = rawUser?.profile_bio;
   if (profileBio && typeof profileBio === 'object') {
-    const entities = /** @type {Raw[]} */ (/** @type {unknown} */ (profileBio?.entities?.description))?.urls || [];
+    const entities = /** @type {Raw} */ (/** @type {unknown} */ (profileBio?.entities?.description))?.urls || [];
     const description = typeof profileBio.description === 'string' ? profileBio.description : '';
     return expandTcoUrls(description, entities) || null;
   }
 
   const legacy = rawUser?.legacy || {};
-  const descriptionUrls = /** @type {Raw[]} */ (/** @type {unknown} */ (legacy?.entities?.description))?.urls || [];
+  const descriptionUrls = /** @type {Raw} */ (/** @type {unknown} */ (legacy?.entities?.description))?.urls || [];
   if (typeof legacy.description === 'string' && legacy.description) {
     return expandTcoUrls(legacy.description, descriptionUrls);
   }

@@ -16,8 +16,12 @@ import {
 } from './schema.js';
 
 const TAG_RE = /<[^>]+>/g;
-const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+const ENTITIES = /** @type {Record<string, string>} */ ({ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' });
 
+/**
+ * @param {string} text
+ * @returns {string}
+ */
 function decodeEntities(text) {
   if (typeof text !== 'string') return '';
   return text.replace(/&(#?x?[0-9a-fA-F]+|amp|lt|gt|quot|apos|nbsp);/g, (m, entity) => {
@@ -31,16 +35,30 @@ function decodeEntities(text) {
   });
 }
 
+/**
+ * @param {string} html
+ * @returns {string}
+ */
 function stripTags(html) {
   if (typeof html !== 'string') return '';
   return decodeEntities(html.replace(TAG_RE, ' ').replace(/\s+/g, ' ').trim());
 }
 
+/**
+ * @param {string} html
+ * @param {string} prop
+ * @returns {string}
+ */
 function extractByItemProp(html, prop) {
   const m = html.match(new RegExp(`itemprop=["']${prop}["'][^>]*>([^<]+)`, 'i'));
   return m ? stripTags(m[1]) : '';
 }
 
+/**
+ * @param {string} html
+ * @param {string} attr
+ * @returns {string}
+ */
 function extractByAttr(html, attr) {
   const m = html.match(new RegExp(`${attr}=["']([^"']+)["']`, 'i'));
   return m ? decodeEntities(m[1]) : '';
@@ -48,7 +66,7 @@ function extractByAttr(html, attr) {
 
 /**
  * Build a PostItem for a vehicle listing.
- * @param {Object} input
+ * @param {Record<string, any>} input
  * @returns {import('../../../core/types.js').PostItem}
  */
 function buildPostItem(input) {
@@ -89,6 +107,11 @@ function buildPostItem(input) {
 
 // ── BonBanh ──────────────────────────────────────────────────────────────
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform]
+ * @returns {import('../../../core/types.js').PostItem[]}
+ */
 function extractBonBanhItems(html, sourcePlatform = 'bonbanh') {
   const items = [];
   const seen = new Set();
@@ -153,6 +176,11 @@ function extractBonBanhItems(html, sourcePlatform = 'bonbanh') {
   return items;
 }
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform]
+ * @returns {import('../../../core/types.js').PostItem[]}
+ */
 function extractBonBanhDetail(html, sourcePlatform = 'bonbanh') {
   const name = extractByItemProp(html, 'name') || '';
   const priceRaw = extractByItemProp(html, 'price') || '';
@@ -211,6 +239,11 @@ function extractBonBanhDetail(html, sourcePlatform = 'bonbanh') {
 
 // ── Oto.com.vn ────────────────────────────────────────────────────────────
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform]
+ * @returns {import('../../../core/types.js').PostItem[]}
+ */
 function extractOtoVnItems(html, sourcePlatform = 'oto_vn') {
   const items = [];
   const seen = new Set();
@@ -281,6 +314,11 @@ function extractOtoVnItems(html, sourcePlatform = 'oto_vn') {
   return items;
 }
 
+/**
+ * @param {string} html
+ * @param {string} [sourcePlatform]
+ * @returns {import('../../../core/types.js').PostItem[]}
+ */
 function extractOtoVnDetail(html, sourcePlatform = 'oto_vn') {
   const title = stripTags(html.match(/<h1[^>]*class=["'][^"']*title-detail[^"']*["'][^>]*>([\s\S]*?)<\/h1>/i)?.[1] || html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || '');
   const priceText = stripTags(html.match(/<span[^>]*class=["'][^"']*price[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)?.[1] || '');
@@ -338,6 +376,11 @@ function extractOtoVnDetail(html, sourcePlatform = 'oto_vn') {
 
 // ── Chợ Tốt Xe ────────────────────────────────────────────────────────────
 
+/**
+ * @param {any} json
+ * @param {string} [sourcePlatform]
+ * @returns {import('../../../core/types.js').PostItem[]}
+ */
 function extractChototXeItems(json, sourcePlatform = 'chotot_xe') {
   const items = [];
   const seen = new Set();
@@ -402,9 +445,9 @@ function extractChototXeItems(json, sourcePlatform = 'chotot_xe') {
 
 /**
  * Normalize HTML/JSON response to PostItem[] for automotive platforms.
- * @param {string | Object} data
- * @param {'search' | 'list' | 'detail'} kind
- * @param {Object} [options]
+ * @param {string | Record<string, any>} data
+ * @param {'search' | 'list' | 'detail'} [kind]
+ * @param {object} [options]
  * @param {string} [options.platform]
  * @param {string} [options.sourcePlatform]
  * @returns {import('../../../core/types.js').PostItem[]}

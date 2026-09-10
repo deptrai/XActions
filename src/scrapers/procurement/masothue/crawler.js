@@ -28,6 +28,14 @@ export class MaSoThueCrawler extends AbstractCrawler {
   requiresAuth = false;
 
   /**
+   * MaSoThue client cast to typed instance.
+   * @returns {MaSoThueClient}
+   */
+  get #client() {
+    return /** @type {MaSoThueClient} */ (this.client);
+  }
+
+  /**
    * @param {Record<string, any>} [deps={}]
    */
   constructor(deps = {}) {
@@ -80,8 +88,8 @@ export class MaSoThueCrawler extends AbstractCrawler {
    */
   #extractItems(html, kind = 'search', context = {}) {
     return normalizeMaSoThueResults(html, kind, {
-      province: context.province,
-      taxCode: context.taxCode,
+      province: /** @type {Record<string, any>} */ (context).province,
+      taxCode: /** @type {Record<string, any>} */ (context).taxCode,
     });
   }
 
@@ -94,7 +102,7 @@ export class MaSoThueCrawler extends AbstractCrawler {
   async #resolveDetailSlug(taxCode, providedSlug) {
     if (providedSlug) return providedSlug;
     try {
-      const response = await this.client.search({ q: taxCode, type: 'auto' });
+      const response = await this.#client.search({ q: taxCode, type: 'auto' });
       const html = response.body || response.data || '';
       const items = normalizeMaSoThueResults(html, 'search');
       const item = items.find((i) => i.externalId === taxCode);
@@ -127,7 +135,7 @@ export class MaSoThueCrawler extends AbstractCrawler {
     }
 
     const searchType = args.type || 'auto';
-    const response = await this.client.search({ q, type: searchType });
+    const response = await this.#client.search({ q, type: searchType });
     const html = response.body || response.data || '';
 
     const posts = this.#extractItems(html, 'search', { province: args.province });
@@ -176,7 +184,7 @@ export class MaSoThueCrawler extends AbstractCrawler {
     }
 
     const page = Math.max(1, Number(args.page) || 1);
-    const response = await this.client.searchByProvince({
+    const response = await this.#client.searchByProvince({
       provinceSlug: province.slug,
       id: province.id,
       page,
@@ -215,7 +223,7 @@ export class MaSoThueCrawler extends AbstractCrawler {
     }
 
     const slug = await this.#resolveDetailSlug(taxCode, args.slug);
-    const response = await this.client.detail({ taxCode, slug });
+    const response = await this.#client.detail({ taxCode, slug });
     const html = response.body || response.data || '';
 
     const posts = this.#extractItems(html, 'detail', { taxCode, province: args.province });
@@ -244,8 +252,9 @@ export class MaSoThueCrawler extends AbstractCrawler {
 
   /** @returns {Promise<void>} */
   async cleanup() {
-    if (this.client && typeof this.client.cleanup === 'function') {
-      await this.client.cleanup().catch(() => {});
+    const client = /** @type {any} */ (this.client);
+    if (client && typeof client.cleanup === 'function') {
+      await client.cleanup().catch(() => {});
     }
   }
 }

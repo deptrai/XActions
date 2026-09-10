@@ -46,6 +46,9 @@ export class AutomotiveClient extends AbstractApiClient {
   /** @type {string} */
   platform = 'automotive';
 
+  /** @type {ChototClient | null} */
+  chototClient = null;
+
   /**
    * @param {Record<string, any>} [options={}]
    */
@@ -125,18 +128,8 @@ export class AutomotiveClient extends AbstractApiClient {
 
   /**
    * Search vehicle listings.
-   * @param {Object} params
-   * @param {string} params.platform
-   * @param {string} [params.brand]
-   * @param {string} [params.model]
-   * @param {string} [params.city]
-   * @param {number} [params.yearMin]
-   * @param {number} [params.yearMax]
-   * @param {number} [params.priceMin]
-   * @param {number} [params.priceMax]
-   * @param {number} [params.page]
-   * @param {number} [params.limit]
-   * @param {Object} [options]
+   * @param {Record<string, any>} [params]
+   * @param {import('../../../core/base-client.js').RequestOptions} [options]
    * @returns {Promise<any>}
    */
   async search(params = {}, options = {}) {
@@ -145,7 +138,15 @@ export class AutomotiveClient extends AbstractApiClient {
     const limit = Math.min(100, Math.max(1, Number(params.limit) || 20));
 
     if (platform === 'chotot_xe' || platform === 'chotot') {
+      if (!this.chototClient) {
+        this.chototClient = new ChototClient({
+          ...this.options,
+          baseUrl: CHOTOT_GATEWAY_URL,
+          requiresAuth: false,
+        });
+      }
       const offset = (page - 1) * limit;
+      /** @type {Record<string, any>} */
       const query = {
         cg: params.model && /sh|airblade|lead|dream|wave|sirius|exciter|winner|raider|future/i.test(params.model) ? 2020 : 2010,
         st: 's',
@@ -189,11 +190,8 @@ export class AutomotiveClient extends AbstractApiClient {
 
   /**
    * List vehicles by page.
-   * @param {Object} params
-   * @param {string} params.platform
-   * @param {number} [params.page]
-   * @param {number} [params.limit]
-   * @param {Object} [options]
+   * @param {Record<string, any>} [params]
+   * @param {import('../../../core/base-client.js').RequestOptions} [options]
    * @returns {Promise<any>}
    */
   async list(params = {}, options = {}) {
@@ -202,11 +200,8 @@ export class AutomotiveClient extends AbstractApiClient {
 
   /**
    * Get vehicle detail.
-   * @param {Object} params
-   * @param {string} params.platform
-   * @param {string} params.id
-   * @param {string} [params.slug]
-   * @param {Object} [options]
+   * @param {Record<string, any>} [params]
+   * @param {import('../../../core/base-client.js').RequestOptions} [options]
    * @returns {Promise<any>}
    */
   async detail(params = {}, options = {}) {
@@ -214,6 +209,13 @@ export class AutomotiveClient extends AbstractApiClient {
     const id = String(params.id || '').trim();
 
     if (platform === 'chotot_xe' || platform === 'chotot') {
+      if (!this.chototClient) {
+        this.chototClient = new ChototClient({
+          ...this.options,
+          baseUrl: CHOTOT_GATEWAY_URL,
+          requiresAuth: false,
+        });
+      }
       const resp = await this.chototClient.getJson(`/v1/public/ad-listing/${id}`, {}, options);
       return { data: resp };
     }

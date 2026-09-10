@@ -9,6 +9,8 @@ export * from './facebook/index.js';
 export * from './threads/index.js';
 export * from './tiktok/index.js';
 export * from './twitter/index.js';
+export { parseHumanCount } from './threads/index.js';
+export { profileItemToPostItem } from './facebook/index.js';
 export * as bluesky from './bluesky/index.js';
 export { BlueskyClient, BlueskyCrawler, BlueskyPlatformResponseValidator } from './bluesky/index.js';
 export * as mastodon from './mastodon/index.js';

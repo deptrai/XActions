@@ -49,13 +49,14 @@ export class FnbPlatformResponseValidator extends AbstractPlatformResponseValida
 
   /**
    * Extract raw body text if available.
-   * @param {any} response
+   * @param {unknown} response
    * @returns {string}
    */
   #getText(response) {
     if (typeof response === 'string') return response.toLowerCase();
 
-    const raw = response?.body ?? response?.data;
+    const resp = /** @type {{ body?: unknown; data?: unknown } | null} */ (response && typeof response === "object" ? response : null);
+    const raw = resp?.body ?? resp?.data;
     if (typeof raw === 'string') return raw.toLowerCase();
     if (Buffer.isBuffer(raw)) return raw.toString('utf-8').toLowerCase();
     if (raw !== null && raw !== undefined && typeof raw === 'object') {
@@ -69,11 +70,11 @@ export class FnbPlatformResponseValidator extends AbstractPlatformResponseValida
   }
 
   /**
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isRateLimit(response) {
-    const status = response?.status ?? response?.statusCode;
+    const status = this._extractStatus(response);
     if (status === 429) return true;
 
     const text = this.#getText(response);
@@ -81,11 +82,11 @@ export class FnbPlatformResponseValidator extends AbstractPlatformResponseValida
   }
 
   /**
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isBotChallenge(response) {
-    const status = response?.status ?? response?.statusCode;
+    const status = this._extractStatus(response);
     if (status === 403) return true;
 
     const text = this.#getText(response);
@@ -93,14 +94,8 @@ export class FnbPlatformResponseValidator extends AbstractPlatformResponseValida
   }
 
   /**
-   * F&B platforms return HTML pages. Valid payloads are non-empty HTML strings
-   * that contain recognizable F&B content and are not a challenge page.
-   * @param {any} response
-   * @returns {boolean}
-   */
-  /**
    * Detect False 200 responses: HTML returning bot challenge, login wall, or missing F&B data under 200.
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isFalse200(response) {
@@ -122,12 +117,18 @@ export class FnbPlatformResponseValidator extends AbstractPlatformResponseValida
     return false;
   }
 
-    isValidPayload(response) {
+  /**
+   * F&B platforms return HTML pages. Valid payloads are non-empty HTML strings
+   * that contain recognizable F&B content and are not a challenge page.
+   * @param {unknown} response
+   * @returns {boolean}
+   */
+  isValidPayload(response) {
     if (this.isRateLimit(response) || this.isBotChallenge(response)) {
       return false;
     }
 
-    const status = response?.status ?? response?.statusCode;
+    const status = this._extractStatus(response);
     if (status >= 400) return false;
 
     const text = this.#getText(response);
@@ -149,7 +150,7 @@ export class FnbPlatformResponseValidator extends AbstractPlatformResponseValida
   }
 
   /**
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isLoginWall(response) {
@@ -168,7 +169,7 @@ export class FnbPlatformResponseValidator extends AbstractPlatformResponseValida
   }
 
   /**
-   * @param {any} response
+   * @param {unknown} response
    * @returns {boolean}
    */
   isAuthExpired(response) {

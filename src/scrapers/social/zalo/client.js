@@ -59,6 +59,7 @@ export class ZaloClient extends AbstractApiClient {
       responseValidator: validator,
       requiresAuth: options.requiresAuth ?? true,
       requiresProxy: options.requiresProxy ?? false,
+      proxyPool: /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (options.proxyPool)),
     });
 
     this.baseUrl = (options.baseUrl || DEFAULT_ZALO_OPENAPI_BASE).replace(/\/+$/, '');
@@ -96,7 +97,11 @@ export class ZaloClient extends AbstractApiClient {
   /**
    * Send GET request through AbstractApiClient resilient pipeline.
    * @param {string} url
-   * @param {Object} [options={}]
+   * @param {object} [options={}]
+   * @param {Record<string, string>} [options.headers]
+   * @param {string} [options.accessToken]
+   * @param {string} [options.token]
+   * @param {boolean} [options.requiresAuth]
    * @returns {Promise<Record<string, unknown>>}
    */
   async get(url, options = {}) {
@@ -214,6 +219,14 @@ export class ZaloClient extends AbstractApiClient {
   }
 
   /**
+   * Cleanup hook for AbstractApiClient compatibility.
+   * @returns {Promise<void>}
+   */
+  async cleanup() {
+    return Promise.resolve();
+  }
+
+  /**
    * Fetch OA Marketplace / Shop products catalog.
    * Endpoint: GET /v3.0/oa/product/getslice
    * @param {Object} [options={}]
@@ -221,12 +234,8 @@ export class ZaloClient extends AbstractApiClient {
    * @param {number} [options.limit=10]
    * @returns {Promise<Record<string, unknown>>}
    */
-  async cleanup() {
-    return Promise.resolve();
-  }
-
   async getProducts(options = {}) {
-    const { offset = 0, limit = 10, ...rest } = options;
+    const { offset = 0, limit = 10, ...rest } = /** @type {Record<string, any>} */ (options);
     const url = this.buildUrl('/v3.0/oa/product/getslice', { offset, limit });
     return this.get(url, rest);
   }

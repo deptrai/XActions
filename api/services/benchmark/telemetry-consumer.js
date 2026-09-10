@@ -145,6 +145,7 @@ export class TelemetryConsumer {
         runMap.set(runId, { runEvent: null, requests: [] });
       }
       const entry = runMap.get(runId);
+      if (!entry) continue;
 
       if (evt.type === 'telemetry:run') {
         entry.runEvent = evt;
@@ -279,17 +280,20 @@ export class TelemetryConsumer {
         try {
           await this.#scoreProcessor(rollups);
         } catch (procErr) {
-          console.error('[TelemetryConsumer] Score processor error:', procErr.message);
+          const msg = procErr instanceof Error ? procErr.message : String(procErr);
+          console.error('[TelemetryConsumer] Score processor error:', msg);
         }
       } else {
         const engine = new BenchmarkScoringEngine();
         const stateManager = defaultBenchmarkStateManager;
 
         // Group rollups by scraperId for aggregate multi-run scoring
+        /** @type {Record<string, Array<Record<string, any>>>} */
         const runsByScraper = {};
         for (const r of rollups) {
-          if (!runsByScraper[r.scraperId]) runsByScraper[r.scraperId] = [];
-          runsByScraper[r.scraperId].push(r);
+          const sId = String(r.scraperId || 'unknown');
+          if (!runsByScraper[sId]) runsByScraper[sId] = [];
+          runsByScraper[sId].push(r);
         }
 
         for (const [scraperId, runs] of Object.entries(runsByScraper)) {
@@ -306,7 +310,8 @@ export class TelemetryConsumer {
               sampleCount: runs.length,
             });
           } catch (scoreErr) {
-            console.warn(`[TelemetryConsumer] Benchmark evaluation warning for ${scraperId}:`, scoreErr.message);
+            const msg = scoreErr instanceof Error ? scoreErr.message : String(scoreErr);
+            console.warn(`[TelemetryConsumer] Benchmark evaluation warning for ${scraperId}:`, msg);
           }
         }
       }

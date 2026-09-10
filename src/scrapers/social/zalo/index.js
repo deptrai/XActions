@@ -40,6 +40,10 @@ export {
   createZaloClient,
 };
 
+/**
+ * @param {ZaloClient | Record<string, unknown> | null} [client]
+ * @param {Record<string, unknown>} [options={}]
+ */
 export function createZaloCrawler(client, options = {}) {
   const resolvedClient = client instanceof ZaloClient ? client : new ZaloClient(client || options || {});
   const resolvedOptions = client instanceof ZaloClient ? options : (options || {});
@@ -54,9 +58,12 @@ export function createZaloCrawler(client, options = {}) {
  */
 export async function scrapeZalo(action, options = {}) {
   const crawler = createZaloCrawler(null, options);
+  const inputSession = typeof options.session === 'object' && options.session !== null
+    ? /** @type {Record<string, unknown>} */ (options.session)
+    : {};
   const session = {
-    ...(options.session || {}),
-    accountId: options.accountId || options.session?.accountId || 'zalo:oa:default',
+    ...inputSession,
+    accountId: String(options.accountId || inputSession.accountId || 'zalo:oa:default'),
   };
   try {
     return await crawler.start({ action, args: options, session });

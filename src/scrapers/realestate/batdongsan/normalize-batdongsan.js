@@ -19,7 +19,7 @@ export const CITY_SLUGS = {
   CT: 'can-tho',
 };
 
-export const CATE_CODES = {
+export const CATE_CODES = /** @type {Record<string, number>} */ ({
   all: 0,
   apartment: 41,
   'can-ho': 41,
@@ -30,7 +30,7 @@ export const CATE_CODES = {
   land: 40,
   'dat-nen': 40,
   office: 51,
-};
+});
 
 /**
  * Swap high and low nibbles (4-bit chunks) of each byte (self-inverse).
@@ -131,12 +131,12 @@ export function normalizeBatdongsanListing(product = {}) {
   const images = Array.isArray(item.Images) ? item.Images : (item.Avatar ? [item.Avatar] : []);
   const detailUrl = item.Url || `https://batdongsan.com.vn/ban-dat/${productId}`;
 
-  let publishedAtIso;
+  let publishedAt;
   try {
     const parsed = item.StartDate ? new Date(item.StartDate) : new Date();
-    publishedAtIso = !isNaN(parsed.getTime()) ? parsed.toISOString() : new Date().toISOString();
+    publishedAt = !isNaN(parsed.getTime()) ? parsed : new Date();
   } catch {
-    publishedAtIso = new Date().toISOString();
+    publishedAt = new Date();
   }
 
   return {
@@ -153,7 +153,7 @@ export function normalizeBatdongsanListing(product = {}) {
     repostsCount: 0,
     repliesCount: 0,
     viewsCount: 0,
-    publishedAt: publishedAtIso,
+    publishedAt,
     crawledAt: new Date(),
     metadata: {
       productId,

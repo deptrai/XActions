@@ -26,6 +26,9 @@ export class LinkedInCrawler extends AbstractCrawler {
   /** @type {boolean} */
   requiresAuth = false;
 
+  /** @type {LinkedInClient & import('../../../core/base-crawler.js').ClientLike} */
+  client;
+
   /**
    * @param {Record<string, any>} [options={}]
    */
@@ -35,6 +38,7 @@ export class LinkedInCrawler extends AbstractCrawler {
       client,
       ...options,
     });
+    this.client = client;
 
     this.registerAction({
       action: 'search_jobs',
@@ -105,7 +109,7 @@ export class LinkedInCrawler extends AbstractCrawler {
     const endpoint = `/jobs-guest/jobs/api/seeMoreJobPostings/search?${query.toString()}`;
     const html = await this.client.getHtml(endpoint);
 
-    const cardChunks = html.split(/<li[^>]*>/i).filter((c) => c.includes('base-card') || c.includes('job-search-card'));
+    const cardChunks = html.split(/<li[^>]*>/i).filter((/** @type {string} */ c) => c.includes('base-card') || c.includes('job-search-card'));
     const jobs = [];
 
     for (const chunk of cardChunks) {
@@ -119,7 +123,7 @@ export class LinkedInCrawler extends AbstractCrawler {
         await this.store.storeBatch(jobs, { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[LinkedInCrawler] Failed to persist jobs batch:', err.message);
+          console.warn('[LinkedInCrawler] Failed to persist jobs batch:', err instanceof Error ? err.message : String(err));
         }
       }
     }
@@ -162,7 +166,7 @@ export class LinkedInCrawler extends AbstractCrawler {
         await this.store.storeBatch([job], { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[LinkedInCrawler] Failed to persist job detail:', err.message);
+          console.warn('[LinkedInCrawler] Failed to persist job detail:', err instanceof Error ? err.message : String(err));
         }
       }
     }

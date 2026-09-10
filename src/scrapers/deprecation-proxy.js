@@ -39,7 +39,10 @@ function createDeprecationProxy(legacyName, replacement) {
           `DEPRECATED: xactions/scrapers/${legacyName} is deprecated. Use xactions/scrapers/social/${legacyName} instead.`
         );
       }
-      return Reflect.apply(target, thisArg, args);
+      if (typeof target === 'function') {
+        return Reflect.apply(target, thisArg, args);
+      }
+      throw new TypeError(`${legacyName} is not a function`);
     },
   });
 }

@@ -170,11 +170,12 @@ export class IpLegalCrawler extends AbstractCrawler {
     if (!posts || !posts.length) return;
 
     if (this.store) {
-      if (typeof this.store.storeBatch === 'function') {
-        await this.store.storeBatch(posts).catch(() => {});
-      } else if (typeof this.store.savePost === 'function') {
+      const storeLike = /** @type {{ storeBatch?: (p: any[]) => Promise<any>; savePost?: (p: any) => Promise<any> }} */ (/** @type {unknown} */ (this.store));
+      if (typeof storeLike.storeBatch === "function") {
+        await storeLike.storeBatch(posts).catch(() => {});
+      } else if (typeof storeLike.savePost === "function") {
         for (const item of posts) {
-          await this.store.savePost(item).catch(() => {});
+          await storeLike.savePost(item).catch(() => {});
         }
       }
     }
@@ -199,7 +200,7 @@ export class IpLegalCrawler extends AbstractCrawler {
     const response = await this.client.getGazetteList({ page });
     const data = extractResponseBody(response, 'ipvietnam', 'search_gazette');
 
-    let allPosts = toPostArray(normalizeIpLegalResults(data, 'search_gazette', { baseUrl: this.client?.baseUrl }));
+    let allPosts = toPostArray(normalizeIpLegalResults(/** @type {any} */ (data), 'search_gazette', { baseUrl: this.client?.baseUrl }));
 
     // If result contains gazette articles rather than application rows, auto-traverse the latest weekly article to fetch applications
     const firstMeta = /** @type {Record<string, unknown>} */ (allPosts[0].metadata || {});
@@ -215,7 +216,7 @@ export class IpLegalCrawler extends AbstractCrawler {
         const latestMeta = /** @type {Record<string, unknown>} */ (latestArticle.metadata || {});
         const articleResp = await this.client.getArticleContent(/** @type {string} */ (latestMeta.articleUrl));
         const articleData = extractResponseBody(articleResp, 'ipvietnam', 'get_weekly_list');
-        const applicationPosts = toPostArray(normalizeIpLegalResults(articleData, 'get_weekly_list', {
+        const applicationPosts = toPostArray(normalizeIpLegalResults(/** @type {any} */ (articleData), 'get_weekly_list', {
           articleUrl: latestMeta.articleUrl,
           articleTitle: latestArticle.title,
         }));
@@ -267,7 +268,7 @@ export class IpLegalCrawler extends AbstractCrawler {
     const response = await this.client.getArticleContent(/** @type {string} */ (articleUrl));
     const data = extractResponseBody(response, 'ipvietnam', 'get_weekly_list');
 
-    const allPosts = toPostArray(normalizeIpLegalResults(data, 'get_weekly_list', { articleUrl }));
+    const allPosts = toPostArray(normalizeIpLegalResults(/** @type {any} */ (data), 'get_weekly_list', { articleUrl }));
     const posts = allPosts.slice(0, limit);
 
     for (const post of posts) {
@@ -296,7 +297,7 @@ export class IpLegalCrawler extends AbstractCrawler {
     const response = await this.client.getYearlySummary({ year });
     const data = extractResponseBody(response, 'ipvietnam', 'yearly_summary');
 
-    const posts = toPostArray(normalizeIpLegalResults(data, 'yearly_summary', { year }));
+    const posts = toPostArray(normalizeIpLegalResults(/** @type {any} */ (data), 'yearly_summary', { year }));
 
     if (posts.length === 0 && a.year != null) {
       throw new PlatformError({
@@ -347,13 +348,13 @@ export class IpLegalCrawler extends AbstractCrawler {
     let data;
     if (a.articleUrl) {
       const response = await this.client.getArticleContent(/** @type {string} */ (a.articleUrl));
-      data = extractResponseBody(response, 'ipvietnam', 'detail');
+      data = extractResponseBody(/** @type {Record<string, unknown> | null} */ (response), 'ipvietnam', 'detail');
     } else {
       const response = await this.client.detail({ id: applicationNumber });
-      data = extractResponseBody(response, 'ipvietnam', 'detail');
+      data = extractResponseBody(/** @type {Record<string, unknown> | null} */ (response), 'ipvietnam', 'detail');
     }
 
-    const result = normalizeIpLegalResults(data, 'detail', { id: applicationNumber, articleUrl: a.articleUrl });
+    const result = normalizeIpLegalResults(/** @type {any} */ (data), 'detail', { id: applicationNumber, articleUrl: a.articleUrl });
     const post = Array.isArray(result) ? result[0] : result;
     if (!post) {
       throw new PlatformError({

@@ -67,7 +67,8 @@ export function removeVietnameseDiacritics(text) {
 export function normalizeCitySlug(city) {
   if (typeof city !== 'string' || !city.trim()) return '';
   const key = city.trim().toLowerCase();
-  if (CITY_SLUG_MAP[key]) return CITY_SLUG_MAP[key];
+  const map = /** @type {Record<string, string>} */ (CITY_SLUG_MAP);
+  if (map[key]) return map[key];
   return removeVietnameseDiacritics(city);
 }
 

@@ -31,48 +31,45 @@ export class ZaloCrawler extends AbstractCrawler {
   requiresProxy = false;
 
   /**
-   * @param {object} [deps={}]
+   * @param {Object} [deps={}]
    * @param {ZaloClient} [deps.client]
    * @param {import('../../../core/base-store.js').AbstractStore} [deps.store]
-   * @param {unknown} [deps.publisher]
-   * @param {unknown} [deps.eventPublisher]
+   * @param {any} [deps.publisher]
+   * @param {any} [deps.eventPublisher]
    * @param {import('../../../core/account-pool.js').AccountPool} [deps.accountPool]
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [deps.governor]
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
    * @param {string} [deps.accessToken]
+   * @param {string} [deps.token]
    * @param {string} [deps.baseUrl]
    * @param {boolean} [deps.requiresAuth]
    * @param {boolean} [deps.requiresProxy]
    */
   constructor(deps = {}) {
-    const d = /** @type {Record<string, unknown>} */ (deps);
-    const client = d.client || new ZaloClient({
-      accessToken: d.accessToken,
-      baseUrl: d.baseUrl,
-      accountPool: d.accountPool,
-      governor: d.governor,
-      proxyPool: d.proxyPool,
-      requiresAuth: d.requiresAuth ?? true,
-      requiresProxy: d.requiresProxy ?? false,
+    const client = deps.client || new ZaloClient({
+      accessToken: deps.accessToken || deps.token,
+      baseUrl: deps.baseUrl,
+      accountPool: deps.accountPool,
+      governor: deps.governor,
+      proxyPool: deps.proxyPool,
+      requiresAuth: deps.requiresAuth ?? true,
+      requiresProxy: deps.requiresProxy ?? false,
     });
 
     super({
-      client: /** @type {import('../../../core/base-crawler.js').ClientLike} */ (client),
-      store: /** @type {import('../../../core/base-crawler.js').StoreLike | undefined} */ (d.store),
-      governor: /** @type {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor | undefined} */ (d.governor),
-      accountPool: /** @type {import('../../../core/account-pool.js').AccountPool | undefined} */ (d.accountPool),
-      requiresAuth: d.requiresAuth ?? true,
+      ...deps,
+      client,
+      requiresAuth: deps.requiresAuth ?? true,
     });
 
-    this.client = /** @type {ZaloClient & Record<string, Function>} */ (client);
-    /** @type {Record<string, Function> | null} */
-    this.publisher = (/** @type {Record<string, Function> | null} */ (d.publisher)) || (/** @type {Record<string, Function> | null} */ (d.eventPublisher)) || null;
+    this.client = client;
+    this.publisher = deps.publisher || deps.eventPublisher || null;
     this.category = 'social';
     this.#registerActions();
   }
 
   /**
-   * @param {import('../../../core/types.js').CrawlerCommand} [command]
+   * @param {import('../../../core/types.js').CrawlerCommand} command
    */
   async start(command) {
     const cmd = command;
@@ -142,13 +139,13 @@ export class ZaloCrawler extends AbstractCrawler {
           count: { type: 'number', default: 50 },
         },
       },
-      handler: (args) => this.oaFollowers(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.oaFollowers(args),
     });
 
     this.registerAction({
       action: 'followers',
       description: 'Alias for oa_followers',
-      handler: (args) => this.oaFollowers(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.oaFollowers(args),
     });
 
     // 3. OA Profile / Info
@@ -161,31 +158,31 @@ export class ZaloCrawler extends AbstractCrawler {
           oaId: { type: 'string' },
         },
       },
-      handler: (args) => this.oaDetail(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.oaDetail(args),
     });
 
     this.registerAction({
       action: 'oa_info',
       description: 'Alias for oa_detail',
-      handler: (args) => this.oaDetail(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.oaDetail(args),
     });
 
     this.registerAction({
       action: 'detail',
       description: 'Alias for oa_detail',
-      handler: (args) => this.oaDetail(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.oaDetail(args),
     });
 
     this.registerAction({
       action: 'profile',
       description: 'Alias for oa_detail',
-      handler: (args) => this.oaDetail(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.oaDetail(args),
     });
 
     this.registerAction({
       action: 'info',
       description: 'Alias for oa_detail',
-      handler: (args) => this.oaDetail(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.oaDetail(args),
     });
 
     // 4. Marketplace / Shop Products
@@ -200,25 +197,25 @@ export class ZaloCrawler extends AbstractCrawler {
           limit: { type: 'number', default: 10 },
         },
       },
-      handler: (args) => this.marketplaceProducts(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.marketplaceProducts(args),
     });
 
     this.registerAction({
       action: 'marketplace_search',
       description: 'Alias for marketplace_products',
-      handler: (args) => this.marketplaceProducts(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.marketplaceProducts(args),
     });
 
     this.registerAction({
       action: 'products',
       description: 'Alias for marketplace_products',
-      handler: (args) => this.marketplaceProducts(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.marketplaceProducts(args),
     });
 
     this.registerAction({
       action: 'marketplace',
       description: 'Alias for marketplace_products',
-      handler: (args) => this.marketplaceProducts(args),
+      handler: (/** @type {Record<string, any>} */ args) => this.marketplaceProducts(args),
     });
   }
 
@@ -237,7 +234,7 @@ export class ZaloCrawler extends AbstractCrawler {
     if (this.accountPool) {
       const accountId = args.accountId || session.accountId;
       if (accountId) {
-        const record = this.accountPool.getAccount(String(accountId), 'zalo');
+        const record = /** @type {{ credentials?: { accessToken?: string } } | null} */ (this.accountPool.getAccount(String(accountId), 'zalo'));
         if (record?.credentials?.accessToken) {
           this.client.setAccessToken(String(record.credentials.accessToken));
           return;
@@ -245,7 +242,8 @@ export class ZaloCrawler extends AbstractCrawler {
       }
       const available = this.accountPool.listAccounts ? this.accountPool.listAccounts('zalo') : [];
       if (available.length > 0) {
-        const first = available[0];
+        const firstId = available[0];
+        const first = firstId ? /** @type {{ credentials?: { accessToken?: string } } | null} */ (this.accountPool.getAccount(firstId, 'zalo')) : null;
         if (first?.credentials?.accessToken) {
           this.client.setAccessToken(String(first.credentials.accessToken));
         }
@@ -261,11 +259,12 @@ export class ZaloCrawler extends AbstractCrawler {
     if (!posts || !posts.length) return;
 
     if (this.store) {
+      const store = /** @type {Record<string, Function>} */ (/** @type {unknown} */ (this.store));
       if (typeof this.store.storeBatch === 'function') {
         await this.store.storeBatch(posts).catch(() => {});
-      } else if (typeof this.store.savePost === 'function') {
+      } else if (typeof store.savePost === 'function') {
         for (const item of posts) {
-          await this.store.savePost(item).catch(() => {});
+          await store.savePost(item).catch(() => {});
         }
       }
     }
@@ -284,9 +283,12 @@ export class ZaloCrawler extends AbstractCrawler {
   async #persistProfiles(profiles) {
     if (!profiles || !profiles.length) return;
 
-    if (this.store && typeof this.store.saveProfile === 'function') {
-      for (const p of profiles) {
-        await this.store.saveProfile(p).catch(() => {});
+    if (this.store) {
+      const store = /** @type {Record<string, Function>} */ (/** @type {unknown} */ (this.store));
+      if (typeof store.saveProfile === 'function') {
+        for (const p of profiles) {
+          await store.saveProfile(p).catch(() => {});
+        }
       }
     }
   }
@@ -366,7 +368,9 @@ export class ZaloCrawler extends AbstractCrawler {
   async oaDetail(args = {}) {
     this.#resolveToken(args);
     const response = await this.client.getOaInfo(args);
-    const result = normalizeZaloResults(response, 'oa_detail', { oaId: args.oaId });
+    const result = /** @type {{ profile?: import('../../../core/types.js').ProfileItem }} */ (
+      normalizeZaloResults(response, 'oa_detail', { oaId: args.oaId })
+    );
 
     if (!result.profile) {
       throw new PlatformError({

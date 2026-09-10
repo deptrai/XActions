@@ -94,6 +94,9 @@ export class RedditClient extends AbstractApiClient {
   /** @type {import('./bridge.js').RedditBrowserBridge | null} */
   browserBridge = null;
 
+  /** @type {string | Record<string, unknown> | null} */
+  proxy = null;
+
   /** @type {Promise<void> | null} */
   #bridgePromise = null;
 
@@ -113,6 +116,7 @@ export class RedditClient extends AbstractApiClient {
    * @param {string} [options.proxyType='residential'] - Default proxy ISP/type
    * @param {boolean} [options.requiresResidential=true] - Require residential proxies
    * @param {import('./validator.js').RedditPlatformResponseValidator} [options.responseValidator]
+   * @param {string | Record<string, unknown>} [options.proxy] - Optional proxy URL or config
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [options.proxyPool]
    * @param {import('../../../core/account-pool.js').AccountPool} [options.accountPool]
    * @param {import('../../../core/adaptive-governor.js').AdaptiveRateGovernor} [options.governor]
@@ -145,6 +149,7 @@ export class RedditClient extends AbstractApiClient {
     this.defaultProxyCountry = options.defaultProxyCountry || 'us';
     this.proxyType = options.proxyType || 'residential';
     this.requiresResidential = options.requiresResidential ?? true;
+    this.proxy = options.proxy || null;
 
     this.baseUrl = String(options.baseUrl || DEFAULT_REDDIT_BASE_URL).replace(/\/+$/, '');
     this.apiBaseUrl = String(options.apiBaseUrl || DEFAULT_REDDIT_API_URL).replace(/\/+$/, '');
@@ -700,7 +705,7 @@ export class RedditClient extends AbstractApiClient {
         if (!this.browserBridge) {
           this.browserBridge = new RedditBrowserBridge({
             baseUrl: this.baseUrl,
-            proxy: this.proxy,
+            proxy: this.proxy || undefined,
             proxyProvider: /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (this.proxyProvider || this.proxyPool)),
             // Do not pass this.userAgent (bot UA) so Stealth keeps its realistic Chrome UA
             headless: process.env.REDDIT_BRIDGE_HEADLESS !== 'false',

@@ -92,7 +92,8 @@ export class RequalificationService {
           });
         }
       } catch (err) {
-        console.warn(`[RequalificationService] Failed to update health score record for ${scraperId}:`, err.message);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[RequalificationService] Failed to update health score record for ${scraperId}:`, msg);
       }
 
       return {
@@ -151,7 +152,8 @@ export class RequalificationService {
         });
       }
     } catch (err) {
-      console.warn(`[RequalificationService] Failed to update health score record during manual requalify:`, err.message);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[RequalificationService] Failed to update health score record during manual requalify:`, msg);
     }
 
     return {

@@ -436,7 +436,7 @@ const handleQuarantineProxy = (/** @type {import('express').Request} */ req, /**
     const durationMs = typeof req.body?.durationMs === 'number' && Number.isFinite(req.body.durationMs) && req.body.durationMs > 0
       ? req.body.durationMs
       : undefined;
-    const decodedKey = safeDecode(rawKey);
+    const decodedKey = safeDecode(String(rawKey));
 
     globalProxyPool.quarantine(decodedKey, durationMs);
     res.json({
@@ -466,7 +466,7 @@ const handleReleaseProxy = (/** @type {import('express').Request} */ req, /** @t
     if (!rawKey) {
       return res.status(400).json({ success: false, error: 'Proxy is required to release' });
     }
-    const decodedKey = safeDecode(rawKey);
+    const decodedKey = safeDecode(String(rawKey));
 
     const released = globalProxyPool.release(decodedKey);
     res.json({
@@ -519,7 +519,7 @@ const handleWakeAccount = (/** @type {import('express').Request} */ req, /** @ty
       return res.status(400).json({ success: false, error: 'accountId is required' });
     }
     const platform = typeof req.body?.platform === 'string' ? req.body.platform : (typeof req.query?.platform === 'string' ? req.query.platform : undefined);
-    const decodedId = safeDecode(rawId);
+    const decodedId = safeDecode(String(rawId));
 
     const account = globalAccountPool.getAccount(decodedId, platform);
     if (!account) {
@@ -529,7 +529,7 @@ const handleWakeAccount = (/** @type {import('express').Request} */ req, /** @ty
       });
     }
 
-    const targetPlatform = platform || account.platform;
+    const targetPlatform = platform || String(account.platform || '');
     const compositeKey = `${targetPlatform}:${decodedId}`;
 
     const hibernatingUntil = /** @type {number | null | undefined} */ (account.hibernatingUntil);
@@ -572,7 +572,7 @@ const handleRotateAccount = (/** @type {import('express').Request} */ req, /** @
       return res.status(400).json({ success: false, error: 'accountId is required' });
     }
     const platform = typeof req.body?.platform === 'string' ? req.body.platform : (typeof req.query?.platform === 'string' ? req.query.platform : undefined);
-    const decodedId = safeDecode(rawId);
+    const decodedId = safeDecode(String(rawId));
 
     const account = globalAccountPool.getAccount(decodedId, platform);
     if (!account) {
@@ -582,7 +582,7 @@ const handleRotateAccount = (/** @type {import('express').Request} */ req, /** @
       });
     }
 
-    const targetPlatform = platform || account.platform;
+    const targetPlatform = platform || String(account.platform || '');
     const nextAccountId = globalAccountPool.getNextAvailable(targetPlatform);
     res.json({
       success: true,

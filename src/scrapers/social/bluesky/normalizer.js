@@ -205,7 +205,7 @@ export function normalizeBlueskyPost(rawItem) {
       rkey,
       isRepost: Boolean(rawItem.reason),
       repostedBy: rawItem.reason?.by?.handle || null,
-      labels: Array.isArray(post.labels) ? post.labels.map((l) => (typeof l === 'string' ? l : l?.val)).filter(Boolean) : [],
+      labels: Array.isArray(post.labels) ? post.labels.map((/** @type {string | { val?: string }} */ l) => (typeof l === 'string' ? l : l?.val)).filter(Boolean) : [],
       indexedAt: post.indexedAt || null,
     },
     publishedAt,
