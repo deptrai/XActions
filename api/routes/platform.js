@@ -359,7 +359,7 @@ router.post('/:platform/scrape', async (req, res) => {
     }
 
     const result = await scrape(platform, action, options);
-    res.json({ ok: true, platform, action, dryRun: false, result });
+    res.json({ ok: true, platform, action, dryRun: Boolean(body.dryRun), result });
   } catch (err) {
     console.error(`❌ POST /platform/${platform}/scrape error:`, err);
     res.status(500).json({

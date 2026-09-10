@@ -227,6 +227,9 @@ export async function x_login({ cookie }) {
 // ============================================================================
 
 export async function x_get_profile({ username }) {
+  if (!username || typeof username !== 'string') {
+    throw new Error('username is required for x_get_profile');
+  }
   return preferHttp(
     async () => {
       const scraper = await ensureHttpScraper();
