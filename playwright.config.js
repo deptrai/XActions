@@ -5,7 +5,7 @@ import { defineConfig, devices } from '@playwright/test';
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://[::1]:3001';
 
 export default defineConfig({
-  testMatch: ['**/tests/playwright/*.e2e.spec.js', '**/tests/e2e/*.e2e.test.js'],
+  testMatch: ['**/tests/playwright/*.e2e.spec.js'],
   fullyParallel: false,
   workers: 1,
   reporter: 'list',
