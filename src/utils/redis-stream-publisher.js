@@ -192,9 +192,9 @@ export class RedisStreamPublisher {
    * Publish a thin event pointer to the Redis stream.
    * Non-blocking and non-throwing: returns { ok: true, id } or { ok: false, error }
    *
-   * @param {string | (Partial<import('../core/types.js').ThinEvent> & Record<string, unknown>)} keyOrItem
-   * @param {Partial<import('../core/types.js').ThinEvent> & Record<string, unknown> | string} [maybeItemOrScraperId]
-   * @param {Object | string} [optsOrScraperId]
+   * @param {string | Record<string, unknown>} keyOrItem
+   * @param {Record<string, unknown> | string} [maybeItemOrScraperId]
+   * @param {Record<string, unknown> | string} [optsOrScraperId]
    * @returns {Promise<{ ok: boolean, id?: string, skipped?: boolean, error?: string }>}
    */
   async publish(keyOrItem, maybeItemOrScraperId, optsOrScraperId = {}) {
@@ -203,35 +203,33 @@ export class RedisStreamPublisher {
       return { ok: false, skipped: true };
     }
 
+    /** @param {unknown} value */
+    const extractScraperId = (value) => {
+      if (typeof value === 'string') return value;
+      const record = typeof value === 'object' && value !== null ? /** @type {Record<string, unknown>} */ (value) : null;
+      return record && typeof record.scraperId === 'string' ? record.scraperId : null;
+    };
+
     let streamKey = this.#streamKey;
+    /** @type {Record<string, unknown> | undefined} */
     let item;
     let scraperId = null;
 
     if (typeof keyOrItem === 'string') {
       streamKey = keyOrItem;
       if (maybeItemOrScraperId && typeof maybeItemOrScraperId === 'object') {
-        item = maybeItemOrScraperId;
-        if (typeof optsOrScraperId === 'string') {
-          scraperId = optsOrScraperId;
-        } else if (optsOrScraperId && typeof optsOrScraperId === 'object') {
-          scraperId = optsOrScraperId.scraperId || null;
-        }
+        item = /** @type {Record<string, unknown>} */ (maybeItemOrScraperId);
+        scraperId = extractScraperId(optsOrScraperId);
       }
     } else if (keyOrItem && typeof keyOrItem === 'object') {
-      item = keyOrItem;
-      if (typeof maybeItemOrScraperId === 'string') {
-        scraperId = maybeItemOrScraperId;
-      } else if (maybeItemOrScraperId && typeof maybeItemOrScraperId === 'object') {
-        scraperId = maybeItemOrScraperId.scraperId || null;
-      }
-      if (!scraperId && typeof optsOrScraperId === 'string') {
-        scraperId = optsOrScraperId;
-      } else if (!scraperId && optsOrScraperId && typeof optsOrScraperId === 'object') {
-        scraperId = optsOrScraperId.scraperId || null;
+      item = /** @type {Record<string, unknown>} */ (keyOrItem);
+      scraperId = extractScraperId(maybeItemOrScraperId);
+      if (!scraperId) {
+        scraperId = extractScraperId(optsOrScraperId);
       }
     }
 
-    if (!scraperId && item && item.scraperId) {
+    if (!scraperId && item && typeof item.scraperId === 'string') {
       scraperId = item.scraperId;
     }
 
@@ -239,7 +237,7 @@ export class RedisStreamPublisher {
       return { ok: false, error: 'No payload provided to publish' };
     }
 
-    const payload = this.formatPayload(item, scraperId);
+    const payload = this.formatPayload(item, scraperId || undefined);
     if (!payload.id) {
       return { ok: false, error: 'Payload missing id' };
     }

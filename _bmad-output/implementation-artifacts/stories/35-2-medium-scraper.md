@@ -358,11 +358,17 @@ Medium được phân loại **low complexity, low risk** trong research: offici
 - Fixed `namespacedMediumId` to handle `0` as a valid numeric id (`externalId ?? ''` instead of `externalId || ''`).
 - Fixed `MediumPlatformResponseValidator.isValidPayload` to treat string `record.data` containing `<rss` or `<feed` as a valid RSS payload.
 - Fixed `src/scrapers/index.js` Medium dispatch block: replaced undefined `args` spread with explicit argument mapping from `options`, added missing `session` variable, and exported `createMediumClient`/`createMediumCrawler`.
+- Fixed `getTagFeed` to use a real `#jsonTagFeed` JSON fallback for `transport: 'http'` and for the default RSS → JSON → Puppeteer chain, instead of jumping directly to Puppeteer.
+- Fixed `MediumBrowserBridge.#extractApolloState` to pass an arrow function (not a `return ...` string) to Puppeteer `evaluate`, and added conditional `MEDIUM_E2E=1` real Chromium tests.
+- Fixed `src/store/retention-cleaner.js` pre-existing TS errors: readonly array types, `unknown` parameters, `INVALID_ARGS`/`USE_ACTIONS_LIST` enums, missing `batchesExecuted` in returns.
+- Fixed `src/utils/redis-stream-publisher.js` pre-existing TS errors: typed `publish` args, extracted `scraperId` safely from `Record<string, unknown>`.
 
 **Completion Notes:**
-- All 69 new Medium tests pass with real `node:http` fixtures (client, crawler, normalizer, validator, dispatcher integration).
+- All 71 new Medium tests pass with real `node:http` fixtures (client, crawler, normalizer, validator, dispatcher integration). The 2 new Puppeteer bridge E2E tests pass when `MEDIUM_E2E=1`.
 - Social scraper regression suite passes: 825 tests across `tests/scrapers/social/`.
 - `npx tsc --noEmit | grep medium` returns no Medium-specific diagnostics.
+- `npx tsc --noEmit | grep src/store/retention-cleaner\.js` and `.../redis-stream-publisher\.js` return no diagnostics for those two files.
+- Full repo still has 768 pre-existing TypeScript errors across 69 files (not introduced by Story 35.2); they need a dedicated pass.
 - Story status moved to `review`; sprint status updated to `35-2-medium-scraper-client-crawler-validator-tests: review`.
 
 ### Pre-Flight Checklist for Dev (auto-validate before claiming done)

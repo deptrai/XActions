@@ -327,6 +327,12 @@ describe('MediumClient (RSS-first with JSON fallback)', () => {
         return;
       }
 
+      if (urlObj.pathname === '/feed/tag/emptytag') {
+        res.writeHead(200, { 'content-type': 'application/rss+xml' });
+        res.end('<?xml version="1.0"?><rss version="2.0"><channel><title>Empty Tag</title></channel></rss>');
+        return;
+      }
+
       if (urlObj.pathname === '/@emptyuser' && urlObj.searchParams.get('format') === 'json') {
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(makeMediumJsonResponse({
@@ -345,6 +351,57 @@ describe('MediumClient (RSS-first with JSON fallback)', () => {
                 },
               },
               User: { 'user:u1': { name: 'Empty User', username: 'emptyuser' } },
+            },
+            paging: { next: null },
+          },
+        }, true));
+        return;
+      }
+
+      // Tag JSON feed fallback
+      if (urlObj.pathname === '/tag/programming' && urlObj.searchParams.get('format') === 'json') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(makeMediumJsonResponse({
+          payload: {
+            references: {
+              Post: {
+                'tagjson001122': {
+                  id: 'tagjson001122',
+                  title: 'Tag JSON Post',
+                  mediumUrl: 'https://medium.com/tag/programming/tag-json-post-tagjson001122',
+                  firstPublishedAt: 1704067200000,
+                  latestPublishedAt: 1704067200000,
+                  creatorId: 'user:u1',
+                  content: { subtitle: '', bodyModel: { paragraphs: [{ text: 'Tag body' }] } },
+                  virtuals: { totalClapCount: 2, responsesCreatedCount: 0, reads: 10, tags: [{ name: 'programming' }] },
+                },
+              },
+              User: { 'user:u1': { name: 'Tag Author', username: 'tagauthor' } },
+            },
+            paging: { next: null },
+          },
+        }, true));
+        return;
+      }
+
+      if (urlObj.pathname === '/tag/emptytag' && urlObj.searchParams.get('format') === 'json') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(makeMediumJsonResponse({
+          payload: {
+            references: {
+              Post: {
+                'emptytag001122': {
+                  id: 'emptytag001122',
+                  title: 'Tag Fallback Post',
+                  mediumUrl: 'https://medium.com/tag/emptytag/tag-fallback-post-emptytag001122',
+                  firstPublishedAt: 1704067200000,
+                  latestPublishedAt: 1704067200000,
+                  creatorId: 'user:u1',
+                  content: { subtitle: '', bodyModel: { paragraphs: [{ text: 'Tag fallback body' }] } },
+                  virtuals: { totalClapCount: 0, responsesCreatedCount: 0, reads: 1, tags: [] },
+                },
+              },
+              User: { 'user:u1': { name: 'Tag Author', username: 'tagauthor' } },
             },
             paging: { next: null },
           },
@@ -439,6 +496,20 @@ describe('MediumClient (RSS-first with JSON fallback)', () => {
     const result = await client.getTagFeed('programming');
     expect(result.items.length).toBe(1);
     expect(result.items[0].title).toBe('Code Post');
+  });
+
+  it('fetches a tag JSON feed when transport is http', async () => {
+    const client = new MediumClient({ baseUrl: serverUrl, delayMin: 0, delayMax: 0 });
+    const result = await client.getTagFeed('programming', { transport: 'http', limit: 5 });
+    expect(result.items.length).toBe(1);
+    expect(result.items[0].title).toBe('Tag JSON Post');
+  });
+
+  it('falls back to JSON when tag RSS is empty', async () => {
+    const client = new MediumClient({ baseUrl: serverUrl, delayMin: 0, delayMax: 0 });
+    const result = await client.getTagFeed('emptytag');
+    expect(result.items.length).toBe(1);
+    expect(result.items[0].title).toBe('Tag Fallback Post');
   });
 
   it('fetches a single post by full URL', async () => {

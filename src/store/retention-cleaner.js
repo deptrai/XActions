@@ -20,7 +20,7 @@ export const DEFAULT_BATCH_SIZE = 1000;
 export const MAX_BATCH_SIZE = 5000;
 export const DEFAULT_BATCH_DELAY_MS = 50;
 
-/** @type {string[]} */
+/** @type {readonly string[]} */
 export const SUPPORTED_PLATFORMS = Object.freeze([
   'twitter',
   'facebook',
@@ -32,7 +32,7 @@ export const SUPPORTED_PLATFORMS = Object.freeze([
   'linkedin',
 ]);
 
-/** @type {string[]} */
+/** @type {readonly string[]} */
 export const CRAWL_PLATFORMS = Object.freeze([
   'twitter',
   'facebook',
@@ -55,10 +55,10 @@ function validatePlatform(platform) {
   if (!CRAWL_PLATFORMS.includes(normalized)) {
     throw new PlatformError({
       message: `Unsupported platform filter: "${platform}". Supported: ${CRAWL_PLATFORMS.join(', ')}`,
-      type: ErrorTypes.VALIDATION,
+      type: ErrorTypes.INVALID_ARGS,
       code: 'XACT_4001',
       statusCode: 400,
-      suggestedAction: SuggestedActions.CHECK_INPUT,
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
     });
   }
   return normalized;
@@ -66,7 +66,7 @@ function validatePlatform(platform) {
 
 /**
  * Validate and normalize a positive integer option.
- * @param {any} value
+ * @param {unknown} value
  * @param {string} name
  * @param {number} defaultValue
  * @returns {number}
@@ -77,10 +77,10 @@ function validatePositiveInt(value, name, defaultValue) {
   if (!Number.isFinite(parsed) || parsed <= 0 || Number.isNaN(parsed) || !Number.isInteger(parsed)) {
     throw new PlatformError({
       message: `${name} must be a positive integer, got: ${value}`,
-      type: ErrorTypes.VALIDATION,
+      type: ErrorTypes.INVALID_ARGS,
       code: 'XACT_4001',
       statusCode: 400,
-      suggestedAction: SuggestedActions.CHECK_INPUT,
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
     });
   }
   return parsed;
@@ -88,7 +88,7 @@ function validatePositiveInt(value, name, defaultValue) {
 
 /**
  * Validate and normalize a non-negative integer option.
- * @param {any} value
+ * @param {unknown} value
  * @param {string} name
  * @param {number} defaultValue
  * @returns {number}
@@ -99,10 +99,10 @@ function validateNonNegativeInt(value, name, defaultValue) {
   if (!Number.isFinite(parsed) || parsed < 0 || Number.isNaN(parsed) || !Number.isInteger(parsed)) {
     throw new PlatformError({
       message: `${name} must be a non-negative integer, got: ${value}`,
-      type: ErrorTypes.VALIDATION,
+      type: ErrorTypes.INVALID_ARGS,
       code: 'XACT_4001',
       statusCode: 400,
-      suggestedAction: SuggestedActions.CHECK_INPUT,
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
     });
   }
   return parsed;
@@ -110,7 +110,7 @@ function validateNonNegativeInt(value, name, defaultValue) {
 
 /**
  * Validate and normalize a cutoff Date.
- * @param {any} value
+ * @param {unknown} value
  * @param {number} retentionDays
  * @returns {Date}
  */
@@ -118,8 +118,8 @@ function resolveCutoffDate(value, retentionDays) {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return value;
   }
-  if (value !== undefined && value !== null) {
-    const parsed = value instanceof Date ? value : new Date(value);
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value);
     if (!Number.isNaN(parsed.getTime())) return parsed;
   }
   return new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
@@ -407,6 +407,8 @@ export class RetentionCleaner {
    * @param {Object} [options]
    * @param {number} [options.checkpointRetentionDays] - Checkpoint TTL in days (default: 90)
    * @param {string[]} [options.statuses] - Candidate statuses to purge (default: ['completed', 'failed'])
+   * @param {number} [options.batchSize] - Batch size for deletion chunking (default: 1000, max: 5000)
+   * @param {number} [options.batchDelayMs] - Sleep between batches in ms (default: 50)
    * @param {boolean} [options.dryRun=false] - If true, only count eligible checkpoints
    * @param {string} [options.platform] - Optional platform filter
    * @param {Date} [options.cutoffDate] - Explicit cutoff date override
@@ -415,6 +417,7 @@ export class RetentionCleaner {
    *   success: boolean;
    *   checkpointsDeleted?: number;
    *   checkpointsEligible?: number;
+   *   batchesExecuted: number;
    *   durationMs: number;
    *   cutoffDate: string;
    *   dryRun: boolean;
@@ -451,6 +454,7 @@ export class RetentionCleaner {
         dryRun,
         checkpointsDeleted: 0,
         checkpointsEligible: 0,
+        batchesExecuted: 0,
         durationMs: Date.now() - startTime,
         cutoffDate: new Date().toISOString(),
       };
@@ -488,6 +492,7 @@ export class RetentionCleaner {
         dryRun: true,
         checkpointsEligible,
         checkpointsDeleted: 0,
+        batchesExecuted: 0,
         durationMs: Date.now() - startTime,
         cutoffDate: cutoffDate.toISOString(),
       };
@@ -639,7 +644,7 @@ export class RetentionCleaner {
       prisma.crawlCheckpoint.count({
         where: {
           ...checkpointBaseWhere,
-          status: { in: SAFE_CHECKPOINT_CLEANUP_STATUSES },
+          status: { in: [...SAFE_CHECKPOINT_CLEANUP_STATUSES] },
           OR: [
             { lastCrawledAt: { lt: d90 } },
             {

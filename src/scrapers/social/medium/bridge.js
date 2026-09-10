@@ -491,7 +491,10 @@ export class MediumBrowserBridge {
    */
   async #extractApolloState(adapter, page) {
     try {
-      const raw = await adapter.evaluate(page, 'return (typeof window !== "undefined" && window.__APOLLO_STATE__) ? window.__APOLLO_STATE__ : null;');
+      const raw = await adapter.evaluate(page, () => {
+        const win = typeof window !== 'undefined' ? /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (window)) : null;
+        return win ? win.__APOLLO_STATE__ : null;
+      });
       if (raw && typeof raw === 'object') {
         return asRecord(raw);
       }

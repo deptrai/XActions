@@ -748,7 +748,7 @@ export class MediumClient extends AbstractApiClient {
       return this.#graphqlTagFeed(cleanTag, options);
     }
     if (transport === 'http') {
-      return this.#puppeteerTagFeed(cleanTag, options);
+      return this.#jsonTagFeed(cleanTag, options);
     }
 
     try {
@@ -760,6 +760,15 @@ export class MediumClient extends AbstractApiClient {
       }
     } catch (err) {
       this.#warnFallback('tag', 'rss', err);
+    }
+
+    try {
+      const jsonResult = await this.#jsonTagFeed(cleanTag, options);
+      if (jsonResult.items.length > 0) {
+        return jsonResult;
+      }
+    } catch (err) {
+      this.#warnFallback('tag', 'json', err);
     }
 
     return this.#puppeteerTagFeed(cleanTag, options);
@@ -798,6 +807,19 @@ export class MediumClient extends AbstractApiClient {
       suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
       platform: 'medium',
     });
+  }
+
+  /**
+   * @param {string} tag
+   * @param {Object} options
+   * @returns {Promise<{ items: Record<string, unknown>[], paging: { next: Record<string, unknown> | null } }>}
+   */
+  async #jsonTagFeed(tag, options) {
+    const url = this.buildUrl(`/tag/${encodeURIComponent(tag)}`);
+    const payload = await this.getJsonPage(url, options);
+    const items = this.#extractJsonPosts(payload);
+    const paging = this.#extractPaging(payload);
+    return this.#feedResult(items, paging.next);
   }
 
   /**
