@@ -181,6 +181,7 @@ export function normalizeTikTokPost(raw, sourceMethod = 'api') {
   const { videoUrl, coverUrl, videoWidth, videoHeight, duration } = extractTikTokMedia(item.video);
 
   // Extract photo carousel images if present (TikTok imagePost / images)
+  /** @type {string[]} */
   const photoUrls = [];
   const imageList = item.imagePost?.images || item.images || [];
   if (Array.isArray(imageList)) {

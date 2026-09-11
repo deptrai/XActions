@@ -160,3 +160,6 @@ scripts/debug-*.mjs
 *.orig
 *.rej
 __pycache__/
+
+# tgrep trigram search index (local)
+.tgrep/

@@ -435,8 +435,9 @@ export class TikTokCrawler extends AbstractCrawler {
     if (!post) {
       throw new PlatformError({
         code: 'XACT_4041',
-        type: ErrorTypes.INTERNAL,
-        message: `Failed to normalize post: ${videoId}`,
+        statusCode: 404,
+        type: ErrorTypes.NOT_FOUND,
+        message: `Post not found or failed to normalize: ${videoId}`,
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         platform: 'tiktok',
       });
@@ -595,17 +596,30 @@ export class TikTokCrawler extends AbstractCrawler {
       await this.client.close();
     }
   }
+
+  /**
+   * Close crawler and client resources (alias for cleanup).
+   * @returns {Promise<void>}
+   */
+  async close() {
+    return this.cleanup();
+  }
 }
 
 /**
  * Factory helper for TikTokCrawler.
- * @param {Record<string, any> | TikTokCrawler} [clientOrOptions={}]
+ * Accepts an existing TikTokCrawler (pass-through), a TikTokClient (injected as deps.client),
+ * or a plain deps/options object forwarded to the constructor.
+ * @param {Record<string, any> | TikTokCrawler | TikTokClient} [clientOrOptions={}]
  * @param {Record<string, any>} [options={}]
  * @returns {TikTokCrawler}
  */
 export function createTikTokCrawler(clientOrOptions = {}, options = {}) {
   if (clientOrOptions instanceof TikTokCrawler) {
     return clientOrOptions;
+  }
+  if (clientOrOptions instanceof TikTokClient) {
+    return new TikTokCrawler({ client: clientOrOptions, ...options });
   }
   return new TikTokCrawler(clientOrOptions || options);
 }

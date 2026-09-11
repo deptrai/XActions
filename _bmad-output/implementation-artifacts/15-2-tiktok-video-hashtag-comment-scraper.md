@@ -2,7 +2,7 @@
 story_id: 15.2
 epic: 15
 story_key: 15-2-tiktok-video-hashtag-comment-scraper
-status: ready-for-dev
+status: done
 created: 2026-08-29T05:50:00Z
 updated: 2026-08-29T06:15:00Z
 owner: luisphan
@@ -11,7 +11,7 @@ baseline_commit: d505635c13b513058bf82764d143d3debfc1b839
 
 # Story 15.2: TikTok Video, Hashtag & Comment Scraper with Anti-Bot Payload Validation
 
-Status: ready-for-review
+Status: done
 
 ## ⚠️ Critical Constraints / Architecture Variance
 
@@ -308,7 +308,16 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 - 2026-08-29 — Implemented all non-capture tasks: client, crawler, normalizer, validator, index, dispatcher wiring, package exports, and red-phase ATDD tests. Marked ready-for-review.
 - 2026-08-29 — Applied second-pass review patches: fixed default export, dispatcher wiring, schema comment/post split, package export, validator empty-list handling, cookie preservation, per-layer cursor tracking, and added caller-migration tests. All 16 TikTok tests pass; TikTok-specific TypeScript is clean.
 
-### Review Findings (Second Pass)
+### Review Findings (Third Pass — Adversarial Hardening)
+
+- [x] [Review][HIGH] `validator.js`: resolve false-positive bot challenge triggering on valid videos with "challenge" or "verify" in descriptions when passed as JSON string body. Restricted keyword detection in JSON payloads to status messages and refined tokens (`challenge required`).
+- [x] [Review][HIGH] `validator.js`: implement `isFalse200()` contract to detect non-zero status codes or error payloads returned with HTTP 200.
+- [x] [Review][MEDIUM] `signer-bridge.js`: close failed warmed page before resetting `#warmedPage` to prevent tab leakage on browser crashes; added `#MAX_SIGN_DEPTH` guard.
+- [x] [Review][MEDIUM] `signer-bridge.js`: cleanup nonce-suffixed user profile directories in `close()` to prevent orphan directory accumulation.
+- [x] [Review][LOW] `crawler.js`: add `close()` alias for `cleanup()` and support `TikTokClient` instance injection in `createTikTokCrawler`.
+- [x] [Review][LOW] `schemas/tiktok/social.json`: add `isImagePost` and `imageCount` metadata fields to post schema.
+- [x] [Review][LOW] TypeScript & unit tests: clean JSDoc types (`tsc --noEmit` 0 errors for tiktok) and verify 32 tests passing across all suites.
+
 
 - [x] [Review][Patch] Add default export to `src/scrapers/social/tiktok/index.js` so `platforms.tiktok` and `getPlatform('tiktok')` resolve correctly
 - [x] [Review][Patch] Add `tiktok` to `src/scrapers/index.js` default export object

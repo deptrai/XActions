@@ -34,17 +34,27 @@ describe('TikTokPlatformResponseValidator', () => {
     expect(validator.isLoginWall(loginPayload)).toBe(true);
   });
 
-  it('does NOT false-positive on valid video response with "verify" in video description', () => {
+  it('does NOT false-positive on valid video response with "verify" or "#challenge" in video description even if passed as serialized JSON body', () => {
     const validVideo = {
       status_code: 0,
       itemInfo: {
         itemStruct: {
           id: '7234567890123456789',
-          desc: 'Watch this tutorial to verify your email address quickly! #verify #tutorial',
+          desc: 'Watch this tutorial to verify your email address quickly! #verify #challenge #tutorial',
         },
       },
     };
     expect(validator.isBotChallenge(validVideo)).toBe(false);
     expect(validator.isValidPayload(validVideo)).toBe(true);
+
+    const serializedResponse = { body: JSON.stringify(validVideo) };
+    expect(validator.isBotChallenge(serializedResponse)).toBe(false);
+    expect(validator.isValidPayload(serializedResponse)).toBe(true);
+  });
+
+  it('detects false 200 responses with non-zero status_code or error field', () => {
+    expect(validator.isFalse200({ status_code: 10001, error: 'fail' })).toBe(true);
+    expect(validator.isFalse200({ status_code: 0 })).toBe(false);
+    expect(validator.isFalse200({})).toBe(true);
   });
 });

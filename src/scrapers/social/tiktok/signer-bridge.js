@@ -144,6 +144,9 @@ export class TikTokBrowserBridge {
   /** @type {Promise<any>} */
   #signQueue = Promise.resolve();
 
+  /** @type {number} Maximum re-queue depth for signUrl retries on stale warmed pages. */
+  static #MAX_SIGN_DEPTH = 3;
+
   /**
    * @param {Object} [options={}]
    * @param {string} [options.baseUrl='https://www.tiktok.com']
@@ -382,21 +385,23 @@ export class TikTokBrowserBridge {
    * @param {string} url
    * @param {Object} [options={}]
    * @param {string} [options.userAgent]
-   * @param {string | Record<string, string>} [options.cookies]
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies]
+   * @param {number} [_depth=0]
    * @returns {Promise<{ query: Record<string, string>, cookies: Record<string, string> }>}
    */
-  async signUrl(url, options = {}) {
-    const next = this.#signQueue.then(() => this.#executeSignUrl(url, options));
+  async signUrl(url, options = {}, _depth = 0) {
+    const next = this.#signQueue.then(() => this.#executeSignUrl(url, options, _depth));
     this.#signQueue = next.catch(() => {});
     return next;
   }
 
   /**
    * @param {string} url
-   * @param {Object} [options={}]
+   * @param {{ cookies?: string | Record<string, string> | Array<{ name: string, value: string }> }} [options={}]
+   * @param {number} [_depth=0] Internal recursion depth — prevents infinite re-queue loops.
    * @returns {Promise<{ query: Record<string, string>, cookies: Record<string, string> }>}
    */
-  async #executeSignUrl(url, options = {}) {
+  async #executeSignUrl(url, options = {}, _depth = 0) {
     const { cookies } = options || {};
     const parsedUrl = new URL(url);
     const accountId = 'tiktok-guest';
@@ -422,8 +427,22 @@ export class TikTokBrowserBridge {
       try {
         await adapter.evaluate(page, () => document.title);
       } catch {
+        try {
+          await adapter.closePage(page);
+        } catch {}
         this.#warmedPage = null;
-        return this.signUrl(url, options);
+        if (_depth >= TikTokBrowserBridge.#MAX_SIGN_DEPTH) {
+          throw new PlatformError({
+            type: ErrorTypes.INTERNAL,
+            code: 'XACT_5000',
+            statusCode: 500,
+            message: `TikTok signUrl failed after ${TikTokBrowserBridge.#MAX_SIGN_DEPTH} page-revival retries — browser may be dead.`,
+            suggestedAction: SuggestedActions.RELOGIN,
+            platform: 'tiktok',
+            accountId,
+          });
+        }
+        return this.signUrl(url, options, _depth + 1);
       }
     }
 
@@ -503,9 +522,11 @@ export class TikTokBrowserBridge {
 
   /**
    * Close the bridge and release browser resources.
+   * Also removes the per-instance profile directory to prevent orphan accumulation.
+   * @param {string} [accountId='tiktok-guest'] - needed to resolve the profile dir path
    * @returns {Promise<void>}
    */
-  async close() {
+  async close(accountId = 'tiktok-guest') {
     if (this.#warmedPage && this.adapter) {
       try {
         await this.adapter.closePage(this.#warmedPage);
@@ -518,6 +539,11 @@ export class TikTokBrowserBridge {
       } catch {}
       this.#browser = null;
     }
+    // Clean up the nonce-suffixed profile dir to avoid orphan accumulation.
+    try {
+      const dir = this.#resolveUserDataDir(accountId);
+      fs.rmSync(dir, { recursive: true, force: true });
+    } catch {}
   }
 }
 

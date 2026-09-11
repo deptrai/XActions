@@ -18,7 +18,9 @@
         "videoHeight": { "type": "number" },
         "videoWidth": { "type": "number" },
         "sourceMethod": { "type": "string" },
-        "coverUrl": { "type": "string" }
+        "coverUrl": { "type": "string" },
+        "isImagePost": { "type": "boolean" },
+        "imageCount": { "type": "number" }
       },
       "required": ["sourceMethod", "awemeId"]
     },
