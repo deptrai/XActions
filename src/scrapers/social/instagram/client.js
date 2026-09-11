@@ -88,6 +88,7 @@ export class InstagramClient extends AbstractApiClient {
 
     if (userProxyPool) {
       this.proxyPool = /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (userProxyPool));
+      this._hasExplicitProxy = true;
     }
 
     this.baseUrl = String(options.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
@@ -163,7 +164,7 @@ export class InstagramClient extends AbstractApiClient {
    */
   resolveProxy(accountId, requiresResidential = true, requiresAuth = this.requiresAuth, options = {}) {
     const safeOptions = asRecord(options);
-    const env = process.env.PROXY_URL;
+    const env = this.resolveEnvProxy();
     // Advisory geo hints kept in options for pools that honour them.
     /** @type {Record<string, unknown>} */
     const merged = { ...safeOptions };

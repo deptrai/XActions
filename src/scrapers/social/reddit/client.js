@@ -8,7 +8,7 @@
  * @license Apache-2.0
  */
 
-import { AbstractApiClient } from '../../../core/base-client.js';
+import { AbstractApiClient, isProxyConnectionError } from '../../../core/base-client.js';
 import { RedditPlatformResponseValidator } from './validator.js';
 import { RedditBrowserBridge } from './bridge.js';
 import {
@@ -100,6 +100,9 @@ export class RedditClient extends AbstractApiClient {
   /** @type {Promise<void> | null} */
   #bridgePromise = null;
 
+  /** @type {string | Record<string, unknown> | null} — proxy used by the in-flight request (for AC-4 quarantine) */
+  #lastResolvedProxy = null;
+
   /**
    * @param {Object} [options={}]
    * @param {string} [options.baseUrl] - Base web URL (default: https://www.reddit.com)
@@ -141,10 +144,14 @@ export class RedditClient extends AbstractApiClient {
       platform: 'reddit',
       responseValidator,
       requiresAuth: options.requiresAuth ?? false,
-      requiresProxy: options.requiresProxy ?? false,
+      // requiresProxy forwarded only when the caller set it — an explicit
+      // `requiresProxy:false` marks _requiresProxyExplicit and disables the
+      // implicit explicit-proxy route entirely (base-client ctor).
+      ...(options.requiresProxy !== undefined ? { requiresProxy: options.requiresProxy } : {}),
     });
     if (userProxyPool) {
       this.proxyPool = /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (userProxyPool));
+      this._hasExplicitProxy = true;
     }
     this.defaultProxyCountry = options.defaultProxyCountry || 'us';
     this.proxyType = options.proxyType || 'residential';
@@ -790,7 +797,22 @@ export class RedditClient extends AbstractApiClient {
       reqOpts.requiresResidential = this.requiresResidential;
     }
 
-    const res = await super.request(method, url, /** @type {import('../../../core/base-client.js').RequestOptions} */ (/** @type {unknown} */ (reqOpts)));
+    // Track the proxy actually resolved for this request so a tunnel-level
+    // failure can quarantine it and fall back to a direct connection (AC-4).
+    this.#lastResolvedProxy = null;
+    let res;
+    try {
+      res = await super.request(method, url, /** @type {import('../../../core/base-client.js').RequestOptions} */ (/** @type {unknown} */ (reqOpts)));
+    } catch (err) {
+      if (isProxyConnectionError(err) && this.#lastResolvedProxy && !this.requiresProxy) {
+        this.quarantineProxy(this.#lastResolvedProxy);
+        console.warn(`⚠️ [REDDIT] Proxy connection failed (${String(/** @type {Error} */ (err).message || err).slice(0, 120)}). Quarantined; retrying direct.`);
+        res = await super.request(method, url, /** @type {import('../../../core/base-client.js').RequestOptions} */ (/** @type {unknown} */ ({ ...reqOpts, disableProxy: true })));
+      } else {
+        if (isProxyConnectionError(err)) this.quarantineProxy(this.#lastResolvedProxy);
+        throw err;
+      }
+    }
 
     // Parse rate-limit headers on success to drive proactive backoff
     if (res && typeof res === 'object' && 'headers' in res && res.headers && typeof res.headers === 'object') {
@@ -825,7 +847,36 @@ export class RedditClient extends AbstractApiClient {
       country: (typeof safeOptions.country === 'string' ? safeOptions.country : null) || this.defaultProxyCountry || 'us',
       isp: (typeof safeOptions.isp === 'string' ? safeOptions.isp : null) || this.proxyType || 'residential',
     };
-    return super.resolveProxy(accountId, requiresResidential, requiresAuth, /** @type {Object} */ (/** @type {unknown} */ (mergedOptions)));
+    if (accountId && !mergedOptions.sessionId) mergedOptions.sessionId = String(accountId);
+
+    // An explicit provider always wins — it reads accountId + requiresResidential.
+    if (this.proxyProvider) {
+      const proxy = super.resolveProxy(accountId, requiresResidential, requiresAuth, /** @type {Object} */ (/** @type {unknown} */ (mergedOptions)));
+      this.#lastResolvedProxy = proxy;
+      return proxy;
+    }
+
+    // proxyPool defaults to the env-seeded globalProxyPool. When it cannot
+    // serve (empty env or all quarantined), fall back to PROXY_URL before
+    // surfacing PROXY_EXHAUSTED (AC-1 / OQ-1).
+    let poolCanServe = false;
+    if (this.proxyPool) {
+      try {
+        const probe = typeof this.proxyPool.getNext === 'function'
+          ? this.proxyPool.getNext(requiresResidential)
+          : null;
+        poolCanServe = probe != null;
+      } catch { poolCanServe = false; }
+    }
+    const env = this.resolveEnvProxy();
+    if (!poolCanServe && env) {
+      this.#lastResolvedProxy = env;
+      return env;
+    }
+
+    const proxy = super.resolveProxy(accountId, requiresResidential, requiresAuth, /** @type {Object} */ (/** @type {unknown} */ (mergedOptions)));
+    this.#lastResolvedProxy = proxy;
+    return proxy;
   }
 
   /**

@@ -26,7 +26,7 @@ import { globalProxyPool } from '../proxy/proxy-pool.js';
  *   pool?: ('realtime' | 'bulk'), consumerId?: ('nowing' | 'chainlens' | 'internal' | string),
  *   session?: Record<string, unknown>, telemetryContext?: import('./telemetry-context.js').TelemetryContext,
  *   isCanary?: boolean, skipResponseValidation?: boolean, raw?: boolean, requiresAuth?: boolean,
- *   timeout?: number, [key: string]: unknown }} RequestOptions
+ *   timeout?: number, disableProxy?: boolean, [key: string]: unknown }} RequestOptions
  */
 
 /**
@@ -44,6 +44,37 @@ import { globalProxyPool } from '../proxy/proxy-pool.js';
 
 const STANDBY_BACKOFF_MS = 30 * 1000;
 const DEFAULT_QUARANTINE_MS = 5 * 60 * 1000;
+
+/**
+ * Classify transport errors caused by a dead or failing proxy tunnel.
+ * Shared by platform clients so proxy-failure handling stays uniform:
+ * quarantine the resolved proxy, then retry the request direct.
+ * @param {unknown} err
+ * @returns {boolean}
+ */
+export function isProxyConnectionError(err) {
+  if (!err) return false;
+  const signatures = [
+    'ERR_TUNNEL_CONNECTION_FAILED',
+    'ERR_PROXY_CONNECTION_FAILED',
+    'ERR_PROXY_CERTIFICATE_INVALID',
+    'ERR_SOCKS_CONNECTION_FAILED',
+    'ERR_NO_SUPPORTED_PROXIES',
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'EHOSTUNREACH',
+    'ETIMEDOUT',
+    '466 Limit Reached',
+  ];
+  // request() wraps transport failures as { status: 503, error } → the
+  // surfaced PlatformError keeps the original error under details.error.
+  const candidates = [err, /** @type {{ details?: { error?: unknown } }} */ (err)?.details?.error];
+  return candidates.some((e) => {
+    if (!e) return false;
+    const msg = String(/** @type {{ message?: unknown }} */ (e).message || e);
+    return signatures.some((sig) => msg.includes(sig));
+  });
+}
 
 export class AbstractApiClient {
   /** @type {string} */
@@ -221,6 +252,11 @@ export class AbstractApiClient {
 
     if (this.proxyProvider && typeof this.proxyProvider.getProxy === 'function') {
       const opts = { accountId: rawAccountId, requiresResidential, pool: pool || undefined, consumerId: safeOptions.consumerId };
+      // Forward geo/session targeting hints (country/isp/sessionId/...) to
+      // provider-class pools (DynamicTunnelProvider) that honour them (AC-5).
+      for (const key of ['country', 'city', 'state', 'region', 'isp', 'asn', 'sessionId', 'sessionduration', 'lifetime', 'period', 'sid']) {
+        if (safeOptions[key] !== undefined) opts[key] = safeOptions[key];
+      }
       proxy = this.proxyProvider.getProxy(opts);
     } else if (this.proxyPool && (this._hasExplicitProxy || this.requiresProxy || requiresResidential)) {
       if (requiresAuth && rawAccountId && typeof this.proxyPool.getStickyProxy === 'function') {
@@ -257,6 +293,37 @@ export class AbstractApiClient {
     }
 
     return /** @type {string | Record<string, unknown> | null} */ (proxy);
+  }
+
+  /**
+   * Shared env proxy fallback (OQ-1): PROXY_URL may hold a comma-separated
+   * list — first entry wins. Clients call this when no provider/pool can
+   * serve a proxy so env-configured proxies still apply (AC-1/AC-2).
+   * @returns {string | null}
+   */
+  resolveEnvProxy() {
+    const raw = process.env.PROXY_URL;
+    if (!raw) return null;
+    const first = String(raw).split(',').map((s) => s.trim()).filter(Boolean)[0];
+    return first || null;
+  }
+
+  /**
+   * Quarantine a proxy that produced a connection failure. Best-effort —
+   * providers that do not own the proxy may reject it; that is fine.
+   * @param {string | Record<string, unknown> | null | undefined} proxy
+   * @param {number} [durationMs] - defaults to the provider's own 5-minute quarantine
+   */
+  quarantineProxy(proxy, durationMs) {
+    if (!proxy) return;
+    const provider = this.proxyProvider || this.proxyPool;
+    if (provider && typeof provider.quarantine === 'function') {
+      try {
+        provider.quarantine(proxy, durationMs);
+      } catch {
+        // Quarantine is best-effort — never fail the request pipeline over it.
+      }
+    }
   }
 
   /**
@@ -633,7 +700,7 @@ export class AbstractApiClient {
 
     while (accountRotationCount <= this.maxAccountRotations) {
       for (let attempt = 0; attempt < this.maxProxyRetries; attempt++) {
-        const shouldUseProxy = this.requiresProxy || opts.requiresResidential || (this._hasExplicitProxy && !this._requiresProxyExplicit);
+        const shouldUseProxy = !opts.disableProxy && (this.requiresProxy || opts.requiresResidential || (this._hasExplicitProxy && !this._requiresProxyExplicit));
 
         // Check if pool is completely quarantined before attempting proxy request
         if (shouldUseProxy && provider && typeof provider.isAllQuarantined === 'function' && provider.isAllQuarantined()) {

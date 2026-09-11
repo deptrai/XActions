@@ -166,3 +166,50 @@
 | Campaign list | `[data-testid="campaignList"]` |
 | Create campaign | `[data-testid="createCampaign"]` |
 | Subscription info | `[data-testid="subscriptionInfo"]` |
+
+---
+
+## New Platforms (Epic 35)
+
+Reddit and Medium scrapers are HTTP/RSS clients — no DOM selectors. Instagram uses a login-form DOM for session bootstrap plus the instagrapi bridge.
+
+### Reddit (`src/scrapers/social/reddit/`)
+
+| Surface | Endpoint / pattern |
+|---------|--------------------|
+| Public listing | `GET {base}/r/{sub}/{sort}.json` (sort: `new|hot|top|rising|controversial`) |
+| Post + comments | `GET {base}/comments/{postId}.json` |
+| OAuth token | `POST https://www.reddit.com/api/v1/access_token` (client_credentials) |
+| RSS fallback | `GET {base}/r/{sub}/{sort}.rss` when `.json` hits a bot challenge |
+| User-Agent | REQUIRED — `xactions:reddit-scraper:v1.0.0 by u/{username}` (`buildRedditUserAgent`) |
+
+### Medium (`src/scrapers/social/medium/`)
+
+| Surface | Endpoint / pattern |
+|---------|--------------------|
+| User feed (RSS) | `GET medium.com/feed/@{username}` |
+| Tag feed (RSS) | `GET medium.com/feed/tag/{tag}` |
+| HTTP/GraphQL | `POST medium.com/_/graphql` (transport: `graphql`) |
+| Transports | `rss` (default) · `http` · `graphql` · `puppeteer` |
+
+### Instagram (`src/scrapers/social/instagram/`)
+
+| Element | Selector |
+|---------|----------|
+| Username input | `input[name="username"]` |
+| Password input | `input[name="password"]` |
+| Login submit | `button[type="submit"]` |
+
+Private-API transport goes through `bridge.py` (instagrapi) — proxy applies to all traffic.
+
+### ProxyProvider usage (all three)
+
+```javascript
+new RedditClient({ proxyProvider: dynamicTunnelProvider });
+// or pool:  { proxyPool: proxyIpPool }  — falls back to globalProxyPool (env-seeded)
+// env fallback chain: injected provider → globalProxyPool → process.env.PROXY_URL
+```
+
+- Geo/session hints (`country`, `isp`, `sessionId`, …) set in `resolveProxy()` are forwarded to provider-class pools (`DynamicTunnelProvider` → `country-{cc}` token).
+- `ProxyIpPool` is a raw IP list — it ignores geo hints; use `DynamicTunnelProvider` for `country`/`city` targeting.
+- `requiresProxy: false` (Reddit/Medium default) → proxy only when explicitly configured; a proxy-connection error quarantines the proxy (5 min) and retries once direct. `requiresProxy: true` → quarantine + `PROXY_EXHAUSTED`, never silent-direct.

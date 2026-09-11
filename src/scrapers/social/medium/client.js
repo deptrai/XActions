@@ -8,7 +8,7 @@
  * @license Apache-2.0
  */
 
-import { AbstractApiClient } from '../../../core/base-client.js';
+import { AbstractApiClient, isProxyConnectionError } from '../../../core/base-client.js';
 import { MediumPlatformResponseValidator } from './validator.js';
 import {
   asRecord,
@@ -56,8 +56,9 @@ export class MediumClient extends AbstractApiClient {
   /** @type {'undici' | 'got'} */
   client = 'undici';
 
-  /** @type {boolean} */
-  requiresProxy = false;
+  // requiresProxy comes from AbstractApiClient (options.requiresProxy ?? false).
+  // Declaring it here would re-initialize it to false AFTER super() runs,
+  // silently discarding an explicit requiresProxy:true option.
 
   /** @type {string} */
   baseUrl;
@@ -79,6 +80,9 @@ export class MediumClient extends AbstractApiClient {
 
   /** @type {number} */
   #lastRequestAt = 0;
+
+  /** @type {string | Record<string, unknown> | null} — proxy used by the in-flight request (for AC-4 quarantine) */
+  #lastResolvedProxy = null;
 
   /**
    * @param {Object} [options={}]
@@ -114,11 +118,14 @@ export class MediumClient extends AbstractApiClient {
       platform: 'medium',
       responseValidator,
       requiresAuth: options.requiresAuth ?? false,
-      requiresProxy: options.requiresProxy ?? false,
+      // requiresProxy forwarded only when the caller set it — see base-client
+      // _requiresProxyExplicit semantics (explicit false = user opted out).
+      ...(options.requiresProxy !== undefined ? { requiresProxy: options.requiresProxy } : {}),
     });
 
     if (userProxyPool) {
       this.proxyPool = /** @type {import('../../../core/base-client.js').ProxyProviderLike} */ (/** @type {unknown} */ (userProxyPool));
+      this._hasExplicitProxy = true;
     }
 
     this.baseUrl = String(options.baseUrl || DEFAULT_MEDIUM_BASE_URL).replace(/\/+$/, '');
@@ -283,12 +290,22 @@ export class MediumClient extends AbstractApiClient {
       reqOpts.requiresResidential = this.requiresResidential;
     }
 
+    // Track the proxy actually resolved for this request so a tunnel-level
+    // failure can quarantine it and fall back to a direct connection (AC-4).
+    this.#lastResolvedProxy = null;
     try {
       const res = await super.request(method, url, /** @type {import('../../../core/base-client.js').RequestOptions} */ (/** @type {unknown} */ (reqOpts)));
       this.#lastRequestAt = Date.now();
       return res;
     } catch (err) {
       this.#lastRequestAt = Date.now();
+      if (isProxyConnectionError(err)) {
+        this.quarantineProxy(this.#lastResolvedProxy);
+        if (this.#lastResolvedProxy && !this.requiresProxy) {
+          console.warn(`⚠️ [MEDIUM] Proxy connection failed (${String(/** @type {Error} */ (err).message || err).slice(0, 120)}). Quarantined; retrying direct.`);
+          return await super.request(method, url, /** @type {import('../../../core/base-client.js').RequestOptions} */ (/** @type {unknown} */ ({ ...reqOpts, disableProxy: true })));
+        }
+      }
       throw err;
     }
   }
@@ -306,7 +323,15 @@ export class MediumClient extends AbstractApiClient {
     const hasProvider = Boolean(this.proxyProvider || this.proxyPool);
 
     if (!hasProvider) {
-      return super.resolveProxy(accountId, requiresResidential, requiresAuth, safeOptions);
+      // No provider and no pool: PROXY_URL env is the documented fallback (AC-2 / OQ-1).
+      const env = this.resolveEnvProxy();
+      if (env) {
+        this.#lastResolvedProxy = env;
+        return env;
+      }
+      const direct = super.resolveProxy(accountId, requiresResidential, requiresAuth, safeOptions);
+      this.#lastResolvedProxy = direct;
+      return direct;
     }
 
     /** @type {Record<string, unknown>} */
@@ -315,8 +340,28 @@ export class MediumClient extends AbstractApiClient {
     const currentIsp = typeof safeOptions.isp === 'string' ? safeOptions.isp : null;
     mergedOptions.country = currentCountry || 'us';
     mergedOptions.isp = currentIsp || 'residential';
+    if (accountId && !mergedOptions.sessionId) mergedOptions.sessionId = String(accountId);
 
-    return super.resolveProxy(accountId, requiresResidential, requiresAuth, /** @type {Object} */ (/** @type {unknown} */ (mergedOptions)));
+    // The env-seeded globalProxyPool only counts when it can actually serve;
+    // otherwise fall back to PROXY_URL before surfacing exhaustion (AC-2).
+    if (!this.proxyProvider && this.proxyPool) {
+      let poolCanServe = false;
+      try {
+        const probe = typeof this.proxyPool.getNext === 'function'
+          ? this.proxyPool.getNext(requiresResidential)
+          : null;
+        poolCanServe = probe != null;
+      } catch { poolCanServe = false; }
+      const env = this.resolveEnvProxy();
+      if (!poolCanServe && env) {
+        this.#lastResolvedProxy = env;
+        return env;
+      }
+    }
+
+    const proxy = super.resolveProxy(accountId, requiresResidential, requiresAuth, /** @type {Object} */ (/** @type {unknown} */ (mergedOptions)));
+    this.#lastResolvedProxy = proxy;
+    return proxy;
   }
 
   /**
