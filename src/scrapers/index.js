@@ -46,8 +46,8 @@ import { ThreadsCrawler } from './social/threads/crawler.js';
 import { ThreadsClient } from './social/threads/client.js';
 import { FacebookCrawler, resolveTargetKey, resolveGroupId } from './social/facebook/crawler.js';
 import { FacebookClient } from './social/facebook/client.js';
-import { TikTokCrawler } from './social/tiktok/crawler.js';
-import { TikTokClient } from './social/tiktok/client.js';
+import { TikTokCrawler, createTikTokCrawler } from './social/tiktok/crawler.js';
+import { TikTokClient, createTikTokClient } from './social/tiktok/client.js';
 import { TwitterCrawler } from './social/twitter/crawler.js';
 import { TwitterClient } from './social/twitter/client.js';
 import { ShopeeCrawler } from './ecom/shopee/crawler.js';
@@ -2871,6 +2871,10 @@ export {
   B2BRegistryExtendedClient,
   RedditCrawler,
   RedditClient,
+  TikTokCrawler,
+  TikTokClient,
+  createTikTokCrawler,
+  createTikTokClient,
   MediumCrawler,
   MediumClient,
   getAdapter,

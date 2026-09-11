@@ -196,10 +196,10 @@ export function normalizeTikTokPost(raw, sourceMethod = 'api') {
   }
 
   const stats = item.statistics || item.stats || {};
-  const likesCount = parseHumanCount(stats.digg_count ?? stats.like_count ?? stats.likes);
-  const repostsCount = parseHumanCount(stats.share_count ?? stats.repost_count ?? stats.reshare);
-  const repliesCount = parseHumanCount(stats.comment_count ?? stats.comments);
-  const viewsCount = parseHumanCount(stats.play_count ?? stats.views);
+  const likesCount = parseHumanCount(stats.digg_count ?? stats.like_count ?? stats.likes ?? stats.diggCount);
+  const repostsCount = parseHumanCount(stats.share_count ?? stats.repost_count ?? stats.reshare ?? stats.shareCount);
+  const repliesCount = parseHumanCount(stats.comment_count ?? stats.comments ?? stats.commentCount);
+  const viewsCount = parseHumanCount(stats.play_count ?? stats.views ?? stats.playCount);
 
   const hashtags = extractHashtags(item);
   const music = item.music || {};
@@ -330,7 +330,7 @@ export function normalizeTikTokSearchResponse(res) {
     res.data?.item_list ||
     res.data?.itemList ||
     res.data?.[0]?.item_list ||
-    [];
+    (Array.isArray(res.data) ? res.data : []);
 
   for (const raw of items) {
     const item = raw.item || raw;

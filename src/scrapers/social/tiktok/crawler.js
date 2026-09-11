@@ -570,7 +570,10 @@ export class TikTokCrawler extends AbstractCrawler {
     const { comments, pageInfo } = await extractor.fetch(videoId, { after: args.after || null });
 
     if (this.store && typeof this.store.storeCommentBatch === 'function' && comments.length > 0) {
-      await this.store.storeCommentBatch(comments, { upsert: true });
+      await this.store.storeCommentBatch(comments, { upsert: true }).catch((err) => {
+        // Tolerant to FK violation if parent post hasn't been crawled/saved yet
+        if (err?.code !== 'P2003') throw err;
+      });
     }
 
     await this.#emitCheckpointAndStream({
