@@ -6,14 +6,14 @@
  * @license Apache-2.0
  */
 
-export { TikTokClient } from './client.js';
-export { TikTokCrawler } from './crawler.js';
+export { TikTokClient, createTikTokClient } from './client.js';
+export { TikTokCrawler, createTikTokCrawler } from './crawler.js';
 export { TikTokBrowserBridge } from './signer-bridge.js';
 export { TikTokPlatformResponseValidator } from './validator.js';
 export * from './normalizer.js';
 
-import { TikTokClient } from './client.js';
-import { TikTokCrawler } from './crawler.js';
+import { TikTokClient, createTikTokClient } from './client.js';
+import { TikTokCrawler, createTikTokCrawler } from './crawler.js';
 import { TikTokBrowserBridge } from './signer-bridge.js';
 import { TikTokPlatformResponseValidator } from './validator.js';
 
@@ -43,7 +43,9 @@ export async function scrapeTikTok(action, args, options = {}) {
 
 export default {
   TikTokClient,
+  createTikTokClient,
   TikTokCrawler,
+  createTikTokCrawler,
   TikTokBrowserBridge,
   TikTokPlatformResponseValidator,
   scrapeTikTok,

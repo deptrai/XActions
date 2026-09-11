@@ -53,7 +53,7 @@ export function parseHumanCount(input) {
 }
 
 /**
- * Convert a Unix timestamp (seconds or ms) to a Date.
+ * Convert a Unix timestamp (seconds, ms, or microseconds) to a Date.
  * @param {unknown} ts
  * @returns {Date | undefined}
  */
@@ -61,7 +61,8 @@ export function parseTimestamp(ts) {
   if (ts === undefined || ts === null) return undefined;
   const n = Number(ts);
   if (!Number.isFinite(n) || n <= 0) return undefined;
-  const ms = n > 1e12 ? n : n * 1000;
+  // Handle microseconds (> 1e14), milliseconds (> 1e11), and seconds
+  const ms = n > 1e14 ? Math.floor(n / 1000) : (n > 1e11 ? n : n * 1000);
   const d = new Date(ms);
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
@@ -129,8 +130,19 @@ export function extractHashtags(item) {
  */
 export function extractAuthor(item) {
   const author = item.author || item.author_info || item.user || {};
-  const authorId = String(author.id || author.uid || author.author_id || author.sec_uid || '');
-  const authorName = String(author.nickname || author.unique_id || author.username || author.handle || '');
+  const authorId = String(
+    author.id ||
+    author.uid ||
+    author.author_id ||
+    author.sec_uid ||
+    author.secUid ||
+    author.unique_id ||
+    author.uniqueId ||
+    author.username ||
+    author.handle ||
+    ''
+  );
+  const authorName = String(author.nickname || author.unique_id || author.uniqueId || author.username || author.handle || authorId || '');
   const authorAvatar = author.avatar_thumb?.urlList?.[0] || author.avatar_larger?.urlList?.[0] || undefined;
   const authorUrl = authorName ? `https://www.tiktok.com/@${authorName}` : undefined;
   return { authorId, authorName, authorAvatar, authorUrl };
@@ -168,6 +180,20 @@ export function normalizeTikTokPost(raw, sourceMethod = 'api') {
   const content = String(item.desc || item.title || '');
   const { videoUrl, coverUrl, videoWidth, videoHeight, duration } = extractTikTokMedia(item.video);
 
+  // Extract photo carousel images if present (TikTok imagePost / images)
+  const photoUrls = [];
+  const imageList = item.imagePost?.images || item.images || [];
+  if (Array.isArray(imageList)) {
+    for (const img of imageList) {
+      const u =
+        img?.imageURL?.urlList?.[0] ||
+        img?.display_image?.urlList?.[0] ||
+        img?.urlList?.[0] ||
+        (typeof img === 'string' ? img : undefined);
+      if (u && !photoUrls.includes(u)) photoUrls.push(u);
+    }
+  }
+
   const stats = item.statistics || item.stats || {};
   const likesCount = parseHumanCount(stats.digg_count ?? stats.like_count ?? stats.likes);
   const repostsCount = parseHumanCount(stats.share_count ?? stats.repost_count ?? stats.reshare);
@@ -178,6 +204,10 @@ export function normalizeTikTokPost(raw, sourceMethod = 'api') {
   const music = item.music || {};
   const postUrl = buildTikTokPostUrl(item) || `https://www.tiktok.com/video/${awemeId}`;
   const publishedAt = parseTimestamp(item.create_time || item.createTime);
+
+  const resolvedMediaUrls = photoUrls.length > 0
+    ? photoUrls
+    : (videoUrl ? [videoUrl] : (coverUrl ? [coverUrl] : []));
 
   /** @type {import('../../../core/types.js').PostItem} */
   const post = {
@@ -191,7 +221,7 @@ export function normalizeTikTokPost(raw, sourceMethod = 'api') {
     authorUrl,
     postUrl,
     content,
-    mediaUrls: videoUrl ? [videoUrl] : (coverUrl ? [coverUrl] : []),
+    mediaUrls: resolvedMediaUrls,
     likesCount,
     repostsCount,
     repliesCount,
@@ -209,6 +239,8 @@ export function normalizeTikTokPost(raw, sourceMethod = 'api') {
       musicTitle: String(music.title || ''),
       region: String(item.region || ''),
       coverUrl,
+      isImagePost: photoUrls.length > 0,
+      imageCount: photoUrls.length,
     },
   };
 

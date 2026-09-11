@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import http from 'node:http';
 import { TikTokClient } from '../../../../src/scrapers/social/tiktok/client.js';
-import { TikTokCrawler } from '../../../../src/scrapers/social/tiktok/crawler.js';
+import { TikTokCrawler, createTikTokCrawler } from '../../../../src/scrapers/social/tiktok/crawler.js';
 import { TikTokPlatformResponseValidator } from '../../../../src/scrapers/social/tiktok/validator.js';
 
 /**
@@ -43,6 +43,15 @@ describe('Story 15.2 — TikTokCrawler Actions', () => {
       }
 
       if (path === '/api/challenge/detail/') {
+        const chaName = url.searchParams.get('challengeName') || url.searchParams.get('challenge_name') || url.searchParams.get('cha_name') || '';
+        if (chaName.includes('nonexistent')) {
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({
+            status_code: 0,
+            challengeInfo: {},
+          }));
+          return;
+        }
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify({
           status_code: 0,
@@ -212,5 +221,25 @@ describe('Story 15.2 — TikTokCrawler Actions', () => {
     expect(reply).toBeDefined();
     expect(reply.depth).toBe(1);
     expect(reply.parentCommentId).toBe(root?.id);
+  });
+
+  it('exports and creates crawler via createTikTokCrawler factory', () => {
+    const crawler = createTikTokCrawler({ requiresAuth: false });
+    expect(crawler).toBeInstanceOf(TikTokCrawler);
+    expect(createTikTokCrawler(crawler)).toBe(crawler);
+  });
+
+  it('throws NOT_FOUND PlatformError with statusCode 404 when hashtag is not found', async () => {
+    const crawler = createCrawler();
+    await expect(
+      crawler.start({
+        action: 'hashtag_feed',
+        args: { tag: 'nonexistent_missing_hashtag_xyz' },
+        session: { accountId: 'tiktok-guest' },
+      })
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'XACT_4041',
+    });
   });
 });

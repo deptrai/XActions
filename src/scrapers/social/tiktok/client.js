@@ -422,9 +422,12 @@ export class TikTokClient extends AbstractApiClient {
    * @returns {string}
    */
   #mergeSignedQuery(url, signedQuery) {
+    if (!signedQuery || Object.keys(signedQuery).length === 0) return url;
     const parsed = new URL(url);
     for (const [k, v] of Object.entries(signedQuery)) {
       if (v === undefined || v === null) continue;
+      // Skip if parameter already exists and has identical string value
+      if (parsed.searchParams.get(k) === String(v)) continue;
       parsed.searchParams.set(k, String(v));
     }
     return parsed.toString();
@@ -606,4 +609,13 @@ export class TikTokClient extends AbstractApiClient {
       this.signerBridge = null;
     }
   }
+}
+
+/**
+ * Factory helper for TikTokClient.
+ * @param {Record<string, any>} [options={}]
+ * @returns {TikTokClient}
+ */
+export function createTikTokClient(options = {}) {
+  return new TikTokClient(options);
 }

@@ -336,7 +336,8 @@ export class TikTokCrawler extends AbstractCrawler {
     if (!challengeId) {
       throw new PlatformError({
         code: 'XACT_4041',
-        type: ErrorTypes.INTERNAL,
+        statusCode: 404,
+        type: ErrorTypes.NOT_FOUND,
         message: `Hashtag not found: ${tag}`,
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         platform: 'tiktok',
@@ -422,7 +423,8 @@ export class TikTokCrawler extends AbstractCrawler {
     if (!resp) {
       throw new PlatformError({
         code: 'XACT_4041',
-        type: ErrorTypes.INTERNAL,
+        statusCode: 404,
+        type: ErrorTypes.NOT_FOUND,
         message: `Post not found: ${videoId} — ${lastErr instanceof Error ? lastErr.message : ''}`,
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
         platform: 'tiktok',
@@ -593,4 +595,17 @@ export class TikTokCrawler extends AbstractCrawler {
       await this.client.close();
     }
   }
+}
+
+/**
+ * Factory helper for TikTokCrawler.
+ * @param {Record<string, any> | TikTokCrawler} [clientOrOptions={}]
+ * @param {Record<string, any>} [options={}]
+ * @returns {TikTokCrawler}
+ */
+export function createTikTokCrawler(clientOrOptions = {}, options = {}) {
+  if (clientOrOptions instanceof TikTokCrawler) {
+    return clientOrOptions;
+  }
+  return new TikTokCrawler(clientOrOptions || options);
 }

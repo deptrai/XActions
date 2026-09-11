@@ -138,6 +138,12 @@ export class TikTokBrowserBridge {
   /** @type {boolean} */
   #isFirstCall = true;
 
+  /** @type {string} */
+  #instanceNonce = Math.random().toString(36).slice(2, 8);
+
+  /** @type {Promise<any>} */
+  #signQueue = Promise.resolve();
+
   /**
    * @param {Object} [options={}]
    * @param {string} [options.baseUrl='https://www.tiktok.com']
@@ -184,7 +190,7 @@ export class TikTokBrowserBridge {
    */
   #resolveUserDataDir(accountId) {
     const cleanId = String(accountId || 'guest').replace(/[^a-zA-Z0-9_-]/g, '_');
-    return path.join(process.cwd(), '.data', 'tiktok-profiles', cleanId);
+    return path.join(process.cwd(), '.data', 'tiktok-profiles', `${cleanId}-${this.#instanceNonce}`);
   }
 
   /**
@@ -359,12 +365,20 @@ export class TikTokBrowserBridge {
           await this.adapter.closePage(page);
         } catch {}
       }
+      if (this.#browser && this.adapter) {
+        try {
+          await this.adapter.closeBrowser(this.#browser);
+        } catch {}
+      }
+      this.#browser = null;
+      this.#warmedPage = null;
       throw err;
     }
   }
 
   /**
    * Sign a TikTok Web API URL using the live anti-bot runtime in the browser.
+   * Concurrency is serialized through #signQueue to avoid onRequest listener cross-assignment.
    * @param {string} url
    * @param {Object} [options={}]
    * @param {string} [options.userAgent]
@@ -372,6 +386,17 @@ export class TikTokBrowserBridge {
    * @returns {Promise<{ query: Record<string, string>, cookies: Record<string, string> }>}
    */
   async signUrl(url, options = {}) {
+    const next = this.#signQueue.then(() => this.#executeSignUrl(url, options));
+    this.#signQueue = next.catch(() => {});
+    return next;
+  }
+
+  /**
+   * @param {string} url
+   * @param {Object} [options={}]
+   * @returns {Promise<{ query: Record<string, string>, cookies: Record<string, string> }>}
+   */
+  async #executeSignUrl(url, options = {}) {
     const { cookies } = options || {};
     const parsedUrl = new URL(url);
     const accountId = 'tiktok-guest';

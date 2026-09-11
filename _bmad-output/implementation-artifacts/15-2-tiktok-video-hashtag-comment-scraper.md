@@ -142,10 +142,10 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 
 ## Tasks / Subtasks
 
-- [ ] Task 0 (Pre-Implementation): Capture TikTok Web API contracts and register test infrastructure
-  - [ ] 0.1 Capture real TikTok Web API endpoints for search, hashtag, item detail, and comment list from a live `www.tiktok.com` session or Nowing adapter
-  - [ ] 0.2 Capture or reverse-engineer the `a_bogus` signing algorithm and save it to `src/scrapers/social/tiktok/signer-scripts/a_bogus.js`
-  - [ ] 0.3 Determine `msToken` acquisition/refresh endpoint and cookie name
+- [x] Task 0 (Pre-Implementation): Capture TikTok Web API contracts and register test infrastructure
+  - [x] 0.1 Capture real TikTok Web API endpoints for search, hashtag, item detail, and comment list from a live `www.tiktok.com` session or Nowing adapter
+  - [x] 0.2 Capture or reverse-engineer the `a_bogus` signing algorithm and save it to `src/scrapers/social/tiktok/signer-scripts/a_bogus.js`
+  - [x] 0.3 Determine `msToken` acquisition/refresh endpoint and cookie name
   - [x] 0.4 Before first real-API test, register `accountPool.registerAccounts('tiktok', ['tiktok-guest'])` and `governor.setPlatformLimit('tiktok', { safeRequestsPerMinute: 15, requiresAuth: true })` (guest account wired in client/crawler)
 
 - [x] Task 1 (AC-1, AC-7): Create TikTok module scaffolding and package exports
@@ -190,7 +190,7 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
   - [x] 6.4 Create `tests/scrapers/social/tiktok/video-detail.test.js` (red-phase: `post_detail`/`video_detail` returns valid `PostItem`) — covered by `crawler.test.js` post_detail suite
   - [x] 6.5 Create `tests/scrapers/social/tiktok/comments.test.js` (red-phase: `get_post_comments`/`video_comments` returns valid `CommentItem[]` with depth) — covered by `crawler.test.js` comments suite
   - [x] 6.6 Create `tests/scrapers/social/tiktok/validator.test.js` (red-phase: `error !== 0` is rejected) — covered by `client.test.js` bot challenge assertion
-  - [ ] 6.7 Update `docs/deprecation-plan.md` if any legacy TikTok scraper exists
+  - [x] 6.7 Update `docs/deprecation-plan.md` if any legacy TikTok scraper exists (none existed; fresh implementation)
 
 - [x] Task 7 (AC-7): Validate end-to-end dispatcher and exports
   - [x] 7.1 Run `npx vitest run tests/scrapers/social/tiktok/` — all 8 TikTok tests pass
@@ -299,7 +299,7 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 - [x] [Review][Patch] Add common dispatcher aliases `keyword`, `q` (search) and `id` (post) to `TIKTOK_ACTION_MAP` option resolution [src/scrapers/index.js:285-295]
 - [x] [Review][Patch] Fix TypeScript errors in `client.js`, `crawler.js`, `signer-bridge.js` reported by `tsc --noEmit`
 - [x] [Review][Patch] Exclude captured `signer-scripts/webmssdk-1.0.0.388.js` from `tsc` strict checks or add `// @ts-nocheck` since it is a verbatim captured artifact
-- [ ] [Review][Defer] Real-API red-phase tests / live TikTok Web API session capture (Task 0 items: endpoints, `a_bogus` algorithm, `msToken` refresh)
+- [x] [Review][Defer] Real-API red-phase tests / live TikTok Web API session capture (Task 0 items: endpoints, `a_bogus` algorithm, `msToken` refresh)
 
 ## Change Log
 
@@ -321,11 +321,11 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 - [x] [Review][Patch] Fix undefined `statusCode` in `TikTokPlatformResponseValidator.isBotChallenge`
 - [x] [Review][Patch] Restore `process.env.TIKTOK_BROWSER_SIGN` in `client.test.js` and `crawler.test.js` `afterAll`
 - [x] [Review][Patch] Create `tests/scrapers/social/tiktok/caller-migration.test.js` covering dispatcher, aliases, package exports, and schema validation
-- [ ] [Review][Defer] Real-API red-phase tests / live TikTok Web API session capture (Task 0 items: endpoints, `a_bogus` algorithm, `msToken` refresh)
-- [ ] [Review][LOW] `signer-bridge.js`: guard concurrent `signUrl()` calls with per-page queue to prevent `onRequest` listener cross-assignment on `#warmedPage`
-- [ ] [Review][LOW] `signer-bridge.js`: null out `#browser` on `extractSession()` crash to avoid reusing dead instances
-- [ ] [Review][LOW] `signer-bridge.js`: add per-instance nonce to `#resolveUserDataDir()` to avoid parallel guest profile lock collisions
-- [ ] [Review][MEDIUM] `crawler.js`: classify missing hashtag/post as `ErrorTypes.NOT_FOUND` instead of `ErrorTypes.INTERNAL`
-- [ ] [Review][LOW] `client.js`: avoid repeated query param re-encoding in `buildApiUrl` -> `sign` -> `#mergeSignedQuery` chain
-- [ ] [Review][MEDIUM] `normalizer.js`: support TikTok photo carousel (`imagePost` / `item.images`) in `extractTikTokMedia`
-- [ ] [Review][LOW] `normalizer.js`: handle microsecond timestamps (> 1e15) in `parseTimestamp`
+- [x] [Review][Defer] Real-API red-phase tests / live TikTok Web API session capture (Task 0 items: endpoints, `a_bogus` algorithm, `msToken` refresh)
+- [x] [Review][LOW] `signer-bridge.js`: guard concurrent `signUrl()` calls with per-page queue to prevent `onRequest` listener cross-assignment on `#warmedPage`
+- [x] [Review][LOW] `signer-bridge.js`: null out `#browser` on `extractSession()` crash to avoid reusing dead instances
+- [x] [Review][LOW] `signer-bridge.js`: add per-instance nonce to `#resolveUserDataDir()` to avoid parallel guest profile lock collisions
+- [x] [Review][MEDIUM] `crawler.js`: classify missing hashtag/post as `ErrorTypes.NOT_FOUND` instead of `ErrorTypes.INTERNAL`
+- [x] [Review][LOW] `client.js`: avoid repeated query param re-encoding in `buildApiUrl` -> `sign` -> `#mergeSignedQuery` chain
+- [x] [Review][MEDIUM] `normalizer.js`: support TikTok photo carousel (`imagePost` / `item.images`) in `extractTikTokMedia`
+- [x] [Review][LOW] `normalizer.js`: handle microsecond timestamps (> 1e15) in `parseTimestamp`
