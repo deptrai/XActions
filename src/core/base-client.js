@@ -70,9 +70,17 @@ export function isProxyConnectionError(err) {
   // surfaced PlatformError keeps the original error under details.error.
   const candidates = [err, /** @type {{ details?: { error?: unknown } }} */ (err)?.details?.error];
   return candidates.some((e) => {
-    if (!e) return false;
-    const msg = String(/** @type {{ message?: unknown }} */ (e).message || e);
-    return signatures.some((sig) => msg.includes(sig));
+    // undici wraps socket failures as TypeError('fetch failed') with the real
+    // errno on .cause.code — walk the cause chain (bounded) for each candidate.
+    let cur = e;
+    let depth = 0;
+    while (cur && depth++ < 5) {
+      const msg = String(/** @type {{ message?: unknown }} */ (cur).message || cur);
+      const code = String(/** @type {{ code?: unknown }} */ (cur).code || '');
+      if (signatures.some((sig) => msg.includes(sig) || code.includes(sig))) return true;
+      cur = /** @type {{ cause?: unknown }} */ (cur).cause;
+    }
+    return false;
   });
 }
 
