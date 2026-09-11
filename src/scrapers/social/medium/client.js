@@ -8,7 +8,7 @@
  * @license Apache-2.0
  */
 
-import { AbstractApiClient, isProxyConnectionError } from '../../../core/base-client.js';
+import { AbstractApiClient } from '../../../core/base-client.js';
 import { MediumPlatformResponseValidator } from './validator.js';
 import {
   asRecord,
@@ -80,9 +80,6 @@ export class MediumClient extends AbstractApiClient {
 
   /** @type {number} */
   #lastRequestAt = 0;
-
-  /** @type {string | Record<string, unknown> | null} — proxy used by the in-flight request (for AC-4 quarantine) */
-  #lastResolvedProxy = null;
 
   /**
    * @param {Object} [options={}]
@@ -290,23 +287,12 @@ export class MediumClient extends AbstractApiClient {
       reqOpts.requiresResidential = this.requiresResidential;
     }
 
-    // Track the proxy actually resolved for this request so a tunnel-level
-    // failure can quarantine it and fall back to a direct connection (AC-4).
-    this.#lastResolvedProxy = null;
+    // Dead-proxy quarantine + direct fallback live in the base request
+    // pipeline (transport catch in base-client — AC-4, lifted in epic-35 retro).
     try {
-      const res = await super.request(method, url, /** @type {import('../../../core/base-client.js').RequestOptions} */ (/** @type {unknown} */ (reqOpts)));
+      return await super.request(method, url, /** @type {import('../../../core/base-client.js').RequestOptions} */ (/** @type {unknown} */ (reqOpts)));
+    } finally {
       this.#lastRequestAt = Date.now();
-      return res;
-    } catch (err) {
-      this.#lastRequestAt = Date.now();
-      if (isProxyConnectionError(err)) {
-        this.quarantineProxy(this.#lastResolvedProxy);
-        if (this.#lastResolvedProxy && !this.requiresProxy) {
-          console.warn(`⚠️ [MEDIUM] Proxy connection failed (${String(/** @type {Error} */ (err).message || err).slice(0, 120)}). Quarantined; retrying direct.`);
-          return await super.request(method, url, /** @type {import('../../../core/base-client.js').RequestOptions} */ (/** @type {unknown} */ ({ ...reqOpts, disableProxy: true })));
-        }
-      }
-      throw err;
     }
   }
 
@@ -326,12 +312,9 @@ export class MediumClient extends AbstractApiClient {
       // No provider and no pool: PROXY_URL env is the documented fallback (AC-2 / OQ-1).
       const env = this.resolveEnvProxy();
       if (env) {
-        this.#lastResolvedProxy = env;
         return env;
       }
-      const direct = super.resolveProxy(accountId, requiresResidential, requiresAuth, safeOptions);
-      this.#lastResolvedProxy = direct;
-      return direct;
+      return super.resolveProxy(accountId, requiresResidential, requiresAuth, safeOptions);
     }
 
     /** @type {Record<string, unknown>} */
@@ -354,14 +337,11 @@ export class MediumClient extends AbstractApiClient {
       } catch { poolCanServe = false; }
       const env = this.resolveEnvProxy();
       if (!poolCanServe && env) {
-        this.#lastResolvedProxy = env;
         return env;
       }
     }
 
-    const proxy = super.resolveProxy(accountId, requiresResidential, requiresAuth, /** @type {Object} */ (/** @type {unknown} */ (mergedOptions)));
-    this.#lastResolvedProxy = proxy;
-    return proxy;
+    return super.resolveProxy(accountId, requiresResidential, requiresAuth, /** @type {Object} */ (/** @type {unknown} */ (mergedOptions)));
   }
 
   /**

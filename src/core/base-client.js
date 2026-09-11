@@ -818,19 +818,19 @@ export class AbstractApiClient {
         const requestStart = Date.now();
         const requestTimeout = opts.timeout ?? this.timeout ?? 30000;
         let response;
+        /** @type {Record<string, unknown>} */
+        const transportOpts = {
+          ...opts,
+          timeout: requestTimeout,
+          method,
+          url,
+          proxy,
+          accountId: currentAccountId,
+        };
+        if (agent) {
+          transportOpts.agent = agent;
+        }
         try {
-          /** @type {Record<string, unknown>} */
-          const transportOpts = {
-            ...opts,
-            timeout: requestTimeout,
-            method,
-            url,
-            proxy,
-            accountId: currentAccountId,
-          };
-          if (agent) {
-            transportOpts.agent = agent;
-          }
           response = await transport(transportOpts);
         } catch (err) {
           if (err instanceof PlatformError && !err.isRetryable) {
@@ -843,6 +843,27 @@ export class AbstractApiClient {
             headers: {},
             error: err,
           };
+          // Tunnel-level failure — the proxy is dead, not the target.
+          // Quarantine it; when the platform allows direct egress, retry once
+          // direct inside this same attempt (requiresProxy:true keeps the
+          // 503 → ProxyDeadError path below, so the proxy stays required).
+          if (proxy && isProxyConnectionError(err)) {
+            this.quarantineProxy(proxy);
+            if (!this.requiresProxy) {
+              const directOpts = { ...transportOpts, proxy: null };
+              delete directOpts.agent;
+              try {
+                response = await transport(directOpts);
+              } catch (retryErr) {
+                const rErrObj = /** @type {Record<string, unknown>} */ (retryErr);
+                response = {
+                  status: rErrObj?.statusCode || (rErrObj?.name === 'TimeoutError' ? 408 : 503),
+                  headers: {},
+                  error: retryErr,
+                };
+              }
+            }
+          }
         }
 
         const status = response?.status ?? 500;

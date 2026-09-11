@@ -8,7 +8,7 @@
  * @license Apache-2.0
  */
 
-import { AbstractApiClient, isProxyConnectionError } from '../../../core/base-client.js';
+import { AbstractApiClient } from '../../../core/base-client.js';
 import { RedditPlatformResponseValidator } from './validator.js';
 import { RedditBrowserBridge } from './bridge.js';
 import {
@@ -99,9 +99,6 @@ export class RedditClient extends AbstractApiClient {
 
   /** @type {Promise<void> | null} */
   #bridgePromise = null;
-
-  /** @type {string | Record<string, unknown> | null} — proxy used by the in-flight request (for AC-4 quarantine) */
-  #lastResolvedProxy = null;
 
   /**
    * @param {Object} [options={}]
@@ -797,22 +794,9 @@ export class RedditClient extends AbstractApiClient {
       reqOpts.requiresResidential = this.requiresResidential;
     }
 
-    // Track the proxy actually resolved for this request so a tunnel-level
-    // failure can quarantine it and fall back to a direct connection (AC-4).
-    this.#lastResolvedProxy = null;
-    let res;
-    try {
-      res = await super.request(method, url, /** @type {import('../../../core/base-client.js').RequestOptions} */ (/** @type {unknown} */ (reqOpts)));
-    } catch (err) {
-      if (isProxyConnectionError(err) && this.#lastResolvedProxy && !this.requiresProxy) {
-        this.quarantineProxy(this.#lastResolvedProxy);
-        console.warn(`⚠️ [REDDIT] Proxy connection failed (${String(/** @type {Error} */ (err).message || err).slice(0, 120)}). Quarantined; retrying direct.`);
-        res = await super.request(method, url, /** @type {import('../../../core/base-client.js').RequestOptions} */ (/** @type {unknown} */ ({ ...reqOpts, disableProxy: true })));
-      } else {
-        if (isProxyConnectionError(err)) this.quarantineProxy(this.#lastResolvedProxy);
-        throw err;
-      }
-    }
+    // Dead-proxy quarantine + direct fallback live in the base request
+    // pipeline (transport catch in base-client — AC-4, lifted in epic-35 retro).
+    const res = await super.request(method, url, /** @type {import('../../../core/base-client.js').RequestOptions} */ (/** @type {unknown} */ (reqOpts)));
 
     // Parse rate-limit headers on success to drive proactive backoff
     if (res && typeof res === 'object' && 'headers' in res && res.headers && typeof res.headers === 'object') {
@@ -851,9 +835,7 @@ export class RedditClient extends AbstractApiClient {
 
     // An explicit provider always wins — it reads accountId + requiresResidential.
     if (this.proxyProvider) {
-      const proxy = super.resolveProxy(accountId, requiresResidential, requiresAuth, /** @type {Object} */ (/** @type {unknown} */ (mergedOptions)));
-      this.#lastResolvedProxy = proxy;
-      return proxy;
+      return super.resolveProxy(accountId, requiresResidential, requiresAuth, /** @type {Object} */ (/** @type {unknown} */ (mergedOptions)));
     }
 
     // proxyPool defaults to the env-seeded globalProxyPool. When it cannot
@@ -870,13 +852,10 @@ export class RedditClient extends AbstractApiClient {
     }
     const env = this.resolveEnvProxy();
     if (!poolCanServe && env) {
-      this.#lastResolvedProxy = env;
       return env;
     }
 
-    const proxy = super.resolveProxy(accountId, requiresResidential, requiresAuth, /** @type {Object} */ (/** @type {unknown} */ (mergedOptions)));
-    this.#lastResolvedProxy = proxy;
-    return proxy;
+    return super.resolveProxy(accountId, requiresResidential, requiresAuth, /** @type {Object} */ (/** @type {unknown} */ (mergedOptions)));
   }
 
   /**
