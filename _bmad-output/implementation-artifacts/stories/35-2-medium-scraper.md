@@ -3,7 +3,7 @@ title: 'Story 35.2: Medium Scraper (Client + Crawler + Validator + Tests)'
 type: 'feature'
 created: '2026-09-09'
 updated: '2026-09-11'
-status: 'review'
+status: 'done'
 epic: 35
 story_number: 35.2
 phase: 'Epic 35 — Reddit, Medium & Instagram Scraper Expansion'
