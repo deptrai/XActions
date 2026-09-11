@@ -139,3 +139,74 @@ describe('cleanup', () => {
     await expect(c.cleanup()).resolves.toBeUndefined();
   });
 });
+
+describe('checkpoint + stream emission (AC-5)', () => {
+  function makeStore() {
+    const calls = { storeBatch: [], saveCheckpoint: [] };
+    return {
+      calls,
+      telemetryContext: null,
+      async storeBatch(items) { calls.storeBatch.push(items); return { insertedCount: items.length, totalCount: items.length, duplicates: [] }; },
+      async saveCheckpoint(cp) { calls.saveCheckpoint.push(cp); return cp; },
+      async getCheckpoint() { return null; },
+      async findExistingIds() { return []; },
+    };
+  }
+
+  it('emits saveCheckpoint for user action with correct shape', async () => {
+    const store = makeStore();
+    const c = makeCrawler({ store });
+    await c.start({ action: 'user', args: { username: 'natgeo' }, session: { accountId: 'acct-test' } });
+    expect(store.calls.saveCheckpoint).toHaveLength(1);
+    const cp = store.calls.saveCheckpoint[0];
+    expect(cp.platform).toBe('instagram');
+    expect(cp.targetType).toBe('user');
+    expect(cp.targetKey).toBe('natgeo');
+    expect(cp.status).toBe('completed'); // fixture page_info.has_next_page=false
+  });
+
+  it('publishes each post to the Redis stream when REDIS_STREAM_ENABLED', async () => {
+    process.env.REDIS_STREAM_ENABLED = '1';
+    const published = [];
+    const redisPublisher = { publish: async (evt) => { published.push(evt); } };
+    const store = makeStore();
+    const c = makeCrawler({ store, redisPublisher });
+    try {
+      await c.start({ action: 'user', args: { username: 'natgeo' }, session: { accountId: 'acct-test' } });
+    } finally {
+      delete process.env.REDIS_STREAM_ENABLED;
+    }
+    expect(published).toHaveLength(2);
+    expect(published[0].platform).toBe('instagram');
+    expect(published[0].externalId).toBe('1');
+    expect(published[0].category).toBe('social');
+    expect(published[0].storageRef).toBe(published[0].id);
+  });
+
+  it('does not publish when REDIS_STREAM_ENABLED is unset', async () => {
+    delete process.env.REDIS_STREAM_ENABLED;
+    const published = [];
+    const redisPublisher = { publish: async (evt) => { published.push(evt); } };
+    const c = makeCrawler({ store: makeStore(), redisPublisher });
+    await c.start({ action: 'hashtag', args: { tag: 'travel' }, session: { accountId: 'acct-test' } });
+    expect(published).toHaveLength(0);
+  });
+});
+
+describe('limit + transport resolution', () => {
+  it('honours a numeric limit smaller than the page', async () => {
+    const c = makeCrawler();
+    const res = await c.start({ action: 'user', args: { username: 'natgeo', limit: 1 }, session: { accountId: 'acct-test' } });
+    expect(res.posts).toHaveLength(1);
+  });
+  it('falls back to default limit on garbage', async () => {
+    const c = makeCrawler();
+    const res = await c.start({ action: 'user', args: { username: 'natgeo', limit: 'abc' }, session: { accountId: 'acct-test' } });
+    expect(res.posts).toHaveLength(2); // fixture has 2, default limit 25 doesn't truncate
+  });
+  it('per-request transport override switches client.transport', async () => {
+    const c = makeCrawler();
+    await c.start({ action: 'user', args: { username: 'natgeo', transport: 'http' }, session: { accountId: 'acct-test' } });
+    expect(c.client.transport).toBe('http');
+  });
+});

@@ -285,3 +285,60 @@ itLive('scrapes a real public profile via puppeteer', async () => {
   expect(user.username).toBe('natgeo');
   await c.close();
 }, 60000);
+
+describe('buildUrl (AC-1 URL contract)', () => {
+  const c = new InstagramClient({ transport: 'http', baseUrl: 'https://www.instagram.com', requiresAuth: false, requiresProxy: false });
+  it('joins a relative path onto baseUrl and sets scalar params', () => {
+    const u = c.buildUrl('/p/X/', { __a: '1', __d: 'dis' });
+    expect(u).toContain('https://www.instagram.com/p/X/');
+    expect(u).toContain('__a=1');
+    expect(u).toContain('__d=dis');
+  });
+  it('passes absolute URLs through unchanged host', () => {
+    expect(c.buildUrl('https://cdn.example.com/x.jpg')).toBe('https://cdn.example.com/x.jpg');
+  });
+  it('skips undefined/null/empty params', () => {
+    const u = c.buildUrl('/p/X/', { a: undefined, b: null, c: '', d: 'v' });
+    expect(u).not.toContain('a=');
+    expect(u).not.toContain('b=');
+    expect(u).toContain('d=v');
+  });
+  it('throws XACT_4001 on a non-string/empty path', () => {
+    expect(() => c.buildUrl('')).toThrow(/non-empty string/);
+    expect(() => c.buildUrl('   ')).toThrow(/non-empty string/);
+  });
+});
+
+describe('getUserMedia __user/__raw pass-through (no double-fetch)', () => {
+  it('uses the supplied profile payload instead of refetching', async () => {
+    const c = makeClient();
+    const user = { pk: 98765, username: 'natgeo', edge_owner_to_timeline_media: { edges: [{ node: { pk: 1, code: 'X', taken_at: 1 } }], page_info: { has_next_page: false } } };
+    const { items, pageInfo } = await c.getUserMedia('natgeo', { __user: user });
+    expect(items).toHaveLength(1);
+    expect(pageInfo.has_next_page).toBe(false);
+  });
+});
+
+describe('ensureSession credential fallback', () => {
+  it('logs in via injected credentials when no cached session exists', async () => {
+    const c = makeClient({ credentials: { sessionid: 'FALLBACK_SESS' } });
+    const res = await c.ensureSession('acct-cred');
+    expect(res).toBeTruthy();
+    expect(res.cookies.sessionid).toBe('FALLBACK_SESS');
+  });
+  it('returns null when neither cache, store, nor credentials exist', async () => {
+    const c = makeClient();
+    const res = await c.ensureSession('acct-none', {});
+    expect(res).toBeNull();
+  });
+});
+
+describe('cookie header on outgoing requests', () => {
+  it('sends session cookies in the cookie header after login', async () => {
+    const c = makeClient();
+    await c.login({ accountId: 'acct-cookie', sessionid: 'SESSCOOKIE', csrftoken: 'tok' });
+    await c.getUserProfile('natgeo');
+    expect(lastHeaders.cookie).toContain('sessionid=SESSCOOKIE');
+    expect(lastHeaders.cookie).toContain('csrftoken=tok');
+  });
+});
