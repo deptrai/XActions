@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: "09-11-2026"
+last_updated: "09-12-2026 00:34"
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -51,7 +51,8 @@ development_status:
   11-1-proxyippool-accountpool-sticky-round-robin: done
   11-2-static-dynamic-residential-tunnel-proxy-providers: done
   11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: done
-  11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: done
+  11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: 
+    done
   11-5-end-to-end-request-pipeline-two-mode-ip: done
   11-6-rate-limit-bot-challenge-defense: done
   11-7-crawler-governor-integration-validator-contract: done
@@ -220,4 +221,33 @@ development_status:
   35-2-medium-scraper-client-crawler-validator-tests: done
   35-3-instagram-scraper-client-crawler-session-proxy-tests: done
   35-4-unified-proxy-docs: done
-  epic-35-retrospective: optional
+  epic-35-retrospective: done
+action_items:
+  - id: "epic-35-retro-item-1-gate-proxy_exhausted-at-base-client-js-9"
+    epic: 35
+    action: "Gate PROXY_EXHAUSTED at base-client.js:978 on shouldUseProxy so direct-request
+      429/403 keep real error type (fixes 7 client tests)"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-35-retro-2026-09-12.md"
+  - id: "epic-35-retro-item-2-proxyippool-isallquarantined-returns-fal"
+    epic: 35
+    action: "ProxyIpPool.isAllQuarantined() returns false on empty pool (empty !=
+      exhausted)"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-35-retro-2026-09-12.md"
+  - id: "epic-35-retro-item-3-lift-duplicated-quarantine-to-direct-ret"
+    epic: 35
+    action: "Lift duplicated quarantine-to-direct-retry block from reddit/medium into
+      base-client when a third client needs it"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-35-retro-2026-09-12.md"
+  - id: "epic-35-retro-item-4-live-verify-instagram-session-persistenc"
+    epic: 35
+    action: "Live-verify Instagram session persistence (>=10 requests, stable proxy)
+      before relying on the metric"
+    owner: "Luis"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-35-retro-2026-09-12.md"
