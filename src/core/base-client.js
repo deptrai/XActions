@@ -975,7 +975,11 @@ export class AbstractApiClient {
             provider.quarantine(proxy, this.rateLimitHibernationMs);
           }
 
-          if (provider && typeof provider.isAllQuarantined === 'function' && provider.isAllQuarantined()) {
+          // Pool exhaustion only applies when this request intended to use a
+          // proxy — a direct request must keep its real 429/403 error type.
+          // (isAllQuarantined is vacuous-true on an empty pool; the default
+          // env-seeded pool is empty when no proxy env is configured.)
+          if (shouldUseProxy && provider && typeof provider.isAllQuarantined === 'function' && provider.isAllQuarantined()) {
             if (concreteAccountId && this.accountPool) {
               this.accountPool.markUnavailable(concreteAccountId, 'proxy_exhausted', this.standbyBackoffMs, this.platform);
             }
