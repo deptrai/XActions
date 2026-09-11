@@ -1,9 +1,10 @@
 ---
 epic: 35
 story: 35.3
-status: ready-for-dev
+status: review
 created: '2026-09-09'
 updated: '2026-09-11'
+baseline_commit: 28d4f6f02d9bfebeec2c0156f0d6ff8e27057cec
 ---
 
 # Story 35.3: Instagram Scraper (Client + Crawler + Session/Proxy + Tests)
@@ -214,10 +215,58 @@ Plain exported functions (mirror `medium/normalizer.js`) — **there is no `base
 - [Source: prisma/schema.prisma#SocialAccount] — `encryptedCookie`/`encryptedProxy`/`metadata`
 - [Source: api/routes/platform.js] — `VALID_PLATFORMS`, `PLATFORM_ALIASES`, `validatePlatformAccount`, AES-256-GCM encrypt/decrypt
 
+## Tasks / Subtasks
+
+- [x] Implement `src/scrapers/social/instagram/normalizer.js` — plain functions (`namespacedInstagramId`, `extractMediaId`, `normalizeInstagramMedia`, `normalizeInstagramProfile`, `normalizeInstagramComment`, `asRecord`) mirroring `medium/normalizer.js` (AC-7)
+- [x] Implement `src/scrapers/social/instagram/validator.js` — `InstagramPlatformResponseValidator extends AbstractPlatformResponseValidator` + `ValidationError` + `validatePost/validateUser/validateComment` (AC-8, AC-9)
+- [x] Implement `src/scrapers/social/instagram/client.js` — `InstagramClient extends AbstractApiClient` with `puppeteer`/`http`/`instagrapi` transports, gaussian throttle, sticky US-residential proxy, SessionManager + SocialAccount persistence (AC-1, AC-3, AC-4, AC-9)
+- [x] Implement `src/scrapers/social/instagram/crawler.js` — `InstagramCrawler extends AbstractCrawler` registering `user`/`hashtag`/`post`/`comments` + aliases, checkpointResolver, Redis stream emit (AC-5, AC-6)
+- [x] Implement `src/scrapers/social/instagram/index.js` barrel
+- [x] Write optional `src/scrapers/social/instagram/bridge.py` instagrapi stdio-JSON bridge (AC-2)
+- [x] Register `instagram`/`ig`/`insta` in `src/scrapers/social/index.js`, `src/scrapers/social/actions-list.js`, and dispatcher `src/scrapers/index.js` (with `actionNotAvailable` → 400)
+- [x] Register `instagram`/`ig`/`insta` in `api/routes/platform.js` `VALID_PLATFORMS` + `validatePlatformAccount` + `buildAuthCookie`
+- [x] Write tests `tests/scrapers/social/instagram/{normalizer,validator,client,crawler}.test.js` — real `node:http` fixture, no mocks (AC-10)
+
 ## Dev Agent Record
 
 ### Agent Model Used
 claude-opus-5[1m]
 
+### Implementation Plan
+Mirrored the proven Medium (35.2) pattern end-to-end: plain-function normalizer, `AbstractPlatformResponseValidator` subclass, `AbstractApiClient` subclass with per-platform `buildUrl`/`resolveProxy`, `AbstractCrawler` subclass with registered `ActionDescriptor`s + Redis-stream checkpoint emission, 3-place registration (social barrel → actions-list → unified dispatcher) + `platform.js` VALID_PLATFORMS/validatePlatformAccount.
+
+### Debug Log
+- `extractMediaId` initially returned JS-number `pk` — a 19-digit int64 lost float precision (`...678`→`...600`). Fixed: prefer safe-integer string `pk`, else `id`/`code`, splitting `pk_owner` form only when `numeric_numeric`.
+- `resolveProxy`: base auto-assigns `globalProxyPool` (a real `ProxyIpPool` with 1 non-residential seed proxy) so `hasProvider` was always true → `super.resolveProxy` threw `XACT_5030`. Fixed by probing `getNext(requiresResidential)` — a non-residential-only pool returns null → falls back to `PROXY_URL` env, surfacing `ProxyDeadError` only when nothing usable exists.
+- `saveSession` called `resolveProxy` unconditionally → ProxyDeadError crashed session save. Fixed to best-effort try/catch.
+- `buildUrl` is a per-client method (not on base) — added it to `InstagramClient`.
+- Crawler `start()` enforces `requiresAuth` before handlers → tests pass `session:{accountId}`.
+
 ### Completion Notes
-Ultimate context engine analysis completed — comprehensive developer guide created.
+- AC-1/2/3/4/5/6/7/8/9 all satisfied; AC-10 tests: 52 passed, 1 env-gated skip (INSTAGRAM_E2E live puppeteer).
+- `instagrapi` bridge ships behind a capability check → `PlatformError` 501 `XACT_5010` when `INSTAGRAPI_BIN`/`INSTAGRAPI_URL` absent; bridge.py present for when it is configured.
+- Instagram `pk` int64 precision bug caught by tests and fixed in `extractMediaId`.
+- `challenge`/`429`/`401` mapped to `BotChallengeError`/`RateLimitError`/`AuthSessionExpiredError` with ≤3 challenge retries (rotate_proxy on the 3rd).
+
+## File List
+
+**Created**
+- `src/scrapers/social/instagram/normalizer.js`
+- `src/scrapers/social/instagram/validator.js`
+- `src/scrapers/social/instagram/client.js`
+- `src/scrapers/social/instagram/crawler.js`
+- `src/scrapers/social/instagram/index.js`
+- `src/scrapers/social/instagram/bridge.py`
+- `tests/scrapers/social/instagram/normalizer.test.js`
+- `tests/scrapers/social/instagram/validator.test.js`
+- `tests/scrapers/social/instagram/client.test.js`
+- `tests/scrapers/social/instagram/crawler.test.js`
+
+**Modified**
+- `src/scrapers/social/index.js` — instagram barrel + named exports
+- `src/scrapers/social/actions-list.js` — InstagramCrawler in crawler list
+- `src/scrapers/index.js` — import, `instagram`/`ig`/`insta` platform map, dispatch block, `actionNotAvailable` reuse
+- `api/routes/platform.js` — `VALID_PLATFORMS` + `validatePlatformAccount` + `buildAuthCookie` instagram branches
+
+## Change Log
+- feat(35.3): Instagram scraper — client (puppeteer/http/instagrapi), crawler (user/hashtag/post/comments), normalizer, validator, session+sticky-proxy, optional instagrapi bridge.py, dispatcher + platform.js registration. 52 tests pass, 1 env-gated. (Date: 2026-09-11)

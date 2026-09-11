@@ -99,6 +99,15 @@ const mediumProxy = new Proxy(mediumModule, {
     return Reflect.apply(target, thisArg, args);
   },
 });
+
+const instagramProxy = new Proxy(instagramModule, {
+  get(target, prop, receiver) {
+    return Reflect.get(target, prop, receiver);
+  },
+  apply(target, thisArg, args) {
+    return Reflect.apply(target, thisArg, args);
+  },
+});
 import topcv from './recruitment/topcv/index.js';
 import vietnamworks from './recruitment/vietnamworks/index.js';
 import linkedin from './recruitment/linkedin/index.js';
@@ -134,6 +143,9 @@ import * as redditModule from './social/reddit/index.js';
 import { MediumClient } from './social/medium/client.js';
 import { MediumCrawler } from './social/medium/crawler.js';
 import * as mediumModule from './social/medium/index.js';
+import { InstagramClient } from './social/instagram/client.js';
+import { InstagramCrawler } from './social/instagram/crawler.js';
+import * as instagramModule from './social/instagram/index.js';
 import { defaultStore } from '../store/index.js';
 
 // ============================================================================
@@ -250,6 +262,9 @@ export const platforms = {
   rdt: redditProxy,
   medium: mediumProxy,
   md: mediumProxy,
+  instagram: instagramProxy,
+  ig: instagramProxy,
+  insta: instagramProxy,
 };
 
 /**
@@ -1861,6 +1876,91 @@ export async function scrape(platform, action, options = {}) {
       governor: options.governor,
       accountPool: options.accountPool,
       sessionManager: options.sessionManager,
+      requiresProxy: options.requiresProxy,
+    });
+
+    try {
+      return await crawler.start({ action: mappedAction, args: mappedArgs, session });
+    } finally {
+      if (options.autoClose !== false) {
+        await crawler.cleanup().catch(() => {});
+      }
+    }
+  }
+
+  // ── Instagram path (Story 35.3) ──
+  // Dispatches to InstagramCrawler / InstagramClient (Puppeteer stealth default, http + instagrapi bridge).
+  if (platformName === 'instagram' || platformName === 'ig' || platformName === 'insta') {
+    /** @type {Record<string, string>} */
+    const INSTAGRAM_ACTION_MAP = {
+      user: 'user',
+      author: 'user',
+      profile: 'user',
+      posts: 'user',
+      hashtag: 'hashtag',
+      tag: 'hashtag',
+      topic: 'hashtag',
+      post: 'post',
+      post_detail: 'post',
+      media: 'post',
+      reel: 'post',
+      comments: 'comments',
+      replies: 'comments',
+    };
+
+    const mappedAction = INSTAGRAM_ACTION_MAP[action];
+    if (!mappedAction) {
+      const available = [...new Set(Object.values(INSTAGRAM_ACTION_MAP))];
+      throw actionNotAvailable(platform, action, available);
+    }
+
+    /** @type {Record<string, unknown>} */
+    const mappedArgs = {};
+    if (options.username != null || options.user != null || options.handle != null || options.author != null) {
+      mappedArgs.username = options.username || options.user || options.handle || options.author;
+    }
+    if (options.tag != null || options.hashtag != null || options.topic != null) {
+      mappedArgs.tag = options.tag || options.hashtag || options.topic;
+    }
+    if (options.shortcode != null || options.postId != null || options.id != null || options.url != null) {
+      mappedArgs.shortcode = options.shortcode || options.postId || options.id || options.url;
+    }
+    if (options.url != null) mappedArgs.url = options.url;
+    if (options.limit != null) mappedArgs.limit = options.limit;
+    if (options.cursor != null) mappedArgs.cursor = options.cursor;
+    if (options.transport != null) mappedArgs.transport = options.transport;
+    if (options.userAgent != null) mappedArgs.userAgent = options.userAgent;
+    if (options.accountId != null) mappedArgs.accountId = options.accountId;
+
+    const client = options.client || new InstagramClient({
+      baseUrl: options.baseUrl || 'https://www.instagram.com',
+      userAgent: options.userAgent,
+      transport: options.transport,
+      credentials: options.credentials || options.session,
+      proxy: options.proxy,
+      proxyPool: options.proxyPool,
+      proxyProvider: options.proxyProvider,
+      governor: options.governor,
+      responseValidator: options.responseValidator,
+      sessionManager: options.sessionManager,
+      socialStore: options.socialStore,
+      requiresAuth: options.requiresAuth,
+      requiresProxy: options.requiresProxy,
+      requiresResidential: options.requiresResidential !== false,
+      timeout: options.timeout,
+    });
+
+    const session = options.session || {};
+
+    const crawler = new InstagramCrawler({
+      client,
+      store,
+      redisPublisher: options.redisPublisher,
+      proxyPool: options.proxyPool,
+      governor: options.governor,
+      accountPool: options.accountPool,
+      sessionManager: options.sessionManager,
+      requiresAuth: options.requiresAuth,
       requiresProxy: options.requiresProxy,
     });
 

@@ -21,8 +21,9 @@ export async function executeActionListTool(options = {}) {
   const { ThreadsCrawler } = await import('./threads/crawler.js');
   const { RedditCrawler } = await import('./reddit/crawler.js');
   const { MediumCrawler } = await import('./medium/crawler.js');
+  const { InstagramCrawler } = await import('./instagram/crawler.js');
 
-  const crawlers = [new FacebookCrawler(), new ThreadsCrawler(), new RedditCrawler(), new MediumCrawler()];
+  const crawlers = [new FacebookCrawler(), new ThreadsCrawler(), new RedditCrawler(), new MediumCrawler(), new InstagramCrawler()];
 
   try {
     /** @type {Record<string, unknown>[]} */

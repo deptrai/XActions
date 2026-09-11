@@ -19,4 +19,6 @@ export * as reddit from './reddit/index.js';
 export { RedditClient, RedditCrawler, RedditPlatformResponseValidator, RedditBrowserBridge } from './reddit/index.js';
 export * as medium from './medium/index.js';
 export { MediumClient, MediumCrawler, MediumPlatformResponseValidator } from './medium/index.js';
+export * as instagram from './instagram/index.js';
+export { InstagramClient, InstagramCrawler, InstagramPlatformResponseValidator } from './instagram/index.js';
 export { CommentTreeExtractor } from './comment-tree.js';

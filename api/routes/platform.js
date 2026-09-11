@@ -27,6 +27,7 @@ const VALID_PLATFORMS = [
   'facebook', 'x', 'twitter', 'threads', 'bluesky', 'mastodon', 'tiktok',
   'reddit', 'rdt', 'shopee', 'tiktokshop', 'tiktok-shop', 'topcv',
   'vietnamworks', 'linkedin', 'batdongsan', 'chotot', 'youtube', 'zalo',
+  'instagram', 'ig', 'insta',
 ];
 
 /** @type {Record<string, string>} */
@@ -144,6 +145,17 @@ function validatePlatformAccount(platform, body) {
     if (!clientSecret || typeof clientSecret !== 'string' || clientSecret.trim().length === 0) {
       return 'clientSecret is required';
     }
+  } else if (platform === 'instagram' || platform === 'ig' || platform === 'insta') {
+    const { sessionid, username, password } = body;
+    const hasCookie = sessionid && typeof sessionid === 'string' && sessionid.trim().length > 0;
+    const hasCreds = username && typeof username === 'string' && username.trim().length > 0
+      && password && typeof password === 'string' && password.trim().length > 0;
+    if (!hasCookie && !hasCreds) {
+      return 'sessionid cookie or username+password is required';
+    }
+    if (hasCookie && String(sessionid).trim().length > 4096) {
+      return 'sessionid too long';
+    }
   }
 
   return null;
@@ -190,6 +202,15 @@ function buildAuthCookie(platform, cookie) {
       clientId: cookie.clientId,
       clientSecret: cookie.clientSecret,
       username: cookie.username || cookie.redditUsername,
+    };
+  }
+  if (platform === 'instagram' || platform === 'ig' || platform === 'insta') {
+    return {
+      sessionid: cookie.sessionid,
+      ds_user_id: cookie.ds_user_id,
+      csrftoken: cookie.csrftoken,
+      username: cookie.username,
+      password: cookie.password,
     };
   }
   return cookie;
