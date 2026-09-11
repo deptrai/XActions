@@ -1,7 +1,7 @@
 ---
 epic: 35
 story: 35.4
-status: review
+status: done
 created: '2026-09-09'
 updated: '2026-09-09'
 ---

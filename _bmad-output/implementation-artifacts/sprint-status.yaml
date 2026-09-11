@@ -167,7 +167,7 @@ development_status:
   25-4-backward-compatibility-error-mapping: backlog
   25-5-core-checkpoint-resume-engine: done
   25-6-checkpoint-resolvers-top-platforms: done
-  25-7-early-termination-pagination-loops: review
+  25-7-early-termination-pagination-loops: done
   epic-25-retrospective: optional
 
   epic-26: backlog
@@ -215,9 +215,9 @@ development_status:
   epic-34: done
   epic-34-retrospective: optional
 
-  epic-35: in-progress
+  epic-35: done
   35-1-reddit-scraper-client-crawler-validator-tests: done
   35-2-medium-scraper-client-crawler-validator-tests: done
   35-3-instagram-scraper-client-crawler-session-proxy-tests: done
-  35-4-unified-proxy-docs: review
+  35-4-unified-proxy-docs: done
   epic-35-retrospective: optional

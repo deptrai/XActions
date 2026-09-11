@@ -2,7 +2,7 @@
 title: 'Story 25.7: Early Termination in Crawler Pagination Loops'
 type: 'feature'
 created: '2026-09-09'
-status: 'review'
+status: 'done'
 baseline_commit: '15472f9e89cc04748e1c1763a883fc8a04b9d0b8'
 review_loop_iteration: 0
 context:
