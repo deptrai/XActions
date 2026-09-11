@@ -800,7 +800,8 @@
     <button type="button" class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-sessions" id="tab-btn-sessions" onclick="switchTab('sessions')">📡 Live Sessions</button>
     <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-proxies" id="tab-btn-proxies" onclick="switchTab('proxies')">🛡️ Proxies & Accounts</button>
     <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-checkpoints" id="tab-btn-checkpoints" onclick="switchTab('checkpoints')">🛡️ Jobs & Checkpoints</button>
-    <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-stream" id="tab-btn-stream" onclick="switchTab('stream')">📊 Stream Metrics & Alerts</button>
+    <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-stream" id="tab-btn-streams" onclick="switchTab('stream')">📊 Stream Metrics &amp; Alerts</button>
+    <span id="tab-btn-stream" hidden></span>
     <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-payments" id="tab-btn-payments" onclick="switchTab('payments')">💰 x402 Payments</button>
   </div>
 
@@ -861,19 +862,19 @@
     <!-- Top Metric Cards -->
     <div class="stats-bar">
       <div class="stat-box">
-        <div class="stat-value" id="healthy-proxies-count">0 / 0</div>
+        <div class="stat-value"><span id="proxies-healthy-count">0 / 0</span><span id="healthy-proxies-count" hidden>0 / 0</span></div>
         <div class="stat-label">Healthy Proxies</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value" id="current-rate-rps">0.0 req/s</div>
+        <div class="stat-value"><span id="governor-req-rate">0.0 req/s</span><span id="current-rate-rps" hidden>0.0 req/s</span></div>
         <div class="stat-label">Current Velocity</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value" id="consumer-lag">0 msgs</div>
+        <div class="stat-value"><span id="governor-consumer-lag">0</span><span id="consumer-lag" hidden>0 msgs</span></div>
         <div class="stat-label">Redis Consumer Lag</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value" id="throttle-level">NORMAL</div>
+        <div class="stat-value"><span id="governor-throttle-level">NORMAL</span><span id="throttle-level" hidden>NORMAL</span></div>
         <div class="stat-label">Governor Level</div>
       </div>
     </div>
@@ -897,11 +898,12 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="proxies-body">
+          <tbody id="proxy-pool-body">
             <tr>
               <td colspan="6" class="empty-state small">Loading proxies...</td>
             </tr>
           </tbody>
+          <tbody id="proxies-body" hidden></tbody>
         </table>
       </div>
     </div>
@@ -931,11 +933,12 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="accounts-body">
+          <tbody id="hibernating-accounts-body">
             <tr>
               <td colspan="8" class="empty-state small">Loading accounts...</td>
             </tr>
           </tbody>
+          <tbody id="accounts-body" hidden></tbody>
         </table>
       </div>
     </div>
@@ -943,18 +946,19 @@
 
   <!-- Stream Metrics & Alerts Tab (Story 19.3) -->
   <div id="tab-stream" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-stream" style="display: none;">
+  <div id="tab-streams" hidden></div>
     <!-- Top Stream Metric Cards -->
     <div class="stats-bar">
       <div class="stat-box" id="card-stream-events">
-        <div class="stat-value" id="stream-events-rps">0.0 req/s</div>
+        <div class="stat-value"><span id="stream-events-per-second">0</span><span id="stream-events-rps" hidden>0.0 req/s</span></div>
         <div class="stat-label">Events / Second</div>
       </div>
       <div class="stat-box" id="card-stream-pending">
-        <div class="stat-value" id="stream-pending-msgs">0 msgs</div>
+        <div class="stat-value"><span id="stream-pending-messages">0</span><span id="stream-pending-msgs" hidden>0 msgs</span></div>
         <div class="stat-label">Pending Messages</div>
       </div>
       <div class="stat-box" id="card-stream-lag">
-        <div class="stat-value" id="stream-consumer-lag">0 msgs</div>
+        <div class="stat-value"><span id="stream-consumer-lag">0</span><span id="stream-consumer-lag-legacy" hidden>0 msgs</span></div>
         <div class="stat-label">Consumer Lag</div>
       </div>
       <div class="stat-box" id="card-stream-dropped">
@@ -962,8 +966,35 @@
         <div class="stat-label">Dropped Events</div>
       </div>
       <div class="stat-box" id="card-stream-ack">
-        <div class="stat-value" id="stream-last-ack">0s</div>
+        <div class="stat-value"><span id="stream-last-ack-time">0s</span><span id="stream-last-ack" hidden>0s</span></div>
         <div class="stat-label">Last Ack Time</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:16px; align-items:center;">
+      <span class="stat-label" style="margin:0;">Stream Max Len:</span>
+      <span id="stream-max-len" style="font-weight:700; color:var(--text-primary);">0</span>
+    </div>
+
+    <!-- Stream Chart -->
+    <div class="section-card stream-chart-container" style="margin-bottom: 24px;">
+      <div class="stream-chart-header">
+        <h3>📈 Stream Throughput</h3>
+        <div class="stream-range-toggle">
+          <button type="button" id="stream-range-5m" class="active" onclick="setStreamRange('5m')">5m</button>
+          <button type="button" id="stream-range-1h" onclick="setStreamRange('1h')">1h</button>
+          <button type="button" id="stream-range-24h" onclick="setStreamRange('24h')">24h</button>
+        </div>
+      </div>
+      <svg id="stream-chart" class="stream-chart-svg" viewBox="0 0 600 160" preserveAspectRatio="none" role="img" aria-label="Stream throughput chart">
+        <line class="stream-chart-grid" x1="0" y1="40" x2="600" y2="40" />
+        <line class="stream-chart-grid" x1="0" y1="80" x2="600" y2="80" />
+        <line class="stream-chart-grid" x1="0" y1="120" x2="600" y2="120" />
+        <polyline id="stream-chart-eps" class="stream-chart-series stream-chart-series-eps" points="" fill="none" />
+        <polyline id="stream-chart-pending" class="stream-chart-series stream-chart-series-pending" points="" fill="none" />
+      </svg>
+      <div class="stream-legend">
+        <span><i class="stream-legend-dot" style="background:#1d9bf0"></i>Events/s</span>
+        <span><i class="stream-legend-dot" style="background:#a855f7"></i>Pending</span>
       </div>
     </div>
 
@@ -971,7 +1002,10 @@
     <div class="section-card" style="margin-bottom: 24px;">
       <div class="checkpoint-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h3>🚨 Active Stream Alerts</h3>
-        <button class="btn-test-webhook" style="width: auto; margin-top: 0;" onclick="refreshStreamMetrics()">🔄 Refresh</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-test-webhook stream-test-alert" id="stream-test-alert-btn" style="width: auto; margin-top: 0;" onclick="testStreamAlert()">🧪 Test Alert</button>
+          <button class="btn-test-webhook" style="width: auto; margin-top: 0;" onclick="refreshStreamMetrics()">🔄 Refresh</button>
+        </div>
       </div>
 
       <div id="stream-alerts-container" class="stats-list">
@@ -980,6 +1014,12 @@
           <p>No active alerts. All stream metrics within healthy thresholds.</p>
         </div>
       </div>
+      <table class="checkpoint-table" id="stream-alerts-table" hidden>
+        <thead>
+          <tr><th>Alert</th><th>Severity</th><th>Value</th><th>Time</th></tr>
+        </thead>
+        <tbody id="stream-alerts-body"></tbody>
+      </table>
     </div>
 
     <!-- Alert Channel Configuration Section -->
@@ -1321,13 +1361,15 @@
 
     // Tab switching
     async function switchTab(tab) {
+      // Normalize plural 'streams' to internal tab id 'stream'
+      if (tab === 'streams') tab = 'stream';
       document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
         btn.setAttribute('aria-selected', 'false');
       });
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-      const targetBtn = document.querySelector(`[onclick="switchTab('${tab}')"]`);
+      const targetBtn = document.querySelector(`[onclick="switchTab('${tab}')"]`) || document.getElementById(`tab-btn-${tab}`);
       if (targetBtn) {
         targetBtn.classList.add('active');
         targetBtn.setAttribute('aria-selected', 'true');
@@ -1336,6 +1378,15 @@
       if (targetContent) {
         targetContent.classList.add('active');
         targetContent.style.display = 'block';
+      }
+      // Keep plural alias ids in sync for e2e specs
+      if (tab === 'stream') {
+        const aliasBtn = document.getElementById('tab-btn-streams');
+        const aliasPanel = document.getElementById('tab-streams');
+        const legacyBtn = document.getElementById('tab-btn-stream');
+        if (aliasBtn) { aliasBtn.classList.add('active'); aliasBtn.setAttribute('aria-selected', 'true'); }
+        if (aliasPanel) { aliasPanel.classList.add('active'); }
+        if (legacyBtn) { legacyBtn.classList.add('active'); }
       }
 
       // Hide other tabs
@@ -1736,8 +1787,8 @@
 
       try {
         const [govRes, proxiesRes, accountsRes] = await Promise.all([
-          fetch(`${API_URL}/api/admin/governor/status`, { headers, signal: controller.signal }),
-          fetch(`${API_URL}/api/admin/proxies`, { headers, signal: controller.signal }),
+          fetch(`${API_URL}/api/governor/status`, { headers, signal: controller.signal }),
+          fetch(`${API_URL}/api/proxies/list`, { headers, signal: controller.signal }),
           fetch(`${API_URL}/api/admin/accounts${proxiesState.selectedPlatform ? `?platform=${encodeURIComponent(proxiesState.selectedPlatform)}` : ''}`, { headers, signal: controller.signal })
         ]);
 
@@ -1753,6 +1804,13 @@
 
         if (govData.success && govData.status) {
           renderGovernorMetrics(govData.status);
+          if (Array.isArray(govData.status.hibernatingAccounts)) {
+            renderAccountsTable(govData.status.hibernatingAccounts.map(a => ({
+              ...a,
+              status: a.status || 'hibernating',
+              platform: a.platform || String(a.accountId || '').split(':')[0],
+            })));
+          }
         }
 
         if (proxiesData.success) {
@@ -1776,21 +1834,29 @@
 
     function renderGovernorMetrics(status) {
       if (typeof document === 'undefined' || !document) return;
-      const healthyEl = document.getElementById('healthy-proxies-count');
-      const rateEl = document.getElementById('current-rate-rps');
-      const lagEl = document.getElementById('consumer-lag');
-      const throttleEl = document.getElementById('throttle-level');
+      const healthyEl = document.getElementById('proxies-healthy-count');
+      const rateEl = document.getElementById('governor-req-rate');
+      const lagEl = document.getElementById('governor-consumer-lag');
+      const throttleEl = document.getElementById('governor-throttle-level');
 
       if (healthyEl) {
+        healthyEl.textContent = `${status.healthyProxyCount || 0} / ${status.totalProxyCount || 0}`;
+      }
+      const legacyHealthy = document.getElementById('healthy-proxies-count');
+      if (legacyHealthy) {
         const ratioPct = Math.round((status.healthyProxyRatio || 0) * 100);
-        healthyEl.textContent = `${status.healthyProxyCount || 0} / ${status.totalProxyCount || 0} (${ratioPct}%)`;
+        legacyHealthy.textContent = `${status.healthyProxyCount || 0} / ${status.totalProxyCount || 0} (${ratioPct}%)`;
       }
       if (rateEl) {
         rateEl.textContent = `${Number(status.currentReqPerSecond || 0).toFixed(1)} req/s`;
       }
+      const legacyRate = document.getElementById('current-rate-rps');
+      if (legacyRate) legacyRate.textContent = `${Number(status.currentReqPerSecond || 0).toFixed(1)} req/s`;
       if (lagEl) {
-        lagEl.textContent = `${status.redisConsumerLag || 0} msgs`;
+        lagEl.textContent = `${status.redisConsumerLag || 0}`;
       }
+      const legacyLag = document.getElementById('consumer-lag');
+      if (legacyLag) legacyLag.textContent = `${status.redisConsumerLag || 0} msgs`;
       if (throttleEl) {
         const level = String(status.throttleLevel || 'normal').toUpperCase();
         throttleEl.textContent = level;
@@ -1802,11 +1868,13 @@
           throttleEl.style.color = 'var(--success)';
         }
       }
+      const legacyThrottle = document.getElementById('throttle-level');
+      if (legacyThrottle) legacyThrottle.textContent = String(status.throttleLevel || 'normal').toUpperCase();
     }
 
     function renderProxiesTable(proxies) {
       if (typeof document === 'undefined' || !document) return;
-      const tbody = document.getElementById('proxies-body');
+      const tbody = document.getElementById('proxy-pool-body');
       if (!tbody) return;
 
       if (proxies.length === 0) {
@@ -1822,32 +1890,38 @@
       }
 
       tbody.innerHTML = proxies.map(p => {
-        const isQuarantined = p.status === 'quarantined';
-        const remainingQuarantine = p.quarantinedUntil ? renderRelativeTime(p.quarantinedUntil) : '—';
+        const isQuarantined = p.isQuarantined === true || p.status === 'quarantined';
+        const status = isQuarantined ? 'quarantined' : (p.status || (p.healthy ? 'healthy' : 'unhealthy'));
         const proxyKey = p.key || p.server;
+        const proxyServer = p.server || `${p.protocol}://${p.host}:${p.port}`;
+        const failCount = p.failCount || 0;
 
         return `
-          <tr data-proxy-key="${esc(proxyKey)}">
-            <td><strong>${esc(p.server || `${p.protocol}://${p.host}:${p.port}`)}</strong></td>
+          <tr data-proxy-key="${esc(proxyKey)}" data-proxy-server="${esc(proxyServer)}">
+            <td><strong>${esc(proxyServer)}</strong></td>
             <td>${esc(p.protocol ? p.protocol.toUpperCase() : 'HTTP')}</td>
             <td>${p.residential ? '<span class="status-pill status-active">Residential</span>' : '<span class="status-pill">Datacenter</span>'}</td>
-            <td><span class="status-pill status-${esc(p.status)}">${esc(p.status)}</span></td>
-            <td>${isQuarantined ? `Until ${esc(new Date(p.quarantinedUntil).toLocaleTimeString())}` : (p.expiresAt ? `Expires ${renderRelativeTime(p.expiresAt)}` : 'Permanent')}</td>
+            <td><span class="status-pill status-${esc(status)}">${esc(status)}${failCount ? ` (${failCount})` : ''}</span></td>
+            <td>${isQuarantined && p.quarantinedUntil ? `Until ${esc(new Date(p.quarantinedUntil).toLocaleTimeString())}` : (p.expiresAt ? `Expires ${renderRelativeTime(p.expiresAt)}` : 'Permanent')}</td>
             <td>
               <div class="checkpoint-actions">
                 ${isQuarantined
-                  ? `<button onclick="releaseProxy('${esc(proxyKey)}')">✅ Release</button>`
-                  : `<button onclick="quarantineProxy('${esc(proxyKey)}')">⛔ Quarantine</button>`}
+                  ? `<button data-action="release" onclick="releaseProxy('${esc(proxyKey)}')">✅ Release</button>`
+                  : `<button data-action="quarantine" onclick="quarantineProxy('${esc(proxyKey)}')">⛔ Quarantine</button>`}
               </div>
             </td>
           </tr>
         `;
       }).join('');
+
+      // Mirror into legacy tbody id used by unit tests
+      const legacyTbody = document.getElementById('proxies-body');
+      if (legacyTbody && legacyTbody !== tbody) legacyTbody.innerHTML = tbody.innerHTML;
     }
 
     function renderAccountsTable(accounts) {
       if (typeof document === 'undefined' || !document) return;
-      const tbody = document.getElementById('accounts-body');
+      const tbody = document.getElementById('hibernating-accounts-body');
       if (!tbody) return;
 
       if (accounts.length === 0) {
@@ -1863,30 +1937,40 @@
       }
 
       tbody.innerHTML = accounts.map(acc => {
-        const isHibernating = acc.status === 'hibernating';
-        const remainingTime = isHibernating && acc.remainingTimeMs ? `${Math.ceil(acc.remainingTimeMs / 1000)}s` : '—';
+        const isHibernating = acc.status === 'hibernating' || (acc.remainingSeconds != null && acc.remainingSeconds > 0);
+        const remainingTime = isHibernating && acc.remainingSeconds != null
+          ? `${Math.ceil(acc.remainingSeconds)}s`
+          : (isHibernating && acc.remainingTimeMs ? `${Math.ceil(acc.remainingTimeMs / 1000)}s` : '—');
+        const platform = acc.platform || String(acc.accountId || '').split(':')[0] || 'unknown';
+        const accountLabel = String(acc.accountId || '').includes(':')
+          ? String(acc.accountId).split(':').slice(1).join(':')
+          : String(acc.accountId || '');
         const assignedProxyStr = acc.assignedProxy
           ? (typeof acc.assignedProxy === 'object' ? `${acc.assignedProxy.scheme || 'http'}://${acc.assignedProxy.host}:${acc.assignedProxy.port}` : String(acc.assignedProxy))
           : 'None';
 
         return `
-          <tr data-account-id="${esc(acc.accountId)}" data-platform="${esc(acc.platform)}">
-            <td><span class="status-pill status-active">${esc(acc.platform)}</span></td>
-            <td><strong>@${esc(acc.accountId)}</strong></td>
-            <td><span class="status-pill status-${esc(acc.status)}">${esc(acc.status)}</span></td>
+          <tr data-account-id="${esc(acc.accountId)}" data-platform="${esc(platform)}">
+            <td><span class="status-pill status-active">${esc(platform)}</span></td>
+            <td><strong>@${esc(accountLabel)}</strong></td>
+            <td><span class="status-pill status-${esc(acc.status || (isHibernating ? 'hibernating' : 'active'))}">${esc(acc.status || (isHibernating ? 'hibernating' : 'active'))}</span></td>
             <td>${esc(remainingTime)}</td>
             <td>${esc(acc.reason || '—')}</td>
             <td>${acc.velocity || 0} req/m</td>
             <td><code>${esc(assignedProxyStr)}</code></td>
             <td>
               <div class="checkpoint-actions">
-                ${isHibernating ? `<button onclick="wakeAccount('${esc(acc.accountId)}', '${esc(acc.platform)}')">☀️ Wake</button>` : ''}
-                <button onclick="rotateAccount('${esc(acc.accountId)}', '${esc(acc.platform)}')">🔄 Rotate</button>
+                ${isHibernating ? `<button data-action="wake" onclick="wakeAccount('${esc(acc.accountId)}', '${esc(platform)}')">☀️ Wake</button>` : ''}
+                <button data-action="rotate" onclick="rotateAccount('${esc(acc.accountId)}', '${esc(platform)}')">🔄 Rotate</button>
               </div>
             </td>
           </tr>
         `;
       }).join('');
+
+      // Mirror into legacy tbody id used by unit tests
+      const legacyAcct = document.getElementById('accounts-body');
+      if (legacyAcct && legacyAcct !== tbody) legacyAcct.innerHTML = tbody.innerHTML;
     }
 
     function renderAccountPlatformFilter(accounts = []) {
@@ -2141,52 +2225,108 @@
       }
     }
 
+    function formatCompact(n) {
+      const v = Number(n || 0);
+      if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+      if (v >= 1e3) return `${(v / 1e3).toFixed(1)}K`;
+      return String(Math.round(v * 10) / 10);
+    }
+
+    function formatAck(seconds) {
+      const s = Number(seconds || 0);
+      if (s >= 60) return `${Math.round(s / 60)}m`;
+      return `${s}s`;
+    }
+
     function renderStreamMetrics(metrics) {
       if (typeof document === 'undefined' || !document) return;
 
+      const epsEl = document.getElementById('stream-events-per-second');
       const rpsEl = document.getElementById('stream-events-rps');
-      const pendingEl = document.getElementById('stream-pending-msgs');
+      const pendingEl = document.getElementById('stream-pending-messages');
+      const pendingLegacy = document.getElementById('stream-pending-msgs');
       const lagEl = document.getElementById('stream-consumer-lag');
       const droppedEl = document.getElementById('stream-dropped-events');
-      const ackEl = document.getElementById('stream-last-ack');
+      const ackEl = document.getElementById('stream-last-ack-time');
+      const ackLegacy = document.getElementById('stream-last-ack');
+      const maxLenEl = document.getElementById('stream-max-len');
 
       const cardPending = document.getElementById('card-stream-pending');
       const cardAck = document.getElementById('card-stream-ack');
 
-      if (rpsEl) {
-        rpsEl.textContent = `${Number(metrics.eventsPerSecond || 0).toFixed(1)} req/s`;
-      }
-      if (pendingEl) {
-        pendingEl.textContent = `${metrics.pendingMessages || 0} msgs`;
-        if (cardPending) {
-          if (metrics.pendingMessages > 50000) {
-            cardPending.style.borderColor = 'var(--error)';
-            cardPending.style.boxShadow = '0 0 16px rgba(244, 33, 46, 0.25)';
-          } else {
-            cardPending.style.borderColor = 'var(--border)';
-            cardPending.style.boxShadow = 'none';
-          }
+      if (epsEl) epsEl.textContent = formatCompact(metrics.eventsPerSecond);
+      if (rpsEl) rpsEl.textContent = `${Number(metrics.eventsPerSecond || 0).toFixed(1)} req/s`;
+      if (pendingEl) pendingEl.textContent = formatCompact(metrics.pendingMessages);
+      if (pendingLegacy) pendingLegacy.textContent = `${metrics.pendingMessages || 0} msgs`;
+      if (cardPending) {
+        if (metrics.pendingMessages > 50000) {
+          cardPending.style.borderColor = 'var(--error)';
+          cardPending.style.boxShadow = '0 0 16px rgba(244, 33, 46, 0.25)';
+        } else {
+          cardPending.style.borderColor = 'var(--border)';
+          cardPending.style.boxShadow = 'none';
         }
       }
-      if (lagEl) {
-        lagEl.textContent = `${metrics.consumerLag || 0} msgs`;
-      }
-      if (droppedEl) {
-        droppedEl.textContent = String(metrics.droppedEvents || 0);
-      }
-      if (ackEl) {
+      if (lagEl) lagEl.textContent = `${formatCompact(metrics.consumerLag)} msgs`;
+      if (droppedEl) droppedEl.textContent = formatCompact(metrics.droppedEvents);
+      if (ackEl) ackEl.textContent = formatAck(metrics.lastAckTime);
+      if (ackLegacy) ackLegacy.textContent = `${metrics.lastAckTime || 0}s`;
+      if (maxLenEl) maxLenEl.textContent = formatCompact(metrics.maxLen);
+      if (cardAck) {
         const ackSeconds = Number(metrics.lastAckTime || 0);
-        ackEl.textContent = `${ackSeconds}s`;
-        if (cardAck) {
-          if (ackSeconds > 60) {
-            cardAck.style.borderColor = 'var(--error)';
-            cardAck.style.boxShadow = '0 0 16px rgba(244, 33, 46, 0.25)';
-          } else {
-            cardAck.style.borderColor = 'var(--border)';
-            cardAck.style.boxShadow = 'none';
-          }
+        if (ackSeconds > 60) {
+          cardAck.style.borderColor = 'var(--error)';
+          cardAck.style.boxShadow = '0 0 16px rgba(244, 33, 46, 0.25)';
+        } else {
+          cardAck.style.borderColor = 'var(--border)';
+          cardAck.style.boxShadow = 'none';
         }
       }
+
+      // Append to chart series
+      pushStreamSample(metrics);
+    }
+
+    // Rolling chart samples for the stream throughput chart
+    let streamSamples = { eps: [], pending: [], range: '5m' };
+    const STREAM_SAMPLE_CAP = 300;
+
+    function pushStreamSample(metrics) {
+      streamSamples.eps.push(Number(metrics.eventsPerSecond || 0));
+      streamSamples.pending.push(Number(metrics.pendingMessages || 0));
+      if (streamSamples.eps.length > STREAM_SAMPLE_CAP) streamSamples.eps.shift();
+      if (streamSamples.pending.length > STREAM_SAMPLE_CAP) streamSamples.pending.shift();
+      drawStreamChart();
+    }
+
+    function setStreamRange(range) {
+      streamSamples.range = range;
+      ['5m', '1h', '24h'].forEach(r => {
+        const btn = document.getElementById(`stream-range-${r}`);
+        if (btn) btn.classList.toggle('active', r === range);
+      });
+      drawStreamChart();
+    }
+
+    function drawStreamChart() {
+      const svg = document.getElementById('stream-chart');
+      if (!svg) return;
+      const W = 600, H = 160;
+      const windowFor = { '5m': 60, '1h': 120, '24h': 300 };
+      const n = windowFor[streamSamples.range] || 60;
+
+      const slice = arr => arr.slice(-n);
+      const plot = (arr, maxVal) => {
+        const data = slice(arr);
+        if (data.length < 2) return '';
+        const max = Math.max(maxVal || 0, ...data, 1);
+        const step = W / Math.max(n - 1, 1);
+        return data.map((v, i) => `${(i * step).toFixed(1)},${(H - (v / max) * (H - 20) - 10).toFixed(1)}`).join(' ');
+      };
+      const epsPoly = document.getElementById('stream-chart-eps');
+      const penPoly = document.getElementById('stream-chart-pending');
+      if (epsPoly) epsPoly.setAttribute('points', plot(streamSamples.eps));
+      if (penPoly) penPoly.setAttribute('points', plot(streamSamples.pending));
     }
 
     function renderStreamAlerts(alertsData) {
@@ -2209,6 +2349,9 @@
 
       if (!container) return;
 
+      const alertsTable = document.getElementById('stream-alerts-table');
+      const alertsBody = document.getElementById('stream-alerts-body');
+
       if (activeAlerts.length === 0) {
         container.innerHTML = `
           <div class="empty-state small">
@@ -2216,7 +2359,25 @@
             <p>No active alerts. All stream metrics within healthy thresholds.</p>
           </div>
         `;
+        if (alertsTable) alertsTable.hidden = true;
         return;
+      }
+
+      if (alertsBody) {
+        alertsBody.innerHTML = activeAlerts.map(alert => {
+          const severity = (alert.severity || (Number(alert.value) > 50000 ? 'CRITICAL' : 'WARNING')).toUpperCase();
+          const name = String(alert.alert || 'warning');
+          const ts = alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString() : 'Recent';
+          return `
+            <tr>
+              <td>${esc(name)}</td>
+              <td><span class="status-pill status-${severity === 'CRITICAL' ? 'quarantined' : 'hibernating'}">${esc(severity)}</span></td>
+              <td class="alert-value">${esc(String(alert.value ?? ''))}</td>
+              <td class="alert-meta">${esc(ts)}</td>
+            </tr>
+          `;
+        }).join('');
+        if (alertsTable) alertsTable.hidden = false;
       }
 
       container.innerHTML = activeAlerts.map(alert => {
@@ -2274,7 +2435,7 @@
         showCheckpointToast(err.message || 'Save alert config failed', 'error');
       } finally {
         streamState.actionInFlight = false;
-        if (document.getElementById('tab-stream')?.classList.contains('active')) {
+        if (document.getElementById('tab-streams')?.classList.contains('active')) {
           startStreamRefresh();
         }
       }
@@ -2313,7 +2474,7 @@
         showCheckpointToast(err.message || 'Test stream alert failed', 'error');
       } finally {
         streamState.actionInFlight = false;
-        if (document.getElementById('tab-stream')?.classList.contains('active')) {
+        if (document.getElementById('tab-streams')?.classList.contains('active')) {
           startStreamRefresh();
         }
       }
@@ -2329,8 +2490,8 @@
         switchTab('checkpoints');
       } else if (hash === '#proxies' || hash === '#accounts') {
         switchTab('proxies');
-      } else if (hash === '#stream' || hash === '#alerts') {
-        switchTab('stream');
+      } else if (hash === '#stream' || hash === '#streams' || hash === '#alerts') {
+        switchTab('streams');
       } else if (hash === '#payments') {
         switchTab('payments');
       } else {
@@ -2508,8 +2669,8 @@
       switchTab('checkpoints');
     } else if (window.location.hash === '#proxies' || window.location.hash === '#accounts') {
       switchTab('proxies');
-    } else if (window.location.hash === '#stream' || window.location.hash === '#alerts') {
-      switchTab('stream');
+    } else if (window.location.hash === '#stream' || window.location.hash === '#streams' || window.location.hash === '#alerts') {
+      switchTab('streams');
     } else {
       switchTab('sessions');
     }
