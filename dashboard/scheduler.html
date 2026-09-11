@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scheduled Crawl Jobs — Cron Automation for Scrapers | XActions</title>
+  <meta name="description" content="Schedule recurring crawl jobs on a cron — create, enable, disable, run and inspect XActions scheduler jobs from the dashboard.">
+  <meta name="author" content="nich (@nichxbt)">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <style>
+    :root {
+      --bg-primary: #000;
+      --bg-secondary: #16181c;
+      --bg-tertiary: #202327;
+      --text-primary: #e7e9ea;
+      --text-secondary: #8b8f94;
+      --accent: #1d9bf0;
+      --border: #2f3336;
+      --success: #00ba7c;
+      --warning: #ffad1f;
+      --error: #f4212e;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg-primary); color: var(--text-primary); font-family: var(--font); min-height: 100vh; }
+
+    .layout { display: flex; max-width: 1400px; margin: 0 auto; min-height: 100vh; }
+    .content { flex: 1; padding: 24px; }
+
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+    .page-header h1 { font-size: 22px; font-weight: 800; }
+    .page-header p { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+
+    .card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+    .card__title { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-grid .full { grid-column: 1 / -1; }
+    .field label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+    .field input, .field select, .field textarea {
+      width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-primary);
+      border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: var(--font);
+    }
+    .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+    .field .hint { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 9999px;
+      border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary);
+      font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn--primary:hover { opacity: 0.9; color: #fff; }
+    .btn--danger:hover { border-color: var(--error); color: var(--error); }
+    .btn--sm { padding: 5px 12px; font-size: 12px; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .jobs-table { width: 100%; border-collapse: collapse; }
+    .jobs-table th, .jobs-table td { padding: 10px 12px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--border); }
+    .jobs-table th { color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+    .jobs-table td.cmd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .jobs-table tr:last-child td { border-bottom: none; }
+
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; border: 1px solid var(--border); }
+    .badge--on { color: var(--success); border-color: var(--success); }
+    .badge--off { color: var(--text-secondary); }
+    .badge--success { color: var(--success); border-color: var(--success); }
+    .badge--failed { color: var(--error); border-color: var(--error); }
+    .badge--never { color: var(--warning); border-color: var(--warning); }
+
+    .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .empty { color: var(--text-secondary); text-align: center; padding: 32px 12px; font-size: 14px; }
+
+    .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; display: none; z-index: 200; }
+    .toast.show { display: flex; }
+    .toast.success { background: rgba(0,186,124,0.15); color: var(--success); border: 1px solid var(--success); }
+    .toast.error { background: rgba(244,33,46,0.15); color: var(--error); border: 1px solid var(--error); }
+
+    .history-panel { background: var(--bg-tertiary); border-radius: 10px; padding: 14px; margin-top: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; max-height: 320px; overflow-y: auto; }
+    .history-panel .h-entry { border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 10px; }
+    .history-panel .h-entry:last-child { border-bottom: none; margin-bottom: 0; }
+    .auth-note { color: var(--warning); font-size: 13px; margin-top: 12px; }
+
+    @media (max-width: 720px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .jobs-table th:nth-child(3), .jobs-table td.cmd { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-nav">Skip to main content</a>
+  <div class="layout">
+    <aside class="sidebar-left" aria-label="Main navigation"></aside>
+    <script src="/js/sidebar.js"></script>
+
+    <main class="content" id="main-content">
+      <div class="page-header">
+        <div>
+          <h1>⏱️ Scheduled Crawl Jobs</h1>
+          <p>Cron jobs that re-run <code>xactions</code> CLI commands (scrapers, snapshots, monitors). Jobs persist in <code>~/.xactions/scheduler.json</code>.</p>
+        </div>
+        <button class="btn" id="refreshBtn">↻ Refresh</button>
+      </div>
+
+      <div class="card">
+        <div class="card__title">New Job</div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="jobTemplate">Template (optional)</label>
+            <select id="jobTemplate"><option value="">— choose preset —</option></select>
+          </div>
+          <div class="field">
+            <label for="jobName">Name</label>
+            <input id="jobName" type="text" placeholder="daily-search" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="jobCron">Cron expression</label>
+            <input id="jobCron" type="text" placeholder="0 9 * * *" autocomplete="off">
+            <div class="hint">Standard 5-field cron — e.g. <code>0 */6 * * *</code> = every 6h.</div>
+          </div>
+          <div class="field">
+            <label for="jobCommand">Command (xactions CLI)</label>
+            <input id="jobCommand" type="text" placeholder='search "from:someone" --output out.json' autocomplete="off">
+            <div class="hint">Runs <code>node bin/unfollowx &lt;command&gt; &lt;args&gt;</code> in the project dir.</div>
+          </div>
+        </div>
+        <div style="margin-top:14px; display:flex; gap:10px; align-items:center;">
+          <button class="btn btn--primary" id="createBtn">＋ Schedule Job</button>
+          <span class="auth-note" id="authNote" hidden>⚠️ Admin login required — open <a href="/login" style="color:var(--accent)">/login</a> first.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__title">Jobs</div>
+        <table class="jobs-table">
+          <thead>
+            <tr>
+              <th>Name</th><th>Cron</th><th>Command</th><th>Status</th><th>Last run</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="jobsBody">
+            <tr><td colspan="6" class="empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card" id="historyCard" hidden>
+        <div class="card__title" id="historyTitle">History</div>
+        <div class="history-panel" id="historyPanel"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/config.js"></script>
+  <script src="/js/scheduler.js"></script>
+</body>
+</html>

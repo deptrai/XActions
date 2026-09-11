@@ -546,6 +546,10 @@ app.get('/monitor', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/monitor.html'));
 });
 
+app.get('/scheduler', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/scheduler.html'));
+});
+
 app.get('/unfollowers', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/unfollowers.html'));
 });
