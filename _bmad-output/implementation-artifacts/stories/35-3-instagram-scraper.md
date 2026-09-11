@@ -111,7 +111,7 @@ So that I can analyze visual social content and influencer data.
 
 ## Open Questions
 - OQ-1 (RESOLVED): Primary transport is `puppeteer` (public web scraping). `instagrapi` Python bridge is optional advanced path — implement only if private API features are required later.
-- OQ-2 (RESOLVED): New `SocialAccount` table will be created for generic social platform sessions (Reddit, Medium, Instagram). Reuses `SessionManager` in-memory cache + `encryptedCookie`/`encryptedProxy` pattern from `FacebookAccount`.
+- OQ-2 (RESOLVED): `SocialAccount` table **already exists** in `prisma/schema.prisma` (model `SocialAccount` + `SocialAccountHealth`). `platform` is a free-form `String` (`'reddit' | 'medium' | 'instagram' | ...`), **not a Prisma enum** — writing `platform:'instagram'` needs **no migration**. What is missing is only the *write path*: no route/service yet persists a session into `SocialAccount`, so this story must add it (mirror `facebookAccounts.js` encrypt → `encryptedCookie`/`encryptedProxy`). `SessionManager` is in-memory only — persistence to `SocialAccount` is the new work.
 - OQ-3 (RESOLVED): Default proxy for Instagram is `country-us` residential via `ProxyProvider`; `country-vn` is only for Vietnam platforms. Proxy fallback to `PROXY_URL` env if no provider injected.
 
 ---
@@ -152,6 +152,8 @@ Extends `AbstractCrawler`: `name='instagram'`, `platform='instagram'`, `requires
 
 ### Normalizer — `src/scrapers/social/instagram/normalizer.js`
 
+Plain exported functions (mirror `medium/normalizer.js`) — **there is no `base-normalizer.js`**; do not look for a base class. IDs use `generatePostId` from `src/core/types.js` + a platform prefix helper, exactly like Medium's `namespacedMediumId`.
+
 - `namespacedInstagramId(pk)` → `instagram:${pk}`.
 - `normalizeInstagramMedia(media)` → `PostItem`: `id`, `platform:'instagram'`, `externalId: media.pk||media.id`, `category:'social'`, `author`/`authorId` from `media.user`, `content: media.caption?.text`, `postUrl: https://instagram.com/p/${code}`, `mediaUrls[]` (image_versions2 + video_versions), `publishedAt: new Date(taken_at*1000)`, `likesCount`, `repliesCount`, `metadata:{mediaType, isVideo, shortcode:code, location}`.
 - `normalizeInstagramProfile(user)` → `ProfileItem`: `id: instagram:${user.pk}`, `username`, `fullName`, `bio: user.biography`, `followersCount: user.follower_count`, `followingCount: user.following_count`, `avatarUrl: user.profile_pic_url_hd||profile_pic_url`, `metadata:{isVerified,isPrivate,mediaCount}`.
@@ -172,7 +174,7 @@ Extends `AbstractCrawler`: `name='instagram'`, `platform='instagram'`, `requires
 
 - `src/scrapers/social/index.js` — `export * as instagram from './instagram/index.js';` + named exports.
 - `src/scrapers/social/actions-list.js` — `new InstagramCrawler()` in the crawler list.
-- `src/scrapers/index.js` — register `instagram`/`ig`/`insta` in dispatcher + action map (`user`/`profile`/`hashtag`/`post`/`comments`), model the Medium dispatch block; unknown action → `actionNotAvailable(platform, action, available)` (400, not 500).
+- `src/scrapers/index.js` — register `instagram`/`ig`/`insta` in dispatcher + action map (`user`/`profile`/`hashtag`/`post`/`comments`), model the Medium dispatch block; unknown action → call the **existing** `actionNotAvailable(platform, action, available)` helper already defined at `src/scrapers/index.js:279` (stamps `statusCode:400`/`code:XACT_4001`). Do **not** `throw new Error(...)` raw — that regresses the 500→400 fix.
 
 ### I/O & Edge-Case Matrix
 
