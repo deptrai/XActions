@@ -159,3 +159,4 @@ scripts/debug-*.mjs
 *.bak
 *.orig
 *.rej
+__pycache__/
