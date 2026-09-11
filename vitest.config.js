@@ -18,7 +18,10 @@ export default defineConfig({
     hookTimeout: 30000,
     pool: 'forks',
     fileParallelism: false,
-    retry: 0,
+    // Retry once to absorb env-dependent flakiness (live-proxy 503s,
+    // rate-limit contention under shuffle) without masking real failures —
+    // a deterministic bug still fails on retry.
+    retry: 1,
     include: ['tests/**/*.test.js'],
     exclude: [
       'node_modules',
