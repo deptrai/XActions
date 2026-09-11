@@ -1309,16 +1309,19 @@ export class FacebookCrawler extends AbstractCrawler {
       posts.push(post);
     }
 
+    let stopPagination = false;
     if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
-      await this.store.storeBatch(posts, { upsert: true });
+      const batch = await this.store.storeBatch(posts, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? posts);
     }
 
     const pageInfo = res?.data?.group?.feed?.page_info || res?.data?.node?.feed?.page_info || null;
-    await this.#saveCheckpoint('group', args.groupId, pageInfo?.end_cursor || null, posts, Boolean(pageInfo?.has_next_page));
+    const hasMore = Boolean(pageInfo?.has_next_page) && !stopPagination;
+    await this.#saveCheckpoint('group', args.groupId, pageInfo?.end_cursor || null, posts, hasMore);
 
     return {
       posts,
-      pageInfo,
+      pageInfo: pageInfo ? { ...pageInfo, has_next_page: hasMore } : pageInfo,
     };
   }
 
@@ -1428,16 +1431,19 @@ export class FacebookCrawler extends AbstractCrawler {
       }
     }
 
+    let stopPagination = false;
     if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
-      await this.store.storeBatch(posts, { upsert: true });
+      const batch = await this.store.storeBatch(posts, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? posts);
     }
 
     const pageInfo = res?.data?.page?.timeline_feed?.page_info || res?.data?.node?.timeline_feed?.page_info || null;
-    await this.#saveCheckpoint('page', args.pageId, pageInfo?.end_cursor || null, posts, Boolean(pageInfo?.has_next_page));
+    const hasMore = Boolean(pageInfo?.has_next_page) && !stopPagination;
+    await this.#saveCheckpoint('page', args.pageId, pageInfo?.end_cursor || null, posts, hasMore);
 
     return {
       posts,
-      pageInfo,
+      pageInfo: pageInfo ? { ...pageInfo, has_next_page: hasMore } : pageInfo,
     };
   }
 
@@ -1566,13 +1572,19 @@ export class FacebookCrawler extends AbstractCrawler {
       postItems.push(postItem);
     }
 
+    let stopPagination = false;
     if (this.store && postItems.length > 0 && typeof this.store.storeBatch === 'function') {
-      await this.store.storeBatch(postItems, { upsert: true });
+      const batch = await this.store.storeBatch(postItems, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? postItems);
     }
 
-    await this.#saveCheckpoint('search', `${query}:${type}`, pageInfo?.end_cursor, postItems, pageInfo?.has_next_page);
+    const hasMore = Boolean(pageInfo?.has_next_page) && !stopPagination;
+    await this.#saveCheckpoint('search', `${query}:${type}`, pageInfo?.end_cursor, postItems, hasMore);
 
-    const out = Object.assign([...postItems], { posts: postItems, pageInfo });
+    const out = Object.assign([...postItems], {
+      posts: postItems,
+      pageInfo: pageInfo ? { ...pageInfo, has_next_page: hasMore } : pageInfo,
+    });
     return out;
   }
 
@@ -1719,13 +1731,19 @@ export class FacebookCrawler extends AbstractCrawler {
       postItems.push(postItem);
     }
 
+    let stopPagination = false;
     if (this.store && postItems.length > 0 && typeof this.store.storeBatch === 'function') {
-      await this.store.storeBatch(postItems, { upsert: true });
+      const batch = await this.store.storeBatch(postItems, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? postItems);
     }
 
-    await this.#saveCheckpoint('search', `${groupId}:${rawQuery}`, pageInfo?.end_cursor, postItems, pageInfo?.has_next_page);
+    const hasMore = Boolean(pageInfo?.has_next_page) && !stopPagination;
+    await this.#saveCheckpoint('search', `${groupId}:${rawQuery}`, pageInfo?.end_cursor, postItems, hasMore);
 
-    const out = Object.assign([...postItems], { posts: postItems, pageInfo });
+    const out = Object.assign([...postItems], {
+      posts: postItems,
+      pageInfo: pageInfo ? { ...pageInfo, has_next_page: hasMore } : pageInfo,
+    });
     return out;
   }
 
@@ -2131,16 +2149,19 @@ export class FacebookCrawler extends AbstractCrawler {
       postItems = postItems.slice(0, limit);
     }
 
+    let stopPagination = false;
     if (this.store && postItems.length > 0 && typeof this.store.storeBatch === 'function') {
-      await this.store.storeBatch(postItems, { upsert: true });
+      const batch = await this.store.storeBatch(postItems, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? postItems);
     }
 
+    const hasMore = Boolean(pageInfo?.has_next_page) && !stopPagination;
     const targetKey = [rawQuery, location, category, categoryId, minPrice, maxPrice].filter((v) => v !== undefined && v !== null && v !== '').join(':');
-    await this.#saveCheckpoint('marketplace', targetKey, pageInfo?.end_cursor || null, postItems, Boolean(pageInfo?.has_next_page));
+    await this.#saveCheckpoint('marketplace', targetKey, pageInfo?.end_cursor || null, postItems, hasMore);
 
     return {
       posts: postItems,
-      pageInfo,
+      pageInfo: { ...pageInfo, has_next_page: hasMore },
       note,
     };
   }
@@ -2594,6 +2615,16 @@ export class FacebookCrawler extends AbstractCrawler {
       }
 
       const pageInfo = connection?.page_info || { has_next_page: false, end_cursor: null };
+      if (pageInfo.has_next_page && comments.length > 0) {
+        const pageItems = [];
+        for (const raw of comments) {
+          const comment = this.#normalizeComment(raw, postId);
+          if (comment) pageItems.push(comment);
+        }
+        if (await this.shouldStopPagination(pageItems)) {
+          pageInfo.has_next_page = false;
+        }
+      }
       return { comments, pageInfo };
     };
 
@@ -2637,11 +2668,14 @@ export class FacebookCrawler extends AbstractCrawler {
       this.validateItem(comment);
     }
 
+    let stopPagination = false;
     if (this.store && comments.length > 0 && typeof this.store.storeCommentBatch === 'function') {
-      await this.store.storeCommentBatch(comments, { upsert: true });
+      const batch = await this.store.storeCommentBatch(comments, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? comments);
     }
 
-    return { comments, pageInfo, note };
+    const finalPageInfo = stopPagination && pageInfo ? { ...pageInfo, has_next_page: false } : pageInfo;
+    return { comments, pageInfo: finalPageInfo, note };
   }
 
   /**
@@ -2662,13 +2696,16 @@ export class FacebookCrawler extends AbstractCrawler {
       postItems.push(postItem);
     }
 
+    let stopPagination = false;
     if (this.store && typeof this.store.storeBatch === 'function' && postItems.length > 0) {
-      await this.store.storeBatch(postItems, { upsert: true });
+      const batch = await this.store.storeBatch(postItems, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? postItems);
     }
 
-    await this.#saveCheckpoint('group_members', groupId, pageInfo?.end_cursor || null, postItems, Boolean(pageInfo?.has_next_page));
+    const hasMore = Boolean(pageInfo?.has_next_page) && !stopPagination;
+    await this.#saveCheckpoint('group_members', groupId, pageInfo?.end_cursor || null, postItems, hasMore);
 
-    return { members, note, pageInfo };
+    return { members, note, pageInfo: pageInfo ? { ...pageInfo, has_next_page: hasMore } : pageInfo };
   }
 
   /**
@@ -2937,6 +2974,7 @@ export class FacebookCrawler extends AbstractCrawler {
     let cursor = args?.cursor || null;
     let pageInfo = null;
     let pageCount = 0;
+    let stoppedEarly = false;
     const maxPages = limit + 20;
 
     try {
@@ -2944,6 +2982,7 @@ export class FacebookCrawler extends AbstractCrawler {
         if (++pageCount > maxPages) break;
         const remaining = limit - followers.length;
         const first = Math.min(remaining, 50);
+        const pageStart = postItems.length;
 
         const variables = {
           username: targetKey,
@@ -2981,6 +3020,14 @@ export class FacebookCrawler extends AbstractCrawler {
           break;
         }
         cursor = pageInfo.end_cursor;
+        if (await this.shouldStopPagination(postItems.slice(pageStart))) {
+          stoppedEarly = true;
+          break;
+        }
+      }
+
+      if (stoppedEarly && pageInfo) {
+        pageInfo = { ...pageInfo, has_next_page: false };
       }
 
       if (this.store && typeof this.store.storeBatch === 'function' && postItems.length > 0) {
@@ -3047,6 +3094,7 @@ export class FacebookCrawler extends AbstractCrawler {
     let cursor = args?.cursor || null;
     let pageInfo = null;
     let pageCount = 0;
+    let stoppedEarly = false;
     const maxPages = limit + 20;
 
     try {
@@ -3054,6 +3102,7 @@ export class FacebookCrawler extends AbstractCrawler {
         if (++pageCount > maxPages) break;
         const remaining = limit - following.length;
         const first = Math.min(remaining, 50);
+        const pageStart = postItems.length;
 
         const variables = {
           username: targetKey,
@@ -3100,6 +3149,14 @@ export class FacebookCrawler extends AbstractCrawler {
           break;
         }
         cursor = pageInfo.end_cursor;
+        if (await this.shouldStopPagination(postItems.slice(pageStart))) {
+          stoppedEarly = true;
+          break;
+        }
+      }
+
+      if (stoppedEarly && pageInfo) {
+        pageInfo = { ...pageInfo, has_next_page: false };
       }
 
       if (this.store && typeof this.store.storeBatch === 'function' && postItems.length > 0) {
@@ -3153,6 +3210,7 @@ export class FacebookCrawler extends AbstractCrawler {
     let cursor = args?.cursor || null;
     let pageInfo = null;
     let pageCount = 0;
+    let stoppedEarly = false;
     const maxPages = limit + 20;
 
     try {
@@ -3160,6 +3218,7 @@ export class FacebookCrawler extends AbstractCrawler {
         if (++pageCount > maxPages) break;
         const remaining = limit - members.length;
         const first = Math.min(remaining, 50);
+        const pageStart = postItems.length;
 
         const variables = {
           groupId,
@@ -3220,6 +3279,10 @@ export class FacebookCrawler extends AbstractCrawler {
           break;
         }
         cursor = pageInfo.end_cursor;
+        if (await this.shouldStopPagination(postItems.slice(pageStart))) {
+          stoppedEarly = true;
+          break;
+        }
       }
     } catch (err) {
       if (err instanceof PlatformError && (err.type === ErrorTypes.AUTH_EXPIRED || err.type === ErrorTypes.RATE_LIMIT)) {
@@ -3245,6 +3308,10 @@ export class FacebookCrawler extends AbstractCrawler {
           note: 'Group is private or members list is restricted. Please retry with relogin if you are a member.',
         };
       }
+    }
+
+    if (stoppedEarly && pageInfo) {
+      pageInfo = { ...pageInfo, has_next_page: false };
     }
 
     if (this.store && typeof this.store.storeBatch === 'function' && postItems.length > 0) {

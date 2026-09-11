@@ -33,7 +33,7 @@ describe('Story 15.2 — TikTok Scraper E2E Pipeline', () => {
             {
               type: 1,
               item: {
-                id: '7234567890123456789',
+                id: '7234567890123456795',
                 desc: 'Viral dance video on TikTok #dance #viral',
                 createTime: 1680000000,
                 author: {
@@ -206,6 +206,7 @@ describe('Story 15.2 — TikTok Scraper E2E Pipeline', () => {
       query: 'dance',
       baseUrl: serverUrl,
       cookies: mockSessionCookie,
+      store: null,
       requiresProxy: false,
       requiresAuth: false,
     });
@@ -213,7 +214,7 @@ describe('Story 15.2 — TikTok Scraper E2E Pipeline', () => {
     expect(res).toBeDefined();
     expect(res.posts).toHaveLength(1);
     const post = res.posts[0];
-    expect(post.id).toBe('tiktok:7234567890123456789');
+    expect(post.id).toBe('tiktok:7234567890123456795');
     expect(post.platform).toBe('tiktok');
     expect(post.authorName).toBe('Dancer Pro');
     expect(post.likesCount).toBe(154000);

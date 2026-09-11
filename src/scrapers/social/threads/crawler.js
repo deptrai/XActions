@@ -1124,22 +1124,25 @@ export class ThreadsCrawler extends AbstractCrawler {
       }
     }
 
+    let stopPagination = false;
     if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
-      await this.store.storeBatch(posts, { upsert: true });
+      const batch = await this.store.storeBatch(posts, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? posts);
     }
 
     const pageInfo = this.#normalizePageInfo(res?.data?.mediaData?.page_info);
+    const hasMore = pageInfo.has_next_page && !stopPagination;
     await this.#emitCheckpointAndStream({
       targetType: 'user_feed',
       targetKey: cleanUser,
       cursor: pageInfo.end_cursor,
       items: posts,
-      hasMore: pageInfo.has_next_page,
+      hasMore,
     });
 
     return {
       posts,
-      pageInfo,
+      pageInfo: { ...pageInfo, has_next_page: hasMore },
     };
   }
 
@@ -1199,19 +1202,22 @@ export class ThreadsCrawler extends AbstractCrawler {
         }
 
         const pageInfo = this.#normalizePageInfo(res?.data?.searchResults?.page_info || res?.data?.mediaData?.page_info);
+        let stopPagination = false;
         if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
-          await this.store.storeBatch(posts, { upsert: true });
+          const batch = await this.store.storeBatch(posts, { upsert: true });
+          stopPagination = await this.shouldStopPagination(batch ?? posts);
         }
+        const hasMore = pageInfo.has_next_page && !stopPagination;
 
         await this.#emitCheckpointAndStream({
           targetType: 'search',
           targetKey: args.query,
           cursor: pageInfo.end_cursor,
           items: posts,
-          hasMore: pageInfo.has_next_page,
+          hasMore,
         });
 
-        return { posts, pageInfo };
+        return { posts, pageInfo: { ...pageInfo, has_next_page: hasMore } };
       } catch (err) {
         console.warn(`⚠️ [THREADS] GraphQL search failed, falling back to SSR: ${err instanceof Error ? err.message : String(err)}`);
       }
@@ -1307,23 +1313,26 @@ export class ThreadsCrawler extends AbstractCrawler {
       }
     }
 
+    let stopPagination = false;
     if (this.store && typeof this.store.storeBatch === 'function' && sliced.length > 0) {
-      await this.store.storeBatch(sliced, { upsert: true });
+      const batch = await this.store.storeBatch(sliced, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? sliced);
     }
 
     const pageInfo = this.#normalizePageInfo(ssrPageInfo);
+    const hasMore = pageInfo.has_next_page && !stopPagination;
 
     await this.#emitCheckpointAndStream({
       targetType: 'search',
       targetKey: args.query,
       cursor: pageInfo.end_cursor,
       items: sliced,
-      hasMore: pageInfo.has_next_page,
+      hasMore,
     });
 
     return {
       posts: sliced,
-      pageInfo,
+      pageInfo: { ...pageInfo, has_next_page: hasMore },
     };
   }
 
@@ -1378,6 +1387,26 @@ export class ThreadsCrawler extends AbstractCrawler {
     const seenCursors = new Set();
 
     /**
+     * Early-termination check: when a comment page is entirely known items,
+     * mask has_next_page so the extractor stops paginating that layer.
+     * @param {Array<any>} comments
+     * @param {{ has_next_page: boolean, end_cursor: string | null } | null} pageInfo
+     * @param {string} postId
+     */
+    const applyEarlyTermination = async (comments, pageInfo, postId) => {
+      if (!pageInfo?.has_next_page || comments.length === 0) return pageInfo;
+      const pageItems = [];
+      for (const raw of comments) {
+        const comment = this.#normalizeCommentItem(raw, postId);
+        if (comment) pageItems.push(comment);
+      }
+      if (await this.shouldStopPagination(pageItems)) {
+        return { ...pageInfo, has_next_page: false };
+      }
+      return pageInfo;
+    };
+
+    /**
      * @param {import('../comment-tree.js').FetchLayerInput} input
      * @returns {Promise<import('../comment-tree.js').FetchLayerPage>}
      */
@@ -1399,7 +1428,7 @@ export class ThreadsCrawler extends AbstractCrawler {
             const { comments, pageInfo } = this.#extractSsrRootComments(rootPostSsr, this.#clampCount(limit, 1, 50));
             return {
               comments,
-              pageInfo: this.#normalizePageInfo(pageInfo, seenCursors),
+              pageInfo: await applyEarlyTermination(comments, this.#normalizePageInfo(pageInfo, seenCursors), postId),
               note: 'SSR-only mode; using post page reply threads.',
             };
           }
@@ -1453,7 +1482,7 @@ export class ThreadsCrawler extends AbstractCrawler {
           const { comments, pageInfo } = this.#extractFallbackRootComments(res);
           return {
             comments,
-            pageInfo: this.#normalizePageInfo(pageInfo, seenCursors),
+            pageInfo: await applyEarlyTermination(comments, this.#normalizePageInfo(pageInfo, seenCursors), postId),
             note: 'Using POST_DETAIL fallback; only root-level comments returned.',
           };
         }
@@ -1515,7 +1544,7 @@ export class ThreadsCrawler extends AbstractCrawler {
 
         return {
           comments,
-          pageInfo: this.#normalizePageInfo(connection?.page_info, seenCursors),
+          pageInfo: await applyEarlyTermination(comments, this.#normalizePageInfo(connection?.page_info, seenCursors), postId),
         };
       } catch (err) {
         if (isReply) {
@@ -1536,22 +1565,25 @@ export class ThreadsCrawler extends AbstractCrawler {
 
     const { comments, pageInfo } = await extractor.fetch(rootPostId);
 
+    let stopPagination = false;
     if (this.store && typeof this.store.storeCommentBatch === 'function' && comments.length > 0) {
-      await this.store.storeCommentBatch(comments, { upsert: true });
+      const batch = await this.store.storeCommentBatch(comments, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? comments);
     }
 
     const normalizedPageInfo = this.#normalizePageInfo(pageInfo);
+    const hasMore = normalizedPageInfo.has_next_page && !stopPagination;
     await this.#emitCheckpointAndStream({
       targetType: 'post_comments',
       targetKey: rootPostId,
       cursor: normalizedPageInfo.end_cursor,
       items: comments,
-      hasMore: normalizedPageInfo.has_next_page,
+      hasMore,
     });
 
     return {
       comments,
-      pageInfo: normalizedPageInfo,
+      pageInfo: { ...normalizedPageInfo, has_next_page: hasMore },
     };
   }
 

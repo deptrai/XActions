@@ -280,19 +280,22 @@ export class TikTokCrawler extends AbstractCrawler {
       this.validateItem(post);
     }
 
+    let stopPagination = false;
     if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
-      await this.store.storeBatch(posts, { upsert: true });
+      const batch = await this.store.storeBatch(posts, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? posts);
     }
+    const hasMore = pageInfo.has_next_page && !stopPagination;
 
     await this.#emitCheckpointAndStream({
       targetType: 'search',
       targetKey: args.query,
       cursor: pageInfo.end_cursor,
       items: posts,
-      hasMore: pageInfo.has_next_page,
+      hasMore,
     });
 
-    return { posts, pageInfo };
+    return { posts, pageInfo: { ...pageInfo, has_next_page: hasMore } };
   }
 
   /**
@@ -355,19 +358,22 @@ export class TikTokCrawler extends AbstractCrawler {
       this.validateItem(post);
     }
 
+    let stopPagination = false;
     if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
-      await this.store.storeBatch(posts, { upsert: true });
+      const batch = await this.store.storeBatch(posts, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? posts);
     }
+    const hasMore = pageInfo.has_next_page && !stopPagination;
 
     await this.#emitCheckpointAndStream({
       targetType: 'hashtag_feed',
       targetKey: tag,
       cursor: pageInfo.end_cursor,
       items: posts,
-      hasMore: pageInfo.has_next_page,
+      hasMore,
     });
 
-    return { posts, pageInfo };
+    return { posts, pageInfo: { ...pageInfo, has_next_page: hasMore } };
   }
 
   /**
@@ -558,6 +564,17 @@ export class TikTokCrawler extends AbstractCrawler {
         }
       }
 
+      if (pageInfo.has_next_page && rawComments.length > 0) {
+        const pageItems = [];
+        for (const raw of rawComments) {
+          const comment = normalizeTikTokComment(raw, postId);
+          if (comment) pageItems.push(comment);
+        }
+        if (await this.shouldStopPagination(pageItems)) {
+          pageInfo.has_next_page = false;
+        }
+      }
+
       return { comments: rawComments, pageInfo };
     };
 
@@ -569,22 +586,26 @@ export class TikTokCrawler extends AbstractCrawler {
 
     const { comments, pageInfo } = await extractor.fetch(videoId, { after: args.after || null });
 
+    let stopPagination = false;
     if (this.store && typeof this.store.storeCommentBatch === 'function' && comments.length > 0) {
-      await this.store.storeCommentBatch(comments, { upsert: true }).catch((err) => {
+      const batch = await this.store.storeCommentBatch(comments, { upsert: true }).catch((err) => {
         // Tolerant to FK violation if parent post hasn't been crawled/saved yet
         if (err?.code !== 'P2003') throw err;
+        return null;
       });
+      stopPagination = await this.shouldStopPagination(batch ?? comments);
     }
+    const hasMore = pageInfo.has_next_page && !stopPagination;
 
     await this.#emitCheckpointAndStream({
       targetType: 'post_comments',
       targetKey: videoId,
       cursor: pageInfo.end_cursor,
       items: comments,
-      hasMore: pageInfo.has_next_page,
+      hasMore,
     });
 
-    return { comments, pageInfo };
+    return { comments, pageInfo: { ...pageInfo, has_next_page: hasMore } };
   }
 
   /** @returns {Promise<void>} */

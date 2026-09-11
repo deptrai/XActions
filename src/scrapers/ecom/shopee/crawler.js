@@ -137,7 +137,8 @@ export class ShopeeCrawler extends AbstractCrawler {
       await storeForSearch.savePosts(products).catch(() => {});
     }
 
-    const hasNext = Boolean(!response?.nomore && products.length > 0 && products.length === limit);
+    const stopPagination = await this.shouldStopPagination(products);
+    const hasNext = Boolean(!response?.nomore && products.length > 0 && products.length === limit) && !stopPagination;
 
     if (this.store && typeof this.store.saveCheckpoint === 'function') {
       try {

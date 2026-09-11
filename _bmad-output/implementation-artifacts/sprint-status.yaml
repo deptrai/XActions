@@ -167,7 +167,7 @@ development_status:
   25-4-backward-compatibility-error-mapping: backlog
   25-5-core-checkpoint-resume-engine: done
   25-6-checkpoint-resolvers-top-platforms: done
-  25-7-early-termination-pagination-loops: ready-for-dev
+  25-7-early-termination-pagination-loops: review
   epic-25-retrospective: optional
 
   epic-26: backlog

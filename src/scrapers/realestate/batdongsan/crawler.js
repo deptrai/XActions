@@ -127,15 +127,19 @@ export class BatdongsanCrawler extends AbstractCrawler {
     const rawList = Array.isArray(decoded?.data) ? decoded.data : (Array.isArray(decoded?.items) ? decoded.items : []);
     const listings = rawList.map((item) => normalizeBatdongsanListing(item));
 
+    let batch = null;
     if (this.store && typeof this.store.storeBatch === 'function') {
       try {
-        await this.store.storeBatch(listings, { validateSchema: true });
+        batch = await this.store.storeBatch(listings, { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
           console.warn('[BatdongsanCrawler] Failed to persist listings batch:', err instanceof Error ? err.message : String(err));
         }
       }
     }
+
+    const stopPagination = await this.shouldStopPagination(batch ?? listings);
+    const hasNext = rawList.length >= limit && !stopPagination;
 
     if (this.store && typeof this.store.saveCheckpoint === 'function') {
       try {
@@ -146,7 +150,7 @@ export class BatdongsanCrawler extends AbstractCrawler {
           lastCursor: String(page),
           lastTimestamp: new Date(),
           lastCrawledAt: new Date(),
-          status: rawList.length >= limit ? 'has_more' : 'completed',
+          status: hasNext ? 'has_more' : 'completed',
         });
       } catch {}
     }
@@ -157,7 +161,7 @@ export class BatdongsanCrawler extends AbstractCrawler {
       listings,
       pageInfo: {
         current_page: page,
-        has_next_page: rawList.length >= limit,
+        has_next_page: hasNext,
         total_items: totalHits,
       },
     };

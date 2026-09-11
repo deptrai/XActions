@@ -845,18 +845,26 @@ export class TwitterCrawler extends AbstractCrawler {
   /**
    * Store a batch of items.
    * @param {Array<any>} items
+   * @returns {Promise<{ insertedCount: number, totalCount: number } | null>} aggregated StoreBatchResult metadata, or null when nothing was stored / store lacks metadata
    */
   async #persistPostItems(items) {
-    if (!this.store || typeof this.store.storeBatch !== 'function' || items.length === 0) return;
+    if (!this.store || typeof this.store.storeBatch !== 'function' || items.length === 0) return null;
     const storeable = items.map((item) => this.#toStoreablePostItem(item));
     for (const item of storeable) {
       this.validateItem(item);
     }
     const CHUNK_SIZE = 500;
+    let insertedCount = 0;
+    let totalCount = 0;
     for (let i = 0; i < storeable.length; i += CHUNK_SIZE) {
       const chunk = storeable.slice(i, i + CHUNK_SIZE);
-      await this.store.storeBatch(chunk, { upsert: true, validateSchema: true });
+      const batch = await this.store.storeBatch(chunk, { upsert: true, validateSchema: true });
+      if (batch && typeof batch === 'object') {
+        if (typeof batch.insertedCount === 'number') insertedCount += batch.insertedCount;
+        if (typeof batch.totalCount === 'number') totalCount += batch.totalCount;
+      }
     }
+    return totalCount > 0 ? { insertedCount, totalCount } : null;
   }
 
   /**
@@ -931,6 +939,10 @@ export class TwitterCrawler extends AbstractCrawler {
         hasMore = Boolean(nextCursor);
         break;
       }
+      if (pageItems.length > 0 && (await this.shouldStopPagination(pageItems))) {
+        hasMore = false;
+        break;
+      }
     }
 
     return { items: allItems.slice(0, limit), cursor: nextCursor, hasMore };
@@ -985,18 +997,20 @@ export class TwitterCrawler extends AbstractCrawler {
       extraMetadata: { searchQuery: args.query },
     });
 
-    await this.#persistPostItems(items);
+    const batch = await this.#persistPostItems(items);
+    const stopPagination = await this.shouldStopPagination(batch ?? items);
+    const finalHasMore = hasMore && !stopPagination;
     await this.#emitCheckpointAndStream({
       targetType: 'search',
       targetKey: rawQuery,
       cursor,
       items,
-      hasMore,
+      hasMore: finalHasMore,
     });
 
     const pageInfo = {
-      hasNextPage: hasMore,
-      has_next_page: hasMore,
+      hasNextPage: finalHasMore,
+      has_next_page: finalHasMore,
       endCursor: cursor,
       end_cursor: cursor,
     };
@@ -1061,20 +1075,22 @@ export class TwitterCrawler extends AbstractCrawler {
     });
 
     const posts = items;
-    await this.#persistPostItems(posts);
+    const batch = await this.#persistPostItems(posts);
+    const stopPagination = await this.shouldStopPagination(batch ?? posts);
+    const finalHasMore = hasMore && !stopPagination;
     await this.#emitCheckpointAndStream({
       targetType: 'hashtag',
       targetKey: cleanTag,
       cursor,
       items: posts,
-      hasMore,
+      hasMore: finalHasMore,
     });
 
     return {
       posts,
       pageInfo: {
-        hasNextPage: hasMore,
-        has_next_page: hasMore,
+        hasNextPage: finalHasMore,
+        has_next_page: finalHasMore,
         endCursor: cursor,
         end_cursor: cursor,
       },
@@ -1444,16 +1460,19 @@ export class TwitterCrawler extends AbstractCrawler {
 
     const normalized = normalizeLikersResponse(response, tweetId);
     const posts = normalized.likers.map((p) => profileItemToPostItem(p));
-    await this.#persistPostItems(posts);
+    const batch = await this.#persistPostItems(posts);
+    const stopPagination = await this.shouldStopPagination(batch ?? posts);
+    const hasMore = normalized.pageInfo.has_next_page && !stopPagination;
 
     await this.#emitCheckpointAndStream({
       targetType: 'likes',
       targetKey: tweetId,
       cursor: normalized.pageInfo.end_cursor,
       items: normalized.likers,
-      hasMore: normalized.pageInfo.has_next_page,
+      hasMore,
     });
 
+    normalized.pageInfo = { ...normalized.pageInfo, has_next_page: hasMore };
     return normalized;
   }
 
@@ -1484,7 +1503,9 @@ export class TwitterCrawler extends AbstractCrawler {
 
     const normalized = normalizeBookmarksResponse(response);
 
-    await this.#persistPostItems(normalized.posts);
+    const batch = await this.#persistPostItems(normalized.posts);
+    const stopPagination = await this.shouldStopPagination(batch ?? normalized.posts);
+    const hasMore = normalized.pageInfo.has_next_page && !stopPagination;
 
     const targetKey = session?.accountId || args.accountId || 'self';
     await this.#emitCheckpointAndStream({
@@ -1492,9 +1513,10 @@ export class TwitterCrawler extends AbstractCrawler {
       targetKey,
       cursor: normalized.pageInfo.end_cursor,
       items: normalized.posts,
-      hasMore: normalized.pageInfo.has_next_page,
+      hasMore,
     });
 
+    normalized.pageInfo = { ...normalized.pageInfo, has_next_page: hasMore };
     return normalized;
   }
 
@@ -1602,16 +1624,18 @@ export class TwitterCrawler extends AbstractCrawler {
     })));
 
     const posts = followers.map((f) => profileItemToPostItem(f));
-    await this.#persistPostItems(posts);
+    const batch = await this.#persistPostItems(posts);
+    const stopPagination = await this.shouldStopPagination(batch ?? posts);
+    const hasMore = normalized.pageInfo.has_next_page && !stopPagination;
     await this.#emitCheckpointAndStream({
       targetType: 'followers',
       targetKey: username,
       cursor: normalized.pageInfo.end_cursor,
       items: followers,
-      hasMore: normalized.pageInfo.has_next_page,
+      hasMore,
     });
 
-    return { followers, pageInfo: normalized.pageInfo };
+    return { followers, pageInfo: { ...normalized.pageInfo, has_next_page: hasMore } };
   }
 
   /**
@@ -1653,16 +1677,18 @@ export class TwitterCrawler extends AbstractCrawler {
     })));
 
     const posts = following.map((f) => profileItemToPostItem(f));
-    await this.#persistPostItems(posts);
+    const batch = await this.#persistPostItems(posts);
+    const stopPagination = await this.shouldStopPagination(batch ?? posts);
+    const hasMore = normalized.pageInfo.has_next_page && !stopPagination;
     await this.#emitCheckpointAndStream({
       targetType: 'following',
       targetKey: username,
       cursor: normalized.pageInfo.end_cursor,
       items: following,
-      hasMore: normalized.pageInfo.has_next_page,
+      hasMore,
     });
 
-    return { following, pageInfo: normalized.pageInfo };
+    return { following, pageInfo: { ...normalized.pageInfo, has_next_page: hasMore } };
   }
 
   /**
@@ -1758,16 +1784,18 @@ export class TwitterCrawler extends AbstractCrawler {
     })));
 
     const posts = members.map((m) => profileItemToPostItem(m));
-    await this.#persistPostItems(posts);
+    const batch = await this.#persistPostItems(posts);
+    const stopPagination = await this.shouldStopPagination(batch ?? posts);
+    const hasMore = normalized.pageInfo.has_next_page && !stopPagination;
     await this.#emitCheckpointAndStream({
       targetType: 'list_members',
       targetKey: `twitter:list:${listId}`,
       cursor: normalized.pageInfo.end_cursor,
       items: members,
-      hasMore: normalized.pageInfo.has_next_page,
+      hasMore,
     });
 
-    return { members, pageInfo: normalized.pageInfo };
+    return { members, pageInfo: { ...normalized.pageInfo, has_next_page: hasMore } };
   }
 
   /**
@@ -2074,6 +2102,7 @@ export class TwitterCrawler extends AbstractCrawler {
 
     while (allItems.length < limit) {
       const pageLimit = Math.min(limit - allItems.length, maxPerRequest);
+      const pagePosts = [];
       let resp;
 
       if (useUserTweetsFallback) {
@@ -2153,6 +2182,7 @@ export class TwitterCrawler extends AbstractCrawler {
             if (seen.has(post.id)) continue;
             seen.add(post.id);
             allItems.push(post);
+            pagePosts.push(post);
             foundTweets = true;
             if (allItems.length >= limit) break;
           }
@@ -2166,6 +2196,10 @@ export class TwitterCrawler extends AbstractCrawler {
         break;
       }
       if (!nextCursor) {
+        hasMore = false;
+        break;
+      }
+      if (pagePosts.length > 0 && (await this.shouldStopPagination(pagePosts))) {
         hasMore = false;
         break;
       }
@@ -2318,20 +2352,22 @@ export class TwitterCrawler extends AbstractCrawler {
       accountId,
     });
 
-    await this.#persistPostItems(items);
+    const batch = await this.#persistPostItems(items);
+    const stopPagination = await this.shouldStopPagination(batch ?? items);
+    const finalHasMore = hasMore && !stopPagination;
     await this.#emitCheckpointAndStream({
       targetType: 'media',
       targetKey: `twitter:user:${username}`,
       cursor,
       items,
-      hasMore,
+      hasMore: finalHasMore,
     });
 
     return {
       posts: items,
       pageInfo: {
-        hasNextPage: hasMore,
-        has_next_page: hasMore,
+        hasNextPage: finalHasMore,
+        has_next_page: finalHasMore,
         endCursor: cursor,
         end_cursor: cursor,
       },
