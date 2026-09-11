@@ -50,23 +50,23 @@ development_status:
   epic-11: done
   11-1-proxyippool-accountpool-sticky-round-robin: done
   11-2-static-dynamic-residential-tunnel-proxy-providers: done
-  11-3-end-to-end-request-pipeline-with-429-403-auto-quarantine-exp: backlog
-  11-4-adaptive-infrastructure-aware-rate-limiter-account-protectio: backlog
-  11-5-end-to-end-request-pipeline-two-mode-ip-strategy: backlog
-  11-6-rate-limit-bot-challenge-defense-quarantine-retry-hibernatio: backlog
-  11-7-crawler-governor-integration-platform-response-validator-con: backlog
+  11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: done
+  11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: done
+  11-5-end-to-end-request-pipeline-two-mode-ip: done
+  11-6-rate-limit-bot-challenge-defense: done
+  11-7-crawler-governor-integration-validator-contract: done
   11-8-socksnode-dynamic-residential-proxy-provider: done
-  11-9-proactive-proxy-ttl-buffer-auto-refresh-interceptor: backlog
+  11-9-dual-pool-consumer-quota: done
   epic-11-retrospective: done
 
   epic-12: done
-  12-1-terminal-ascii-qr-code-login-module-with-countdown-timeout: backlog
-  12-2-cdp-remote-attach-mode-with-launch-helper-gaussian-jitter: backlog
-  12-3-multi-browser-path-resolution-advanced-anti-automation-flags: backlog
+  12-1-terminal-ascii-qr-code-login-module: done
+  12-2-cdp-remote-attach-mode-chrome-devtools-protocol: done
+  12-3-terminal-qr-full-backfill: done
   epic-12-retrospective: done
 
   epic-13: done
-  13-1-tiered-signer-architecture-pre-signed-token-ring-worker-page: backlog
+  13-1-tiered-signer-architecture-token-ring-worker-pool: done
   13-1-2-tier-0-pure-algorithm-crypto-signer-bridge: backlog
   13-2-refactor-twitter-scraper-to-hybrid-architecture: done
   13-2-1-twitter-hybrid-profile-relationships: done
@@ -82,7 +82,7 @@ development_status:
   13-2-11-twitter-hybrid-list-management: done
   13-2-12-twitter-hybrid-integration-caller-migration: done
   13-3-refactor-facebook-scraper-to-hybrid-architecture: done
-  13-4-facebook-browser-as-signer-integration: backlog
+  13-4-facebook-browser-as-signer-bridge: done
   13-5-facebook-hybrid-profile-followers-group-members: done
   13-6-facebook-hybrid-search-global-group-search: done
   13-7-facebook-hybrid-post-group-comments: done
@@ -92,7 +92,7 @@ development_status:
   epic-13-retrospective: done
 
   epic-14: done
-  14-1-hierarchical-comment-tree-extraction-with-topological-sort: backlog
+  14-1-hierarchical-comment-tree-extraction-algorithm: done
   14-2-mcp-tool-exporters-daemon-http-sse-server: done
   14-3-realtime-thin-event-redis-stream-for-nowing-ai-lead-hub: done
   14-4-real-time-n-gram-keyword-hashtag-frequency-analytics-engine: backlog
@@ -102,13 +102,13 @@ development_status:
   15-1-threads-scraper-adapter-meta-internal-graphql: done
   15-1-1-threads-hybrid-profile-followers-following: done
   15-1-2-threads-hybrid-post-detail-comment-tree: done
-  15-1-3-threads-hybrid-docid-hardening-for-search-comments: backlog
+  15-1-3-threads-hybrid-docid-hardening-search-comments: done
   15-1-4-threads-hybrid-integration-package-exports: done
-  15-2-tiktok-video-hashtag-comment-scraper-with-anti-bot-payload-v: backlog
+  15-2-tiktok-video-hashtag-comment-scraper: ready-for-dev
   epic-15-retrospective: done
 
   epic-16: done
-  16-1-shopee-search-product-review-scraper-with-tls-spoofing: backlog
+  16-1-shopee-search-product-review-scraper-tls-spoofing: done
   16-2-tiktok-shop-product-sales-scraper: done
   epic-16-retrospective: done
 
@@ -120,7 +120,7 @@ development_status:
   epic-18: done
   18-1-topcv-job-company-scraper: done
   18-2-vietnamworks-job-scraper: done
-  18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach-gaussian: backlog
+  18-3-linkedin-b2b-lead-job-scraper-via-cdp-remote-attach: done
   epic-18-retrospective: done
 
   epic-19: done
@@ -136,7 +136,7 @@ development_status:
   19-7-admin-rest-api-proxy-management: done
   19-8-admin-rest-api-account-checkpoint-management: done
   19-9-admin-rest-api-stream-metrics-alerts: done
-  19-10-admin-mcp-tools-for-ai-agents: backlog
+  19-10-admin-mcp-tools: done
   epic-19-retrospective: done
 
   epic-20: backlog
@@ -165,9 +165,9 @@ development_status:
   25-2-package-json-exports-v2: backlog
   25-3-mcp-cli-api-caller-migration: backlog
   25-4-backward-compatibility-error-mapping: backlog
-  25-5-core-checkpoint-resume-early-termination-engine: backlog
-  25-6-checkpoint-resolvers-for-top-platforms: backlog
-  25-7-early-termination-in-crawler-pagination-loops: backlog
+  25-5-core-checkpoint-resume-engine: done
+  25-6-checkpoint-resolvers-top-platforms: done
+  25-7-early-termination-pagination-loops: ready-for-dev
   epic-25-retrospective: optional
 
   epic-26: backlog
@@ -219,5 +219,5 @@ development_status:
   35-1-reddit-scraper-client-crawler-validator-tests: done
   35-2-medium-scraper-client-crawler-validator-tests: done
   35-3-instagram-scraper-client-crawler-session-proxy-tests: done
-  35-4-unified-proxyprovider-injection-socialaccount-schema-docs-se: backlog
+  35-4-unified-proxy-docs: ready-for-dev
   epic-35-retrospective: optional
