@@ -268,6 +268,23 @@ export function getPlatform(platform) {
   return mod;
 }
 
+/**
+ * Build a 400-level "action not available" error so the API layer can map it
+ * to HTTP 400 instead of a generic 500.
+ * @param {string} platform
+ * @param {string} action
+ * @param {string[]} available
+ * @returns {Error & { statusCode: number, code: string }}
+ */
+function actionNotAvailable(platform, action, available) {
+  const err = /** @type {Error & { statusCode?: number, code?: string }} */ (new Error(
+    `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
+  ));
+  err.statusCode = 400;
+  err.code = 'XACT_4001';
+  return /** @type {Error & { statusCode: number, code: string }} */ (err);
+}
+
 // ============================================================================
 // Unified Scrape Interface
 // ============================================================================
@@ -360,9 +377,7 @@ export async function dispatchFacebookHybrid(action, options = {}) {
       : Object.keys(ACTION_MAPPING);
 
     if (!validActions.includes(mappedAction)) {
-      throw new Error(
-        `Action "${action}" not available on platform "facebook". Available: ${validActions.join(', ')}`
-      );
+      throw actionNotAvailable('facebook', action, validActions);
     }
 
     let accountId = options.authCookie?.accountId || (Array.isArray(options.accountIds) && options.accountIds.length > 0 ? options.accountIds[0] : null);
@@ -550,9 +565,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = TWITTER_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(TWITTER_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -649,9 +662,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = SHOPEE_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(SHOPEE_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -730,9 +741,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = HEALTHCARE_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(HEALTHCARE_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -1112,9 +1121,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = TIKTOK_SHOP_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(TIKTOK_SHOP_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -1187,9 +1194,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = TOPCV_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(TOPCV_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -1263,9 +1268,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = VNW_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(VNW_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -1345,9 +1348,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = LINKEDIN_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(LINKEDIN_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -1427,9 +1428,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = CHOTOT_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(CHOTOT_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -1495,9 +1494,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = BDS_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(BDS_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -1571,9 +1568,7 @@ export async function scrape(platform, action, options = {}) {
 
     if (!mappedAction) {
       const available = [...new Set(Object.values(BLUESKY_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     const username = options.username || options.handle || options.actor || options.target;
@@ -1684,9 +1679,7 @@ export async function scrape(platform, action, options = {}) {
 
     if (!mappedAction) {
       const available = [...new Set(Object.values(MASTODON_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     let username = options.username || options.handle || options.actor || options.target;
@@ -1820,9 +1813,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = MEDIUM_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(MEDIUM_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -1896,9 +1887,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = MASOTHUE_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(MASOTHUE_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -1956,9 +1945,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = B2B_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(B2B_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -2021,9 +2008,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = AUTOMOTIVE_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(AUTOMOTIVE_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -2088,9 +2073,7 @@ export async function scrape(platform, action, options = {}) {
     const mappedAction = FNB_ACTION_MAP[action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(FNB_ACTION_MAP))];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, available);
     }
 
     /** @type {Record<string, unknown>} */
@@ -2163,9 +2146,7 @@ export async function scrape(platform, action, options = {}) {
     if (!mappedAction) {
       const available = Object.values(THREADS_ACTION_MAP);
       const unique = [...new Set(available)];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${unique.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, unique);
     }
 
     const username = options.username || options.target;
@@ -2263,9 +2244,7 @@ export async function scrape(platform, action, options = {}) {
     if (!mappedAction) {
       const available = Object.values(TIKTOK_ACTION_MAP);
       const unique = [...new Set(available)];
-      throw new Error(
-        `Action "${action}" not available on platform "${platform}". Available: ${unique.join(', ')}`
-      );
+      throw actionNotAvailable(platform, action, unique);
     }
 
     const query = options.query || options.keyword || options.q || options.target;
@@ -2390,9 +2369,7 @@ export async function scrape(platform, action, options = {}) {
         const available = Object.keys(platformMod).filter(
           (k) => typeof platformMod[k] === 'function' && (k.startsWith('scrape') || k.startsWith('search'))
         );
-        throw new Error(
-          `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-        );
+        throw actionNotAvailable(platform, action, available);
       }
 
       if (options.authCookie && platformMod.loginWithCookie) {
@@ -2463,9 +2440,7 @@ export async function scrape(platform, action, options = {}) {
     const available = Object.keys(platformMod).filter(
       (k) => typeof platformMod[k] === 'function' && (k.startsWith('scrape') || k.startsWith('search'))
     );
-    throw new Error(
-      `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-    );
+    throw actionNotAvailable(platform, action, available);
   }
 
   // Determine the first argument based on platform type
