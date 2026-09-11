@@ -42,7 +42,7 @@ development_status:
   epic-10: done
   10-1-core-domain-interfaces-error-hierarchy-definition: done
   10-2-prisma-post-comment-relational-schema-migration: done
-  10-3-ai-dataset-export-utility-streaming-jsonl-csv-with-sanitizat: backlog
+  10-3-ai-dataset-export-utility-streaming-jsonl-csv: done
   10-4-crawlcheckpoint-operational-api-resume-pause-retry: done
   10-5-metadata-schema-contract-registry-for-consumers: done
   epic-10-retrospective: done
