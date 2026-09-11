@@ -2418,7 +2418,7 @@ export async function scrape(platform, action, options = {}) {
 
     const crawler = new TikTokCrawler({
       client,
-      store,
+      store: options.store !== undefined ? options.store : store,
       redisPublisher: options.redisPublisher,
       proxyPool: options.proxyPool,
       proxyProvider: options.proxyProvider,

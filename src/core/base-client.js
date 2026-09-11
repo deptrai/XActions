@@ -633,8 +633,10 @@ export class AbstractApiClient {
 
     while (accountRotationCount <= this.maxAccountRotations) {
       for (let attempt = 0; attempt < this.maxProxyRetries; attempt++) {
-        // Check if pool is completely quarantined before attempting
-        if (provider && typeof provider.isAllQuarantined === 'function' && provider.isAllQuarantined()) {
+        const shouldUseProxy = this.requiresProxy || opts.requiresResidential || (this._hasExplicitProxy && !this._requiresProxyExplicit);
+
+        // Check if pool is completely quarantined before attempting proxy request
+        if (shouldUseProxy && provider && typeof provider.isAllQuarantined === 'function' && provider.isAllQuarantined()) {
           if (concreteAccountId && this.accountPool) {
             this.accountPool.markUnavailable(concreteAccountId, 'proxy_exhausted', this.standbyBackoffMs, this.platform);
           }
@@ -650,7 +652,6 @@ export class AbstractApiClient {
           });
         }
 
-        const shouldUseProxy = this.requiresProxy || opts.requiresResidential || (this._hasExplicitProxy && !this._requiresProxyExplicit);
         const proxy = shouldUseProxy
           ? this.resolveProxy(concreteAccountId, opts.requiresResidential, effectiveRequiresAuth, { pool: pool || undefined, consumerId: consumerId || undefined })
           : null;

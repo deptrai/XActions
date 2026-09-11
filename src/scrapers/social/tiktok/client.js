@@ -175,13 +175,20 @@ export class TikTokClient extends AbstractApiClient {
    */
   constructor(deps = {}) {
     const baseUrl = (deps.baseUrl || 'https://www.tiktok.com').replace(/\/+$/, '');
+    const pool = deps.proxyPool;
+    const hasConfiguredProxy = Boolean(
+      deps.proxy ||
+      deps.proxyProvider ||
+      (pool && typeof pool.isAllQuarantined === 'function' ? !pool.isAllQuarantined() : Boolean(pool))
+    );
+    const requiresProxy = deps.requiresProxy !== undefined ? deps.requiresProxy : hasConfiguredProxy;
 
     super(/** @type {any} */ ({
       ...deps,
       platform: 'tiktok',
       client: 'got',
       requiresAuth: deps.requiresAuth !== undefined ? deps.requiresAuth : true,
-      requiresProxy: deps.requiresProxy !== false,
+      requiresProxy,
       responseValidator: deps.responseValidator || new TikTokPlatformResponseValidator(),
     }));
 
@@ -309,6 +316,7 @@ export class TikTokClient extends AbstractApiClient {
           ...params,
         },
         cookies: signed.cookies,
+        responseData: signed.responseData || null,
       };
     }
 
@@ -400,6 +408,13 @@ export class TikTokClient extends AbstractApiClient {
   async requestTikTokApi(method, endpointPath, params = {}, options = {}) {
     const url = this.buildApiUrl(endpointPath, params);
     const signed = await this.sign({ url, params });
+
+    // If the browser-as-signer bridge already captured the authenticated payload
+    // directly from the live browser session, use it to ensure 100% data reliability
+    // and avoid false 200 empty responses from secondary external HTTP calls.
+    if (signed.responseData && typeof signed.responseData === 'object' && Object.keys(signed.responseData).length > 0) {
+      return /** @type {Record<string, any>} */ (signed.responseData);
+    }
 
     // Merge any extra query params (e.g. caller overrides) and the signing output.
     const finalUrl = this.#mergeSignedQuery(url, signed.query);

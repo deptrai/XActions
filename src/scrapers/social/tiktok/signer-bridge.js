@@ -64,6 +64,28 @@ function normalizeProxy(proxy) {
 }
 
 /**
+ * Detect whether an error was caused by a dead, rate-limited, or refusing proxy tunnel.
+ * @param {any} err
+ * @returns {boolean}
+ */
+function isProxyConnectionError(err) {
+  if (!err) return false;
+  const msg = String(err.message || err);
+  return (
+    msg.includes('ERR_TUNNEL_CONNECTION_FAILED') ||
+    msg.includes('ERR_PROXY_CONNECTION_FAILED') ||
+    msg.includes('ERR_PROXY_CERTIFICATE_INVALID') ||
+    msg.includes('ERR_SOCKS_CONNECTION_FAILED') ||
+    msg.includes('ERR_NO_SUPPORTED_PROXIES') ||
+    msg.includes('ECONNRESET') ||
+    msg.includes('ECONNREFUSED') ||
+    msg.includes('EHOSTUNREACH') ||
+    msg.includes('ETIMEDOUT') ||
+    msg.includes('466 Limit Reached')
+  );
+}
+
+/**
  * Script executed inside the TikTok page context to trigger a signed API request.
  * The platform's own fetch hook (webmssdk) rewrites the URL with anti-bot tokens.
  * @param {string | { url?: string; init?: unknown }} arg1
@@ -75,7 +97,14 @@ function triggerSignedFetch(arg1, arg2) {
   let init = typeof arg1 === 'object' && arg1 !== null && 'init' in arg1 ? arg1.init : arg2;
   const options = init ? (typeof init === 'string' ? JSON.parse(init) : init) : { credentials: 'include', mode: 'cors' };
   return fetch(url, options).then(
-    () => 'ok',
+    async (res) => {
+      try {
+        const text = await res.text();
+        return text ? JSON.parse(text) : 'ok';
+      } catch {
+        return 'ok';
+      }
+    },
     (err) => String(err instanceof Error ? err.message : err)
   );
 }
@@ -143,6 +172,9 @@ export class TikTokBrowserBridge {
 
   /** @type {Promise<any>} */
   #signQueue = Promise.resolve();
+
+  /** @type {any} */
+  #lastResolvedRawProxy = null;
 
   /** @type {number} Maximum re-queue depth for signUrl retries on stale warmed pages. */
   static #MAX_SIGN_DEPTH = 3;
@@ -247,32 +279,48 @@ export class TikTokBrowserBridge {
     if (this.proxyProvider && typeof this.proxyProvider.getProxy === 'function') {
       try {
         const p = this.proxyProvider.getProxy({ accountId, requiresResidential });
-        if (p) return normalizeProxy(p);
+        if (p) {
+          this.#lastResolvedRawProxy = p;
+          return normalizeProxy(p);
+        }
       } catch {}
     }
     if (this.proxyPool) {
       if (typeof this.proxyPool.getStickyProxy === 'function') {
         try {
           const p = this.proxyPool.getStickyProxy(accountId, requiresResidential);
-          if (p) return normalizeProxy(p);
+          if (p) {
+            this.#lastResolvedRawProxy = p;
+            return normalizeProxy(p);
+          }
         } catch {}
       } else if (typeof this.proxyPool.getNext === 'function') {
         try {
           const p = this.proxyPool.getNext(requiresResidential);
-          if (p) return normalizeProxy(p);
+          if (p) {
+            this.#lastResolvedRawProxy = p;
+            return normalizeProxy(p);
+          }
         } catch {}
       } else if (typeof this.proxyPool.getRotatingProxy === 'function') {
         try {
           const p = this.proxyPool.getRotatingProxy(requiresResidential);
-          if (p) return normalizeProxy(p);
+          if (p) {
+            this.#lastResolvedRawProxy = p;
+            return normalizeProxy(p);
+          }
         } catch {}
       } else if (typeof this.proxyPool.getRoundRobinProxy === 'function') {
         try {
           const p = this.proxyPool.getRoundRobinProxy(requiresResidential);
-          if (p) return normalizeProxy(p);
+          if (p) {
+            this.#lastResolvedRawProxy = p;
+            return normalizeProxy(p);
+          }
         } catch {}
       }
     }
+    this.#lastResolvedRawProxy = this.proxy || null;
     return normalizeProxy(this.proxy);
   }
 
@@ -320,7 +368,7 @@ export class TikTokBrowserBridge {
    * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [cookies='']
    * @returns {Promise<{ ttwid: string, msToken: string, deviceId: string }>}
    */
-  async extractSession(accountId = 'tiktok-guest', cookies = '') {
+  async extractSession(accountId = 'tiktok-guest', cookies = '', _isRetry = false) {
     const parsedCookies = this.#parseCookies(cookies);
     const rawTtwid = parsedCookies.find((c) => c.name === 'ttwid')?.value || '';
     const rawMsToken = parsedCookies.find((c) => c.name === 'msToken')?.value || '';
@@ -339,10 +387,19 @@ export class TikTokBrowserBridge {
       }
 
       const navTimeout = this.#isFirstCall ? 45000 : 25000;
-      await adapter.goto(page, `${this.baseUrl}/foryou`, {
-        waitUntil: 'networkidle',
-        timeout: navTimeout,
-      });
+      try {
+        await adapter.goto(page, `${this.baseUrl}/foryou`, {
+          waitUntil: 'networkidle',
+          timeout: navTimeout,
+        });
+      } catch (navErr) {
+        // TikTok video streaming keeps connections open; if networkidle times out
+        // but DOM content is loaded and cookies exist, proceed gracefully.
+        const hasTokens = await adapter.evaluate(page, () => Boolean(document.cookie.includes('msToken') || document.cookie.includes('ttwid'))).catch(() => false);
+        if (!hasTokens) {
+          throw navErr;
+        }
+      }
       this.#isFirstCall = false;
 
       const tokens = /** @type {{ ttwid: string, msToken: string, deviceId: string }} */ (
@@ -375,6 +432,18 @@ export class TikTokBrowserBridge {
       }
       this.#browser = null;
       this.#warmedPage = null;
+
+      if (!_isRetry && isProxyConnectionError(err)) {
+        if (this.proxyPool && this.#lastResolvedRawProxy && typeof this.proxyPool.quarantine === 'function') {
+          try {
+            this.proxyPool.quarantine(this.#lastResolvedRawProxy);
+          } catch {}
+        }
+        this.#lastResolvedRawProxy = null;
+        console.warn('⚠️ [TIKTOK-BRIDGE] Proxy tunnel failed (' + err.message + '). Quarantining and retrying with rotated proxy or direct fallback...');
+        return this.extractSession(accountId, cookies, true);
+      }
+
       throw err;
     }
   }
@@ -411,16 +480,25 @@ export class TikTokBrowserBridge {
 
     // Reuse a warmed page if available, otherwise create a fresh one.
     let page = this.#warmedPage;
-    if (!page) {
+    try {
+      if (!page) {
       page = await adapter.newPage(browser, { preserveProfile: false });
       const parsedCookies = this.#parseCookies(cookies || '');
       if (parsedCookies.length > 0) {
         await adapter.setCookies(page, parsedCookies);
       }
-      await adapter.goto(page, `${this.baseUrl}/foryou`, {
-        waitUntil: 'networkidle',
-        timeout: 45000,
-      });
+      try {
+        await adapter.goto(page, `${this.baseUrl}/foryou`, {
+          waitUntil: 'networkidle',
+          timeout: 45000,
+        });
+      } catch (navErr) {
+        // Continuous video streams can block networkidle; continue if page initialized.
+        const hasTokens = await adapter.evaluate(page, () => Boolean(document.cookie.includes('msToken') || document.cookie.includes('ttwid'))).catch(() => false);
+        if (!hasTokens) {
+          throw navErr;
+        }
+      }
       this.#warmedPage = page;
     } else {
       // Ensure the page still has a valid frame.
@@ -444,6 +522,32 @@ export class TikTokBrowserBridge {
         }
         return this.signUrl(url, options, _depth + 1);
       }
+    }
+    } catch (err) {
+      if (page && this.adapter) {
+        try {
+          await this.adapter.closePage(page);
+        } catch {}
+      }
+      if (this.#browser && this.adapter) {
+        try {
+          await this.adapter.closeBrowser(this.#browser);
+        } catch {}
+      }
+      this.#browser = null;
+      this.#warmedPage = null;
+
+      if (_depth < TikTokBrowserBridge.#MAX_SIGN_DEPTH && isProxyConnectionError(err)) {
+        if (this.proxyPool && this.#lastResolvedRawProxy && typeof this.proxyPool.quarantine === 'function') {
+          try {
+            this.proxyPool.quarantine(this.#lastResolvedRawProxy);
+          } catch {}
+        }
+        this.#lastResolvedRawProxy = null;
+        console.warn('⚠️ [TIKTOK-BRIDGE] signUrl proxy tunnel failed (' + err.message + '). Retrying with depth ' + (_depth + 1) + '...');
+        return this.signUrl(url, options, _depth + 1);
+      }
+      throw err;
     }
 
     // Set up a one-shot listener that captures the signed request URL.
@@ -500,12 +604,14 @@ export class TikTokBrowserBridge {
       const cookieHeader = buildCookieHeader(cookies || '');
       const parsedCookies = parseTikTokCookies(cookieHeader);
 
+      const responseData = (typeof fetchResult === 'object' && fetchResult !== null) ? fetchResult : null;
       return {
         query,
         cookies: {
           ...(parsedCookies.ttwid ? { ttwid: parsedCookies.ttwid } : {}),
           ...(parsedCookies.msToken ? { msToken: parsedCookies.msToken } : {}),
         },
+        responseData,
       };
     } finally {
       nativePage.off('request', onRequest);
