@@ -250,6 +250,33 @@ function asStringCookies(client) {
   return Object.values(c).join(';');
 }
 
+describe('shortcode + challenge policy', () => {
+  it('resolves shortcode from URLs with query/hash/trailing slash', async () => {
+    const c = makeClient();
+    const r1 = await c.getPost('https://www.instagram.com/p/POST42/?igsh=abc&utm=x');
+    expect(r1.media.pk).toBe(42);
+    const r2 = await c.getPost('https://www.instagram.com/reel/POST42#frag');
+    expect(r2.media.pk).toBe(42);
+    const r3 = await c.getPost('https://www.instagram.com/share/POST42/');
+    expect(r3.media.pk).toBe(42);
+  });
+
+  it('escalates to rotate_proxy after 3 consecutive BotChallengeError (AC-9)', async () => {
+    const c = makeClient();
+    const url = `${baseUrl}/challenge/`;
+    // Feed BotChallengeError repeatedly through the private mapper via request.
+    // Each call to request() on the challenge endpoint surfaces a challenge;
+    // after MAX (3) the mapped error must carry suggestedAction rotate_proxy.
+    let last;
+    for (let i = 0; i < 5; i++) {
+      try { await c.request('GET', url, { requiresAuth: false, skipResponseValidation: true }); }
+      catch (e) { last = e; }
+    }
+    expect(last).toBeInstanceOf(BotChallengeError);
+    expect(last.suggestedAction).toBe('rotate_proxy');
+  });
+});
+
 // Live E2E — real Instagram via Puppeteer + residential proxy. Env-gated.
 const itLive = process.env.INSTAGRAM_E2E === '1' ? it : it.skip;
 itLive('scrapes a real public profile via puppeteer', async () => {

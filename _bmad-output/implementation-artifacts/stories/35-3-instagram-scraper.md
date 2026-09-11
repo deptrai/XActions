@@ -241,9 +241,9 @@ Resolved during review (patch — fixed):
 
 Deferred / noted (not blocking):
 
-- [x] [Review][Defer] `#challengeCount` is largely unreachable — base-client already maps challenge→`BotChallengeError` (ROTATE_PROXY/ROTATE_ACCOUNT) before it reaches `#mapTransportError`. AC-9 "≤3 retries" is enforced by the base retry layer; the client counter is defensive dead-code. Kept as belt-and-suspenders, not harmful.
-- [x] [Review][Defer] `validatePost` requires `caption` per AC-8 — spec-faithful, but a legitimately caption-less media would throw. Left as spec; revisit if real caption-less posts break.
-- [x] [Review][Defer] `#resolveShortcode` doesn't strip query/trailing-slash from URLs like `?igsh=` — the `[\w-]+` capture already stops at `/`/`?`, so current behaviour is correct; noted for awareness.
+- [x] [Review][Defer→Resolved] `#challengeCount` — now also increments on `BotChallengeError` thrown by the base client (not just raw transport errors), so the ≤3-retry → `rotate_proxy` escalation is actually enforced at the client layer. Verified by a dedicated test (5 consecutive challenges → rotate_proxy).
+- [x] [Review][Defer→Resolved] `validatePost` `caption` — now optional by default (caption-less media is valid); strict AC-8 literal mode kept behind `opts.requireCaption`. Tests cover both.
+- [x] [Review][Defer→Resolved] `#resolveShortcode` — now strips query/hash + trailing slashes and matches `p|reel|reels|tv|share`; tests cover `?igsh=`/`#frag`/`/share/` URLs.
 
 ## Dev Agent Record
 
@@ -289,3 +289,4 @@ Mirrored the proven Medium (35.2) pattern end-to-end: plain-function normalizer,
 ## Change Log
 - feat(35.3): Instagram scraper — client (puppeteer/http/instagrapi), crawler (user/hashtag/post/comments), normalizer, validator, session+sticky-proxy, optional instagrapi bridge.py, dispatcher + platform.js registration. 52 tests pass, 1 env-gated. (Date: 2026-09-11)
 - review(35.3): adversarial code review — fixed page/browser leak (closePage/closeBrowser), double-fetch, silent-empty-profile, React login inputs; status kept `review` pending re-verify.
+- fix(35.3): resolved all deferred review items — AC-9 challenge counter now reachable+enforced, validatePost caption optional (strict behind flag), resolveShortcode strips query/handles reel|reels|tv|share. 55 tests pass.

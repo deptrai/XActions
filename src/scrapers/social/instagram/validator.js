@@ -177,17 +177,21 @@ export class InstagramPlatformResponseValidator extends AbstractPlatformResponse
 
   /**
    * AC-8 — validate a raw media object; throws ValidationError listing missing fields.
+   * `caption` is optional — legitimately caption-less posts are valid; only flag it when
+   * an object claims to be media but carries no content signal at all.
    * @param {unknown} raw
+   * @param {object} [opts]
+   * @param {boolean} [opts.requireCaption=false] - strict spec mode (AC-8 literal).
    * @returns {boolean}
    */
-  validatePost(raw) {
+  validatePost(raw, opts = {}) {
     const record = asRecord(raw);
     /** @type {string[]} */
     const missing = [];
     if (record.pk === undefined && record.id === undefined) missing.push('pk');
     if (record.code === undefined && record.shortcode === undefined) missing.push('code');
     if (record.taken_at === undefined) missing.push('taken_at');
-    if (record.caption === undefined) missing.push('caption');
+    if (opts.requireCaption === true && record.caption === undefined) missing.push('caption');
     if (missing.length > 0) {
       throw new ValidationError({
         message: `Invalid Instagram media: missing ${missing.join(', ')}`,

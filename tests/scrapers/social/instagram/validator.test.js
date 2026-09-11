@@ -55,14 +55,19 @@ describe('validatePost (AC-8)', () => {
     try { v.validatePost({ pk: 1 }); } catch (e) { err = e; }
     expect(err).toBeInstanceOf(ValidationError);
     expect(err.name).toBe('ValidationError');
-    expect(err.missing).toEqual(expect.arrayContaining(['code', 'taken_at', 'caption']));
+    expect(err.missing).toEqual(expect.arrayContaining(['code', 'taken_at']));
     expect(err.missing).not.toContain('pk');
     expect(err.statusCode).toBe(400);
   });
   it('throws when pk/id absent', () => {
     expect(() => v.validatePost({ code: 'x', taken_at: 1, caption: 'c' })).toThrow(ValidationError);
   });
+  it('accepts caption-less media by default; strict mode still requires caption', () => {
+    expect(v.validatePost({ pk: 1, code: 'x', taken_at: 1 })).toBe(true);
+    expect(() => v.validatePost({ pk: 1, code: 'x', taken_at: 1 }, { requireCaption: true })).toThrow(ValidationError);
+  });
 });
+
 
 describe('validateUser / validateComment', () => {
   it('validates user requires pk + username', () => {

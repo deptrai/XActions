@@ -254,6 +254,22 @@ export class InstagramClient extends AbstractApiClient {
    * @returns {Error}
    */
   #mapTransportError(err) {
+    // Enforce the ≤3-challenge-retry policy (AC-9) even when the base client already
+    // produced a BotChallengeError — count it so a persistent challenge escalates to
+    // rotate_proxy instead of retrying forever.
+    if (err instanceof BotChallengeError) {
+      this.#challengeCount += 1;
+      console.warn(`⚠️ [INSTAGRAM] Bot challenge (attempt ${this.#challengeCount}/${MAX_CHALLENGE_RETRIES})`);
+      if (this.#challengeCount >= MAX_CHALLENGE_RETRIES) {
+        return new BotChallengeError({
+          message: 'Instagram challenge/checkpoint persists after 3 attempts — rotating proxy',
+          suggestedAction: SuggestedActions.ROTATE_PROXY,
+          platform: 'instagram',
+          details: { attempts: this.#challengeCount },
+        });
+      }
+      return err;
+    }
     if (err instanceof PlatformError) return err;
     const rec = asRecord(err);
     const status = Number(rec.statusCode ?? rec.status ?? 0);
@@ -694,8 +710,9 @@ export class InstagramClient extends AbstractApiClient {
    * @returns {string}
    */
   #resolveShortcode(input) {
-    const s = String(input || '').trim();
-    const m = s.match(/instagram\.com\/(?:p|reel|tv)\/([\w-]+)/i);
+    // Strip query/hash + trailing slashes so `?igsh=`/`/p/CODE/?x` resolve cleanly.
+    const s = String(input || '').trim().split(/[?#]/)[0].replace(/\/+$/, '');
+    const m = s.match(/instagram\.com\/(?:p|reel|reels|tv|share)\/([\w-]+)/i);
     if (m) return m[1];
     return /^[\w-]+$/.test(s) ? s : '';
   }
