@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: "09-12-2026 00:34"
+last_updated: "09-12-2026 00:38"
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -228,7 +228,7 @@ action_items:
     action: "Gate PROXY_EXHAUSTED at base-client.js:978 on shouldUseProxy so direct-request
       429/403 keep real error type (fixes 7 client tests)"
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-35-retro-2026-09-12.md"
   - id: "epic-35-retro-item-2-proxyippool-isallquarantined-returns-fal"
     epic: 35
