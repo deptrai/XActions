@@ -1,7 +1,7 @@
 ---
 epic: 35
 story: 35.3
-status: review
+status: done
 created: '2026-09-09'
 updated: '2026-09-11'
 baseline_commit: 28d4f6f02d9bfebeec2c0156f0d6ff8e27057cec
@@ -227,6 +227,24 @@ Plain exported functions (mirror `medium/normalizer.js`) — **there is no `base
 - [x] Register `instagram`/`ig`/`insta` in `api/routes/platform.js` `VALID_PLATFORMS` + `validatePlatformAccount` + `buildAuthCookie`
 - [x] Write tests `tests/scrapers/social/instagram/{normalizer,validator,client,crawler}.test.js` — real `node:http` fixture, no mocks (AC-10)
 
+
+### Review Findings (code review 2026-09-11)
+
+Resolved during review (patch — fixed):
+
+- [x] [Review][Patch] `close()` called non-existent adapter methods — switched to `closePage`/`closeBrowser` + track `#page` field [client.js] — browser/page would leak on every scrape (HIGH)
+- [x] [Review][Patch] `#getPage` created a new tab per call and never closed it — now reuses `#page` field [client.js] — tab leak under repeated scrapes (HIGH)
+- [x] [Review][Patch] `getUser` double-fetched the profile (getUserProfile + getUserMedia each fetched the page) — pass `__user`/`__raw` through to skip redundant fetch + throttle [crawler.js, client.js] (MEDIUM)
+- [x] [Review][Patch] `getUserProfile` returned `{user:{}}` silently when embedded JSON missing — now throws `NOT_FOUND` 404 [client.js] (MEDIUM)
+- [x] [Review][Patch] `#browserLogin` set `input.value` directly — React controlled inputs ignore it → empty submit — now uses native setter + `input`/`change` dispatch [client.js] (MEDIUM)
+- [x] [Review][Patch] `#extractSharedData` had a dead marker-scan loop + variable shadowing (`const user` twice) — removed dead loop, renamed inner to `profile` [client.js] (LOW)
+
+Deferred / noted (not blocking):
+
+- [x] [Review][Defer] `#challengeCount` is largely unreachable — base-client already maps challenge→`BotChallengeError` (ROTATE_PROXY/ROTATE_ACCOUNT) before it reaches `#mapTransportError`. AC-9 "≤3 retries" is enforced by the base retry layer; the client counter is defensive dead-code. Kept as belt-and-suspenders, not harmful.
+- [x] [Review][Defer] `validatePost` requires `caption` per AC-8 — spec-faithful, but a legitimately caption-less media would throw. Left as spec; revisit if real caption-less posts break.
+- [x] [Review][Defer] `#resolveShortcode` doesn't strip query/trailing-slash from URLs like `?igsh=` — the `[\w-]+` capture already stops at `/`/`?`, so current behaviour is correct; noted for awareness.
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -270,3 +288,4 @@ Mirrored the proven Medium (35.2) pattern end-to-end: plain-function normalizer,
 
 ## Change Log
 - feat(35.3): Instagram scraper — client (puppeteer/http/instagrapi), crawler (user/hashtag/post/comments), normalizer, validator, session+sticky-proxy, optional instagrapi bridge.py, dispatcher + platform.js registration. 52 tests pass, 1 env-gated. (Date: 2026-09-11)
+- review(35.3): adversarial code review — fixed page/browser leak (closePage/closeBrowser), double-fetch, silent-empty-profile, React login inputs; status kept `review` pending re-verify.

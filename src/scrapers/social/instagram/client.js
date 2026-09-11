@@ -48,8 +48,9 @@ export class InstagramClient extends AbstractApiClient {
   /** @type {number} */ delayMin = 2000;
   /** @type {number} */ delayMax = 5000;
   /** @type {number} */ #lastRequestAt = 0;
-  /** @type {import('../../adapters/base-adapter.js').BaseAdapter | null} */ #adapter = null;
-  /** @type {import('../../adapters/base-adapter.js').AdapterBrowser | null} */ #browser = null;
+  /** @type {import('../../adapters/base.js').BaseAdapter | null} */ #adapter = null;
+  /** @type {import('../../adapters/base.js').AdapterBrowser | null} */ #browser = null;
+  /** @type {import('../../adapters/base.js').AdapterPage | null} */ #page = null;
   /** @type {import('../../../core/session-manager.js').SessionManager} */ #sessionManager;
   /** @type {object | null} */ #socialStore;
   /** @type {Record<string, unknown> | null} */ #credentials = null;
@@ -423,7 +424,7 @@ export class InstagramClient extends AbstractApiClient {
   /**
    * Lazy-launch the stealth Puppeteer browser (only when transport==='puppeteer').
    * @param {string | null} [accountId]
-   * @returns {Promise<import('../../adapters/base-adapter.js').AdapterPage>}
+   * @returns {Promise<import('../../adapters/base.js').AdapterPage>}
    */
   async #getPage(accountId = null) {
     if (this.transport === 'instagrapi' && !instagrapiAvailable()) {
@@ -444,14 +445,17 @@ export class InstagramClient extends AbstractApiClient {
       const proxy = this.resolveProxy(accountId, this.requiresResidential, this.requiresAuth);
       this.#browser = await this.#adapter.launch({ proxy });
     }
-    const page = await this.#adapter.newPage(this.#browser, { userAgent: this.userAgent });
+    // Reuse a single page (avoids leaking a tab per call).
+    if (!this.#page) {
+      this.#page = await this.#adapter.newPage(this.#browser, { userAgent: this.userAgent });
+    }
     // Apply session cookies so requests are authenticated.
     const jar = this.cookies ? asRecord(this.cookies) : {};
     for (const [name, value] of Object.entries(jar)) {
       if (value == null || value === '') continue;
-      await this.#adapter.setCookie(page, { name, value: String(value), domain: '.instagram.com', path: '/' });
+      await this.#adapter.setCookie(this.#page, { name, value: String(value), domain: '.instagram.com', path: '/' });
     }
-    return page;
+    return this.#page;
   }
 
   /**
@@ -464,11 +468,18 @@ export class InstagramClient extends AbstractApiClient {
   async #browserLogin(username, password) {
     const page = await this.#getPage(username);
     await this.#adapter.goto(page, `${this.baseUrl}/accounts/login/`, { waitUntil: 'domcontentloaded' });
+    // React controlled inputs ignore `el.value=` — use the native setter + dispatch
+    // input/change so React's onChange fires, then submit.
     await this.#adapter.evaluate(page, (u, p) => {
-      const user = document.querySelector('input[name="username"]');
-      const pass = document.querySelector('input[name="password"]');
-      if (user) user.value = u;
-      if (pass) pass.value = p;
+      const setVal = (el, val) => {
+        if (!el) return;
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        setter.call(el, val);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      setVal(document.querySelector('input[name="username"]'), u);
+      setVal(document.querySelector('input[name="password"]'), p);
     }, username, password);
     await this.#adapter.evaluate(page, () => {
       const btn = document.querySelector('button[type="submit"]');
@@ -489,10 +500,6 @@ export class InstagramClient extends AbstractApiClient {
    */
   #extractSharedData(html) {
     const text = String(html || '');
-    for (const marker of ['window._sharedData =', 'window.__additionalDataLoaded', '"graphql"']) {
-      const idx = text.indexOf(marker);
-      if (idx === -1) continue;
-    }
     // Parse `window._sharedData = {...};`
     const shared = text.match(/window\._sharedData\s*=\s*(\{[\s\S]*?\});<\/script>/);
     if (shared) { try { return asRecord(JSON.parse(shared[1])); } catch { /* fallthrough */ } }
@@ -530,7 +537,15 @@ export class InstagramClient extends AbstractApiClient {
     const html = await this.#adapter.getContent(page);
     const data = this.#extractSharedData(html);
     const entry = asRecord(asRecord(asRecord(data.entry_data).ProfilePage)[0] ?? data);
-    return { user: asRecord(entry.user ?? asRecord(entry.graphql).user), raw: data };
+    const profile = asRecord(entry.user ?? asRecord(entry.graphql).user ?? asRecord(asRecord(entry.data).user));
+    if (!Object.keys(profile).length) {
+      throw new PlatformError({
+        type: ErrorTypes.NOT_FOUND, code: 'XACT_4040',
+        message: `Instagram user "${user}" not found or profile payload empty`, statusCode: 404,
+        suggestedAction: SuggestedActions.VERIFY_URL, platform: 'instagram',
+      });
+    }
+    return { user: profile, raw: data };
   }
 
   /**
@@ -554,7 +569,15 @@ export class InstagramClient extends AbstractApiClient {
    * @returns {Promise<Record<string, unknown>>}
    */
   async getUserMedia(username, options = {}) {
-    const { user, raw } = await this.getUserProfile(username, options);
+    // When the caller already has the profile payload, pass `raw`/`user` to skip a
+    // redundant fetch (getUserProfile already loaded the page once).
+    let user = asRecord(options.__user);
+    let raw = asRecord(options.__raw);
+    if (!Object.keys(user).length) {
+      const res = await this.getUserProfile(username, options);
+      user = asRecord(res.user);
+      raw = asRecord(res.raw);
+    }
     const edgeMedia = asRecord(user.edge_owner_to_timeline_media ?? asRecord(asRecord(raw).graphql).edge_owner_to_timeline_media);
     const edges = Array.isArray(edgeMedia.edges) ? edgeMedia.edges : [];
     const items = edges.map((e) => asRecord(e).node ?? e);
@@ -708,11 +731,14 @@ export class InstagramClient extends AbstractApiClient {
    * @returns {Promise<void>}
    */
   async close() {
-    if (this.#browser && this.#adapter && typeof this.#adapter.close === 'function') {
-      await this.#adapter.close(this.#browser).catch(() => {});
-    } else if (this.#browser && typeof this.#browser.close === 'function') {
-      await this.#browser.close().catch(() => {});
+    // Adapter API is closePage / closeBrowser (not close) — matches Medium/Reddit bridges.
+    if (this.#page && this.#adapter && typeof this.#adapter.closePage === 'function') {
+      await this.#adapter.closePage(this.#page).catch(() => {});
     }
+    if (this.#browser && this.#adapter && typeof this.#adapter.closeBrowser === 'function') {
+      await this.#adapter.closeBrowser(this.#browser).catch(() => {});
+    }
+    this.#page = null;
     this.#browser = null;
   }
 }

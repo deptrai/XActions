@@ -203,7 +203,8 @@ export class InstagramCrawler extends AbstractCrawler {
     await this.client.ensureSession(accountId, session);
 
     const { user, raw } = await this.client.getUserProfile(username, { ...args, accountId });
-    const { items, pageInfo } = await this.client.getUserMedia(username, { ...args, accountId, limit });
+    // Pass the already-fetched payload through so getUserMedia does not re-fetch.
+    const { items, pageInfo } = await this.client.getUserMedia(username, { ...args, accountId, limit, __user: user, __raw: raw });
 
     const profile = normalizeInstagramProfile(user);
     const posts = items.slice(0, limit).map((m) => {
