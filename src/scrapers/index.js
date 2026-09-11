@@ -2383,6 +2383,12 @@ export async function scrape(platform, action, options = {}) {
     if (options.includeComments != null) {
       mappedArgs.includeComments = options.includeComments;
     }
+    if (options.resume !== undefined) {
+      mappedArgs.resume = options.resume;
+    }
+    if (options.dryRun !== undefined) {
+      mappedArgs.dryRun = options.dryRun;
+    }
 
     if (mappedArgs.cursor != null && ['post_detail', 'get_post_comments'].includes(mappedAction) && mappedArgs.after == null) {
       mappedArgs.after = mappedArgs.cursor;

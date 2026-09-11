@@ -155,8 +155,10 @@ export class TikTokCrawler extends AbstractCrawler {
    * @param {string | null} [params.cursor]
    * @param {Array<import('../../../core/types.js').PostItem | import('../../../core/types.js').CommentItem>} [params.items]
    * @param {boolean} [params.hasMore]
+   * @param {boolean} [params.dryRun]
    */
-  async #emitCheckpointAndStream({ targetType, targetKey, cursor = null, items = [], hasMore = false }) {
+  async #emitCheckpointAndStream({ targetType, targetKey, cursor = null, items = [], hasMore = false, dryRun = false }) {
+    if (dryRun) return;
     try {
       const storeWithCheckpoint = /** @type {any} */ (this.store);
       if (storeWithCheckpoint && typeof storeWithCheckpoint.saveCheckpoint === 'function') {
@@ -263,7 +265,7 @@ export class TikTokCrawler extends AbstractCrawler {
     }
 
     const accountId = session?.accountId || 'tiktok-guest';
-    const count = this.#clamp(args.count, 1, 35);
+    const count = this.#clamp(args.count ?? 20, 1, 35);
     const cursor = args.cursor ?? 0;
 
     await this.client.init({ accountId, cookies: session?.cookies });
@@ -281,7 +283,8 @@ export class TikTokCrawler extends AbstractCrawler {
     }
 
     let stopPagination = false;
-    if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
+    const isDryRun = Boolean(args.dryRun || session?.dryRun);
+    if (!isDryRun && this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
       const batch = await this.store.storeBatch(posts, { upsert: true });
       stopPagination = await this.shouldStopPagination(batch ?? posts);
     }
@@ -293,6 +296,7 @@ export class TikTokCrawler extends AbstractCrawler {
       cursor: pageInfo.end_cursor,
       items: posts,
       hasMore,
+      dryRun: isDryRun,
     });
 
     return { posts, pageInfo: { ...pageInfo, has_next_page: hasMore } };
@@ -319,7 +323,7 @@ export class TikTokCrawler extends AbstractCrawler {
     }
 
     const accountId = session?.accountId || 'tiktok-guest';
-    const count = this.#clamp(args.count, 1, 35);
+    const count = this.#clamp(args.count ?? 20, 1, 35);
     const cursor = args.cursor ?? 0;
     const tag = String(args.tag).replace(/^#/, '');
 

@@ -403,6 +403,12 @@ router.post('/:platform/scrape', async (req, res) => {
     const options = { ...body };
     delete options.action;
 
+    // Interactive dashboard scrapes and preview dryRuns should start fresh from cursor 0
+    // unless the caller explicitly requested resume: true.
+    if (options.resume === undefined) {
+      options.resume = false;
+    }
+
     // Resolve account if provided
     const accountIds = /** @type {string[] | undefined} */ (body.accountIds);
     if (Array.isArray(accountIds) && accountIds.length > 0) {

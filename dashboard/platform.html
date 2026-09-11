@@ -2055,6 +2055,8 @@
         );
         if (maxBatchEl) {
           const limit = Number(maxBatchEl.value);
+          body.count = limit;
+          body.limit = limit;
           for (const key of [
             "urls",
             "postUrls",
@@ -2139,9 +2141,10 @@
           cardsHtml = `
             <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:12px;margin:16px 0;">
               ${items.slice(0, 12).map((item, i) => {
-                const title = item.title || item.name || item.username || item.author || `Item #${i+1}`;
+                const title = item.title || item.name || item.authorName || item.username || item.author || `Item #${i+1}`;
                 const text = item.content || item.text || item.description || item.url || '';
                 const link = item.url || item.postUrl || item.profileUrl || '';
+                const cover = (item.mediaUrls && item.mediaUrls[0]) || item.coverUrl || item.metadata?.coverUrl || '';
                 return `
                   <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px;">
                     <div style="font-weight:700;font-size:0.875rem;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
@@ -2149,7 +2152,13 @@
                       <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(title)}</span>
                     </div>
                     ${text ? `<div style="font-size:0.8125rem;color:var(--text-secondary);line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;">${esc(text)}</div>` : ''}
-                    ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" style="font-size:0.75rem;color:var(--accent);text-decoration:none;margin-top:auto;">View Source →</a>` : ''}
+                    ${(item.likesCount != null || item.viewsCount != null || item.repliesCount != null) ? `
+                    <div style="font-size:0.75rem;color:var(--text-secondary);display:flex;gap:10px;margin-top:auto;padding-top:4px;">
+                      ${item.viewsCount != null ? `<span>👁️ ${Number(item.viewsCount).toLocaleString()}</span>` : ''}
+                      ${item.likesCount != null ? `<span>❤️ ${Number(item.likesCount).toLocaleString()}</span>` : ''}
+                      ${item.repliesCount != null ? `<span>💬 ${Number(item.repliesCount).toLocaleString()}</span>` : ''}
+                    </div>` : ''}
+                    ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" style="font-size:0.75rem;color:var(--accent);text-decoration:none;margin-top:4px;">View Source →</a>` : ''}
                   </div>
                 `;
               }).join('')}
