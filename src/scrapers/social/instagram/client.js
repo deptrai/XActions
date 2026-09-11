@@ -458,7 +458,20 @@ export class InstagramClient extends AbstractApiClient {
       this.#adapter = new PuppeteerAdapter();
     }
     if (!this.#browser) {
-      const proxy = this.resolveProxy(accountId, this.requiresResidential, this.requiresAuth);
+      // Honour requiresProxy:false — a direct connection must NOT resolve or attach
+      // a proxy. Matches the same gate base-client.request() applies (shouldUseProxy).
+      // resolveProxy() throws ProxyDeadError on an empty/dead pool, which would
+      // otherwise break a caller that explicitly opted out of proxying.
+      let proxy = null;
+      const shouldUseProxy =
+        this.requiresProxy || (this._hasExplicitProxy && !this._requiresProxyExplicit);
+      if (shouldUseProxy) {
+        try {
+          proxy = this.resolveProxy(accountId, this.requiresResidential, this.requiresAuth);
+        } catch {
+          proxy = null; // direct-connect fallback when proxy resolution fails
+        }
+      }
       this.#browser = await this.#adapter.launch({ proxy });
     }
     // Reuse a single page (avoids leaking a tab per call).
@@ -516,16 +529,94 @@ export class InstagramClient extends AbstractApiClient {
    */
   #extractSharedData(html) {
     const text = String(html || '');
-    // Parse `window._sharedData = {...};`
+    // Legacy `window._sharedData = {...};` (pre-Comet pages).
     const shared = text.match(/window\._sharedData\s*=\s*(\{[\s\S]*?\});<\/script>/);
     if (shared) { try { return asRecord(JSON.parse(shared[1])); } catch { /* fallthrough */ } }
-    // Parse any `<script type="application/json" ...>{...}</script>` containing "graphql".
+
+    // Comet/Relay pages (2024+): profile/hashtag/post payloads live inside
+    // `<script type="application/json">` blocks shaped as `require[].__bbox.result.data`.
+    // Deep-search each block for the Relay `data` envelope and surface its first
+    // meaningful node (xig_user_by_username / xdt hashtag / shortcode_media).
+    const collected = { __relay: [] };
     const jsonBlocks = text.matchAll(/<script[^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/gi);
     for (const m of jsonBlocks) {
-      try {
-        const parsed = asRecord(JSON.parse(m[1]));
-        if (parsed.graphql || parsed.data || parsed.user || parsed.items) return parsed;
-      } catch { /* try next block */ }
+      let parsed;
+      try { parsed = JSON.parse(m[1]); } catch { continue; }
+      const data = this.#findRelayData(parsed);
+      if (data) collected.__relay.push(data);
+    }
+    if (collected.__relay.length) return collected;
+    return {};
+  }
+
+  /**
+   * Depth-first search a parsed Comet JSON block for `result.data` / `data` envelope
+   * carrying a recognizable Instagram node (user / hashtag / media).
+   * @param {unknown} node
+   * @param {number} [depth]
+   * @returns {Record<string, unknown> | null}
+   */
+  #findRelayData(node, depth = 0) {
+    if (!node || typeof node !== 'object' || depth > 60) return null;
+    const rec = /** @type {Record<string, unknown>} */ (node);
+    // Relay `result.data` envelope holding a recognizable node.
+    const data = asRecord(rec.data ?? asRecord(rec.result).data);
+    if (
+      data.xig_user_by_username || data.user || data.xdt_api__v1__hashtag ||
+      data.hashtag || data.shortcode_media || data.media ||
+      data.xdt_shortcode_media || data.xdt_api__v1__media
+    ) {
+      return data;
+    }
+    for (const k of Object.keys(rec)) {
+      const found = this.#findRelayData(rec[k], depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  /**
+   * Find the user node across all collected Relay data envelopes.
+   * @param {Record<string, unknown>} extracted - result of #extractSharedData
+   * @returns {Record<string, unknown>}
+   */
+  #findUserNode(extracted) {
+    const relay = Array.isArray(extracted.__relay) ? extracted.__relay : [];
+    for (const data of relay) {
+      const u = asRecord(data.xig_user_by_username ?? data.user);
+      if (Object.keys(u).length) return u;
+    }
+    // legacy shapes
+    return asRecord(
+      asRecord(asRecord(extracted.entry_data).ProfilePage)[0]?.user ??
+      asRecord(extracted.graphql).user ??
+      asRecord(asRecord(extracted.data).user)
+    );
+  }
+
+  /**
+   * Find the timeline/media connection across collected Relay envelopes.
+   * Prefers the polaris connection attached to the user node; falls back to a
+   * standalone connection found in any block.
+   * @param {Record<string, unknown>} extracted
+   * @param {Record<string, unknown>} [user]
+   * @returns {Record<string, unknown>}
+   */
+  #findTimelineConn(extracted, user = {}) {
+    const direct = asRecord(
+      user.edge_owner_to_timeline_media ??
+      user.polaris_ordered_timeline_connection ??
+      asRecord(extracted.graphql).edge_owner_to_timeline_media
+    );
+    if (Array.isArray(direct.edges)) return direct;
+    const relay = Array.isArray(extracted.__relay) ? extracted.__relay : [];
+    for (const data of relay) {
+      const u = asRecord(data.xig_user_by_username ?? data.user);
+      const conn = asRecord(
+        u.polaris_ordered_timeline_connection ?? u.edge_owner_to_timeline_media ??
+        data.polaris_ordered_timeline_connection
+      );
+      if (Array.isArray(conn.edges)) return conn;
     }
     return {};
   }
@@ -552,8 +643,7 @@ export class InstagramClient extends AbstractApiClient {
     await this.#adapter.goto(page, `${this.baseUrl}/${encodeURIComponent(user)}/`, { waitUntil: 'domcontentloaded' });
     const html = await this.#adapter.getContent(page);
     const data = this.#extractSharedData(html);
-    const entry = asRecord(asRecord(asRecord(data.entry_data).ProfilePage)[0] ?? data);
-    const profile = asRecord(entry.user ?? asRecord(entry.graphql).user ?? asRecord(asRecord(entry.data).user));
+    const profile = this.#findUserNode(data);
     if (!Object.keys(profile).length) {
       throw new PlatformError({
         type: ErrorTypes.NOT_FOUND, code: 'XACT_4040',
@@ -594,7 +684,7 @@ export class InstagramClient extends AbstractApiClient {
       user = asRecord(res.user);
       raw = asRecord(res.raw);
     }
-    const edgeMedia = asRecord(user.edge_owner_to_timeline_media ?? asRecord(asRecord(raw).graphql).edge_owner_to_timeline_media);
+    const edgeMedia = this.#findTimelineConn(raw, user);
     const edges = Array.isArray(edgeMedia.edges) ? edgeMedia.edges : [];
     const items = edges.map((e) => asRecord(e).node ?? e);
     const pageInfo = asRecord(edgeMedia.page_info);

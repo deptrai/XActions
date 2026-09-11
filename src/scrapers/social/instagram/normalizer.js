@@ -93,6 +93,8 @@ function bestImageUrl(media) {
   if (!best && typeof media.image_url === 'string') best = media.image_url;
   if (!best && typeof media.thumbnail_url === 'string') best = media.thumbnail_url;
   if (!best && typeof media.display_url === 'string') best = media.display_url;
+  // Polaris/Comet timeline nodes carry `display_uri` instead of image_versions2.
+  if (!best && typeof media.display_uri === 'string') best = media.display_uri;
   return best;
 }
 
@@ -122,6 +124,7 @@ function collectMediaUrls(media) {
   }
   push(media.display_url);
   push(media.thumbnail_url);
+  push(media.display_uri);
   return urls;
 }
 
@@ -167,7 +170,7 @@ export function normalizeInstagramMedia(raw) {
     likesCount: likes,
     repliesCount: replies,
     viewsCount: asNumber(media.view_count ?? media.play_count),
-    publishedAt: media.taken_at ? new Date(Number(media.taken_at) * 1000) : null,
+    publishedAt: (media.taken_at ?? media.taken_at_ts) ? new Date(Number(media.taken_at ?? media.taken_at_ts) * 1000) : null,
     crawledAt: new Date(),
     metadata: {
       mediaType: media.media_type,
@@ -208,7 +211,7 @@ export function normalizeInstagramProfile(raw) {
     metadata: {
       isVerified: user.is_verified === true,
       isPrivate: user.is_private === true,
-      mediaCount: asNumber(user.media_count ?? asRecord(user.edge_owner_to_timeline_media).count),
+      mediaCount: asNumber(user.media_count ?? user.all_media_count ?? asRecord(user.edge_owner_to_timeline_media).count ?? asRecord(user.polaris_ordered_timeline_connection).count),
       isBusiness: user.is_business_account === true,
       externalUrl: asString(user.external_url) || undefined,
     },
