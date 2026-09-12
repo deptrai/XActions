@@ -108,3 +108,6 @@ Subagent narrowing: session `Agent` tool là async-only (không có blocking/awa
 - `npx vitest run tests/scrapers/action-not-available.test.js` -- expected: pass
 - `npx tsc --noEmit` -- expected: 0 errors
 - `grep -rn "src/scrapers/facebook/\(proxy\|limits\|messengerQueue\|messengerShare\)" tests/` -- expected: only non-migrated symbols (none for the 4 modules)
+
+
+**Tất cả 3 reviewer layers đã hoàn tất:** blind-hunter phát hiện finding `high` (vanilla Error→PlatformError, đã patch); edge-case-hunter trả `[]` (không finding); verification-gap xác nhận `platform.js:430` check `err.statusCode` trực tiếp (vanilla Error đã trả 400 cho scrape path) NHƯNG `schemas.js:20`/`checkpoints.js:260` dùng `instanceof PlatformError` → patch PlatformError vẫn đúng+cần thiết cho các route đó, và barrel-resolve test đóng verification-gap. Full `tests/scrapers/` suite: **151 files / 2224 tests pass, 0 regression**.
