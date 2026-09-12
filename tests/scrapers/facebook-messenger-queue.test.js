@@ -9,7 +9,7 @@ import {
   parseRecipientsFile,
   parseLinksFile,
   buildCampaignQueue,
-} from '../../src/scrapers/facebook/messengerQueue.js';
+} from '../../src/scrapers/social/facebook/messengerQueue.js';
 
 // ============================================================================
 // parseRecipientsFile — AC2

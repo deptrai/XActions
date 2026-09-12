@@ -7,7 +7,7 @@ import {
   getActionLimit,
   enforceDelay,
   getAccountAgeDays,
-} from '../../src/scrapers/facebook/limits.js';
+} from '../../src/scrapers/social/facebook/limits.js';
 
 describe('Story 6.13 — Action Velocity Limiting', () => {
   describe('LIMITS (AC1, AC2)', () => {

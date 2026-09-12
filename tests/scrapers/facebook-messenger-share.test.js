@@ -10,7 +10,7 @@ import {
   shareToMessenger,
   messengerShareCampaign,
   SELECTORS,
-} from '../../src/scrapers/facebook/messengerShare.js';
+} from '../../src/scrapers/social/facebook/messengerShare.js';
 import { makeFakePage } from '../helpers/fake-page.js';
 
 // ============================================================================

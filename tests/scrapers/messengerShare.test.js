@@ -12,7 +12,7 @@ import {
   shareToMessenger,
   messengerShareCampaign,
   SELECTORS,
-} from '../../src/scrapers/facebook/messengerShare.js';
+} from '../../src/scrapers/social/facebook/messengerShare.js';
 
 // ============================================================================
 // Pure Utilities

@@ -1,4 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// FROZEN LEGACY — do not edit. Canonical source: src/scrapers/social/facebook/ (Story 25.3). This copy is kept for backward compat and removed in Epic 26.
 // LEGACY — see docs/deprecation-plan.md (Replaced by batch handling in FacebookCrawler Story 13.9)
 /**
  * Facebook Messenger-share input/queue parser (Story 5.4 — Messenger Port, Epic 5).

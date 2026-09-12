@@ -1,4 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// FROZEN LEGACY — do not edit. Canonical source: src/scrapers/social/facebook/ (Story 25.3). This copy is kept for backward compat and removed in Epic 26.
 /**
  * Facebook proxy rotation module (Story 5.3 — Auth modes & proxy rotation, Epic 5).
  *

@@ -30,3 +30,27 @@ export {
 export { FacebookActions, assertFacebookUrlLocal, stripPii, stripEmojiSurrogates, pickRandomSegment } from './actions.js';
 export { FacebookActionVelocityTracker, runGuardedActionBatch, enforceActionDelay, ACTION_LIMITS, ACCOUNT_RISK_WARNING } from './batch-runner.js';
 
+
+// ============================================================================
+// Canonical module re-exports (Story 25.3 migration — these live here as the
+// source of truth; the legacy src/scrapers/facebook/*.js copies are frozen for
+// Epic 26 decommission). Re-exported so consumers can use the barrel instead of
+// deep imports. collision-prone names are namespaced.
+// ============================================================================
+export { parseFlatProxy, rotateProxy } from './proxy.js';
+export {
+  LIMITS as FB_LIMITS,
+  ACCOUNT_AGE_TIERS as FB_ACCOUNT_AGE_TIERS,
+  getActionLimit,
+  enforceDelay,
+  getAccountAgeDays,
+} from './limits.js';
+export { parseRecipientsFile, parseLinksFile, buildCampaignQueue } from './messengerQueue.js';
+export {
+  SELECTORS as MESSENGER_SHARE_SELECTORS,
+  composeMessage as composeMessengerShareMessage,
+  typeMessage,
+  sendMessageToThread,
+  shareToMessenger,
+  messengerShareCampaign,
+} from './messengerShare.js';

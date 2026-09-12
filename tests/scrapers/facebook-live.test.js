@@ -30,8 +30,8 @@ import {
   getPagesFromCookie,
   checkMessengerCTA,
 } from '../../src/scrapers/facebook/graphql.js';
-import { messengerShareCampaign } from '../../src/scrapers/facebook/messengerShare.js';
-import { rotateProxy } from '../../src/scrapers/facebook/proxy.js';
+import { messengerShareCampaign } from '../../src/scrapers/social/facebook/messengerShare.js';
+import { rotateProxy } from '../../src/scrapers/social/facebook/proxy.js';
 import { executeFacebookAutomateTool } from '../../src/mcp/server.js';
 
 // ---------------------------------------------------------------------------

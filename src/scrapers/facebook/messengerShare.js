@@ -1,4 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// FROZEN LEGACY — do not edit. Canonical source: src/scrapers/social/facebook/ (Story 25.3). This copy is kept for backward compat and removed in Epic 26.
 // LEGACY — see docs/deprecation-plan.md (Replaced by facebook:messenger_share in Story 13.9)
 /**
  * XActions Facebook Messenger Share Automation (Story 5.2)

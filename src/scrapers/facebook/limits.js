@@ -1,4 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
+// FROZEN LEGACY — do not edit. Canonical source: src/scrapers/social/facebook/ (Story 25.3). This copy is kept for backward compat and removed in Epic 26.
 // by nichxbt
 /**
  * Facebook velocity & rate-limiting configuration (Story 6.13 — ADR-015).
