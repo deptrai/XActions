@@ -22,3 +22,16 @@ export { MediumClient, MediumCrawler, MediumPlatformResponseValidator } from './
 export * as instagram from './instagram/index.js';
 export { InstagramClient, InstagramCrawler, InstagramPlatformResponseValidator } from './instagram/index.js';
 export { CommentTreeExtractor } from './comment-tree.js';
+
+// scrape() dispatch descriptors (Story 25.1) — one per social platform dir.
+export { default as twitterDescriptor } from './twitter/descriptor.js';
+export { default as facebookDescriptor } from './facebook/descriptor.js';
+export { default as threadsDescriptor } from './threads/descriptor.js';
+export { default as blueskyDescriptor } from './bluesky/descriptor.js';
+export { default as mastodonDescriptor } from './mastodon/descriptor.js';
+export { default as tiktokDescriptor } from './tiktok/descriptor.js';
+export { default as redditDescriptor } from './reddit/descriptor.js';
+export { default as mediumDescriptor } from './medium/descriptor.js';
+export { default as instagramDescriptor } from './instagram/descriptor.js';
+export { default as youtubeDescriptor } from './youtube/descriptor.js';
+export { default as zaloDescriptor } from './zalo/descriptor.js';
