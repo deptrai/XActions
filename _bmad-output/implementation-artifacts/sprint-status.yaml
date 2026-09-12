@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: "09-12-2026 19:13"
+last_updated: "09-12-2026 21:05"
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -257,7 +257,7 @@ action_items:
       re-export proxy/limits/messengerQueue/messengerShare tu social barrel, danh
       dau src/scrapers/facebook/ la frozen-legacy cho Epic 26 xoa"
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-25-retro-2026-09-12.md"
   - id: "epic-25-retro-item-6-wire-errortypes-deprecated-khi-epic-26-g"
     epic: 25
@@ -265,26 +265,26 @@ action_items:
       deprecatedActions map de actionNotAvailable tra type DEPRECATED + suggestedAction
       thay INVALID_ARGS"
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-25-retro-2026-09-12.md"
   - id: "epic-25-retro-item-7-them-test-cho-story-25-4-assert-suggeste"
     epic: 25
     action: "Them test cho Story 25.4: assert suggestedAction + type tren actionNotAvailable
       (hien khong test nao cover 25.4); cover ca DEPRECATED branch khi wire"
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-25-retro-2026-09-12.md"
   - id: "epic-25-retro-item-8-checkpoint-round-trip-e2e-test-acl-resol"
     epic: 25
     action: "Checkpoint round-trip e2e: test ACL -> resolver -> getCheckpoint -> inject
       -> storeBatch -> ET tren Postgres that (run1 luu cursor, run2 resume + ET break)"
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-25-retro-2026-09-12.md"
   - id: "epic-25-retro-item-9-observability-cho-et-acl-silent-catch-lo"
     epic: 25
     action: "Observability cho ET/ACL silent-catch: log warn khi getCheckpoint/findExistingIds
       throw (hien catch{} trong tai base-crawler.js:457,491)"
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-25-retro-2026-09-12.md"
