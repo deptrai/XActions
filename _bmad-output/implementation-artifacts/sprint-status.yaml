@@ -171,9 +171,9 @@ development_status:
   25-7-early-termination-pagination-loops: done
   epic-25-retrospective: done
 
-  epic-26: in-progress
+  epic-26: done
   26-1-pre-decommission-parity-rollback-preparation: done
-  26-2-final-legacy-removal: in-progress
+  26-2-final-legacy-removal: done
   epic-26-retrospective: optional
 
   epic-27: backlog
