@@ -72,3 +72,33 @@ describe('social/facebook barrel — canonical re-exports resolve', () => {
     expect(typeof barrel.messengerShareCampaign).toBe('function');
   });
 });
+
+describe('Story 25.4 — DEPRECATED branch (Epic 26 producer, mechanism wired now)', () => {
+  it('returns type DEPRECATED + replacement suggestedAction when action is deprecated', () => {
+    const err = actionNotAvailable('fb', 'old_share', ['messenger_share'], undefined, 'messenger_share');
+    expect(err).toBeInstanceOf(PlatformError);
+    expect(err.type).toBe(ErrorTypes.DEPRECATED); // 'deprecated'
+    expect(err.code).toBe('XACT_4001');
+    expect(err.statusCode).toBe(400);
+    expect(err.suggestedAction).toBe('use_messenger_share');
+    expect(err.message).toContain('messenger_share');
+  });
+
+  it('explicit suggestedAction overrides the derived use_<replacement>', () => {
+    const err = actionNotAvailable('fb', 'old_x', ['new_x'], 'relogin', 'new_x');
+    expect(err.type).toBe(ErrorTypes.DEPRECATED);
+    expect(err.suggestedAction).toBe('relogin');
+  });
+
+  it('non-deprecated action stays INVALID_ARGS with use_x_actions_list', () => {
+    const err = actionNotAvailable('fb', 'nope', ['search']);
+    expect(err.type).toBe(ErrorTypes.INVALID_ARGS);
+    expect(err.suggestedAction).toBe('use_x_actions_list');
+  });
+
+  it('DEPRECATED_ACTIONS registry exists, is frozen, and is keyed platform:action', async () => {
+    const { DEPRECATED_ACTIONS } = await import('../../src/scrapers/platforms.js');
+    expect(Object.isFrozen(DEPRECATED_ACTIONS)).toBe(true);
+    expect(typeof DEPRECATED_ACTIONS).toBe('object');
+  });
+});

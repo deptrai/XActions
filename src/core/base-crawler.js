@@ -454,8 +454,11 @@ export class AbstractCrawler {
       if (checkpoint && checkpoint.lastCursor !== undefined && checkpoint.lastCursor !== null && checkpoint.lastCursor !== '') {
         return { ...normalizedArgs, [cursorField]: checkpoint.lastCursor };
       }
-    } catch {
-      // Swallow checkpoint lookup errors to avoid breaking scraping
+    } catch (err) {
+      // Swallow checkpoint lookup errors to avoid breaking scraping, but surface
+      // the degradation so a dead checkpoint store doesn't silently become a
+      // full re-crawl every run.
+      console.warn(`[CHECKPOINT] getCheckpoint failed for ${this.name}.${action} (${resolution.targetType}:${resolution.targetKey}); starting from scratch: ${err instanceof Error ? err.message : String(err)}`);
     }
     return undefined;
   }
@@ -488,7 +491,10 @@ export class AbstractCrawler {
       const uniqueIds = [...new Set(ids)];
       const existingIds = await this.store.findExistingIds(uniqueIds);
       return existingIds.length === uniqueIds.length;
-    } catch {
+    } catch (err) {
+      // Fail-open: an ET lookup error must never stop pagination, but log it so a
+      // dead store doesn't silently disable early termination on every page.
+      console.warn(`[EARLY-TERM] findExistingIds failed for ${this.name}; continuing pagination: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
   }

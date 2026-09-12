@@ -162,23 +162,46 @@ export function getPlatform(platform) {
 }
 
 /**
+ * Registry of deprecated platform actions → their replacement action.
+ * Key: `"platform:action"` (both lowercased). Value: the replacement action name.
+ * When `actionNotAvailable` resolves an action present here, it returns
+ * `type: ErrorTypes.DEPRECATED` with `suggestedAction` pointing at the
+ * replacement — Story 25.4's "removed/renamed action" branch. Epic 26's
+ * decommission populates this map as legacy actions are removed.
+ * @type {Record<string, string>}
+ */
+export const DEPRECATED_ACTIONS = Object.freeze({});
+
+/**
  * Build a 400-level "action not available" error so the API layer can map it
- * to HTTP 400 instead of a generic 500.
+ * to HTTP 400 instead of a generic 500. Returns a `PlatformError` so handlers
+ * that branch on `instanceof PlatformError` (schemas.js, checkpoints.js) emit the
+ * normalized envelope; `err.statusCode` also covers `platform.js`'s 400 mapping.
+ *
+ * When `action` is present in `DEPRECATED_ACTIONS`, the error uses
+ * `type: DEPRECATED` and a `suggestedAction` pointing at the replacement action.
  * @param {string} platform
  * @param {string} action
  * @param {string[]} available
  * @param {string} [suggestedAction]
- * @returns {PlatformError} Error with `statusCode:400`, `code:'XACT_4001'`, `type:INVALID_ARGS`.
+ * @param {string} [deprecatedReplacement] - explicit replacement action; overrides registry lookup.
+ * @returns {PlatformError} Error with `statusCode:400`, `code:'XACT_4001'`.
  */
-export function actionNotAvailable(platform, action, available, suggestedAction = undefined) {
+export function actionNotAvailable(platform, action, available, suggestedAction = undefined, deprecatedReplacement = undefined) {
   const availableList = Array.isArray(available) ? available : [];
+  const replacement = deprecatedReplacement
+    ?? DEPRECATED_ACTIONS[`${String(platform).toLowerCase()}:${String(action)}`]
+    ?? DEPRECATED_ACTIONS[`${String(platform).toLowerCase()}:${String(action).toLowerCase()}`];
+  const isDeprecated = replacement !== undefined;
   return new PlatformError({
     code: 'XACT_4001',
-    type: ErrorTypes.INVALID_ARGS,
-    message: `Action "${action}" not available on platform "${platform}". Available: ${availableList.join(', ')}`,
+    type: isDeprecated ? ErrorTypes.DEPRECATED : ErrorTypes.INVALID_ARGS,
+    message: isDeprecated
+      ? `Action "${action}" on platform "${platform}" is deprecated. Use "${replacement}" instead.`
+      : `Action "${action}" not available on platform "${platform}". Available: ${availableList.join(', ')}`,
     statusCode: 400,
     isRetryable: false,
-    suggestedAction: suggestedAction || SuggestedActions.USE_ACTIONS_LIST,
+    suggestedAction: suggestedAction || (isDeprecated ? `use_${replacement}` : SuggestedActions.USE_ACTIONS_LIST),
     platform,
   });
 }
