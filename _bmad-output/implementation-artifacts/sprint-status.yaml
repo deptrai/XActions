@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: "09-12-2026 14:05"
+last_updated: "09-12-2026 19:13"
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -169,7 +169,7 @@ development_status:
   25-5-core-checkpoint-resume-engine: done
   25-6-checkpoint-resolvers-top-platforms: done
   25-7-early-termination-pagination-loops: done
-  epic-25-retrospective: optional
+  epic-25-retrospective: done
 
   epic-26: backlog
   26-1-pre-decommission-parity-rollback-preparation: backlog
@@ -251,3 +251,40 @@ action_items:
     owner: "Luis"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-35-retro-2026-09-12.md"
+  - id: "epic-25-retro-item-5-chong-drift-facebook-modules-point-6-tes"
+    epic: 25
+    action: "Chong drift Facebook modules: point 6 test file sang social/facebook/,
+      re-export proxy/limits/messengerQueue/messengerShare tu social barrel, danh
+      dau src/scrapers/facebook/ la frozen-legacy cho Epic 26 xoa"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-25-retro-2026-09-12.md"
+  - id: "epic-25-retro-item-6-wire-errortypes-deprecated-khi-epic-26-g"
+    epic: 25
+    action: "Wire ErrorTypes.DEPRECATED khi Epic 26 go action dau tien: them per-descriptor
+      deprecatedActions map de actionNotAvailable tra type DEPRECATED + suggestedAction
+      thay INVALID_ARGS"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-25-retro-2026-09-12.md"
+  - id: "epic-25-retro-item-7-them-test-cho-story-25-4-assert-suggeste"
+    epic: 25
+    action: "Them test cho Story 25.4: assert suggestedAction + type tren actionNotAvailable
+      (hien khong test nao cover 25.4); cover ca DEPRECATED branch khi wire"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-25-retro-2026-09-12.md"
+  - id: "epic-25-retro-item-8-checkpoint-round-trip-e2e-test-acl-resol"
+    epic: 25
+    action: "Checkpoint round-trip e2e: test ACL -> resolver -> getCheckpoint -> inject
+      -> storeBatch -> ET tren Postgres that (run1 luu cursor, run2 resume + ET break)"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-25-retro-2026-09-12.md"
+  - id: "epic-25-retro-item-9-observability-cho-et-acl-silent-catch-lo"
+    epic: 25
+    action: "Observability cho ET/ACL silent-catch: log warn khi getCheckpoint/findExistingIds
+      throw (hien catch{} trong tai base-crawler.js:457,491)"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-25-retro-2026-09-12.md"
