@@ -161,7 +161,7 @@ development_status:
   24-4-archive-or-remove-unused-scraper-modules: backlog
   epic-24-retrospective: optional
 
-  epic-25: in-progress
+  epic-25: done
   25-1-universal-scrape-dispatcher: done
   25-2-package-json-exports-v2: done
   25-3-mcp-cli-api-caller-migration: done
@@ -171,8 +171,8 @@ development_status:
   25-7-early-termination-pagination-loops: done
   epic-25-retrospective: done
 
-  epic-26: backlog
-  26-1-pre-decommission-parity-rollback-preparation: backlog
+  epic-26: in-progress
+  26-1-pre-decommission-parity-rollback-preparation: in-progress
   26-2-final-legacy-removal: backlog
   epic-26-retrospective: optional
 
