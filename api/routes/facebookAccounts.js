@@ -22,7 +22,7 @@ import prisma from '../lib/prisma.js';
 import express from 'express';
 import crypto from 'crypto';
 import { authenticate } from '../middleware/auth.js';
-import { parseFlatProxy } from '../../src/scrapers/facebook/proxy.js';
+import { parseFlatProxy } from '../../src/scrapers/social/facebook/proxy.js';
 
 const router = express.Router();
 // ============================================================================

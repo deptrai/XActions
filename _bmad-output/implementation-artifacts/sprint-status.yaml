@@ -164,8 +164,8 @@ development_status:
   epic-25: in-progress
   25-1-universal-scrape-dispatcher: done
   25-2-package-json-exports-v2: done
-  25-3-mcp-cli-api-caller-migration: backlog
-  25-4-backward-compatibility-error-mapping: backlog
+  25-3-mcp-cli-api-caller-migration: done
+  25-4-backward-compatibility-error-mapping: done
   25-5-core-checkpoint-resume-engine: done
   25-6-checkpoint-resolvers-top-platforms: done
   25-7-early-termination-pagination-loops: done

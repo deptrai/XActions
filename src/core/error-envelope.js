@@ -17,6 +17,7 @@ export const ErrorTypes = Object.freeze({
   NOT_FOUND: 'not_found',
   TARGET_NOT_FOUND: 'target_not_found',
   INTERNAL: 'internal',
+  DEPRECATED: 'deprecated', // Story 25.4 — unified deprecation error envelope
 });
 
 export const SuggestedActions = Object.freeze({

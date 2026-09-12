@@ -776,16 +776,16 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
         return res.status(400).json({ ok: false, error: msg, sessionExpired });
       }
 
-      const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
-      const messengerShareModule = /** @type {{ messengerShareCampaign: MessengerCampaignDeps['messengerShareCampaign'] }} */ (await import('../../src/scrapers/facebook/messengerShare.js'));
+      const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/index.js');
+      const messengerShareModule = /** @type {{ messengerShareCampaign: MessengerCampaignDeps['messengerShareCampaign'] }} */ (await import('../../src/scrapers/social/facebook/messengerShare.js'));
       const { messengerShareCampaign } = messengerShareModule;
       // Wrap createBrowser to pass headless option
       const createBrowserWithHeadless = (/** @type {FacebookOptions | undefined} */ opts) => createBrowser({ ...opts, headless: isHeadless });
-      const runArgs = {
+      const runArgs = /** @type {any} */ ({
         accounts, links: allLinks, recipients, content,
         dryRun: resolvedDryRun, maxBatch, delay: messengerDelay,
         deps: { createBrowser: createBrowserWithHeadless, createPage, loginWithCookie, messengerShareCampaign },
-      };
+      });
 
       // Dry-run: no browser, no Operation row (mirrors generic dry-run short-circuit).
       if (resolvedDryRun) {
@@ -885,7 +885,7 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
       }
     }
 
-    const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/facebook/index.js');
+    const { createBrowser, createPage, loginWithCookie } = await import('../../src/scrapers/index.js');
     const {
       scheduleFacebookPost,
     } = await import('../services/facebookAutomation.js');

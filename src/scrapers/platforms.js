@@ -21,6 +21,8 @@
 // Legacy Platform Modules (kept here so index.js has zero legacy imports)
 // ============================================================================
 
+
+import { ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
 import twitter from './twitter/index.js';
 import threads from './threads/index.js';
 import facebook from './facebook/index.js';
@@ -165,15 +167,19 @@ export function getPlatform(platform) {
  * @param {string} platform
  * @param {string} action
  * @param {string[]} available
- * @returns {Error & { statusCode: number, code: string }}
+ * @param {string} [suggestedAction]
+ * @returns {Error & { statusCode: number, code: string, type: string, suggestedAction: string, platform: string }}
  */
-export function actionNotAvailable(platform, action, available) {
-  const err = /** @type {Error & { statusCode?: number, code?: string }} */ (new Error(
+export function actionNotAvailable(platform, action, available, suggestedAction = undefined) {
+  const err = /** @type {Error & { statusCode?: number, code?: string, type?: string, suggestedAction?: string, platform?: string }} */ (new Error(
     `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
   ));
   err.statusCode = 400;
   err.code = 'XACT_4001';
-  return /** @type {Error & { statusCode: number, code: string }} */ (err);
+  err.type = ErrorTypes.INVALID_ARGS;
+  err.platform = platform;
+  err.suggestedAction = suggestedAction || SuggestedActions.USE_ACTIONS_LIST;
+  return /** @type {Error & { statusCode: number, code: string, type: string, suggestedAction: string, platform: string }} */ (err);
 }
 
 // Re-exported so `src/scrapers/index.js` can keep its public export surface

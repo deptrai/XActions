@@ -42,7 +42,7 @@ export function createBrowser(
 
 export function createPage(browser: Browser, options?: Record<string, unknown>): Promise<Page>;
 
-export function loginWithCookie(page: Page, authToken: string): Promise<Page>;
+export function loginWithCookie(page: Page, authToken: string | Record<string, string | undefined>): Promise<Page>;
 
 export function scrapeProfile(
   page: Page,

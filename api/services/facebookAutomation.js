@@ -8,11 +8,11 @@ import {
   loginWithCookie,
   createBrowser,
   createPage,
-} from '../../src/scrapers/facebook/index.js';
+} from '../../src/scrapers/index.js';
 import {
   getActionLimit,
   enforceDelay,
-} from '../../src/scrapers/facebook/limits.js';
+} from '../../src/scrapers/social/facebook/limits.js';
 // ============================================================================
 // Persistent profile directory helper (Story 6.17 — ADR-016)
 // ============================================================================

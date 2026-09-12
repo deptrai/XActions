@@ -3966,7 +3966,7 @@ async function executeFacebookEpic4Tool(name, args) {
       ...(cursor && { cursor: String(cursor).trim() }),
       dryRun: resolvedDryRun,
     };
-    const { buildMarketplaceSearchUrl } = await import('../scrapers/facebook/normalize.js');
+    const { buildMarketplaceSearchUrl } = await import('../scrapers/social/facebook/normalize-marketplace.js');
     const searchUrl = buildMarketplaceSearchUrl(query, options);
     if (resolvedDryRun) {
       return { dryRun: true, platform: 'facebook', preview: { ...options, searchUrl } };

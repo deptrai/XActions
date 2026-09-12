@@ -17,7 +17,7 @@
 import prisma from '../lib/prisma.js';
 import cron from 'node-cron';
 import { postTweet, postThread } from '../../src/postComposer.js';
-import { createBrowser, createPage, loginWithCookie } from '../../src/scrapers/twitter/index.js';
+import { createBrowser, createPage, loginWithCookie } from '../../src/scrapers/index.js';
 const THROUGHPUT_WINDOW_MS = 3_600_000; // 1 hour
 const THROUGHPUT_CAP = 5;               // NFR-9 / NFR10: ≤5 executed/hour/user
 const JITTER_MIN_MS = 5 * 60 * 1000;    // 5 min

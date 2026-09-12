@@ -141,7 +141,7 @@ export async function connectCommand(options = {}) {
   console.log(chalk.gray('  Nothing is sent anywhere. The session is written to'));
   console.log(chalk.gray(`  ${COOKIE_FILE} and stays on this machine.\n`));
 
-  const { createBrowser, createPage } = await import('../../scrapers/twitter/index.js');
+  const { createBrowser, createPage } = await import('../../scrapers/index.js');
 
   let browser;
   const spinner = ora('Opening browser...').start();

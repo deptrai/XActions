@@ -246,3 +246,24 @@ Bảng mapping **subpath export → module đích** sau khi Epic 25 hoàn tất.
 > **Lý do giữ shim (không redirect cứng):** các legacy `index.js` export **function API** (`scrapeProfile`, `createBrowser`, `createPage`…) khác hình dạng với `social/` barrel (**class API** `XClient`/`XCrawler`). Redirect cứng `./scrapers/<p>` → `social/` sẽ đổi export shape và break consumer — vi phạm NFR-16 "giữ mapping ít nhất 1 release cycle". Vì vậy 25.2 **xác nhận `./scrapers` & `./scrapers/social` trỏ đúng** và **giữ nguyên 4 flat key + `twitter/http`** làm shim cho tới Epic 26.
 
 *Cập nhật: Story 25.2 — 2026-09-12*
+
+## 10. Caller Migration & Unified Error Mapping (Stories 25.3 & 25.4)
+
+Đã hoàn thành di chuyển toàn bộ callers trong `src/mcp/`, `src/cli/`, `api/` sang dispatcher `scrape()` và social hybrid barrels (`src/scrapers/social/`). Không còn bất kỳ caller nào import trực tiếp từ legacy paths:
+- `src/mcp/local-tools.js`: Chuyển sang import browser helpers từ `src/scrapers/index.js`.
+- `api/routes/facebookAccounts.js` & `api/services/facebookAccountPool.js`: Chuyển sang `src/scrapers/social/facebook/proxy.js`.
+- `api/services/facebookAutomation.js`: Chuyển sang `src/scrapers/social/facebook/limits.js` và `src/scrapers/index.js`.
+- `api/services/tweetScheduler.js`: Chuyển sang `src/scrapers/index.js`.
+- `src/cli/commands/automate.js` & `connect.js`: Chuyển sang `src/scrapers/index.js` và `src/scrapers/social/facebook/`.
+- `src/mcp/server.js`: Chuyển marketplace URL normalization sang `src/scrapers/social/facebook/normalize-marketplace.js`.
+
+### Error Envelope & Deprecation Parity
+- Thêm `ErrorTypes.DEPRECATED = 'deprecated'` vào `src/core/error-envelope.js`.
+- Chuẩn hóa `actionNotAvailable()` trong `src/scrapers/platforms.js` trả về `Error` với đầy đủ envelope parameters:
+  - `code: 'XACT_4001'`
+  - `statusCode: 400`
+  - `type: ErrorTypes.INVALID_ARGS` (hoặc `ErrorTypes.DEPRECATED` nếu action có mapping thay thế)
+  - `suggestedAction: SuggestedActions.USE_ACTIONS_LIST`
+- Bảo toàn 100% backward compatibility cho legacy exports cho tới khi decommission trong Epic 26.
+
+*Cập nhật: Story 25.3 & 25.4 — 2026-09-12*

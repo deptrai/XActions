@@ -46,9 +46,9 @@ export function registerAutomateCommand(program) {
         process.exit(1);
       }
 
-      const { loginWithCookie, createBrowser, createPage } = await import('../../scrapers/facebook/index.js');
-      const { parseRecipientsFile, buildCampaignQueue } = await import('../../scrapers/facebook/messengerQueue.js');
-      const { messengerShareCampaign } = await import('../../scrapers/facebook/messengerShare.js');
+      const { loginWithCookie, createBrowser, createPage } = await import('../../scrapers/index.js');
+      const { parseRecipientsFile, buildCampaignQueue } = await import('../../scrapers/social/facebook/messengerQueue.js');
+      const { messengerShareCampaign } = await import('../../scrapers/social/facebook/messengerShare.js');
 
       // Parse authCookie
       let authCookie;

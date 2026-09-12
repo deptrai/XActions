@@ -32,7 +32,7 @@ import {
   createBrowser as fbCreateBrowser,
   createPage as fbCreatePage,
   loginWithCookie as fbLoginWithCookie,
-} from '../scrapers/facebook/index.js';
+} from '../scrapers/index.js';
 import { scrape as dispatchScrape } from '../scrapers/index.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
 import {
