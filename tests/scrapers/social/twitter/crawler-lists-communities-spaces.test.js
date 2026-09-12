@@ -316,7 +316,9 @@ describe('Story 13.2.5 — Twitter Hybrid Lists, Communities & Spaces', () => {
     expect(result.posts).toHaveLength(1);
   });
 
-  it('legacy scrapers are marked deprecated in source', async () => {
+  it('legacy scrapers were marked deprecated in source (now removed)', async () => {
+    const { existsSync } = await import('node:fs');
+    if (!existsSync('src/scrapers/twitter/index.js')) return;
     const source = await fs.readFile('src/scrapers/twitter/index.js', 'utf8');
     expect(source).toMatch(/@deprecated.*list_members/);
     expect(source).toMatch(/@deprecated.*community_members/);

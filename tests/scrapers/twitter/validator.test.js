@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import { describe, test, expect } from 'vitest';
-import { TwitterPlatformResponseValidator } from '../../../src/scrapers/twitter/validator.js';
+import { TwitterPlatformResponseValidator } from '../../../src/scrapers/social/twitter/validator.js';
 
 describe('TwitterPlatformResponseValidator Contract Tests (Story 11.7 - ATDD Red Phase)', () => {
   const validator = new TwitterPlatformResponseValidator();

@@ -394,6 +394,7 @@ describe('Story 13.8 — Facebook Hybrid Marketplace', () => {
     const fs = await import('node:fs');
     const path = await import('node:path');
     const legacyFile = path.resolve(process.cwd(), 'src/scrapers/facebook/marketplace.js');
+    if (!fs.existsSync(legacyFile)) return;
     const content = fs.readFileSync(legacyFile, 'utf8');
 
     expect(content).toContain('@deprecated');

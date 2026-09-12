@@ -166,14 +166,16 @@ describe('Story 13.2.12 — Twitter Hybrid Integration & Caller Migration', () =
     expect(pkg.exports['./scrapers/social/twitter']).toBe('./src/scrapers/social/twitter/index.js');
   });
 
-  it('legacy src/scrapers/twitter/index.js is marked @deprecated', async () => {
+  it('legacy src/scrapers/twitter/index.js was marked @deprecated (now removed)', async () => {
+    const { existsSync } = await import('node:fs');
+    if (!existsSync('src/scrapers/twitter/index.js')) return;
     const source = await fs.readFile('src/scrapers/twitter/index.js', 'utf8');
     expect(source).toMatch(/@deprecated/);
   });
 
-  it('deprecation plan marks Twitter Puppeteer as deprecated-marked', async () => {
+  it('deprecation plan marks Twitter Puppeteer as removed', async () => {
     const plan = await fs.readFile('docs/deprecation-plan.md', 'utf8');
-    expect(plan).toMatch(/Twitter Puppeteer.*deprecated-marked.*Story 13\.2\.12/);
-    expect(plan).toMatch(/Twitter HTTP.*deprecated-marked.*Story 13\.2\.12/);
+    expect(plan).toMatch(/Twitter Puppeteer.*removed.*Story 13\.2\.12/);
+    expect(plan).toMatch(/Twitter HTTP.*removed.*Story 13\.2\.12/);
   });
 });

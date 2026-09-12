@@ -12,7 +12,6 @@
 
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { runGuardedActionBatch, FacebookActionVelocityTracker, getActionLimit } from './batch-runner.js';
-import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from '../../facebook/core.js';
 import { stripPii } from './pii.js';
 import {
   resolveScrollDuration,
@@ -28,8 +27,40 @@ import {
   countCancelResults,
 } from './warmup-cancel.js';
 
-export { assertFacebookUrlLocal } from '../../facebook/core.js';
 export { stripPii } from './pii.js';
+
+/**
+ * Path segments after facebook.com/ that are NOT user/page profile handles.
+ */
+export const NON_PROFILE_SEGMENTS = [
+  'photo', 'photo.php', 'groups', 'watch', 'events', 'marketplace',
+  'pages', 'people', 'friends', 'reel', 'reels', 'stories', 'hashtag',
+];
+
+/**
+ * Validate that a URL is a valid http(s) facebook.com URL.
+ * @param {string} url
+ * @param {unknown} [label]
+ * @returns {void}
+ */
+export function assertFacebookUrlLocal(url, label = 'URL') {
+  if (typeof url !== 'string' || !url.trim()) {
+    throw new Error(`❌ ${label} must be a non-empty string`);
+  }
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch (_) {
+    throw new Error(`❌ ${label} must be a valid URL`);
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error(`❌ ${label} must be an http(s) URL`);
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (host !== 'facebook.com' && !host.endsWith('.facebook.com')) {
+    throw new Error(`❌ ${label} must be a facebook.com URL`);
+  }
+}
 
 /**
  * Maximum batch size for a single write action batch.

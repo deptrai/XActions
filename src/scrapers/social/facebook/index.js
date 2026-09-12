@@ -54,3 +54,4 @@ export {
   shareToMessenger,
   messengerShareCampaign,
 } from './messengerShare.js';
+export { FACEBOOK_BASE, MBASIC_BASE, MOBILE_BASE, MOBILE_UA, MOBILE_VIEWPORT, sleep, randomDelay } from './url-helpers.js';

@@ -24,9 +24,9 @@ import {
   normalizeListOrCommunityMembersResponse,
   normalizeSpacesResponse,
 } from './normalize-list-community-space.js';
-import { buildAdvancedQuery } from '../../twitter/http/search.js';
-import { parseTweetData } from '../../twitter/http/tweets.js';
-import { extractUserCoreFields } from '../../twitter/http/user-helpers.js';
+import { buildAdvancedQuery } from './http/search.js';
+import { parseTweetData } from './http/tweets.js';
+import { extractUserCoreFields } from './http/user-helpers.js';
 import {
   DEFAULT_FEATURES,
   DEFAULT_FIELD_TOGGLES,

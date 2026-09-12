@@ -457,7 +457,7 @@ export class TwitterClient extends AbstractApiClient {
       if (!is404 || !/\/i\/api\/graphql\//.test(url)) throw err;
       const opMatch = url.match(/\/i\/api\/graphql\/[A-Za-z0-9_-]+\/([A-Za-z0-9_]+)/);
       if (!opMatch) throw err;
-      const { resolveQueryId } = await import('../../twitter/http/query-id-resolver.js');
+      const { resolveQueryId } = await import('./http/query-id-resolver.js');
       const freshId = await resolveQueryId(opMatch[1], queryId);
       if (!freshId || freshId === queryId) throw err;
       const retryUrl = url.replace(/\/i\/api\/graphql\/[A-Za-z0-9_-]+\//, `/i/api/graphql/${freshId}/`);

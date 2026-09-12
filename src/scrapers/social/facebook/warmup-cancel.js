@@ -10,7 +10,7 @@
  */
 
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
-import { assertFacebookUrlLocal } from '../../facebook/core.js';
+import { assertFacebookUrlLocal } from './actions.js';
 import { enforceActionDelay } from './batch-runner.js';
 
 /**

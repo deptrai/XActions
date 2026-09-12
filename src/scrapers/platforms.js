@@ -23,17 +23,19 @@
 
 
 import { ErrorTypes, SuggestedActions, PlatformError } from '../core/error-envelope.js';
-import twitter from './twitter/index.js';
-import threads from './threads/index.js';
-import facebook from './facebook/index.js';
+import {
+  bluesky as blueskyProxy,
+  mastodon as mastodonProxy,
+  twitter as twitterProxy,
+  facebook as facebookProxy,
+  threads as threadsProxy,
+} from './deprecation-proxy.js';
 
 // ============================================================================
 // Hybrid Platform Module Barrels
 // ============================================================================
 
 import tiktok from './social/tiktok/index.js';
-import tiktokShop from './ecom/tiktok-shop/index.js';
-import { bluesky as blueskyProxy, mastodon as mastodonProxy } from './deprecation-proxy.js';
 import * as redditModule from './social/reddit/index.js';
 import * as mediumModule from './social/medium/index.js';
 import * as instagramModule from './social/instagram/index.js';
@@ -50,6 +52,7 @@ import healthcare from './healthcare/index.js';
 import ipLegal from './legal/ip-trademark/index.js';
 import youtube from './social/youtube/index.js';
 import zalo from './social/zalo/index.js';
+import * as tiktokShop from './ecom/tiktok-shop/index.js';
 
 const redditProxy = new Proxy(redditModule, {
   get(target, prop, receiver) {
@@ -87,15 +90,15 @@ const instagramProxy = new Proxy(instagramModule, {
  */
 /** @type {Record<string, Record<string, unknown>>} */
 export const platforms = {
-  twitter,
-  x: twitter, // alias
+  twitter: twitterProxy,
+  x: twitterProxy, // alias
   bluesky: blueskyProxy,
   bsky: blueskyProxy,
   mastodon: mastodonProxy,
   masto: mastodonProxy,
-  threads,
-  facebook,
-  fb: facebook, // alias
+  threads: threadsProxy,
+  facebook: facebookProxy,
+  fb: facebookProxy, // alias
   tiktok,
   tiktokshop: tiktokShop,
   tiktok_shop: tiktokShop,
@@ -209,4 +212,8 @@ export function actionNotAvailable(platform, action, available, suggestedAction 
 // Re-exported so `src/scrapers/index.js` can keep its public export surface
 // (destructured Twitter helpers + default export) without importing the
 // legacy module paths directly.
-export { twitter, threads, facebook };
+export {
+  twitterProxy as twitter,
+  threadsProxy as threads,
+  facebookProxy as facebook,
+};

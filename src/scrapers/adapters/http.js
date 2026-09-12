@@ -14,11 +14,6 @@
 
 import { BaseAdapter } from './base.js';
 
-/**
- * @typedef {import('../twitter/http/types.js').HttpScraper} TwitterHttpScraper
- * @typedef {import('../twitter/http/types.js').TwitterHttpClientOptions} TwitterHttpClientOptions
- */
-
 export class HttpAdapter extends BaseAdapter {
   name = 'http';
   description = 'Direct HTTP/GraphQL — no browser needed, 10x faster, works in serverless/edge';
@@ -27,30 +22,29 @@ export class HttpAdapter extends BaseAdapter {
 
   async checkDependencies() {
     try {
-      await import('../twitter/http/client.js');
+      await import('../social/twitter/client.js');
       return { available: true };
     } catch (e) {
       return {
         available: false,
-        message: 'HTTP scraper modules not found. Ensure src/scrapers/twitter/http/ is present.',
+        message: 'Twitter client module not found. Ensure src/scrapers/social/twitter/ is present.',
       };
     }
   }
 
   /**
    * "Launch" for HTTP means creating a client instance (no browser to spawn).
-   * @param {LaunchOptions} [options]
-   * @returns {Promise<AdapterBrowser>}
+   * @param {Record<string, any>} [options]
+   * @returns {Promise<any>}
    */
   async launch(options = {}) {
-    const httpModule = await import('../twitter/http/index.js');
-    const createHttpScraper = /** @type {(options: TwitterHttpClientOptions) => Promise<TwitterHttpScraper>} */ (httpModule.createHttpScraper);
-    const scraper = await createHttpScraper(/** @type {TwitterHttpClientOptions} */ (options));
+    const { TwitterClient } = await import('../social/twitter/client.js');
+    const client = new TwitterClient(options);
     return {
-      _native: scraper.client,
+      _native: client,
       _adapter: this.name,
-      _scraper: scraper,
-      ...scraper,
+      _scraper: client,
+      ...client,
     };
   }
 
@@ -61,7 +55,7 @@ export class HttpAdapter extends BaseAdapter {
    * @returns {Promise<AdapterPage>}
    */
   async newPage(browser, options = {}) {
-    const b = /** @type {AdapterBrowser & { _scraper: TwitterHttpScraper }} */ (browser);
+    const b = /** @type {AdapterBrowser & { _scraper: any }} */ (browser);
     return {
       _native: b._scraper,
       _adapter: this.name,
@@ -114,7 +108,7 @@ export class HttpAdapter extends BaseAdapter {
    * @returns {Promise<void>}
    */
   async setCookie(page, cookie) {
-    const p = /** @type {AdapterPage & TwitterHttpScraper} */ (page);
+    const p = /** @type {AdapterPage & any} */ (page);
     const client = p.client;
     if (client && typeof client.setCookies === 'function') {
       client.setCookies(`${cookie.name}=${cookie.value}`);
@@ -168,10 +162,10 @@ export class HttpAdapter extends BaseAdapter {
   /**
    * Get the underlying HTTP scraper object for direct access.
    * @param {AdapterBrowser} browser
-   * @returns {TwitterHttpScraper}
+   * @returns {any}
    */
   getScraper(browser) {
-    const b = /** @type {AdapterBrowser & { _scraper: TwitterHttpScraper }} */ (browser);
+    const b = /** @type {AdapterBrowser & { _scraper: any }} */ (browser);
     return b._scraper;
   }
 }

@@ -6,7 +6,7 @@
  * @license Apache-2.0
  */
 
-import { parseTweetData } from '../../twitter/http/tweets.js';
+import { parseTweetData } from './http/tweets.js';
 
 /**
  * @typedef {Object} MediaVariant

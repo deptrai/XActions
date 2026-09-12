@@ -51,6 +51,22 @@ import {
   facebook,
 } from './platforms.js';
 
+import {
+  createBrowser,
+  createPage,
+  loginWithCookie,
+  exportToJSON,
+  exportToCSV,
+} from './browser.js';
+
+export {
+  createBrowser,
+  createPage,
+  loginWithCookie,
+  exportToJSON,
+  exportToCSV,
+};
+
 export { platforms, getPlatform };
 
 import twitterDescriptor from './social/twitter/descriptor.js';
@@ -127,10 +143,10 @@ import { defaultStore } from '../store/index.js';
 // ============================================================================
 // HTTP Scraper (Direct GraphQL — no browser required)
 // Usage: createBrowser({ adapter: 'http', cookies: '...' })
-// Or:   import { createHttpScraper } from 'xactions/scrapers/twitter/http';
+// Or:   import { createHttpScraper } from 'xactions/scrapers/social/twitter';
 // ============================================================================
 
-export { createHttpScraper } from './twitter/http/index.js';
+export { createHttpScraper } from './social/twitter/http/index.js';
 
 // ============================================================================
 // Adapter System (Multi-Framework Support)
@@ -149,32 +165,24 @@ import {
 } from './adapters/index.js';
 
 // ============================================================================
-// Backward-Compatible Twitter Re-exports
+// Backward-Compatible Twitter Re-exports (routed to scrape())
 // ============================================================================
 
-// Re-export all Twitter functions at top level for backward compatibility
-export const {
-  createBrowser,
-  createPage,
-  loginWithCookie,
-  scrapeProfile,
-  scrapeFollowers,
-  scrapeFollowing,
-  scrapeTweets,
-  searchTweets,
-  scrapeThread,
-  scrapeLikes,
-  scrapeHashtag,
-  scrapeMedia,
-  scrapeListMembers,
-  scrapeBookmarks,
-  scrapeNotifications,
-  scrapeTrending,
-  scrapeCommunityMembers,
-  scrapeSpaces,
-  exportToJSON,
-  exportToCSV,
-} = twitter;
+export const scrapeProfile = (page, username, opts = {}) => scrape('twitter', 'profile', { page, username, ...opts });
+export const scrapeFollowers = (page, username, opts = {}) => scrape('twitter', 'followers', { page, username, ...opts });
+export const scrapeFollowing = (page, username, opts = {}) => scrape('twitter', 'following', { page, username, ...opts });
+export const scrapeTweets = (page, username, opts = {}) => scrape('twitter', 'tweets', { page, username, ...opts });
+export const searchTweets = (page, query, opts = {}) => scrape('twitter', 'search', { page, query, ...opts });
+export const scrapeThread = (page, tweetId, opts = {}) => scrape('twitter', 'thread', { page, tweetId, ...opts });
+export const scrapeLikes = (page, username, opts = {}) => scrape('twitter', 'likes', { page, username, ...opts });
+export const scrapeHashtag = (page, hashtag, opts = {}) => scrape('twitter', 'hashtag', { page, hashtag, ...opts });
+export const scrapeMedia = (page, username, opts = {}) => scrape('twitter', 'media', { page, username, ...opts });
+export const scrapeListMembers = (page, listId, opts = {}) => scrape('twitter', 'list_members', { page, listId, ...opts });
+export const scrapeBookmarks = (page, opts = {}) => scrape('twitter', 'bookmarks', { page, ...opts });
+export const scrapeNotifications = (page, opts = {}) => scrape('twitter', 'notifications', { page, ...opts });
+export const scrapeTrending = (page, opts = {}) => scrape('twitter', 'trending', { page, ...opts });
+export const scrapeCommunityMembers = (page, communityId, opts = {}) => scrape('twitter', 'community_members', { page, communityId, ...opts });
+export const scrapeSpaces = (page, query, opts = {}) => scrape('twitter', 'spaces', { page, query, ...opts });
 
 // ============================================================================
 // Unified Scrape Interface — Thin Descriptor Dispatcher (Story 25.1)

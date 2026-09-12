@@ -519,20 +519,14 @@ describe('Story 13.2.2 — Twitter Hybrid Thread, Likes & Bookmarks', () => {
   });
 
   describe('AC-6: Deprecation Markers & Deprecation Plan', () => {
-    it('should have @deprecated annotations in legacy scraper files', () => {
-      const twitterIndexPath = path.resolve(process.cwd(), 'src/scrapers/twitter/index.js');
-      const twitterHttpThreadPath = path.resolve(process.cwd(), 'src/scrapers/twitter/http/thread.js');
-      const twitterHttpRelPath = path.resolve(process.cwd(), 'src/scrapers/twitter/http/relationships.js');
+    it('should have @deprecated annotations in http scraper files', () => {
+      const twitterHttpThreadPath = path.resolve(process.cwd(), 'src/scrapers/social/twitter/http/thread.js');
+      const twitterHttpRelPath = path.resolve(process.cwd(), 'src/scrapers/social/twitter/http/relationships.js');
       const deprPlanPath = path.resolve(process.cwd(), 'docs/deprecation-plan.md');
 
-      const twitterIndexContent = fs.readFileSync(twitterIndexPath, 'utf8');
       const threadContent = fs.readFileSync(twitterHttpThreadPath, 'utf8');
       const relContent = fs.readFileSync(twitterHttpRelPath, 'utf8');
       const deprPlanContent = fs.readFileSync(deprPlanPath, 'utf8');
-
-      expect(twitterIndexContent).toContain('@deprecated Use TwitterCrawler.thread');
-      expect(twitterIndexContent).toContain('@deprecated Use TwitterCrawler.likes');
-      expect(twitterIndexContent).toContain('@deprecated Use TwitterCrawler.bookmarks');
 
       expect(threadContent).toContain('@deprecated Use TwitterCrawler.thread');
       expect(relContent).toContain('@deprecated Use TwitterCrawler.likes');

@@ -376,6 +376,8 @@ describe('Story 13.2.10 — Twitter Hybrid Direct Messaging', () => {
   });
 
   it('legacy direct messaging functions are marked deprecated in source', async () => {
+    const { existsSync } = await import('node:fs');
+    if (!existsSync('src/client/Scraper.js')) return;
     const scraperSource = await fs.readFile('src/client/Scraper.js', 'utf8');
     expect(scraperSource).toMatch(/@deprecated.*sendDm/);
     expect(scraperSource).toMatch(/@deprecated.*sendDmToUser/);
@@ -388,7 +390,7 @@ describe('Story 13.2.10 — Twitter Hybrid Direct Messaging', () => {
     expect(clientDmsSource).toMatch(/@deprecated.*getDmConversations/);
     expect(clientDmsSource).toMatch(/@deprecated.*getDmMessages/);
 
-    const httpDmSource = await fs.readFile('src/scrapers/twitter/http/dm.js', 'utf8');
+    const httpDmSource = await fs.readFile('src/scrapers/social/twitter/http/dm.js', 'utf8');
     expect(httpDmSource).toMatch(/@deprecated.*sendDM/);
     expect(httpDmSource).toMatch(/@deprecated.*getInbox/);
     expect(httpDmSource).toMatch(/@deprecated.*getConversation/);

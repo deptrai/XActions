@@ -8,7 +8,7 @@
  * @license Apache-2.0
  */
 
-import { parseTimelineInstructions } from '../../twitter/http/tweets.js';
+import { parseTimelineInstructions } from './http/tweets.js';
 import { parseTwitterTweetToPostItem } from './normalize-thread.js';
 
 /** @typedef {import('../../../core/types.js').PostItem} PostItem */

@@ -339,6 +339,8 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
   });
 
   it('legacy engagement functions are marked deprecated in source', async () => {
+    const { existsSync } = await import('node:fs');
+    if (!existsSync('src/client/Scraper.js')) return;
     const scraperSource = await fs.readFile('src/client/Scraper.js', 'utf8');
     expect(scraperSource).toMatch(/@deprecated.*likeTweet/);
     expect(scraperSource).toMatch(/@deprecated.*unlikeTweet/);
@@ -351,13 +353,13 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
     expect(clientApiSource).toMatch(/@deprecated.*retweet/);
     expect(clientApiSource).toMatch(/@deprecated.*unretweet/);
 
-    const httpEngagementSource = await fs.readFile('src/scrapers/twitter/http/engagement.js', 'utf8');
+    const httpEngagementSource = await fs.readFile('src/scrapers/social/twitter/http/engagement.js', 'utf8');
     expect(httpEngagementSource).toMatch(/@deprecated.*likeTweet/);
     expect(httpEngagementSource).toMatch(/@deprecated.*unlikeTweet/);
     expect(httpEngagementSource).toMatch(/@deprecated.*retweet/);
     expect(httpEngagementSource).toMatch(/@deprecated.*unretweet/);
 
-    const httpIndexSource = await fs.readFile('src/scrapers/twitter/http/index.js', 'utf8');
+    const httpIndexSource = await fs.readFile('src/scrapers/social/twitter/http/index.js', 'utf8');
     expect(httpIndexSource).toMatch(/@deprecated.*likeTweet/);
   });
 

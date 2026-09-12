@@ -84,36 +84,36 @@ Xoá theo thứ tự:
 
 | Platform | Status | Estimated Phase | Owner |
 |----------|--------|-----------------|-------|
-| Twitter Puppeteer (`src/scrapers/twitter/index.js`) | `deprecated-marked` | Phase 1 (Story 13.2.12) | DEV |
-| Twitter HTTP (`src/scrapers/twitter/http/`) | `deprecated-marked` | Phase 1 (Story 13.2.12) | DEV |
-| Twitter Legacy Profile/Followers/Following (`src/scrapers/twitter/index.js` profile/followers/following) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
-| Twitter Legacy Thread/Likes/Bookmarks (`src/scrapers/twitter/index.js`, `thread.js`, `relationships.js`) | `deprecated-marked` | Phase 1 (Epic 13.2.2) | DEV |
-| Twitter HTTP Relationships (`src/scrapers/twitter/http/relationships.js`) | `deprecated-marked` | Phase 1 (Epic 13.2.1) | DEV |
-| Twitter Legacy Search/Hashtag/Trending (`src/scrapers/twitter/index.js` searchTweets/scrapeHashtag/scrapeTrending; `src/scrapers/twitter/http/search.js` searchTweets/searchUsers/scrapeTrending/scrapeHashtag) | `deprecated-marked` | Phase 1 (Story 13.2.3) | DEV |
-| Twitter Legacy Media (`src/scrapers/twitter/http/media.js`, `src/scrapers/twitter/index.js` scrapeMedia) | `deprecated-marked` | Phase 1 (Story 13.2.4) | DEV |
-| Twitter Legacy Lists/Communities/Spaces (`src/scrapers/twitter/index.js` scrapeListMembers/scrapeCommunityMembers/scrapeSpaces; `src/scrapers/twitter/http/relationships.js`) | `deprecated-marked` | Phase 1 (Story 13.2.5) | DEV |
-| Twitter Legacy Content Composition (`src/client/Scraper.js` sendTweet/sendQuoteTweet; `src/client/api/tweets.js` sendTweet/sendQuoteTweet; `src/scrapers/twitter/http/actions.js` postTweet/postThread/replyToTweet/quoteTweet/schedulePost) | `deprecated-marked` | Phase 1 (Story 13.2.6 / 13.2.7) | DEV |
-| `src/scrapers/twitter/http/actions.js` `schedulePost` → `twitter:schedule` | `deprecated-marked` | Phase 1 (Story 13.2.7) | DEV |
-| `src/scrapers/twitter/http/index.js` `schedulePost` → `twitter:schedule` | `deprecated-marked` | Phase 1 (Story 13.2.7) | DEV |
-| Twitter Legacy Engagement (`src/client/Scraper.js` likeTweet/unlikeTweet/retweet/unretweet; `src/client/api/tweets.js`; `src/scrapers/twitter/http/engagement.js` likeTweet/unlikeTweet/retweet/unretweet) | `deprecated-marked` | Phase 1 (Story 13.2.8) | DEV |
-| `src/scrapers/twitter/http/engagement.js` like/unlike/retweet/unretweet → `twitter:like` / `twitter:unlike` / `twitter:retweet` / `twitter:undo_retweet` | `deprecated-marked` | Phase 1 (Story 13.2.8) | DEV |
-| Twitter Legacy Social Graph (`src/client/Scraper.js` followUser/unfollowUser; `src/client/api/users.js`; `src/scrapers/twitter/http/engagement.js` followUser/unfollowUser/blockUser/unblockUser/muteUser/unmuteUser/bookmarkTweet/unbookmarkTweet) | `deprecated-marked` | Phase 1 (Story 13.2.9) | DEV |
-| `src/scrapers/twitter/http/engagement.js` social graph & bookmarks → `twitter:follow` / `twitter:unfollow` / `twitter:block` / `twitter:unblock` / `twitter:mute` / `twitter:unmute` / `twitter:bookmark` / `twitter:unbookmark` | `deprecated-marked` | Phase 1 (Story 13.2.9) | DEV |
-| Twitter Legacy Direct Messaging (`src/client/Scraper.js` sendDm/sendDmToUser/getDmConversations/getDmMessages; `src/client/api/dms.js`; `src/scrapers/twitter/http/dm.js` sendDM/getInbox/getConversation) | `deprecated-marked` | Phase 1 (Story 13.2.10) | DEV |
-| `src/scrapers/twitter/http/dm.js` direct messaging → `twitter:send_dm` / `twitter:dm_conversations` / `twitter:dm_messages` | `deprecated-marked` | Phase 1 (Story 13.2.10) | DEV |
-| Twitter Legacy List Management (`src/client/Scraper.js` getListTweets/getListMembers/getListById; `src/client/api/lists.js` getListTweets/getListMembers/getListById) | `deprecated-marked` | Phase 1 (Story 13.2.11) | DEV |
-| `src/client/api/lists.js` list operations → `twitter:list_members` / `twitter:create_list` / `twitter:add_list_members` / `twitter:remove_list_members` | `deprecated-marked` | Phase 1 (Story 13.2.11) | DEV |
-| `src/client/Scraper.js` (search/getTrends/getExploreTabs and all methods) | `deprecated-planned` | Phase 2–3 | TBD |
-| Facebook Puppeteer (`src/scrapers/facebook/`) | `deprecated-marked` | Phase 1 (Epic 13.10) | DEV |
-| Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `deprecated-marked` | Phase 1 (Epic 13.5) | DEV |
-| Facebook Legacy Search (`src/scrapers/facebook/search.js`, `group-search.js`) | `deprecated-marked` | Phase 1 (Epic 13.6) | DEV |
-| Facebook Legacy Comments (`src/scrapers/facebook/comments.js`) | `deprecated-marked` | Phase 1 (Epic 13.7) | DEV |
-| Facebook Legacy Marketplace (`src/scrapers/facebook/marketplace.js`) | `deprecated-marked` | Phase 1 (Epic 13.8) | DEV |
-| Facebook Legacy Social Actions (`src/scrapers/facebook/messengerShare.js`, `shareLinkByUid.js`, `graphqlSend.js`, `messengerQueue.js`, `api/services/facebookAutomation.js` like/comment/post/share/join/friend helpers) | `deprecated-marked` | Phase 1 (Epic 13.9) | DEV |
+| Twitter Puppeteer (`src/scrapers/twitter/index.js`) | `removed` | Phase 1 (Story 13.2.12) | DEV |
+| Twitter HTTP (`src/scrapers/twitter/http/`) | `removed` | Phase 1 (Story 13.2.12) | DEV |
+| Twitter Legacy Profile/Followers/Following (`src/scrapers/twitter/index.js` profile/followers/following) | `removed` | Phase 1 (Epic 13.2.1) | DEV |
+| Twitter Legacy Thread/Likes/Bookmarks (`src/scrapers/twitter/index.js`, `thread.js`, `relationships.js`) | `removed` | Phase 1 (Epic 13.2.2) | DEV |
+| Twitter HTTP Relationships (`src/scrapers/twitter/http/relationships.js`) | `removed` | Phase 1 (Epic 13.2.1) | DEV |
+| Twitter Legacy Search/Hashtag/Trending (`src/scrapers/twitter/index.js` searchTweets/scrapeHashtag/scrapeTrending; `src/scrapers/twitter/http/search.js` searchTweets/searchUsers/scrapeTrending/scrapeHashtag) | `removed` | Phase 1 (Story 13.2.3) | DEV |
+| Twitter Legacy Media (`src/scrapers/twitter/http/media.js`, `src/scrapers/twitter/index.js` scrapeMedia) | `removed` | Phase 1 (Story 13.2.4) | DEV |
+| Twitter Legacy Lists/Communities/Spaces (`src/scrapers/twitter/index.js` scrapeListMembers/scrapeCommunityMembers/scrapeSpaces; `src/scrapers/twitter/http/relationships.js`) | `removed` | Phase 1 (Story 13.2.5) | DEV |
+| Twitter Legacy Content Composition (`src/client/Scraper.js` sendTweet/sendQuoteTweet; `src/client/api/tweets.js` sendTweet/sendQuoteTweet; `src/scrapers/twitter/http/actions.js` postTweet/postThread/replyToTweet/quoteTweet/schedulePost) | `removed` | Phase 1 (Story 13.2.6 / 13.2.7) | DEV |
+| `src/scrapers/twitter/http/actions.js` `schedulePost` → `twitter:schedule` | `removed` | Phase 1 (Story 13.2.7) | DEV |
+| `src/scrapers/twitter/http/index.js` `schedulePost` → `twitter:schedule` | `removed` | Phase 1 (Story 13.2.7) | DEV |
+| Twitter Legacy Engagement (`src/client/Scraper.js` likeTweet/unlikeTweet/retweet/unretweet; `src/client/api/tweets.js`; `src/scrapers/twitter/http/engagement.js` likeTweet/unlikeTweet/retweet/unretweet) | `removed` | Phase 1 (Story 13.2.8) | DEV |
+| `src/scrapers/twitter/http/engagement.js` like/unlike/retweet/unretweet → `twitter:like` / `twitter:unlike` / `twitter:retweet` / `twitter:undo_retweet` | `removed` | Phase 1 (Story 13.2.8) | DEV |
+| Twitter Legacy Social Graph (`src/client/Scraper.js` followUser/unfollowUser; `src/client/api/users.js`; `src/scrapers/twitter/http/engagement.js` followUser/unfollowUser/blockUser/unblockUser/muteUser/unmuteUser/bookmarkTweet/unbookmarkTweet) | `removed` | Phase 1 (Story 13.2.9) | DEV |
+| `src/scrapers/twitter/http/engagement.js` social graph & bookmarks → `twitter:follow` / `twitter:unfollow` / `twitter:block` / `twitter:unblock` / `twitter:mute` / `twitter:unmute` / `twitter:bookmark` / `twitter:unbookmark` | `removed` | Phase 1 (Story 13.2.9) | DEV |
+| Twitter Legacy Direct Messaging (`src/client/Scraper.js` sendDm/sendDmToUser/getDmConversations/getDmMessages; `src/client/api/dms.js`; `src/scrapers/twitter/http/dm.js` sendDM/getInbox/getConversation) | `removed` | Phase 1 (Story 13.2.10) | DEV |
+| `src/scrapers/twitter/http/dm.js` direct messaging → `twitter:send_dm` / `twitter:dm_conversations` / `twitter:dm_messages` | `removed` | Phase 1 (Story 13.2.10) | DEV |
+| Twitter Legacy List Management (`src/client/Scraper.js` getListTweets/getListMembers/getListById; `src/client/api/lists.js` getListTweets/getListMembers/getListById) | `removed` | Phase 1 (Story 13.2.11) | DEV |
+| `src/client/api/lists.js` list operations → `twitter:list_members` / `twitter:create_list` / `twitter:add_list_members` / `twitter:remove_list_members` | `removed` | Phase 1 (Story 13.2.11) | DEV |
+| `src/client/Scraper.js` (search/getTrends/getExploreTabs and all methods) | `removed` | Phase 2–3 | TBD |
+| Facebook Puppeteer (`src/scrapers/facebook/`) | `removed` | Phase 1 (Epic 13.10) | DEV |
+| Facebook Legacy Profile/Followers/GroupMembers (`src/scrapers/facebook/profile.js`, `followers.js`) | `removed` | Phase 1 (Epic 13.5) | DEV |
+| Facebook Legacy Search (`src/scrapers/facebook/search.js`, `group-search.js`) | `removed` | Phase 1 (Epic 13.6) | DEV |
+| Facebook Legacy Comments (`src/scrapers/facebook/comments.js`) | `removed` | Phase 1 (Epic 13.7) | DEV |
+| Facebook Legacy Marketplace (`src/scrapers/facebook/marketplace.js`) | `removed` | Phase 1 (Epic 13.8) | DEV |
+| Facebook Legacy Social Actions (`src/scrapers/facebook/messengerShare.js`, `shareLinkByUid.js`, `graphqlSend.js`, `messengerQueue.js`, `api/services/facebookAutomation.js` like/comment/post/share/join/friend helpers) | `removed` | Phase 1 (Epic 13.9) | DEV |
 | FacebookClient HTTP-only token extraction (`src/scrapers/social/facebook/client.js`) | `deprecated-planned` | Phase 1 (Epic 13.4) | DEV |
-| Threads Puppeteer (`src/scrapers/threads/index.js`) | `deprecated-planned` | Phase 1 (Epic 15.1, 15.1.1, 15.1.2, 15.1.3, 15.1.4) — hybrid caller migration and package exports in Story 15.1.4 | DEV |
-| Bluesky Legacy (`src/scrapers/bluesky/index.js`) | `deprecated-marked` | Phase 1 (Story 23.6) | DEV |
-| Mastodon Legacy (`src/scrapers/mastodon/index.js`) | `deprecated-marked` | Phase 1 (Story 23.6) | DEV |
+| Threads Puppeteer (`src/scrapers/threads/index.js`) | `removed` | Phase 1 (Epic 15.1, 15.1.1, 15.1.2, 15.1.3, 15.1.4) — hybrid caller migration and package exports in Story 15.1.4 | DEV |
+| Bluesky Legacy (`src/scrapers/bluesky/index.js`) | `removed` | Phase 1 (Story 23.6) | DEV |
+| Mastodon Legacy (`src/scrapers/mastodon/index.js`) | `removed` | Phase 1 (Story 23.6) | DEV |
 | `xactions checkpoints` / `xactions stream` (legacy admin CLI) | `deprecated-planned` | Phase 2–3 | TBD |
 
 ### Legacy Threads Functions → Hybrid Actions

@@ -5,10 +5,10 @@
 
 import prisma from '../lib/prisma.js';
 import {
-  loginWithCookie,
   createBrowser,
   createPage,
-} from '../../src/scrapers/index.js';
+} from '../../src/scrapers/browser.js';
+import { loginWithCookie } from '../../src/scrapers/social/facebook/url-helpers.js';
 import {
   getActionLimit,
   enforceDelay,

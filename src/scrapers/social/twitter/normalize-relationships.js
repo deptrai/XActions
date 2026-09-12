@@ -7,7 +7,7 @@
  * @license Apache-2.0
  */
 
-import { parseUserList } from '../../twitter/http/relationships.js';
+import { parseUserList } from './http/relationships.js';
 
 /** @typedef {import('../../../core/types.js').ProfileItem} ProfileItem */
 /** @typedef {import('../../../core/types.js').PostItem} PostItem */

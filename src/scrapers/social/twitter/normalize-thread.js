@@ -8,8 +8,8 @@
  * @license Apache-2.0
  */
 
-import { parseTweetData } from '../../twitter/http/tweets.js';
-import { parseConversationModule, reconstructThread } from '../../twitter/http/thread.js';
+import { parseTweetData } from './http/tweets.js';
+import { parseConversationModule, reconstructThread } from './http/thread.js';
 
 /** @typedef {import('../../../core/types.js').PostItem} PostItem */
 

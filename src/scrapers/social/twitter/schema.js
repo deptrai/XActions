@@ -6,7 +6,7 @@
  * feature flags, field toggles, variable builders, REST paths and rate limits
  * used by `TwitterClient` and `TwitterCrawler` in `src/scrapers/social/twitter/`.
  *
- * It was extracted from `src/scrapers/twitter/http/endpoints.js` so the hybrid
+ * It was extracted from `src/scrapers/social/twitter/http/endpoints.js` so the hybrid
  * engine does not depend on legacy scraper internals. Legacy `endpoints.js` is
  * kept for backward compatibility but is considered deprecated.
  *

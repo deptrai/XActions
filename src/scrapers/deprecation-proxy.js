@@ -10,6 +10,9 @@
 
 import * as blueskyBarrel from './social/bluesky/index.js';
 import * as mastodonBarrel from './social/mastodon/index.js';
+import * as twitterBarrel from './social/twitter/index.js';
+import * as facebookBarrel from './social/facebook/index.js';
+import * as threadsBarrel from './social/threads/index.js';
 
 /**
  * Create a deprecation proxy that warns once per key and forwards to the
@@ -49,3 +52,6 @@ function createDeprecationProxy(legacyName, replacement) {
 
 export const bluesky = createDeprecationProxy('bluesky', blueskyBarrel);
 export const mastodon = createDeprecationProxy('mastodon', mastodonBarrel);
+export const twitter = createDeprecationProxy('twitter', twitterBarrel);
+export const facebook = createDeprecationProxy('facebook', facebookBarrel);
+export const threads = createDeprecationProxy('threads', threadsBarrel);

@@ -29,8 +29,9 @@ import { normalizeFacebookMarketplaceListing } from './normalize-marketplace.js'
 import { FacebookActions } from './actions.js';
 import { FacebookActionVelocityTracker } from './batch-runner.js';
 import { stripPii } from './pii.js';
-import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from '../../facebook/core.js';
-import { normalizeHandle, buildMarketplaceSearchUrl, resolveMarketplaceLocation } from '../../facebook/normalize.js';
+import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from './actions.js';
+import { normalizeHandle } from './normalize.js';
+import { buildMarketplaceSearchUrl, resolveMarketplaceLocation } from './normalize-marketplace.js';
 
 const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
 

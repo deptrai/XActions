@@ -11,8 +11,8 @@
 import { getAdapter } from '../../adapters/index.js';
 import { launchBrowserWithCdp, launchChrome } from '../../../core/cdp-launcher.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
-import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from '../../facebook/core.js';
-import { normalizeProfile, normalizeGroupMember, normalizeHandle } from '../../facebook/normalize.js';
+import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from './actions.js';
+import { normalizeProfile, normalizeGroupMember, normalizeHandle } from './normalize.js';
 import { normalizeFacebookProfile, normalizeFacebookGroupMember } from './normalize-profile.js';
 import path from 'node:path';
 import fs from 'node:fs';

@@ -335,7 +335,7 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
   });
 
   describe('AC-10 & TR-7: Deprecation Markers & Deprecation Plan Update', () => {
-    it('[AC-10] Legacy src/scrapers/facebook/index.js has @deprecated banner', () => {
+    it('[AC-10] Legacy src/scrapers/facebook/index.js had @deprecated banner (now removed)', () => {
       const legacyPath = path.resolve(process.cwd(), 'src/scrapers/facebook/index.js');
       if (fs.existsSync(legacyPath)) {
         const content = fs.readFileSync(legacyPath, 'utf8');
@@ -343,7 +343,7 @@ describe('Story 13.10 — Facebook Hybrid Integration & Caller Migration', () =>
       }
     });
 
-    it('[AC-10] docs/deprecation-plan.md status tracker marks Facebook legacy as deprecated-marked', () => {
+    it('[AC-10] docs/deprecation-plan.md status tracker marks Facebook legacy as removed', () => {
       const deprPath = path.resolve(process.cwd(), 'docs/deprecation-plan.md');
       const content = fs.readFileSync(deprPath, 'utf8');
       expect(content).toContain('Facebook');

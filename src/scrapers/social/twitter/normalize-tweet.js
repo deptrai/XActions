@@ -5,7 +5,7 @@
  * @license MIT
  */
 
-import { parseTweetData } from '../../twitter/http/tweets.js';
+import { parseTweetData } from './http/tweets.js';
 
 /**
  * Convert a raw Twitter GraphQL tweet result into a universal PostItem.

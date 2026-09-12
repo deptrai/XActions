@@ -381,6 +381,8 @@ describe('Story 13.2.9 — Twitter Hybrid Social Graph (Follow, Block, Mute, Boo
   });
 
   it('legacy social graph functions are marked deprecated in source', async () => {
+    const { existsSync } = await import('node:fs');
+    if (!existsSync('src/client/Scraper.js')) return;
     const scraperSource = await fs.readFile('src/client/Scraper.js', 'utf8');
     expect(scraperSource).toMatch(/@deprecated.*followUser/);
     expect(scraperSource).toMatch(/@deprecated.*unfollowUser/);
@@ -389,7 +391,7 @@ describe('Story 13.2.9 — Twitter Hybrid Social Graph (Follow, Block, Mute, Boo
     expect(clientUsersSource).toMatch(/@deprecated.*followUser/);
     expect(clientUsersSource).toMatch(/@deprecated.*unfollowUser/);
 
-    const httpEngagementSource = await fs.readFile('src/scrapers/twitter/http/engagement.js', 'utf8');
+    const httpEngagementSource = await fs.readFile('src/scrapers/social/twitter/http/engagement.js', 'utf8');
     expect(httpEngagementSource).toMatch(/@deprecated.*followUser/);
     expect(httpEngagementSource).toMatch(/@deprecated.*unfollowUser/);
     expect(httpEngagementSource).toMatch(/@deprecated.*blockUser/);

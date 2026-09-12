@@ -281,10 +281,10 @@ describe('Story 13.2.7 — Twitter Hybrid Content Scheduling', () => {
   });
 
   it('legacy schedule functions are marked deprecated in source', async () => {
-    const actionsSource = await fs.readFile('src/scrapers/twitter/http/actions.js', 'utf8');
+    const actionsSource = await fs.readFile('src/scrapers/social/twitter/http/actions.js', 'utf8');
     expect(actionsSource).toMatch(/@deprecated.*schedulePost/);
 
-    const indexSource = await fs.readFile('src/scrapers/twitter/http/index.js', 'utf8');
+    const indexSource = await fs.readFile('src/scrapers/social/twitter/http/index.js', 'utf8');
     expect(indexSource).toMatch(/@deprecated.*schedulePost/);
   });
 

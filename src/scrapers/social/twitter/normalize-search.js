@@ -6,7 +6,7 @@
  */
 
 import { tweetToPostItem } from './normalize-tweet.js';
-import { extractUserCoreFields } from '../../twitter/http/user-helpers.js';
+import { extractUserCoreFields } from './http/user-helpers.js';
 
 /**
  * Extract tweets and cursor from SearchTimeline response.
