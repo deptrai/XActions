@@ -14,7 +14,7 @@
 
 import { FacebookCrawler, resolveTargetKey, resolveGroupId } from './crawler.js';
 import { FacebookClient } from './client.js';
-import { getPlatform, actionNotAvailable } from '../../platforms.js';
+import { actionNotAvailable } from '../../platforms.js';
 
 // Local copies of the index.js factory helpers so the moved
 // `dispatchFacebookHybrid` body stays verbatim.
@@ -251,52 +251,8 @@ export default {
    * @returns {Promise<Record<string, any>>}
    */
   async dispatch(platformName, action, options, ctx = {}) {
-    const platform = ctx.platform || platformName;
-    if (options.page) {
-      const mod = getPlatform(platform);
-      /** @type {Record<string, string>} */
-      const legacyMap = {
-        profile: 'scrapeProfile',
-        followers: 'scrapeFollowers',
-        following: 'scrapeFollowing',
-        tweets: 'scrapeTweets',
-        posts: 'scrapeTweets',
-        search: 'searchFacebook',
-        group_search: 'scrapeFacebookGroupSearch',
-        post_comments: 'scrapeFacebookComments',
-        group_posts: 'scrapeFacebookGroupPosts',
-        group_comments: 'scrapeFacebookGroupComments',
-        group_members: 'scrapeGroupMembers',
-        'group-members': 'scrapeGroupMembers',
-        marketplace: 'scrapeMarketplace',
-      };
-      const fnName = legacyMap[action] || action;
-      const platformMod = /** @type {Record<string, Function>} */ (mod);
-      const fn = /** @type {(...args: any[]) => Promise<Record<string, any>>} */ (platformMod[fnName]);
-
-      if (typeof fn !== 'function') {
-        const available = Object.keys(platformMod).filter(
-          (k) => typeof platformMod[k] === 'function' && (k.startsWith('scrape') || k.startsWith('search'))
-        );
-        throw actionNotAvailable(platform, action, available);
-      }
-
-      if (options.authCookie && platformMod.loginWithCookie) {
-        await platformMod.loginWithCookie(options.page, options.authCookie, options.browserOptions || {});
-      }
-
-      const target = action === 'group_search'
-        ? options.url
-        : (options.username || options.query || options.hashtag || options.url || options.listUrl || options.communityUrl);
-
-      // Actions that only take page + options (no target)
-      const noTargetActions = ['scrapeBookmarks', 'scrapeNotifications', 'scrapeTrending'];
-      if (noTargetActions.includes(fnName)) {
-        return await fn(options.page, options);
-      }
-
-      return await fn(options.page, target, options);
-    }
+    // Legacy page-based dispatch removed in Story 26.2 — all actions route to
+    // the hybrid FacebookCrawler. The legacy module functions were deleted.
     return await dispatchFacebookHybrid(action, options);
   },
 };

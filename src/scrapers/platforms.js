@@ -6,11 +6,10 @@
  * can stay a thin dispatcher with zero legacy module imports.
  *
  * NOTE: `platforms.facebook` / `platforms.twitter` / `platforms.threads`
- * intentionally point at the LEGACY module barrels (./facebook, ./twitter,
- * ./threads) — `tests/scrapers/facebook-exports.test.js` and
- * `api/routes/facebook.js` depend on those legacy functions
- * (createBrowser/loginWithCookie/page-based scrapers). Repointing them at the
- * social/* hybrid barrels is a behavior change scoped to Stories 25.3/25.4.
+ * route through `deprecation-proxy.js` which re-exports the `social/*`
+ * hybrid barrels with console warnings. The legacy `src/scrapers/twitter/`,
+ * `src/scrapers/facebook/`, and `src/scrapers/threads/` directories were
+ * removed in Story 26.2.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @see https://xactions.app

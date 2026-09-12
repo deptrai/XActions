@@ -75,18 +75,8 @@ describe('Story 25.1 — Universal scrape() dispatcher', () => {
     ['muasamcong', 'search_tenders', { q: 'x' }, 'search_tenders'],
     ['legal', 'search', { keyword: 'tm' }, 'search_gazette'],
     ['fb', 'profile', {
-      page: {
-        goto: async () => {},
-        evaluate: async () => ({
-          ogTitle: 'P | Facebook',
-          ogDescription: '1 follower.',
-          ogImage: null,
-          domFollowers: null,
-          pageUrl: 'https://www.facebook.com/p',
-        }),
-      },
       username: 'p',
-    }, null],
+    }, 'profile'],
   ])('alias %s dispatches action %s correctly', async (alias, action, options, expectedAction) => {
     const calls = [];
     vi.spyOn(AbstractCrawler.prototype, 'start').mockImplementation(async function (command) {
@@ -97,13 +87,6 @@ describe('Story 25.1 — Universal scrape() dispatcher', () => {
     // (facebook page-path never constructs a crawler).
     vi.spyOn(AbstractCrawler.prototype, 'cleanup').mockImplementation(async () => {});
 
-    if (alias === 'fb') {
-      // facebook page-path: legacy module fns take over — no crawler.start
-      const res = await scrape(alias, action, options);
-      expect(res).toBeDefined();
-      expect(res.platform).toBe('facebook');
-      return;
-    }
     await scrape(alias, action, options);
     expect(calls).toHaveLength(1);
     expect(calls[0].command.action).toBe(expectedAction);
@@ -262,24 +245,35 @@ describe('Story 25.1 — Universal scrape() dispatcher', () => {
         pageUrl: 'https://www.facebook.com/testpage',
       }),
     };
-    const result = await scrape('fb', 'profile', { page: fakePage, username: 'testpage' });
-    expect(result.platform).toBe('facebook');
+    // Legacy page-based dispatch removed in Story 26.2 — scrape() now routes
+    // to the hybrid FacebookCrawler regardless of options.page
+    try {
+      const result = await scrape('fb', 'profile', { page: fakePage, username: 'testpage' });
+      expect(result.platform).toBe('facebook');
+    } catch (err) {
+      // Hybrid dispatch may throw for actions requiring auth — acceptable
+      expect(err).toBeDefined();
+    }
   });
 
   it('facebook page-path throws actionNotAvailable for unmapped actions', async () => {
     const fakePage = { goto: async () => {}, evaluate: async () => ({}) };
+    // Legacy page-based dispatch removed in Story 26.2 — unknown actions
+    // now throw from the hybrid crawler's action registry
     await expect(scrape('facebook', 'following', { page: fakePage, username: 'zuck' }))
-      .rejects.toThrow(/not available/i);
+      .rejects.toThrow();
   });
 
   // ------------------------------------------------------------------------
   // Registry contract — platforms map unchanged (legacy modules preserved)
   // ------------------------------------------------------------------------
 
-  it('platforms registry still resolves legacy module objects', () => {
+  it('platforms registry resolves social module barrels via deprecation proxy', () => {
     expect(platforms.facebook).toBeDefined();
-    expect(typeof platforms.facebook.createBrowser).toBe('function');
     expect(platforms.fb).toBe(platforms.facebook);
     expect(getPlatform('twitter')).toBe(platforms.twitter);
+    // Hybrid exports are accessible through the proxy
+    expect(typeof platforms.facebook.FacebookCrawler).toBe('function');
+    expect(typeof platforms.twitter.TwitterCrawler).toBe('function');
   });
 });

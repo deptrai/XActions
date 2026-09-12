@@ -51,7 +51,7 @@ export { TwitterApiError, RateLimitError, AuthError, NotFoundError, NetworkError
  * @returns {Promise<import('./types.js').HttpScraper>} Scraper with all methods bound to the client
  * 
  * @example
- * import { createHttpScraper } from 'xactions/scrapers/twitter/http';
+ * import { createHttpScraper } from 'xactions/scrapers/social/twitter';
  * const scraper = await createHttpScraper({ cookies: 'auth_token=xxx; ct0=yyy' });
  * const profile = await scraper.scrapeProfile('elonmusk');
  * const tweets = await scraper.scrapeTweets('elonmusk', { limit: 50 });
