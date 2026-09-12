@@ -434,13 +434,15 @@ export class TikTokBrowserBridge {
       this.#warmedPage = null;
 
       if (!_isRetry && isProxyConnectionError(err)) {
-        if (this.proxyPool && this.#lastResolvedRawProxy && typeof this.proxyPool.quarantine === 'function') {
+        const pool437 = /** @type {any} */ (this.proxyPool);
+        if (pool437 && this.#lastResolvedRawProxy && typeof pool437.quarantine === 'function') {
           try {
-            this.proxyPool.quarantine(this.#lastResolvedRawProxy);
+            pool437.quarantine(this.#lastResolvedRawProxy);
           } catch {}
         }
         this.#lastResolvedRawProxy = null;
-        console.warn('⚠️ [TIKTOK-BRIDGE] Proxy tunnel failed (' + err.message + '). Quarantining and retrying with rotated proxy or direct fallback...');
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn('⚠️ [TIKTOK-BRIDGE] Proxy tunnel failed (' + errMsg + '). Quarantining and retrying with rotated proxy or direct fallback...');
         return this.extractSession(accountId, cookies, true);
       }
 
@@ -456,7 +458,7 @@ export class TikTokBrowserBridge {
    * @param {string} [options.userAgent]
    * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies]
    * @param {number} [_depth=0]
-   * @returns {Promise<{ query: Record<string, string>, cookies: Record<string, string> }>}
+   * @returns {Promise<{ query: Record<string, string>, cookies: Record<string, string>, responseData?: unknown }>}
    */
   async signUrl(url, options = {}, _depth = 0) {
     const next = this.#signQueue.then(() => this.#executeSignUrl(url, options, _depth));
@@ -468,7 +470,7 @@ export class TikTokBrowserBridge {
    * @param {string} url
    * @param {{ cookies?: string | Record<string, string> | Array<{ name: string, value: string }> }} [options={}]
    * @param {number} [_depth=0] Internal recursion depth — prevents infinite re-queue loops.
-   * @returns {Promise<{ query: Record<string, string>, cookies: Record<string, string> }>}
+   * @returns {Promise<{ query: Record<string, string>, cookies: Record<string, string>, responseData?: unknown }>}
    */
   async #executeSignUrl(url, options = {}, _depth = 0) {
     const { cookies } = options || {};
@@ -538,13 +540,15 @@ export class TikTokBrowserBridge {
       this.#warmedPage = null;
 
       if (_depth < TikTokBrowserBridge.#MAX_SIGN_DEPTH && isProxyConnectionError(err)) {
-        if (this.proxyPool && this.#lastResolvedRawProxy && typeof this.proxyPool.quarantine === 'function') {
+        const pool437 = /** @type {any} */ (this.proxyPool);
+        if (pool437 && this.#lastResolvedRawProxy && typeof pool437.quarantine === 'function') {
           try {
-            this.proxyPool.quarantine(this.#lastResolvedRawProxy);
+            pool437.quarantine(this.#lastResolvedRawProxy);
           } catch {}
         }
         this.#lastResolvedRawProxy = null;
-        console.warn('⚠️ [TIKTOK-BRIDGE] signUrl proxy tunnel failed (' + err.message + '). Retrying with depth ' + (_depth + 1) + '...');
+        const errMsg2 = err instanceof Error ? err.message : String(err);
+        console.warn('⚠️ [TIKTOK-BRIDGE] signUrl proxy tunnel failed (' + errMsg2 + '). Retrying with depth ' + (_depth + 1) + '...');
         return this.signUrl(url, options, _depth + 1);
       }
       throw err;

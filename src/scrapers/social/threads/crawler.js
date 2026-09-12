@@ -1390,11 +1390,12 @@ export class ThreadsCrawler extends AbstractCrawler {
      * Early-termination check: when a comment page is entirely known items,
      * mask has_next_page so the extractor stops paginating that layer.
      * @param {Array<any>} comments
-     * @param {{ has_next_page: boolean, end_cursor: string | null } | null} pageInfo
+     * @param {{ has_next_page: boolean, end_cursor: string | null } | null | undefined} pageInfo
      * @param {string} postId
+     * @returns {Promise<{ has_next_page: boolean, end_cursor: string | null } | undefined>}
      */
     const applyEarlyTermination = async (comments, pageInfo, postId) => {
-      if (!pageInfo?.has_next_page || comments.length === 0) return pageInfo;
+      if (!pageInfo?.has_next_page || comments.length === 0) return pageInfo ?? undefined;
       const pageItems = [];
       for (const raw of comments) {
         const comment = this.#normalizeCommentItem(raw, postId);
@@ -1403,7 +1404,7 @@ export class ThreadsCrawler extends AbstractCrawler {
       if (await this.shouldStopPagination(pageItems)) {
         return { ...pageInfo, has_next_page: false };
       }
-      return pageInfo;
+      return pageInfo ?? undefined;
     };
 
     /**

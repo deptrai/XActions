@@ -251,4 +251,4 @@ export function validateInstagramPost(raw) {
 }
 
 /** Helper to satisfy the "asString" need without re-exporting from normalizer. */
-function asString(v) { return typeof v === 'string' ? v : v == null ? '' : String(v); }
+function asString(/** @type {unknown} */ v) { return typeof v === 'string' ? v : v == null ? '' : String(v); }

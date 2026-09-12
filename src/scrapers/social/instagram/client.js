@@ -49,24 +49,15 @@ export class InstagramClient extends AbstractApiClient {
   /** @type {number} */ delayMax = 5000;
   /** @type {number} */ #lastRequestAt = 0;
   /** @type {import('../../adapters/base.js').BaseAdapter | null} */ #adapter = null;
-  /** @type {import('../../adapters/base.js').AdapterBrowser | null} */ #browser = null;
-  /** @type {import('../../adapters/base.js').AdapterPage | null} */ #page = null;
+  /** @type {any} */ #browser = null;
+  /** @type {any} */ #page = null;
   /** @type {import('../../../core/session-manager.js').SessionManager} */ #sessionManager;
-  /** @type {object | null} */ #socialStore;
+  /** @type {any} */ #socialStore;
   /** @type {Record<string, unknown> | null} */ #credentials = null;
   /** @type {number} */ #challengeCount = 0;
 
   /**
-   * @param {Object} [options]
-   * @param {InstagramTransport | string} [options.transport]
-   * @param {number} [options.delayMin]
-   * @param {number} [options.delayMax]
-   * @param {import('../../../core/session-manager.js').SessionManager} [options.sessionManager]
-   * @param {object} [options.socialStore] - optional SocialAccount persistence writer ({upsertSession}).
-   * @param {object} [options.bridge] - injected browser/instagrapi bridge override.
-   * @param {boolean} [options.requiresAuth=true]
-   * @param {boolean} [options.requiresProxy=true]
-   * @param {boolean} [options.requiresResidential=true]
+   * @param {Record<string, any>} [options]
    */
   constructor(options = {}) {
     const responseValidator = options.responseValidator || new InstagramPlatformResponseValidator();
@@ -91,9 +82,10 @@ export class InstagramClient extends AbstractApiClient {
       this._hasExplicitProxy = true;
     }
 
-    this.baseUrl = String(options.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
-    this.graphQlBase = String(options.graphQlBase || process.env.INSTAGRAM_GRAPHQL_BASE || DEFAULT_GRAPHQL_BASE).replace(/\/+$/, '');
-    this.userAgent = options.userAgent || process.env.INSTAGRAM_USER_AGENT || DEFAULT_USER_AGENT;
+    const safeOpts = /** @type {Record<string, any>} */ (options || {});
+    this.baseUrl = String(safeOpts.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
+    this.graphQlBase = String(safeOpts.graphQlBase || process.env.INSTAGRAM_GRAPHQL_BASE || DEFAULT_GRAPHQL_BASE).replace(/\/+$/, '');
+    this.userAgent = safeOpts.userAgent || process.env.INSTAGRAM_USER_AGENT || DEFAULT_USER_AGENT;
     this.delayMin = typeof options.delayMin === 'number' ? options.delayMin : 2000;
     this.delayMax = typeof options.delayMax === 'number' ? options.delayMax : 5000;
     this.requiresResidential = options.requiresResidential !== false;
@@ -106,7 +98,7 @@ export class InstagramClient extends AbstractApiClient {
       rawTransport === 'puppeteer' || rawTransport === 'instagrapi' || rawTransport === 'http' ? rawTransport : 'puppeteer'
     );
 
-    if (options.credentials) this.#credentials = asRecord(options.credentials);
+    if (safeOpts.credentials) this.#credentials = asRecord(safeOpts.credentials);
   }
 
   /**
@@ -332,14 +324,14 @@ export class InstagramClient extends AbstractApiClient {
     const key = accountId || asString(session.accountId) || 'default';
     const cached = this.#sessionManager.get(key);
     if (cached) {
-      this.cookies = asRecord(cached.cookies);
+      this.cookies = /** @type {Record<string, string>} */ (asRecord(cached.cookies));
       return cached;
     }
     // Try injected SocialAccount store (encrypted persistence).
     if (this.#socialStore && typeof this.#socialStore.getSession === 'function') {
       const stored = await this.#socialStore.getSession(key).catch(() => null);
       if (stored) {
-        this.cookies = asRecord(stored.cookies);
+        this.cookies = /** @type {Record<string, string>} */ (asRecord(stored.cookies));
         this.#sessionManager.set(key, stored);
         return stored;
       }
@@ -379,7 +371,7 @@ export class InstagramClient extends AbstractApiClient {
       });
     }
 
-    this.cookies = cookies;
+    this.cookies = /** @type {Record<string, string>} */ (cookies);
     /** @type {import('../../../core/types.js').LoginResult} */
     const result = {
       accountId,
@@ -403,16 +395,16 @@ export class InstagramClient extends AbstractApiClient {
     if (this.#socialStore && typeof this.#socialStore.upsertSession === 'function') {
       // resolveProxy throws ProxyDeadError when no residential proxy is healthy —
       // that must not fail session persistence, so capture it best-effort.
-      let proxy = process.env.PROXY_URL || null;
+      /** @type {any} */ let proxy = process.env.PROXY_URL || null;
       try {
         proxy = this.resolveProxy(accountId, this.requiresResidential, this.requiresAuth);
       } catch { proxy = process.env.PROXY_URL || null; }
       await this.#socialStore.upsertSession(accountId, {
         platform: 'instagram',
         cookies: resolved.cookies ?? this.cookies ?? {},
-        proxy,
+        proxy: typeof proxy === 'string' ? proxy : (/** @type {any} */ (proxy)?.server || null),
         metadata: { savedAt: new Date().toISOString(), transport: this.transport },
-      }).catch((err) => console.warn(`⚠️ [INSTAGRAM] SocialAccount session persist failed: ${err?.message || err}`));
+      }).catch((/** @type {any} */ err) => console.warn(`⚠️ [INSTAGRAM] SocialAccount session persist failed: ${err?.message || err}`));
     }
   }
 
@@ -424,13 +416,13 @@ export class InstagramClient extends AbstractApiClient {
   async loadSession(accountId) {
     const cached = this.#sessionManager.get(accountId);
     if (cached) {
-      this.cookies = asRecord(cached.cookies);
+      this.cookies = /** @type {Record<string, string>} */ (asRecord(cached.cookies));
       return cached;
     }
     if (this.#socialStore && typeof this.#socialStore.getSession === 'function') {
       const stored = await this.#socialStore.getSession(accountId).catch(() => null);
       if (stored) {
-        this.cookies = asRecord(stored.cookies);
+        this.cookies = /** @type {Record<string, string>} */ (asRecord(stored.cookies));
         this.#sessionManager.set(accountId, stored);
         return stored;
       }
@@ -443,6 +435,7 @@ export class InstagramClient extends AbstractApiClient {
    * @param {string | null} [accountId]
    * @returns {Promise<import('../../adapters/base.js').AdapterPage>}
    */
+  /** @param {string | null} [accountId] */
   async #getPage(accountId = null) {
     if (this.transport === 'instagrapi' && !instagrapiAvailable()) {
       throw new PlatformError({
@@ -473,7 +466,8 @@ export class InstagramClient extends AbstractApiClient {
           proxy = null; // direct-connect fallback when proxy resolution fails
         }
       }
-      this.#browser = await this.#adapter.launch({ proxy });
+      const launchProxy = typeof proxy === 'string' ? proxy : (/** @type {any} */ (proxy)?.server || undefined);
+      this.#browser = await this.#adapter.launch({ proxy: launchProxy });
     }
     // Reuse a single page (avoids leaking a tab per call).
     if (!this.#page) {
@@ -497,26 +491,27 @@ export class InstagramClient extends AbstractApiClient {
    */
   async #browserLogin(username, password) {
     const page = await this.#getPage(username);
-    await this.#adapter.goto(page, `${this.baseUrl}/accounts/login/`, { waitUntil: 'domcontentloaded' });
+    const adapter = /** @type {any} */ (this.#adapter);
+    await adapter.goto(page, `${this.baseUrl}/accounts/login/`, { waitUntil: 'domcontentloaded' });
     // React controlled inputs ignore `el.value=` — use the native setter + dispatch
     // input/change so React's onChange fires, then submit.
-    await this.#adapter.evaluate(page, (u, p) => {
-      const setVal = (el, val) => {
+    await adapter.evaluate(page, (/** @type {any} */ u, /** @type {any} */ p) => {
+      const setVal = (/** @type {any} */ el, /** @type {any} */ val) => {
         if (!el) return;
-        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-        setter.call(el, val);
+        const desc = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
+        desc?.set?.call(el, val);
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
       };
       setVal(document.querySelector('input[name="username"]'), u);
       setVal(document.querySelector('input[name="password"]'), p);
     }, username, password);
-    await this.#adapter.evaluate(page, () => {
+    await adapter.evaluate(page, () => {
       const btn = document.querySelector('button[type="submit"]');
       if (btn) btn.click();
     });
     // Harvest cookies written by the login flow.
-    const jar = await this.#adapter.evaluate(page, () =>
+    const jar = await adapter.evaluate(page, () =>
       Object.fromEntries(document.cookie.split('; ').map((c) => c.split('=')))
     );
     return asRecord(jar);
@@ -538,6 +533,7 @@ export class InstagramClient extends AbstractApiClient {
     // `<script type="application/json">` blocks shaped as `require[].__bbox.result.data`.
     // Deep-search each block for the Relay `data` envelope and surface its first
     // meaningful node (xig_user_by_username / xdt hashtag / shortcode_media).
+    /** @type {{ __relay: Array<Record<string, unknown>> }} */
     const collected = { __relay: [] };
     const jsonBlocks = text.matchAll(/<script[^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/gi);
     for (const m of jsonBlocks) {
@@ -588,11 +584,10 @@ export class InstagramClient extends AbstractApiClient {
       if (Object.keys(u).length) return u;
     }
     // legacy shapes
-    return asRecord(
-      asRecord(asRecord(extracted.entry_data).ProfilePage)[0]?.user ??
-      asRecord(extracted.graphql).user ??
-      asRecord(asRecord(extracted.data).user)
-    );
+    /** @type {any} */
+    const ext = extracted;
+    const directUser = ext?.entry_data?.ProfilePage?.[0]?.user ?? ext?.graphql?.user ?? ext?.data?.user;
+    return asRecord(directUser);
   }
 
   /**
@@ -640,9 +635,11 @@ export class InstagramClient extends AbstractApiClient {
     if (this.transport === 'instagrapi') return this.#instagrapiCall('user', { username: user, ...options });
     if (this.transport === 'http') return this.#httpUserProfile(user, options);
 
-    const page = await this.#getPage(options.accountId || null);
-    await this.#adapter.goto(page, `${this.baseUrl}/${encodeURIComponent(user)}/`, { waitUntil: 'domcontentloaded' });
-    const html = await this.#adapter.getContent(page);
+    const accountId = typeof options?.accountId === 'string' ? options.accountId : null;
+    const page = await this.#getPage(accountId);
+    const adapter = /** @type {any} */ (this.#adapter);
+    await adapter.goto(page, `${this.baseUrl}/${encodeURIComponent(user)}/`, { waitUntil: 'domcontentloaded' });
+    const html = await adapter.getContent(page);
     const data = this.#extractSharedData(html);
     const profile = this.#findUserNode(data);
     if (!Object.keys(profile).length) {
@@ -714,11 +711,13 @@ export class InstagramClient extends AbstractApiClient {
     if (this.transport === 'instagrapi') return this.#instagrapiCall('hashtag', { tag: clean, ...options });
     if (this.transport === 'http') return this.#httpHashtag(clean, options);
 
-    const page = await this.#getPage(options.accountId || null);
-    await this.#adapter.goto(page, `${this.baseUrl}/explore/tags/${encodeURIComponent(clean)}/`, { waitUntil: 'domcontentloaded' });
-    const html = await this.#adapter.getContent(page);
+    const accountId = typeof options?.accountId === 'string' ? options.accountId : null;
+    const page = await this.#getPage(accountId);
+    const adapter = /** @type {any} */ (this.#adapter);
+    await adapter.goto(page, `${this.baseUrl}/explore/tags/${encodeURIComponent(clean)}/`, { waitUntil: 'domcontentloaded' });
+    const html = await adapter.getContent(page);
     const data = this.#extractSharedData(html);
-    const tagNode = asRecord(asRecord(asRecord(data.entry_data).TagPage)[0]?.tag ?? asRecord(asRecord(data.graphql).hashtag));
+    const tagNode = asRecord(/** @type {any} */ (asRecord(asRecord(data.entry_data).TagPage))[0]?.tag ?? asRecord(asRecord(data.graphql).hashtag));
     const media = asRecord(tagNode.edge_hashtag_to_media);
     const items = (Array.isArray(media.edges) ? media.edges : []).map((e) => asRecord(e).node ?? e);
     const pageInfo = asRecord(media.page_info);
@@ -759,11 +758,13 @@ export class InstagramClient extends AbstractApiClient {
     if (this.transport === 'instagrapi') return this.#instagrapiCall('post', { shortcode: code, ...options });
     if (this.transport === 'http') return this.#httpPost(code, options);
 
-    const page = await this.#getPage(options.accountId || null);
-    await this.#adapter.goto(page, `${this.baseUrl}/p/${encodeURIComponent(code)}/`, { waitUntil: 'domcontentloaded' });
-    const html = await this.#adapter.getContent(page);
+    const accountId = typeof options?.accountId === 'string' ? options.accountId : null;
+    const page = await this.#getPage(accountId);
+    const adapter = /** @type {any} */ (this.#adapter);
+    await adapter.goto(page, `${this.baseUrl}/p/${encodeURIComponent(code)}/`, { waitUntil: 'domcontentloaded' });
+    const html = await adapter.getContent(page);
     const data = this.#extractSharedData(html);
-    const postPage = asRecord(asRecord(asRecord(data.entry_data).PostPage)[0] ?? data);
+    const postPage = asRecord(/** @type {any} */ (asRecord(asRecord(data.entry_data).PostPage))[0] ?? data);
     const media = asRecord(asRecord(postPage.graphql).shortcode_media ?? postPage.media ?? postPage);
     return { media, raw: data };
   }
@@ -788,7 +789,8 @@ export class InstagramClient extends AbstractApiClient {
    * @returns {Promise<Record<string, unknown>>}
    */
   async getComments(shortcode, options = {}) {
-    const { media } = await this.getPost(shortcode, options);
+    const postResult = /** @type {any} */ (await this.getPost(shortcode, options));
+    const media = asRecord(postResult.media);
     const edge = asRecord(media.edge_media_to_comment ?? media.comments);
     const items = (Array.isArray(edge.edges) ? edge.edges : []).map((e) => asRecord(e).node ?? e);
     const pageInfo = asRecord(edge.page_info);
@@ -852,7 +854,7 @@ export class InstagramClient extends AbstractApiClient {
 }
 
 /** Helper to satisfy asString need. */
-function asString(v) { return typeof v === 'string' ? v : v == null ? '' : String(v); }
+function asString(/** @type {unknown} */ v) { return typeof v === 'string' ? v : v == null ? '' : String(v); }
 
 /**
  * @param {InstagramClient | Record<string, unknown>} [clientOrOptions]

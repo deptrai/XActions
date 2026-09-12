@@ -259,11 +259,12 @@ export class AbstractApiClient {
     let proxy = null;
 
     if (this.proxyProvider && typeof this.proxyProvider.getProxy === 'function') {
-      const opts = { accountId: rawAccountId, requiresResidential, pool: pool || undefined, consumerId: safeOptions.consumerId };
+      const opts = /** @type {Record<string, unknown>} */ ({ accountId: rawAccountId, requiresResidential, pool: pool || undefined, consumerId: safeOptions.consumerId });
+      const safeRecord = /** @type {Record<string, unknown>} */ (safeOptions);
       // Forward geo/session targeting hints (country/isp/sessionId/...) to
       // provider-class pools (DynamicTunnelProvider) that honour them (AC-5).
       for (const key of ['country', 'city', 'state', 'region', 'isp', 'asn', 'sessionId', 'sessionduration', 'lifetime', 'period', 'sid']) {
-        if (safeOptions[key] !== undefined) opts[key] = safeOptions[key];
+        if (safeRecord[key] !== undefined) opts[key] = safeRecord[key];
       }
       proxy = this.proxyProvider.getProxy(opts);
     } else if (this.proxyPool && (this._hasExplicitProxy || this.requiresProxy || requiresResidential)) {
@@ -850,7 +851,7 @@ export class AbstractApiClient {
           if (proxy && isProxyConnectionError(err)) {
             this.quarantineProxy(proxy);
             if (!this.requiresProxy) {
-              const directOpts = { ...transportOpts, proxy: null };
+              const directOpts = /** @type {Record<string, any>} */ ({ ...transportOpts, proxy: null });
               delete directOpts.agent;
               try {
                 response = await transport(directOpts);

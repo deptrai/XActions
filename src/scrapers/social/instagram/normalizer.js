@@ -106,7 +106,7 @@ function bestImageUrl(media) {
 function collectMediaUrls(media) {
   /** @type {string[]} */
   const urls = [];
-  const push = (u) => { if (typeof u === 'string' && u && !urls.includes(u)) urls.push(u); };
+  const push = (/** @type {unknown} */ u) => { if (typeof u === 'string' && u && !urls.includes(u)) urls.push(u); };
 
   const iv2 = asRecord(media.image_versions2);
   for (const c of Array.isArray(iv2.candidates) ? iv2.candidates : []) {

@@ -250,6 +250,7 @@ export class TikTokCrawler extends AbstractCrawler {
    * @param {string} args.query
    * @param {number} [args.count=12]
    * @param {string | number} [args.cursor=0]
+   * @param {boolean} [args.dryRun]
    * @param {Record<string, any>} [session={}]
    * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }>}
    */

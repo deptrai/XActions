@@ -82,10 +82,10 @@ export class InstagramCrawler extends AbstractCrawler {
         if (!u || typeof u !== 'string') return null;
         return { targetType: 'user', targetKey: u.trim().toLowerCase(), cursorField: 'cursor', fallbackCursorFields: ['max_id', 'end_cursor'] };
       },
-      handler: (args, session) => this.getUser(args, session),
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getUser(args, session),
     });
     for (const alias of ['author', 'profile']) {
-      this.registerAction({ action: alias, description: `Alias for user`, ...desc, requiredArgs: ['username'], optionalArgs: ['limit', 'cursor', 'transport'], outputType: '{ profile, posts, pageInfo }', handler: (a, s) => this.getUser(a, s) });
+      this.registerAction({ action: alias, description: `Alias for user`, ...desc, requiredArgs: ['username'], optionalArgs: ['limit', 'cursor', 'transport'], outputType: '{ profile, posts, pageInfo }', handler: (/** @type {any} */ a, /** @type {any} */ s) => this.getUser(a, s) });
     }
 
     this.registerAction({
@@ -101,10 +101,10 @@ export class InstagramCrawler extends AbstractCrawler {
         if (!t || typeof t !== 'string') return null;
         return { targetType: 'tag', targetKey: t.trim().toLowerCase().replace(/^#/, ''), cursorField: 'cursor', fallbackCursorFields: ['max_id', 'end_cursor'] };
       },
-      handler: (args, session) => this.getHashtag(args, session),
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getHashtag(args, session),
     });
     for (const alias of ['tag', 'topic']) {
-      this.registerAction({ action: alias, description: 'Alias for hashtag', ...desc, requiredArgs: ['tag'], optionalArgs: ['limit', 'cursor', 'transport'], outputType: '{ posts, pageInfo }', handler: (a, s) => this.getHashtag(a, s) });
+      this.registerAction({ action: alias, description: 'Alias for hashtag', ...desc, requiredArgs: ['tag'], optionalArgs: ['limit', 'cursor', 'transport'], outputType: '{ posts, pageInfo }', handler: (/** @type {any} */ a, /** @type {any} */ s) => this.getHashtag(a, s) });
     }
 
     this.registerAction({
@@ -115,10 +115,10 @@ export class InstagramCrawler extends AbstractCrawler {
       optionalArgs: ['transport'],
       outputType: '{ post: PostItem }',
       example: { shortcode: 'Cxyz123' },
-      handler: (args, session) => this.getPost(args, session),
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPost(args, session),
     });
     for (const alias of ['post_detail', 'media']) {
-      this.registerAction({ action: alias, description: 'Alias for post', ...desc, requiredArgs: ['shortcode'], optionalArgs: ['transport'], outputType: '{ post }', handler: (a, s) => this.getPost(a, s) });
+      this.registerAction({ action: alias, description: 'Alias for post', ...desc, requiredArgs: ['shortcode'], optionalArgs: ['transport'], outputType: '{ post }', handler: (/** @type {any} */ a, /** @type {any} */ s) => this.getPost(a, s) });
     }
 
     this.registerAction({
@@ -129,7 +129,7 @@ export class InstagramCrawler extends AbstractCrawler {
       optionalArgs: ['limit', 'cursor', 'transport'],
       outputType: '{ comments: CommentItem[], pageInfo }',
       example: { shortcode: 'Cxyz123', limit: 50 },
-      handler: (args, session) => this.getComments(args, session),
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getComments(args, session),
     });
   }
 
@@ -199,12 +199,12 @@ export class InstagramCrawler extends AbstractCrawler {
     const limit = this.#parseLimit(args.limit);
     const transport = this.#resolveTransport(args);
     if (transport) this.client.transport = transport;
-    const accountId = session?.accountId || args.accountId;
+    const accountId = typeof session?.accountId === 'string' ? session.accountId : typeof args.accountId === 'string' ? args.accountId : undefined;
     await this.client.ensureSession(accountId, session);
 
     const { user, raw } = await this.client.getUserProfile(username, { ...args, accountId });
     // Pass the already-fetched payload through so getUserMedia does not re-fetch.
-    const { items, pageInfo } = await this.client.getUserMedia(username, { ...args, accountId, limit, __user: user, __raw: raw });
+    const { items, pageInfo } = /** @type {{ items: any[], pageInfo: any }} */ (await this.client.getUserMedia(username, { ...args, accountId, limit, __user: user, __raw: raw }));
 
     const profile = normalizeInstagramProfile(user);
     const posts = items.slice(0, limit).map((m) => {
@@ -237,10 +237,10 @@ export class InstagramCrawler extends AbstractCrawler {
     const limit = this.#parseLimit(args.limit);
     const transport = this.#resolveTransport(args);
     if (transport) this.client.transport = transport;
-    const accountId = session?.accountId || args.accountId;
+    const accountId = typeof session?.accountId === 'string' ? session.accountId : typeof args.accountId === 'string' ? args.accountId : undefined;
     await this.client.ensureSession(accountId, session);
 
-    const { items, pageInfo } = await this.client.getHashtagFeed(tag, { ...args, accountId, limit });
+    const { items, pageInfo } = /** @type {{ items: any[], pageInfo: any }} */ (await this.client.getHashtagFeed(tag, { ...args, accountId, limit }));
     const posts = items.slice(0, limit).map((m) => {
       const post = normalizeInstagramMedia(asRecord(m));
       this.validateItem(post);
@@ -270,10 +270,10 @@ export class InstagramCrawler extends AbstractCrawler {
     const shortcode = this.#extractShortcode(args);
     const transport = this.#resolveTransport(args);
     if (transport) this.client.transport = transport;
-    const accountId = session?.accountId || args.accountId;
+    const accountId = typeof session?.accountId === 'string' ? session.accountId : typeof args.accountId === 'string' ? args.accountId : undefined;
     await this.client.ensureSession(accountId, session);
 
-    const { media } = await this.client.getPost(shortcode, { ...args, accountId });
+    const { media } = /** @type {{ media: any }} */ (await this.client.getPost(shortcode, { ...args, accountId }));
     const post = normalizeInstagramMedia(media);
     this.validateItem(post);
     if (this.store && typeof this.store.storeContent === 'function') {
@@ -296,11 +296,11 @@ export class InstagramCrawler extends AbstractCrawler {
     const limit = this.#parseLimit(args.limit, 50);
     const transport = this.#resolveTransport(args);
     if (transport) this.client.transport = transport;
-    const accountId = session?.accountId || args.accountId;
+    const accountId = typeof session?.accountId === 'string' ? session.accountId : typeof args.accountId === 'string' ? args.accountId : undefined;
     await this.client.ensureSession(accountId, session);
 
-    const { media } = await this.client.getPost(shortcode, { ...args, accountId });
-    const { items, pageInfo } = await this.client.getComments(shortcode, { ...args, accountId, limit });
+    const { media } = /** @type {{ media: any }} */ (await this.client.getPost(shortcode, { ...args, accountId }));
+    const { items, pageInfo } = /** @type {{ items: any[], pageInfo: any }} */ (await this.client.getComments(shortcode, { ...args, accountId, limit }));
     const postId = extractMediaId(media);
     const comments = items.slice(0, limit).map((c) => normalizeInstagramComment(asRecord(c), postId));
     return { comments, pageInfo };

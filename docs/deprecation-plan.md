@@ -225,3 +225,24 @@ Trước khi thực hiện Story 20.2 (Legacy Scraper Code Decommissioning), tea
 ---
 
 *Last updated: 2026-08-30*
+
+## 9. `package.json` Export Map → Hybrid Surface (Story 25.2)
+
+Bảng mapping **subpath export → module đích** sau khi Epic 25 hoàn tất. Các key `legacy` được **giữ nguyên** (shim) cho tới Epic 26 decommission; consumer mới nên dùng `./scrapers/social/<platform>` hoặc dispatcher `./scrapers`.
+
+| `package.json` export key | Module đích | Trạng thái | Ghi chú |
+|---|---|---|---|
+| `xactions` (`.`) | `src/index.js` | stable | Entry chính |
+| `xactions/scrapers` | `src/scrapers/index.js` | stable | **Unified `scrape()` dispatcher** (Story 25.1) |
+| `xactions/scrapers/social` | `src/scrapers/social/index.js` | stable | Barrel mọi social platform + descriptors |
+| `xactions/scrapers/social/<platform>` | `src/scrapers/social/<platform>/index.js` | stable | `XClient`, `XCrawler`, validator, descriptor |
+| `xactions/scrapers/twitter` | `src/scrapers/twitter/index.js` | **legacy-shim** | Puppeteer function API; `@deprecated` → dùng `social/twitter` |
+| `xactions/scrapers/bluesky` | `src/scrapers/bluesky/index.js` | **legacy-shim** | `@deprecated` → `social/bluesky` |
+| `xactions/scrapers/mastodon` | `src/scrapers/mastodon/index.js` | **legacy-shim** | `@deprecated` → `social/mastodon` |
+| `xactions/scrapers/threads` | `src/scrapers/threads/index.js` | **legacy-shim** | `@deprecated` → `social/threads` |
+| `xactions/scrapers/twitter/http` | `src/scrapers/twitter/http/index.js` | **legacy-shim** | HTTP client; giữ shim — vẫn được `social/twitter/client.js` & `adapters/http.js` import nội bộ |
+| `xactions/scrapers/{ecom,recruitment,realestate}/<p>` | `src/scrapers/{ecom,recruitment,realestate}/<p>/index.js` | stable | Đã trỏ đúng cấu trúc mới |
+
+> **Lý do giữ shim (không redirect cứng):** các legacy `index.js` export **function API** (`scrapeProfile`, `createBrowser`, `createPage`…) khác hình dạng với `social/` barrel (**class API** `XClient`/`XCrawler`). Redirect cứng `./scrapers/<p>` → `social/` sẽ đổi export shape và break consumer — vi phạm NFR-16 "giữ mapping ít nhất 1 release cycle". Vì vậy 25.2 **xác nhận `./scrapers` & `./scrapers/social` trỏ đúng** và **giữ nguyên 4 flat key + `twitter/http`** làm shim cho tới Epic 26.
+
+*Cập nhật: Story 25.2 — 2026-09-12*
