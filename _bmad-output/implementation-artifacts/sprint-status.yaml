@@ -172,8 +172,8 @@ development_status:
   epic-25-retrospective: done
 
   epic-26: in-progress
-  26-1-pre-decommission-parity-rollback-preparation: in-progress
-  26-2-final-legacy-removal: backlog
+  26-1-pre-decommission-parity-rollback-preparation: done
+  26-2-final-legacy-removal: ready-for-dev
   epic-26-retrospective: optional
 
   epic-27: backlog
