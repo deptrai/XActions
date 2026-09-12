@@ -93,7 +93,13 @@ Subagent narrowing: session `Agent` tool là async-only (không có blocking/awa
 | Legacy `facebook/` files vẫn tồn tại song song (drift vẫn có thể xảy ra nếu ai sửa) | `low` | Mục đích của spec là chống drift *về tests + barrel*, không xoá legacy (Epic 26). Frozen banner giảm rủi ro. Residual drift risk được ghi vào deferred-work. |
 | Story 25.4 DEPRECATED branch vẫn chưa wire (enum dead) | `low` | Đã biết — deferred sang Epic 26 theo retro action item #2. Test pin `ErrorTypes.DEPRECATED==='deprecated'` để wire-up sau không đổi ngầm. |
 
-Không có `high`/`medium` finding nào survive. Không loopback cần thiết.
+| `actionNotAvailable` trả vanilla `Error`, không phải `PlatformError` | `high` | Xác nhận: `api/routes/schemas.js:20` + `checkpoints.js:260` branch `instanceof PlatformError` → vanilla Error trả 500+XACT_5000 thay vì 400. Spec 25.4 muốn "API map to 400 not 500" — không đạt. **PATCHED**: `platforms.js` giờ `return new PlatformError({code:'XACT_4001',type:INVALID_ARGS,statusCode:400,...})`; guard `Array.isArray(available)`. |
+| `available.join(', ')` không guard null/undefined/non-array → TypeError | `low`→`patch` | Xác nhận: `actionNotAvailable('fb','x',null)` throw TypeError. **PATCHED** cùng lúc: `Array.isArray(available)?available:[]`. |
+
+**Loopback 1 (sau khi blind-hunter subagent emit findings):** finding `high` ở trên được phát hiện bởi reviewer subagent SAU KHI triage inline ban đầu — triage inline ban đầu đã miss nó. Patch áp dụng trong cùng run; test cập nhật assert `instanceof PlatformError` + edge-case non-array `available`. Verify: `instanceof PlatformError===true`, `toEnvelope()` đầy đủ, dispatcher tests 40/40 pass, tsc 0 errors.
+
+| Barrel `social/facebook/index.js` re-exports không có test nào verify resolve | `low` (verification-gap) | AC nói "import từ barrel resolve" nhưng chỉ có deep-import tests; không test nào import barrel. **PATCHED**: thêm test `social/facebook barrel — canonical re-exports resolve` assert 14 named exports defined + callable. 6/6 pass. |
+
 
 ## Verification
 

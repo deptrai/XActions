@@ -22,7 +22,7 @@
 // ============================================================================
 
 
-import { ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
+import { ErrorTypes, SuggestedActions, PlatformError } from '../core/error-envelope.js';
 import twitter from './twitter/index.js';
 import threads from './threads/index.js';
 import facebook from './facebook/index.js';
@@ -168,18 +168,19 @@ export function getPlatform(platform) {
  * @param {string} action
  * @param {string[]} available
  * @param {string} [suggestedAction]
- * @returns {Error & { statusCode: number, code: string, type: string, suggestedAction: string, platform: string }}
+ * @returns {PlatformError} Error with `statusCode:400`, `code:'XACT_4001'`, `type:INVALID_ARGS`.
  */
 export function actionNotAvailable(platform, action, available, suggestedAction = undefined) {
-  const err = /** @type {Error & { statusCode?: number, code?: string, type?: string, suggestedAction?: string, platform?: string }} */ (new Error(
-    `Action "${action}" not available on platform "${platform}". Available: ${available.join(', ')}`
-  ));
-  err.statusCode = 400;
-  err.code = 'XACT_4001';
-  err.type = ErrorTypes.INVALID_ARGS;
-  err.platform = platform;
-  err.suggestedAction = suggestedAction || SuggestedActions.USE_ACTIONS_LIST;
-  return /** @type {Error & { statusCode: number, code: string, type: string, suggestedAction: string, platform: string }} */ (err);
+  const availableList = Array.isArray(available) ? available : [];
+  return new PlatformError({
+    code: 'XACT_4001',
+    type: ErrorTypes.INVALID_ARGS,
+    message: `Action "${action}" not available on platform "${platform}". Available: ${availableList.join(', ')}`,
+    statusCode: 400,
+    isRetryable: false,
+    suggestedAction: suggestedAction || SuggestedActions.USE_ACTIONS_LIST,
+    platform,
+  });
 }
 
 // Re-exported so `src/scrapers/index.js` can keep its public export surface
