@@ -119,3 +119,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-epic-25-retro-fixnow-cleanup.md`
   summary: Residual drift risk — legacy src/scrapers/facebook/{proxy,limits,messengerQueue,messengerShare}.js vẫn tồn tại song song với canonical social/ cho tới Epic 26 decommission.
   evidence: Tests đã repoint sang social/ + barrel re-export + frozen banner, nhưng 2 bản file vẫn có thể bị sửa lệch nhau nếu ai edit legacy trước Epic 26. Settle khi Epic 26 xoá legacy.
+
+## Deferred from: code review of spec-27-2 (2026-09-13)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-27-2-sessionhealthorchestrator-continuous-health-score-circuit-br.md`
+  summary: Time-based metric decay for long-lived processes in SessionHealthOrchestrator
+  evidence: Stale rate-limit and bot-challenge counts remain cumulative indefinitely until a circuit break or manual wake occurs. Future enhancement should introduce half-life decay or rolling time-window.

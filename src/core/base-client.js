@@ -936,6 +936,9 @@ export class AbstractApiClient {
           // 503 → ProxyDeadError path below, so the proxy stays required).
           if (proxy && isProxyConnectionError(err)) {
             this.quarantineProxy(proxy);
+            if (concreteAccountId && this.healthOrchestrator && typeof this.healthOrchestrator.recordProxyHealth === 'function') {
+              try { this.healthOrchestrator.recordProxyHealth(this.platform || 'default', concreteAccountId, false); } catch {}
+            }
             if (!this.requiresProxy) {
               const directOpts = /** @type {Record<string, any>} */ ({ ...transportOpts, proxy: null });
               delete directOpts.agent;
@@ -1054,6 +1057,9 @@ export class AbstractApiClient {
                 });
               }
             } else if (!skipResponseValidation && !this.responseValidator.isValidPayload(response)) {
+              if (concreteAccountId && this.healthOrchestrator && typeof this.healthOrchestrator.recordPayload === 'function') {
+                try { this.healthOrchestrator.recordPayload(this.platform || 'default', concreteAccountId, false); } catch {}
+              }
               throw new PlatformError({
                 type: ErrorTypes.INVALID_ARGS,
                 code: 'XACT_4001',
@@ -1080,8 +1086,13 @@ export class AbstractApiClient {
               this.governor.recordRequest(trackingKey, this.platform);
             }
           }
-          if (concreteAccountId && this.healthOrchestrator && typeof this.healthOrchestrator.recordSuccess === 'function') {
-            try { this.healthOrchestrator.recordSuccess(this.platform || 'default', concreteAccountId); } catch {}
+          if (concreteAccountId && this.healthOrchestrator) {
+            if (typeof this.healthOrchestrator.recordPayload === 'function') {
+              try { this.healthOrchestrator.recordPayload(this.platform || 'default', concreteAccountId, true); } catch {}
+            }
+            if (typeof this.healthOrchestrator.recordSuccess === 'function') {
+              try { this.healthOrchestrator.recordSuccess(this.platform || 'default', concreteAccountId); } catch {}
+            }
           }
           return response;
         }

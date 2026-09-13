@@ -57,7 +57,7 @@ describe('Story 27.2 — Admin accounts health & probe API', () => {
     expect(alice.circuitState).toBe('closed');
 
     expect(bob).toBeDefined();
-    expect(bob.healthScore).toBe(92);
+    expect(bob.healthScore).toBe(82);
     expect(bob.circuitState).toBe('closed');
   });
 

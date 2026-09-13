@@ -640,7 +640,16 @@ const handleProbeAccount = async (/** @type {import('express').Request} */ req, 
     }
     const platform = typeof req.body?.platform === 'string' ? req.body.platform : (typeof req.query?.platform === 'string' ? req.query.platform : undefined);
     const decodedId = safeDecode(String(rawId));
-    const targetPlatform = platform || 'default';
+
+    const account = globalAccountPool.getAccount(decodedId, platform);
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        error: `Account "${decodedId}" not found`,
+      });
+    }
+
+    const targetPlatform = platform || String(account.platform || 'default');
     const circuit = await globalSessionHealthOrchestrator.checkRecovery(targetPlatform, decodedId, { force: true });
     const score = globalSessionHealthOrchestrator.getHealthScore(targetPlatform, decodedId);
     res.json({

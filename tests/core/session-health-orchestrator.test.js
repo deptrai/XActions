@@ -29,10 +29,10 @@ describe('Story 27.2 — SessionHealthOrchestrator (Scoring & Circuit Breaker)',
 
   it('[P0] consecutive errors reduce health score deterministically', () => {
     const o = new SessionHealthOrchestrator();
-    o.recordError('tw', 'acc1'); // -8
-    expect(o.getHealthScore('tw', 'acc1')).toBe(92);
-    o.recordError('tw', 'acc1'); // -16
-    expect(o.getHealthScore('tw', 'acc1')).toBe(84);
+    o.recordError('tw', 'acc1'); // -18
+    expect(o.getHealthScore('tw', 'acc1')).toBe(82);
+    o.recordError('tw', 'acc1'); // -36
+    expect(o.getHealthScore('tw', 'acc1')).toBe(64);
     // Success clears consecutive errors
     o.recordSuccess('tw', 'acc1');
     expect(o.getHealthScore('tw', 'acc1')).toBe(100);
@@ -139,10 +139,10 @@ describe('Story 27.2 — SessionHealthOrchestrator (Scoring & Circuit Breaker)',
     const o = new SessionHealthOrchestrator();
     o.recordLatency('tw', 'dave', 9000); // avg > 8s → -20
     expect(o.getHealthScore('tw', 'dave')).toBe(80);
-    o.recordPayload('tw', 'dave', false); // incomplete → -12
-    expect(o.getHealthScore('tw', 'dave')).toBe(60);
+    o.recordPayload('tw', 'dave', false); // incomplete → -12 + -18 consecErr → -30
+    expect(o.getHealthScore('tw', 'dave')).toBe(50);
     o.recordProxyHealth('tw', 'dave', false); // proxy unhealthy → -15
-    expect(o.getHealthScore('tw', 'dave')).toBe(45);
+    expect(o.getHealthScore('tw', 'dave')).toBe(35);
   });
 
   it('[P1] NO_PROBE: half-open without probeFn defaults to manual-wake reopen', async () => {
@@ -170,7 +170,7 @@ describe('Story 27.2 — SessionHealthOrchestrator (Scoring & Circuit Breaker)',
     const api = new StatusApi({ orchestrator: o });
     const status = api.getGovernorStatus();
     expect(status.healthScores).toBeDefined();
-    expect(status.healthScores['tw:sam']).toBe(92);
+    expect(status.healthScores['tw:sam']).toBe(82);
     expect(status.circuitBreakerStates).toBeDefined();
   });
 });

@@ -92,6 +92,16 @@ context: []
 - Given admin accounts API, when GET `/api/admin/accounts`, then mỗi account có `healthScore` + `circuitState`; POST `/accounts/probe` trigger checkRecovery.
 - `npm run typecheck` + `vitest run` pass, no regression.
 
+
+### Review Findings
+
+- [x] [Review][Patch] Fix consecutive error penalty cap so pure error streak opens breaker [<src/core/session-health-orchestrator.js:203>] — applied: `min(75, 18*consecErrors)` replaces `min(40, 8*consecErrors)`; tests 26/26 pass
+- [x] [Review][Patch] Wire recordPayload and recordProxyHealth in base-client on invalid payload and proxy connection failure [<src/core/base-client.js:938,1045>] — applied: recordPayload(false) on invalid payload, recordProxyHealth(false) on proxy-conn error; tests 26/26 pass
+- [x] [Review][Patch] Add concurrency lock to checkRecovery to prevent probe re-entry and doubled backoff [<src/core/session-health-orchestrator.js:283>] — applied: `_probing` Set mutex guards half-open probe; tests 26/26 pass
+- [x] [Review][Patch] Validate account exists in globalAccountPool before probing in handleProbeAccount [<api/routes/admin.js:635>] — applied: `globalAccountPool.getAccount()` → 404 when missing; tests 26/26 pass
+- [x] [Review][Patch] Add CSS definitions for .status-active, .status-quarantined, .status-checkpoint in admin.html [<dashboard/admin.html:354>] — applied: extended `.status-pill` CSS with `.status-active`, `.status-quarantined`, `.status-checkpoint`, `.status-sick`, `.status-hibernating`; tests 26/26 pass
+- [x] [Review][Defer] Time-based metric decay for long-lived processes [<src/core/session-health-orchestrator.js:37>] — deferred: future sliding-window / EMA decay enhancement
+
 ## Implementation Notes
 
 - 2026-09-13: Implemented Story 27.2 end-to-end.

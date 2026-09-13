@@ -79,6 +79,8 @@ export class SessionHealthOrchestrator {
     this._scores = new Map();
     /** @type {Map<string, (accountId:string, platform:string)=>Promise<{success:boolean, complete?:boolean, challenge?:boolean}>|{success:boolean, complete?:boolean, challenge?:boolean}>} */
     this._probes = new Map();
+    /** @type {Set<string>} */
+    this._probing = new Set();
   }
 
   /** @param {string} platform @param {string} accountId */
@@ -195,7 +197,7 @@ export class SessionHealthOrchestrator {
     const latencyPenalty = avg > 8000 ? 20 : avg > 3000 ? 10 : 0;
     const score = Math.max(0, Math.min(100, Math.round(
       100
-      - Math.min(40, 8 * m.consecutiveErrors)
+      - Math.min(75, 18 * m.consecutiveErrors)
       - Math.min(30, 10 * m.rateLimits)
       - Math.min(30, 15 * m.botChallenges)
       - latencyPenalty
@@ -293,26 +295,33 @@ export class SessionHealthOrchestrator {
       b.state = 'half-open';
     }
     // half-open → run probe
-    const probe = this._probes.get(this._key(platform, accountId));
-    /** @type {{ success: boolean, complete?: boolean, challenge?: boolean }} */
-    let result = { success: true, complete: true };
-    if (typeof probe === 'function') {
-      try { result = await probe(accountId, platform); }
-      catch { result = { success: false }; }
-    } else {
-      // No probe registered → manual-wake semantics, conservative reopen.
-      console.warn(`⚠️ [SessionHealth] no probeFn for ${platform}:${accountId} — manual-wake reopen`);
-    }
-    if (result && result.success && result.complete !== false && !result.challenge) {
-      this._close(platform, accountId);
-    } else {
-      b.failures++;
-      b.state = 'open';
-      b.openedAt = this._now();
-      b.nextProbeAt = b.openedAt + this._cooldownFor(b.failures);
-      this._markSick(platform, accountId);
-      // keep score low on failed probe
-      this._scores.set(this._key(platform, accountId), { score: Math.min(this._scores.get(this._key(platform, accountId))?.score ?? 0, this._sickThreshold - 1) });
+    const key = this._key(platform, accountId);
+    if (this._probing.has(key)) return b;
+    this._probing.add(key);
+    try {
+      const probe = this._probes.get(key);
+      /** @type {{ success: boolean, complete?: boolean, challenge?: boolean }} */
+      let result = { success: true, complete: true };
+      if (typeof probe === 'function') {
+        try { result = await probe(accountId, platform); }
+        catch { result = { success: false }; }
+      } else {
+        // No probe registered → manual-wake semantics, conservative reopen.
+        console.warn(`⚠️ [SessionHealth] no probeFn for ${platform}:${accountId} — manual-wake reopen`);
+      }
+      if (result && result.success && result.complete !== false && !result.challenge) {
+        this._close(platform, accountId);
+      } else {
+        b.failures++;
+        b.state = 'open';
+        b.openedAt = this._now();
+        b.nextProbeAt = b.openedAt + this._cooldownFor(b.failures);
+        this._markSick(platform, accountId);
+        // keep score low on failed probe
+        this._scores.set(key, { score: Math.min(this._scores.get(key)?.score ?? 0, this._sickThreshold - 1) });
+      }
+    } finally {
+      this._probing.delete(key);
     }
     return b;
   }

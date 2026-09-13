@@ -351,11 +351,11 @@
       text-transform: uppercase;
     }
 
-    .status-running { background: rgba(0, 186, 124, 0.15); color: var(--success); }
-    .status-paused { background: rgba(255, 173, 31, 0.15); color: var(--warning); }
-    .status-failed { background: rgba(244, 33, 46, 0.15); color: var(--error); }
+    .status-running, .status-active { background: rgba(0, 186, 124, 0.15); color: var(--success); }
+    .status-paused, .status-quarantined { background: rgba(255, 173, 31, 0.15); color: var(--warning); }
+    .status-failed, .status-checkpoint, .status-sick { background: rgba(244, 33, 46, 0.15); color: var(--error); }
     .status-completed { background: rgba(29, 155, 240, 0.15); color: var(--accent); }
-    .status-stalled { background: rgba(255, 173, 31, 0.15); color: var(--warning); animation: pulse 2s infinite; }
+    .status-stalled, .status-hibernating { background: rgba(255, 173, 31, 0.15); color: var(--warning); animation: pulse 2s infinite; }
 
     .checkpoint-actions {
       display: flex;

@@ -492,7 +492,7 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
       // Record was updated — score is 100, metrics reflect success
       expect(orchestrator.getHealthScore('twitter', 'health_acc')).toBe(100);
       const metrics = orchestrator._metricsFor('twitter', 'health_acc');
-      expect(metrics.payloadComplete).toBe(1);
+      expect(metrics.payloadComplete).toBe(2);
       expect(metrics.latencySamples).toBe(1);
     });
 
@@ -513,7 +513,7 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
       await expect(client.request('GET', 'http://127.0.0.1:8080/test', { accountId: 'err_acc' })).rejects.toThrow();
       const metrics = orchestrator._metricsFor('twitter', 'err_acc');
       expect(metrics.consecutiveErrors).toBe(1);
-      expect(orchestrator.getHealthScore('twitter', 'err_acc')).toBe(92);
+      expect(orchestrator.getHealthScore('twitter', 'err_acc')).toBe(82);
     });
   });
 });
