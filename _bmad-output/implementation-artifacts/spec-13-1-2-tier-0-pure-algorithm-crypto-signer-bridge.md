@@ -2,7 +2,7 @@
 title: 'Story 13.1.2 — Tier 0 Pure-Algorithm Crypto Signer Bridge'
 type: 'feature'
 created: '2026-09-13'
-status: 'in-review'
+status: 'done'
 baseline_commit: '6946fa91efb4c1efccbc6f1d78c331e73ea5f0e2'
 route: 'dispatch'
 review_loop_iteration: 0
@@ -90,10 +90,20 @@ context: []
 
 ## Review Triage Log
 
+Self-review + planning fixes:
 - [self-review 2026-09-13] `#resolveSign` không tồn tại — sign resolution nằm inline trong `requestWithSign` (base-client.js:490-537). Đã sửa Code Map/Tasks: thêm nhánh `pure_algorithm` là **nhánh đầu tiên** + auto-detect `payload.algorithm` trước default `'token'`. [high → fixed]
 - [self-review] Thứ tự ưu tiên Tier 0 + merge `signature`→`payload.name` header chưa đủ rõ. Đã ghi explicit trong Code Map. [high → fixed]
 - [self-review] `x-request-fingerprint` HMAC cần seed — đổi `accountSeed` → `payload.seed` do caller truyền; thiếu seed → `null` → fallback. [medium → fixed]
 - [self-review] Latency `<0.1ms` ghi rõ là đo test-only bằng `performance.now()`, không phải runtime guarantee. [low → fixed]
+
+Post-implementation review (3 layers run inline — Agent tool unavailable):
+- [F7 HIGH → patch] Auto-detect bị tắt khi caller bỏ trống `signType` (default `'token'` nuốt `algorithm`). Fixed: dùng `requestedSignType = payload.signType` (undefined khi omit) thay vì `signType` đã-default trong điều kiện auto-detect. Thêm test `auto-detect ... when signType is omitted`. [verified: test mới pass]
+- [F3 MEDIUM → patch] Raw-string signature + `location:'cookie'` bị rơi (chỉ header/query được merge). Fixed: thêm nhánh cookie → `this.cookies[name]` + `updateCookies`. [verified: typecheck + tests pass]
+- [F2 LOW → patch] `pureSigners` plain-object non-function entries bị bỏ lặng. Fixed: warn khi skip. [verified]
+- [F1 maybe-false] `pure_algorithm` + tokenRing + no script → `effectiveSignType='custom'` bỏ qua token branch. Đúng spec ("fallback Tier 2/`sign()`", token là Tier 1). [kept — matches spec]
+- [F5 false] Test bound `elapsed<5000` gồm full HTTP — latency AC đã có test riêng <0.1ms. [rejected]
+- [F6 false] `sign()` default throw khi chưa override — hành vi hiện có, không phải regression. [rejected]
+- [F4 low] seed trong payload có thể lộ nếu signer log — signer do project viết, cosmetic. [rejected]
 
 ## Design Notes
 
