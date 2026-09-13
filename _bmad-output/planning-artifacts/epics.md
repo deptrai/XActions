@@ -1623,13 +1623,14 @@ So that **downstream consumers never receive silently empty or malformed data**.
 
 **Acceptance Criteria:**
 * **Given** `MetadataSchemaRegistry` and `validateSchemaNode()` already exist in `src/core/metadata-schema-registry.js`
-* **When** wiring `SchemaDriftGuard` into `AbstractCrawler`
+* **When** wiring `SchemaDriftGuard` (`src/core/schema-drift-guard.js`) into `AbstractCrawler.validateItem`
 * **Then** each crawler registers a `PostItem`/`ProfileItem`/`CommentItem` schema per action
 * **And** `SchemaDriftGuard.validate(platform, action, data)` returns `{ classification, missingFields, typeErrors, score }`
-* **And** `classification` is `complete` (all required, no type errors), `degraded` (some optional missing, minor type issues, score ≥ 70), or `corrupted` (required missing, major type issues, score < 70)
-* **And** `corrupted` results trigger a `PlatformError` with `ErrorTypes.DEGRADED_DATA` and suggested action `RETRY_WITH_DIFFERENT_ACCOUNT`
+* **And** score is computed deterministically as `score = max(0, 100 − 35×missingRequired − 15×typeErrors − 5×missingOptional)`
+* **And** `classification` is `complete` (no missing required, no type errors, score ≥ 95), `degraded` (no missing required, score ≥ 70), or `corrupted` (any missing required field, or score < 70)
+* **And** `corrupted` results trigger a `PlatformError` with `ErrorTypes.DEGRADED_DATA` (new enum in `src/core/error-envelope.js`) and suggested action `RETRY_WITH_DIFFERENT_ACCOUNT`
 * **And** degraded-but-acceptable results are stored with a `dataQuality.score` and `dataQuality.missingFields` metadata
-* **And** Zod or JSON-Schema is used (pure ESM, no extra heavy dependencies)
+* **And** validation reuses the existing `validateSchemaNode()` JSON-Schema evaluator — **no Zod, no Ajv, zero new dependencies** (pure ESM)
 
 ### Story 28.2: SelectorCanary — Periodic DOM Probe & Drift Alert
 As a **Scraping Operations Engineer**,  
@@ -1638,12 +1639,12 @@ So that **we know about breaking UI changes before production scrapers fail sile
 
 **Acceptance Criteria:**
 * **Given** `docs/agents/selectors.md` and `docs/case-studies/robust-dom-extraction.md` document fallback selector chains
-* **When** implementing `SelectorCanary`
-* **Then** it runs as a scheduled job (Bull or cron) against a known set of public test targets per platform
+* **When** implementing `SelectorCanary` (`src/services/selector-canary.js`)
+* **Then** it runs as a scheduled job (Bull repeatable job via existing `api/services/jobQueue.js`, or standalone `setInterval` when no Redis) against a declared set of public test targets per platform stored in `config/canary-targets.json` (twitter/facebook/youtube/threads — public profiles & feeds only)
 * **And** for each target it tries the primary selector and then the documented fallback chain
 * **And** it records `successRate`, `usedFallback`, `driftDetected`, and `lastWorkingSelector`
-* **And** if `successRate` drops below `0.8` for two consecutive runs, it emits an alert to the configured channel (email/Slack/Webhook) and sets the platform `driftDetected` flag in governor status
-* **And** canary results are viewable on `dashboard/admin.html`
+* **And** if `successRate` drops below `0.8` for two consecutive runs, it emits an alert via the existing notification dispatch (Telegram/webhook channel already used by the platform) and exposes `platformDrift[platform] = { alert, successRate, lastProbe }` through `AdaptiveRateGovernor.getStatus()` / `status-api`
+* **And** canary results are viewable on `dashboard/admin.html` as a drift-status badge per platform (green ok / red drift)
 
 ### Story 28.3: AutoSelectorFallback — Assisted Selector Re-Discovery
 As a **Scraping Developer**,  
@@ -1652,11 +1653,11 @@ So that **I can recover from DOM drift without manually inspecting every UI chan
 
 **Acceptance Criteria:**
 * **Given** `SelectorCanary` has flagged a drift
-* **When** running `AutoSelectorFallback.investigate(platform, pageUrl, expectedShape)`
-* **Then** it fetches a live snapshot of the page (via Puppeteer or HTTP)
+* **When** running `AutoSelectorFallback.investigate(platform, pageUrl, expectedShape)` (`src/core/auto-selector-fallback.js`)
+* **Then** it fetches a live snapshot of the page (via Puppeteer `createStealthPage` or HTTP)
 * **And** it searches the DOM for elements whose text/attributes/children structurally match the expected output shape (e.g., tweet text, like count)
-* **And** it returns a ranked list of candidate selectors with confidence scores
-* **And** the tool is CLI-accessible: `xactions tools suggest-selector --platform twitter --url https://x.com/elonmusk`
+* **And** it returns a ranked list of candidate selectors with `confidenceScore` (0.0–1.0), **preferring stable attributes in order `data-testid` → `role`/`aria-*` → semantic tag+structure, and rejecting obfuscated hash-only class selectors**
+* **And** the tool is CLI-accessible via the existing commander wiring in `src/cli/commands/`: `xactions tools suggest-selector --platform twitter --url https://x.com/elonmusk --field tweet_text`
 
 ---
 
