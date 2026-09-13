@@ -121,3 +121,41 @@ Một số test kiểm tra sự tồn tại của file legacy cần được g�
 - [ ] Chạy `npm test` (đảm bảo 100% tests pass).
 - [ ] Cập nhật status trong `docs/deprecation-plan.md` sang `removed`.
 - [ ] Commit với thông điệp: `feat(decommission): Story 26.2 — remove legacy scrapers (twitter, facebook, threads, bluesky, mastodon)`.
+
+---
+
+## 7. Review Findings & Remediation (Story 26.2 Code Review)
+
+### Findings Summary
+- Total findings identified across 4 review layers: **15**
+- Dismissed / Pre-resolved: **2** (already fixed in `e01d0ac1`: dead legacy dispatch, platforms.facebook exports)
+- Active patches applied: **13** (committed in `0f9f4b8e`)
+
+### Remediations Applied:
+1. **Scraper Stub Completeness** (`src/client/index.js`):
+   - Added missing methods: `setCookies`, `getCookies`, `saveCookies`, `getTweets`, `getTweetsAndReplies`, `getLikedTweets`, `getLatestTweet`, `likeTweet`, `unlikeTweet`, `retweet`, `unretweet`, `followUser`, `unfollowUser`, `sendQuoteTweet`, `deleteTweet`, `getFollowing`, `searchProfiles`, `getExploreTabs`, `getListTweets`, `getListMembers`, `getListById`, `isLoggedIn`.
+   - Fixed `getTweet` mapping from non-existent `tweet_detail` action to `thread` action.
+   - Fixed envelope unwrapping: `profile` unwraps `res.profile`, `getTweet` unwraps `rootTweet`, `searchTweets` unwraps `posts`, `getFollowers` unwraps `followers`.
+   - Added unit test suite: `tests/client/scraper-stub.test.js` (8 tests, 100% pass).
+
+2. **Package Subpath Export** (`package.json`):
+   - Fixed `./scrapers/twitter/http` mapping from `social/twitter/index.js` to `social/twitter/http/index.js`.
+
+3. **Convenience Wrapper Mapping** (`src/scrapers/index.js`):
+   - `scrapeTweets`: auto-prefixes `from:<username>` into `query` when not explicitly provided.
+   - `scrapeLikes`: maps `username` to `tweetId: opts.tweetId || username`.
+   - `scrapeCommunityMembers`: builds canonical `communityUrl` from `communityId`.
+   - `scrapeNotifications`: throws explicit error explaining lack of crawler support.
+
+4. **Descriptor Enhancements** (`src/scrapers/social/twitter/descriptor.js`):
+   - `mapArgs` accepts both `communityUrl` and `communityId` for community actions.
+
+5. **Facebook Utility Hardening** (`src/scrapers/social/facebook/`):
+   - `url-helpers.js`: coerced `c_user` to string for numeric IDs; supported both `datr` and `datar` cookie names.
+   - `normalize.js`: updated `normalizeHandle` regex to strip subdomains (`m.facebook.com`, `web.facebook.com`).
+
+6. **Deprecation Proxy Fallbacks** (`src/scrapers/deprecation-proxy.js`):
+   - Added fallback resolution for `createBrowser`, `createPage`, `loginWithCookie` on `platforms.twitter` and `platforms.facebook`.
+
+7. **Dead Code Elimination** (`src/scrapers/social/facebook/descriptor.js`):
+   - Removed legacy `options.page` dispatch path that referenced deleted legacy modules.
