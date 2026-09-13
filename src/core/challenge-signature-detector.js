@@ -69,6 +69,7 @@ const BUILTIN_SIGNATURES = [
     type: 'cloudflare_managed',
     appliesTo: 'both',
     patterns: [
+      { kind: 'substr', value: 'cf-challenge', weight: 0.8 },
       { kind: 'substr', value: 'cf-chl-bypass', weight: 1.0 },
       { kind: 'substr', value: 'cf-challenge-running', weight: 1.0 },
       { kind: 'substr', value: 'challenge-running', weight: 0.7 },
@@ -140,7 +141,7 @@ const BUILTIN_SIGNATURES = [
     type: 'generic_captcha',
     appliesTo: 'both',
     patterns: [
-      { kind: 'substr', value: 'captcha', weight: 0.5 },
+      { kind: 'substr', value: 'captcha', weight: 0.4 },
       { kind: 'substr', value: 'data-testid="challenge"', weight: 0.6 },
       { kind: 'substr', value: 'window.__初始状态', weight: 0.8 }, // Weibo sentinel
     ],
@@ -153,14 +154,14 @@ const BUILTIN_SIGNATURES = [
     platform: 'facebook',
     patterns: [
       { kind: 'regex', value: 'facebook\\.com/checkpoint|/checkpoint/', weight: 1.0 },
-      { kind: 'substr', value: '"checkpoint"', weight: 0.6 },
+      { kind: 'substr', value: 'checkpoint', weight: 0.6 },
       { kind: 'substr', value: 'Your account has been temporarily locked', weight: 1.0 },
     ],
   },
   {
     id: 'tw-unusual-login',
     type: 'platform_unusual_login',
-    appliesTo: 'http',
+    appliesTo: 'both',
     platform: 'twitter',
     patterns: [
       { kind: 'substr', value: 'unusual-login', weight: 1.0 },
@@ -171,7 +172,7 @@ const BUILTIN_SIGNATURES = [
   {
     id: 'tw-account-locked',
     type: 'platform_account_locked',
-    appliesTo: 'http',
+    appliesTo: 'both',
     platform: 'twitter',
     patterns: [
       { kind: 'substr', value: 'account_locked', weight: 1.0 },
@@ -183,7 +184,7 @@ const BUILTIN_SIGNATURES = [
   {
     id: 'ig-challenge-required',
     type: 'platform_challenge_required',
-    appliesTo: 'http',
+    appliesTo: 'both',
     platform: 'instagram',
     patterns: [
       { kind: 'substr', value: 'challenge_required', weight: 1.0 },
@@ -198,7 +199,7 @@ const BUILTIN_SIGNATURES = [
     appliesTo: 'http',
     patterns: [
       { kind: 'status', value: 403, weight: 0.4 },
-      { kind: 'substr', value: 'challenge', weight: 0.6 },
+      { kind: 'substr', value: 'challenge', weight: 0.3 },
     ],
   },
 ];
@@ -263,7 +264,7 @@ export class ChallengeSignatureDetector {
 
     for (const sig of candidates) {
       if (sig.appliesTo === 'dom') continue; // response-only path
-      if (sig.platform && sig.platform !== platform) continue;
+      if (sig.platform && platform && sig.platform !== platform) continue;
 
       let score = 0;
       let topWeight = 0;
@@ -278,11 +279,15 @@ export class ChallengeSignatureDetector {
         }
       }
 
+      if (matched.length === 0) continue;
+
       // Confidence: top matched weight + bonus per extra hit (capped at 1).
-      // A single strong signal (weight 1.0) → confidence 1.0.
-      // Weaker single signal (weight 0.5) → 0.5; two 0.4s → 0.4+0.15=0.55.
       const extraHits = matched.length - 1;
-      const confidence = Math.min(1, topWeight + extraHits * 0.15);
+      let confidence = Math.min(1, topWeight + extraHits * 0.15);
+      // Status 403 boost (+0.2) when non-status patterns matched
+      if (statusCode === 403 && sig.id !== 'http-403-challenge' && matched.some(m => !m.startsWith('status:'))) {
+        confidence = Math.min(1, confidence + 0.2);
+      }
       if (confidence >= 0.5 && (!best || confidence > best.confidence)) {
         best = { sig, score, matched, confidence };
       }
@@ -323,9 +328,10 @@ export class ChallengeSignatureDetector {
     if (typeof html !== 'string' || !html) {
       return { detected: false, type: 'unknown', confidence: 0, suggestedHibernationMs: HIBERNATION.unknown, signature: null, matchedPatterns: [] };
     }
+    const safeOpts = (opts && typeof opts === 'object') ? opts : {};
     // Reuse the same catalog — `appliesTo: 'dom' | 'both'` only
-    const platform = opts.platform || null;
-    const url = String(opts.url || '');
+    const platform = safeOpts.platform || null;
+    const url = String(safeOpts.url || '');
     const candidates = [...this._catalog];
     if (platform && this._platformSigs.has(platform)) {
       candidates.push(...(this._platformSigs.get(platform) || []));
@@ -335,7 +341,7 @@ export class ChallengeSignatureDetector {
     let best = null;
     for (const sig of candidates) {
       if (sig.appliesTo === 'http') continue;
-      if (sig.platform && sig.platform !== platform) continue;
+      if (sig.platform && platform && sig.platform !== platform) continue;
       let score = 0;
       let topWeight = 0;
       const matched = [];
@@ -347,6 +353,7 @@ export class ChallengeSignatureDetector {
           matched.push(`${pat.kind}:${String(pat.value).substring(0, 40)}`);
         }
       }
+      if (matched.length === 0) continue;
       const extraHits = matched.length - 1;
       const confidence = Math.min(1, topWeight + extraHits * 0.15);
       if (confidence >= 0.5 && (!best || confidence > best.confidence)) {
@@ -377,12 +384,13 @@ export class ChallengeSignatureDetector {
    * @returns {ChallengeResult}
    */
   detectFromResponse(response, opts = {}) {
+    const safeOpts = (opts && typeof opts === 'object') ? opts : {};
     const rec = /** @type {Record<string, any>} */ (response && typeof response === 'object' ? response : {});
     const body = rec.data ?? rec.body ?? response;
     const headers = /** @type {Record<string, string>} */ (rec.headers || {});
     const statusCode = rec.status ?? rec.statusCode ?? 0;
     const url = rec.url ?? rec.config?.url ?? '';
-    return this.detect({ body, headers, statusCode, url, platform: opts.platform });
+    return this.detect({ body, headers, statusCode, url, platform: safeOpts.platform });
   }
 
   /** @param {ChallengePattern} pat @param {{bodyText:string, url:string, statusCode:number, headers:Record<string,string>}} ctx @returns {boolean} */
@@ -402,6 +410,13 @@ export class ChallengeSignatureDetector {
       case 'header': {
         const name = String(pat.value).toLowerCase();
         const want = String(pat.headerValue || '').toLowerCase();
+        if (headers && typeof /** @type {any} */ (headers).get === 'function') {
+          const val = /** @type {any} */ (headers).get(name);
+          if (val !== null && val !== undefined) {
+            if (!want) return true;
+            return String(val).toLowerCase().includes(want);
+          }
+        }
         for (const [k, v] of Object.entries(headers || {})) {
           if (String(k).toLowerCase() === name) {
             if (!want) return true;

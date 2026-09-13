@@ -6,6 +6,7 @@ import { AbstractCrawler } from '../../src/core/base-crawler.js';
 import { AbstractApiClient } from '../../src/core/base-client.js';
 import { AccountPool } from '../../src/core/account-pool.js';
 import { AdaptiveRateGovernor } from '../../src/core/adaptive-governor.js';
+import { SessionHealthOrchestrator } from '../../src/core/session-health-orchestrator.js';
 import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../src/core/error-envelope.js';
 import { globalActionRegistry } from '../../src/core/action-registry.js';
@@ -174,6 +175,54 @@ describe('AbstractCrawler contract', () => {
           session: { accountId: 'opt_in_acc' }
         })
       ).rejects.toThrow(PlatformError);
+    });
+  });
+
+  describe('Story 27.3: detectChallengeOnPage DOM Bot-Detection', () => {
+    it('detects challenge on page and notifies accountPool, governor, and healthOrchestrator', async () => {
+      const governor = new AdaptiveRateGovernor();
+      const accountPool = new AccountPool({ governor });
+      const healthOrchestrator = new SessionHealthOrchestrator({ accountPool, governor });
+      accountPool.registerAccounts('test-crawler', ['crawler_acc']);
+
+      const crawler = new TestCrawler({ governor, accountPool, healthOrchestrator });
+      crawler.name = 'test-crawler';
+
+      const stubPage = {
+        content: async () => `<!DOCTYPE html><html><head><title>Just a moment...</title></head>
+          <body><div class="cf-challenge-running">Checking your browser</div>
+          <script>window.__cf_chl = {};</script></body></html>`,
+        url: () => 'https://example.com/search',
+      };
+
+      const result = await crawler.detectChallengeOnPage(stubPage, { accountId: 'crawler_acc' });
+      expect(result.detected).toBe(true);
+      expect(result.type).toBe('cloudflare_managed');
+      expect(result.suggestedHibernationMs).toBe(5 * 60 * 1000);
+
+      // Account marked unavailable in pool
+      expect(accountPool.getNextAvailable('test-crawler')).toBeNull();
+
+      // Governor recorded bot challenge with 5min duration
+      expect(governor.isHibernating('test-crawler:crawler_acc')).toBe(true);
+      expect(governor.getHibernationReason('test-crawler:crawler_acc')).toBe('bot_challenge');
+
+      // Health orchestrator score dropped
+      expect(healthOrchestrator.getHealthScore('test-crawler', 'crawler_acc')).toBeLessThan(70);
+    });
+
+    it('returns safe fallback when page is null, invalid, or clean HTML', async () => {
+      const crawler = new TestCrawler();
+      const nullRes = await crawler.detectChallengeOnPage(null);
+      expect(nullRes.detected).toBe(false);
+      expect(nullRes.type).toBe('unknown');
+
+      const cleanPage = {
+        content: async () => '<html><body><div>Normal content</div></body></html>',
+        url: () => 'https://example.com',
+      };
+      const cleanRes = await crawler.detectChallengeOnPage(cleanPage);
+      expect(cleanRes.detected).toBe(false);
     });
   });
 });

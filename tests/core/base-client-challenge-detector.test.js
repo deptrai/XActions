@@ -165,4 +165,80 @@ describe('Story 27.3 — base-client ChallengeSignatureDetector integration', ()
     expect(accountPool.getNextAvailable('twitter')).toBe('acct_clean');
     expect(governor.isHibernating('twitter:acct_clean')).toBe(false);
   });
+  it('[P0] F-5: false-200 challenge response throws BotChallengeError and does not double-record penalty', async () => {
+    const accountPool = new AccountPool();
+    accountPool.registerAccounts('twitter', ['acct_false200']);
+    const governor = new AdaptiveRateGovernor();
+    const orchestrator = new SessionHealthOrchestrator({ accountPool, governor });
+    const detector = new ChallengeSignatureDetector();
+
+    // Client WITHOUT responseValidator (default null)
+    const client = new TestApiClient({
+      accountPool,
+      governor,
+      healthOrchestrator: orchestrator,
+      challengeDetector: detector,
+      responseValidator: null, // explicit null
+      requiresAuth: true,
+      platform: 'twitter',
+      maxProxyRetries: 1,
+      httpClient: async () => ({
+        status: 200, // False 200!
+        headers: {},
+        data: '<!DOCTYPE html><html><head><title>Just a moment...</title></head><body><div class="cf-challenge-running"></div></body></html>',
+      }),
+    });
+
+    let thrownError = null;
+    try {
+      await client.request('GET', 'http://127.0.0.1:8080/test', { accountId: 'acct_false200' });
+    } catch (err) {
+      thrownError = err;
+    }
+
+    expect(thrownError).toBeInstanceOf(BotChallengeError);
+    expect(thrownError.details?.challengeType).toBe('cloudflare_managed');
+    expect(thrownError.details?.challengeSignature).toBe('cf-managed');
+
+    // Account hibernated in governor with suggested duration
+    expect(governor.isHibernating('twitter:acct_false200')).toBe(true);
+
+    // Verify health orchestrator only got 1 bot challenge penalty (score should be 100 - 18 consecErr - 15 botChallenge = 67, NOT double-penalized to ~34)
+    const score = orchestrator.getHealthScore('twitter', 'acct_false200');
+    expect(score).toBeGreaterThanOrEqual(60);
+  });
+
+  it('[P0] F-6 & F-7: terminal 403 challenge preserves bot_challenge and suggested hibernation duration', async () => {
+    const accountPool = new AccountPool();
+    accountPool.registerAccounts('twitter', ['acct_term403']);
+    const governor = new AdaptiveRateGovernor();
+    const detector = new ChallengeSignatureDetector();
+
+    const client = new TestApiClient({
+      accountPool,
+      governor,
+      challengeDetector: detector,
+      requiresAuth: true,
+      platform: 'twitter',
+      maxProxyRetries: 1, // Will exhaust on attempt 0
+      httpClient: async () => ({
+        status: 403,
+        headers: { 'cf-mitigated': 'challenge' },
+        data: '<html><body>cf-chl-bypass</body></html>',
+      }),
+    });
+
+    try {
+      await client.request('GET', 'http://127.0.0.1:8080/test', { accountId: 'acct_term403' });
+    } catch (err) {
+      expect(err).toBeInstanceOf(BotChallengeError);
+      expect(err.details?.challengeType).toBe('cloudflare_managed');
+      expect(err.details?.suggestedHibernationMs).toBe(5 * 60 * 1000);
+    }
+
+    // Account remains hibernated as bot_challenge, NOT overwritten by rate_limit
+    expect(governor.isHibernating('twitter:acct_term403')).toBe(true);
+    expect(governor.getHibernationReason('twitter:acct_term403')).toBe('bot_challenge');
+  });
 });
+

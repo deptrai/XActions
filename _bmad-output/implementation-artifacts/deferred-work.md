@@ -125,3 +125,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-27-2-sessionhealthorchestrator-continuous-health-score-circuit-br.md`
   summary: Time-based metric decay for long-lived processes in SessionHealthOrchestrator
   evidence: Stale rate-limit and bot-challenge counts remain cumulative indefinitely until a circuit break or manual wake occurs. Future enhancement should introduce half-life decay or rolling time-window.
+
+## Deferred from: code review of spec-27-3 (2026-09-13)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-27-3-challengesignaturedetector-automated-bot-detection-page-dete.md`
+  summary: Dedicated `challenge_detected` event emission in telemetry
+  evidence: Telemetry in `AbstractApiClient` records `isCheckpoint` via `telemetry.recordRequest()`; emitting a dedicated event `{platform, accountId, type, confidence, signature}` can be added when challenge telemetry reporting is standardized.

@@ -990,7 +990,7 @@ export class AbstractApiClient {
           if (concreteAccountId && this.accountPool) {
             try { this.accountPool.markUnavailable(concreteAccountId, 'bot_challenge', hibernationMs, this.platform); } catch {}
             if (this.governor && typeof this.governor.recordBotChallenge === 'function') {
-              try { this.governor.recordBotChallenge(concreteAccountId, this.platform); } catch {}
+              try { this.governor.recordBotChallenge(concreteAccountId, this.platform, hibernationMs); } catch {}
             }
             if (this.healthOrchestrator && typeof this.healthOrchestrator.recordBotChallenge === 'function') {
               try { this.healthOrchestrator.recordBotChallenge(this.platform || 'default', concreteAccountId); } catch {}
@@ -1005,6 +1005,52 @@ export class AbstractApiClient {
 
         // Success condition (2xx / 3xx)
         if (status >= 200 && status < 400) {
+          // Story 27.3 — False-200 bot challenge check (runs before isRaw, and even when responseValidator is null)
+          let challengeResult = lastChallengeResult;
+          if (!challengeResult) {
+            try {
+              const detector = this.challengeDetector || globalChallengeSignatureDetector;
+              if (detector && typeof detector.detectFromResponse === 'function') {
+                challengeResult = detector.detectFromResponse(response, { platform: this.platform });
+              }
+            } catch { challengeResult = null; }
+          }
+
+          const isValidatorChallenge =
+            typeof this.responseValidator?.isBotChallenge === 'function' &&
+            Boolean(this.responseValidator.isBotChallenge(response));
+
+          if ((challengeResult && challengeResult.detected) || isValidatorChallenge) {
+            const hibernationMs = challengeResult?.suggestedHibernationMs || this.rateLimitHibernationMs;
+            const challengeType = challengeResult?.type || 'unknown';
+            const challengeSig = challengeResult?.signature || 'validator_fallback';
+            // Only record if early check did not already record it (avoids double penalty)
+            if (!lastChallengeResult?.detected && concreteAccountId && this.accountPool) {
+              try { this.accountPool.markUnavailable(concreteAccountId, 'bot_challenge', hibernationMs, this.platform); } catch {}
+              if (this.governor && typeof this.governor.recordBotChallenge === 'function') {
+                try { this.governor.recordBotChallenge(concreteAccountId, this.platform, hibernationMs); } catch {}
+              }
+              if (this.healthOrchestrator && typeof this.healthOrchestrator.recordBotChallenge === 'function') {
+                try { this.healthOrchestrator.recordBotChallenge(this.platform || 'default', concreteAccountId); } catch {}
+              }
+            }
+            throw new BotChallengeError({
+              code: 'XACT_4030',
+              message: `Bot challenge detected on upstream platform (${challengeType})`,
+              statusCode: 403,
+              suggestedAction: concreteAccountId ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
+              accountId: concreteAccountId,
+              platform: this.platform,
+              details: {
+                challengeType,
+                challengeSignature: challengeSig,
+                confidence: challengeResult?.confidence ?? null,
+                suggestedHibernationMs: hibernationMs,
+                response: response?.data || response,
+              },
+            });
+          }
+
           if (isRaw) {
             if (!isCanary) {
               const trackingKey = concreteAccountId || 'noauth';
@@ -1044,48 +1090,6 @@ export class AbstractApiClient {
                 accountId: concreteAccountId,
                 platform: this.platform,
                 details: response?.data || response,
-              });
-            }
-            // Story 27.3 — also check inside 2xx: "false-200" challenges
-            // (status OK but body is a challenge page). Uses cached result
-            // when available to avoid rescanning the body.
-            let challengeResult = lastChallengeResult;
-            if (!challengeResult) {
-              try {
-                const detector = this.challengeDetector || globalChallengeSignatureDetector;
-                if (detector && typeof detector.detectFromResponse === 'function') {
-                  challengeResult = detector.detectFromResponse(response, { platform: this.platform });
-                }
-              } catch { challengeResult = null; }
-            }
-
-            if ((challengeResult && challengeResult.detected) || this.responseValidator.isBotChallenge(response)) {
-              const hibernationMs = challengeResult?.suggestedHibernationMs || this.rateLimitHibernationMs;
-              const challengeType = challengeResult?.type || 'unknown';
-              const challengeSig = challengeResult?.signature || 'validator_fallback';
-              if (concreteAccountId && this.accountPool) {
-                this.accountPool.markUnavailable(concreteAccountId, 'bot_challenge', hibernationMs, this.platform);
-                if (this.governor && typeof this.governor.recordBotChallenge === 'function') {
-                  this.governor.recordBotChallenge(concreteAccountId, this.platform);
-                }
-                if (this.healthOrchestrator && typeof this.healthOrchestrator.recordBotChallenge === 'function') {
-                  try { this.healthOrchestrator.recordBotChallenge(this.platform || 'default', concreteAccountId); } catch {}
-                }
-              }
-              throw new BotChallengeError({
-                code: 'XACT_4030',
-                message: `Bot challenge detected on upstream platform (${challengeType})`,
-                statusCode: 403,
-                suggestedAction: concreteAccountId ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
-                accountId: concreteAccountId,
-                platform: this.platform,
-                details: {
-                  challengeType,
-                  challengeSignature: challengeSig,
-                  confidence: challengeResult?.confidence ?? null,
-                  suggestedHibernationMs: hibernationMs,
-                  response: response?.data || response,
-                },
               });
             }
 
@@ -1191,9 +1195,18 @@ export class AbstractApiClient {
 
           if (isLastProxyAttempt) {
             if (concreteAccountId && this.accountPool) {
-              this.accountPool.markUnavailable(concreteAccountId, 'rate_limit', this.rateLimitHibernationMs, this.platform);
-              if (this.governor && typeof this.governor.recordRateLimit === 'function') {
-                this.governor.recordRateLimit(concreteAccountId, this.platform, this.rateLimitHibernationMs);
+              const isChl = Boolean(lastChallengeResult?.detected || status === 403);
+              const reason = isChl ? 'bot_challenge' : 'rate_limit';
+              const hibMs = lastChallengeResult?.suggestedHibernationMs || this.rateLimitHibernationMs;
+              this.accountPool.markUnavailable(concreteAccountId, reason, hibMs, this.platform);
+              if (isChl) {
+                if (this.governor && typeof this.governor.recordBotChallenge === 'function') {
+                  this.governor.recordBotChallenge(concreteAccountId, this.platform, hibMs);
+                }
+              } else {
+                if (this.governor && typeof this.governor.recordRateLimit === 'function') {
+                  this.governor.recordRateLimit(concreteAccountId, this.platform, this.rateLimitHibernationMs);
+                }
               }
 
               const nextAccount = this.accountPool.getNextAvailable(this.platform);
@@ -1208,14 +1221,23 @@ export class AbstractApiClient {
             }
 
             const errorClass = status === 429 ? RateLimitError : BotChallengeError;
+            const challengeDetails = (status === 403 && lastChallengeResult?.detected)
+              ? {
+                  challengeType: lastChallengeResult.type,
+                  challengeSignature: lastChallengeResult.signature,
+                  confidence: lastChallengeResult.confidence,
+                  suggestedHibernationMs: lastChallengeResult.suggestedHibernationMs,
+                  response: response?.data || response,
+                }
+              : (response?.data || response);
             throw new errorClass({
               code: status === 429 ? 'XACT_4290' : 'XACT_4030',
-              message: status === 429 ? 'Rate limit exceeded on upstream platform' : 'Bot challenge detected on upstream platform',
+              message: status === 429 ? 'Rate limit exceeded on upstream platform' : `Bot challenge detected on upstream platform (${lastChallengeResult?.type || 'unknown'})`,
               suggestedAction: concreteAccountId ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
               retryAfterMs: chosenDelay,
               accountId: concreteAccountId,
               platform: this.platform,
-              details: response?.data || response,
+              details: challengeDetails,
             });
           }
 

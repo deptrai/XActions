@@ -255,6 +255,8 @@ export abstract class AbstractCrawler {
   cdpUrl: string | null;
   governor: AdaptiveRateGovernor | null;
   accountPool: AccountPool | null;
+  challengeDetector: ChallengeSignatureDetector | null;
+  healthOrchestrator: SessionHealthOrchestrator | null;
   constructor(deps?: {
     client?: AbstractApiClient;
     store?: AbstractStore;
@@ -263,6 +265,8 @@ export abstract class AbstractCrawler {
     accountPool?: AccountPool;
     requiresAuth?: boolean;
     cdpUrl?: string;
+    challengeDetector?: ChallengeSignatureDetector;
+    healthOrchestrator?: SessionHealthOrchestrator;
   });
   registerAction(action: string, handler: Function, descriptor?: Partial<Omit<ActionDescriptor, 'action'>>): void;
   registerAction(descriptor: Partial<ActionDescriptor> & { action: string; handler: Function }): void;
@@ -278,6 +282,7 @@ export abstract class AbstractCrawler {
   abstract getPostDetail(args: Record<string, unknown>): Promise<PostItem>;
   abstract getComments(args: Record<string, unknown>): Promise<CommentItem[]>;
   abstract cleanup(): Promise<void>;
+  detectChallengeOnPage(page: unknown, opts?: { accountId?: string }): Promise<ChallengeResult>;
 }
 
 export interface SignPayload {
@@ -319,6 +324,8 @@ export abstract class AbstractApiClient {
   maxBackoffMs: number;
   rateLimitHibernationMs: number;
   standbyBackoffMs: number;
+  challengeDetector: ChallengeSignatureDetector | null;
+  healthOrchestrator: SessionHealthOrchestrator | null;
   constructor(options?: {
     sessionManager?: SessionManager;
     proxyPool?: unknown;
@@ -340,6 +347,8 @@ export abstract class AbstractApiClient {
     maxBackoffMs?: number;
     rateLimitHibernationMs?: number;
     standbyBackoffMs?: number;
+    challengeDetector?: ChallengeSignatureDetector;
+    healthOrchestrator?: SessionHealthOrchestrator;
   });
   resolveProxy(
     accountId?: string,

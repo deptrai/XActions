@@ -96,6 +96,20 @@ context: []
 - Given `base-client` receives detected challenge → calls `accountPool.markUnavailable(accountId, 'bot_challenge', suggestedHibernationMs, platform)` + `governor.recordBotChallenge` + `healthOrchestrator.recordBotChallenge`.
 - `npm run typecheck` + `vitest run` pass, no regression.
 
+
+### Review Findings
+
+- [x] [Review][Patch] Fix http-403-challenge false positive on clean 200 responses with 'challenge' [<src/core/challenge-signature-detector.js:210>] — applied: weight reduced to 0.3 so 200 + 'challenge' alone is confidence 0.3 (<0.5), requiring status 403 to trigger (confidence 0.55).
+- [x] [Review][Patch] Reduce plain 'captcha' weight to 0.4 so text mentions don't trigger false positives [<src/core/challenge-signature-detector.js:145>] — applied: weight 0.4 requires second signal to reach 0.5 threshold.
+- [x] [Review][Patch] Add missing 'cf-challenge' pattern to Cloudflare catalog [<src/core/challenge-signature-detector.js:77>] — applied: cf-challenge substr added with weight 0.8.
+- [x] [Review][Patch] Set appliesTo to 'both' for Twitter and Instagram signatures to support DOM crawlers [<src/core/challenge-signature-detector.js:175>] — applied: tw-unusual-login, tw-account-locked, ig-challenge-required now apply to both HTTP and DOM.
+- [x] [Review][Patch] Hoist false-200 check before isRaw and outside responseValidator, deduplicate challenge recording on 2xx [<src/core/base-client.js:1015>] — applied: false-200 checked even without responseValidator and before isRaw returns; duplicate penalty recording guarded.
+- [x] [Review][Patch] Pass suggestedHibernationMs (durationMs) to governor.recordBotChallenge [<src/core/base-client.js:992, src/core/base-crawler.js:585>] — applied: durationMs passed in both client and crawler.
+- [x] [Review][Patch] Guard against null opts in detectFromHtml, detectFromResponse, and detectChallengeOnPage [<src/core/challenge-signature-detector.js:325, src/core/base-crawler.js:570>] — applied: safeOpts object check.
+- [x] [Review][Patch] Add unit tests for AbstractCrawler.prototype.detectChallengeOnPage [<tests/core/base-crawler.test.js:180>] — applied: added tests for challenge detection on page and safe fallbacks.
+- [x] [Review][Patch] Add missing TypeScript declarations to types/core.d.ts [<types/core.d.ts:255,325>] — applied: declared challengeDetector and healthOrchestrator across client and crawler classes.
+- [x] [Review][Defer] Telemetry challenge_detected event emission [<src/core/base-client.js:1000>] — deferred: logged in deferred-work.md; existing telemetry covers isCheckpoint.
+
 ## Implementation Notes
 
 - 2026-09-13: Implemented Story 27.3 end-to-end.
@@ -120,6 +134,17 @@ context: []
 ## Spec Change Log
 
 ## Review Triage Log
+
+- [F-1 Critical → patch] http-403-challenge false-positive on clean 200 containing 'challenge' — reduced 'challenge' weight to 0.3. [fixed]
+- [F-2 High → patch] Plain 'captcha' weight 0.5 triggers on mentions — reduced to 0.4. [fixed]
+- [F-3 High → patch] Missing 'cf-challenge' in Cloudflare catalog — added with weight 0.8. [fixed]
+- [F-4 High → patch] Twitter & Instagram signatures marked appliesTo: 'http' skipped in DOM crawler — changed to 'both'. [fixed]
+- [F-5 High → patch] False-200 detection bypassed when responseValidator is null, and double penalty on 2xx — hoisted check before isRaw, guarded duplicate recording. [fixed]
+- [F-6 Medium → patch] governor.recordBotChallenge omitted suggestedHibernationMs — passed as 3rd arg in client and crawler. [fixed]
+- [F-7 Medium → patch] null opts caused TypeError — added safeOpts guard across detector and crawler. [fixed]
+- [F-8 Medium → patch] Missing test for AbstractCrawler.detectChallengeOnPage — added unit test with stub page. [fixed]
+- [F-9 Low → patch] Missing TypeScript declarations in types/core.d.ts — added declarations for crawler and client. [fixed]
+- [F-10 Low → defer] Dedicated challenge_detected telemetry event — logged to deferred-work.md.
 
 ## Design Notes
 

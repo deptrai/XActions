@@ -153,4 +153,86 @@ describe('Story 27.3 — ChallengeSignatureDetector', () => {
     const r = globalChallengeSignatureDetector.detect({ body: 'cf-chl-bypass' });
     expect(r.detected).toBe(true);
   });
+  it('[P0] F-1: clean 200 response containing word "challenge" is not detected', () => {
+    const d = new ChallengeSignatureDetector();
+    const r = d.detect({
+      statusCode: 200,
+      body: 'Welcome to the 30-day coding challenge! Win prizes by completing challenges daily.',
+    });
+    expect(r.detected).toBe(false);
+    expect(r.type).toBe('unknown');
+
+    // But status 403 with word "challenge" triggers detection
+    const r403 = d.detect({
+      statusCode: 403,
+      body: 'Access denied: bot challenge required',
+    });
+    expect(r403.detected).toBe(true);
+    expect(r403.signature).toBe('http-403-challenge');
+  });
+
+  it('[P0] F-2: plain "captcha" mention in text alone does not trigger false positive', () => {
+    const d = new ChallengeSignatureDetector();
+    const r = d.detect({
+      statusCode: 200,
+      body: 'We discussed how captcha technology evolved over the past decade.',
+    });
+    expect(r.detected).toBe(false);
+  });
+
+  it('[P0] F-3: cf-challenge pattern matches cloudflare_managed', () => {
+    const d = new ChallengeSignatureDetector();
+    const r = d.detectFromHtml('<div class="cf-challenge">Please wait</div>');
+    expect(r.detected).toBe(true);
+    expect(r.type).toBe('cloudflare_managed');
+  });
+
+  it('[P0] F-4: DOM detection matches Twitter account_locked and unusual-login in HTML', () => {
+    const d = new ChallengeSignatureDetector();
+    const rLocked = d.detectFromHtml('<div>Your account is account_locked. Please reset.</div>', { platform: 'twitter' });
+    expect(rLocked.detected).toBe(true);
+    expect(rLocked.type).toBe('platform_account_locked');
+
+    const rUnusual = d.detectFromHtml('<div>unusual-login detected on your account</div>', { platform: 'twitter' });
+    expect(rUnusual.detected).toBe(true);
+    expect(rUnusual.type).toBe('platform_unusual_login');
+  });
+
+  it('[P1] F-7: null options does not throw TypeError in detectFromHtml or detectFromResponse', () => {
+    const d = new ChallengeSignatureDetector();
+    expect(() => d.detectFromHtml('<div class="cf-challenge"></div>', null)).not.toThrow();
+    expect(() => d.detectFromResponse({ status: 200, data: 'hello' }, null)).not.toThrow();
+  });
+
+  it('[P1] Headers object with .get() method is supported in header patterns', () => {
+    const d = new ChallengeSignatureDetector();
+    // Simulate Fetch/Undici Headers instance
+    const headers = new Map([['cf-mitigated', 'challenge']]);
+    const mockHeaders = {
+      get: (name) => headers.get(name.toLowerCase()) || null,
+    };
+    const r = d.detect({
+      body: 'access denied',
+      headers: mockHeaders,
+    });
+    expect(r.detected).toBe(true);
+    expect(r.type).toBe('cloudflare_managed');
+  });
+
+  it('[P1] status 403 provides +0.2 confidence boost to matched signature', () => {
+    const d = new ChallengeSignatureDetector();
+    // Just a moment alone has weight 0.6
+    const r200 = d.detect({ body: 'Just a moment...', statusCode: 200 });
+    const r403 = d.detect({ body: 'Just a moment...', statusCode: 403 });
+    expect(r403.confidence).toBeGreaterThan(r200.confidence);
+    expect(r403.confidence - r200.confidence).toBeCloseTo(0.2, 1);
+  });
+
+  it('[P1] platform signatures match when platform parameter is omitted but URL contains platform path', () => {
+    const d = new ChallengeSignatureDetector();
+    const r = d.detect({ url: 'https://www.facebook.com/checkpoint/?next=home' });
+    expect(r.detected).toBe(true);
+    expect(r.type).toBe('platform_checkpoint');
+  });
 });
+
