@@ -508,3 +508,75 @@ export class SignerWorkerPagePool {
   get minSize(): number;
   get maxSize(): number;
 }
+
+// ---------------------------------------------------------------------------
+// Story 27.1 — FingerprintManager & TLS Profile Provider
+// ---------------------------------------------------------------------------
+
+export interface FingerprintWebGL {
+  vendor: string;
+  renderer: string;
+}
+
+export interface Fingerprint {
+  userAgent: string;
+  viewport: { width: number; height: number };
+  timezone: string;
+  locale: string;
+  colorDepth: number;
+  platform: string;
+  webgl: FingerprintWebGL;
+  fonts: string[];
+  hardwareConcurrency: number;
+  deviceMemory: number;
+  browserFamily: 'chrome' | 'firefox' | 'safari' | 'unknown';
+  osFamily: 'windows' | 'mac' | 'linux';
+  region?: string;
+}
+
+export interface TlsProfile {
+  browserFamily: 'chrome' | 'firefox' | 'safari' | 'unknown';
+  cipherSuites: string[];
+  minVersion: string;
+  maxVersion: string;
+  alpnProtocols: string[];
+  sigAlgs?: string[];
+}
+
+export class TlsProfileProvider {
+  constructor(options?: { overrides?: Record<string, Partial<TlsProfile>> });
+  getProfile(familyOrUa: string): TlsProfile | null;
+  forFingerprint(fingerprint: { userAgent?: string }): TlsProfile | null;
+}
+
+export function browserFamilyFromUA(ua?: string): 'chrome' | 'firefox' | 'safari' | 'unknown';
+
+export interface FingerprintStore {
+  get(key: string): unknown;
+  set(key: string, value: unknown): unknown;
+}
+
+export class FingerprintManager {
+  constructor(options?: {
+    prisma?: unknown;
+    tlsProvider?: TlsProfileProvider;
+    store?: FingerprintStore;
+  });
+  bindProxyRegion(accountId: string, region: string): void;
+  getForAccount(
+    platform: string,
+    accountId: string,
+    options?: { proxy?: string | { region?: string; country?: string } }
+  ): Promise<Fingerprint>;
+  rotateForAccount(
+    platform: string,
+    accountId: string,
+    options?: { proxy?: string | { region?: string; country?: string } }
+  ): Promise<Fingerprint>;
+  tlsProfileFor(fingerprintOrUa: Fingerprint | string): TlsProfile | null;
+  has(platform: string, accountId: string): boolean;
+  get size(): number;
+}
+
+export const globalFingerprintManager: FingerprintManager;
+export const globalTlsProfileProvider: TlsProfileProvider;

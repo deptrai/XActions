@@ -9,6 +9,8 @@
  * @license MIT
  */
 
+import { globalFingerprintManager } from '../core/fingerprint-manager.js';
+
 // ============================================================================
 // User-Agent Pool
 // ============================================================================
@@ -44,7 +46,18 @@ const USER_AGENTS = [
  * Launch a stealth-configured Puppeteer browser
  */
 export async function launchStealthBrowser(options = {}) {
-  const { proxy, headless = true, userDataDir, viewport, userAgent } = options;
+  const { proxy, headless = true, userDataDir, viewport, userAgent, fingerprint, fingerprintManager, accountId, platform } = options;
+
+  // Resolve a stable, geo-consistent fingerprint when requested (Story 27.1).
+  let fp = fingerprint && fingerprint.userAgent ? fingerprint : null;
+  const fm = fingerprintManager || (accountId ? globalFingerprintManager : null);
+  if (!fp && fm && accountId) {
+    try {
+      fp = await fm.getForAccount(platform || 'default', accountId, { proxy });
+    } catch (err) {
+      console.warn(`⚠️ [stealth] FingerprintManager.getForAccount failed: ${err?.message || err}`);
+    }
+  }
 
   let puppeteer;
   try {
@@ -66,7 +79,7 @@ export async function launchStealthBrowser(options = {}) {
     '--disable-blink-features=AutomationControlled',
     '--disable-infobars',
     '--disable-dev-shm-usage',
-    '--lang=en-US,en',
+    `--lang=${fp ? fp.locale : 'en-US'},${fp ? fp.locale.split('-')[0] : 'en'}`,
   ];
 
   if (proxy) {
@@ -74,7 +87,7 @@ export async function launchStealthBrowser(options = {}) {
     args.push(`--proxy-server=${proxyUrl}`);
   }
 
-  const vp = viewport || {
+  const vp = viewport || (fp && fp.viewport) || {
     width: randomInt(1280, 1920),
     height: randomInt(720, 1080),
   };
@@ -88,6 +101,8 @@ export async function launchStealthBrowser(options = {}) {
   if (userDataDir) launchOptions.userDataDir = userDataDir;
 
   const browser = await puppeteer.launch(launchOptions);
+  // Attach resolved fingerprint so createStealthPage can reuse it (Story 27.1).
+  if (fp) browser.__fingerprint = fp;
   return browser;
 }
 
@@ -95,34 +110,66 @@ export async function launchStealthBrowser(options = {}) {
  * Create a stealth-configured page with all patches applied
  */
 export async function createStealthPage(browser, options = {}) {
-  const { proxy, userAgent } = options;
+  const { proxy, userAgent, fingerprint, fingerprintManager, accountId, platform } = options;
   const page = await browser.newPage();
 
-  // Set random user agent
-  const ua = userAgent || USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+  // Resolve a stable fingerprint: explicit option → browser-attached → manager (Story 27.1).
+  let fp = fingerprint && fingerprint.userAgent ? fingerprint : (browser && browser.__fingerprint) || null;
+  const fm = fingerprintManager || (accountId ? globalFingerprintManager : null);
+  if (!fp && fm && accountId) {
+    try {
+      fp = await fm.getForAccount(platform || 'default', accountId, { proxy });
+    } catch (err) {
+      console.warn(`⚠️ [stealth] FingerprintManager.getForAccount failed: ${err?.message || err}`);
+    }
+  }
+
+  // Set user agent — fingerprint-stable when available, else random (legacy).
+  const ua = userAgent || (fp && fp.userAgent) || USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
   await page.setUserAgent(ua);
+
+  // Timezone / locale consistency with the fingerprint (Story 27.1).
+  if (fp && fp.timezone && typeof page.emulateTimezone === 'function') {
+    try { await page.emulateTimezone(fp.timezone); } catch { /* older puppeteer */ }
+  }
 
   // Proxy authentication
   if (proxy && typeof proxy === 'object' && proxy.username && proxy.password) {
     await page.authenticate({ username: proxy.username, password: proxy.password });
   }
 
-  // Anti-detection patches
-  await page.evaluateOnNewDocument(() => {
+  // Anti-detection patches — apply the resolved fingerprint when present so
+  // platform/locale/WebGL/hardware stay consistent with the user-agent and
+  // proxy region (Story 27.1); otherwise keep the legacy randomized defaults.
+  await page.evaluateOnNewDocument((fpData) => {
+    const fp = fpData || null;
+    const navPlatform = fp && fp.platform ? fp.platform : ['Win32', 'MacIntel', 'Linux x86_64'][Math.floor(Math.random() * 3)];
+    const navLanguages = fp && fp.locale ? [fp.locale, fp.locale.split('-')[0]] : ['en-US', 'en'];
+    const webglVendor = fp && fp.webgl ? fp.webgl.vendor : 'Intel Inc.';
+    const webglRenderer = fp && fp.webgl ? fp.webgl.renderer : 'Intel Iris OpenGL Engine';
+
     // Override webdriver flag
     Object.defineProperty(navigator, 'webdriver', { get: () => false });
 
     // Override languages
-    Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+    Object.defineProperty(navigator, 'languages', { get: () => navLanguages });
+    if (fp && fp.locale) {
+      Object.defineProperty(navigator, 'language', { get: () => fp.locale });
+    }
 
     // Override plugins length
     Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
 
-    // Override platform
-    const platforms = ['Win32', 'MacIntel', 'Linux x86_64'];
-    Object.defineProperty(navigator, 'platform', {
-      get: () => platforms[Math.floor(Math.random() * platforms.length)],
-    });
+    // Override platform — fingerprint-stable, not random, when available
+    Object.defineProperty(navigator, 'platform', { get: () => navPlatform });
+
+    // Hardware concurrency + device memory consistent with the fingerprint OS
+    if (fp && fp.hardwareConcurrency) {
+      Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => fp.hardwareConcurrency });
+    }
+    if (fp && fp.deviceMemory) {
+      try { Object.defineProperty(navigator, 'deviceMemory', { get: () => fp.deviceMemory }); } catch { /* FF lacks deviceMemory */ }
+    }
 
     // Override permissions
     const originalQuery = window.navigator.permissions.query;
@@ -131,14 +178,14 @@ export async function createStealthPage(browser, options = {}) {
         ? Promise.resolve({ state: Notification.permission })
         : originalQuery(parameters);
 
-    // WebGL vendor and renderer
+    // WebGL vendor and renderer — fingerprint-stable
     const getParameter = WebGLRenderingContext.prototype.getParameter;
     WebGLRenderingContext.prototype.getParameter = function (parameter) {
-      if (parameter === 37445) return 'Intel Inc.';
-      if (parameter === 37446) return 'Intel Iris OpenGL Engine';
+      if (parameter === 37445) return webglVendor;
+      if (parameter === 37446) return webglRenderer;
       return getParameter.call(this, parameter);
     };
-  });
+  }, fp || null);
 
   // Set realistic viewport
   const viewport = page.viewport();

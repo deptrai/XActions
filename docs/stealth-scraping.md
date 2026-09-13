@@ -187,3 +187,48 @@ Human-like typing: random inter-key delay (50–150ms), occasional pauses.
 - Firefox 121–123 (Windows, Mac)
 - Safari 17 (Mac)
 - Edge 120 (Windows)
+
+---
+
+## FingerprintManager (Story 27.1)
+
+`FingerprintManager` (`src/core/fingerprint-manager.js`) manages a pool of *complete*, internally-consistent browser fingerprints and binds them to a geo-consistent proxy region so platforms cannot fingerprint XActions via TLS/JA4 mismatch, inconsistent timezone/locale, or proxy-UA mismatch.
+
+### `getForAccount(platform, accountId, { proxy })`
+
+Returns a stable `Fingerprint` for `platform:accountId`:
+
+```js
+import { globalFingerprintManager } from './src/core/fingerprint-manager.js';
+
+const fp = await globalFingerprintManager.getForAccount('twitter', 'alice', {
+  proxy: { region: 'us' },   // or proxy record from ProxyIpPool
+});
+// → { userAgent, viewport, timezone, locale, colorDepth, platform,
+//     webgl: {vendor,renderer}, fonts, hardwareConcurrency, deviceMemory, ... }
+```
+
+- **Stable** — repeated calls return the same fingerprint until `rotateForAccount()`.
+- **Geo-consistent** — `timezone`/`locale` are derived from the proxy `region`/`country`; when the proxy exposes no region they stay internally consistent with the fingerprint's OS family.
+- **Unique per account** — two accounts on the same region get independent fingerprints.
+- **Persisted** — when the account is registered in `SocialAccount`, the fingerprint is written to `metadata.fingerprint`; otherwise it lives in-process.
+
+### `rotateForAccount(platform, accountId, { proxy })`
+
+Explicitly generates and persists a new fingerprint. Only subsequent stealth launches pick it up — in-flight pages are unaffected.
+
+### `bindProxyRegion(accountId, region)`
+
+Bind an account to a region so future fingerprints are geo-consistent even without a proxy record.
+
+### Stealth browser integration
+
+`launchStealthBrowser` / `createStealthPage` accept `fingerprint`, `fingerprintManager`, `accountId`, `platform`. When a fingerprint resolves, the page's `navigator.platform`, `languages`, `language`, `hardwareConcurrency`, `deviceMemory`, WebGL vendor/renderer, UA, viewport, and `--lang` flag all come from the fingerprint instead of randomized defaults.
+
+### TlsProfileProvider
+
+`TlsProfileProvider` (`src/core/tls-profile-provider.js`) maps a browser family to a representative TLS handshake profile (`cipherSuites`, `minVersion`, `alpnProtocols`, `sigAlgs`) — a best-effort JA3/JA4 hint. When the transport cannot expose cipher control it is a graceful no-op; the browser fingerprint still applies.
+
+```js
+const tls = globalFingerprintManager.tlsProfileFor(fp); // → TlsProfile | null
+```
