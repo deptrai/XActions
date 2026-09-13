@@ -111,9 +111,10 @@ export class TikTokShopCrawler extends AbstractCrawler {
       if (products.length >= limit) break;
     }
 
-    if (this.store && typeof this.store.storeBatch === 'function' && products.length > 0) {
+    const validProducts = this.filterValidItems(products);
+    if (this.store && typeof this.store.storeBatch === 'function' && validProducts.length > 0) {
       try {
-        await this.store.storeBatch(products, { upsert: true });
+        await this.store.storeBatch(validProducts, { upsert: true });
       } catch (storeErr) {
         if (process.env.NODE_ENV !== 'production' && process.env.TIKTOK_SHOP_LOG_STORE !== 'false') {
           // eslint-disable-next-line no-console
@@ -169,9 +170,10 @@ export class TikTokShopCrawler extends AbstractCrawler {
       });
     }
 
-    if (this.store && typeof this.store.storeBatch === 'function') {
+    const validProducts = this.filterValidItems([product]);
+    if (this.store && typeof this.store.storeBatch === 'function' && validProducts.length > 0) {
       try {
-        await this.store.storeBatch([product], { upsert: true });
+        await this.store.storeBatch(validProducts, { upsert: true });
       } catch (storeErr) {
         if (process.env.NODE_ENV !== 'production' && process.env.TIKTOK_SHOP_LOG_STORE !== 'false') {
           // eslint-disable-next-line no-console
@@ -229,9 +231,10 @@ export class TikTokShopCrawler extends AbstractCrawler {
       if (products.length >= limit) break;
     }
 
-    if (this.store && typeof this.store.storeBatch === 'function' && products.length > 0) {
+    const validProducts = this.filterValidItems(products);
+    if (this.store && typeof this.store.storeBatch === 'function' && validProducts.length > 0) {
       try {
-        await this.store.storeBatch(products, { upsert: true });
+        await this.store.storeBatch(validProducts, { upsert: true });
       } catch (storeErr) {
         if (process.env.NODE_ENV !== 'production' && process.env.TIKTOK_SHOP_LOG_STORE !== 'false') {
           // eslint-disable-next-line no-console

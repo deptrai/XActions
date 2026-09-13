@@ -272,6 +272,32 @@ export class AbstractCrawler {
   }
 
   /**
+   * Validate a batch of items, dropping corrupted/invalid ones instead of
+   * aborting the whole batch. Returns only the items that passed validateItem.
+   * Corrupted drops surface a warn log so schema drift is never silent.
+   * @template T
+   * @param {T[]} items
+   * @returns {T[]}
+   */
+  filterValidItems(items) {
+    if (!Array.isArray(items)) return [];
+    const valid = [];
+    for (const item of items) {
+      try {
+        this.validateItem(item);
+        valid.push(item);
+      } catch (err) {
+        const type = /** @type {any} */ (err)?.type;
+        console.warn(
+          `[${this.name}] item dropped by validation (${type || 'unknown'}): ` +
+            (err instanceof Error ? err.message : String(err)),
+        );
+      }
+    }
+    return valid;
+  }
+
+  /**
    * @param {CrawlerCommand} command
    * @returns {Promise<PostItem[] | CommentItem[] | PostItem | any>}
    */

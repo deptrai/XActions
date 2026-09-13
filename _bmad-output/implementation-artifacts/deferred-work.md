@@ -137,11 +137,14 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-28-1-schemadriftguard-runtime-contract-validation-completeness-cl.md`
   summary: Non-post entities (comments and profiles) in YouTube and Zalo crawlers bypass runtime contract validation
   evidence: In YouTube crawler (`videoComments`, `channelDetail`) and Zalo crawler (`oaDetail`, `followers`), items are sent directly to store without passing through `this.validateItem(item)`. Pre-existing crawler gap outside Story 28.1 scope.
+  status: RESOLVED (2026-09-13) — `validateItem` wired into YouTube `#persistPosts`/`#persistProfiles`/`#persistComments` and Zalo `#persistProfiles` via `AbstractCrawler.filterValidItems` (drops corrupted items with a warn log instead of aborting the batch).
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-28-1-schemadriftguard-runtime-contract-validation-completeness-cl.md`
   summary: Vertical, e-commerce, and recruitment crawlers do not invoke validateItem before storeBatch
   evidence: 11 crawler subclasses (e.g. LinkedIn, Shopee, VietnamWorks, Batdongsan) pre-date contract validation and do not call `this.validateItem(item)`. Requires systematic crawler adoption in future data quality hardening.
+  status: RESOLVED (2026-09-13) — `filterValidItems` (new `AbstractCrawler` helper) wired before every `storeBatch`/`savePosts`/`saveComments` in: LinkedIn, VietnamWorks, TopCV, Batdongsan, Chotot, Shopee, TikTok-Shop, MaSoThue, Automotive, BlueSky, Mastodon. Verified all normalized items satisfy post/comment/profile contracts, so no false `corrupted`. ThreadsCrawler silent `catch {}` now surfaces `DEGRADED_DATA` via warn log.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-28-1-schemadriftguard-runtime-contract-validation-completeness-cl.md`
   summary: Downstream content store preservation and indexing of item.dataQuality metadata
   evidence: `AbstractCrawler.validateItem` attaches `item.dataQuality` to degraded in-memory items, but SQL/Prisma persistence adapters lack dedicated unit tests verifying whether `dataQuality` is stored in `metadata` or requires schema column mappings.
+  status: PARTIALLY RESOLVED (2026-09-13) — added `base-crawler-drift.test.js` test asserting `item.dataQuality` survives a JSON store round-trip (`JsonStore` serializes via `JSON.stringify`/`JSON.parse`). Remaining open question: whether Prisma schema needs a dedicated `dataQuality` column vs. folding into `metadata` — that mapping decision is still deferred.

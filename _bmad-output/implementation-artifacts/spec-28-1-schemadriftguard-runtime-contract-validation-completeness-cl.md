@@ -142,10 +142,10 @@ Implementation review pass (Edge Case Hunter + Verification Gap Reviewer):
 - [x] [Review][Patch] `category: 'profile'` mis-inferred as post-item [<src/core/schema-drift-guard.js:98>] — applied: `rec.category !== 'profile'` keeps ProfileItem as profile; tested
 - [x] [Review][Patch] `item.dataQuality` assigned to non-extensible/frozen item [<src/core/base-crawler.js:266>] — applied: added `Object.isExtensible(item)` guard
 - [x] [Review][Patch] Item schemas rejected `metadata: null` [<schemas/items/{post,comment,profile}-item.json:33>] — applied: union type `["object", "null"]`
-- [x] [Review][False] `ThreadsCrawler` swallows `PlatformError(DEGRADED_DATA)` [<src/scrapers/social/threads/crawler.js:1122>] — rejected: by design `// Skip invalid posts instead of aborting the whole batch.`, spec boundary explicitly states callers can catch/skip per-item
-- [x] [Review][Defer] Non-post entities (comments, profiles) bypass validateItem in YouTube/Zalo [<src/scrapers/social/youtube/crawler.js:462>] — deferred: pre-existing scraper gap to future crawler hardening
-- [x] [Review][Defer] 11 vertical crawlers do not adopt validateItem [<src/scrapers/recruitment/linkedin/crawler.js:121>] — deferred: pre-existing crawler gap across vertical scrapers
-- [x] [Review][Defer] Downstream store persistence adapter testing for item.dataQuality [<src/core/base-crawler.js:266>] — deferred: tracked in deferred-work.md for store adapter tests
+- [x] [Review][Patch] `ThreadsCrawler` swallows `PlatformError(DEGRADED_DATA)` [<src/scrapers/social/threads/crawler.js:1121>] — applied (2026-09-13): 4 silent `catch {}` blocks now catch `err` and `console.warn` when `err.type === ErrorTypes.DEGRADED_DATA`, so contract drift is surfaced instead of silently dropped (still skip-per-item, never aborts batch)
+- [x] [Review][Patch] Non-post entities (comments, profiles) bypass validateItem in YouTube/Zalo [<src/scrapers/social/youtube/crawler.js:283>] — applied (2026-09-13): `validateItem` wired into YouTube `#persistPosts`/`#persistProfiles`/`#persistComments` and Zalo `#persistProfiles`; corrupted items dropped with warn log
+- [x] [Review][Patch] 11 vertical crawlers do not adopt validateItem [<src/scrapers/recruitment/linkedin/crawler.js:121>] — applied (2026-09-13): new `AbstractCrawler.filterValidItems` helper wired before every `storeBatch`/`savePosts`/`saveComments` across LinkedIn, VietnamWorks, TopCV, Batdongsan, Chotot, Shopee, TikTok-Shop, MaSoThue, Automotive, BlueSky, Mastodon; verified normalized items satisfy post/comment/profile contracts (no false-corrupted)
+- [x] [Review][Patch] Downstream store persistence adapter testing for item.dataQuality [<src/core/base-crawler.js:266>] — applied (2026-09-13): added `base-crawler-drift.test.js` test asserting `item.dataQuality` survives a JSON store round-trip. NOTE: whether Prisma needs a dedicated `dataQuality` column vs. folding into `metadata` remains an open mapping decision (still tracked in deferred-work.md)
 
 ## Design Notes
 
@@ -159,5 +159,6 @@ Implementation review pass (Edge Case Hunter + Verification Gap Reviewer):
 
 **Commands:**
 - `npm run typecheck` — 0 errors strict.
-- `vitest run tests/core/schema-drift-guard.test.js tests/core/base-crawler-drift.test.js` — pass.
+- `vitest run tests/core/schema-drift-guard.test.js tests/core/base-crawler-drift.test.js` — pass (incl. `dataQuality` JSON store round-trip).
+- `vitest run` (14 patched crawlers' suites: youtube, zalo, threads, bluesky, mastodon, shopee, tiktok-shop, linkedin, vietnamworks, topcv, batdongsan, chotot, masothue, automotive) — pass, no regression.
 - `vitest run` — full suite no regression.

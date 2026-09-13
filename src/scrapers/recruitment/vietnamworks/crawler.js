@@ -104,9 +104,10 @@ export class VietnamWorksCrawler extends AbstractCrawler {
     const rawList = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp?.items) ? resp.items : []);
     const jobs = rawList.map((/** @type {any} */ job) => normalizeVietnamWorksJob(job));
 
-    if (this.store && typeof this.store.storeBatch === 'function') {
+    const validJobs = this.filterValidItems(jobs);
+    if (this.store && typeof this.store.storeBatch === 'function' && validJobs.length > 0) {
       try {
-        await this.store.storeBatch(jobs, { validateSchema: true });
+        await this.store.storeBatch(validJobs, { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
           console.warn('[VietnamWorksCrawler] Failed to persist jobs batch:', err instanceof Error ? err.message : String(err));
@@ -167,9 +168,10 @@ export class VietnamWorksCrawler extends AbstractCrawler {
       sourceMethod: 'job_detail',
     };
 
-    if (this.store && typeof this.store.storeBatch === 'function') {
+    const validJobs = this.filterValidItems([job]);
+    if (this.store && typeof this.store.storeBatch === 'function' && validJobs.length > 0) {
       try {
-        await this.store.storeBatch([job], { validateSchema: true });
+        await this.store.storeBatch(validJobs, { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
           console.warn('[VietnamWorksCrawler] Failed to persist job detail:', err instanceof Error ? err.message : String(err));

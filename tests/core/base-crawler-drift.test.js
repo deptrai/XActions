@@ -121,6 +121,43 @@ describe('Story 28.1 — BaseCrawler DriftGuard Integration Tests', () => {
     expect(store.items[0].dataQuality?.classification).toBe('degraded');
   });
 
+  it('persists item.dataQuality through a JSON store round-trip (serialization survives)', async () => {
+    // Simulates a JSON-backed store (e.g. Prisma/Redis) where the item is
+    // serialized on write and deserialized on read — dataQuality must survive.
+    class JsonStore extends InMemoryStore {
+      async storeBatch(items) {
+        const serialized = JSON.parse(JSON.stringify(items));
+        this.items.push(...serialized);
+        return { insertedCount: serialized.length, duplicateCount: 0, totalCount: this.items.length, schemaValid: true };
+      }
+    }
+
+    const store = new JsonStore();
+    const crawler = new SampleCrawler({ store });
+
+    const degradedPost = {
+      id: 'twitter:777',
+      platform: 'twitter',
+      externalId: '777',
+      category: 'social',
+      authorId: 'auth_7',
+      content: 'Degraded post to verify dataQuality JSON persistence',
+    };
+
+    crawler.validateItem(degradedPost);
+    expect(degradedPost.dataQuality?.classification).toBe('degraded');
+
+    await crawler.processAndPersist([degradedPost]);
+
+    expect(store.items).toHaveLength(1);
+    const persisted = store.items[0];
+    expect(persisted.dataQuality).toBeDefined();
+    expect(persisted.dataQuality?.classification).toBe('degraded');
+    expect(persisted.dataQuality?.score).toBe(80);
+    expect(Array.isArray(persisted.dataQuality?.missingFields)).toBe(true);
+    expect(persisted.dataQuality?.missingFields).toContain('authorAvatar');
+  });
+
   it('throws PlatformError(DEGRADED_DATA) and prevents corrupted item from persisting when required field is missing', async () => {
     const store = new InMemoryStore();
     const crawler = new SampleCrawler({ store });

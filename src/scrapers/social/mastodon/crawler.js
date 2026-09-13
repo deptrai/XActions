@@ -259,8 +259,10 @@ export class MastodonCrawler extends AbstractCrawler {
     }
 
     if (this.store && profiles.length > 0) {
-      const postItems = profiles.map(profileItemToPostItem);
-      await this.store.storeBatch(postItems).catch(() => {});
+      const postItems = this.filterValidItems(profiles.map(profileItemToPostItem));
+      if (postItems.length > 0) {
+        await this.store.storeBatch(postItems).catch(() => {});
+      }
     }
 
     return {
@@ -298,8 +300,10 @@ export class MastodonCrawler extends AbstractCrawler {
     }
 
     if (this.store && profiles.length > 0) {
-      const postItems = profiles.map(profileItemToPostItem);
-      await this.store.storeBatch(postItems).catch(() => {});
+      const postItems = this.filterValidItems(profiles.map(profileItemToPostItem));
+      if (postItems.length > 0) {
+        await this.store.storeBatch(postItems).catch(() => {});
+      }
     }
 
     return {
@@ -338,8 +342,9 @@ export class MastodonCrawler extends AbstractCrawler {
       args.onProgress({ scraped: posts.length, limit });
     }
 
-    if (this.store && posts.length > 0) {
-      await this.store.storeBatch(posts).catch(() => {});
+    const validPosts = this.filterValidItems(posts);
+    if (this.store && validPosts.length > 0) {
+      await this.store.storeBatch(validPosts).catch(() => {});
     }
 
     return posts;
@@ -362,8 +367,9 @@ export class MastodonCrawler extends AbstractCrawler {
     const posts = res.statuses.map((s) => normalizeMastodonStatus(s, instance));
     const profiles = res.accounts.map((a) => normalizeMastodonAccount(a, instance));
 
-    if (this.store && posts.length > 0) {
-      await this.store.storeBatch(posts).catch(() => {});
+    const validPosts = this.filterValidItems(posts);
+    if (this.store && validPosts.length > 0) {
+      await this.store.storeBatch(validPosts).catch(() => {});
     }
 
     return {
@@ -397,8 +403,9 @@ export class MastodonCrawler extends AbstractCrawler {
 
     const posts = res.statuses.map((s) => normalizeMastodonStatus(s, instance));
 
-    if (this.store && posts.length > 0) {
-      await this.store.storeBatch(posts).catch(() => {});
+    const validPosts = this.filterValidItems(posts);
+    if (this.store && validPosts.length > 0) {
+      await this.store.storeBatch(validPosts).catch(() => {});
     }
 
     return posts;
@@ -422,8 +429,9 @@ export class MastodonCrawler extends AbstractCrawler {
 
     const posts = raw.map((s) => normalizeMastodonStatus(s, instance));
 
-    if (this.store && posts.length > 0) {
-      await this.store.storeBatch(posts).catch(() => {});
+    const validPosts = this.filterValidItems(posts);
+    if (this.store && validPosts.length > 0) {
+      await this.store.storeBatch(validPosts).catch(() => {});
     }
 
     return posts;

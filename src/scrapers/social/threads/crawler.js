@@ -1118,8 +1118,13 @@ export class ThreadsCrawler extends AbstractCrawler {
           if (!post) continue;
           this.validateItem(post);
           posts.push(post);
-        } catch {
-          // Skip invalid posts instead of aborting the whole batch.
+        } catch (err) {
+          // Skip invalid posts instead of aborting the whole batch,
+          // but surface contract-drift signals instead of swallowing them.
+          const type = /** @type {any} */ (err)?.type;
+          if (type === ErrorTypes.DEGRADED_DATA) {
+            console.warn(`[threads] post dropped by schema drift: ${err instanceof Error ? err.message : String(err)}`);
+          }
         }
       }
     }
@@ -1195,8 +1200,13 @@ export class ThreadsCrawler extends AbstractCrawler {
               }
               this.validateItem(post);
               posts.push(post);
-            } catch {
-              // Skip invalid posts instead of aborting the whole batch.
+            } catch (err) {
+              // Skip invalid posts instead of aborting the whole batch,
+              // but surface contract-drift signals instead of swallowing them.
+              const type = /** @type {any} */ (err)?.type;
+              if (type === ErrorTypes.DEGRADED_DATA) {
+                console.warn(`[threads] post dropped by schema drift: ${err instanceof Error ? err.message : String(err)}`);
+              }
             }
           }
         }
@@ -1251,8 +1261,12 @@ export class ThreadsCrawler extends AbstractCrawler {
                 if (!post) continue;
                 this.validateItem(post);
                 posts.push(post);
-              } catch {
-                // Skip invalid SSR posts.
+              } catch (err) {
+                // Skip invalid SSR posts, but surface contract-drift signals.
+                const type = /** @type {any} */ (err)?.type;
+                if (type === ErrorTypes.DEGRADED_DATA) {
+                  console.warn(`[threads] SSR post dropped by schema drift: ${err instanceof Error ? err.message : String(err)}`);
+                }
               }
             }
           }
@@ -1293,8 +1307,12 @@ export class ThreadsCrawler extends AbstractCrawler {
                   if (!post) continue;
                   this.validateItem(post);
                   posts.push(post);
-                } catch {
-                  // Skip invalid SSR posts.
+                } catch (err) {
+                  // Skip invalid SSR posts, but surface contract-drift signals.
+                  const type = /** @type {any} */ (err)?.type;
+                  if (type === ErrorTypes.DEGRADED_DATA) {
+                    console.warn(`[threads] SSR post dropped by schema drift: ${err instanceof Error ? err.message : String(err)}`);
+                  }
                 }
               }
             }

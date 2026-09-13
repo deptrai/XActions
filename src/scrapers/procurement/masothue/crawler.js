@@ -141,8 +141,9 @@ export class MaSoThueCrawler extends AbstractCrawler {
     const posts = this.#extractItems(html, 'search', { province: args.province });
     const limit = Math.max(1, Number(args.limit) || 10);
 
-    if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
-      await this.store.storeBatch(posts.slice(0, limit)).catch(() => {});
+    const validPosts = this.filterValidItems(posts.slice(0, limit));
+    if (this.store && typeof this.store.storeBatch === 'function' && validPosts.length > 0) {
+      await this.store.storeBatch(validPosts).catch(() => {});
     }
 
     return {
@@ -194,8 +195,9 @@ export class MaSoThueCrawler extends AbstractCrawler {
     const posts = this.#extractItems(html, 'province', { province: province.name });
     const limit = Math.max(1, Number(args.limit) || 10);
 
-    if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
-      await this.store.storeBatch(posts.slice(0, limit)).catch(() => {});
+    const validPosts = this.filterValidItems(posts.slice(0, limit));
+    if (this.store && typeof this.store.storeBatch === 'function' && validPosts.length > 0) {
+      await this.store.storeBatch(validPosts).catch(() => {});
     }
 
     return {
@@ -240,8 +242,9 @@ export class MaSoThueCrawler extends AbstractCrawler {
     }
 
     const post = posts[0];
-    if (this.store && typeof this.store.storeBatch === 'function') {
-      await this.store.storeBatch([post]).catch(() => {});
+    const validPosts = this.filterValidItems([post]);
+    if (this.store && typeof this.store.storeBatch === 'function' && validPosts.length > 0) {
+      await this.store.storeBatch(validPosts).catch(() => {});
     }
 
     return { post };

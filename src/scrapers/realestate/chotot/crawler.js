@@ -135,9 +135,10 @@ export class ChototCrawler extends AbstractCrawler {
       listings.push(normalizeChototListing(ad, category, phone));
     }
 
-    if (this.store && typeof this.store.storeBatch === 'function') {
+    const validListings = this.filterValidItems(listings);
+    if (this.store && typeof this.store.storeBatch === 'function' && validListings.length > 0) {
       try {
-        await this.store.storeBatch(listings, { validateSchema: true });
+        await this.store.storeBatch(validListings, { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
           console.warn('[ChototCrawler] Failed to persist listings batch:', err instanceof Error ? err.message : String(err));
@@ -190,9 +191,10 @@ export class ChototCrawler extends AbstractCrawler {
       sourceMethod: 'listing_detail',
     };
 
-    if (this.store && typeof this.store.storeBatch === 'function') {
+    const validListings = this.filterValidItems([listing]);
+    if (this.store && typeof this.store.storeBatch === 'function' && validListings.length > 0) {
       try {
-        await this.store.storeBatch([listing], { validateSchema: true });
+        await this.store.storeBatch(validListings, { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
           console.warn('[ChototCrawler] Failed to persist listing detail:', err instanceof Error ? err.message : String(err));

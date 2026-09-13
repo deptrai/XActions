@@ -301,6 +301,7 @@ export abstract class AbstractCrawler {
   listActions(): ActionDescriptor[];
   getItemSchemaType(item: unknown): string;
   validateItem(item: PostItem | CommentItem | ProfileItem | unknown): void;
+  filterValidItems<T>(items: T[]): T[];
   start(command: CrawlerCommand): Promise<unknown>;
   resolveCheckpoint(action: string, args?: Record<string, unknown>): Promise<Record<string, unknown> | undefined>;
   shouldStopPagination(items: Array<{ id: string }>): Promise<boolean>;

@@ -258,19 +258,30 @@ export class YouTubeVNCrawler extends AbstractCrawler {
   async #persistPosts(posts) {
     if (!posts || !posts.length) return;
 
+    const valid = [];
+    for (const item of posts) {
+      try {
+        this.validateItem(item);
+        valid.push(item);
+      } catch (err) {
+        console.warn(`[youtube] skip invalid post item: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    if (!valid.length) return;
+
     if (this.store) {
       const store = /** @type {Record<string, Function>} */ (/** @type {unknown} */ (this.store));
       if (typeof this.store.storeBatch === 'function') {
-        await this.store.storeBatch(posts).catch(() => {});
+        await this.store.storeBatch(valid).catch(() => {});
       } else if (typeof store.savePost === 'function') {
-        for (const item of posts) {
+        for (const item of valid) {
           await store.savePost(item).catch(() => {});
         }
       }
     }
 
     if (this.publisher && typeof this.publisher.publish === 'function') {
-      for (const item of posts) {
+      for (const item of valid) {
         await this.publisher.publish(item, this.scraperId).catch(() => {});
       }
     }
@@ -287,7 +298,12 @@ export class YouTubeVNCrawler extends AbstractCrawler {
       const store = /** @type {Record<string, Function>} */ (/** @type {unknown} */ (this.store));
       if (typeof store.saveProfile === 'function') {
         for (const p of profiles) {
-          await store.saveProfile(p).catch(() => {});
+          try {
+            this.validateItem(p);
+            await store.saveProfile(p).catch(() => {});
+          } catch (err) {
+            console.warn(`[youtube] skip invalid profile item: ${err instanceof Error ? err.message : String(err)}`);
+          }
         }
       }
     }
@@ -304,7 +320,12 @@ export class YouTubeVNCrawler extends AbstractCrawler {
       const store = /** @type {Record<string, Function>} */ (/** @type {unknown} */ (this.store));
       if (typeof store.saveComment === 'function') {
         for (const c of comments) {
-          await store.saveComment(c).catch(() => {});
+          try {
+            this.validateItem(c);
+            await store.saveComment(c).catch(() => {});
+          } catch (err) {
+            console.warn(`[youtube] skip invalid comment item: ${err instanceof Error ? err.message : String(err)}`);
+          }
         }
       }
     }

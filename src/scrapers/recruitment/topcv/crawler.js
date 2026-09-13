@@ -100,9 +100,10 @@ export class TopCvCrawler extends AbstractCrawler {
     const html = await this.client.getHtml(searchUrl);
     const jobs = this.#parseJobListHtml(html).slice(0, limit);
 
-    if (this.store && typeof this.store.storeBatch === 'function') {
+    const validJobs = this.filterValidItems(jobs);
+    if (this.store && typeof this.store.storeBatch === 'function' && validJobs.length > 0) {
       try {
-        await this.store.storeBatch(jobs, { validateSchema: true });
+        await this.store.storeBatch(validJobs, { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
           console.warn('[TopCvCrawler] Failed to persist jobs batch:', err instanceof Error ? err.message : String(err));
@@ -145,9 +146,10 @@ export class TopCvCrawler extends AbstractCrawler {
     const html = await this.client.getHtml(jobUrl);
     const job = this.#parseJobDetailHtml(html, jobId, jobUrl);
 
-    if (this.store && typeof this.store.storeBatch === 'function') {
+    const validJobs = this.filterValidItems([job]);
+    if (this.store && typeof this.store.storeBatch === 'function' && validJobs.length > 0) {
       try {
-        await this.store.storeBatch([job], { validateSchema: true });
+        await this.store.storeBatch(validJobs, { validateSchema: true });
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
           console.warn('[TopCvCrawler] Failed to persist job detail:', err instanceof Error ? err.message : String(err));

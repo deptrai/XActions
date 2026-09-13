@@ -189,12 +189,13 @@ export class AutomotiveCrawler extends AbstractCrawler {
    * @returns {Promise<void>}
    */
   async #persist(posts) {
-    if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
-      await this.store.storeBatch(posts).catch(() => {});
+    const validPosts = this.filterValidItems(posts);
+    if (this.store && typeof this.store.storeBatch === 'function' && validPosts.length > 0) {
+      await this.store.storeBatch(validPosts).catch(() => {});
     }
 
-    if (this.publisher && typeof this.publisher.publish === 'function' && posts.length > 0) {
-      for (const post of posts) {
+    if (this.publisher && typeof this.publisher.publish === 'function' && validPosts.length > 0) {
+      for (const post of validPosts) {
         await this.publisher.publish({
           id: post.id,
           platform: post.platform,

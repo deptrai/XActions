@@ -248,8 +248,10 @@ export class BlueskyCrawler extends AbstractCrawler {
     const nextCursor = raw?.cursor || null;
 
     if (this.store && profiles.length > 0) {
-      const postItems = profiles.map(profileItemToPostItem);
-      await this.store.storeBatch(postItems).catch(() => {});
+      const postItems = this.filterValidItems(profiles.map(profileItemToPostItem));
+      if (postItems.length > 0) {
+        await this.store.storeBatch(postItems).catch(() => {});
+      }
     }
 
     return {
@@ -284,8 +286,10 @@ export class BlueskyCrawler extends AbstractCrawler {
     const nextCursor = raw?.cursor || null;
 
     if (this.store && profiles.length > 0) {
-      const postItems = profiles.map(profileItemToPostItem);
-      await this.store.storeBatch(postItems).catch(() => {});
+      const postItems = this.filterValidItems(profiles.map(profileItemToPostItem));
+      if (postItems.length > 0) {
+        await this.store.storeBatch(postItems).catch(() => {});
+      }
     }
 
     return {
@@ -324,8 +328,9 @@ export class BlueskyCrawler extends AbstractCrawler {
     const posts = rawFeed.map(normalizeBlueskyPost);
     const nextCursor = raw?.cursor || null;
 
-    if (this.store && posts.length > 0) {
-      await this.store.storeBatch(posts).catch(() => {});
+    const validPosts = this.filterValidItems(posts);
+    if (this.store && validPosts.length > 0) {
+      await this.store.storeBatch(validPosts).catch(() => {});
     }
 
     return {
@@ -380,8 +385,9 @@ export class BlueskyCrawler extends AbstractCrawler {
     const posts = rawPosts.map(normalizeBlueskyPost);
     const nextCursor = raw?.cursor || null;
 
-    if (this.store && posts.length > 0) {
-      await this.store.storeBatch(posts).catch(() => {});
+    const validPosts = this.filterValidItems(posts);
+    if (this.store && validPosts.length > 0) {
+      await this.store.storeBatch(validPosts).catch(() => {});
     }
 
     return {
@@ -411,8 +417,9 @@ export class BlueskyCrawler extends AbstractCrawler {
       .slice(0, limit)
       .map((topic, idx) => normalizeBlueskyTrendingTopic(topic, idx + 1));
 
-    if (this.store && trends.length > 0) {
-      await this.store.storeBatch(trends).catch(() => {});
+    const validTrends = this.filterValidItems(trends);
+    if (this.store && validTrends.length > 0) {
+      await this.store.storeBatch(validTrends).catch(() => {});
     }
 
     return {
@@ -457,8 +464,9 @@ export class BlueskyCrawler extends AbstractCrawler {
     const posts = rawFeed.map(normalizeBlueskyPost);
     const nextCursor = raw?.cursor || null;
 
-    if (this.store && posts.length > 0) {
-      await this.store.storeBatch(posts).catch(() => {});
+    const validPosts = this.filterValidItems(posts);
+    if (this.store && validPosts.length > 0) {
+      await this.store.storeBatch(validPosts).catch(() => {});
     }
 
     return {

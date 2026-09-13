@@ -133,8 +133,9 @@ export class ShopeeCrawler extends AbstractCrawler {
     }
 
     const storeForSearch = /** @type {any} */ (this.store);
-    if (storeForSearch && typeof storeForSearch.savePosts === 'function' && products.length > 0) {
-      await storeForSearch.savePosts(products).catch(() => {});
+    const validProducts = this.filterValidItems(products);
+    if (storeForSearch && typeof storeForSearch.savePosts === 'function' && validProducts.length > 0) {
+      await storeForSearch.savePosts(validProducts).catch(() => {});
     }
 
     const stopPagination = await this.shouldStopPagination(products);
@@ -205,8 +206,9 @@ export class ShopeeCrawler extends AbstractCrawler {
     }
 
     const storeForDetail = /** @type {any} */ (this.store);
-    if (storeForDetail && typeof storeForDetail.savePosts === 'function') {
-      await storeForDetail.savePosts([product]).catch(() => {});
+    const validProducts = this.filterValidItems([product]);
+    if (storeForDetail && typeof storeForDetail.savePosts === 'function' && validProducts.length > 0) {
+      await storeForDetail.savePosts(validProducts).catch(() => {});
     }
 
     return { product };
@@ -254,8 +256,9 @@ export class ShopeeCrawler extends AbstractCrawler {
     }
 
     const storeForReviews = /** @type {any} */ (this.store);
-    if (storeForReviews && typeof storeForReviews.saveComments === 'function' && reviews.length > 0) {
-      await storeForReviews.saveComments(reviews).catch(() => {});
+    const validReviews = this.filterValidItems(reviews);
+    if (storeForReviews && typeof storeForReviews.saveComments === 'function' && validReviews.length > 0) {
+      await storeForReviews.saveComments(validReviews).catch(() => {});
     }
 
     const hasNext = Boolean(reviews.length > 0 && reviews.length === limit);

@@ -287,7 +287,12 @@ export class ZaloCrawler extends AbstractCrawler {
       const store = /** @type {Record<string, Function>} */ (/** @type {unknown} */ (this.store));
       if (typeof store.saveProfile === 'function') {
         for (const p of profiles) {
-          await store.saveProfile(p).catch(() => {});
+          try {
+            this.validateItem(p);
+            await store.saveProfile(p).catch(() => {});
+          } catch (err) {
+            console.warn(`[zalo] skip invalid profile item: ${err instanceof Error ? err.message : String(err)}`);
+          }
         }
       }
     }
