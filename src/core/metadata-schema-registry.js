@@ -31,7 +31,7 @@ const __dirname = path.dirname(__filename);
  * @param {string} [dataPath]
  * @returns {string[]}
  */
-function validateSchemaNode(schema, data, dataPath = 'metadata') {
+export function validateSchemaNode(schema, data, dataPath = 'metadata') {
   /** @type {string[]} */
   const errors = [];
 
@@ -149,7 +149,7 @@ function validateSchemaNode(schema, data, dataPath = 'metadata') {
   return errors;
 }
 
-class MetadataSchemaRegistry {
+export class MetadataSchemaRegistry {
   constructor() {
     /** @type {Map<string, JsonSchema>} */
     this.schemas = new Map();

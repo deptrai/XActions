@@ -131,3 +131,17 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-27-3-challengesignaturedetector-automated-bot-detection-page-dete.md`
   summary: Dedicated `challenge_detected` event emission in telemetry
   evidence: Telemetry in `AbstractApiClient` records `isCheckpoint` via `telemetry.recordRequest()`; emitting a dedicated event `{platform, accountId, type, confidence, signature}` can be added when challenge telemetry reporting is standardized.
+
+## Deferred from: code review of spec-28-1 (2026-09-13)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-28-1-schemadriftguard-runtime-contract-validation-completeness-cl.md`
+  summary: Non-post entities (comments and profiles) in YouTube and Zalo crawlers bypass runtime contract validation
+  evidence: In YouTube crawler (`videoComments`, `channelDetail`) and Zalo crawler (`oaDetail`, `followers`), items are sent directly to store without passing through `this.validateItem(item)`. Pre-existing crawler gap outside Story 28.1 scope.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-28-1-schemadriftguard-runtime-contract-validation-completeness-cl.md`
+  summary: Vertical, e-commerce, and recruitment crawlers do not invoke validateItem before storeBatch
+  evidence: 11 crawler subclasses (e.g. LinkedIn, Shopee, VietnamWorks, Batdongsan) pre-date contract validation and do not call `this.validateItem(item)`. Requires systematic crawler adoption in future data quality hardening.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-28-1-schemadriftguard-runtime-contract-validation-completeness-cl.md`
+  summary: Downstream content store preservation and indexing of item.dataQuality metadata
+  evidence: `AbstractCrawler.validateItem` attaches `item.dataQuality` to degraded in-memory items, but SQL/Prisma persistence adapters lack dedicated unit tests verifying whether `dataQuality` is stored in `metadata` or requires schema column mappings.

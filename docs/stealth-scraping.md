@@ -324,3 +324,60 @@ detector.registerPlatformSignatures('weibo', [{
 ```
 
 Platform signatures only fire when `input.platform` matches.
+
+## SchemaDriftGuard (Story 28.1)
+
+`SchemaDriftGuard` (`src/core/schema-drift-guard.js`) provides runtime schema validation and completeness classification for crawler data items (`PostItem`, `ProfileItem`, `CommentItem`) before storage. It guards downstream consumers against contract drift, missing fields, or malformed data.
+
+### Completeness Score & Classification
+
+Completeness is scored deterministically on a scale of `[0, 100]`:
+
+$$\text{score} = \max(0, 100 - 35 \times \text{missingRequired} - 15 \times \text{typeErrors} - \min(20, 5 \times \text{missingOptional}))$$
+
+- **`complete`**: `missingRequired === 0`, `typeErrors === 0`, and `missingOptional === 0` (score = 100). The item is stored normally without quality metadata.
+- **`degraded`**: `missingRequired === 0`, `typeErrors === 0`, and missing optional fields present (`score ≥ 70`). The missing optional penalty is capped at 20 points, preventing crawlers that omit optional engagement counters from being falsely marked as corrupted. The item is persisted with metadata attached:
+  ```js
+  item.dataQuality = {
+    score: 80,
+    missingFields: ['authorAvatar', 'postUrl', ...],
+    classification: 'degraded'
+  };
+  ```
+- **`corrupted`**: `missingRequired > 0` OR `typeErrors > 0` OR `score < 70`. Throws `PlatformError` with `type: ErrorTypes.DEGRADED_DATA` and `suggestedAction: SuggestedActions.RETRY_WITH_DIFFERENT_ACCOUNT`. Corrupted items abort batch storage and are never persisted to downstream stores.
+
+### Canonical Item Schemas
+
+Canonical contracts are located in `schemas/items/` and automatically discovered via `MetadataSchemaRegistry`:
+- `schemas/items/post-item.json`: Required: `id`, `platform`, `externalId`, `authorId`, `category`, `content`.
+- `schemas/items/comment-item.json`: Required: `id`, `platform`, `externalId`, `postId`, `authorId`, `content`.
+- `schemas/items/profile-item.json`: Required: `id`, `platform`, `externalId`.
+
+Timestamps (`crawledAt`, `publishedAt`) support union types `["object", "string"]` (supporting both Date instances and ISO strings). Nullable fields (`authorAvatar`, `publishedAt`) accept `null` without generating type errors.
+
+### Schema Resolution & Item Type Inference
+
+1. **Resolution Priority**: `${platform}:${schemaType}` (custom or registry) → `items:${schemaType}` (custom or registry). If no schema matches, the guard no-ops `complete` with score 100 for backward compatibility.
+2. **Discriminator Inference**:
+   - `postId` present → `'comment-item'`
+   - `authorId` present OR `category` present → `'post-item'` (handles media-only posts where `content: ''`)
+   - otherwise → `'profile-item'`
+
+Subclasses can override `getItemSchemaType(item)` to supply custom schema type mappings.
+
+### API & Crawler Integration
+
+```js
+import { globalSchemaDriftGuard, SchemaDriftGuard } from './src/core/schema-drift-guard.js';
+
+// Pure evaluation without throwing:
+const result = globalSchemaDriftGuard.validate('twitter', item);
+// → { classification: 'degraded', score: 90, missingFields: ['postUrl'], typeErrors: [] }
+
+// Throwing evaluation in crawlers:
+globalSchemaDriftGuard.validateOrThrow('twitter', item);
+// Throws PlatformError(ErrorTypes.DEGRADED_DATA) if corrupted
+```
+
+`AbstractCrawler.validateItem(item)` invokes `driftGuard.validateOrThrow(this.name, item, { schemaType: this.getItemSchemaType(item) })` after fundamental `id`/`platform`/`category` checks.
+

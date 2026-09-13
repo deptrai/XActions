@@ -45,4 +45,5 @@ export {
   generateCommentId,
   isValidCategory,
 } from './types.js';
-export { default as metadataSchemaRegistry } from './metadata-schema-registry.js';
+export { SchemaDriftGuard, globalSchemaDriftGuard } from './schema-drift-guard.js';
+export { default as metadataSchemaRegistry, MetadataSchemaRegistry, validateSchemaNode } from './metadata-schema-registry.js';

@@ -14,6 +14,7 @@ import { defaultTelemetryEmitter } from './telemetry-emitter.js';
 import { TelemetryContext } from './telemetry-context.js';
 import { globalChallengeSignatureDetector } from './challenge-signature-detector.js';
 import { globalSessionHealthOrchestrator } from './session-health-orchestrator.js';
+import { globalSchemaDriftGuard } from './schema-drift-guard.js';
 
 /** @typedef {import('./types.js').CrawlerCommand} CrawlerCommand */
 /** @typedef {import('./types.js').ActionDescriptor} ActionDescriptor */
@@ -47,6 +48,9 @@ export class AbstractCrawler {
 
   /** @type {import('./session-health-orchestrator.js').SessionHealthOrchestrator | null} */
   healthOrchestrator = null;
+
+  /** @type {import('./schema-drift-guard.js').SchemaDriftGuard | null} */
+  driftGuard = null;
 
   /** @type {string | null} */
   #scraperId = null;
@@ -107,6 +111,7 @@ export class AbstractCrawler {
    * @param {string} [deps.category]
    * @param {import('./challenge-signature-detector.js').ChallengeSignatureDetector} [deps.challengeDetector]
    * @param {import('./session-health-orchestrator.js').SessionHealthOrchestrator} [deps.healthOrchestrator]
+   * @param {import('./schema-drift-guard.js').SchemaDriftGuard} [deps.driftGuard]
    * @param {import('./telemetry-emitter.js').TelemetryEmitter} [deps.telemetryEmitter]
    */
   constructor(deps = {}) {
@@ -120,6 +125,7 @@ export class AbstractCrawler {
     this.accountPool = deps.accountPool || deps.client?.accountPool || null;
     this.challengeDetector = deps.challengeDetector || deps.client?.challengeDetector || globalChallengeSignatureDetector;
     this.healthOrchestrator = deps.healthOrchestrator || deps.client?.healthOrchestrator || globalSessionHealthOrchestrator;
+    this.driftGuard = deps.driftGuard || globalSchemaDriftGuard;
     this.cdpUrl = deps.cdpUrl || null;
     if (deps.requiresAuth !== undefined) {
       this.requiresAuth = deps.requiresAuth;
@@ -213,8 +219,21 @@ export class AbstractCrawler {
   }
 
   /**
+   * Hook to determine schema type for an item. Default uses driftGuard inference.
+   * Can be overridden by subclasses.
+   * @param {unknown} item
+   * @returns {string}
+   */
+  getItemSchemaType(item) {
+    if (this.driftGuard && typeof this.driftGuard.inferItemType === 'function') {
+      return this.driftGuard.inferItemType(item);
+    }
+    return 'post-item';
+  }
+
+  /**
    * Validate a post/comment item before storage.
-   * @param {PostItem | CommentItem} item
+   * @param {PostItem | CommentItem | import('./types.js').ProfileItem | any} item
    */
   validateItem(item) {
     if (
@@ -237,6 +256,18 @@ export class AbstractCrawler {
         platform: this.name,
         suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
       });
+    }
+
+    if (this.driftGuard && typeof this.driftGuard.validateOrThrow === 'function') {
+      const schemaType = this.getItemSchemaType(item);
+      const result = this.driftGuard.validateOrThrow(this.name, item, { schemaType });
+      if (result && result.classification === 'degraded' && Object.isExtensible(item)) {
+        item.dataQuality = {
+          score: result.score,
+          missingFields: result.missingFields,
+          classification: 'degraded',
+        };
+      }
     }
   }
 

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Canonical CommentItem Contract",
+  "type": "object",
+  "required": [
+    "id",
+    "platform",
+    "externalId",
+    "postId",
+    "authorId",
+    "content"
+  ],
+  "properties": {
+    "id": { "type": "string" },
+    "platform": { "type": "string" },
+    "externalId": { "type": "string" },
+    "postId": { "type": "string" },
+    "authorId": { "type": "string" },
+    "content": { "type": "string" },
+    "parentCommentId": { "type": ["string", "null"] },
+    "depth": { "type": "number" },
+    "authorName": { "type": "string" },
+    "authorAvatar": { "type": ["string", "null"] },
+    "likesCount": { "type": "number" },
+    "subCommentsCount": { "type": "number" },
+    "metadata": { "type": ["object", "null"] },
+    "publishedAt": { "type": ["object", "string", "null"] },
+    "crawledAt": { "type": ["object", "string"] }
+  }
+}

@@ -18,6 +18,7 @@ export const ErrorTypes = Object.freeze({
   TARGET_NOT_FOUND: 'target_not_found',
   INTERNAL: 'internal',
   DEPRECATED: 'deprecated', // Story 25.4 — unified deprecation error envelope
+  DEGRADED_DATA: 'degraded_data', // Story 28.1 — schema drift corrupted data
 });
 
 export const SuggestedActions = Object.freeze({
@@ -32,6 +33,7 @@ export const SuggestedActions = Object.freeze({
   CONTACT_SUPPORT: 'contact_support',
   USE_ACTIONS_LIST: 'use_x_actions_list',
   VERIFY_URL: 'verify_url',
+  RETRY_WITH_DIFFERENT_ACCOUNT: 'retry_with_different_account',
 });
 
 /** @type {Set<string>} */

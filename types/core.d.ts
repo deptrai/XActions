@@ -24,6 +24,7 @@ export interface PostItem {
   metadata?: Record<string, unknown>;
   publishedAt?: Date;
   crawledAt: Date;
+  dataQuality?: DataQualityMetadata;
 }
 
 export interface CommentItem {
@@ -42,6 +43,24 @@ export interface CommentItem {
   metadata?: Record<string, unknown>;
   publishedAt?: Date;
   crawledAt: Date;
+  dataQuality?: DataQualityMetadata;
+}
+
+export interface ProfileItem {
+  id: string;
+  platform: string;
+  externalId: string;
+  username?: string;
+  name?: string;
+  authorName?: string;
+  bio?: string;
+  avatar?: string;
+  profileUrl?: string;
+  followersCount?: number;
+  followingCount?: number;
+  metadata?: Record<string, unknown>;
+  crawledAt: Date;
+  dataQuality?: DataQualityMetadata;
 }
 
 export interface ThinEvent {
@@ -191,7 +210,11 @@ export const ErrorTypes: Readonly<{
   PROXY_EXHAUSTED: 'proxy_exhausted';
   HIBERNATION: 'hibernation';
   INVALID_ARGS: 'invalid_args';
+  NOT_FOUND: 'not_found';
+  TARGET_NOT_FOUND: 'target_not_found';
   INTERNAL: 'internal';
+  DEPRECATED: 'deprecated';
+  DEGRADED_DATA: 'degraded_data';
 }>;
 
 export const SuggestedActions: Readonly<{
@@ -199,11 +222,14 @@ export const SuggestedActions: Readonly<{
   ROTATE_PROXY: 'rotate_proxy';
   ROTATE_ACCOUNT: 'rotate_account';
   HIBERNATE_ACCOUNT: 'hibernate_account';
+  RATE_LIMIT_BACKOFF: 'rate_limit_backoff';
   RELOGIN: 'relogin';
   WAIT: 'wait';
   REDUCE_RATE: 'reduce_rate';
   CONTACT_SUPPORT: 'contact_support';
   USE_ACTIONS_LIST: 'use_x_actions_list';
+  VERIFY_URL: 'verify_url';
+  RETRY_WITH_DIFFERENT_ACCOUNT: 'retry_with_different_account';
 }>;
 
 export class PlatformError extends Error {
@@ -257,6 +283,7 @@ export abstract class AbstractCrawler {
   accountPool: AccountPool | null;
   challengeDetector: ChallengeSignatureDetector | null;
   healthOrchestrator: SessionHealthOrchestrator | null;
+  driftGuard: SchemaDriftGuard | null;
   constructor(deps?: {
     client?: AbstractApiClient;
     store?: AbstractStore;
@@ -267,11 +294,13 @@ export abstract class AbstractCrawler {
     cdpUrl?: string;
     challengeDetector?: ChallengeSignatureDetector;
     healthOrchestrator?: SessionHealthOrchestrator;
+    driftGuard?: SchemaDriftGuard;
   });
   registerAction(action: string, handler: Function, descriptor?: Partial<Omit<ActionDescriptor, 'action'>>): void;
   registerAction(descriptor: Partial<ActionDescriptor> & { action: string; handler: Function }): void;
   listActions(): ActionDescriptor[];
-  validateItem(item: PostItem | CommentItem): void;
+  getItemSchemaType(item: unknown): string;
+  validateItem(item: PostItem | CommentItem | ProfileItem | unknown): void;
   start(command: CrawlerCommand): Promise<unknown>;
   resolveCheckpoint(action: string, args?: Record<string, unknown>): Promise<Record<string, unknown> | undefined>;
   shouldStopPagination(items: Array<{ id: string }>): Promise<boolean>;
@@ -697,3 +726,88 @@ export class ChallengeSignatureDetector {
 }
 
 export const globalChallengeSignatureDetector: ChallengeSignatureDetector;
+
+// ---------------------------------------------------------------------------
+// Story 28.1 — SchemaDriftGuard: Runtime Contract Validation & Completeness Classification
+// ---------------------------------------------------------------------------
+
+export interface DataQualityMetadata {
+  score: number;
+  missingFields: string[];
+  classification: 'degraded';
+}
+
+export type DriftClassification = 'complete' | 'degraded' | 'corrupted';
+
+export interface DriftValidationResult {
+  classification: DriftClassification;
+  score: number;
+  missingFields: string[];
+  typeErrors: string[];
+}
+
+export interface JsonSchema {
+  type?: string | string[];
+  enum?: unknown[];
+  minimum?: number;
+  maximum?: number;
+  pattern?: string;
+  properties?: Record<string, JsonSchema>;
+  required?: string[];
+  items?: JsonSchema;
+  oneOf?: JsonSchema[];
+  anyOf?: JsonSchema[];
+  title?: string;
+  description?: string;
+  version?: string;
+}
+
+export function validateSchemaNode(
+  schema: JsonSchema | undefined | null,
+  data: unknown,
+  dataPath?: string
+): string[];
+
+export class MetadataSchemaRegistry {
+  constructor();
+  registerSchema(platform: string, category: string, schema: JsonSchema): void;
+  getSchema(platform: string, category: string): JsonSchema | null;
+  hasSchema(platform: string, category: string): boolean;
+  loadSchemasFromDisk(schemasDir: string): void;
+  listSchemas(): Array<{
+    platform: string;
+    category: string;
+    title: string;
+    description: string;
+    version: string;
+    propertiesCount: number;
+  }>;
+  validateMetadata(
+    platform: string,
+    category: string,
+    metadata: unknown
+  ): { valid: boolean; errors: string[] };
+}
+
+export const metadataSchemaRegistry: MetadataSchemaRegistry;
+
+export class SchemaDriftGuard {
+  registry: MetadataSchemaRegistry;
+  constructor(deps?: { registry?: MetadataSchemaRegistry });
+  registerItemSchema(type: string, schema: JsonSchema): void;
+  getSchema(platform: string, schemaType: string): JsonSchema | null;
+  inferItemType(item: unknown): string;
+  validate(
+    platform: string,
+    item: unknown,
+    opts?: { schemaType?: string }
+  ): DriftValidationResult;
+  validateOrThrow(
+    platform: string,
+    item: unknown,
+    opts?: { schemaType?: string }
+  ): DriftValidationResult;
+}
+
+export const globalSchemaDriftGuard: SchemaDriftGuard;
+

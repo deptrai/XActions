@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Canonical PostItem Contract",
+  "type": "object",
+  "required": [
+    "id",
+    "platform",
+    "externalId",
+    "authorId",
+    "category",
+    "content"
+  ],
+  "properties": {
+    "id": { "type": "string" },
+    "platform": { "type": "string" },
+    "externalId": { "type": "string" },
+    "category": { "type": "string" },
+    "authorId": { "type": "string" },
+    "content": { "type": "string" },
+    "title": { "type": "string" },
+    "authorName": { "type": "string" },
+    "authorAvatar": { "type": ["string", "null"] },
+    "authorUrl": { "type": ["string", "null"] },
+    "postUrl": { "type": ["string", "null"] },
+    "mediaUrls": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "likesCount": { "type": "number" },
+    "repostsCount": { "type": "number" },
+    "repliesCount": { "type": "number" },
+    "viewsCount": { "type": "number" },
+    "metadata": { "type": ["object", "null"] },
+    "publishedAt": { "type": ["object", "string", "null"] },
+    "crawledAt": { "type": ["object", "string"] }
+  }
+}
