@@ -499,6 +499,7 @@ CREATE INDEX IF NOT EXISTS idx_post_metadata_salary ON "Post" USING btree ((meta
 * AD-17: Redis Stream Metrics & Backpressure Observability.
 * AD-18: Metadata Schema Contract for Consumers.
 * AD-19: Internal Operator Dashboard, Admin CLI & MCP Surface.
+* AD-23: Pluggable Browser Backend (Chrome/Obscura) with Auth-Aware Fallback & Per-Backend Telemetry.
 * Thêm section Inherited Invariants, Deferred, Open Questions.
 
 ---
@@ -537,3 +538,15 @@ Tất cả AD UX đã được chuyển thành story acceptance criteria trong `
 * AD-8 + AD-14: Đồng bộ ngôn ngữ action-level ("mặc định ở cấp platform, override theo action") và bổ sung `requiresAuth` vào Action Discovery Contract.
 * AD-5 rule 4 + AD-9 rule 1: Đồng bộ hóa wording từ platform-level sang action-level request auth state (F10, F11).
 * Tham chiếu: `sprint-change-proposal-2026-08-27.md` & `reviews/GATE-REPORT-2026-08-27.md`.
+
+### Decision Changelog bổ sung (2026-09-13 — Obscura Browser Backend)
+
+* **AD-23 adopted:** Pluggable browser backend cho `launchStealthBrowser` — `chrome` (default) | `obscura` (CDP, opt-in). Quyết định từ spike `scripts/obscura-spike.mjs`: Obscura (Rust, ~30MB) render được guest-visible pages nhưng **không mount `data-testid` trên SPA sau-auth** và **treo `waitUntil:'networkidle2'`** trên v0.2.2.
+  * **Rule 1 — Auth-aware backend scope:** `obscura` CHỈ phục vụ public/guest-visible scraping. Post-auth (`requiresAuth===true`, resolved per `base-crawler.js:177`) reject `obscura` bằng `PlatformError{ type: INVALID_ARGS }` — không silent fallback, không registry riêng.
+  * **Rule 2 — Fallback direction:** `XACTIONS_BROWSER_BACKEND` (primary) + `XACTIONS_BROWSER_BACKEND_FALLBACK` (default `chrome`). `obscura→chrome` luôn được phép; `chrome→obscura` chỉ trên public-scraping path.
+  * **Rule 3 — networkidle0 only:** mọi navigation trên `obscura` dùng `waitUntil:'networkidle0'`/`load`/`domcontentloaded`; cấm `networkidle2`.
+  * **Rule 4 — Backend ở adapter layer + teardown contract:** resolution đặt tại `PuppeteerAdapter.launch/connect` (điểm vào chung cho scraper bridges) và `launchStealthBrowser` (caller trực tiếp). Teardown per-backend: `obscura`→`disconnect()`, `chrome`→`close()` đọc từ `browser.__backend`.
+  * **Rule 5 — Per-backend telemetry:** `XACTIONS_BROWSER_BACKEND_METRICS=1` gắn `browserBackend` vào telemetry `emitRun` (Epic 34) khi browser launch thật xảy ra; per-backend comparison qua `obscura-spike.mjs BACKEND=both`. `CanaryRunner` không sửa (probe HTTP). Default OFF.
+  * **Rule 6 — Watch → Verify → Promote gate:** không auto-update; `obscura-for-auth` chỉ mở opt-in sau khi spike xanh (`/home` mount `data-testid`) + change request + human approve.
+* **Spec:** `implementation-artifacts/spec-27-4-obscura-public-scraping-backend-watch.md`; **Docs:** `docs/obscura-backend.md`, `docs/obscura-watch.md`; **Proposal:** `sprint-change-proposal-2026-09-13-obscura-backend.md`.
+* **Trigger:** Obscura spike evaluation + pluggable backend decision, approved by Luisphan.

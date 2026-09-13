@@ -114,12 +114,13 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-96 (Vietnam F&B, Healthcare & Legal Directory Crawler):** Cào danh bạ nhà hàng/quán cafe (PasGo, Foody, Riviu), phòng khám/nhà thuốc (Medpro, YouMed, Thuocsi), và đơn đăng ký nhãn hiệu (IP Vietnam `wipo.ipvietnam.gov.vn`). Chuẩn hóa `PostItem` (`category: 'fnb_merchant' | 'healthcare' | 'legal'`). (Epic 22.1–22.3)
 * **FR-97 (Zalo OA & YouTube VN Crawler):** Cào Zalo Official Account posts/followers qua Zalo OA API v3.0 (`openapi.zalo.me`) và YouTube VN channels/videos/comments qua YouTube Data API v3 với `regionCode: 'VN'`. HTML fallback khi API quota exhausted. Chuẩn hóa `PostItem` (`platform: 'zalo' | 'youtube'`). (Epic 33)
 * **FR-101 (Unified Social Account Storage):** Cung cấp `SocialAccount` và `SocialAccountHealth` Prisma models để lưu trữ session/cookie/proxy dùng chung cho mọi social platform (Reddit, Medium, Instagram, và các platform tương lai). Hỗ trợ `encryptedCookie`, `encryptedProxy`, `metadata Json?`, và quan hệ `User → SocialAccount[]`. Encryption dùng AES-256-GCM với key derivation từ `SESSION_SECRET`/`JWT_SECRET`. (Epic 35.4)
+* **FR-102 (Pluggable Browser Backend — Obscura for Public Scraping):** Hỗ trợ `launchStealthBrowser` chọn backend `chrome` (default) | `obscura` (CDP, opt-in) qua `options.backend` hoặc `XACTIONS_BROWSER_BACKEND`. `obscura` CHỈ phục vụ public/guest-visible scraping; post-auth actions (`post`/`like`/`reply`/`dm`/`spaces`) reject `obscura` bằng `PlatformError{ type: INVALID_ARGS }`. Primary/fallback qua `XACTIONS_BROWSER_BACKEND` + `XACTIONS_BROWSER_BACKEND_FALLBACK` (`obscura→chrome` luôn được phép; `chrome→obscura` chỉ trên public-scraping path). Mọi navigation trên `obscura` dùng `waitUntil:'networkidle0'` — `networkidle2` không được hỗ trợ (Obscura 0.2.x). Watch → Verify → Promote gate theo `docs/obscura-watch.md` — `obscura-for-auth` chỉ mở opt-in sau spike-verify, không bao giờ default. (Epic 27.4, AD-23)
 
 ---
 
 ## 4. Danh Mục Yêu Cầu Phi Chức Năng (Non-Functional Requirements NFR-11 ➔ NFR-19)
 
-* **NFR-11 (Tối ưu Tài Nguyên):** Giảm ít nhất **85% RAM** (từ ~10GB xuống <300MB) và **70% CPU** so với mô hình Full Headless Browser.
+* **NFR-11 (Tối ưu Tài Nguyên):** Giảm ít nhất **85% RAM** (từ ~10GB xuống <300MB) và **70% CPU** so với mô hình Full Headless Browser. *Củng cố bởi FR-102:* `obscura` backend (~30MB/engine) cho public scraping, đo improvement qua per-backend telemetry (`XACTIONS_BROWSER_BACKEND_METRICS=1` → `browserBackend` trong Epic 34 benchmark).
 * **NFR-12 (Băng Thông & Tốc Độ):** Tăng tốc độ thu thập dữ liệu lên ít nhất **5x–10x (>500 requests/giây)** bằng Async HTTP Client với Connection Pool.
 * **NFR-13 (Tự Phục Hồi & Chống Chặn):** Tự động phát hiện proxy chết/rate-limit, cách ly 5 phút và replay request 3 lần với exponential backoff.
 * **NFR-14 (Bảo Mật Phi Mật Khẩu):** Không lưu trữ plain-text password; đăng nhập an toàn qua Terminal ASCII QR Code và Chrome CDP Attach.

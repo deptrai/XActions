@@ -1610,6 +1610,26 @@ So that **the crawler can record `bot_challenge` hibernation immediately instead
 * **And** on detection, `AbstractApiClient` calls `governor.recordBotChallenge()` automatically
 * **And** the detector is unit-tested with real HTML/JSON samples from each platform
 
+### Story 27.4: Obscura Browser Backend — Public-Scraping Transport & Watch/Promote Gate
+As a **Scraping Reliability Engineer**,  
+I want **a pluggable browser backend in `stealthBrowser.js` where `obscura` (CDP) serves guest-visible scraping while `chrome` stays default for post-auth automation, plus a watch gate that promotes `obscura-for-auth` only after spike-verify**,  
+So that **we cut ~85% browser RAM on public scrapes without risking React-hydration failures on logged-in automation**.
+
+**Acceptance Criteria:**
+* **Given** `PuppeteerAdapter.launch/connect` (`src/scrapers/adapters/puppeteer.js`) and `launchStealthBrowser(options)`
+* **When** `options.backend` or `XACTIONS_BROWSER_BACKEND` selects `obscura`
+* **Then** it `puppeteer-core.connect({browserWSEndpoint})` to `options.wsEndpoint || OBSCURA_WS_ENDPOINT || ws://127.0.0.1:9222`; `chrome`/unset → `puppeteer.launch()` unchanged; `browser.__backend` recorded; teardown reads `__backend` (`obscura`→`disconnect()`, `chrome`→`close()`)
+* **And** a public scraper bridge (e.g. reddit/medium) threads `options.backend`/`requiresAuth` into `adapter.launch()` so backend reaches the scraper — not only `launchStealthBrowser`
+* **And** post-auth actions (`requiresAuth===true`, resolved per base-crawler.js:177) reject `backend==='obscura'` with `PlatformError{ type: INVALID_ARGS }` (no silent fallback, no separate registry)
+* **And** primary/fallback via `XACTIONS_BROWSER_BACKEND` + `XACTIONS_BROWSER_BACKEND_FALLBACK` (default `chrome`): `obscura→chrome` always allowed; `chrome→obscura` only on public-scraping path (post-auth still throws via guard)
+* **And** `XACTIONS_BROWSER_BACKEND_METRICS=1` tags each real browser launch/probe with `browserBackend` (Epic 34 `emitRun`); per-backend latency/success comparison runs via `obscura-spike.mjs BACKEND=both` — default OFF, `CanaryRunner` unchanged (it probes HTTP, not browser)
+* **And** all `obscura` navigation uses `waitUntil:'networkidle0'`/`load`/`domcontentloaded` — never `networkidle2` (hangs on 0.2.2)
+* **And** `scripts/obscura-spike.mjs BACKEND=both` verifies chrome vs obscura on example/cloudflare/sannysoft/x-guest, skips cleanly when no `obscura serve`
+* **And** `docs/obscura-backend.md` (install, `obscura serve --stealth`, env vars, fit matrix) + `docs/obscura-watch.md` (issue watch list, promote gate requiring `/home` `data-testid` mount green) exist
+* **And** `puppeteer-core` is a direct dependency; zero other new deps
+
+> Full spec: `implementation-artifacts/spec-27-4-obscura-public-scraping-backend-watch.md`
+
 ---
 
 ## Epic 28: Schema Drift & Selector Resilience
