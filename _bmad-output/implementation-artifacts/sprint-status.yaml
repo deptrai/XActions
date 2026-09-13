@@ -179,7 +179,7 @@ development_status:
   epic-27: in-progress
   27-1-fingerprintmanager-tls-ja4-spoofing-geo-consistent-profiles: done
   27-2-sessionhealthorchestrator-continuous-health-score-circuit-br: done
-  27-3-challengesignaturedetector-automated-bot-detection-page-dete: backlog
+  27-3-challengesignaturedetector-automated-bot-detection-page-dete: done
   epic-27-retrospective: optional
 
   epic-28: backlog

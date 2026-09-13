@@ -36,6 +36,7 @@ export { AbstractPlatformResponseValidator } from './platform-validator.js';
 export { PreSignedTokenRing, SignerWorkerPagePool, PureCryptoSignerRegistry } from './signer-pool.js';
 export { FingerprintManager, globalFingerprintManager } from './fingerprint-manager.js';
 export { SessionHealthOrchestrator, globalSessionHealthOrchestrator } from './session-health-orchestrator.js';
+export { ChallengeSignatureDetector, globalChallengeSignatureDetector } from './challenge-signature-detector.js';
 export { TlsProfileProvider, globalTlsProfileProvider, browserFamilyFromUA } from './tls-profile-provider.js';
 export {
   CATEGORIES,

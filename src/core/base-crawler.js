@@ -12,6 +12,7 @@ import { launchBrowserWithCdp } from './cdp-launcher.js';
 import { gaussianDelay } from '../utils/gaussian-delay.js';
 import { defaultTelemetryEmitter } from './telemetry-emitter.js';
 import { TelemetryContext } from './telemetry-context.js';
+import { globalChallengeSignatureDetector } from './challenge-signature-detector.js';
 
 /** @typedef {import('./types.js').CrawlerCommand} CrawlerCommand */
 /** @typedef {import('./types.js').ActionDescriptor} ActionDescriptor */
@@ -39,6 +40,9 @@ export class AbstractCrawler {
 
   /** @type {AccountPool | null} */
   accountPool = null;
+
+  /** @type {import('./challenge-signature-detector.js').ChallengeSignatureDetector | null} */
+  challengeDetector = null;
 
   /** @type {string | null} */
   #scraperId = null;
@@ -551,4 +555,42 @@ export class AbstractCrawler {
 
   /** @returns {Promise<void>} */
   async cleanup() { throw new Error('Method not implemented: cleanup()'); }
+
+  /**
+   * Story 27.3 — run `ChallengeSignatureDetector` against a Puppeteer page's
+   * rendered DOM. Returns the normalized ChallengeResult; never throws.
+   * When `detected`, this crawler's `governor`/`accountPool`/`healthOrchestrator`
+   * are notified (mirroring AbstractApiClient behaviour).
+   *
+   * @param {import('puppeteer').Page} page
+   * @param {Object} [opts]
+   * @param {string} [opts.accountId]  - account to markUnavailable when detected
+   * @returns {Promise<import('./challenge-signature-detector.js').ChallengeResult>}
+   */
+  async detectChallengeOnPage(page, opts = {}) {
+    const fallback = {
+      detected: false, type: 'unknown', confidence: 0,
+      suggestedHibernationMs: 10 * 60 * 1000,
+      signature: null, matchedPatterns: [],
+    };
+    try {
+      if (!page || typeof page.content !== 'function') return fallback;
+      const html = await page.content();
+      const url = typeof page.url === 'function' ? page.url() : '';
+      const detector = this.challengeDetector || globalChallengeSignatureDetector;
+      const result = detector.detectFromHtml(html, { url, platform: this.name });
+      if (result.detected) {
+        const accountId = opts.accountId || null;
+        if (accountId && this.accountPool && typeof this.accountPool.markUnavailable === 'function') {
+          try { this.accountPool.markUnavailable(accountId, 'bot_challenge', result.suggestedHibernationMs, this.name); } catch {}
+        }
+        if (accountId && this.governor && typeof this.governor.recordBotChallenge === 'function') {
+          try { this.governor.recordBotChallenge(accountId, this.name); } catch {}
+        }
+      }
+      return result;
+    } catch {
+      return fallback;
+    }
+  }
 }

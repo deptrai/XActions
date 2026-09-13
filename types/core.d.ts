@@ -625,3 +625,66 @@ export class SessionHealthOrchestrator {
 }
 
 export const globalSessionHealthOrchestrator: SessionHealthOrchestrator;
+
+// ---------------------------------------------------------------------------
+// Story 27.3 — ChallengeSignatureDetector
+// ---------------------------------------------------------------------------
+
+export type ChallengeType =
+  | 'cloudflare_managed'
+  | 'cloudflare_turnstile'
+  | 'cloudflare_interstitial'
+  | 'arkose'
+  | 'recaptcha'
+  | 'hcaptcha'
+  | 'platform_checkpoint'
+  | 'platform_unusual_login'
+  | 'platform_account_locked'
+  | 'platform_challenge_required'
+  | 'generic_captcha'
+  | 'unknown';
+
+export interface ChallengePattern {
+  kind: 'substr' | 'regex' | 'header' | 'status';
+  value: string | number;
+  weight: number;
+  headerValue?: string;
+}
+
+export interface ChallengeSignature {
+  id: string;
+  type: ChallengeType;
+  patterns: ChallengePattern[];
+  hibernationMs?: number;
+  appliesTo?: 'http' | 'dom' | 'both';
+  platform?: string;
+}
+
+export interface ChallengeResult {
+  detected: boolean;
+  type: ChallengeType;
+  confidence: number;
+  suggestedHibernationMs: number;
+  signature: string | null;
+  matchedPatterns: string[];
+}
+
+export interface ChallengeDetectInput {
+  body?: string | Buffer | object;
+  data?: string | Buffer | object;
+  headers?: Record<string, string>;
+  statusCode?: number;
+  status?: number;
+  url?: string;
+  platform?: string;
+}
+
+export class ChallengeSignatureDetector {
+  constructor();
+  registerPlatformSignatures(platform: string, sigs: ChallengeSignature[]): void;
+  detect(input: ChallengeDetectInput): ChallengeResult;
+  detectFromHtml(html: string, opts?: { url?: string; platform?: string }): ChallengeResult;
+  detectFromResponse(response: unknown, opts?: { platform?: string }): ChallengeResult;
+}
+
+export const globalChallengeSignatureDetector: ChallengeSignatureDetector;

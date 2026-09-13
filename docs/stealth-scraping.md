@@ -264,3 +264,63 @@ When an account's score drops below `30`, its circuit breaker **opens**:
 - `GET /api/admin/accounts` returns `healthScore` and `circuitState` (`closed` | `open` | `half-open`) for every account.
 - `POST /api/admin/accounts/probe` triggers an immediate recovery probe.
 - `StatusApi.getGovernorStatus()` merges `healthScores` and `circuitBreakerStates`.
+
+## ChallengeSignatureDetector (Story 27.3)
+
+`ChallengeSignatureDetector` (`src/core/challenge-signature-detector.js`) is the single source of truth for bot-detection / challenge-page signatures. It runs as a shared service consumed by **both** `AbstractApiClient` (HTTP response body/headers/status) and `AbstractCrawler` (Puppeteer `page.content()`).
+
+```js
+import { globalChallengeSignatureDetector } from './src/core/challenge-signature-detector.js';
+
+const r = globalChallengeSignatureDetector.detect({
+  body: response.data, headers: response.headers,
+  statusCode: response.status, url: 'https://…',
+  platform: 'twitter',
+});
+// → { detected: true, type: 'cloudflare_managed', confidence: 0.85,
+//     suggestedHibernationMs: 300_000, signature: 'cf-managed', matchedPatterns: [...] }
+```
+
+### Built-in signatures
+
+| Type | Sample signatures | Default hibernation |
+|---|---|---|
+| `cloudflare_managed` | `cf-chl-bypass`, `cf-challenge-running`, `__cf_chl`, `Just a moment...`, `cf-mitigated: challenge` header | 5 min |
+| `cloudflare_turnstile` | `cf-turnstile`, `challenges.cloudflare.com/turnstile` | 5 min |
+| `cloudflare_interstitial` | `<title>Just a moment`, `cf-chl-widget` | 5 min |
+| `arkose` | `arkoselabs.com`, `funcaptcha`, `client-api.arkoselabs.com` | 30 min |
+| `recaptcha` | `g-recaptcha`, `www.google.com/recaptcha` | 10 min |
+| `hcaptcha` | `hcaptcha.com`, `h-captcha` | 10 min |
+| `platform_checkpoint` | Facebook `/checkpoint/` URL, `account has been temporarily locked` | 15 min |
+| `platform_unusual_login` | Twitter `unusual-login`, `verify your account` | 15 min |
+| `platform_account_locked` | Twitter error code 326, `account_locked` | 30 min |
+| `platform_challenge_required` | Instagram `challenge_required`, `checkpoint_required` | 15 min |
+| `generic_captcha` | `captcha`, `data-testid="challenge"`, `window.__初始状态` (Weibo) | 10 min |
+
+### Confidence model
+
+Confidence is computed per signature as: `top_matched_weight + 0.15 × (extra_matched_patterns − 1)`, capped at `1`. `detected` fires when `confidence ≥ 0.5`. The detector picks the **highest-confidence** signature across the catalog — so a response matching both Cloudflare and Arkose returns whichever has the stronger signature.
+
+### Usage — HTTP (AbstractApiClient)
+
+`AbstractApiClient.request()` runs `detector.detectFromResponse()` on every response. On `detected`, it records the signal on `accountPool.markUnavailable(id, 'bot_challenge', suggestedHibernationMs, platform)` + `governor.recordBotChallenge()` + `healthOrchestrator.recordBotChallenge()` — regardless of HTTP status. The existing 403/429 retry path then handles rotation/quarantine; on 2xx (false-200) the existing `isBotChallenge` validator branch also consumes the cached result and throws `BotChallengeError` with `details.challengeType` + `details.challengeSignature`.
+
+### Usage — DOM (AbstractCrawler)
+
+```js
+const result = await crawler.detectChallengeOnPage(page, { accountId: 'alice' });
+if (result.detected) { /* account already hibernated */ }
+```
+
+### Platform overrides
+
+```js
+detector.registerPlatformSignatures('weibo', [{
+  id: 'weibo-init',
+  type: 'platform_checkpoint',
+  appliesTo: 'dom',
+  patterns: [{ kind: 'substr', value: 'window.__初始状态 = {', weight: 1.0 }],
+}]);
+```
+
+Platform signatures only fire when `input.platform` matches.

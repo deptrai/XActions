@@ -20,6 +20,7 @@ import {
 import { globalProxyPool } from '../proxy/proxy-pool.js';
 import { PureCryptoSignerRegistry } from './signer-pool.js';
 import { globalSessionHealthOrchestrator } from './session-health-orchestrator.js';
+import { globalChallengeSignatureDetector } from './challenge-signature-detector.js';
 
 /**
  * Normalize the `pureSigners` option into a `PureCryptoSignerRegistry`.
@@ -205,6 +206,7 @@ export class AbstractApiClient {
    * @param {import('./telemetry-context.js').TelemetryContext} [options.telemetryContext]
    * @param {boolean} [options.isCanary]
    * @param {import('./session-health-orchestrator.js').SessionHealthOrchestrator} [options.healthOrchestrator]
+   * @param {import('./challenge-signature-detector.js').ChallengeSignatureDetector} [options.challengeDetector]
    */
   constructor(options = {}) {
     if (new.target === AbstractApiClient) {
@@ -224,6 +226,7 @@ export class AbstractApiClient {
     this.telemetryContext = options.telemetryContext || null;
     this.isCanary = Boolean(options.isCanary);
     this.healthOrchestrator = options.healthOrchestrator !== undefined ? options.healthOrchestrator : globalSessionHealthOrchestrator;
+    this.challengeDetector = options.challengeDetector !== undefined ? options.challengeDetector : globalChallengeSignatureDetector;
 
     if (options.platform !== undefined) this.platform = options.platform;
     if (options.client !== undefined) this.client = options.client;
@@ -968,6 +971,38 @@ export class AbstractApiClient {
 
         recordTelemetryAttempt(response, requestStart, attempt, isQuarantined);
 
+        // Story 27.3 — early challenge *signal* on ANY status code.
+        // We do NOT throw here — the existing 403/429 path handles retry,
+        // proxy quarantine, and eventual BotChallengeError. This block just
+        // records the detection to governor/orchestrator/pool so the
+        // "hibernate + retry different account" flow kicks in even when
+        // the challenge page came back with 200 (false-200) or 4xx.
+        let lastChallengeResult = null;
+        try {
+          const detector = this.challengeDetector || globalChallengeSignatureDetector;
+          if (detector && typeof detector.detectFromResponse === 'function' && response) {
+            lastChallengeResult = detector.detectFromResponse(response, { platform: this.platform });
+          }
+        } catch { lastChallengeResult = null; }
+
+        if (lastChallengeResult && lastChallengeResult.detected) {
+          const hibernationMs = lastChallengeResult.suggestedHibernationMs || this.rateLimitHibernationMs;
+          if (concreteAccountId && this.accountPool) {
+            try { this.accountPool.markUnavailable(concreteAccountId, 'bot_challenge', hibernationMs, this.platform); } catch {}
+            if (this.governor && typeof this.governor.recordBotChallenge === 'function') {
+              try { this.governor.recordBotChallenge(concreteAccountId, this.platform); } catch {}
+            }
+            if (this.healthOrchestrator && typeof this.healthOrchestrator.recordBotChallenge === 'function') {
+              try { this.healthOrchestrator.recordBotChallenge(this.platform || 'default', concreteAccountId); } catch {}
+            }
+          }
+          // Note: we do NOT throw here on 4xx/5xx — the existing status-code
+          // branch below already handles 403 (quarantine proxy + retry +
+          // eventual BotChallengeError via line ~1281). For 2xx, the
+          // responseValidator.isBotChallenge check inside the success branch
+          // re-uses lastChallengeResult so the throw happens there.
+        }
+
         // Success condition (2xx / 3xx)
         if (status >= 200 && status < 400) {
           if (isRaw) {
@@ -1011,9 +1046,25 @@ export class AbstractApiClient {
                 details: response?.data || response,
               });
             }
-            if (this.responseValidator.isBotChallenge(response)) {
+            // Story 27.3 — also check inside 2xx: "false-200" challenges
+            // (status OK but body is a challenge page). Uses cached result
+            // when available to avoid rescanning the body.
+            let challengeResult = lastChallengeResult;
+            if (!challengeResult) {
+              try {
+                const detector = this.challengeDetector || globalChallengeSignatureDetector;
+                if (detector && typeof detector.detectFromResponse === 'function') {
+                  challengeResult = detector.detectFromResponse(response, { platform: this.platform });
+                }
+              } catch { challengeResult = null; }
+            }
+
+            if ((challengeResult && challengeResult.detected) || this.responseValidator.isBotChallenge(response)) {
+              const hibernationMs = challengeResult?.suggestedHibernationMs || this.rateLimitHibernationMs;
+              const challengeType = challengeResult?.type || 'unknown';
+              const challengeSig = challengeResult?.signature || 'validator_fallback';
               if (concreteAccountId && this.accountPool) {
-                this.accountPool.markUnavailable(concreteAccountId, 'bot_challenge', this.rateLimitHibernationMs, this.platform);
+                this.accountPool.markUnavailable(concreteAccountId, 'bot_challenge', hibernationMs, this.platform);
                 if (this.governor && typeof this.governor.recordBotChallenge === 'function') {
                   this.governor.recordBotChallenge(concreteAccountId, this.platform);
                 }
@@ -1023,12 +1074,18 @@ export class AbstractApiClient {
               }
               throw new BotChallengeError({
                 code: 'XACT_4030',
-                message: 'Bot challenge detected on upstream platform',
+                message: `Bot challenge detected on upstream platform (${challengeType})`,
                 statusCode: 403,
                 suggestedAction: concreteAccountId ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
                 accountId: concreteAccountId,
                 platform: this.platform,
-                details: response?.data || response,
+                details: {
+                  challengeType,
+                  challengeSignature: challengeSig,
+                  confidence: challengeResult?.confidence ?? null,
+                  suggestedHibernationMs: hibernationMs,
+                  response: response?.data || response,
+                },
               });
             }
 

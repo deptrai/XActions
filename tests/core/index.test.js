@@ -170,6 +170,8 @@ describe('StatusApi', () => {
         yieldedCount: 0,
       },
       consumerQuotas: {},
+      healthScores: {},
+      circuitBreakerStates: {},
     });
   });
 });
