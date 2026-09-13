@@ -580,3 +580,48 @@ export class FingerprintManager {
 
 export const globalFingerprintManager: FingerprintManager;
 export const globalTlsProfileProvider: TlsProfileProvider;
+
+// ---------------------------------------------------------------------------
+// Story 27.2 — SessionHealthOrchestrator & Circuit Breaker
+// ---------------------------------------------------------------------------
+
+export interface CircuitBreakerState {
+  state: 'closed' | 'open' | 'half-open';
+  failures: number;
+  nextProbeAt: number;
+  openedAt: number;
+}
+
+export interface SessionHealthStatus {
+  healthScores: Record<string, number>;
+  circuitBreakerStates: Record<string, CircuitBreakerState>;
+}
+
+export type ProbeResult = { success: boolean; complete?: boolean; challenge?: boolean };
+export type ProbeFn = (accountId: string, platform: string) => Promise<ProbeResult> | ProbeResult;
+
+export class SessionHealthOrchestrator {
+  constructor(options?: {
+    governor?: unknown;
+    accountPool?: unknown;
+    sickThreshold?: number;
+    baseCooldownMs?: number;
+    maxCooldownMs?: number;
+    now?: () => number;
+  });
+  recordSuccess(platform: string, accountId: string): void;
+  recordError(platform: string, accountId: string): void;
+  recordRateLimit(platform: string, accountId: string): void;
+  recordBotChallenge(platform: string, accountId: string): void;
+  recordLatency(platform: string, accountId: string, latencyMs: number): void;
+  recordPayload(platform: string, accountId: string, complete: boolean): void;
+  recordProxyHealth(platform: string, accountId: string, healthy: boolean): void;
+  getHealthScore(platform: string, accountId: string): number;
+  registerProbe(platform: string, accountId: string, probeFn: ProbeFn): void;
+  checkRecovery(platform: string, accountId: string): Promise<CircuitBreakerState>;
+  wake(platform: string, accountId: string): void;
+  isAvailable(platform: string, accountId: string): boolean;
+  getStatus(): SessionHealthStatus;
+}
+
+export const globalSessionHealthOrchestrator: SessionHealthOrchestrator;

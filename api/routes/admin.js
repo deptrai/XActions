@@ -27,7 +27,7 @@ import { defaultStreamMetricsCollector } from '../../src/utils/stream-metrics-co
 import { defaultStreamAlertEngine } from '../../src/utils/stream-alerts.js';
 import { globalProxyPool } from '../../src/proxy/proxy-pool.js';
 import { globalAccountPool } from '../../src/core/account-pool.js';
-import { globalStatusApi, globalAdaptiveRateGovernor } from '../../src/core/index.js';
+import { globalStatusApi, globalAdaptiveRateGovernor, globalSessionHealthOrchestrator } from '../../src/core/index.js';
 import { refreshGovernorConsumerLag, globalStreamMetricsReader } from '../../src/utils/stream-metrics.js';
 import {
   getRetentionStats as getStoreRetentionStats,
@@ -222,6 +222,21 @@ function isAdminRequest(req) {
   const expected = process.env.ADMIN_API_KEY || '';
   return expected.length > 0 && safeCompare(adminKey, expected);
 }
+
+/**
+ * Helper middleware or inline check for admin auth supporting both Bearer JWT and x-admin-key.
+ */
+const requireAdminOrApiKey = (/** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res, /** @type {import('express').NextFunction} */ next) => {
+  const adminKey = String(req.headers['x-admin-key'] || '');
+  const expected = process.env.ADMIN_API_KEY || '';
+  if (expected && safeCompare(adminKey, expected)) {
+    return next();
+  }
+  return authenticateToken(req, res, () => {
+    return requireAdmin(req, res, next);
+  });
+};
+
 
 /**
  * GET /api/admin/x402/stats
@@ -490,10 +505,22 @@ router.post('/proxies/:key/release', authenticateToken, requireAdmin, handleRele
  * GET /api/admin/accounts
  * List all accounts with status, hibernation, velocity, and assigned proxies (Story 19.2 & Story 19.8)
  */
-router.get('/accounts', authenticateToken, requireAdmin, (req, res) => {
+router.get('/accounts', requireAdminOrApiKey, (req, res) => {
   try {
     const platform = typeof req.query?.platform === 'string' ? req.query.platform : undefined;
-    const accounts = globalAccountPool.listAccountDetails(platform);
+    const rawAccounts = globalAccountPool.listAccountDetails(platform);
+    const healthStatus = globalSessionHealthOrchestrator.getStatus();
+    const accounts = rawAccounts.map((a) => {
+      const key = `${a.platform || 'default'}:${a.accountId}`;
+      const score = healthStatus.healthScores[key] ?? 100;
+      const circuit = healthStatus.circuitBreakerStates[key] || { state: 'closed', failures: 0, nextProbeAt: 0, openedAt: 0 };
+      return {
+        ...a,
+        healthScore: score,
+        circuitState: circuit.state,
+        circuitBreaker: circuit,
+      };
+    });
     res.json({
       success: true,
       total: accounts.length,
@@ -557,8 +584,8 @@ const handleWakeAccount = (/** @type {import('express').Request} */ req, /** @ty
     });
   }
 };
-router.post('/accounts/wake', authenticateToken, requireAdmin, handleWakeAccount);
-router.post('/accounts/:id/wake', authenticateToken, requireAdmin, handleWakeAccount);
+router.post('/accounts/wake', requireAdminOrApiKey, handleWakeAccount);
+router.post('/accounts/:id/wake', requireAdminOrApiKey, handleWakeAccount);
 
 /**
  * POST /api/admin/accounts/rotate
@@ -597,22 +624,45 @@ const handleRotateAccount = (/** @type {import('express').Request} */ req, /** @
     });
   }
 };
-router.post('/accounts/rotate', authenticateToken, requireAdmin, handleRotateAccount);
-router.post('/accounts/:id/rotate', authenticateToken, requireAdmin, handleRotateAccount);
+router.post('/accounts/rotate', requireAdminOrApiKey, handleRotateAccount);
+router.post('/accounts/:id/rotate', requireAdminOrApiKey, handleRotateAccount);
 
 /**
- * Helper middleware or inline check for admin auth supporting both Bearer JWT and x-admin-key.
+ * POST /api/admin/accounts/probe
+ * POST /api/admin/accounts/:id/probe
+ * Trigger recovery probe on a sick/half-open account (Story 27.2)
  */
-const requireAdminOrApiKey = (/** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res, /** @type {import('express').NextFunction} */ next) => {
-  const adminKey = String(req.headers['x-admin-key'] || '');
-  const expected = process.env.ADMIN_API_KEY || '';
-  if (expected && safeCompare(adminKey, expected)) {
-    return next();
+const handleProbeAccount = async (/** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res) => {
+  try {
+    const rawId = req.body?.accountId || req.params?.id;
+    if (!rawId) {
+      return res.status(400).json({ success: false, error: 'accountId is required' });
+    }
+    const platform = typeof req.body?.platform === 'string' ? req.body.platform : (typeof req.query?.platform === 'string' ? req.query.platform : undefined);
+    const decodedId = safeDecode(String(rawId));
+    const targetPlatform = platform || 'default';
+    const circuit = await globalSessionHealthOrchestrator.checkRecovery(targetPlatform, decodedId, { force: true });
+    const score = globalSessionHealthOrchestrator.getHealthScore(targetPlatform, decodedId);
+    res.json({
+      success: true,
+      accountId: decodedId,
+      platform: targetPlatform,
+      healthScore: score,
+      circuitState: circuit.state,
+      circuitBreaker: circuit,
+      message: circuit.state === 'closed'
+        ? `Account "${decodedId}" probe succeeded — breaker closed`
+        : `Account "${decodedId}" probe result: breaker is ${circuit.state}`,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: (err instanceof Error ? err.message : String(err)),
+    });
   }
-  return authenticateToken(req, res, () => {
-    return requireAdmin(req, res, next);
-  });
 };
+router.post('/accounts/probe', requireAdminOrApiKey, handleProbeAccount);
+router.post('/accounts/:id/probe', requireAdminOrApiKey, handleProbeAccount);
 
 /**
  * POST /api/admin/retention/cleanup

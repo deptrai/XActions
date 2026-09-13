@@ -232,3 +232,35 @@ Bind an account to a region so future fingerprints are geo-consistent even witho
 ```js
 const tls = globalFingerprintManager.tlsProfileFor(fp); // → TlsProfile | null
 ```
+
+---
+
+## SessionHealthOrchestrator (Story 27.2)
+
+`SessionHealthOrchestrator` (`src/core/session-health-orchestrator.js`) maintains a continuous health score `[0, 100]` per `platform:accountId` from six signals and drives an automatic circuit breaker:
+
+- **Consecutive errors** (−8/each, cap 40)
+- **Rate-limit events** (−10/each, cap 30)
+- **Bot challenge events** (−15/each, cap 30)
+- **Average latency** (>3s −10, >8s −20)
+- **Payload completeness** (incomplete −12/each, cap 24)
+- **Proxy health** (unhealthy −15)
+
+### Circuit Breaker & Recovery Probe
+
+When an account's score drops below `30`, its circuit breaker **opens**:
+1. The account is marked `sick` in `AccountPool` and `AdaptiveRateGovernor`, excluding it from rotation.
+2. After a cooldown (`baseCooldownMs` × 2^failures, cap 30m), the breaker enters **`half-open`**.
+3. A **recovery probe** runs: callers/admin register a probe per account via `registerProbe(platform, accountId, probeFn)`. The probe performs a cheap, read-only action (e.g. `profile`) through a fresh proxy.
+4. If the probe succeeds with a complete payload and no challenge, the breaker **closes**, score resets to `60`, and the account is marked active again. On failure, the breaker re-opens with exponential backoff.
+
+### Operator Dashboard & API
+
+- `dashboard/admin.html` displays a **Health** column in the accounts table:
+  - Green: `≥ 70`
+  - Yellow: `30 – 69`
+  - Red: `< 30` (sick / breaker open)
+  - Action button: **🩺 Probe** (triggers manual immediate recovery check)
+- `GET /api/admin/accounts` returns `healthScore` and `circuitState` (`closed` | `open` | `half-open`) for every account.
+- `POST /api/admin/accounts/probe` triggers an immediate recovery probe.
+- `StatusApi.getGovernorStatus()` merges `healthScores` and `circuitBreakerStates`.

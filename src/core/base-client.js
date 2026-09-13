@@ -19,6 +19,7 @@ import {
 } from './error-envelope.js';
 import { globalProxyPool } from '../proxy/proxy-pool.js';
 import { PureCryptoSignerRegistry } from './signer-pool.js';
+import { globalSessionHealthOrchestrator } from './session-health-orchestrator.js';
 
 /**
  * Normalize the `pureSigners` option into a `PureCryptoSignerRegistry`.
@@ -203,6 +204,7 @@ export class AbstractApiClient {
    * @param {boolean} [options.requiresProxy]
    * @param {import('./telemetry-context.js').TelemetryContext} [options.telemetryContext]
    * @param {boolean} [options.isCanary]
+   * @param {import('./session-health-orchestrator.js').SessionHealthOrchestrator} [options.healthOrchestrator]
    */
   constructor(options = {}) {
     if (new.target === AbstractApiClient) {
@@ -221,6 +223,7 @@ export class AbstractApiClient {
     this.pureSigners = normalizePureSigners(options.pureSigners);
     this.telemetryContext = options.telemetryContext || null;
     this.isCanary = Boolean(options.isCanary);
+    this.healthOrchestrator = options.healthOrchestrator !== undefined ? options.healthOrchestrator : globalSessionHealthOrchestrator;
 
     if (options.platform !== undefined) this.platform = options.platform;
     if (options.client !== undefined) this.client = options.client;
@@ -831,8 +834,11 @@ export class AbstractApiClient {
         }
 
         const recordTelemetryAttempt = (/** @type {Record<string, unknown>} */ res, /** @type {number} */ reqStart, /** @type {number} */ attemptNum, isQuarantined = false) => {
-          if (!telemetry || typeof telemetry.recordRequest !== 'function') return;
           const latencyMs = Math.max(0, Date.now() - reqStart);
+          if (concreteAccountId && this.healthOrchestrator && typeof this.healthOrchestrator.recordLatency === 'function') {
+            try { this.healthOrchestrator.recordLatency(this.platform || 'default', concreteAccountId, latencyMs); } catch {}
+          }
+          if (!telemetry || typeof telemetry.recordRequest !== 'function') return;
           const headers = /** @type {Record<string, unknown>} */ (res?.headers || {});
           let proxyBytes = Number(headers['content-length'] || headers['Content-Length'] || 0);
           if (!proxyBytes) {
@@ -987,6 +993,9 @@ export class AbstractApiClient {
                 if (this.governor && typeof this.governor.recordRateLimit === 'function') {
                   this.governor.recordRateLimit(concreteAccountId, this.platform, this.rateLimitHibernationMs);
                 }
+                if (this.healthOrchestrator && typeof this.healthOrchestrator.recordRateLimit === 'function') {
+                  try { this.healthOrchestrator.recordRateLimit(this.platform || 'default', concreteAccountId); } catch {}
+                }
               }
               throw new RateLimitError({
                 code: 'XACT_4290',
@@ -1004,6 +1013,9 @@ export class AbstractApiClient {
                 this.accountPool.markUnavailable(concreteAccountId, 'bot_challenge', this.rateLimitHibernationMs, this.platform);
                 if (this.governor && typeof this.governor.recordBotChallenge === 'function') {
                   this.governor.recordBotChallenge(concreteAccountId, this.platform);
+                }
+                if (this.healthOrchestrator && typeof this.healthOrchestrator.recordBotChallenge === 'function') {
+                  try { this.healthOrchestrator.recordBotChallenge(this.platform || 'default', concreteAccountId); } catch {}
                 }
               }
               throw new BotChallengeError({
@@ -1067,6 +1079,9 @@ export class AbstractApiClient {
             ) {
               this.governor.recordRequest(trackingKey, this.platform);
             }
+          }
+          if (concreteAccountId && this.healthOrchestrator && typeof this.healthOrchestrator.recordSuccess === 'function') {
+            try { this.healthOrchestrator.recordSuccess(this.platform || 'default', concreteAccountId); } catch {}
           }
           return response;
         }
@@ -1139,6 +1154,9 @@ export class AbstractApiClient {
           await this.#sleep(chosenDelay);
         } else {
           // Other status codes (401, 5xx, etc.)
+          if (concreteAccountId && this.healthOrchestrator && typeof this.healthOrchestrator.recordError === 'function') {
+            try { this.healthOrchestrator.recordError(this.platform || 'default', concreteAccountId); } catch {}
+          }
           this.handleError(response, this.platform);
         }
       }

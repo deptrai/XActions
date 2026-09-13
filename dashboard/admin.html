@@ -930,12 +930,13 @@
               <th>Reason</th>
               <th>Velocity</th>
               <th>Assigned Proxy</th>
+              <th>Health</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody id="hibernating-accounts-body">
             <tr>
-              <td colspan="8" class="empty-state small">Loading accounts...</td>
+              <td colspan="9" class="empty-state small">Loading accounts...</td>
             </tr>
           </tbody>
           <tbody id="accounts-body" hidden></tbody>
@@ -1927,7 +1928,7 @@
       if (accounts.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="8" class="empty-state small">
+            <td colspan="9" class="empty-state small">
               <div class="icon">👥</div>
               <p>No accounts registered for this platform filter.</p>
             </td>
@@ -1959,8 +1960,17 @@
             <td>${acc.velocity || 0} req/m</td>
             <td><code>${esc(assignedProxyStr)}</code></td>
             <td>
+              ${(() => {
+                const score = acc.healthScore != null ? Number(acc.healthScore) : 100;
+                const badgeClass = score >= 70 ? 'status-active' : (score >= 30 ? 'status-quarantined' : 'status-checkpoint');
+                const circuit = acc.circuitState ? ` (${esc(acc.circuitState)})` : '';
+                return `<span class="status-pill ${badgeClass}" title="Circuit: ${esc(acc.circuitState || 'closed')}">${score}/100${circuit}</span>`;
+              })()}
+            </td>
+            <td>
               <div class="checkpoint-actions">
                 ${isHibernating ? `<button data-action="wake" onclick="wakeAccount('${esc(acc.accountId)}', '${esc(platform)}')">☀️ Wake</button>` : ''}
+                <button data-action="probe" onclick="probeAccount('${esc(acc.accountId)}', '${esc(platform)}')">🩺 Probe</button>
                 <button data-action="rotate" onclick="rotateAccount('${esc(acc.accountId)}', '${esc(platform)}')">🔄 Rotate</button>
               </div>
             </td>
@@ -2061,6 +2071,45 @@
       } catch (err) {
         console.error('Release proxy failed:', err);
         showCheckpointToast(err.message || 'Release proxy failed', 'error');
+      } finally {
+        proxiesState.actionInFlight = false;
+        if (document.getElementById('tab-proxies')?.classList.contains('active')) {
+          startProxiesRefresh();
+        }
+      }
+    }
+
+    async function probeAccount(accountId, platform) {
+      proxiesState.actionInFlight = true;
+      stopProxiesRefresh();
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/accounts/probe`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ accountId, platform })
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          showCheckpointToast('Insufficient permissions', 'error');
+          window.location.href = '/login';
+          return;
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to probe account');
+        }
+
+        showCheckpointToast(`🩺 Probe complete: ${data.message || 'score ' + data.healthScore}`, 'success');
+        await loadProxiesAndAccounts();
+      } catch (err) {
+        console.error('Probe account failed:', err);
+        showCheckpointToast(err.message || 'Probe account failed', 'error');
       } finally {
         proxiesState.actionInFlight = false;
         if (document.getElementById('tab-proxies')?.classList.contains('active')) {

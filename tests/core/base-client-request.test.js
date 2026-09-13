@@ -9,6 +9,7 @@ import { ProxyIpPool } from '../../src/proxy/proxy-pool.js';
 import { AccountPool } from '../../src/core/account-pool.js';
 import { AdaptiveRateGovernor } from '../../src/core/adaptive-governor.js';
 import { PlatformError, ErrorTypes } from '../../src/core/error-envelope.js';
+import { SessionHealthOrchestrator } from '../../src/core/session-health-orchestrator.js';
 
 let upstreamServer;
 let proxyServer;
@@ -470,6 +471,49 @@ describe('Story 11.3 — 429/403 Auto-Quarantine, Standby Backoff & Exponential 
         code: 'XACT_5030',
         type: ErrorTypes.PROXY_EXHAUSTED,
       });
+    });
+  });
+
+  describe('Story 27.2: SessionHealthOrchestrator Integration', () => {
+    test('should feed recordSuccess and recordLatency to injected healthOrchestrator on 200', async () => {
+      const orchestrator = new SessionHealthOrchestrator();
+      const accountPool = new AccountPool();
+      accountPool.registerAccounts('twitter', ['health_acc']);
+
+      const client = new TestApiClient({
+        accountPool,
+        requiresAuth: true,
+        platform: 'tw_test',
+        healthOrchestrator: orchestrator,
+        httpClient: async () => ({ status: 200, headers: {}, data: { ok: true } }),
+      });
+
+      await client.request('GET', 'http://127.0.0.1:8080/test', { accountId: 'health_acc' });
+      // Record was updated — score is 100, metrics reflect success
+      expect(orchestrator.getHealthScore('twitter', 'health_acc')).toBe(100);
+      const metrics = orchestrator._metricsFor('twitter', 'health_acc');
+      expect(metrics.payloadComplete).toBe(1);
+      expect(metrics.latencySamples).toBe(1);
+    });
+
+    test('should feed recordError to healthOrchestrator when request throws', async () => {
+      const orchestrator = new SessionHealthOrchestrator();
+      const accountPool = new AccountPool();
+      accountPool.registerAccounts('twitter', ['err_acc']);
+
+      const client = new TestApiClient({
+        accountPool,
+        requiresAuth: true,
+        healthOrchestrator: orchestrator,
+        maxProxyRetries: 1,
+        maxAccountRotations: 0,
+        httpClient: async () => { throw new Error('network down'); },
+      });
+
+      await expect(client.request('GET', 'http://127.0.0.1:8080/test', { accountId: 'err_acc' })).rejects.toThrow();
+      const metrics = orchestrator._metricsFor('twitter', 'err_acc');
+      expect(metrics.consecutiveErrors).toBe(1);
+      expect(orchestrator.getHealthScore('twitter', 'err_acc')).toBe(92);
     });
   });
 });
