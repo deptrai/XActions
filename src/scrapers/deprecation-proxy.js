@@ -21,7 +21,8 @@ import * as threadsBarrel from './social/threads/index.js';
  * @param {Record<string, unknown>} replacement
  * @returns {Record<string, unknown>}
  */
-function createDeprecationProxy(legacyName, replacement) {
+/** @param {string} legacyName @param {Record<string, any>} replacement @param {Record<string, any>} [fallbacks] */
+function createDeprecationProxy(legacyName, replacement, fallbacks = {}) {
   /** @type {Set<string>} */
   const warnedKeys = new Set();
 
@@ -33,7 +34,10 @@ function createDeprecationProxy(legacyName, replacement) {
           `DEPRECATED: xactions/scrapers/${legacyName}/${prop} is deprecated. Use xactions/scrapers/social/${legacyName} instead.`
         );
       }
-      return Reflect.get(target, prop, receiver);
+      const val = Reflect.get(target, prop, receiver);
+      if (val !== undefined) return val;
+      if (typeof prop === 'string' && prop in fallbacks) return fallbacks[prop];
+      return undefined;
     },
     apply(target, thisArg, args) {
       if (!warnedKeys.has('(call)')) {
@@ -50,8 +54,18 @@ function createDeprecationProxy(legacyName, replacement) {
   });
 }
 
+import { createBrowser, createPage, loginWithCookie } from './browser.js';
+
 export const bluesky = createDeprecationProxy('bluesky', blueskyBarrel);
 export const mastodon = createDeprecationProxy('mastodon', mastodonBarrel);
-export const twitter = createDeprecationProxy('twitter', twitterBarrel);
-export const facebook = createDeprecationProxy('facebook', facebookBarrel);
+export const twitter = createDeprecationProxy('twitter', twitterBarrel, {
+  createBrowser,
+  createPage,
+  loginWithCookie,
+});
+export const facebook = createDeprecationProxy('facebook', facebookBarrel, {
+  createBrowser,
+  createPage,
+  loginWithCookie,
+});
 export const threads = createDeprecationProxy('threads', threadsBarrel);

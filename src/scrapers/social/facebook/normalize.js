@@ -53,7 +53,7 @@ export function normalizeHandle(input) {
   }
   let handle = input;
   if (handle.startsWith('https://') || handle.startsWith('http://')) {
-    handle = handle.replace(/^https?:\/\/(www\.)?facebook\.com\//, '').replace(/\/$/, '');
+    handle = handle.replace(/^https?:\/\/([a-z0-9-]+\.)?facebook\.com\//i, '').replace(/\/$/, '');
   }
   handle = handle.replace(/^@/, '');
   if (/^profile\.php\?id=\d+/i.test(handle)) {

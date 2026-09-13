@@ -29,7 +29,6 @@ export class Scraper {
 
   /** @param {string} [filePath] */
   async loadCookies(filePath) {
-    // Backward compatibility stub — reads cookies from file if provided
     if (filePath) {
       const fs = await import('node:fs/promises');
       const raw = await fs.readFile(filePath, 'utf8');
@@ -65,7 +64,7 @@ export class Scraper {
   async getProfile(username) {
     /** @type {any} */
     const res = await dispatchScrape('twitter', 'profile', { username, ...this.options });
-    return res.data || res;
+    return res.profile || res.data || res;
   }
 
   async me() {
@@ -75,8 +74,8 @@ export class Scraper {
   /** @param {string} tweetId */
   async getTweet(tweetId) {
     /** @type {any} */
-    const res = await dispatchScrape('twitter', 'tweet_detail', { tweetId, ...this.options });
-    return res.data || res;
+    const res = await dispatchScrape('twitter', 'thread', { tweetId, ...this.options });
+    return res.rootTweet || res.posts?.[0] || res.data || res;
   }
 
   /**
@@ -85,8 +84,8 @@ export class Scraper {
    */
   async *getTweets(username, count = 100) {
     /** @type {any} */
-    const res = await dispatchScrape('twitter', 'tweets', { username, limit: count, ...this.options });
-    const items = res.items || res.posts || res.tweets || [];
+    const res = await dispatchScrape('twitter', 'search', { query: `from:${username}`, limit: count, ...this.options });
+    const items = res.posts || res.items || res.tweets || [];
     for (const item of items) yield item;
   }
 
@@ -105,7 +104,7 @@ export class Scraper {
   async *getLikedTweets(username, count = 100) {
     /** @type {any} */
     const res = await dispatchScrape('twitter', 'likes', { username, limit: count, ...this.options });
-    const items = res.items || res.posts || [];
+    const items = res.posts || res.items || [];
     for (const item of items) yield item;
   }
 
@@ -157,8 +156,8 @@ export class Scraper {
    */
   async *searchTweets(query, count = 100, mode = 'Latest') {
     /** @type {any} */
-    const res = await dispatchScrape('twitter', 'search', { query, limit: count, mode, ...this.options });
-    const items = res.items || res.posts || [];
+    const res = await dispatchScrape('twitter', 'search', { query, limit: count, type: mode, ...this.options });
+    const items = res.posts || res.items || [];
     for (const item of items) yield item;
   }
 
@@ -168,30 +167,30 @@ export class Scraper {
    */
   async *searchProfiles(query, count = 100) {
     /** @type {any} */
-    const res = await dispatchScrape('twitter', 'search_users', { query, limit: count, ...this.options });
-    const items = res.items || res.users || [];
+    const res = await dispatchScrape('twitter', 'search', { query, limit: count, ...this.options });
+    const items = res.users || res.items || [];
     for (const item of items) yield item;
   }
 
   /**
-   * @param {string} userId
+   * @param {string} userIdOrUsername
    * @param {number} [count]
    */
-  async *getFollowers(userId, count = 100) {
+  async *getFollowers(userIdOrUsername, count = 100) {
     /** @type {any} */
-    const res = await dispatchScrape('twitter', 'followers', { username: userId, limit: count, ...this.options });
-    const items = res.items || res.users || res.followers || [];
+    const res = await dispatchScrape('twitter', 'followers', { username: userIdOrUsername, limit: count, ...this.options });
+    const items = res.followers || res.users || res.items || [];
     for (const item of items) yield item;
   }
 
   /**
-   * @param {string} userId
+   * @param {string} userIdOrUsername
    * @param {number} [count]
    */
-  async *getFollowing(userId, count = 100) {
+  async *getFollowing(userIdOrUsername, count = 100) {
     /** @type {any} */
-    const res = await dispatchScrape('twitter', 'following', { username: userId, limit: count, ...this.options });
-    const items = res.items || res.users || res.following || [];
+    const res = await dispatchScrape('twitter', 'following', { username: userIdOrUsername, limit: count, ...this.options });
+    const items = res.following || res.users || res.items || [];
     for (const item of items) yield item;
   }
 
@@ -214,8 +213,8 @@ export class Scraper {
 
   async getExploreTabs() {
     /** @type {any} */
-    const res = await dispatchScrape('twitter', 'explore', { ...this.options });
-    return res.tabs || res.items || [];
+    const res = await dispatchScrape('twitter', 'trending', { ...this.options });
+    return res.trends || res.items || [];
   }
 
   /**
@@ -224,8 +223,8 @@ export class Scraper {
    */
   async *getListTweets(listId, count = 100) {
     /** @type {any} */
-    const res = await dispatchScrape('twitter', 'list_tweets', { listId, limit: count, ...this.options });
-    const items = res.items || res.posts || [];
+    const res = await dispatchScrape('twitter', 'list_members', { listId, limit: count, ...this.options });
+    const items = res.members || res.items || res.posts || [];
     for (const item of items) yield item;
   }
 
@@ -236,14 +235,14 @@ export class Scraper {
   async *getListMembers(listId, count = 100) {
     /** @type {any} */
     const res = await dispatchScrape('twitter', 'list_members', { listId, limit: count, ...this.options });
-    const items = res.items || res.users || [];
+    const items = res.members || res.users || res.items || [];
     for (const item of items) yield item;
   }
 
   /** @param {string} listId */
   async getListById(listId) {
     /** @type {any} */
-    const res = await dispatchScrape('twitter', 'list_detail', { listId, ...this.options });
+    const res = await dispatchScrape('twitter', 'list_members', { listId, ...this.options });
     return res.data || res;
   }
 

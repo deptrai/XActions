@@ -171,17 +171,17 @@ import {
 export const scrapeProfile = (page, username, opts = {}) => scrape('twitter', 'profile', { page, username, ...opts });
 export const scrapeFollowers = (page, username, opts = {}) => scrape('twitter', 'followers', { page, username, ...opts });
 export const scrapeFollowing = (page, username, opts = {}) => scrape('twitter', 'following', { page, username, ...opts });
-export const scrapeTweets = (page, username, opts = {}) => scrape('twitter', 'tweets', { page, username, ...opts });
+export const scrapeTweets = (page, username, opts = {}) => scrape('twitter', 'tweets', { page, username, query: opts.query || (username ? `from:${username}` : undefined), ...opts });
 export const searchTweets = (page, query, opts = {}) => scrape('twitter', 'search', { page, query, ...opts });
 export const scrapeThread = (page, tweetId, opts = {}) => scrape('twitter', 'thread', { page, tweetId, ...opts });
-export const scrapeLikes = (page, username, opts = {}) => scrape('twitter', 'likes', { page, username, ...opts });
+export const scrapeLikes = (page, username, opts = {}) => scrape('twitter', 'likes', { page, username, tweetId: opts.tweetId || username, ...opts });
 export const scrapeHashtag = (page, hashtag, opts = {}) => scrape('twitter', 'hashtag', { page, hashtag, ...opts });
 export const scrapeMedia = (page, username, opts = {}) => scrape('twitter', 'media', { page, username, ...opts });
 export const scrapeListMembers = (page, listId, opts = {}) => scrape('twitter', 'list_members', { page, listId, ...opts });
 export const scrapeBookmarks = (page, opts = {}) => scrape('twitter', 'bookmarks', { page, ...opts });
-export const scrapeNotifications = (page, opts = {}) => scrape('twitter', 'notifications', { page, ...opts });
+export const scrapeNotifications = async () => { throw new Error('Notifications scraping not supported via GraphQL crawler'); };
 export const scrapeTrending = (page, opts = {}) => scrape('twitter', 'trending', { page, ...opts });
-export const scrapeCommunityMembers = (page, communityId, opts = {}) => scrape('twitter', 'community_members', { page, communityId, ...opts });
+export const scrapeCommunityMembers = (page, communityId, opts = {}) => scrape('twitter', 'community_members', { page, communityId, communityUrl: opts.communityUrl || `https://x.com/i/communities/${communityId}`, ...opts });
 export const scrapeSpaces = (page, query, opts = {}) => scrape('twitter', 'spaces', { page, query, ...opts });
 
 // ============================================================================

@@ -86,7 +86,7 @@ export default {
     if (options.url) mappedArgs.url = options.url;
     if (options.userId) mappedArgs.userId = options.userId;
     if (options.listId || options.listUrl) mappedArgs.listUrl = options.listId || options.listUrl;
-    if (options.communityUrl) mappedArgs.communityUrl = options.communityUrl;
+    if (options.communityUrl || options.communityId) mappedArgs.communityUrl = options.communityUrl || (options.communityId ? `https://x.com/i/communities/${options.communityId}` : undefined);
     if (options.conversationId) mappedArgs.conversationId = options.conversationId;
     if (options.text) mappedArgs.text = options.text;
     if (options.mediaIds) mappedArgs.mediaIds = options.mediaIds;

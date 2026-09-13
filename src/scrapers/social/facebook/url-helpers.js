@@ -26,10 +26,12 @@ export const MOBILE_VIEWPORT = { width: 390, height: 844, isMobile: true };
  */
 export async function loginWithCookie(page, cookies = {}, options = {}) {
   const combined = { ...cookies, ...options };
-  const { c_user, xs, sb, datar, fr, fbl_st, headless = true, skipWarmup = false } = combined;
-  if (!c_user?.trim() || !xs?.trim()) {
+  const cUser = String(combined.c_user ?? '').trim();
+  const xsVal = String(combined.xs ?? '').trim();
+  if (!cUser || !xsVal) {
     throw new Error('❌ Facebook login requires both c_user and xs cookies');
   }
+  const { sb, datar, datr, fr, fbl_st, headless = true, skipWarmup = false } = combined;
 
   const navTimeout = 60000;
   const DESKTOP_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -41,12 +43,14 @@ export async function loginWithCookie(page, cookies = {}, options = {}) {
   const futureExpiry = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
   /** @type {import('puppeteer').CookieParam[]} */
   const fbCookies = [
-    { name: 'c_user', value: c_user, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry },
-    { name: 'xs', value: xs, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry },
+    { name: 'c_user', value: cUser, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry },
+    { name: 'xs', value: xsVal, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry },
   ];
 
-  if (sb?.trim()) fbCookies.push({ name: 'sb', value: sb, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
-  if (datar?.trim()) fbCookies.push({ name: 'datr', value: datar, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
+  const sbVal = String(sb ?? '').trim();
+  if (sbVal) fbCookies.push({ name: 'sb', value: sbVal, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
+  const datrVal = String(datr || datar || '').trim();
+  if (datrVal) fbCookies.push({ name: 'datr', value: datrVal, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
   if (fr?.trim()) fbCookies.push({ name: 'fr', value: fr, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
   if (fbl_st?.trim()) fbCookies.push({ name: 'fbl_st', value: fbl_st, domain: '.facebook.com', path: '/', httpOnly: false, secure: true, sameSite: 'None', expires: futureExpiry });
 
