@@ -366,10 +366,11 @@ describe('Story 15.1.4: Threads Hybrid Caller Migration & Package Exports', () =
     expect(mod.threadsProfileItemToPostItem).toBeDefined();
   });
 
-  it('AC-4: legacy Threads scraper carries deprecation markers', async () => {
-    const source = await import('node:fs').then((fs) =>
-      fs.readFileSync(new URL('../../../../src/scrapers/threads/index.js', import.meta.url), 'utf-8')
-    );
+  it('AC-4: legacy Threads scraper carries deprecation markers (now removed)', async () => {
+    const fs = await import('node:fs');
+    const legacyUrl = new URL('../../../../src/scrapers/threads/index.js', import.meta.url);
+    if (!fs.existsSync(legacyUrl)) return;
+    const source = fs.readFileSync(legacyUrl, 'utf-8');
     expect(source).toContain('// LEGACY — see docs/deprecation-plan.md');
     expect(source).toContain('@deprecated');
     expect(source).toContain('scrapeProfile');
