@@ -1,6 +1,6 @@
 // Copyright (c) 2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { PreSignedTokenRing, SignerWorkerPagePool } from '../../src/core/signer-pool.js';
+import { PreSignedTokenRing, SignerWorkerPagePool, PureCryptoSignerRegistry } from '../../src/core/signer-pool.js';
 import { PlatformError } from '../../src/core/error-envelope.js';
 import { PlaywrightAdapter } from '../../src/scrapers/adapters/playwright.js';
 
@@ -202,5 +202,49 @@ describe('Story 13.1 — SignerWorkerPagePool (AC-2)', () => {
     await pool.close({ timeoutMs: 500 });
 
     expect(localBrowser._native.isConnected()).toBe(false);
+  });
+});
+
+
+describe('Story 13.1.2 — PureCryptoSignerRegistry (Tier 0)', () => {
+  it('[P0] should register, get, has, list, and report size', () => {
+    const reg = new PureCryptoSignerRegistry();
+    const fn = () => ({ headers: { 'x-a': 'b' } });
+
+    expect(reg.size).toBe(0);
+    reg.register('x-request-fingerprint', fn);
+    expect(reg.size).toBe(1);
+    expect(reg.has('x-request-fingerprint')).toBe(true);
+    expect(reg.get('x-request-fingerprint')).toBe(fn);
+    expect(reg.list()).toEqual(['x-request-fingerprint']);
+  });
+
+  it('[P1] should return null for unregistered algorithm and support unregister', () => {
+    const reg = new PureCryptoSignerRegistry();
+    expect(reg.get('nope')).toBeNull();
+    expect(reg.has('nope')).toBe(false);
+
+    reg.register('a', () => null);
+    expect(reg.unregister('a')).toBe(true);
+    expect(reg.unregister('a')).toBe(false);
+    expect(reg.size).toBe(0);
+  });
+
+  it('[P1] should reject a non-function signer and an empty algorithm name', () => {
+    const reg = new PureCryptoSignerRegistry();
+    expect(() => reg.register('', () => {})).toThrow();
+    expect(() => reg.register('x', 'not-a-fn')).toThrow();
+  });
+
+  it('[P0] should execute a registered pure signer synchronously under 0.1ms', () => {
+    const reg = new PureCryptoSignerRegistry();
+    reg.register('x-request-fingerprint', (p) => ({ headers: { 'x-request-fingerprint': `fp_${p.method}` } }));
+    const fn = reg.get('x-request-fingerprint');
+
+    const start = performance.now();
+    for (let i = 0; i < 1000; i++) fn({ method: 'GET', url: 'http://x.com/x' });
+    const perCall = (performance.now() - start) / 1000;
+
+    expect(perCall).toBeLessThan(0.1);
   });
 });

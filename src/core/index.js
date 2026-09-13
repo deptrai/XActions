@@ -33,7 +33,7 @@ export { AccountPool, globalAccountPool } from './account-pool.js';
 export { StatusApi, globalStatusApi } from './status-api.js';
 export { AdaptiveRateGovernor, PlatformRateLimit, globalAdaptiveRateGovernor } from './adaptive-governor.js';
 export { AbstractPlatformResponseValidator } from './platform-validator.js';
-export { PreSignedTokenRing, SignerWorkerPagePool } from './signer-pool.js';
+export { PreSignedTokenRing, SignerWorkerPagePool, PureCryptoSignerRegistry } from './signer-pool.js';
 export {
   CATEGORIES,
   CATEGORY_VALUES,

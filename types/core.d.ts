@@ -281,7 +281,9 @@ export abstract class AbstractCrawler {
 }
 
 export interface SignPayload {
-  signType?: 'token' | 'page' | 'custom' | string;
+  signType?: 'token' | 'page' | 'pure_algorithm' | 'custom' | string;
+  /** Tier 0 pure-algorithm name; auto-detected when registered and signType is not 'token'/'page'. */
+  algorithm?: string;
   location?: 'header' | 'query' | 'cookie';
   name?: string;
   prefix?: string;
@@ -309,6 +311,7 @@ export abstract class AbstractApiClient {
   cookies: Record<string, string>;
   tokenRing: PreSignedTokenRing | null;
   signerPool: SignerWorkerPagePool | null;
+  pureSigners: PureCryptoSignerRegistry | null;
   maxProxyRetries: number;
   maxAccountRotations: number;
   backoffBaseMs: number;
@@ -325,6 +328,7 @@ export abstract class AbstractApiClient {
     responseValidator?: AbstractPlatformResponseValidator;
     tokenRing?: PreSignedTokenRing;
     signerPool?: SignerWorkerPagePool;
+    pureSigners?: PureCryptoSignerRegistry | Record<string, (payload: SignPayload) => SignResult | string | null | undefined> | Map<string, (payload: SignPayload) => SignResult | string | null | undefined>;
     platform?: string;
     client?: 'undici' | 'got';
     httpClient?: Function;
@@ -471,6 +475,16 @@ export class PreSignedTokenRing {
   get size(): number;
   get capacity(): number;
   get isEmpty(): boolean;
+}
+
+export class PureCryptoSignerRegistry {
+  constructor();
+  register(algorithm: string, fn: (payload: SignPayload) => SignResult | string | null | undefined): this;
+  get(algorithm: string): ((payload: SignPayload) => SignResult | string | null | undefined) | null;
+  has(algorithm: string): boolean;
+  unregister(algorithm: string): boolean;
+  list(): string[];
+  get size(): number;
 }
 
 export class SignerWorkerPagePool {

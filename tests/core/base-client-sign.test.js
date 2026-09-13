@@ -301,3 +301,154 @@ describe('Story 13.1 — AbstractApiClient.requestWithSign Integration (AC-3, AC
     expect(body).toEqual({ hello: 'world' });
   });
 });
+
+describe('Story 13.1.2 — Tier 0 Pure-Algorithm Crypto Signer Bridge (requestWithSign)', () => {
+  let upstreamServer;
+  let upstreamPort;
+  let receivedRequests;
+
+  beforeAll(async () => {
+    upstreamServer = createServer((req, res) => {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        receivedRequests.push({ method: req.method, url: req.url, headers: req.headers, body });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      });
+    });
+    upstreamPort = await startServer(upstreamServer);
+  });
+
+  afterAll(async () => {
+    await new Promise((resolve) => upstreamServer?.close(resolve));
+  });
+
+  beforeEach(() => {
+    receivedRequests = [];
+  });
+
+  const upstreamUrl = () => `http://127.0.0.1:${upstreamPort}`;
+
+  it('[P0] should dispatch to pure signer (signType=pure_algorithm) without a browser', async () => {
+    const pureSigners = {
+      'x-request-fingerprint': (p) => ({ headers: { 'x-request-fingerprint': `fp_${p.method}` } }),
+    };
+    const client = new TestApiClient({ pureSigners });
+
+    const start = performance.now();
+    const res = await client.requestWithSign('GET', `${upstreamUrl()}/api/fp`, {
+      signType: 'pure_algorithm',
+      algorithm: 'x-request-fingerprint',
+    });
+    const elapsed = performance.now() - start;
+
+    expect(res.status).toBe(200);
+    expect(receivedRequests[0].headers['x-request-fingerprint']).toBe('fp_GET');
+    // Pure signer path should be fast; generous bound (full HTTP request included).
+    expect(elapsed).toBeLessThan(5000);
+  });
+
+  it('[P0] should map a raw-string pure signer return to the payload.name header', async () => {
+    const pureSigners = { 'x-sig': () => 'raw_sig_abc' };
+    const client = new TestApiClient({ pureSigners });
+
+    const res = await client.requestWithSign('GET', `${upstreamUrl()}/api/raw`, {
+      signType: 'pure_algorithm',
+      algorithm: 'x-sig',
+      location: 'header',
+      name: 'x-sig',
+    });
+
+    expect(res.status).toBe(200);
+    expect(receivedRequests[0].headers['x-sig']).toBe('raw_sig_abc');
+  });
+
+  it('[P1] should auto-detect a registered algorithm when signType is not token/page', async () => {
+    const pureSigners = { 'x-request-fingerprint': () => ({ headers: { 'x-request-fingerprint': 'auto_fp' } }) };
+    const client = new TestApiClient({ pureSigners });
+
+    const res = await client.requestWithSign('GET', `${upstreamUrl()}/api/auto`, {
+      signType: 'custom',
+      algorithm: 'x-request-fingerprint',
+    });
+
+    expect(res.status).toBe(200);
+    expect(receivedRequests[0].headers['x-request-fingerprint']).toBe('auto_fp');
+  });
+
+  it('[P0] should auto-detect a registered algorithm when signType is omitted (AC AUTO_DETECT)', async () => {
+    const pureSigners = { 'x-request-fingerprint': () => ({ headers: { 'x-request-fingerprint': 'detected_fp' } }) };
+    const client = new TestApiClient({ pureSigners });
+
+    // No signType at all — payload.algorithm alone must route to Tier 0.
+    const res = await client.requestWithSign('GET', `${upstreamUrl()}/api/detect`, {
+      algorithm: 'x-request-fingerprint',
+    });
+
+    expect(res.status).toBe(200);
+    expect(receivedRequests[0].headers['x-request-fingerprint']).toBe('detected_fp');
+  });
+
+  it('[P1] should fall back to sign() when algorithm is not registered', async () => {
+    const client = new CustomSignClient({ pureSigners: {} });
+
+    const res = await client.requestWithSign('GET', `${upstreamUrl()}/api/nosigner`, {
+      signType: 'pure_algorithm',
+      algorithm: 'not-registered',
+    });
+
+    expect(res.status).toBe(200);
+    expect(receivedRequests[0].headers['x-custom-sig']).toBe('custom_signature_abc');
+  });
+
+  it('[P1] should fall back to sign() when the pure signer returns null', async () => {
+    const client = new CustomSignClient({
+      pureSigners: { 'x-null': () => null },
+    });
+
+    const res = await client.requestWithSign('GET', `${upstreamUrl()}/api/null`, {
+      signType: 'pure_algorithm',
+      algorithm: 'x-null',
+    });
+
+    expect(res.status).toBe(200);
+    expect(receivedRequests[0].headers['x-custom-sig']).toBe('custom_signature_abc');
+  });
+
+  it('[P1] should fall back to sign() when the pure signer throws', async () => {
+    const client = new CustomSignClient({
+      pureSigners: {
+        'x-throws': () => {
+          throw new Error('boom');
+        },
+      },
+    });
+
+    const res = await client.requestWithSign('GET', `${upstreamUrl()}/api/throw`, {
+      signType: 'pure_algorithm',
+      algorithm: 'x-throws',
+    });
+
+    expect(res.status).toBe(200);
+    expect(receivedRequests[0].headers['x-custom-sig']).toBe('custom_signature_abc');
+  });
+
+  it('[P0] should be deterministic and under 0.1ms for the HMAC fingerprint signer', async () => {
+    const { signRequestFingerprint } = await import('../../src/scrapers/social/twitter/pure-signers.js');
+
+    const payload = { method: 'GET', url: 'http://x.com/i/api/graphql/Q/UserTweets', seed: 's3cret' };
+    const a = signRequestFingerprint(payload);
+    const b = signRequestFingerprint(payload);
+    expect(a).toEqual(b);
+
+    const start = performance.now();
+    for (let i = 0; i < 1000; i++) signRequestFingerprint(payload);
+    const perCall = (performance.now() - start) / 1000;
+    expect(perCall).toBeLessThan(0.1);
+
+    expect(signRequestFingerprint({ method: 'GET', url: 'http://x.com/x' })).toBeNull();
+  });
+});

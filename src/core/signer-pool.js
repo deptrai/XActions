@@ -14,6 +14,95 @@ import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js
 import pLimit from 'p-limit';
 
 /**
+ * Pure-Algorithm Crypto Signer Registry — Tier 0 ("Zero-Browser").
+ *
+ * Maps an algorithm name to a synchronous pure signing function implemented with
+ * `node:crypto` / WebAssembly — no headless browser. This lets clients resolve
+ * request signatures in <0.1ms without dispatching to the SignerWorkerPagePool.
+ *
+ * A signer function receives the request `payload` object and returns either:
+ *   - a SignResult object `{ headers?, query?, cookies?, signature? }`,
+ *   - a raw string (treated as `signature`),
+ *   - or `null`/`undefined` to signal "not applicable" → caller falls back to Tier 2.
+ *
+ * Signer functions MUST be synchronous and MUST NOT spawn a browser.
+ *
+ * @author nich (@nichxbt)
+ */
+export class PureCryptoSignerRegistry {
+  /** @type {Map<string, Function>} */
+  #signers = new Map();
+
+  /**
+   * Register a pure signing function under an algorithm name.
+   * Re-registering the same name overwrites the previous signer.
+   * @param {string} algorithm - e.g. 'x-request-fingerprint'
+   * @param {Function} fn - synchronous signer `(payload) => SignResult | string | null`
+   * @returns {this}
+   */
+  register(algorithm, fn) {
+    if (typeof algorithm !== 'string' || algorithm.trim().length === 0) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: '❌ PureCryptoSignerRegistry.register requires a non-empty algorithm name',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    if (typeof fn !== 'function') {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `❌ PureCryptoSignerRegistry.register requires a function for algorithm "${algorithm}"`,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    this.#signers.set(algorithm, fn);
+    return this;
+  }
+
+  /**
+   * Get the signer function for an algorithm, or null if not registered.
+   * @param {string} algorithm
+   * @returns {Function | null}
+   */
+  get(algorithm) {
+    return this.#signers.get(algorithm) || null;
+  }
+
+  /**
+   * Check whether an algorithm has a registered signer.
+   * @param {string} algorithm
+   * @returns {boolean}
+   */
+  has(algorithm) {
+    return this.#signers.has(algorithm);
+  }
+
+  /**
+   * Unregister an algorithm.
+   * @param {string} algorithm
+   * @returns {boolean} true if a signer was removed
+   */
+  unregister(algorithm) {
+    return this.#signers.delete(algorithm);
+  }
+
+  /**
+   * List all registered algorithm names.
+   * @returns {string[]}
+   */
+  list() {
+    return [...this.#signers.keys()];
+  }
+
+  /** @returns {number} Number of registered signers */
+  get size() {
+    return this.#signers.size;
+  }
+}
+
+/**
  * Pre-Signed Token Ring for O(1) synchronous token allocation.
  */
 export class PreSignedTokenRing {

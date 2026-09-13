@@ -18,6 +18,35 @@ import {
   SuggestedActions,
 } from './error-envelope.js';
 import { globalProxyPool } from '../proxy/proxy-pool.js';
+import { PureCryptoSignerRegistry } from './signer-pool.js';
+
+/**
+ * Normalize the `pureSigners` option into a `PureCryptoSignerRegistry`.
+ * Accepts an existing registry, a plain `algorithm → fn` object map, or a
+ * `Map` of the same shape. Returns null when nothing usable is supplied.
+ * @param {import('./signer-pool.js').PureCryptoSignerRegistry | Record<string, Function> | Map<string, Function> | null | undefined} input
+ * @returns {import('./signer-pool.js').PureCryptoSignerRegistry | null}
+ */
+function normalizePureSigners(input) {
+  if (!input) return null;
+  if (input instanceof PureCryptoSignerRegistry) return input;
+
+  const registry = new PureCryptoSignerRegistry();
+  const entries =
+    input instanceof Map
+      ? [...input.entries()]
+      : typeof input === 'object'
+        ? Object.entries(input)
+        : [];
+  for (const [algorithm, fn] of entries) {
+    if (typeof fn === 'function') {
+      registry.register(algorithm, fn);
+    } else {
+      console.warn(`⚠️ pureSigners: skipping non-function entry for algorithm "${algorithm}"`);
+    }
+  }
+  return registry.size > 0 ? registry : null;
+}
 
 /** @typedef {import('./types.js').AccountRecord} AccountRecord */
 
@@ -118,6 +147,9 @@ export class AbstractApiClient {
   /** @type {import('./signer-pool.js').SignerWorkerPagePool | null} */
   signerPool = null;
 
+  /** @type {import('./signer-pool.js').PureCryptoSignerRegistry | null} */
+  pureSigners = null;
+
   /** @type {ProxyProviderLike | null} */
   proxyPool = null;
 
@@ -155,6 +187,7 @@ export class AbstractApiClient {
    * @param {import('./platform-validator.js').AbstractPlatformResponseValidator} [options.responseValidator]
    * @param {import('./signer-pool.js').PreSignedTokenRing} [options.tokenRing]
    * @param {import('./signer-pool.js').SignerWorkerPagePool} [options.signerPool]
+   * @param {import('./signer-pool.js').PureCryptoSignerRegistry | Record<string, Function>} [options.pureSigners] - Tier 0 pure-algorithm signers (registry or plain algorithm→fn map)
    * @param {string} [options.platform]
    * @param {'undici' | 'got'} [options.client]
    * @param {Function} [options.httpClient]
@@ -185,6 +218,7 @@ export class AbstractApiClient {
     this.responseValidator = options.responseValidator || null;
     this.tokenRing = options.tokenRing || null;
     this.signerPool = options.signerPool || null;
+    this.pureSigners = normalizePureSigners(options.pureSigners);
     this.telemetryContext = options.telemetryContext || null;
     this.isCanary = Boolean(options.isCanary);
 
@@ -475,7 +509,8 @@ export class AbstractApiClient {
    * @param {string} method
    * @param {string} url
    * @param {Object} [payload={}]
-   * @param {string} [payload.signType='token'] - 'token' | 'page' | 'custom'
+   * @param {string} [payload.signType='token'] - 'token' | 'page' | 'pure_algorithm' | 'custom'
+   * @param {string} [payload.algorithm] - Tier 0 pure-algorithm name (e.g. 'x-request-fingerprint'); auto-detected when registered and signType is not 'token'/'page'
    * @param {'header' | 'query' | 'cookie'} [payload.location='header']
    * @param {string} [payload.name='authorization']
    * @param {string} [payload.prefix='']
@@ -491,7 +526,48 @@ export class AbstractApiClient {
     let signResult = null;
     const signType = payload.signType || 'token';
 
-    if (signType === 'token' && this.tokenRing) {
+    // ── Tier 0: pure-algorithm crypto signer (zero-browser) ─────────────
+    // Runs before Tier 1 (token ring) and Tier 2 (page pool). Triggered when
+    //   - signType === 'pure_algorithm', OR
+    //   - payload.algorithm matches a registered signer AND the caller did NOT
+    //     explicitly set signType to 'token' or 'page' (auto-detect). Note:
+    //     `payload.signType` is inspected BEFORE the 'token' default applies so
+    //     an omitted signType still auto-detects.
+    // A pure signer returns a SignResult object, a raw signature string, or
+    // null/undefined to signal "not applicable" → fall through to lower tiers.
+    const algorithm = typeof payload.algorithm === 'string' ? payload.algorithm : null;
+    const requestedSignType = payload.signType; // undefined when caller omitted it
+    const wantsPure =
+      this.pureSigners !== null &&
+      algorithm !== null &&
+      (signType === 'pure_algorithm' ||
+        (requestedSignType !== 'token' && requestedSignType !== 'page' && this.pureSigners.has(algorithm)));
+
+    if (wantsPure && this.pureSigners && algorithm) {
+      const pureFn = this.pureSigners.get(algorithm);
+      if (pureFn) {
+        try {
+          const res = pureFn({ ...payload, method, url });
+          if (res !== null && res !== undefined) {
+            signResult = typeof res === 'object' ? res : { signature: res };
+          }
+          // res === null/undefined → not applicable → fall through to Tier 2.
+        } catch (err) {
+          // Signer threw → wrap intent, then fall back to Tier 2 (AD-14).
+          console.warn(
+            `⚠️ Pure-algorithm signer "${algorithm}" threw: ${err instanceof Error ? err.message : String(err)} — falling back to Tier 2`
+          );
+        }
+      }
+      // No registered signer / null result / threw → fall back to lower tiers.
+    }
+
+    // When the caller asked for pure_algorithm but it could not resolve, let the
+    // request degrade gracefully to a page sign (if a script was supplied) or to
+    // the subclass sign() hook — never hard-fail on an unresolvable pure signer.
+    const effectiveSignType = signType === 'pure_algorithm' ? (payload.script ? 'page' : 'custom') : signType;
+
+    if (!signResult && effectiveSignType === 'token' && this.tokenRing) {
       if (this.tokenRing.isEmpty) {
         throw new PlatformError({
           type: ErrorTypes.INTERNAL,
@@ -527,13 +603,13 @@ export class AbstractApiClient {
           });
         }
       }
-    } else if (signType === 'page' && this.signerPool && payload.script) {
+    } else if (!signResult && effectiveSignType === 'page' && this.signerPool && payload.script) {
       const res = await this.signerPool.evaluate(payload.script, payload.args || [], {
         timeoutMs: payload.timeoutMs,
         warmup: payload.warmup,
       });
       signResult = typeof res === 'object' && res !== null ? res : { signature: res };
-    } else if (typeof this.sign === 'function' && this.sign !== AbstractApiClient.prototype.sign) {
+    } else if (!signResult && typeof this.sign === 'function' && this.sign !== AbstractApiClient.prototype.sign) {
       signResult = /** @type {Record<string, any>} */ (await this.sign(payload));
     }
 
@@ -572,6 +648,10 @@ export class AbstractApiClient {
           resolvedUrl = isAbsolute
             ? parsedUrl.toString()
             : `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+        } else if (location === 'cookie') {
+          // Raw-string signature into a cookie slot — mirror signResult.cookies.
+          this.cookies[name] = String(signResult.signature);
+          this.updateCookies(this.cookies);
         }
       }
     }
