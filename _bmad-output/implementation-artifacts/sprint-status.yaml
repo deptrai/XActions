@@ -176,7 +176,7 @@ development_status:
   26-2-final-legacy-removal: done
   epic-26-retrospective: optional
 
-  epic-27: in-progress
+  epic-27: done
   27-1-fingerprintmanager-tls-ja4-spoofing-geo-consistent-profiles: done
   27-2-sessionhealthorchestrator-continuous-health-score-circuit-br: done
   27-3-challengesignaturedetector-automated-bot-detection-page-dete: done
