@@ -115,6 +115,7 @@ context: []
   - Tests: `tests/core/session-health-orchestrator.test.js` (9 tests) + `tests/admin/accounts-health.test.js` (3 tests) — real impl, no mocks, 12/12 pass.
   - `docs/stealth-scraping.md` documented orchestrator API, circuit breaker flow, and admin dashboard endpoints.
 - Verified: `npm run typecheck` 0 errors; tests 12/12 pass.
+  - 2026-09-13 E2E (Playwright + real Express + real orchestrator): `tests/e2e/admin-health-27-2.e2e.test.js` — 4/4 pass. Verified Health column header, green/yellow/red pills from live scores, 🩺 Probe → POST /accounts/probe → circuit closed + score 60, and GET /accounts returns healthScore/circuitState. Test seeds real orchestrator signals via `recordError`/`recordLatency`/`recordRateLimit`/`recordBotChallenge` — no mocks for the system under test.
 
 
 ## Spec Change Log
