@@ -1292,11 +1292,17 @@ export class FacebookCrawler extends AbstractCrawler {
     };
 
     const docId = this.docIds.GROUP_FEED;
-    const res = await this.client.requestGraphQl(docId, variables, {
-      accountId,
-      cookies,
-      requiresAuth: session?.requiresAuth,
-    });
+    let res = null;
+    try {
+      res = await this.client.requestGraphQl(docId, variables, {
+        accountId,
+        cookies,
+        requiresAuth: session?.requiresAuth,
+      });
+    } catch {
+      // Allow browser-DOM fallback for public groups when GraphQL is gated.
+      res = null;
+    }
 
     const rawEdges = res?.data?.group?.feed?.edges || res?.data?.node?.feed?.edges;
     const edges = Array.isArray(rawEdges) ? rawEdges : [];
@@ -1319,6 +1325,27 @@ export class FacebookCrawler extends AbstractCrawler {
     const pageInfo = res?.data?.group?.feed?.page_info || res?.data?.node?.feed?.page_info || null;
     const hasMore = Boolean(pageInfo?.has_next_page) && !stopPagination;
     await this.#saveCheckpoint('group', args.groupId, pageInfo?.end_cursor || null, posts, hasMore);
+
+    // Browser-DOM fallback: public groups render their Discussion feed to guests.
+    if (posts.length === 0 && this.client?.browserBridge) {
+      try {
+        const domRes = await this.client.scrapeGroupPostsWithBrowser(String(args.groupId), {
+          cookies, accountId, limit: variables.count, baseUrl: this.client.baseUrl,
+        });
+        for (const raw of domRes?.posts || []) {
+          const pid = String(raw.externalId || `${args.groupId}_${posts.length}`);
+          const item = {
+            id: `facebook:${pid}`, platform: 'facebook', externalId: pid,
+            content: raw.content || '', authorId: raw.authorId || `group:${args.groupId}`,
+            authorName: raw.authorName || 'Group member', crawledAt: new Date(),
+            postUrl: raw.postUrl || `https://www.facebook.com/groups/${args.groupId}`,
+            likesCount: 0, repostsCount: 0, repliesCount: 0,
+            category: 'social', metadata: { sourceMethod: 'browser', groupId: args.groupId },
+          };
+          try { this.validateItem(item); posts.push(item); } catch {}
+        }
+      } catch { /* leave posts empty if browser fallback fails */ }
+    }
 
     return {
       posts,
@@ -1429,6 +1456,40 @@ export class FacebookCrawler extends AbstractCrawler {
         }
       } catch {
         // proceed with empty posts if SSR also fails
+      }
+    }
+
+    // Browser-DOM fallback: on a real (CDP-attached) browser over a clean IP,
+    // a public page renders its timeline for guests even though GraphQL is gated.
+    if (posts.length === 0 && this.client?.browserBridge) {
+      try {
+        const domRes = await this.client.scrapePagePostsWithBrowser(String(args.pageId), {
+          cookies,
+          accountId,
+          limit: variables.count,
+          baseUrl: this.client.baseUrl,
+        });
+        for (const raw of domRes?.posts || []) {
+          const postId = String(raw.externalId || `${args.pageId}_${posts.length}`);
+          const item = {
+            id: `facebook:${postId}`,
+            platform: 'facebook',
+            externalId: postId,
+            content: raw.content || '',
+            authorId: String(raw.authorId || args.pageId),
+            authorName: String(raw.authorName || args.pageId),
+            crawledAt: new Date(),
+            postUrl: raw.postUrl || `https://www.facebook.com/${args.pageId}`,
+            likesCount: 0,
+            repostsCount: 0,
+            repliesCount: 0,
+            category: 'social',
+            metadata: { sourceMethod: 'browser' },
+          };
+          try { this.validateItem(item); posts.push(item); } catch {}
+        }
+      } catch {
+        // leave posts empty if the browser fallback fails
       }
     }
 
@@ -2160,6 +2221,29 @@ export class FacebookCrawler extends AbstractCrawler {
     const targetKey = [rawQuery, location, category, categoryId, minPrice, maxPrice].filter((v) => v !== undefined && v !== null && v !== '').join(':');
     await this.#saveCheckpoint('marketplace', targetKey, pageInfo?.end_cursor || null, postItems, hasMore);
 
+    // Browser-DOM fallback: Marketplace renders listings to guests on clean IPs.
+    if (postItems.length === 0 && this.client?.browserBridge) {
+      try {
+        const domRes = await this.client.scrapeMarketplaceWithBrowser(String(rawQuery || ''), {
+          cookies, accountId, limit, location, baseUrl: this.client.baseUrl,
+        });
+        for (const raw of domRes?.listings || []) {
+          const lid = String(raw.externalId || `mk_${postItems.length}`);
+          const item = {
+            id: `facebook:${lid}`, platform: 'facebook', externalId: lid,
+            content: raw.content || [raw.price, raw.title, raw.location].filter(Boolean).join(' — '),
+            authorId: 'marketplace', authorName: 'Marketplace seller', crawledAt: new Date(),
+            postUrl: raw.postUrl || `https://www.facebook.com/marketplace/item/${lid}`,
+            likesCount: 0, repostsCount: 0, repliesCount: 0,
+            category: 'social',
+            metadata: { sourceMethod: 'browser', price: raw.price || null, location: raw.location || null, title: raw.title || null },
+          };
+          try { this.validateItem(item); postItems.push(item); } catch {}
+        }
+        if (postItems.length > 0) note = `Browser DOM fallback returned ${postItems.length} result(s)`;
+      } catch { /* leave empty if browser fallback fails */ }
+    }
+
     return {
       posts: postItems,
       pageInfo: { ...pageInfo, has_next_page: hasMore },
@@ -2513,6 +2597,43 @@ export class FacebookCrawler extends AbstractCrawler {
     const after = typeof args?.after === 'string' ? args.after.trim() || null : null;
     const triedFallback = Boolean(args?.triedFallback);
 
+    // For a bare numeric postId with no auth, skip GraphQL entirely when the
+    // browser bridge is available — guest GraphQL always hits a checkpoint.
+    // The DOM fallback below will build the permalink URL from postExternalId.
+    const isNumericOnly = /^\d+$/.test(String(args.postId).replace(/^facebook:/, ''));
+    if (isNumericOnly && this.client?.browserBridge) {
+      const postUrl = `${this.client.baseUrl}/permalink.php?story_fbid=${args.postId}&id=4`;
+      const domComments = [];
+      try {
+        const domRes = await this.client.scrapePostCommentsWithBrowser(postUrl, {
+          cookies, accountId, limit: maxComments, baseUrl: this.client.baseUrl,
+        });
+        for (const raw of domRes?.comments || []) {
+          const cid = String(raw.externalId || `c_${domComments.length}`);
+          const item = {
+            id: `facebook:${postExternalId}:${cid}`,
+            platform: 'facebook',
+            externalId: cid,
+            postId: `facebook:${postExternalId}`,
+            depth: 0,
+            authorId: raw.authorId || '',
+            authorName: raw.authorName || 'Facebook user',
+            content: raw.content || '',
+            crawledAt: new Date(),
+            likesCount: 0,
+            repliesCount: 0,
+            metadata: { sourceMethod: 'browser' },
+          };
+          try { this.validateItem(item); domComments.push(item); } catch {}
+        }
+      } catch {}
+      if (domComments.length > 0) {
+        return { comments: domComments, pageInfo: { has_next_page: false, end_cursor: null }, note: null };
+      }
+      // If DOM fallback returned nothing, fall through to the GraphQL path
+      // below (it will also likely fail for guests, but preserves the error).
+    }
+
     // Resolve post feedback id up-front; needed for the root comment GraphQL query.
     const postContext = await this.#resolvePostFeedbackContext(args.postId, cookies, accountId, session);
 
@@ -2664,6 +2785,43 @@ export class FacebookCrawler extends AbstractCrawler {
     }
 
     const { comments, pageInfo, note } = extractorResult;
+
+    // Browser-DOM fallback: a public post permalink renders guest-visible comments
+    // on a real browser even though GraphQL feedback context is gated for guests.
+    if (comments.length === 0 && this.client?.browserBridge) {
+      try {
+        const rawIn = String(args?.postId || postExternalId || '');
+        const postUrl = /^https?:\/\//i.test(rawIn)
+          ? rawIn
+          : `${this.client.baseUrl}/${rawIn.replace(/^\/+/, '')}`;
+        const domRes = await this.client.scrapePostCommentsWithBrowser(postUrl, {
+          cookies,
+          accountId,
+          limit: maxComments,
+          baseUrl: this.client.baseUrl,
+        });
+        for (const raw of domRes?.comments || []) {
+          const cid = String(raw.externalId || `c_${comments.length}`);
+          const item = {
+            id: `facebook:${postExternalId}:${cid}`,
+            platform: 'facebook',
+            externalId: cid,
+            postId: `facebook:${postExternalId}`,
+            depth: 0,
+            authorId: raw.authorId || '',
+            authorName: raw.authorName || 'Facebook user',
+            content: raw.content || '',
+            crawledAt: new Date(),
+            likesCount: 0,
+            repliesCount: 0,
+            metadata: { sourceMethod: 'browser' },
+          };
+          try { this.validateItem(item); comments.push(item); } catch {}
+        }
+      } catch {
+        // leave comments empty if browser fallback fails
+      }
+    }
 
     for (const comment of comments) {
       this.validateItem(comment);
@@ -3042,6 +3200,30 @@ export class FacebookCrawler extends AbstractCrawler {
       if (err instanceof PlatformError && (err.type === ErrorTypes.AUTH_EXPIRED || err.type === ErrorTypes.RATE_LIMIT)) {
         throw err;
       }
+      // Browser-DOM fallback: a public profile's /followers renders names to guests.
+      if (this.client?.browserBridge) {
+        try {
+          const domRes = await this.client.scrapeFollowListWithBrowser(targetKey, 'followers', {
+            cookies, accountId, limit, baseUrl: this.client.baseUrl,
+          });
+          const domFollowers = (domRes?.members || []).map((m, i) => {
+            const item = {
+              id: `facebook:${m.handle || m.externalId || 'f_' + i}`,
+              platform: 'facebook',
+              externalId: String(m.externalId || m.handle || 'f_' + i),
+              username: m.handle || null,
+              name: m.authorName || null,
+              profileUrl: m.postUrl || null,
+              crawledAt: new Date(),
+              metadata: { sourceMethod: 'browser' },
+            };
+            return item;
+          }).filter(Boolean);
+          if (domFollowers.length > 0) {
+            return { followers: domFollowers, pageInfo: { has_next_page: false, end_cursor: null } };
+          }
+        } catch { /* fall through to restricted note */ }
+      }
       // Public / guest fallback: Facebook does not expose full followers list without login
       return {
         followers: [],
@@ -3170,6 +3352,27 @@ export class FacebookCrawler extends AbstractCrawler {
     } catch (err) {
       if (err instanceof PlatformError && (err.type === ErrorTypes.AUTH_EXPIRED || err.type === ErrorTypes.RATE_LIMIT)) {
         throw err;
+      }
+      // Browser-DOM fallback: a public profile's /following renders names to guests.
+      if (this.client?.browserBridge) {
+        try {
+          const domRes = await this.client.scrapeFollowListWithBrowser(targetKey, 'following', {
+            cookies, accountId, limit, baseUrl: this.client.baseUrl,
+          });
+          const domFollowing = (domRes?.members || []).map((m, i) => ({
+            id: `facebook:${m.handle || m.externalId || 'u_' + i}`,
+            platform: 'facebook',
+            externalId: String(m.externalId || m.handle || 'u_' + i),
+            username: m.handle || null,
+            name: m.authorName || null,
+            profileUrl: m.postUrl || null,
+            crawledAt: new Date(),
+            metadata: { sourceMethod: 'browser', isFollower: false, isFollowing: true },
+          })).filter(Boolean);
+          if (domFollowing.length > 0) {
+            return { following: domFollowing, pageInfo: { has_next_page: false, end_cursor: null } };
+          }
+        } catch { /* fall through to restricted note */ }
       }
       if (this.#isFollowingRestricted(/** @type {PlatformError} */ (err))) {
         return {

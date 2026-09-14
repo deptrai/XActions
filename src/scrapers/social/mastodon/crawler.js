@@ -224,9 +224,11 @@ export class MastodonCrawler extends AbstractCrawler {
 
     const raw = await this.client.lookupAccount(target.username, target.instance);
     const profile = normalizeMastodonAccount(raw, target.instance);
+    this.validateItem(profile);
 
     if (this.store) {
       const postForm = profileItemToPostItem(profile);
+      this.validateItem(postForm);
       await this.store.storeContent(postForm).catch(() => {});
     }
 

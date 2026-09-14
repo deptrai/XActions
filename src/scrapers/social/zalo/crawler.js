@@ -258,19 +258,22 @@ export class ZaloCrawler extends AbstractCrawler {
   async #persistPosts(posts) {
     if (!posts || !posts.length) return;
 
+    const valid = this.filterValidItems(posts);
+    if (!valid.length) return;
+
     if (this.store) {
       const store = /** @type {Record<string, Function>} */ (/** @type {unknown} */ (this.store));
       if (typeof this.store.storeBatch === 'function') {
-        await this.store.storeBatch(posts).catch(() => {});
+        await this.store.storeBatch(valid).catch(() => {});
       } else if (typeof store.savePost === 'function') {
-        for (const item of posts) {
+        for (const item of valid) {
           await store.savePost(item).catch(() => {});
         }
       }
     }
 
     if (this.publisher && typeof this.publisher.publish === 'function') {
-      for (const item of posts) {
+      for (const item of valid) {
         await this.publisher.publish(item, this.scraperId).catch(() => {});
       }
     }
@@ -283,16 +286,14 @@ export class ZaloCrawler extends AbstractCrawler {
   async #persistProfiles(profiles) {
     if (!profiles || !profiles.length) return;
 
+    const valid = this.filterValidItems(profiles);
+    if (!valid.length) return;
+
     if (this.store) {
       const store = /** @type {Record<string, Function>} */ (/** @type {unknown} */ (this.store));
       if (typeof store.saveProfile === 'function') {
-        for (const p of profiles) {
-          try {
-            this.validateItem(p);
-            await store.saveProfile(p).catch(() => {});
-          } catch (err) {
-            console.warn(`[zalo] skip invalid profile item: ${err instanceof Error ? err.message : String(err)}`);
-          }
+        for (const p of valid) {
+          await store.saveProfile(p).catch(() => {});
         }
       }
     }
@@ -318,15 +319,13 @@ export class ZaloCrawler extends AbstractCrawler {
     });
 
     const posts = Array.isArray(result.posts) ? result.posts : [];
-    for (const post of posts) {
-      this.validateItem(post);
-    }
-    await this.#persistPosts(posts);
+    const validPosts = this.filterValidItems(posts);
+    await this.#persistPosts(validPosts);
 
     return {
-      posts,
+      posts: validPosts,
       pageInfo: result.pageInfo || {
-        total: posts.length,
+        total: validPosts.length,
         offset,
         limit,
         has_next_page: false,
@@ -352,12 +351,13 @@ export class ZaloCrawler extends AbstractCrawler {
     });
 
     const profiles = Array.isArray(result.profiles) ? result.profiles : [];
-    await this.#persistProfiles(profiles);
+    const validProfiles = this.filterValidItems(profiles);
+    await this.#persistProfiles(validProfiles);
 
     return {
-      profiles,
+      profiles: validProfiles,
       pageInfo: result.pageInfo || {
-        total: profiles.length,
+        total: validProfiles.length,
         offset,
         count,
         has_next_page: false,
@@ -388,6 +388,7 @@ export class ZaloCrawler extends AbstractCrawler {
       });
     }
 
+    this.validateItem(result.profile);
     await this.#persistProfiles([result.profile]);
     return { profile: result.profile };
   }
@@ -410,15 +411,13 @@ export class ZaloCrawler extends AbstractCrawler {
     });
 
     const posts = Array.isArray(result.posts) ? result.posts : [];
-    for (const post of posts) {
-      this.validateItem(post);
-    }
-    await this.#persistPosts(posts);
+    const validPosts = this.filterValidItems(posts);
+    await this.#persistPosts(validPosts);
 
     return {
-      posts,
+      posts: validPosts,
       pageInfo: result.pageInfo || {
-        total: posts.length,
+        total: validPosts.length,
         offset,
         limit,
         has_next_page: false,

@@ -197,7 +197,14 @@ function extractMbasicProfileFromDom(handle) {
      /create\s*new\s*account/i.test(bodyText) ||
      /password/i.test(bodyText));
   if (hasLoginForm || hasLoginIndicators || /^log\s*in\s*to\s*view/i.test(bodyText)) {
-    return null;
+    // On a clean/residential IP, Facebook renders public profile content
+    // alongside a passive login banner (og:title/og:description still present).
+    // Only bail when the wall actually suppresses content — no usable og:title.
+    const ogTitleProbe = document.querySelector('meta[property="og:title"], meta[name="og:title"]')?.getAttribute('content') || null;
+    const hasUsableOg = typeof ogTitleProbe === 'string' && ogTitleProbe.trim() && !/facebook|log in/i.test(ogTitleProbe);
+    if (!hasUsableOg) {
+      return null;
+    }
   }
 
   // Name: prefer document.title, then og:title, then h1, then other headings.
@@ -280,6 +287,223 @@ function extractMbasicProfileFromDom(handle) {
     pageUrl,
     userId,
   };
+}
+
+/**
+ * Extract public page/timeline posts from a loaded desktop page.
+ * Renders `div[role="article"]` feed units on a public page/profile for guests on
+ * clean IPs. This is a standalone function so it can be passed to adapter.evaluate().
+ * @param {string} pageId
+ * @param {number} [limit=20]
+ * @returns {Record<string, any>[]}
+ */
+function extractPagePostsFromDom(pageId, limit = 20) {
+  const results = [];
+  const seen = new Set();
+  const articles = document.querySelectorAll('div[role="article"], div[data-pagelet*="FeedUnit"], div[data-pagelet*="ProfileTimeline"]');
+
+  const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
+
+  for (const art of articles) {
+    if (results.length >= limit) break;
+    // Pull the dominant text block; drop nav/buttons noise.
+    const textEl = art.querySelector('div[data-ad-preview="message"], div[dir="auto"], span[dir="auto"]') || art;
+    const text = clean(textEl.innerText || textEl.textContent).slice(0, 2000);
+    if (!text || text.length < 10) continue;
+    // Skip pure-UI fragments (Like/Comment/Share rails, headers).
+    if (/^(like|comment|share|follow|see more|write a comment)\b/i.test(text) && text.length < 60) continue;
+
+    // Permalink for the post (numeric id / pfbid / story_fbid).
+    let postUrl = null;
+    const links = art.querySelectorAll('a[href]');
+    for (const a of links) {
+      const href = a.getAttribute('href') || '';
+      const m = href.match(/(\/posts\/[0-9]+|\/permalink\/[0-9]+|pfbid[A-Za-z0-9_-]+|story_fbid=[0-9]+|\/videos\/[0-9]+|\/photo[^"'\s]*fbid=[0-9]+)/);
+      if (m) { postUrl = href.startsWith('http') ? href : 'https://www.facebook.com' + href; break; }
+    }
+    const externalId = postUrl
+      ? (postUrl.match(/pfbid[A-Za-z0-9_-]+|[0-9]{6,}/)?.[0] || `${pageId}_${results.length}`)
+      : `${pageId}_${results.length}`;
+    if (seen.has(externalId)) continue;
+    seen.add(externalId);
+
+    // Author from the first profile link in the article header.
+    let authorName = pageId;
+    const authorLink = art.querySelector('a[href*="/"][role="link"] strong, h3 a, h4 a, a[aria-hidden="false"] strong');
+    if (authorLink) authorName = clean(authorLink.textContent) || pageId;
+
+    results.push({
+      externalId,
+      content: text,
+      authorName,
+      authorId: pageId,
+      postUrl: postUrl || ('https://www.facebook.com/' + pageId),
+    });
+  }
+  return results;
+}
+
+/**
+ * Extract comments from a loaded post permalink page (desktop guest view).
+ * Reads top-level comment list items. Standalone for adapter.evaluate().
+ * @param {number} [limit=50]
+ * @returns {Record<string, any>[]}
+ */
+function extractCommentsFromDom(limit = 50) {
+  const results = [];
+  const seen = new Set();
+  const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
+  const isNoise = (t) => /^(like|reply|share|view all|view more|most relevant|write a comment|top comments|all reactions|see more|follow|comments?|log in|forgotten account)\b/i.test(t) ||
+    /^\d+[wsmhd]\s*$/i.test(t) || /^(like|comment|share)\.?$/i.test(t);
+
+  // On a public permalink, each comment is a nested role="article" inside the
+  // post's comment list — distinct from the single top-level post article.
+  const articles = [...document.querySelectorAll('div[role="article"]')];
+  // The post itself is usually the largest/first article; comments are the rest.
+  const commentArts = articles.slice(1);
+
+  for (const art of commentArts) {
+    if (results.length >= limit) break;
+    // Author: first profile anchor (to /user/ or a vanity profile, not photo/post links).
+    let authorName = null;
+    const authorLink = art.querySelector('a[href*="/user/"], a[href*="facebook.com/"]:not([href*="photo"]):not([href*="/posts/"])');
+    if (authorLink) {
+      const cand = clean(authorLink.textContent);
+      if (cand && !isNoise(cand) && cand.length < 80 && !/^\d+[wsmhd]/.test(cand)) authorName = cand;
+    }
+
+    // Body: longest meaningful text block that isn't the author or an action rail.
+    let bodyText = '';
+    const blocks = art.querySelectorAll('div[dir="auto"], span[dir="auto"], div[lang]');
+    for (const b of blocks) {
+      const t = clean(b.innerText || b.textContent);
+      if (!t || t.length < 3 || isNoise(t) || t === authorName) continue;
+      if (/^\d+[wsmhd]\b/.test(t) && t.length < 30) continue;
+      if (t.length > bodyText.length) bodyText = t;
+    }
+    if (!bodyText || bodyText.length < 3) continue;
+
+    const key = (authorName || 'anon') + '|' + bodyText.slice(0, 80);
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    results.push({
+      externalId: 'c_' + results.length,
+      content: bodyText.slice(0, 2000),
+      authorName: authorName || 'Facebook user',
+      authorId: null,
+    });
+  }
+  return results;
+}
+
+/**
+ * Extract public group feed posts from a loaded group page (desktop guest view).
+ * Public groups render Discussion posts for guests on clean IPs.
+ * @param {string} groupId
+ * @param {number} [limit=20]
+ * @returns {Record<string, any>[]}
+ */
+function extractGroupPostsFromDom(groupId, limit = 20) {
+  const results = [];
+  const seen = new Set();
+  const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
+  const articles = document.querySelectorAll('div[role="article"], div[data-pagelet*="GroupInlineFeed"], div[data-pagelet*="FeedUnit"]');
+
+  for (const art of articles) {
+    if (results.length >= limit) break;
+    const textEl = art.querySelector('div[data-ad-preview="message"], div[dir="auto"], span[dir="auto"]') || art;
+    const text = clean(textEl.innerText || textEl.textContent).slice(0, 2000);
+    if (!text || text.length < 10) continue;
+    if (/^(like|comment|share|join group|write something|see more|about this group|public group|featured|recent media)\b/i.test(text) && text.length < 80) continue;
+
+    let postUrl = null;
+    for (const a of art.querySelectorAll('a[href]')) {
+      const href = a.getAttribute('href') || '';
+      if (/(\/posts\/[0-9]+|\/permalink\/[0-9]+|pfbid[A-Za-z0-9_-]+|story_fbid=[0-9]+|groups\/[^/]+\/permalink)/.test(href)) {
+        postUrl = href.startsWith('http') ? href : 'https://www.facebook.com' + href; break;
+      }
+    }
+    const externalId = postUrl ? (postUrl.match(/pfbid[A-Za-z0-9_-]+|[0-9]{6,}/)?.[0] || `${groupId}_${results.length}`) : `${groupId}_${results.length}`;
+    if (seen.has(externalId)) continue;
+    seen.add(externalId);
+
+    let authorName = 'Group member';
+    const authorEl = art.querySelector('h3 a, h4 a, a[role="link"] strong, strong a');
+    if (authorEl) authorName = clean(authorEl.textContent) || authorName;
+
+    results.push({ externalId, content: text, authorName, authorId: null, postUrl: postUrl || `https://www.facebook.com/groups/${groupId}` });
+  }
+  return results;
+}
+
+/**
+ * Extract Marketplace listings from a loaded marketplace search page (desktop guest view).
+ * Marketplace renders listings for guests on clean IPs.
+ * @param {number} [limit=50]
+ * @returns {Record<string, any>[]}
+ */
+function extractMarketplaceFromDom(limit = 50) {
+  const results = [];
+  const seen = new Set();
+  const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
+  // Listings are links to /marketplace/item/<id> with price + title + location.
+  const cards = document.querySelectorAll('a[href*="/marketplace/item/"]');
+  for (const card of cards) {
+    if (results.length >= limit) break;
+    const href = card.getAttribute('href') || '';
+    const idM = href.match(/item\/(\d+)/);
+    const externalId = idM ? idM[1] : `mk_${results.length}`;
+    if (seen.has(externalId)) continue;
+    const text = clean(card.innerText || card.textContent);
+    if (!text) continue;
+    // Split into lines: [price, title, location] typically.
+    const lines = text.split(/\s{2,}|\n/).map(clean).filter(Boolean);
+    const price = lines.find(l => /^[₫$€£]|^\d[\d,.]*\s*(₫|vnd|đ|USD)/i.test(l)) || null;
+    const title = lines.find(l => l !== price && !/^\d+\s*km|km away|·/.test(l) && l.length > 3) || null;
+    const location = lines.find(l => /,|\d+\s*km|Ho Chi Minh|Hanoi|Vietnam/i.test(l) && l !== title) || null;
+    if (!title && !price) continue;
+    seen.add(externalId);
+    results.push({
+      externalId,
+      content: [price, title, location].filter(Boolean).join(' — ') || text.slice(0, 200),
+      title: title || '',
+      price: price || '',
+      location: location || '',
+      postUrl: href.startsWith('http') ? href : 'https://www.facebook.com' + href,
+    });
+  }
+  return results;
+}
+
+/**
+ * Extract follower/following names from a loaded /followers or /following page.
+ * Guests on clean IPs see a name list for public profiles.
+ * @param {string} ownerHandle
+ * @param {number} [limit=50]
+ * @returns {Record<string, any>[]}
+ */
+function extractFollowListFromDom(ownerHandle, limit = 50) {
+  const results = [];
+  const seen = new Set();
+  const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
+  // Follower entries are list items / anchors to profile paths.
+  const links = document.querySelectorAll('a[href]');
+  for (const a of links) {
+    if (results.length >= limit) break;
+    const href = a.getAttribute('href') || '';
+    if (!/^https?:\/\/(www\.)?facebook\.com\/|^\/[A-Za-z0-9.]+\/?$/.test(href)) continue;
+    if (/followers|following|friends|photo|posts|videos|reels|about|more|login|signup|help|privacy|terms|recover|watch|marketplace|groups|pages|events|gaming|settings|bookmarks/i.test(href)) continue;
+    const name = clean(a.textContent);
+    if (!name || name.length < 2 || name.length > 80) continue;
+    if (/^(followers?|following|more|see all|log in|sign up|friends?|posts?|about|reels?|photos?|videos?|forgotten account|forgot account|create new account|find friends|help centre|help center)$/i.test(name)) continue;
+    const handle = href.replace(/^https?:\/\/(www\.)?facebook\.com\//, '').replace(/\/$/, '').split('?')[0] || null;
+    if (!handle || /^(login|recover|help|signup|watch|marketplace|groups|pages|events|gaming|settings|bookmarks|privacy|terms|policies)/i.test(handle)) continue;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    results.push({ externalId: handle || `u_${results.length}`, authorName: name, handle, postUrl: href.startsWith('http') ? href : 'https://www.facebook.com' + href });
+  }
+  return results;
 }
 
 /**
@@ -689,8 +913,12 @@ export class FacebookBrowserBridge {
    */
   #resolveProfileBaseUrl(baseUrl) {
     const input = (baseUrl || this.baseUrl || 'https://mbasic.facebook.com').replace(/\/+$/, '');
+    // When attached to a real (headed) Chrome via CDP, prefer the desktop site —
+    // mbasic redirects guests to a login interstitial on residential IPs, whereas
+    // the desktop page renders public profile content behind a passive banner.
+    const preferDesktop = Boolean(this.cdpUrl) && this.adapterName !== 'http';
     if (input === 'https://www.facebook.com' || input === 'http://www.facebook.com') {
-      return 'https://mbasic.facebook.com';
+      return preferDesktop ? 'https://www.facebook.com' : 'https://mbasic.facebook.com';
     }
     return input;
   }
@@ -946,6 +1174,194 @@ export class FacebookBrowserBridge {
         } catch {}
       }
     }
+  }
+
+  /**
+   * Scrape public page/profile timeline posts via the browser bridge (desktop DOM).
+   * Used as a no-auth fallback when GraphQL returns nothing for a guest session.
+   * @param {string} pageId - Page handle or profile id
+   * @param {Object} [options={}]
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies]
+   * @param {string} [options.accountId]
+   * @param {number} [options.limit=20]
+   * @param {number} [options.timeout]
+   * @returns {Promise<{ posts: Record<string, any>[], pageInfo?: any, note?: string }>}
+   */
+  async scrapePagePosts(pageId, options = {}) {
+    if (!pageId || typeof pageId !== 'string') {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'pageId is required',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    const accountId = options.accountId || 'fb-guest';
+    const limit = Number.isFinite(options.limit) && options.limit > 0 ? Math.min(Math.floor(options.limit), 200) : 20;
+    const timeout = options.timeout || 30000;
+    const baseUrl = (this.#resolveProfileBaseUrl(options.baseUrl));
+    const targetUrl = `${baseUrl}/${String(pageId).replace(/^\/+/, '')}`;
+
+    const adapter = await this.#resolveAdapter();
+    const browser = await this.#getBrowser(accountId);
+    let page = null;
+    try {
+      page = await adapter.newPage(browser, { preserveProfile: false });
+      const parsedCookies = this.#parseCookies(options.cookies || '');
+      if (parsedCookies.length > 0) await adapter.setCookies(page, parsedCookies);
+
+      await adapter.goto(page, targetUrl, { waitUntil: 'domcontentloaded', timeout });
+      // Wait briefly for feed units then scroll once to lazy-load more.
+      await this.#pollForSelector(adapter, page, 'div[role="article"], div[data-pagelet*="FeedUnit"], div[data-pagelet*="ProfileTimeline"]', 8000);
+      await adapter.scroll(page, { y: 1200 }).catch(() => {});
+      await this.#sleep(1500);
+
+      const raw = /** @type {Record<string, any>[]} */ (await adapter.evaluate(page, extractPagePostsFromDom, String(pageId), limit));
+      const posts = Array.isArray(raw) ? raw : [];
+      return {
+        posts,
+        pageInfo: { has_next_page: false, end_cursor: null },
+        note: posts.length === 0 ? 'No public posts rendered for guest session' : undefined,
+      };
+    } finally {
+      if (page && this.adapter) { try { await this.adapter.closePage(page); } catch {} }
+    }
+  }
+
+  /**
+   * Scrape comments from a post permalink via the browser bridge (desktop DOM).
+   * @param {string} postUrl - Full post permalink URL
+   * @param {Object} [options={}]
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies]
+   * @param {string} [options.accountId]
+   * @param {number} [options.limit=50]
+   * @param {number} [options.timeout]
+   * @returns {Promise<{ comments: Record<string, any>[], pageInfo?: any, note?: string }>}
+   */
+  async scrapePostComments(postUrl, options = {}) {
+    if (!postUrl || typeof postUrl !== 'string') {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'postUrl is required',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    const accountId = options.accountId || 'fb-guest';
+    const limit = Number.isFinite(options.limit) && options.limit > 0 ? Math.min(Math.floor(options.limit), 2000) : 50;
+    const timeout = options.timeout || 30000;
+    let targetUrl = postUrl.trim();
+    if (!/^https?:\/\//i.test(targetUrl)) {
+      const baseUrl = this.#resolveProfileBaseUrl(options.baseUrl);
+      targetUrl = `${baseUrl}/${targetUrl.replace(/^\/+/, '')}`;
+    }
+
+    const adapter = await this.#resolveAdapter();
+    const browser = await this.#getBrowser(accountId);
+    let page = null;
+    try {
+      page = await adapter.newPage(browser, { preserveProfile: false });
+      const parsedCookies = this.#parseCookies(options.cookies || '');
+      if (parsedCookies.length > 0) await adapter.setCookies(page, parsedCookies);
+
+      await adapter.goto(page, targetUrl, { waitUntil: 'domcontentloaded', timeout });
+      await this.#sleep(1500);
+      await adapter.scroll(page, { y: 800 }).catch(() => {});
+      await this.#sleep(1000);
+
+      const raw = /** @type {Record<string, any>[]} */ (await adapter.evaluate(page, extractCommentsFromDom, limit));
+      const comments = Array.isArray(raw) ? raw : [];
+      return {
+        comments,
+        pageInfo: { has_next_page: false, end_cursor: null },
+        note: comments.length === 0 ? 'No public comments rendered for guest session' : undefined,
+      };
+    } finally {
+      if (page && this.adapter) { try { await this.adapter.closePage(page); } catch {} }
+    }
+  }
+
+  /**
+   * Shared DOM-list scraper: open a URL, wait, scroll, run an extractor, return items.
+   * @param {string} targetUrl
+   * @param {(…args:any[])=>Record<string,any>[]} extractorFn
+   * @param {any[]} extractorArgs
+   * @param {string} itemKey - result field name (posts|listings|members)
+   * @param {Object} [options]
+   * @returns {Promise<Record<string, any>>}
+   */
+  async #scrapeDomList(targetUrl, extractorFn, extractorArgs, itemKey, options = {}) {
+    const accountId = options.accountId || 'fb-guest';
+    const timeout = options.timeout || 30000;
+    const scrollY = options.scrollY ?? 1200;
+    const adapter = await this.#resolveAdapter();
+    const browser = await this.#getBrowser(accountId);
+    let page = null;
+    try {
+      page = await adapter.newPage(browser, { preserveProfile: false });
+      const parsedCookies = this.#parseCookies(options.cookies || '');
+      if (parsedCookies.length > 0) await adapter.setCookies(page, parsedCookies);
+      await adapter.goto(page, targetUrl, { waitUntil: 'domcontentloaded', timeout });
+      await this.#sleep(2000);
+      await adapter.scroll(page, { y: scrollY }).catch(() => {});
+      await this.#sleep(1500);
+      const raw = /** @type {Record<string, any>[]} */ (await adapter.evaluate(page, extractorFn, ...extractorArgs));
+      const items = Array.isArray(raw) ? raw : [];
+      return { [itemKey]: items, pageInfo: { has_next_page: false, end_cursor: null }, note: items.length === 0 ? `No public ${itemKey} rendered for guest session` : undefined };
+    } finally {
+      if (page && this.adapter) { try { await this.adapter.closePage(page); } catch {} }
+    }
+  }
+
+  /**
+   * Scrape a public group's feed via the browser bridge.
+   * @param {string} groupId
+   * @param {Object} [options]
+   * @returns {Promise<{ posts: Record<string, any>[], pageInfo?: any, note?: string }>}
+   */
+  async scrapeGroupPosts(groupId, options = {}) {
+    if (!groupId) {
+      throw new PlatformError({ code: 'XACT_4001', type: ErrorTypes.INVALID_ARGS, message: 'groupId is required', suggestedAction: SuggestedActions.USE_ACTIONS_LIST });
+    }
+    const limit = Number.isFinite(options.limit) && options.limit > 0 ? Math.min(Math.floor(options.limit), 200) : 20;
+    const baseUrl = this.#resolveProfileBaseUrl(options.baseUrl);
+    const targetUrl = `${baseUrl}/groups/${String(groupId).replace(/^\/+|\/+$/g, '')}`;
+    return this.#scrapeDomList(targetUrl, extractGroupPostsFromDom, [String(groupId), limit], 'posts', options);
+  }
+
+  /**
+   * Scrape Marketplace search results via the browser bridge.
+   * @param {string} query
+   * @param {Object} [options]
+   * @param {string} [options.location]
+   * @returns {Promise<{ listings: Record<string, any>[], pageInfo?: any, note?: string }>}
+   */
+  async scrapeMarketplaceListings(query, options = {}) {
+    if (!query) {
+      throw new PlatformError({ code: 'XACT_4001', type: ErrorTypes.INVALID_ARGS, message: 'query is required', suggestedAction: SuggestedActions.USE_ACTIONS_LIST });
+    }
+    const limit = Number.isFinite(options.limit) && options.limit > 0 ? Math.min(Math.floor(options.limit), 200) : 50;
+    const baseUrl = this.#resolveProfileBaseUrl(options.baseUrl);
+    const loc = (options.location || 'Ho Chi Minh City').toLowerCase().replace(/\s+/g, '');
+    const targetUrl = `${baseUrl}/marketplace/${encodeURIComponent(loc)}/search?query=${encodeURIComponent(query)}`;
+    return this.#scrapeDomList(targetUrl, extractMarketplaceFromDom, [limit], 'listings', { ...options, scrollY: 1500 });
+  }
+
+  /**
+   * Scrape a public profile's followers list via the browser bridge.
+   * @param {string} handle
+   * @param {Object} [options]
+   * @returns {Promise<{ members: Record<string, any>[], pageInfo?: any, note?: string }>}
+   */
+  async scrapeFollowList(handle, kind, options = {}) {
+    if (!handle) {
+      throw new PlatformError({ code: 'XACT_4001', type: ErrorTypes.INVALID_ARGS, message: 'handle is required', suggestedAction: SuggestedActions.USE_ACTIONS_LIST });
+    }
+    const limit = Number.isFinite(options.limit) && options.limit > 0 ? Math.min(Math.floor(options.limit), 500) : 50;
+    const baseUrl = this.#resolveProfileBaseUrl(options.baseUrl);
+    const seg = kind === 'following' ? 'following' : 'followers';
+    const targetUrl = `${baseUrl}/${String(handle).replace(/^\/+|\/+$/g, '')}/${seg}`;
+    return this.#scrapeDomList(targetUrl, extractFollowListFromDom, [String(handle), limit], 'members', { ...options, scrollY: 1500 });
   }
 
   /**

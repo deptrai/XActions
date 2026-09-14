@@ -317,4 +317,55 @@ describe('Story 28.1 — BaseCrawler DriftGuard Integration Tests', () => {
     await expect(crawler.processAndPersist(batch)).rejects.toThrow(PlatformError);
     expect(store.items).toHaveLength(0);
   });
+  describe('AbstractCrawler.filterValidItems', () => {
+    it('returns empty array when input is null, undefined, or not an array', () => {
+      const crawler = new SampleCrawler();
+      expect(crawler.filterValidItems(null)).toEqual([]);
+      expect(crawler.filterValidItems(undefined)).toEqual([]);
+      expect(crawler.filterValidItems(/** @type {any} */ ({ not: 'an array' }))).toEqual([]);
+    });
+
+    it('filters out corrupted items, logs warning, and retains complete and degraded items', () => {
+      const crawler = new SampleCrawler();
+
+      const completeItem = { ...fullValidPost, id: 'twitter:good1' };
+      const degradedItem = {
+        id: 'twitter:degraded1',
+        platform: 'twitter',
+        externalId: 'degraded1',
+        category: 'social',
+        authorId: 'auth_deg',
+        content: 'Degraded post with missing optional fields',
+      };
+      const corruptedItem = {
+        id: 'twitter:corrupted1',
+        platform: 'twitter',
+        externalId: 'corrupted1',
+        category: 'social',
+        // missing required authorId
+        content: 'Corrupted post',
+      };
+
+      const warnings = [];
+      const origWarn = console.warn;
+      console.warn = (...args) => warnings.push(args.join(' '));
+
+      try {
+        const result = crawler.filterValidItems([completeItem, corruptedItem, degradedItem]);
+
+        expect(result).toHaveLength(2);
+        expect(result[0].id).toBe('twitter:good1');
+        expect(result[0].dataQuality).toBeUndefined();
+
+        expect(result[1].id).toBe('twitter:degraded1');
+        expect(result[1].dataQuality?.classification).toBe('degraded');
+        expect(result[1].dataQuality?.score).toBe(80);
+
+        expect(warnings.length).toBeGreaterThanOrEqual(1);
+        expect(warnings[0]).toContain('[twitter] item dropped by validation (degraded_data)');
+      } finally {
+        console.warn = origWarn;
+      }
+    });
+  });
 });

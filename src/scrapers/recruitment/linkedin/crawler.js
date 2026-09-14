@@ -197,6 +197,7 @@ export class LinkedInCrawler extends AbstractCrawler {
       ...args,
       companySlug: companySlug || args.companyName || 'unknown',
     });
+    this.validateItem(company);
     return { company };
   }
 
@@ -228,6 +229,7 @@ export class LinkedInCrawler extends AbstractCrawler {
       profileSlug: profileSlug || 'lead',
       profileUrl,
     });
+    this.validateItem(lead);
 
     return { lead };
   }

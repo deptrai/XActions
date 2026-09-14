@@ -184,7 +184,7 @@ development_status:
   epic-27-retrospective: optional
 
   epic-28: in-progress
-  28-1-schemadriftguard-runtime-contract-validation-completeness-cl: review
+  28-1-schemadriftguard-runtime-contract-validation-completeness-cl: done
   28-2-selectorcanary-periodic-dom-probe-drift-alert: backlog
   28-3-autoselectorfallback-assisted-selector-re-discovery: backlog
   epic-28-retrospective: optional

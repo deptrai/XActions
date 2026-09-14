@@ -216,9 +216,11 @@ export class BlueskyCrawler extends AbstractCrawler {
 
     const raw = await this.client.xrpc('app.bsky.actor.getProfile', { actor });
     const profile = normalizeBlueskyProfile(raw);
+    this.validateItem(profile);
 
     if (this.store) {
       const postItem = profileItemToPostItem(profile);
+      this.validateItem(postItem);
       await this.store.storeContent(postItem).catch(() => {});
     }
 

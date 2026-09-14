@@ -258,15 +258,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
   async #persistPosts(posts) {
     if (!posts || !posts.length) return;
 
-    const valid = [];
-    for (const item of posts) {
-      try {
-        this.validateItem(item);
-        valid.push(item);
-      } catch (err) {
-        console.warn(`[youtube] skip invalid post item: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    }
+    const valid = this.filterValidItems(posts);
     if (!valid.length) return;
 
     if (this.store) {
@@ -294,16 +286,14 @@ export class YouTubeVNCrawler extends AbstractCrawler {
   async #persistProfiles(profiles) {
     if (!profiles || !profiles.length) return;
 
+    const valid = this.filterValidItems(profiles);
+    if (!valid.length) return;
+
     if (this.store) {
       const store = /** @type {Record<string, Function>} */ (/** @type {unknown} */ (this.store));
       if (typeof store.saveProfile === 'function') {
-        for (const p of profiles) {
-          try {
-            this.validateItem(p);
-            await store.saveProfile(p).catch(() => {});
-          } catch (err) {
-            console.warn(`[youtube] skip invalid profile item: ${err instanceof Error ? err.message : String(err)}`);
-          }
+        for (const p of valid) {
+          await store.saveProfile(p).catch(() => {});
         }
       }
     }
@@ -316,16 +306,14 @@ export class YouTubeVNCrawler extends AbstractCrawler {
   async #persistComments(comments) {
     if (!comments || !comments.length) return;
 
+    const valid = this.filterValidItems(comments);
+    if (!valid.length) return;
+
     if (this.store) {
       const store = /** @type {Record<string, Function>} */ (/** @type {unknown} */ (this.store));
       if (typeof store.saveComment === 'function') {
-        for (const c of comments) {
-          try {
-            this.validateItem(c);
-            await store.saveComment(c).catch(() => {});
-          } catch (err) {
-            console.warn(`[youtube] skip invalid comment item: ${err instanceof Error ? err.message : String(err)}`);
-          }
+        for (const c of valid) {
+          await store.saveComment(c).catch(() => {});
         }
       }
     }
@@ -346,16 +334,13 @@ export class YouTubeVNCrawler extends AbstractCrawler {
 
     const result = normalizeYouTubeResults(response, 'search', { regionCode });
     const posts = Array.isArray(result.posts) ? result.posts : [];
-
-    for (const post of posts) {
-      this.validateItem(post);
-    }
-    await this.#persistPosts(posts);
+    const validPosts = this.filterValidItems(posts);
+    await this.#persistPosts(validPosts);
 
     return {
-      posts,
+      posts: validPosts,
       pageInfo: result.pageInfo || {
-        total: posts.length,
+        total: validPosts.length,
         has_next_page: false,
       },
     };
@@ -376,16 +361,13 @@ export class YouTubeVNCrawler extends AbstractCrawler {
 
     const result = normalizeYouTubeResults(response, 'trending_vn', { regionCode });
     const posts = Array.isArray(result.posts) ? result.posts : [];
-
-    for (const post of posts) {
-      this.validateItem(post);
-    }
-    await this.#persistPosts(posts);
+    const validPosts = this.filterValidItems(posts);
+    await this.#persistPosts(validPosts);
 
     return {
-      posts,
+      posts: validPosts,
       pageInfo: result.pageInfo || {
-        total: posts.length,
+        total: validPosts.length,
         has_next_page: false,
       },
     };
@@ -408,16 +390,13 @@ export class YouTubeVNCrawler extends AbstractCrawler {
       channelId,
     });
     const posts = Array.isArray(result.posts) ? result.posts : [];
-
-    for (const post of posts) {
-      this.validateItem(post);
-    }
-    await this.#persistPosts(posts);
+    const validPosts = this.filterValidItems(posts);
+    await this.#persistPosts(validPosts);
 
     return {
-      posts,
+      posts: validPosts,
       pageInfo: result.pageInfo || {
-        total: posts.length,
+        total: validPosts.length,
         has_next_page: false,
       },
     };
@@ -444,6 +423,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
       });
     }
 
+    this.validateItem(result.profile);
     await this.#persistProfiles([result.profile]);
     return { profile: result.profile };
   }
@@ -487,13 +467,14 @@ export class YouTubeVNCrawler extends AbstractCrawler {
 
     const result = normalizeYouTubeResults(response, 'video_comments', { videoId });
     const comments = Array.isArray(result.comments) ? result.comments : [];
+    const validComments = this.filterValidItems(comments);
 
-    await this.#persistComments(comments);
+    await this.#persistComments(validComments);
 
     return {
-      comments,
+      comments: validComments,
       pageInfo: result.pageInfo || {
-        total: comments.length,
+        total: validComments.length,
         has_next_page: false,
       },
     };

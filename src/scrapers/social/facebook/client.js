@@ -714,6 +714,88 @@ export class FacebookClient extends AbstractApiClient {
   }
 
   /**
+   * Scrape public page/profile timeline posts via the browser bridge (no-auth DOM fallback).
+   * @param {string} pageId
+   * @param {Object} [options={}]
+   * @returns {Promise<{ posts: any[], pageInfo?: any, note?: string }>}
+   */
+  async scrapePagePostsWithBrowser(pageId, options = {}) {
+    if (!this.browserBridge) {
+      throw new PlatformError({
+        code: 'XACT_5030',
+        type: 'NOT_AVAILABLE',
+        message: 'Browser bridge is not configured',
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'facebook',
+      });
+    }
+    return this.browserBridge.scrapePagePosts(pageId, options);
+  }
+
+  /**
+   * Scrape post comments via the browser bridge (no-auth DOM fallback).
+   * @param {string} postUrl
+   * @param {Object} [options={}]
+   * @returns {Promise<{ comments: any[], pageInfo?: any, note?: string }>}
+   */
+  async scrapePostCommentsWithBrowser(postUrl, options = {}) {
+    if (!this.browserBridge) {
+      throw new PlatformError({
+        code: 'XACT_5030',
+        type: 'NOT_AVAILABLE',
+        message: 'Browser bridge is not configured',
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'facebook',
+      });
+    }
+    return this.browserBridge.scrapePostComments(postUrl, options);
+  }
+
+  /**
+   * Scrape a public group's feed posts via the browser bridge (no-auth DOM fallback).
+   * @param {string} groupId
+   * @param {Object} [options={}]
+   */
+  async scrapeGroupPostsWithBrowser(groupId, options = {}) {
+    this.#requireBridge();
+    return this.browserBridge.scrapeGroupPosts(groupId, options);
+  }
+
+  /**
+   * Scrape Marketplace listings via the browser bridge (no-auth DOM fallback).
+   * @param {string} query
+   * @param {Object} [options={}]
+   */
+  async scrapeMarketplaceWithBrowser(query, options = {}) {
+    this.#requireBridge();
+    return this.browserBridge.scrapeMarketplaceListings(query, options);
+  }
+
+  /**
+   * Scrape a profile's followers or following list via the browser bridge (no-auth DOM fallback).
+   * @param {string} handle
+   * @param {'followers'|'following'} kind
+   * @param {Object} [options={}]
+   */
+  async scrapeFollowListWithBrowser(handle, kind, options = {}) {
+    this.#requireBridge();
+    return this.browserBridge.scrapeFollowList(handle, kind, options);
+  }
+
+  /** @private ensure bridge exists */
+  #requireBridge() {
+    if (!this.browserBridge) {
+      throw new PlatformError({
+        code: 'XACT_5030',
+        type: 'NOT_AVAILABLE',
+        message: 'Browser bridge is not configured',
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'facebook',
+      });
+    }
+  }
+
+  /**
    * Ensure and return a browser bridge instance.
    * @returns {FacebookBrowserBridge}
    */

@@ -2,10 +2,10 @@
 title: 'Story 28.1 — SchemaDriftGuard: Runtime Contract Validation & Completeness Classification'
 type: 'feature'
 created: '2026-09-13'
-status: 'review'
+status: 'done'
 route: 'dispatch'
 baseline_commit: 'c44265ed'
-review_loop_iteration: 0
+review_loop_iteration: 1
 context: []
 ---
 
@@ -146,6 +146,14 @@ Implementation review pass (Edge Case Hunter + Verification Gap Reviewer):
 - [x] [Review][Patch] Non-post entities (comments, profiles) bypass validateItem in YouTube/Zalo [<src/scrapers/social/youtube/crawler.js:283>] — applied (2026-09-13): `validateItem` wired into YouTube `#persistPosts`/`#persistProfiles`/`#persistComments` and Zalo `#persistProfiles`; corrupted items dropped with warn log
 - [x] [Review][Patch] 11 vertical crawlers do not adopt validateItem [<src/scrapers/recruitment/linkedin/crawler.js:121>] — applied (2026-09-13): new `AbstractCrawler.filterValidItems` helper wired before every `storeBatch`/`savePosts`/`saveComments` across LinkedIn, VietnamWorks, TopCV, Batdongsan, Chotot, Shopee, TikTok-Shop, MaSoThue, Automotive, BlueSky, Mastodon; verified normalized items satisfy post/comment/profile contracts (no false-corrupted)
 - [x] [Review][Patch] Downstream store persistence adapter testing for item.dataQuality [<src/core/base-crawler.js:266>] — applied (2026-09-13): added `base-crawler-drift.test.js` test asserting `item.dataQuality` survives a JSON store round-trip. NOTE: whether Prisma needs a dedicated `dataQuality` column vs. folding into `metadata` remains an open mapping decision (still tracked in deferred-work.md)
+
+Second adversarial review pass (Blind Hunter, Acceptance Auditor, Edge Case Hunter, Verification Gap Reviewer):
+- [x] [Review][Patch] Unguarded `validateItem` loop in `YouTubeVNCrawler` batch actions (`search`, `trendingVn`, `channelVideos`) crashes whole crawl [<src/scrapers/social/youtube/crawler.js:350>] — applied: replaced raw loop with `this.filterValidItems(posts)` and wired to `#persistPosts`/`#persistProfiles`/`#persistComments`.
+- [x] [Review][Patch] Unguarded `validateItem` loop in `ZaloCrawler` batch actions (`oaPosts`, `marketplaceProducts`) crashes whole crawl [<src/scrapers/social/zalo/crawler.js:321>] — applied: replaced raw loop with `this.filterValidItems(posts)` and wired to `#persistPosts`/`#persistProfiles`.
+- [x] [Review][Patch] `BlueskyCrawler.getProfile` and `MastodonCrawler.getProfile` bypass `validateItem` on converted `postItem` before `store.storeContent` [<src/scrapers/social/bluesky/crawler.js:220>, <src/scrapers/social/mastodon/crawler.js:230>] — applied: added `this.validateItem(profile)` and `this.validateItem(postItem)` prior to persistence.
+- [x] [Review][Patch] `LinkedInCrawler` single-item actions (`companyProfile`, `leadProfile`) return unvalidated items [<src/scrapers/recruitment/linkedin/crawler.js:199, 230>] — applied: validated `company` and `lead` via `this.validateItem(...)`.
+- [x] [Review][Patch] Missing unit test coverage for `AbstractCrawler.filterValidItems` [<tests/core/base-crawler-drift.test.js:210>] — applied: added comprehensive unit tests for non-array handling, dropping corrupted items with warn log, and attaching `dataQuality`.
+- [x] [Review][Defer] Downstream content store persistence and Prisma column mapping for `item.dataQuality` [<src/core/base-crawler.js:266>] — deferred: pre-existing architectural choice regarding dedicated SQL column vs JSON metadata field.
 
 ## Design Notes
 
