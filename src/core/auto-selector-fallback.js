@@ -490,6 +490,11 @@ export class AutoSelectorFallback {
     if (typeof browser.createPage === 'function') {
       return await browser.createPage();
     }
+    // Injected harness → use raw newPage so a partially-failed createStealthPage
+    // cannot leak an unclosed page before falling back (mirrors SelectorCanary:152).
+    if (this.#browserFactory && typeof browser.newPage === 'function') {
+      return await browser.newPage();
+    }
     try {
       const { createStealthPage } = await import('../scraping/stealthBrowser.js');
       return await createStealthPage(browser);

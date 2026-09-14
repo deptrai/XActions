@@ -131,6 +131,8 @@ describe('Story 28.3 — AutoSelectorFallback: Assisted Selector Re-Discovery', 
 
     expect(pageHarness.isClosed).toBe(true);
     expect(browser.isClosed).toBe(true);
+    // No leaked pages — every page allocated on the harness must be closed
+    expect(browser.pages.every((p) => p.isClosed)).toBe(true);
   });
 
   it('[AC-2] TESTID_PREFERRED: element with both data-testid and role ranks data-testid above role', async () => {
@@ -308,6 +310,7 @@ describe('Story 28.3 — AutoSelectorFallback: Assisted Selector Re-Discovery', 
 
     expect(createdPage.isClosed).toBe(true);
     expect(browser.isClosed).toBe(true);
+    expect(browser.pages.every((p) => p.isClosed)).toBe(true);
   });
 
   it('[AC-10] PAGE_CLOSE_FAILS: throw during page.close() does not prevent browser cleanup', async () => {
