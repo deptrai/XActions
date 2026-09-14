@@ -164,3 +164,9 @@ __pycache__/
 # tgrep trigram search index (local)
 .tgrep/
 scripts/obscura-spike-results/
+
+# Local runtime data (profiles, sessions, caches)
+.data/
+
+# Temporary probe/debug scripts
+scripts/_probe.mjs
