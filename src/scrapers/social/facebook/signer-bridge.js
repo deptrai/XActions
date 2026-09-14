@@ -201,7 +201,12 @@ function extractMbasicProfileFromDom(handle) {
     // alongside a passive login banner (og:title/og:description still present).
     // Only bail when the wall actually suppresses content — no usable og:title.
     const ogTitleProbe = document.querySelector('meta[property="og:title"], meta[name="og:title"]')?.getAttribute('content') || null;
-    const hasUsableOg = typeof ogTitleProbe === 'string' && ogTitleProbe.trim() && !/facebook|log in/i.test(ogTitleProbe);
+    // Strip the Facebook brand suffix before checking — "Mark Zuckerberg | Facebook"
+    // is a valid title, but "Facebook" or "Log in to Facebook" alone is not.
+    const strippedOgTitle = typeof ogTitleProbe === 'string'
+      ? ogTitleProbe.replace(/\s*[|\-–—]\s*Facebook\s*$/i, '').replace(/\s*Facebook\s*$/i, '').trim()
+      : '';
+    const hasUsableOg = Boolean(strippedOgTitle) && !/^(log\s*in|sign\s*up)/i.test(strippedOgTitle);
     if (!hasUsableOg) {
       return null;
     }
@@ -497,7 +502,7 @@ function extractFollowListFromDom(ownerHandle, limit = 50) {
     const name = clean(a.textContent);
     if (!name || name.length < 2 || name.length > 80) continue;
     if (/^(followers?|following|more|see all|log in|sign up|friends?|posts?|about|reels?|photos?|videos?|forgotten account|forgot account|create new account|find friends|help centre|help center)$/i.test(name)) continue;
-    const handle = href.replace(/^https?:\/\/(www\.)?facebook\.com\//, '').replace(/\/$/, '').split('?')[0] || null;
+    const handle = href.replace(/^https?:\/\/(www\.)?facebook\.com\//, '').replace(/^\/+|\/+$/g, '').split('?')[0] || null;
     if (!handle || /^(login|recover|help|signup|watch|marketplace|groups|pages|events|gaming|settings|bookmarks|privacy|terms|policies)/i.test(handle)) continue;
     if (seen.has(name)) continue;
     seen.add(name);
@@ -916,7 +921,10 @@ export class FacebookBrowserBridge {
     // When attached to a real (headed) Chrome via CDP, prefer the desktop site —
     // mbasic redirects guests to a login interstitial on residential IPs, whereas
     // the desktop page renders public profile content behind a passive banner.
-    const preferDesktop = Boolean(this.cdpUrl) && this.adapterName !== 'http';
+    // Prefer desktop for any real browser adapter (CDP or stealth Puppeteer) —
+    // mbasic lacks the DOM elements queried by extractPagePostsFromDom and siblings.
+    // Only use mbasic for the lightweight http adapter or when no adapter is set.
+    const preferDesktop = this.adapterName !== 'http';
     if (input === 'https://www.facebook.com' || input === 'http://www.facebook.com') {
       return preferDesktop ? 'https://www.facebook.com' : 'https://mbasic.facebook.com';
     }

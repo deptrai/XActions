@@ -685,7 +685,7 @@ export class FacebookClient extends AbstractApiClient {
     if (!this.browserBridge) {
       throw new PlatformError({
         code: 'XACT_5030',
-        type: 'NOT_AVAILABLE',
+        type: ErrorTypes.INTERNAL,
         message: 'Browser bridge is not configured',
         suggestedAction: SuggestedActions.RELOGIN,
         platform: 'facebook',
@@ -704,7 +704,7 @@ export class FacebookClient extends AbstractApiClient {
     if (!this.browserBridge) {
       throw new PlatformError({
         code: 'XACT_5030',
-        type: 'NOT_AVAILABLE',
+        type: ErrorTypes.INTERNAL,
         message: 'Browser bridge is not configured',
         suggestedAction: SuggestedActions.RELOGIN,
         platform: 'facebook',
@@ -723,7 +723,7 @@ export class FacebookClient extends AbstractApiClient {
     if (!this.browserBridge) {
       throw new PlatformError({
         code: 'XACT_5030',
-        type: 'NOT_AVAILABLE',
+        type: ErrorTypes.INTERNAL,
         message: 'Browser bridge is not configured',
         suggestedAction: SuggestedActions.RELOGIN,
         platform: 'facebook',
@@ -742,7 +742,7 @@ export class FacebookClient extends AbstractApiClient {
     if (!this.browserBridge) {
       throw new PlatformError({
         code: 'XACT_5030',
-        type: 'NOT_AVAILABLE',
+        type: ErrorTypes.INTERNAL,
         message: 'Browser bridge is not configured',
         suggestedAction: SuggestedActions.RELOGIN,
         platform: 'facebook',
@@ -787,7 +787,7 @@ export class FacebookClient extends AbstractApiClient {
     if (!this.browserBridge) {
       throw new PlatformError({
         code: 'XACT_5030',
-        type: 'NOT_AVAILABLE',
+        type: ErrorTypes.INTERNAL,
         message: 'Browser bridge is not configured',
         suggestedAction: SuggestedActions.RELOGIN,
         platform: 'facebook',

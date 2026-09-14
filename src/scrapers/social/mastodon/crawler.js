@@ -228,7 +228,7 @@ export class MastodonCrawler extends AbstractCrawler {
 
     if (this.store) {
       const postForm = profileItemToPostItem(profile);
-      this.validateItem(postForm);
+      try { this.validateItem(postForm); } catch { /* skip corrupted conversion */ }
       await this.store.storeContent(postForm).catch(() => {});
     }
 

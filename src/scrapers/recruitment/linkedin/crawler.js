@@ -131,11 +131,11 @@ export class LinkedInCrawler extends AbstractCrawler {
 
     const pageNumber = Math.floor(start / 25) + 1;
     return {
-      jobs,
+      jobs: validJobs,
       pageInfo: {
         current_page: pageNumber,
         has_next_page: cardChunks.length >= 25,
-        total_items: jobs.length,
+        total_items: validJobs.length,
       },
     };
   }
@@ -173,7 +173,7 @@ export class LinkedInCrawler extends AbstractCrawler {
       }
     }
 
-    return { job };
+    return { job: validJobs[0] || job };
   }
 
   /**

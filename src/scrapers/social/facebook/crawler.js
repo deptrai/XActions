@@ -1316,15 +1316,7 @@ export class FacebookCrawler extends AbstractCrawler {
       posts.push(post);
     }
 
-    let stopPagination = false;
-    if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
-      const batch = await this.store.storeBatch(posts, { upsert: true });
-      stopPagination = await this.shouldStopPagination(batch ?? posts);
-    }
-
     const pageInfo = res?.data?.group?.feed?.page_info || res?.data?.node?.feed?.page_info || null;
-    const hasMore = Boolean(pageInfo?.has_next_page) && !stopPagination;
-    await this.#saveCheckpoint('group', args.groupId, pageInfo?.end_cursor || null, posts, hasMore);
 
     // Browser-DOM fallback: public groups render their Discussion feed to guests.
     if (posts.length === 0 && this.client?.browserBridge) {
@@ -1346,6 +1338,15 @@ export class FacebookCrawler extends AbstractCrawler {
         }
       } catch { /* leave posts empty if browser fallback fails */ }
     }
+
+    let stopPagination = false;
+    if (this.store && typeof this.store.storeBatch === 'function' && posts.length > 0) {
+      const batch = await this.store.storeBatch(posts, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? posts);
+    }
+
+    const hasMore = Boolean(pageInfo?.has_next_page) && !stopPagination;
+    await this.#saveCheckpoint('group', args.groupId, pageInfo?.end_cursor || null, posts, hasMore);
 
     return {
       posts,
@@ -2219,7 +2220,6 @@ export class FacebookCrawler extends AbstractCrawler {
 
     const hasMore = Boolean(pageInfo?.has_next_page) && !stopPagination;
     const targetKey = [rawQuery, location, category, categoryId, minPrice, maxPrice].filter((v) => v !== undefined && v !== null && v !== '').join(':');
-    await this.#saveCheckpoint('marketplace', targetKey, pageInfo?.end_cursor || null, postItems, hasMore);
 
     // Browser-DOM fallback: Marketplace renders listings to guests on clean IPs.
     if (postItems.length === 0 && this.client?.browserBridge) {
@@ -2243,6 +2243,12 @@ export class FacebookCrawler extends AbstractCrawler {
         if (postItems.length > 0) note = `Browser DOM fallback returned ${postItems.length} result(s)`;
       } catch { /* leave empty if browser fallback fails */ }
     }
+
+    // Persist DOM-fallback items (storeBatch/checkpoint ran before fallback above).
+    if (postItems.length > 0 && this.store && typeof this.store.storeBatch === 'function') {
+      try { await this.store.storeBatch(postItems, { upsert: true }); } catch {}
+    }
+    await this.#saveCheckpoint('marketplace', targetKey, pageInfo?.end_cursor || null, postItems, hasMore);
 
     return {
       posts: postItems,
@@ -2602,7 +2608,9 @@ export class FacebookCrawler extends AbstractCrawler {
     // The DOM fallback below will build the permalink URL from postExternalId.
     const isNumericOnly = /^\d+$/.test(String(args.postId).replace(/^facebook:/, ''));
     if (isNumericOnly && this.client?.browserBridge) {
-      const postUrl = `${this.client.baseUrl}/permalink.php?story_fbid=${args.postId}&id=4`;
+      // permalink.php needs an owner id; use '4' as a generic page context —
+      // Facebook resolves story_fbid to the correct post regardless of id.
+      const postUrl = `${this.client.baseUrl}/permalink.php?story_fbid=${postExternalId}&id=4`;
       const domComments = [];
       try {
         const domRes = await this.client.scrapePostCommentsWithBrowser(postUrl, {
@@ -2628,6 +2636,9 @@ export class FacebookCrawler extends AbstractCrawler {
         }
       } catch {}
       if (domComments.length > 0) {
+        if (this.store && typeof this.store.storeCommentBatch === 'function') {
+          try { await this.store.storeCommentBatch(domComments, { upsert: true }); } catch {}
+        }
         return { comments: domComments, pageInfo: { has_next_page: false, end_cursor: null }, note: null };
       }
       // If DOM fallback returned nothing, fall through to the GraphQL path
@@ -2793,7 +2804,7 @@ export class FacebookCrawler extends AbstractCrawler {
         const rawIn = String(args?.postId || postExternalId || '');
         const postUrl = /^https?:\/\//i.test(rawIn)
           ? rawIn
-          : `${this.client.baseUrl}/${rawIn.replace(/^\/+/, '')}`;
+          : `${this.client.baseUrl}/permalink.php?story_fbid=${postExternalId}&id=4`;
         const domRes = await this.client.scrapePostCommentsWithBrowser(postUrl, {
           cookies,
           accountId,
@@ -2823,18 +2834,16 @@ export class FacebookCrawler extends AbstractCrawler {
       }
     }
 
-    for (const comment of comments) {
-      this.validateItem(comment);
-    }
+    const validComments = this.filterValidItems(comments);
 
     let stopPagination = false;
-    if (this.store && comments.length > 0 && typeof this.store.storeCommentBatch === 'function') {
-      const batch = await this.store.storeCommentBatch(comments, { upsert: true });
-      stopPagination = await this.shouldStopPagination(batch ?? comments);
+    if (this.store && validComments.length > 0 && typeof this.store.storeCommentBatch === 'function') {
+      const batch = await this.store.storeCommentBatch(validComments, { upsert: true });
+      stopPagination = await this.shouldStopPagination(batch ?? validComments);
     }
 
     const finalPageInfo = stopPagination && pageInfo ? { ...pageInfo, has_next_page: false } : pageInfo;
-    return { comments, pageInfo: finalPageInfo, note };
+    return { comments: validComments, pageInfo: finalPageInfo, note };
   }
 
   /**
@@ -2847,13 +2856,8 @@ export class FacebookCrawler extends AbstractCrawler {
     const members = bridgeResult?.members || [];
     const note = bridgeResult?.note;
     const pageInfo = bridgeResult?.pageInfo || null;
-    const postItems = [];
 
-    for (const member of members) {
-      const postItem = profileItemToPostItem(member);
-      this.validateItem(postItem);
-      postItems.push(postItem);
-    }
+    const postItems = this.filterValidItems(members.map(profileItemToPostItem));
 
     let stopPagination = false;
     if (this.store && typeof this.store.storeBatch === 'function' && postItems.length > 0) {
@@ -3206,20 +3210,23 @@ export class FacebookCrawler extends AbstractCrawler {
           const domRes = await this.client.scrapeFollowListWithBrowser(targetKey, 'followers', {
             cookies, accountId, limit, baseUrl: this.client.baseUrl,
           });
-          const domFollowers = (domRes?.members || []).map((m, i) => {
-            const item = {
+          const domFollowers = this.filterValidItems(
+            (domRes?.members || []).map((m, i) => ({
               id: `facebook:${m.handle || m.externalId || 'f_' + i}`,
               platform: 'facebook',
               externalId: String(m.externalId || m.handle || 'f_' + i),
-              username: m.handle || null,
-              name: m.authorName || null,
-              profileUrl: m.postUrl || null,
+              username: m.handle || '',
+              name: m.authorName || '',
+              profileUrl: m.postUrl || '',
               crawledAt: new Date(),
               metadata: { sourceMethod: 'browser' },
-            };
-            return item;
-          }).filter(Boolean);
+            }))
+          );
           if (domFollowers.length > 0) {
+            if (this.store && typeof this.store.storeBatch === 'function') {
+              try { await this.store.storeBatch(domFollowers.map(profileItemToPostItem), { upsert: true }); } catch {}
+            }
+            await this.#saveCheckpoint('followers', targetKey, null, domFollowers.map(profileItemToPostItem), false);
             return { followers: domFollowers, pageInfo: { has_next_page: false, end_cursor: null } };
           }
         } catch { /* fall through to restricted note */ }
@@ -3359,17 +3366,23 @@ export class FacebookCrawler extends AbstractCrawler {
           const domRes = await this.client.scrapeFollowListWithBrowser(targetKey, 'following', {
             cookies, accountId, limit, baseUrl: this.client.baseUrl,
           });
-          const domFollowing = (domRes?.members || []).map((m, i) => ({
-            id: `facebook:${m.handle || m.externalId || 'u_' + i}`,
-            platform: 'facebook',
-            externalId: String(m.externalId || m.handle || 'u_' + i),
-            username: m.handle || null,
-            name: m.authorName || null,
-            profileUrl: m.postUrl || null,
-            crawledAt: new Date(),
-            metadata: { sourceMethod: 'browser', isFollower: false, isFollowing: true },
-          })).filter(Boolean);
+          const domFollowing = this.filterValidItems(
+            (domRes?.members || []).map((m, i) => ({
+              id: `facebook:${m.handle || m.externalId || 'u_' + i}`,
+              platform: 'facebook',
+              externalId: String(m.externalId || m.handle || 'u_' + i),
+              username: m.handle || '',
+              name: m.authorName || '',
+              profileUrl: m.postUrl || '',
+              crawledAt: new Date(),
+              metadata: { sourceMethod: 'browser', isFollower: false, isFollowing: true },
+            }))
+          );
           if (domFollowing.length > 0) {
+            if (this.store && typeof this.store.storeBatch === 'function') {
+              try { await this.store.storeBatch(domFollowing.map(profileItemToPostItem), { upsert: true }); } catch {}
+            }
+            await this.#saveCheckpoint('following', targetKey, null, domFollowing.map(profileItemToPostItem), false);
             return { following: domFollowing, pageInfo: { has_next_page: false, end_cursor: null } };
           }
         } catch { /* fall through to restricted note */ }

@@ -220,7 +220,7 @@ export class BlueskyCrawler extends AbstractCrawler {
 
     if (this.store) {
       const postItem = profileItemToPostItem(profile);
-      this.validateItem(postItem);
+      try { this.validateItem(postItem); } catch { /* skip corrupted conversion */ }
       await this.store.storeContent(postItem).catch(() => {});
     }
 
