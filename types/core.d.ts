@@ -150,6 +150,8 @@ export interface GovernorStatus {
   dualPool: import('./proxy.js').DualPoolStats;
   /** Per-consumer quota status (AD-20). */
   consumerQuotas: Record<string, ConsumerStatus>;
+  /** Platform DOM selector drift status (Story 28.2). */
+  platformDrift: Record<string, PlatformDriftStatus>;
 }
 
 /** Consumer quota configuration (AD-20). */
@@ -502,6 +504,9 @@ export class AdaptiveRateGovernor {
   getConsumerStatus(consumerId: string): ConsumerStatus;
   /** Seconds until the consumer's sliding window frees a slot (AD-20). */
   getConsumerRetryAfterSeconds(consumerId: string): number;
+  setPlatformDrift(platform: string, drift: PlatformDriftStatus): void;
+  clearPlatformDrift(platform: string): void;
+  updatePlatformDrift(driftMap: Record<string, PlatformDriftStatus>): void;
   getStatus(): GovernorStatus;
 }
 
@@ -811,4 +816,53 @@ export class SchemaDriftGuard {
 }
 
 export const globalSchemaDriftGuard: SchemaDriftGuard;
+
+// ---------------------------------------------------------------------------
+// Story 28.2 — SelectorCanary: Periodic DOM Probe & Drift Alert
+// ---------------------------------------------------------------------------
+
+export interface PlatformDriftStatus {
+  alert: boolean;
+  successRate: number;
+  lastProbe: string;
+  lastWorkingSelector?: string;
+  consecutiveFailures?: number;
+}
+
+export interface CanaryTargetConfig {
+  name: string;
+  url: string;
+  selectorChain: string[];
+}
+
+export interface SelectorCanaryResult {
+  platform: string;
+  successRate: number;
+  usedFallback: boolean;
+  driftDetected: boolean;
+  lastWorkingSelector: string | null;
+  lastProbe: string;
+  consecutiveFailures: number;
+  alert?: boolean;
+}
+
+export interface SelectorCanaryOptions {
+  config?: Record<string, CanaryTargetConfig[]>;
+  configPath?: string;
+  browserFactory?: (options?: unknown) => Promise<unknown>;
+  alertDispatcher?: unknown;
+  governor?: AdaptiveRateGovernor;
+  now?: () => number;
+  cronSchedule?: string;
+}
+
+export class SelectorCanary {
+  constructor(options?: SelectorCanaryOptions);
+  startScheduler(): boolean;
+  stopScheduler(): void;
+  runOnce(): Promise<Record<string, SelectorCanaryResult>>;
+  getStatus(): Record<string, PlatformDriftStatus>;
+}
+
+export const globalSelectorCanary: SelectorCanary;
 

@@ -151,6 +151,37 @@
  */
 
 /**
+ * Platform DOM selector drift status (Story 28.2).
+ * @typedef {Object} PlatformDriftStatus
+ * @property {boolean} alert - True only when successRate < 0.8 for 2 consecutive runs
+ * @property {number} successRate - 0.0–1.0
+ * @property {string} lastProbe - ISO timestamp
+ * @property {string} [lastWorkingSelector]
+ * @property {number} [consecutiveFailures]
+ */
+
+/**
+ * Configuration for a single canary test target (Story 28.2).
+ * @typedef {Object} CanaryTargetConfig
+ * @property {string} name
+ * @property {string} url
+ * @property {string[]} selectorChain
+ */
+
+/**
+ * Result of a selector canary probe pass for a platform (Story 28.2).
+ * @typedef {Object} SelectorCanaryResult
+ * @property {string} platform
+ * @property {number} successRate
+ * @property {boolean} usedFallback
+ * @property {boolean} driftDetected
+ * @property {string | null} lastWorkingSelector
+ * @property {string} lastProbe
+ * @property {number} consecutiveFailures
+ * @property {boolean} [alert]
+ */
+
+/**
  * @typedef {Object} GovernorStatus
  * @property {number} healthyProxyCount
  * @property {number} totalProxyCount
@@ -161,6 +192,7 @@
  * @property {string} throttleLevel
  * @property {DualPoolStats} dualPool - Dual-pool partition stats (AD-20).
  * @property {Record<string, ConsumerStatus>} consumerQuotas - Per-consumer quota status (AD-20).
+ * @property {Record<string, PlatformDriftStatus>} platformDrift - Platform DOM selector drift status (Story 28.2).
  */
 
 /**

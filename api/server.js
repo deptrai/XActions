@@ -95,6 +95,7 @@ import platformRoutes from './routes/platform.js';
 import benchmarkRoutes from './routes/benchmark.js';
 import { defaultCanaryRunner } from './services/benchmark/canary-runner.js';
 import { defaultTelemetryConsumer } from './services/benchmark/telemetry-consumer.js';
+import { globalSelectorCanary } from '../src/services/selector-canary.js';
 import { defaultHealthTierCache } from '../src/benchmark/health-tier-cache.js';
 import aiDetectorMiddleware from './middleware/ai-detector.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
@@ -772,6 +773,11 @@ if (process.env.NODE_ENV !== 'test') {
     if (process.env.ENABLE_CANARY_SCHEDULER === 'true') {
       defaultCanaryRunner.startScheduler();
     }
+
+    // Start Selector Canary Scheduler (Story 28.2)
+    if (process.env.ENABLE_SELECTOR_CANARY === 'true') {
+      globalSelectorCanary.startScheduler();
+    }
   });
 
   // Graceful shutdown: stop cron schedulers and finish in-flight cleanup.
@@ -780,6 +786,7 @@ if (process.env.NODE_ENV !== 'test') {
       console.log(`🛑 [Server] Received ${signal}, shutting down...`);
       requestRetentionShutdown();
       defaultCanaryRunner.stopScheduler();
+      globalSelectorCanary.stopScheduler();
       defaultTelemetryConsumer.stop();
       defaultHealthTierCache.stopPolling();
       httpServer.close(async () => {

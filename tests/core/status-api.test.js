@@ -23,6 +23,7 @@ describe('Story 11.4 — StatusApi Contract & Governor Integration (ATDD Green P
         yieldedCount: 0,
       },
       consumerQuotas: {},
+      platformDrift: {},
       healthScores: {},
       circuitBreakerStates: {},
     });

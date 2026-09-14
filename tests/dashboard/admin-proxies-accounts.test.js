@@ -368,4 +368,33 @@ describe('Story 19.2: Admin Dashboard — Proxies & Accounts View', () => {
 
     dom.window.close();
   });
+
+  it('AC-8 (Story 28.2): platformDrift badge card shows green/red drift indicators', async () => {
+    // Inject drift state into the real global governor before the dashboard fetch.
+    globalAdaptiveRateGovernor.setPlatformDrift('twitter', { alert: true, successRate: 0.4, lastProbe: '2026-09-14T00:00:00.000Z' });
+    globalAdaptiveRateGovernor.setPlatformDrift('youtube', { alert: false, successRate: 1.0, lastProbe: '2026-09-14T00:00:00.000Z' });
+
+    const dom = await createJSDOM(adminToken, '#proxies');
+    const { document, window } = dom.window;
+
+    try {
+      await window.__dashboard.loadProxiesAndAccounts();
+
+      const card = document.getElementById('platform-drift-card');
+      const badges = document.getElementById('platform-drift-badges');
+      expect(card).toBeTruthy();
+      expect(card.style.display).not.toBe('none');
+
+      const driftBadge = badges.querySelector('.drift-badge-drift');
+      const okBadge = badges.querySelector('.drift-badge-ok');
+      expect(driftBadge).toBeTruthy();
+      expect(okBadge).toBeTruthy();
+      expect(badges.textContent).toContain('TWITTER');
+      expect(badges.textContent).toContain('YOUTUBE');
+    } finally {
+      globalAdaptiveRateGovernor.clearPlatformDrift('twitter');
+      globalAdaptiveRateGovernor.clearPlatformDrift('youtube');
+      dom.window.close();
+    }
+  });
 });

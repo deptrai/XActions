@@ -652,4 +652,76 @@ When writing new selectors:
 
 ---
 
+## Selector Canary & Drift Detection (Story 28.2)
+
+To proactively detect DOM changes across supported platforms before scrapers break in production, XActions runs a background `SelectorCanary` probe service.
+
+### Configuration (`config/canary-targets.json`)
+
+Test targets and their ordered fallback selector chains are defined in `config/canary-targets.json`:
+
+```json
+{
+  "twitter": [
+    {
+      "name": "twitter-profile",
+      "url": "https://x.com/nasa",
+      "selectorChain": [
+        "[data-testid=\"UserName\"]",
+        "[data-testid=\"UserDescription\"]",
+        "main [role=\"main\"]"
+      ]
+    }
+  ],
+  "facebook": [
+    {
+      "name": "facebook-profile",
+      "url": "https://www.facebook.com/Meta",
+      "selectorChain": [
+        "[role=\"main\"]",
+        "h1",
+        "div[data-pagelet=\"ProfileActions\"]"
+      ]
+    }
+  ],
+  "youtube": [
+    {
+      "name": "youtube-channel",
+      "url": "https://www.youtube.com/@nasa",
+      "selectorChain": [
+        "ytd-channel-name",
+        "#channel-header",
+        "tp-yt-paper-tabs"
+      ]
+    }
+  ],
+  "threads": [
+    {
+      "name": "threads-profile",
+      "url": "https://threads.net/@nasa",
+      "selectorChain": [
+        "[role=\"main\"]",
+        "h1",
+        "header"
+      ]
+    }
+  ]
+}
+```
+
+### Environment Flags
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `ENABLE_SELECTOR_CANARY` | boolean string | `false` | Set to `"true"` in `api/server.js` to start the background scheduler. |
+| `SELECTOR_CANARY_CRON` | string | `0 * * * *` | Cron schedule expression for periodic DOM canary probes (defaults to hourly). |
+
+### Behavior & Alerting
+
+- **Fallback chain execution**: Probes each target by evaluating selectors in order. If the primary selector fails but a fallback succeeds, `usedFallback=true`, `driftDetected=true`, and `lastWorkingSelector` is recorded.
+- **Alert threshold**: If a platform's `successRate < 0.8` for two consecutive probe runs, an alert is dispatched via `AlertDispatcher` and surfaced in `AdaptiveRateGovernor.getStatus().platformDrift`.
+- **Auto-recovery**: When `successRate` recovers to `>= 0.8`, the consecutive failure counter resets to 0 and the alert state clears automatically.
+
+---
+
 > **Contributing:** When you discover a new selector or a changed one, update this file and the `SELECTORS` object in `src/utils/core.js`. Keep this document as the single source of truth.

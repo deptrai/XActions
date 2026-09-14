@@ -1,0 +1,46 @@
+{
+  "twitter": [
+    {
+      "name": "twitter-profile",
+      "url": "https://x.com/nasa",
+      "selectorChain": [
+        "[data-testid=\"UserName\"]",
+        "[data-testid=\"UserDescription\"]",
+        "main [role=\"main\"]"
+      ]
+    }
+  ],
+  "facebook": [
+    {
+      "name": "facebook-profile",
+      "url": "https://www.facebook.com/Meta",
+      "selectorChain": [
+        "[role=\"main\"]",
+        "h1",
+        "div[data-pagelet=\"ProfileActions\"]"
+      ]
+    }
+  ],
+  "youtube": [
+    {
+      "name": "youtube-channel",
+      "url": "https://www.youtube.com/@nasa",
+      "selectorChain": [
+        "ytd-channel-name",
+        "#channel-header",
+        "tp-yt-paper-tabs"
+      ]
+    }
+  ],
+  "threads": [
+    {
+      "name": "threads-profile",
+      "url": "https://www.threads.net/@nasa",
+      "selectorChain": [
+        "[role=\"main\"]",
+        "h1",
+        "header"
+      ]
+    }
+  ]
+}

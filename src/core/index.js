@@ -47,3 +47,4 @@ export {
 } from './types.js';
 export { SchemaDriftGuard, globalSchemaDriftGuard } from './schema-drift-guard.js';
 export { default as metadataSchemaRegistry, MetadataSchemaRegistry, validateSchemaNode } from './metadata-schema-registry.js';
+export { SelectorCanary, globalSelectorCanary } from '../services/selector-canary.js';

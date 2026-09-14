@@ -82,6 +82,9 @@ export class AdaptiveRateGovernor {
   /** Registered consumer quotas (AD-20). Unknown consumers fall back to `internal`. */
   #consumerQuotas = new Map();
 
+  /** Platform DOM selector drift statuses (Story 28.2). */
+  #platformDrift = new Map();
+
   /**
    * @param {Object} [deps]
    * @param {import('../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
@@ -573,7 +576,39 @@ export class AdaptiveRateGovernor {
       throttleLevel,
       dualPool,
       consumerQuotas,
+      platformDrift: Object.fromEntries(this.#platformDrift.entries()),
     };
+  }
+
+  /**
+   * Set or update drift status for a platform (Story 28.2).
+   * @param {string} platform
+   * @param {import('./types.js').PlatformDriftStatus} drift
+   */
+  setPlatformDrift(platform, drift) {
+    if (!platform) return;
+    this.#platformDrift.set(platform, drift);
+  }
+
+  /**
+   * Clear drift status for a platform (Story 28.2).
+   * @param {string} platform
+   */
+  clearPlatformDrift(platform) {
+    if (!platform) return;
+    this.#platformDrift.delete(platform);
+  }
+
+  /**
+   * Batch update platform drift statuses (Story 28.2).
+   * @param {Record<string, import('./types.js').PlatformDriftStatus>} driftMap
+   */
+  updatePlatformDrift(driftMap) {
+    if (driftMap && typeof driftMap === 'object') {
+      for (const [platform, drift] of Object.entries(driftMap)) {
+        this.#platformDrift.set(platform, drift);
+      }
+    }
   }
 }
 

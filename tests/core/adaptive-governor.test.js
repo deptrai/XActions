@@ -244,4 +244,32 @@ describe('Story 11.4 — Adaptive Infrastructure-Aware Rate Limiter & Account Pr
       expect(globalAdaptiveRateGovernor).toBeInstanceOf(AdaptiveRateGovernor);
     });
   });
+
+  describe('Story 28.2 — platformDrift surface (setPlatformDrift / clearPlatformDrift / updatePlatformDrift)', () => {
+    test('platformDrift defaults to empty object and exposes set/clear/update mutators', () => {
+      const g = new AdaptiveRateGovernor();
+      expect(g.getStatus().platformDrift).toEqual({});
+
+      g.setPlatformDrift('twitter', { alert: true, successRate: 0.5, lastProbe: '2026-09-14T00:00:00.000Z' });
+      expect(g.getStatus().platformDrift.twitter.alert).toBe(true);
+      expect(g.getStatus().platformDrift.twitter.successRate).toBe(0.5);
+
+      g.updatePlatformDrift({ facebook: { alert: false, successRate: 1, lastProbe: '2026-09-14T00:01:00.000Z' }, youtube: { alert: true, successRate: 0.4, lastProbe: '2026-09-14T00:02:00.000Z' } });
+      expect(g.getStatus().platformDrift.facebook.successRate).toBe(1);
+      expect(g.getStatus().platformDrift.youtube.alert).toBe(true);
+
+      g.clearPlatformDrift('twitter');
+      expect(g.getStatus().platformDrift.twitter).toBeUndefined();
+      expect(g.getStatus().platformDrift.youtube).toBeDefined();
+    });
+
+    test('mutators ignore falsy platform / non-object input without throwing', () => {
+      const g = new AdaptiveRateGovernor();
+      expect(() => g.setPlatformDrift('', { alert: true, successRate: 0, lastProbe: 'x' })).not.toThrow();
+      expect(() => g.clearPlatformDrift('')).not.toThrow();
+      expect(() => g.updatePlatformDrift(null)).not.toThrow();
+      expect(() => g.updatePlatformDrift('junk')).not.toThrow();
+      expect(g.getStatus().platformDrift).toEqual({});
+    });
+  });
 });

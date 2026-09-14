@@ -43,6 +43,7 @@ export class StatusApi {
         yieldedCount: 0,
       },
       consumerQuotas: {},
+      platformDrift: {},
     };
     return {
       ...base,

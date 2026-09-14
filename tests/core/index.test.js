@@ -20,6 +20,8 @@ import {
   ErrorTypes,
   SuggestedActions,
   StatusApi,
+  SelectorCanary,
+  globalSelectorCanary,
   ActionRegistry,
   globalActionRegistry,
   SessionManager,
@@ -152,6 +154,16 @@ describe('Error envelope hierarchy', () => {
   });
 });
 
+describe('SelectorCanary exports (Story 28.2)', () => {
+  it('re-exports SelectorCanary class and globalSelectorCanary singleton', () => {
+    expect(typeof SelectorCanary).toBe('function');
+    expect(globalSelectorCanary).toBeInstanceOf(SelectorCanary);
+    expect(typeof globalSelectorCanary.runOnce).toBe('function');
+    expect(typeof globalSelectorCanary.startScheduler).toBe('function');
+    expect(typeof globalSelectorCanary.stopScheduler).toBe('function');
+  });
+});
+
 describe('StatusApi', () => {
   it('returns default GovernorStatus when no governor is provided', () => {
     const api = new StatusApi();
@@ -170,6 +182,7 @@ describe('StatusApi', () => {
         yieldedCount: 0,
       },
       consumerQuotas: {},
+      platformDrift: {},
       healthScores: {},
       circuitBreakerStates: {},
     });

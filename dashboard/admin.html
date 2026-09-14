@@ -356,6 +356,8 @@
     .status-failed, .status-checkpoint, .status-sick { background: rgba(244, 33, 46, 0.15); color: var(--error); }
     .status-completed { background: rgba(29, 155, 240, 0.15); color: var(--accent); }
     .status-stalled, .status-hibernating { background: rgba(255, 173, 31, 0.15); color: var(--warning); animation: pulse 2s infinite; }
+    .drift-badge-ok { background: rgba(0, 186, 124, 0.15); color: var(--success); }
+    .drift-badge-drift { background: rgba(244, 33, 46, 0.15); color: var(--error); }
 
     .checkpoint-actions {
       display: flex;
@@ -877,6 +879,15 @@
         <div class="stat-value"><span id="governor-throttle-level">NORMAL</span><span id="throttle-level" hidden>NORMAL</span></div>
         <div class="stat-label">Governor Level</div>
       </div>
+    </div>
+
+    <!-- Platform DOM Selector Drift Status (Story 28.2) -->
+    <div id="platform-drift-card" class="section-card" style="margin-bottom: 24px; display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600;">🎯 Platform DOM Drift Status</h4>
+        <span style="font-size: 0.75rem; color: var(--text-secondary);">Selector Canary</span>
+      </div>
+      <div id="platform-drift-badges" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
     </div>
 
     <!-- Proxies Section -->
@@ -1871,6 +1882,26 @@
       }
       const legacyThrottle = document.getElementById('throttle-level');
       if (legacyThrottle) legacyThrottle.textContent = String(status.throttleLevel || 'normal').toUpperCase();
+
+      // Render Platform DOM Drift Badges (Story 28.2)
+      const driftCard = document.getElementById('platform-drift-card');
+      const driftBadges = document.getElementById('platform-drift-badges');
+      if (driftBadges && status && status.platformDrift && typeof status.platformDrift === 'object') {
+        const platforms = Object.keys(status.platformDrift);
+        if (platforms.length > 0) {
+          if (driftCard) driftCard.style.display = 'block';
+          driftBadges.innerHTML = platforms.map((platform) => {
+            const drift = status.platformDrift[platform];
+            const isAlert = Boolean(drift && drift.alert);
+            const badgeClass = isAlert ? 'status-pill drift-badge-drift' : 'status-pill drift-badge-ok';
+            const rateStr = drift && typeof drift.successRate === 'number' ? ` (${Math.round(drift.successRate * 100)}%)` : '';
+            const statusText = isAlert ? 'DRIFT' : 'OK';
+            return `<span class="${badgeClass}">● ${esc(String(platform).toUpperCase())}: ${statusText}${rateStr}</span>`;
+          }).join('');
+        } else if (driftCard) {
+          driftCard.style.display = 'none';
+        }
+      }
     }
 
     function renderProxiesTable(proxies) {
