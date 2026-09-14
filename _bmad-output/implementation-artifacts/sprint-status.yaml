@@ -1,5 +1,5 @@
 # generated: "08-27-2026 06:00"
-# last_updated: 2026-09-14
+# last_updated: 2026-09-15
 # project: XActions
 # project_key: XACT
 # tracking_system: file-system
@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: 2026-09-14
+last_updated: 2026-09-15
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -183,10 +183,10 @@ development_status:
   27-4-obscura-public-scraping-backend-watch-gate: done
   epic-27-retrospective: optional
 
-  epic-28: in-progress
+  epic-28: done
   28-1-schemadriftguard-runtime-contract-validation-completeness-cl: done
   28-2-selectorcanary-periodic-dom-probe-drift-alert: done
-  28-3-autoselectorfallback-assisted-selector-re-discovery: review
+  28-3-autoselectorfallback-assisted-selector-re-discovery: done
   epic-28-retrospective: optional
 
   epic-29: backlog
