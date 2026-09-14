@@ -22,6 +22,10 @@ import {
   StatusApi,
   SelectorCanary,
   globalSelectorCanary,
+  AutoSelectorFallback,
+  globalAutoSelectorFallback,
+  FIELD_SHAPES,
+  suggestSelectors,
   ActionRegistry,
   globalActionRegistry,
   SessionManager,
@@ -161,6 +165,21 @@ describe('SelectorCanary exports (Story 28.2)', () => {
     expect(typeof globalSelectorCanary.runOnce).toBe('function');
     expect(typeof globalSelectorCanary.startScheduler).toBe('function');
     expect(typeof globalSelectorCanary.stopScheduler).toBe('function');
+  });
+});
+
+describe('AutoSelectorFallback exports (Story 28.3)', () => {
+  it('re-exports AutoSelectorFallback class, globalAutoSelectorFallback singleton, FIELD_SHAPES, and suggestSelectors', () => {
+    expect(typeof AutoSelectorFallback).toBe('function');
+    expect(globalAutoSelectorFallback).toBeInstanceOf(AutoSelectorFallback);
+    expect(typeof globalAutoSelectorFallback.investigate).toBe('function');
+    expect(typeof suggestSelectors).toBe('function');
+    expect(FIELD_SHAPES).toBeDefined();
+    expect(typeof FIELD_SHAPES).toBe('object');
+    expect(FIELD_SHAPES.twitter).toBeDefined();
+    expect(FIELD_SHAPES.facebook).toBeDefined();
+    expect(FIELD_SHAPES.youtube).toBeDefined();
+    expect(FIELD_SHAPES.threads).toBeDefined();
   });
 });
 

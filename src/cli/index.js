@@ -54,6 +54,7 @@ import { registerAdminCommand } from './commands/admin.js';
 import { registerRetentionCommand } from './commands/retention.js';
 import { registerActionsCommand } from './commands/actions.js';
 import { registerBenchmarkCommand } from './commands/benchmark.js';
+import { registerToolsCommand } from './commands/tools.js';
 import { renderRootHelp } from './help-groups.js';
 
 const program = new Command();
@@ -122,6 +123,7 @@ registerAdminCommand(program);
 registerRetentionCommand(program);
 registerActionsCommand(program);
 registerBenchmarkCommand(program);
+registerToolsCommand(program);
 
 
 

@@ -866,3 +866,54 @@ export class SelectorCanary {
 
 export const globalSelectorCanary: SelectorCanary;
 
+
+// ---------------------------------------------------------------------------
+// Story 28.3 — AutoSelectorFallback: Assisted Selector Re-Discovery
+// ---------------------------------------------------------------------------
+
+export type SelectorStrategy = 'data-testid' | 'aria' | 'semantic' | 'id';
+
+export interface SelectorCandidate {
+  selector: string;
+  confidenceScore: number;
+  strategy: SelectorStrategy;
+  matchedOn: string;
+  snippet: string;
+}
+
+export interface ExpectedShape {
+  text?: string | RegExp | { source: string; flags?: string };
+  attributes?: Record<string, string | RegExp | { source: string; flags?: string }>;
+  childSelectors?: string[];
+  tagName?: string;
+  minChildren?: number;
+}
+
+export interface AutoSelectorFallbackOptions {
+  browserFactory?: () => Promise<unknown>;
+  createPage?: (browser: unknown) => Promise<unknown>;
+  closeBrowser?: (browser: unknown) => Promise<void>;
+  delayMs?: number;
+  backend?: 'obscura' | 'chrome';
+}
+
+export class AutoSelectorFallback {
+  constructor(options?: AutoSelectorFallbackOptions);
+  investigate(
+    platform: string,
+    pageUrl: string,
+    expectedShape: ExpectedShape,
+    opts?: AutoSelectorFallbackOptions
+  ): Promise<SelectorCandidate[]>;
+}
+
+export const globalAutoSelectorFallback: AutoSelectorFallback;
+
+export const FIELD_SHAPES: Record<string, Record<string, ExpectedShape>>;
+
+export function suggestSelectors(
+  platform: string,
+  pageUrl: string,
+  shapeOrFieldName: string | ExpectedShape,
+  opts?: AutoSelectorFallbackOptions
+): Promise<SelectorCandidate[]>;

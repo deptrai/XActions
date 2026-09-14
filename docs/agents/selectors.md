@@ -213,3 +213,53 @@ new RedditClient({ proxyProvider: dynamicTunnelProvider });
 - Geo/session hints (`country`, `isp`, `sessionId`, …) set in `resolveProxy()` are forwarded to provider-class pools (`DynamicTunnelProvider` → `country-{cc}` token).
 - `ProxyIpPool` is a raw IP list — it ignores geo hints; use `DynamicTunnelProvider` for `country`/`city` targeting.
 - `requiresProxy: false` (Reddit/Medium default) → proxy only when explicitly configured; a proxy-connection error quarantines the proxy (5 min) and retries once direct. `requiresProxy: true` → quarantine + `PROXY_EXHAUSTED`, never silent-direct.
+
+---
+
+## Assisted Selector Re-Discovery (`AutoSelectorFallback`)
+
+When DOM drift occurs or existing selectors break, `AutoSelectorFallback` assists in re-discovering replacement selectors on a live page without manual DevTools inspection. It analyzes DOM elements against declared expected shapes, prioritizes stable attributes (`data-testid` > `role`/`aria-*` > semantic structure), and rejects brittle/hash-only classnames.
+
+### CLI Usage (`xactions tools suggest-selector`)
+
+Use the CLI command to query candidate selectors for a given platform, URL, and target field:
+
+```bash
+# Suggest replacement selectors for Twitter tweet text
+xactions tools suggest-selector --platform twitter --url https://x.com/nasa --field tweet_text
+
+# Output as JSON for automated pipelines
+xactions tools suggest-selector --platform twitter --url https://x.com/nasa --field tweet_text --json
+
+# Specify a browser backend (obscura or chrome)
+xactions tools suggest-selector --platform twitter --url https://x.com/nasa --field tweet_text --backend chrome
+```
+
+### Options
+
+| Option | Description | Required | Default |
+|--------|-------------|----------|---------|
+| `--platform <platform>` | Target platform (`twitter`, `facebook`, `youtube`, `threads`) | Yes | — |
+| `--url <url>` | Target page URL to inspect | Yes | — |
+| `--field <field>` | Field name resolved via `FIELD_SHAPES` or literal `data-testid` | Yes | — |
+| `--backend <backend>` | Browser backend (`obscura` or `chrome`) | No | `obscura` |
+| `--json` | Output candidates as JSON | No | `false` |
+
+### Programmatic Usage
+
+```javascript
+import { suggestSelectors, globalAutoSelectorFallback } from 'xactions/core';
+
+// Convenience helper using built-in FIELD_SHAPES
+const candidates = await suggestSelectors('twitter', 'https://x.com/nasa', 'tweet_text');
+
+// Direct investigation with custom expected shape
+const customCandidates = await globalAutoSelectorFallback.investigate(
+  'twitter',
+  'https://x.com/nasa',
+  {
+    attributes: { 'data-testid': 'tweetText' },
+    minChildren: 0,
+  }
+);
+```
