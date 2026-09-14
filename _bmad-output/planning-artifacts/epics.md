@@ -831,10 +831,15 @@ So that **tôi nhận được ngay bảng phân tích Top từ khóa/hashtag th
 **Acceptance Criteria:**
 * **Given** tập dữ liệu `PostItem[]` hoặc `CommentItem[]` vừa được trích xuất
 * **When** gọi `extractKeywordFrequency(items, { minLength, topN, lang, removeStopwords })`
-* **Then** hệ thống thực hiện tokenize, lọc stopwords đa ngôn ngữ (hỗ trợ Tiếng Việt & Tiếng Anh từ `src/analytics/stopwords/`)
-* **And** tính toán phân phối tần suất N-gram (Unigram, Bigram) và trích xuất danh sách Hashtags
-* **And** cung cấp MCP tool `x_analytics_buzzwords` và CLI `xactions analytics buzzwords` trả về Top N keywords/hashtags có số lần xuất hiện cao nhất
-* **And** tích hợp tùy chọn `includeBuzzwords: true` trong `AbstractCrawler` output summary.
+* **Then** hệ thống thực hiện tokenize, lọc stopwords đa ngôn ngữ (hỗ trợ Tiếng Việt & Tiếng Anh từ `src/analytics/stopwords/vi.txt` và `en.txt`, load vào `Set`; ngôn ngữ không có list thì bỏ qua bước lọc)
+* **And (Vietnamese tokenization)** Tiếng Việt là ngôn ngữ đơn âm/ghép — whitespace tokenize cho ra âm tiết chứ không phải từ (`thị trường` là một từ, hai âm tiết). Spec phải ghi rõ chiến lược: dùng compound-aware segmenter, hoặc document rõ fallback "bigram-of-syllables" để khôi phục từ ghép; NFC-normalize và lowercase toàn bộ token trước khi đếm.
+* **And (return shape)** hàm trả về `{ unigrams: [{ term, count }], bigrams: [{ term, count }], hashtags: [{ tag, count }], totalTokens, lang }`; sắp xếp deterministic `count` giảm dần rồi `term` tăng dần.
+* **And (n-gram boundary)** bigram tính trên token stream đã lọc; không bao giờ span qua stopword, dấu câu, hoặc ranh giới item.
+* **And (hashtag)** trích xuất `tag` bỏ ký tự `#`, NFC-normalize + lowercase, loại trừ fragment trong URL/email và `#` theo sau toàn số (regex `#(?=[\p{L}])[\p{L}\p{N}_]+`).
+* **And (input source)** MCP tool `x_analytics_buzzwords` và CLI `xactions analytics buzzwords` nhận đầu vào `{ items? | scrapeId? | source }`; CLI đọc `PostItem[]`/`CommentItem[]` từ file/stdin hoặc truy vấn lại một scrape đã lưu — không yêu cầu caller truyền object sống qua boundary MCP.
+* **And (edge cases)** `minLength` clamp về `>= 1`; `topN = max(0, floor(topN ?? 10))`; với `items` rỗng/null, item thiếu `content`, hoặc `content` không phải string → bỏ qua item đó và trả `{ unigrams: [], bigrams: [], hashtags: [], totalTokens: 0, lang }` thay vì throw.
+* **And (cost & default)** `includeBuzzwords` là opt-in (mặc định **tắt**) trong `AbstractCrawler` options; khi bật, `summary.buzzwords` chứa kết quả `extractKeywordFrequency` trên tối đa 500 item đầu để giới hạn chi phí O(n); khi crawl không có text thì `summary.buzzwords` là mảng rỗng chứ không phải `undefined`.
+* **And (tests)** thêm unit test thật (không mock) trong `tests/analytics/word-frequency.test.js` cover: loại stopword vi+en, bigram không span stopword/item boundary, hashtag case-fold + bỏ URL fragment, và input rỗng/invalid trả về zero-result.
 
 ---
 
