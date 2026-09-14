@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * TypeScript declarations for the XActions stealth browser (Story 27.1).
+ * TypeScript declarations for the XActions stealth browser (Story 27.1, 27.4).
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -18,6 +18,11 @@ export interface StealthBrowserOptions {
   fingerprintManager?: FingerprintManager;
   accountId?: string;
   platform?: string;
+  backend?: string;
+  fallbackBackend?: string;
+  wsEndpoint?: string;
+  requiresAuth?: boolean;
+  telemetryContext?: any;
 }
 
 export interface StealthPageOptions {
@@ -30,12 +35,14 @@ export interface StealthPageOptions {
 }
 
 export function launchStealthBrowser(options?: StealthBrowserOptions): Promise<Browser>;
-export function createStealthPage(browser: Browser, options?: StealthPageOptions): Promise<Page>;
+export function closeStealthBrowser(browser: any): Promise<void>;
+export function createStealthPage(browser: Browser | any, options?: StealthPageOptions): Promise<Page>;
 export function stealthClick(page: Page, selector: string, options?: { steps?: number }): Promise<void>;
 export function stealthType(page: Page, selector: string, text: string): Promise<void>;
 
 declare const _default: {
   launchStealthBrowser: typeof launchStealthBrowser;
+  closeStealthBrowser: typeof closeStealthBrowser;
   createStealthPage: typeof createStealthPage;
   stealthClick: typeof stealthClick;
   stealthType: typeof stealthType;

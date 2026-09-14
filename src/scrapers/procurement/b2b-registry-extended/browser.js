@@ -5,7 +5,7 @@
  * @license Apache-2.0
  */
 
-import { launchStealthBrowser, createStealthPage } from '../../../scraping/stealthBrowser.js';
+import { launchStealthBrowser, createStealthPage, closeStealthBrowser } from '../../../scraping/stealthBrowser.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 
 /**
@@ -84,7 +84,7 @@ export async function warmupBrowser(url, options = {}) {
       cookieCache.set(domain, { cookies: cookieString, expiresAt });
       return cookieString;
     } finally {
-      if (browser && typeof browser.close === 'function') await browser.close().catch(() => {});
+      if (browser) await closeStealthBrowser(browser).catch(() => {});
     }
   })();
 

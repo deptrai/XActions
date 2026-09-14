@@ -10,6 +10,7 @@
  */
 
 import { globalFingerprintManager } from '../core/fingerprint-manager.js';
+import { PlatformError, ErrorTypes } from '../core/error-envelope.js';
 
 // ============================================================================
 // User-Agent Pool
@@ -44,9 +45,42 @@ const USER_AGENTS = [
 
 /**
  * Launch a stealth-configured Puppeteer browser
+ *
+ * Supports pluggable backends via `options.backend` (or env `XACTIONS_BROWSER_BACKEND`):
+ *   - 'chrome'  (default) — puppeteer.launch() with bundled/system Chrome
+ *   - 'obscura' — puppeteer-core.connect() to an Obscura CDP endpoint
+ *               (options.wsEndpoint or env `OBSCURA_WS_ENDPOINT`, default ws://127.0.0.1:9222)
+ *
+ * Supports automatic fallback via `options.fallbackBackend` (or env `XACTIONS_BROWSER_BACKEND_FALLBACK`, default 'chrome').
+ * Enforces post-auth guard (AC-2): requests with `requiresAuth === true` reject 'obscura' and throw PlatformError.
  */
 export async function launchStealthBrowser(options = {}) {
-  const { proxy, headless = true, userDataDir, viewport, userAgent, fingerprint, fingerprintManager, accountId, platform } = options;
+  const {
+    proxy,
+    headless = true,
+    userDataDir,
+    viewport,
+    userAgent,
+    fingerprint,
+    fingerprintManager,
+    accountId,
+    platform,
+    requiresAuth = false,
+    telemetryContext,
+  } = options;
+
+  const primaryBackend = options.backend || process.env.XACTIONS_BROWSER_BACKEND || 'chrome';
+  const fallbackBackend = options.fallbackBackend !== undefined ? options.fallbackBackend : (process.env.XACTIONS_BROWSER_BACKEND_FALLBACK || 'chrome');
+  const wsEndpoint = options.wsEndpoint || process.env.OBSCURA_WS_ENDPOINT || 'ws://127.0.0.1:9222';
+
+  // Guard: post-auth actions cannot use obscura (AC-2)
+  if (requiresAuth && primaryBackend === 'obscura') {
+    throw new PlatformError({
+      type: ErrorTypes.INVALID_ARGS,
+      message: 'obscura backend không hỗ trợ post-auth (React hydration chưa mount data-testid)',
+      suggestedAction: 'dùng chrome backend',
+    });
+  }
 
   // Resolve a stable, geo-consistent fingerprint when requested (Story 27.1).
   let fp = fingerprint && fingerprint.userAgent ? fingerprint : null;
@@ -59,51 +93,117 @@ export async function launchStealthBrowser(options = {}) {
     }
   }
 
-  let puppeteer;
+  const launchWithBackend = async (backend) => {
+    if (requiresAuth && backend === 'obscura') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'obscura backend không hỗ trợ post-auth (React hydration chưa mount data-testid)',
+        suggestedAction: 'dùng chrome backend',
+      });
+    }
+
+    if (backend === 'obscura') {
+      if (userDataDir) {
+        process.env.OBSCURA_STORAGE_DIR = userDataDir;
+      }
+      const puppeteerCore = (await import('puppeteer-core')).default;
+      const browser = await puppeteerCore.connect({ browserWSEndpoint: wsEndpoint });
+      // Obscura runs its own (non-Chromium) engine — record provenance for callers.
+      browser.__backend = 'obscura';
+      if (fp) browser.__fingerprint = fp;
+      console.log(`🕳️  Connected to Obscura at ${wsEndpoint}`);
+      return browser;
+    }
+
+    let puppeteer;
+    try {
+      // Try puppeteer-extra with stealth plugin first
+      const puppeteerExtra = await import('puppeteer-extra');
+      const StealthPlugin = await import('puppeteer-extra-plugin-stealth');
+      puppeteerExtra.default.use(StealthPlugin.default());
+      puppeteer = puppeteerExtra.default;
+      console.log('🥷 Stealth plugin loaded');
+    } catch {
+      // Fallback to regular puppeteer
+      puppeteer = (await import('puppeteer')).default;
+      console.log('⚠️  puppeteer-extra not available, using basic stealth patches');
+    }
+
+    const args = [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-blink-features=AutomationControlled',
+      '--disable-infobars',
+      '--disable-dev-shm-usage',
+      `--lang=${fp ? fp.locale : 'en-US'},${fp ? fp.locale.split('-')[0] : 'en'}`,
+    ];
+
+    if (proxy) {
+      const proxyUrl = typeof proxy === 'object' ? proxy.url : proxy;
+      args.push(`--proxy-server=${proxyUrl}`);
+    }
+
+    const vp = viewport || (fp && fp.viewport) || {
+      width: randomInt(1280, 1920),
+      height: randomInt(720, 1080),
+    };
+
+    const launchOptions = {
+      headless: headless ? 'new' : false,
+      args,
+      defaultViewport: vp,
+    };
+
+    if (userDataDir) launchOptions.userDataDir = userDataDir;
+
+    const browser = await puppeteer.launch(launchOptions);
+    browser.__backend = 'chrome';
+    // Attach resolved fingerprint so createStealthPage can reuse it (Story 27.1).
+    if (fp) browser.__fingerprint = fp;
+    return browser;
+  };
+
+  let activeBrowser;
   try {
-    // Try puppeteer-extra with stealth plugin first
-    const puppeteerExtra = await import('puppeteer-extra');
-    const StealthPlugin = await import('puppeteer-extra-plugin-stealth');
-    puppeteerExtra.default.use(StealthPlugin.default());
-    puppeteer = puppeteerExtra.default;
-    console.log('🥷 Stealth plugin loaded');
-  } catch {
-    // Fallback to regular puppeteer
-    puppeteer = (await import('puppeteer')).default;
-    console.log('⚠️  puppeteer-extra not available, using basic stealth patches');
+    activeBrowser = await launchWithBackend(primaryBackend);
+  } catch (err) {
+    if (err?.type === ErrorTypes.INVALID_ARGS && String(err?.message).includes('obscura backend')) {
+      throw err;
+    }
+    // Fallback logic (AC-2b):
+    // obscura -> chrome is always safe; chrome -> obscura only on public-scraping path (!requiresAuth)
+    const canFallback = Boolean(fallbackBackend && fallbackBackend !== 'none' && fallbackBackend !== primaryBackend && (!requiresAuth || fallbackBackend !== 'obscura'));
+    if (canFallback) {
+      console.warn(`⚠️ [stealth] primary backend ${primaryBackend} failed → fallback ${fallbackBackend}`);
+      activeBrowser = await launchWithBackend(fallbackBackend);
+    } else {
+      throw err;
+    }
   }
 
-  const args = [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-blink-features=AutomationControlled',
-    '--disable-infobars',
-    '--disable-dev-shm-usage',
-    `--lang=${fp ? fp.locale : 'en-US'},${fp ? fp.locale.split('-')[0] : 'en'}`,
-  ];
-
-  if (proxy) {
-    const proxyUrl = typeof proxy === 'object' ? proxy.url : proxy;
-    args.push(`--proxy-server=${proxyUrl}`);
+  if (telemetryContext && typeof telemetryContext.setBrowserBackend === 'function') {
+    telemetryContext.setBrowserBackend(activeBrowser.__backend);
   }
 
-  const vp = viewport || (fp && fp.viewport) || {
-    width: randomInt(1280, 1920),
-    height: randomInt(720, 1080),
-  };
+  return activeBrowser;
+}
 
-  const launchOptions = {
-    headless: headless ? 'new' : false,
-    args,
-    defaultViewport: vp,
-  };
-
-  if (userDataDir) launchOptions.userDataDir = userDataDir;
-
-  const browser = await puppeteer.launch(launchOptions);
-  // Attach resolved fingerprint so createStealthPage can reuse it (Story 27.1).
-  if (fp) browser.__fingerprint = fp;
-  return browser;
+/**
+ * Teardown helper respecting per-backend contract:
+ *   - 'obscura'  → browser.disconnect() (preserves shared external obscura serve)
+ *   - 'chrome'   → browser.close() (kills child process)
+ *
+ * @param {any} browser
+ */
+export async function closeStealthBrowser(browser) {
+  if (!browser) return;
+  const native = browser._native || browser;
+  const backend = browser._backend || native.__backend;
+  if (backend === 'obscura' && typeof native.disconnect === 'function') {
+    await native.disconnect();
+  } else if (typeof native.close === 'function') {
+    await native.close();
+  }
 }
 
 /**
@@ -111,7 +211,21 @@ export async function launchStealthBrowser(options = {}) {
  */
 export async function createStealthPage(browser, options = {}) {
   const { proxy, userAgent, fingerprint, fingerprintManager, accountId, platform } = options;
-  const page = await browser.newPage();
+  const nativeBrowser = browser?._native || browser;
+  const page = await nativeBrowser.newPage();
+
+  const isObscura = browser?._backend === 'obscura' || nativeBrowser?.__backend === 'obscura';
+  if (isObscura) {
+    page.__backend = 'obscura';
+    const origGoto = page.goto.bind(page);
+    page.goto = async (url, opts = {}) => {
+      let wu = opts && opts.waitUntil;
+      if (wu === 'networkidle2' || wu === 'networkidle') {
+        wu = 'networkidle0';
+      }
+      return origGoto(url, { ...opts, ...(wu ? { waitUntil: wu } : {}) });
+    };
+  }
 
   // Resolve a stable fingerprint: explicit option → browser-attached → manager (Story 27.1).
   let fp = fingerprint && fingerprint.userAgent ? fingerprint : (browser && browser.__fingerprint) || null;

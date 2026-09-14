@@ -42,6 +42,7 @@ export class TelemetryContext {
    * @param {string} params.action
    * @param {'production' | 'canary'} [params.source]
    * @param {number} [params.startedAt]
+   * @param {string | null} [params.browserBackend]
    */
   constructor({
     runId = randomUUID(),
@@ -51,6 +52,7 @@ export class TelemetryContext {
     action = '',
     source = 'production',
     startedAt = Date.now(),
+    browserBackend = null,
   }) {
     this.runId = runId;
     this.scraperId = scraperId;
@@ -59,6 +61,7 @@ export class TelemetryContext {
     this.action = action;
     this.source = source;
     this.startedAt = startedAt;
+    this.browserBackend = browserBackend;
 
     /** @type {TransportRequestRecord[]} */
     this.requests = [];
@@ -95,6 +98,15 @@ export class TelemetryContext {
    * @param {boolean} [req.proxyQuarantined]
    * @param {number} [req.ts]
    */
+  /**
+   * Set or update active browser backend.
+   * @param {string} backend
+   */
+  setBrowserBackend(backend) {
+    this.browserBackend = backend;
+  }
+
+  /** @param {Partial<TransportRequestRecord>} [req] */
   recordRequest(req = {}) {
     this.requests.push({
       type: 'telemetry:request',
@@ -157,6 +169,7 @@ export class TelemetryContext {
    * @param {number} [runDetails.durationMs]
    * @param {number} [runDetails.itemCount]
    * @param {string | null} [runDetails.errorName]
+   * @param {string} [runDetails.browserBackend]
    * @returns {Record<string, unknown>}
    */
   toRunPayload(runDetails = {}) {
@@ -165,7 +178,8 @@ export class TelemetryContext {
         ? Number(runDetails.durationMs)
         : Math.max(0, Date.now() - this.startedAt);
 
-    return {
+    /** @type {Record<string, unknown>} */
+    const payload = {
       type: 'telemetry:run',
       runId: this.runId,
       scraperId: this.scraperId,
@@ -179,5 +193,14 @@ export class TelemetryContext {
       errorName: runDetails.errorName ? String(runDetails.errorName) : '',
       storeMetrics: this.storeMetrics,
     };
+
+    if (process.env.XACTIONS_BROWSER_BACKEND_METRICS === '1') {
+      const backend = runDetails.browserBackend || this.browserBackend;
+      if (backend) {
+        payload.browserBackend = backend;
+      }
+    }
+
+    return payload;
   }
 }

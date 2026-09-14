@@ -23,7 +23,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { launchStealthBrowser, createStealthPage } from '../src/scraping/stealthBrowser.js';
+import { launchStealthBrowser, createStealthPage, closeStealthBrowser } from '../src/scraping/stealthBrowser.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, 'obscura-spike-results');
@@ -77,6 +77,7 @@ async function probeBackend(backend) {
   try {
     browser = await launchStealthBrowser({
       backend,
+      fallbackBackend: 'none',
       wsEndpoint: process.env.OBSCURA_WS_ENDPOINT,
       proxy: process.env.PROXY_SERVER || undefined,
       headless: process.env.HEADFUL !== '1',
@@ -90,6 +91,11 @@ async function probeBackend(backend) {
       },
     });
   } catch (err) {
+    if (backend === 'obscura' && (String(err?.message).includes('ECONNREFUSED') || String(err?.message).includes('connect') || err?.code === 'ECONNREFUSED')) {
+      summary.skipped = true;
+      summary.reason = `obscura serve not reachable at ${process.env.OBSCURA_WS_ENDPOINT || 'ws://127.0.0.1:9222'}`;
+      return summary;
+    }
     summary.fatal = `launch failed: ${err.message}`;
     return summary;
   }
@@ -120,7 +126,7 @@ async function probeBackend(backend) {
     }
     summary.targets.push(rec);
   }
-  try { await (backend === 'obscura' ? browser.disconnect() : browser.close()); } catch { /* noop */ }
+  try { await closeStealthBrowser(browser); } catch { /* noop */ }
   summary.finishedAt = new Date().toISOString();
   return summary;
 }
@@ -146,14 +152,36 @@ const all = await withObscuraServer(async () => {
   return out;
 });
 
+async function verifyPostAuthGuard() {
+  const testRec = { name: 'guard-post-auth', expect: 'reject obscura for requiresAuth' };
+  try {
+    await launchStealthBrowser({ backend: 'obscura', requiresAuth: true, fallbackBackend: 'none' });
+    testRec.ok = false;
+    testRec.error = 'Expected PlatformError but launch succeeded';
+  } catch (err) {
+    const isGuard = err?.type === 'invalid_args' || String(err?.message).includes('obscura backend');
+    testRec.ok = isGuard;
+    testRec.result = isGuard ? 'PASS (PlatformError thrown)' : `FAIL: ${err.message}`;
+  }
+  return testRec;
+}
+
+const guardResult = await verifyPostAuthGuard();
+
 const report = path.join(OUT_DIR, `report-${Date.now()}.json`);
 fs.writeFileSync(report, JSON.stringify(all, null, 2));
 
 console.log('\n═══ Obscura spike results ═══');
 for (const s of all) {
+  if (s.skipped) {
+    console.log(`\n■ backend=${s.backend}  ⚠️ SKIPPED (${s.reason})`);
+    continue;
+  }
   console.log(`\n■ backend=${s.backend}${s.fatal ? `  FATAL: ${s.fatal}` : ''}`);
   for (const t of s.targets) {
     console.log(`  ${t.ok ? '✅' : '❌'} ${t.name.padEnd(22)} ${t.ms ? t.ms + 'ms' : ''}  ${t.error || t.result || ''}`);
   }
 }
+console.log(`\n■ post-auth guard check`);
+console.log(`  ${guardResult.ok ? '✅' : '❌'} ${guardResult.name.padEnd(22)} ${guardResult.result || guardResult.error}`);
 console.log(`\nReport → ${report}`);

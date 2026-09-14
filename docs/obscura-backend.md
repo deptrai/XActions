@@ -31,7 +31,7 @@ export OBSCURA_WS_ENDPOINT=ws://127.0.0.1:9222
 const browser = await launchStealthBrowser({ backend: 'obscura' });   // or env
 const page = await createStealthPage(browser, { fingerprint });
 await page.goto(url, { waitUntil: 'networkidle0' });                  // never networkidle2
-await browser.disconnect();                                          // not .close()
+await closeStealthBrowser(browser);                                  // disconnect() on obscura, close() on chrome
 ```
 
 ## Backend fit matrix
@@ -43,9 +43,20 @@ await browser.disconnect();                                          // not .clo
 | Post / like / reply / DM / Spaces (post-auth) | `chrome` ✅ (obscura blocked by guard) |
 | `puppeteer-extra` stealth plugin | `chrome` only |
 
+## Teardown contract
+
+- `obscura` → `browser.disconnect()` (preserves external shared `obscura serve` daemon).
+- `chrome` → `browser.close()` (terminates child process).
+- Use `closeStealthBrowser(browser)` or `adapter.closeBrowser(browser)` to automatically dispatch based on `browser.__backend`.
+
 ## Env vars
 
-`XACTIONS_BROWSER_BACKEND` (`chrome`|`obscura`), `OBSCURA_WS_ENDPOINT` (default `ws://127.0.0.1:9222`), `OBSCURA_BIN` (spike auto-spawn only), `PROXY_SERVER`, `HEADFUL=1`, `SHOTS=1`.
+- `XACTIONS_BROWSER_BACKEND` (`chrome` | `obscura`, default `chrome`): primary browser backend.
+- `XACTIONS_BROWSER_BACKEND_FALLBACK` (`chrome` | `obscura` | `none`, default `chrome`): secondary fallback backend on launch failure. Note: `obscura -> chrome` fallback is always allowed; `chrome -> obscura` is strictly restricted to public scraping paths (`requiresAuth === false`).
+- `OBSCURA_WS_ENDPOINT` (default `ws://127.0.0.1:9222`): WebSocket endpoint of the running Obscura server.
+- `OBSCURA_STORAGE_DIR`: Directory for Obscura cookie/storage persistence (mapped from `userDataDir`).
+- `XACTIONS_BROWSER_BACKEND_METRICS` (`1` or `0`, default `0`): When `1`, attaches `browserBackend` to telemetry runs.
+- `OBSCURA_BIN` (spike auto-spawn only), `PROXY_SERVER`, `HEADFUL=1`, `SHOTS=1`.
 
 ## Verify
 

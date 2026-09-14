@@ -2,9 +2,9 @@
 title: 'Story 27.4 — Obscura Browser Backend: Public-Scraping Transport & Watch/Promote Gate'
 type: 'feature'
 created: '2026-09-13'
-status: 'approved'
+status: 'done'
 route: 'dispatch'
-baseline_commit: '8cdf3fc8'
+baseline_commit: 'de68ad2b'
 review_loop_iteration: 0
 context:
   - '_bmad-output/planning-artifacts/sprint-change-proposal-2026-09-13-obscura-backend.md'
@@ -115,3 +115,38 @@ context:
 - KHÔNG refactor `browserDriver`/`browserAutomation`/`signer-bridge`/CDP-launcher sang `obscura` — đó là post-auth paths, giữ chrome.
 - KHÔNG sửa `CanaryRunner` (Epic 34) — nó probe HTTP, không launch browser; per-backend benchmark qua spike.
 - KHÔNG viết lại `puppeteer-extra` stealth plugin cho CDP-connect (Obscura `--stealth` đã cover phần lớn).
+
+
+## Review Triage Log (Step 4)
+
+- **Finding 1 (Blind Hunter)**: `RedditBrowserBridge` and `MediumBrowserBridge` defaulted `this.fallbackBackend = options.fallbackBackend || null;`. This caused `null` to override the fallback mechanism, disabling fallback to `XACTIONS_BROWSER_BACKEND_FALLBACK` or default `'chrome'`.
+  - **Verdict**: ACCEPT (Patched)
+  - **Action**: Changed default to `options.fallbackBackend` (undefined when omitted) and ensured undefined conversion in `start()`.
+
+- **Finding 2 (Blind Hunter & Edge Case Hunter)**: Asymmetry and lack of defensive unwrapping in `closeStealthBrowser` vs `PuppeteerAdapter.closeBrowser`. Passing a wrapped browser object `{ _native }` to `closeStealthBrowser` or unwrapped native browser to `closeBrowser` could fail or no-op.
+  - **Verdict**: ACCEPT (Patched)
+  - **Action**: Unified both methods with `const native = browser._native || browser; const backend = browser._backend || native.__backend;` and null checks.
+
+- **Finding 3 (Blind Hunter)**: In `src/scrapers/procurement/b2b-registry-extended/browser.js:87`, `warmupBrowser` was invoking `await browser.close()`, which terminates the shared external Obscura daemon if `XACTIONS_BROWSER_BACKEND=obscura`.
+  - **Verdict**: ACCEPT (Patched)
+  - **Action**: Imported and called `closeStealthBrowser(browser)`.
+
+- **Finding 4 (Edge Case Hunter)**: Direct callers of `createStealthPage` using `browser.__backend === 'obscura'` were not protected by the `networkidle2` -> `networkidle0` lifecycle remapping.
+  - **Verdict**: ACCEPT (Patched)
+  - **Action**: Wrapped `page.goto` in `createStealthPage` to transparently remap `networkidle2` and `networkidle` to `networkidle0` for Obscura browser instances.
+
+- **Finding 5 (Edge Case Hunter)**: Missing TypeScript declarations in `src/scraping/stealthBrowser.d.ts` and `src/types/adapters.d.ts` for Story 27.4 options and `closeStealthBrowser`.
+  - **Verdict**: ACCEPT (Patched)
+  - **Action**: Updated type definitions; `npm run typecheck` (`tsc --noEmit`) passes with 0 errors.
+
+- **Finding 6 (Verification Gap Reviewer)**: Test coverage lacked assertions for wrapped/unwrapped teardown, `createStealthPage` remapping, and bridge default fallback passing.
+  - **Verdict**: ACCEPT (Patched)
+  - **Action**: Expanded `tests/scraping/obscura-backend.test.js` from 14 to 18 unit tests, covering all edge cases.
+
+- **Finding 7 (Blind Hunter)**: Suggestion to spawn/manage `obscura` binary lifecycle in library.
+  - **Verdict**: DISMISS
+  - **Reason**: Violates explicit Non-Goal: "KHÔNG spawn/quản lý `obscura` binary lifecycle trong library". Daemon lifecycle is managed externally (`obscura serve`) or via spike script runner.
+
+- **Finding 8 (Verification Gap Reviewer)**: Suggestion to modify `CanaryRunner` to benchmark Obscura browser launches.
+  - **Verdict**: DISMISS
+  - **Reason**: Violates explicit Non-Goal: "KHÔNG sửa `CanaryRunner` (Epic 34) — nó probe HTTP, không launch browser; per-backend benchmark qua spike (`scripts/obscura-spike.mjs BACKEND=both`)."

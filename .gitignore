@@ -163,3 +163,4 @@ __pycache__/
 
 # tgrep trigram search index (local)
 .tgrep/
+scripts/obscura-spike-results/

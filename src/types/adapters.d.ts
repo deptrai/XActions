@@ -1,6 +1,7 @@
 interface AdapterBrowser {
   _native: unknown;
   _adapter: string;
+  _backend?: string;
   newPage?: (...args: unknown[]) => unknown;
   close?: (...args: unknown[]) => unknown;
   [key: string]: unknown;
@@ -43,6 +44,12 @@ interface LaunchOptions {
   userAgent?: string;
   timeout?: number;
   preserveProfile?: boolean;
+  backend?: string;
+  fallbackBackend?: string;
+  wsEndpoint?: string;
+  requiresAuth?: boolean;
+  telemetryContext?: unknown;
+  userDataDir?: string;
 }
 
 interface NewPageOptions {

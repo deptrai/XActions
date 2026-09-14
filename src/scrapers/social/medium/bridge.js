@@ -70,6 +70,10 @@ export class MediumBrowserBridge {
    * @param {import('../../../core/base-client.js').ProxyProviderLike} [options.proxyProvider]
    * @param {string} [options.userAgent]
    * @param {import('../../adapters/base.js').BaseAdapter} [options.adapter]
+   * @param {string} [options.backend]
+   * @param {boolean} [options.requiresAuth=false]
+   * @param {string} [options.fallbackBackend]
+   * @param {string} [options.wsEndpoint]
    */
   constructor(options = {}) {
     this.baseUrl = String(options.baseUrl || 'https://medium.com').replace(/\/+$/, '');
@@ -79,6 +83,10 @@ export class MediumBrowserBridge {
     this.proxyPool = options.proxyPool || null;
     this.proxyProvider = options.proxyProvider || null;
     this.userAgent = options.userAgent || null;
+    this.backend = options.backend || null;
+    this.requiresAuth = options.requiresAuth ?? false;
+    this.fallbackBackend = options.fallbackBackend;
+    this.wsEndpoint = options.wsEndpoint || null;
     this.#adapter = options.adapter
       ? /** @type {import('../../adapters/base.js').BaseAdapter & Record<string, unknown>} */ (options.adapter)
       : null;
@@ -146,11 +154,17 @@ export class MediumBrowserBridge {
 
   /**
    * Launch a fresh browser instance, navigate to Medium, and extract cookies.
+   * @param {Object} [options]
+   * @param {string} [options.backend]
+   * @param {boolean} [options.requiresAuth]
+   * @param {string} [options.fallbackBackend]
+   * @param {string} [options.wsEndpoint]
    * @returns {Promise<this>}
    */
-  async start() {
+  async start(options = {}) {
     if (this.isReady) return this;
     if (this.#startPromise) return this.#startPromise;
+    const safeOptions = options || {};
 
     this.#startPromise = (async () => {
       let attempts = 0;
@@ -183,6 +197,10 @@ export class MediumBrowserBridge {
           this.#browser = await adapter.launch({
             headless: this.headless,
             proxy: launchProxy,
+            backend: (safeOptions.backend || this.backend) || undefined,
+            requiresAuth: safeOptions.requiresAuth ?? this.requiresAuth,
+            fallbackBackend: (safeOptions.fallbackBackend !== undefined ? safeOptions.fallbackBackend : this.fallbackBackend) || undefined,
+            wsEndpoint: (safeOptions.wsEndpoint || this.wsEndpoint) || undefined,
             args: [
               '--no-sandbox',
               '--disable-setuid-sandbox',

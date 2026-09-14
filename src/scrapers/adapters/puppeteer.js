@@ -10,6 +10,7 @@
  */
 
 import { BaseAdapter } from './base.js';
+import { PlatformError, ErrorTypes } from '../../core/error-envelope.js';
 
 export class PuppeteerAdapter extends BaseAdapter {
   name = 'puppeteer';
@@ -50,23 +51,86 @@ export class PuppeteerAdapter extends BaseAdapter {
    * @param {LaunchOptions} [options]
    * @returns {Promise<AdapterBrowser>}
    */
+  /**
+   * @param {LaunchOptions & { backend?: string, fallbackBackend?: string, wsEndpoint?: string, requiresAuth?: boolean, telemetryContext?: any, userDataDir?: string }} [options]
+   * @returns {Promise<AdapterBrowser & { _backend?: string }>}
+   */
   async launch(options = {}) {
-    const puppeteer = await this.#getPuppeteer();
-    const { proxy, ...rest } = options;
-    const launchOptions = /** @type {import('puppeteer').LaunchOptions} */ ({
-      headless: options.headless !== false,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
-        ...(options.args || []),
-        ...(typeof proxy === 'string' && proxy ? [`--proxy-server=${proxy}`] : []),
-        ...(proxy && typeof proxy === 'object' && proxy.server ? [`--proxy-server=${proxy.server}`] : []),
-      ],
-      ...rest,
-    });
-    const browser = await puppeteer.launch(launchOptions);
-    return { _native: browser, _adapter: this.name };
+    const primaryBackend = options.backend || process.env.XACTIONS_BROWSER_BACKEND || 'chrome';
+    const fallbackBackend = options.fallbackBackend !== undefined ? options.fallbackBackend : (process.env.XACTIONS_BROWSER_BACKEND_FALLBACK || 'chrome');
+    const requiresAuth = options.requiresAuth ?? false;
+    const wsEndpoint = options.wsEndpoint || process.env.OBSCURA_WS_ENDPOINT || 'ws://127.0.0.1:9222';
+
+    // Guard: post-auth actions cannot use obscura (AC-2)
+    if (requiresAuth && primaryBackend === 'obscura') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'obscura backend không hỗ trợ post-auth (React hydration chưa mount data-testid)',
+        suggestedAction: 'dùng chrome backend',
+      });
+    }
+
+    /** @param {string} backend */
+    const launchWithBackend = async (backend) => {
+      if (requiresAuth && backend === 'obscura') {
+        throw new PlatformError({
+          type: ErrorTypes.INVALID_ARGS,
+          message: 'obscura backend không hỗ trợ post-auth (React hydration chưa mount data-testid)',
+          suggestedAction: 'dùng chrome backend',
+        });
+      }
+
+      if (backend === 'obscura') {
+        if (options.userDataDir) {
+          process.env.OBSCURA_STORAGE_DIR = options.userDataDir;
+        }
+        const puppeteerCore = (await import('puppeteer-core')).default;
+        const browser = /** @type {import('puppeteer').Browser & { __backend?: string }} */ (await puppeteerCore.connect({ browserWSEndpoint: wsEndpoint }));
+        browser.__backend = 'obscura';
+        return { _native: browser, _adapter: this.name, _backend: 'obscura' };
+      }
+
+      const puppeteer = await this.#getPuppeteer();
+      const { proxy, backend: _b, fallbackBackend: _fb, wsEndpoint: _ws, requiresAuth: _ra, telemetryContext: _tc, ...rest } = options;
+      const launchOptions = /** @type {import('puppeteer').LaunchOptions} */ ({
+        headless: options.headless !== false,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-blink-features=AutomationControlled',
+          ...(options.args || []),
+          ...(typeof proxy === 'string' && proxy ? [`--proxy-server=${proxy}`] : []),
+          ...(proxy && typeof proxy === 'object' && proxy.server ? [`--proxy-server=${proxy.server}`] : []),
+        ],
+        ...rest,
+      });
+      const browser = /** @type {import('puppeteer').Browser & { __backend?: string }} */ (await puppeteer.launch(launchOptions));
+      browser.__backend = 'chrome';
+      return { _native: browser, _adapter: this.name, _backend: 'chrome' };
+    };
+
+    let adapterBrowser;
+    try {
+      adapterBrowser = await launchWithBackend(primaryBackend);
+    } catch (err) {
+      const error = /** @type {{ type?: string, message?: string } | null} */ (err);
+      if (error?.type === ErrorTypes.INVALID_ARGS && String(error?.message).includes('obscura backend')) {
+        throw err;
+      }
+      const canFallback = Boolean(fallbackBackend && fallbackBackend !== 'none' && fallbackBackend !== primaryBackend && (!requiresAuth || fallbackBackend !== 'obscura'));
+      if (canFallback) {
+        console.warn(`⚠️ [stealth] primary backend ${primaryBackend} failed → fallback ${fallbackBackend}`);
+        adapterBrowser = await launchWithBackend(fallbackBackend);
+      } else {
+        throw err;
+      }
+    }
+
+    if (options.telemetryContext && typeof options.telemetryContext.setBrowserBackend === 'function') {
+      options.telemetryContext.setBrowserBackend(adapterBrowser._backend);
+    }
+
+    return adapterBrowser;
   }
 
   /**
@@ -75,13 +139,14 @@ export class PuppeteerAdapter extends BaseAdapter {
    * @returns {Promise<AdapterPage>}
    */
   async newPage(browser, options = {}) {
-    const b = /** @type {AdapterBrowser & { _native: import('puppeteer').Browser, _preserveProfile?: boolean }} */ (browser);
+    const b = /** @type {AdapterBrowser & { _native: import('puppeteer').Browser & { __backend?: string }, _preserveProfile?: boolean, _backend?: string }} */ (browser);
     const nativeBrowser = b._native;
+    const backend = b._backend || nativeBrowser?.__backend || 'chrome';
     const preserveProfile = options.preserveProfile ?? b._preserveProfile ?? false;
     if (preserveProfile) {
       const pages = await nativeBrowser.pages();
       const page = pages.length > 0 ? pages[0] : await nativeBrowser.newPage();
-      return { _native: page, _adapter: this.name };
+      return { _native: page, _adapter: this.name, _backend: backend };
     }
 
     const page = await nativeBrowser.newPage();
@@ -97,7 +162,7 @@ export class PuppeteerAdapter extends BaseAdapter {
       );
     }
 
-    return { _native: page, _adapter: this.name };
+    return { _native: page, _adapter: this.name, _backend: backend };
   }
 
   /**
@@ -108,6 +173,8 @@ export class PuppeteerAdapter extends BaseAdapter {
    */
   async goto(page, url, options = {}) {
     const nativePage = /** @type {import('puppeteer').Page} */ (page._native);
+    const pageBrowser = nativePage?.browser ? /** @type {import('puppeteer').Browser & { __backend?: string }} */ (nativePage.browser()) : null;
+    const isObscura = page._backend === 'obscura' || pageBrowser?.__backend === 'obscura';
     const waitUntilMap = /** @type {Record<NonNullable<GotoOptions['waitUntil']>, import('puppeteer').PuppeteerLifeCycleEvent>} */ ({
       load: 'load',
       domcontentloaded: 'domcontentloaded',
@@ -115,7 +182,10 @@ export class PuppeteerAdapter extends BaseAdapter {
       networkidle0: 'networkidle0',
       networkidle2: 'networkidle2',
     });
-    const waitUntil = options.waitUntil ? waitUntilMap[options.waitUntil] : 'networkidle2';
+    let waitUntil = options.waitUntil ? waitUntilMap[options.waitUntil] : (isObscura ? 'networkidle0' : 'networkidle2');
+    if (isObscura && (waitUntil === 'networkidle2' || /** @type {string} */ (waitUntil) === 'networkidle')) {
+      waitUntil = 'networkidle0';
+    }
     await nativePage.goto(url, { waitUntil, timeout: options.timeout || 30000 });
   }
 
@@ -212,8 +282,14 @@ export class PuppeteerAdapter extends BaseAdapter {
    * @returns {Promise<void>}
    */
   async closeBrowser(browser) {
-    const nativeBrowser = /** @type {import('puppeteer').Browser} */ (browser._native);
-    await nativeBrowser.close();
+    if (!browser) return;
+    const nativeBrowser = /** @type {import('puppeteer').Browser & { __backend?: string, disconnect?: () => Promise<void> }} */ (browser._native || browser);
+    const backend = browser._backend || nativeBrowser?.__backend;
+    if (backend === 'obscura' && typeof nativeBrowser?.disconnect === 'function') {
+      await nativeBrowser.disconnect();
+    } else if (typeof nativeBrowser?.close === 'function') {
+      await nativeBrowser.close();
+    }
   }
 
   /**
@@ -264,15 +340,23 @@ export class PuppeteerAdapter extends BaseAdapter {
       defaultViewport: null,
       ...options,
     });
-    const browser = await puppeteer.connect(connectOptions);
+    const browser = /** @type {import('puppeteer').Browser & { __backend?: string }} */ (await puppeteer.connect(connectOptions));
 
-    return {
+    const connectBackend = options.backend;
+    if (connectBackend) {
+      browser.__backend = connectBackend;
+    }
+    const adapterBrowser = /** @type {AdapterBrowser & { _backend?: string }} */ ({
       _native: browser,
       _adapter: this.name,
       _browserType: 'chromium',
       _cdp: true,
       _preserveProfile: options.preserveProfile ?? true,
-    };
+    });
+    if (connectBackend) {
+      adapterBrowser._backend = connectBackend;
+    }
+    return adapterBrowser;
   }
 }
 
