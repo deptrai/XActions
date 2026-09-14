@@ -265,11 +265,17 @@ function inPageDomWalk(shape) {
      */
     function addCandidate(selector, strategy, matchedOn, baseScore) {
       // Reject any selector containing an obfuscated / hash-only class or id
+      // Split on all CSS combinators + tag/class/id boundaries so `div.css-1a2b3c` is caught
       const parts = selector.split(/[\s>+~:]+/);
       for (let p = 0; p < parts.length; p++) {
         const part = parts[p];
         if (part.startsWith('.') && isHashToken(part.slice(1))) return;
         if (part.startsWith('#') && isHashToken(part.slice(1))) return;
+        // Also check class/id segments embedded in compound selectors like `div.css-1a2b3c`
+        const segments = part.split(/[.#]/);
+        for (let s = 1; s < segments.length; s++) {
+          if (segments[s] && isHashToken(segments[s])) return;
+        }
       }
       let score = baseScore - looseCount * 0.05;
       if (childCorroborated) {
@@ -288,9 +294,8 @@ function inPageDomWalk(shape) {
     // 1. data-testid="..." exact attribute
     if (hasTestId) {
       const testId = (el.getAttribute('data-testid') || '').trim();
-      if (!isHashToken(testId)) {
-        addCandidate(`[data-testid="${cssEscape(testId)}"]`, 'data-testid', 'data-testid', 0.95);
-      }
+      // data-testid is a stable attribute — never reject as hash
+      addCandidate(`[data-testid="${cssEscape(testId)}"]`, 'data-testid', 'data-testid', 0.95);
     }
 
     // 2. role="..." or aria-label="..." / aria-* attribute
@@ -492,7 +497,7 @@ export class AutoSelectorFallback {
     }
     // Injected harness → use raw newPage so a partially-failed createStealthPage
     // cannot leak an unclosed page before falling back (mirrors SelectorCanary:152).
-    if (this.#browserFactory && typeof browser.newPage === 'function') {
+    if ((opts.browserFactory || this.#browserFactory) && typeof browser.newPage === 'function') {
       return await browser.newPage();
     }
     try {
@@ -554,13 +559,21 @@ export class AutoSelectorFallback {
       });
     }
 
+    let parsedUrl;
     try {
-      new URL(pageUrl);
+      parsedUrl = new URL(pageUrl);
     } catch {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
         code: 'XACT_4003',
         message: `pageUrl must be a valid parseable URL: ${pageUrl}`,
+      });
+    }
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4003',
+        message: `pageUrl must use http or https protocol, got: ${parsedUrl.protocol}`,
       });
     }
 
@@ -578,8 +591,8 @@ export class AutoSelectorFallback {
     }
 
     const hasPredicate = Boolean(
-      expectedShape.tagName ||
-      expectedShape.text ||
+      (typeof expectedShape.tagName === 'string' && expectedShape.tagName.trim() !== '') ||
+      (typeof expectedShape.text !== 'undefined' && expectedShape.text !== null) ||
       (expectedShape.attributes && typeof expectedShape.attributes === 'object' && !Array.isArray(expectedShape.attributes) && Object.keys(expectedShape.attributes).length > 0) ||
       (Array.isArray(expectedShape.childSelectors) && expectedShape.childSelectors.length > 0) ||
       typeof expectedShape.minChildren === 'number'
