@@ -255,10 +255,17 @@ export class YouTubeVNCrawler extends AbstractCrawler {
    * Persist post items and emit thin events.
    * @param {import('../../../core/types.js').PostItem[]} posts
    */
+  /**
+   * Persist pre-validated posts to the store.
+   * Callers are expected to have already run filterValidItems — this method
+   * does NOT re-filter to avoid duplicate SchemaDriftGuard passes and
+   * double warning emissions.
+   * @param {import('../../../core/types.js').PostItem[]} posts
+   */
   async #persistPosts(posts) {
     if (!posts || !posts.length) return;
 
-    const valid = this.filterValidItems(posts);
+    const valid = posts;
     if (!valid.length) return;
 
     if (this.store) {

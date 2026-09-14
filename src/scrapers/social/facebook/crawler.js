@@ -1334,7 +1334,7 @@ export class FacebookCrawler extends AbstractCrawler {
             likesCount: 0, repostsCount: 0, repliesCount: 0,
             category: 'social', metadata: { sourceMethod: 'browser', groupId: args.groupId },
           };
-          try { this.validateItem(item); posts.push(item); } catch {}
+          try { this.validateItem(item); posts.push(item); } catch (e) { console.warn(`[FB] DOM item dropped: ${e instanceof Error ? e.message : String(e)}`); }
         }
       } catch { /* leave posts empty if browser fallback fails */ }
     }
@@ -1487,7 +1487,7 @@ export class FacebookCrawler extends AbstractCrawler {
             category: 'social',
             metadata: { sourceMethod: 'browser' },
           };
-          try { this.validateItem(item); posts.push(item); } catch {}
+          try { this.validateItem(item); posts.push(item); } catch (e) { console.warn(`[FB] DOM item dropped: ${e instanceof Error ? e.message : String(e)}`); }
         }
       } catch {
         // leave posts empty if the browser fallback fails
@@ -2238,7 +2238,7 @@ export class FacebookCrawler extends AbstractCrawler {
             category: 'social',
             metadata: { sourceMethod: 'browser', price: raw.price || null, location: raw.location || null, title: raw.title || null },
           };
-          try { this.validateItem(item); postItems.push(item); } catch {}
+          try { this.validateItem(item); postItems.push(item); } catch (e) { console.warn(`[FB] DOM item dropped: ${e instanceof Error ? e.message : String(e)}`); }
         }
         if (postItems.length > 0) note = `Browser DOM fallback returned ${postItems.length} result(s)`;
       } catch { /* leave empty if browser fallback fails */ }
@@ -2632,7 +2632,7 @@ export class FacebookCrawler extends AbstractCrawler {
             repliesCount: 0,
             metadata: { sourceMethod: 'browser' },
           };
-          try { this.validateItem(item); domComments.push(item); } catch {}
+          try { this.validateItem(item); domComments.push(item); } catch (e) { console.warn(`[FB] DOM item dropped: ${e instanceof Error ? e.message : String(e)}`); }
         }
       } catch {}
       if (domComments.length > 0) {

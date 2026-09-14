@@ -1,6 +1,6 @@
 import { FacebookCrawler } from '../src/scrapers/social/facebook/crawler.js';
 const crawler = new FacebookCrawler({ requiresProxy:false, cdpUrl:'http://127.0.0.1:9333' });
-const t=setTimeout(()=>{console.log('HARDTIMEOUT');process.exit(2)},200000);
+const t=setTimeout(async()=>{console.log('HARDTIMEOUT');await crawler.cleanup().catch(()=>{});process.exit(2)},200000);
 const tests=[
  ['profile',{action:'profile',args:{username:'zuck'}}],
  ['page_posts',{action:'page_posts',args:{pageId:'zuck',count:5}}],

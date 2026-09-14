@@ -363,9 +363,23 @@ function extractCommentsFromDom(limit = 50) {
 
   // On a public permalink, each comment is a nested role="article" inside the
   // post's comment list — distinct from the single top-level post article.
+  // Instead of blindly skipping articles[0], skip articles that contain a
+  // large body of text (the post itself typically has more than 200 chars of
+  // primary content) or that have no profile anchor — heuristics that hold
+  // whether or not the post is rendered as the first article.
   const articles = [...document.querySelectorAll('div[role="article"]')];
-  // The post itself is usually the largest/first article; comments are the rest.
-  const commentArts = articles.slice(1);
+  const commentArts = articles.filter((art, idx) => {
+    if (idx === 0) {
+      // Heuristic: the post article usually contains a large text block AND
+      // no nested comment-like structure. If it's small and has a profile
+      // link it might actually be a comment — don't skip it blindly.
+      const blocks = art.querySelectorAll('div[dir="auto"], span[dir="auto"]');
+      const hasLargeBody = [...blocks].some(b => (b.innerText || b.textContent || '').trim().length > 200);
+      const hasProfileLink = Boolean(art.querySelector('a[href*="facebook.com/"]:not([href*="photo"]):not([href*="/posts/"])'));
+      return !(hasLargeBody && !hasProfileLink);
+    }
+    return true;
+  });
 
   for (const art of commentArts) {
     if (results.length >= limit) break;
@@ -392,8 +406,17 @@ function extractCommentsFromDom(limit = 50) {
     if (seen.has(key)) continue;
     seen.add(key);
 
+    // Stable ID from content hash so re-scrapes produce the same comment ids
+    // (idempotent upserts). Falls back to index if hash is unavailable.
+    const hashInput = (authorName || '') + '|' + bodyText.slice(0, 120);
+    let stableId = 'c_' + results.length;
+    try {
+      let h = 0;
+      for (let i = 0; i < hashInput.length; i++) { h = (Math.imul(31, h) + hashInput.charCodeAt(i)) | 0; }
+      stableId = 'c_' + Math.abs(h).toString(36);
+    } catch {}
     results.push({
-      externalId: 'c_' + results.length,
+      externalId: stableId,
       content: bodyText.slice(0, 2000),
       authorName: authorName || 'Facebook user',
       authorId: null,
@@ -1368,8 +1391,13 @@ export class FacebookBrowserBridge {
     const limit = Number.isFinite(options.limit) && options.limit > 0 ? Math.min(Math.floor(options.limit), 500) : 50;
     const baseUrl = this.#resolveProfileBaseUrl(options.baseUrl);
     const seg = kind === 'following' ? 'following' : 'followers';
-    const targetUrl = `${baseUrl}/${String(handle).replace(/^\/+|\/+$/g, '')}/${seg}`;
-    return this.#scrapeDomList(targetUrl, extractFollowListFromDom, [String(handle), limit], 'members', { ...options, scrollY: 1500 });
+    // For numeric-ID profiles (profile.php?id=N), use ?sk=followers/following
+    // since /profile.php?id=N/followers is not a valid Facebook URL.
+    const cleanHandle = String(handle).replace(/^\/+|\/+$/g, '');
+    const targetUrl = cleanHandle.startsWith('profile.php')
+      ? `${baseUrl}/${cleanHandle}&sk=${seg === 'followers' ? 'followers' : 'following'}`
+      : `${baseUrl}/${cleanHandle}/${seg}`;
+    return this.#scrapeDomList(targetUrl, extractFollowListFromDom, [cleanHandle, limit], 'members', { ...options, scrollY: 1500 });
   }
 
   /**
