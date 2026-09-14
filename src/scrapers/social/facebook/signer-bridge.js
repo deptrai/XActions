@@ -370,13 +370,14 @@ function extractCommentsFromDom(limit = 50) {
   const articles = [...document.querySelectorAll('div[role="article"]')];
   const commentArts = articles.filter((art, idx) => {
     if (idx === 0) {
-      // Heuristic: the post article usually contains a large text block AND
-      // no nested comment-like structure. If it's small and has a profile
-      // link it might actually be a comment — don't skip it blindly.
+      // If the first article contains other articles inside it, it is the parent post container
+      if (art.querySelector('div[role="article"]')) return false;
+      // If it contains post-level actions (Share) or large text body, it is the main post, not a comment
+      const hasShare = Boolean(art.querySelector('[aria-label*="Share" i], [aria-label*="Chia sẻ" i]'));
+      const hasCommentsRegion = Boolean(art.querySelector('[role="region"], form[role="presentation"], [aria-label*="Comment" i], [aria-label*="Bình luận" i]'));
       const blocks = art.querySelectorAll('div[dir="auto"], span[dir="auto"]');
       const hasLargeBody = [...blocks].some(b => (b.innerText || b.textContent || '').trim().length > 200);
-      const hasProfileLink = Boolean(art.querySelector('a[href*="facebook.com/"]:not([href*="photo"]):not([href*="/posts/"])'));
-      return !(hasLargeBody && !hasProfileLink);
+      if (hasShare || hasCommentsRegion || hasLargeBody) return false;
     }
     return true;
   });
@@ -525,7 +526,13 @@ function extractFollowListFromDom(ownerHandle, limit = 50) {
     const name = clean(a.textContent);
     if (!name || name.length < 2 || name.length > 80) continue;
     if (/^(followers?|following|more|see all|log in|sign up|friends?|posts?|about|reels?|photos?|videos?|forgotten account|forgot account|create new account|find friends|help centre|help center)$/i.test(name)) continue;
-    const handle = href.replace(/^https?:\/\/(www\.)?facebook\.com\//, '').replace(/^\/+|\/+$/g, '').split('?')[0] || null;
+    let handle = href.replace(/^https?:\/\/(www\.)?facebook\.com\//, '').replace(/^\/+|\/+$/g, '');
+    const idMatch = handle.match(/profile\.php\?id=(\d+)/);
+    if (idMatch) {
+      handle = idMatch[1];
+    } else {
+      handle = handle.split('?')[0] || null;
+    }
     if (!handle || /^(login|recover|help|signup|watch|marketplace|groups|pages|events|gaming|settings|bookmarks|privacy|terms|policies)/i.test(handle)) continue;
     if (seen.has(name)) continue;
     seen.add(name);
@@ -1393,7 +1400,9 @@ export class FacebookBrowserBridge {
     const seg = kind === 'following' ? 'following' : 'followers';
     // For numeric-ID profiles (profile.php?id=N), use ?sk=followers/following
     // since /profile.php?id=N/followers is not a valid Facebook URL.
-    const cleanHandle = String(handle).replace(/^\/+|\/+$/g, '');
+    const resolved = resolveProfileHandle(handle);
+    const isNumeric = /^\d+$/.test(resolved);
+    const cleanHandle = isNumeric ? `profile.php?id=${resolved}` : resolved;
     const targetUrl = cleanHandle.startsWith('profile.php')
       ? `${baseUrl}/${cleanHandle}&sk=${seg === 'followers' ? 'followers' : 'following'}`
       : `${baseUrl}/${cleanHandle}/${seg}`;

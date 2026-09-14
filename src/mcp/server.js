@@ -37,6 +37,10 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'node:crypto';
 import { realpathSync } from 'node:fs';
@@ -1730,6 +1734,62 @@ const TOOLS = [
       required: ['url', 'authCookie'],
     },
   },
+  {
+    name: 'x_facebook_profile',
+    description: 'Scrape a Facebook profile or page for metadata, bio, followers count. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Facebook profile or page URL' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['url', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_followers',
+    description: 'Scrape followers list of a public Facebook profile or page. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Facebook profile or page URL' },
+        limit: { type: 'number', description: 'Max followers to return (positive integer, max 500)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['url', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_following',
+    description: 'Scrape following list of a Facebook profile. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Facebook profile URL' },
+        limit: { type: 'number', description: 'Max following to return (positive integer, max 500)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['url', 'authCookie'],
+    },
+  },
+  {
+    name: 'x_facebook_group_search',
+    description: 'Search posts within a specific Facebook group. Dry-run (default) previews; set dryRun:false to execute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Facebook group URL (must contain facebook.com/groups/)' },
+        query: { type: 'string', description: 'Search term or keyword' },
+        limit: { type: 'number', description: 'Max posts to return (positive integer, max 500)' },
+        dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+      },
+      required: ['url', 'query', 'authCookie'],
+    },
+  },
   // ====== Social Graph ======
   {
     name: 'x_graph_build',
@@ -2924,6 +2984,59 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: 'x_shadowban_check',
+    description: 'Check if an X/Twitter account is shadowbanned (search ban, suggestion ban, deboosting).' ,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        username: {
+          type: 'string',
+          description: 'X/Twitter username to check. Defaults to currently authenticated user if omitted.',
+        },
+      },
+    },
+  },
+  {
+    name: 'x_backup_account',
+    description: 'Create a structured JSON backup snapshot of an account (profile, tweets, follower counts).' ,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        username: {
+          type: 'string',
+          description: 'X/Twitter username to backup.',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of recent items to include (default 50).' ,
+        },
+      },
+      required: ['username'],
+    },
+  },
+  {
+    name: 'x_viral_tweet_detector',
+    description: 'Detect and surface high-engagement viral tweets for a topic, niche, or keyword query.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search keyword, topic, or niche query.',
+        },
+        minLikes: {
+          type: 'number',
+          description: 'Minimum number of likes (default 100).' ,
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum results to return (default 20).' ,
+        },
+      },
+      required: ['query'],
+    },
+  },
 ];
 
 // ============================================================================
@@ -3096,6 +3209,10 @@ async function executeTool(name, args) {
     'x_facebook_group_posts',
     'x_facebook_group_comments',
     'x_facebook_posts',
+    'x_facebook_profile',
+    'x_facebook_followers',
+    'x_facebook_following',
+    'x_facebook_group_search',
   ]);
   if (EPIC7_SCRAPE_TOOLS.has(name)) {
     if (MODE === 'remote') {
@@ -4009,6 +4126,10 @@ async function executeFacebookScrapeTool(name, args) {
     x_facebook_group_posts: 'group_posts',
     x_facebook_group_comments: 'group_comments',
     x_facebook_posts: 'posts',
+    x_facebook_profile: 'profile',
+    x_facebook_followers: 'followers',
+    x_facebook_following: 'following',
+    x_facebook_group_search: 'group_search',
   };
   const action = ACTION_MAP[name];
   if (!action) {
@@ -4240,11 +4361,14 @@ async function executeXeepyTool(name, args) {
         return { error: 'Must set confirm: true to mass unfollow everyone' };
       }
       const following = await localTools.x_get_following?.({ username: 'me', limit: args.limit || 1000 });
+      const followingList = Array.isArray(following) ? following : (following?.following || following?.users || []);
       const unfollowed = [];
-      for (const user of (following?.users || [])) {
+      for (const user of followingList) {
+        const uname = typeof user === 'string' ? user : (user.username || user.handle);
+        if (!uname) continue;
         try {
-          await localTools.x_unfollow?.({ username: user.username });
-          unfollowed.push(user.username);
+          await localTools.x_unfollow?.({ username: uname });
+          unfollowed.push(uname);
           await new Promise(r => setTimeout(r, (args.delay || 2) * 1000));
         } catch (e) { /* skip */ }
       }
@@ -4253,18 +4377,28 @@ async function executeXeepyTool(name, args) {
 
     case 'x_smart_unfollow': {
       // Get following list, then filter by criteria
-      const following = await localTools.x_get_following?.({ username: 'me', limit: 500 });
-      const toUnfollow = [];
-      
+      const following = await localTools.x_get_following?.({ username: 'me', limit: 500 }).catch(() => []);
+      const followingList = Array.isArray(following) ? following : (following?.following || following?.users || []);
+      let toUnfollow = [];
+
+      if (args.criteria === 'non_followers' && typeof localTools.x_get_non_followers === 'function') {
+        const nonFollowersRes = await localTools.x_get_non_followers({ username: 'me' }).catch(() => null);
+        toUnfollow = Array.isArray(nonFollowersRes?.nonFollowers) ? nonFollowersRes.nonFollowers : followingList;
+      } else {
+        toUnfollow = [...followingList];
+      }
+
       if (args.dryRun) {
-        return { message: `Dry run — would analyze ${following?.users?.length || 0} accounts with criteria: ${args.criteria}`, criteria: args.criteria };
+        return { message: `Dry run — would analyze ${followingList.length} accounts with criteria: ${args.criteria}`, criteria: args.criteria, count: toUnfollow.length };
       }
       
       const unfollowed = [];
       for (const user of toUnfollow.slice(0, args.limit || 20)) {
+        const uname = typeof user === 'string' ? user : (user?.username || user?.handle);
+        if (!uname) continue;
         try {
-          await localTools.x_unfollow?.({ username: user.username });
-          unfollowed.push(user.username);
+          await localTools.x_unfollow?.({ username: uname });
+          unfollowed.push(uname);
           await new Promise(r => setTimeout(r, (args.delay || 2) * 1000));
         } catch (e) { /* skip */ }
       }
@@ -4296,7 +4430,7 @@ async function executeXeepyTool(name, args) {
       const commented = [];
       for (const tweet of (searchResults?.tweets || [])) {
         try {
-          await localTools.x_reply?.({ tweetUrl: tweet.url, text: args.comment });
+          await localTools.x_reply?.({ url: tweet.url, tweetUrl: tweet.url, text: args.comment });
           commented.push(tweet.url);
           await new Promise(r => setTimeout(r, (args.delay || 5) * 1000));
         } catch (e) { /* skip */ }
@@ -4310,7 +4444,7 @@ async function executeXeepyTool(name, args) {
       for (const tweet of (searchResults?.tweets || [])) {
         if (args.minLikes && tweet.likes < args.minLikes) continue;
         try {
-          await localTools.x_retweet?.({ tweetUrl: tweet.url });
+          await localTools.x_retweet?.({ url: tweet.url, tweetUrl: tweet.url });
           retweeted.push(tweet.url);
           await new Promise(r => setTimeout(r, (args.delay || 3) * 1000));
         } catch (e) { /* skip */ }
@@ -4485,12 +4619,15 @@ async function executeXeepyTool(name, args) {
     // ── Analytics ──
     case 'x_audience_insights': {
       const followers = await localTools.x_get_followers?.({ username: args.username, limit: args.sampleSize || 200 });
+      const followerList = Array.isArray(followers) ? followers : (followers?.followers || followers?.users || []);
       const profiles = [];
       
       // Sample a subset for deeper analysis
-      const sample = (followers?.users || []).slice(0, Math.min(20, args.sampleSize || 200));
+      const sample = followerList.slice(0, Math.min(20, args.sampleSize || 200));
       for (const user of sample) {
-        const profile = await localTools.x_get_profile?.({ username: user.username }).catch(() => null);
+        const uname = typeof user === 'string' ? user : (user.username || user.handle);
+        if (!uname) continue;
+        const profile = await localTools.x_get_profile?.({ username: uname }).catch(() => null);
         if (profile) profiles.push(profile);
       }
       
@@ -4510,7 +4647,7 @@ async function executeXeepyTool(name, args) {
       return {
         username: args.username,
         sampleSize: profiles.length,
-        totalFollowers: followers?.users?.length || 0,
+        totalFollowers: followerList.length,
         avgFollowersPerFollower: profiles.length ? Math.round(totalFollowers / profiles.length) : 0,
         topLocations: Object.entries(locations).sort((a, b) => b[1] - a[1]).slice(0, 10),
         topInterests: Object.entries(interests).sort((a, b) => b[1] - a[1]).slice(0, 10),
@@ -4591,12 +4728,13 @@ async function executeXeepyTool(name, args) {
 
     case 'x_follower_alerts': {
       const followers = await localTools.x_get_followers?.({ username: args.username, limit: 500 });
+      const followerList = Array.isArray(followers) ? followers : (followers?.followers || followers?.users || []);
       
       return {
         username: args.username,
         alertTypes: args.alertTypes || ['new_follower', 'unfollower', 'milestone', 'surge', 'drop'],
-        currentFollowerCount: followers?.users?.length || 0,
-        snapshot: (followers?.users || []).slice(0, 10).map(u => u.username),
+        currentFollowerCount: followerList.length,
+        snapshot: followerList.slice(0, 10).map(u => typeof u === 'string' ? u : (u.username || u.handle)),
         message: `Follower alerts configured. Save this snapshot and compare on next check to detect changes.`,
         capturedAt: new Date().toISOString(),
       };
@@ -5638,6 +5776,8 @@ function createMcpServer() {
     {
       capabilities: {
         tools: {},
+        resources: {},
+        prompts: {},
       },
     }
   );
@@ -5646,6 +5786,194 @@ function createMcpServer() {
   srv.setRequestHandler(ListToolsRequestSchema, async () => {
     const pluginToolDefs = getPluginTools().map(({ _plugin, handler, ...def }) => def);
     return { tools: [...TOOLS, ...pluginToolDefs] };
+  });
+
+  // Resources (MCP Resource Exposure)
+  srv.setRequestHandler(ListResourcesRequestSchema, async () => {
+    return {
+      resources: [
+        {
+          uri: 'xactions://platforms',
+          name: 'Supported Social & Crawler Platforms',
+          description: 'Full catalog of supported social networks, marketplaces, and crawlers with their capabilities',
+          mimeType: 'application/json',
+        },
+        {
+          uri: 'xactions://actions',
+          name: 'Crawler Actions Catalog',
+          description: 'Catalog of all discrete crawler actions across all supported platforms',
+          mimeType: 'application/json',
+        },
+        {
+          uri: 'xactions://system/status',
+          name: 'XActions System Status',
+          description: 'Operational status of XActions MCP server, mode, and version',
+          mimeType: 'application/json',
+        },
+      ],
+    };
+  });
+
+  srv.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const uri = request?.params?.uri;
+    if (!uri) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'uri is required for ReadResource',
+        suggestedAction: SuggestedActions.CONTACT_SUPPORT,
+      });
+    }
+    if (uri === 'xactions://platforms') {
+      const { x_list_platforms } = await import('./local-tools.js');
+      const data = await x_list_platforms();
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(data, null, 2),
+          },
+        ],
+      };
+    }
+    if (uri === 'xactions://actions') {
+      const { executeActionListTool: getActions } = await import('../scrapers/social/actions-list.js');
+      const actions = await getActions();
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(actions, null, 2),
+          },
+        ],
+      };
+    }
+    if (uri === 'xactions://system/status') {
+      const { globalAdaptiveRateGovernor } = await getCoreModule();
+      const governorStatus = typeof globalAdaptiveRateGovernor?.getStatus === 'function'
+        ? globalAdaptiveRateGovernor.getStatus()
+        : null;
+      const statusData = {
+        version: VERSION,
+        mode: MODE,
+        uptime: process.uptime(),
+        governor: governorStatus,
+      };
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(statusData, null, 2),
+          },
+        ],
+      };
+    }
+    throw new PlatformError({
+      code: 'XACT_4041',
+      type: ErrorTypes.NOT_FOUND,
+      message: `Resource not found: ${uri}`,
+      suggestedAction: SuggestedActions.CONTACT_SUPPORT,
+    });
+  });
+
+  // Prompts (Guided AI Agent Prompts)
+  srv.setRequestHandler(ListPromptsRequestSchema, async () => {
+    return {
+      prompts: [
+        {
+          name: 'x_growth_strategy',
+          description: 'Formulate an actionable account growth strategy based on target audience, niche, and content angles',
+          arguments: [
+            { name: 'niche', description: 'Primary topic or industry (e.g. AI, Crypto, SaaS)', required: true },
+            { name: 'goals', description: 'Primary goals (e.g. gain 1000 followers, lead generation)', required: false },
+          ],
+        },
+        {
+          name: 'x_viral_thread',
+          description: 'Generate an engaging, viral-optimized Twitter/X thread draft with strong hook and call-to-action',
+          arguments: [
+            { name: 'topic', description: 'Topic or lesson to cover in the thread', required: true },
+            { name: 'tone', description: 'Tone of voice (e.g. educational, provocative, story)', required: false },
+          ],
+        },
+        {
+          name: 'x_reputation_audit',
+          description: 'Analyze account sentiment, brand perception, and identify potential PR crisis risks',
+          arguments: [
+            { name: 'brand', description: 'Brand name or handle to audit', required: true },
+          ],
+        },
+      ],
+    };
+  });
+
+  srv.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    const name = request?.params?.name;
+    const promptArgs = request?.params?.arguments;
+    if (!name) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'name is required for GetPrompt',
+        suggestedAction: SuggestedActions.CONTACT_SUPPORT,
+      });
+    }
+    if (name === 'x_growth_strategy') {
+      const niche = promptArgs?.niche || 'Technology';
+      const goals = promptArgs?.goals || 'Audience growth and brand authority';
+      return {
+        description: `Growth strategy prompt for ${niche}`,
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: `Please design a data-backed X/Twitter growth plan for the ${niche} niche with the goal of: ${goals}. Suggest 3 content pillars, optimal posting cadence, and high-impact engagement tactics using XActions automation.`,
+            },
+          },
+        ],
+      };
+    }
+    if (name === 'x_viral_thread') {
+      const topic = promptArgs?.topic || 'lessons learned in software engineering';
+      const tone = promptArgs?.tone || 'engaging and informative';
+      return {
+        description: `Viral thread prompt for ${topic}`,
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: `Draft a 5-tweet viral thread about "${topic}" in a ${tone} tone. The first tweet must contain a compelling hook, tweets 2-4 should deliver actionable insights, and tweet 5 must conclude with a strong summary and call-to-action.`,
+            },
+          },
+        ],
+      };
+    }
+    if (name === 'x_reputation_audit') {
+      const brand = promptArgs?.brand || 'our brand';
+      return {
+        description: `Reputation audit prompt for ${brand}`,
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: `Audit the brand reputation for "${brand}" on X/Twitter. Categorize sentiment (positive, neutral, negative), highlight key topics discussed in mentions/quotes, and flag any potential PR risks.`,
+            },
+          },
+        ],
+      };
+    }
+    throw new PlatformError({
+      code: 'XACT_4041',
+      type: ErrorTypes.NOT_FOUND,
+      message: `Prompt not found: ${name}`,
+      suggestedAction: SuggestedActions.CONTACT_SUPPORT,
+    });
   });
 
   // Execute tools

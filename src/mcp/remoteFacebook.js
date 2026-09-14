@@ -15,6 +15,10 @@ const SCRAPE_ACTION_MAP = {
   x_facebook_group_posts: 'group_posts',
   x_facebook_group_comments: 'group_comments',
   x_facebook_posts: 'posts',
+  x_facebook_profile: 'profile',
+  x_facebook_followers: 'followers',
+  x_facebook_following: 'following',
+  x_facebook_group_search: 'group_search',
 };
 
 /**
@@ -124,6 +128,10 @@ export function isRemoteSupported(toolName) {
     'x_facebook_group_posts',
     'x_facebook_group_comments',
     'x_facebook_posts',
+    'x_facebook_profile',
+    'x_facebook_followers',
+    'x_facebook_following',
+    'x_facebook_group_search',
     'x_facebook_automate',
   ]);
   return SUPPORTED.has(toolName);

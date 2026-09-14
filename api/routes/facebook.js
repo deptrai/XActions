@@ -393,7 +393,7 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
     /** @type {string} */
     let trimmedQuery = '';
 
-    const VALID_ACTIONS = ['profile', 'posts', 'followers', 'search', 'group-members', 'marketplace', 'post_comments', 'group_posts', 'group_comments', 'group_search'];
+    const VALID_ACTIONS = ['profile', 'posts', 'followers', 'following', 'search', 'group-members', 'group_members', 'marketplace', 'post_comments', 'get_comments', 'comments', 'group_posts', 'group_comments', 'group_search'];
     if (!action || !VALID_ACTIONS.includes(action)) {
       return res.status(400).json({
         ok: false,
@@ -401,7 +401,7 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
       });
     }
 
-    if (['profile', 'posts', 'followers', 'group-members', 'post_comments', 'group_posts', 'group_comments', 'group_search'].includes(action) && !url?.trim()) {
+    if (['profile', 'posts', 'followers', 'following', 'group-members', 'group_members', 'post_comments', 'get_comments', 'comments', 'group_posts', 'group_comments', 'group_search'].includes(action) && !url?.trim()) {
       return res.status(400).json({ ok: false, error: `action "${action}" requires url` });
     }
     if (['search', 'marketplace', 'group_search'].includes(action)) {
@@ -447,7 +447,7 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
     }
 
     // Validate comment-only boolean parameter.
-    if (['post_comments', 'group_comments'].includes(action)) {
+    if (['post_comments', 'get_comments', 'comments', 'group_comments'].includes(action)) {
       if (includeReplies !== undefined && includeReplies !== null && typeof includeReplies !== 'boolean') {
         return res.status(400).json({ ok: false, error: 'includeReplies must be a boolean' });
       }
@@ -592,7 +592,7 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
             ? { url: /** @type {string} */ (url).trim(), query: trimmedQuery }
             : { url: /** @type {string} */ (url).trim() }),
       ...(limit !== undefined && limit !== null ? { limit: Number(limit) } : {}),
-      ...(['post_comments', 'group_comments'].includes(action) && includeReplies !== undefined && includeReplies !== null
+      ...(['post_comments', 'get_comments', 'comments', 'group_comments'].includes(action) && includeReplies !== undefined && includeReplies !== null
         ? { includeReplies }
         : {}),
     };

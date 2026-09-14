@@ -69,8 +69,26 @@ async function ensureBrowser() {
     }
     browser = await createBrowser();
     page = await createPage(browser);
+  } else if (!page || (typeof page.isClosed === "function" && page.isClosed())) {
+    page = await createPage(browser);
   }
   return { browser, page };
+}
+
+/**
+ * Get the current active Puppeteer page instance.
+ */
+export async function getPage() {
+  const { page: pg } = await ensureBrowser();
+  return pg;
+}
+
+/**
+ * Get the current active Puppeteer browser instance.
+ */
+export async function getBrowser() {
+  const { browser: br } = await ensureBrowser();
+  return br;
 }
 
 // ============================================================================
@@ -280,14 +298,26 @@ export async function x_get_following({ username, limit = 100 }) {
 
 export async function x_get_non_followers({ username }) {
   const { page: pg } = await ensureBrowser();
-  const followers = await scrapeFollowers(pg, username, { limit: 5000 });
-  const following = await scrapeFollowing(pg, username, { limit: 5000 });
+  const rawFollowers = await scrapeFollowers(pg, username, { limit: 5000 });
+  const rawFollowing = await scrapeFollowing(pg, username, { limit: 5000 });
 
-  const followerSet = new Set(followers.map((f) => f.username));
-  const nonFollowers = following.filter((f) => !followerSet.has(f.username));
+  const followers = Array.isArray(rawFollowers) ? rawFollowers : (rawFollowers?.followers || rawFollowers?.users || []);
+  const following = Array.isArray(rawFollowing) ? rawFollowing : (rawFollowing?.following || rawFollowing?.users || []);
+
+  const getUsername = (u) => {
+    if (!u) return "";
+    const name = typeof u === "string" ? u : (u.username || u.handle || u.externalId || "");
+    return String(name).toLowerCase().replace(/^@/, "");
+  };
+
+  const followerSet = new Set(followers.map(getUsername).filter(Boolean));
+  const nonFollowers = following.filter((f) => {
+    const uname = getUsername(f);
+    return uname && !followerSet.has(uname);
+  });
 
   return {
-    nonFollowers: nonFollowers.map((f) => f.username),
+    nonFollowers: nonFollowers.map((f) => (typeof f === "string" ? f : (f.username || f.handle || f.externalId))),
     count: nonFollowers.length,
     totalFollowing: following.length,
     totalFollowers: followers.length,
@@ -570,9 +600,11 @@ export async function x_post_tweet({ text }) {
   return { success: false, message: 'Could not post tweet' };
 }
 
-export async function x_like({ url }) {
+export async function x_like({ url, tweetUrl }) {
+  const targetUrl = url || tweetUrl;
+  if (!targetUrl) throw new Error('url or tweetUrl is required for x_like');
   const { page: pg } = await ensureBrowser();
-  await pg.goto(url, { waitUntil: 'networkidle2' });
+  await pg.goto(targetUrl, { waitUntil: 'networkidle2' });
   await randomDelay();
 
   if (await clickIfPresent(pg, '[data-testid="like"]')) {
@@ -582,9 +614,11 @@ export async function x_like({ url }) {
   return { success: false, message: 'Could not like tweet' };
 }
 
-export async function x_retweet({ url }) {
+export async function x_retweet({ url, tweetUrl }) {
+  const targetUrl = url || tweetUrl;
+  if (!targetUrl) throw new Error('url or tweetUrl is required for x_retweet');
   const { page: pg } = await ensureBrowser();
-  await pg.goto(url, { waitUntil: 'networkidle2' });
+  await pg.goto(targetUrl, { waitUntil: 'networkidle2' });
   await randomDelay();
 
   if (await clickIfPresent(pg, '[data-testid="retweet"]')) {
@@ -600,9 +634,11 @@ export async function x_retweet({ url }) {
 // 15. Download Video
 // ============================================================================
 
-export async function x_download_video({ tweetUrl }) {
+export async function x_download_video({ tweetUrl, url }) {
+  const targetUrl = tweetUrl || url;
+  if (!targetUrl) throw new Error('tweetUrl or url is required for x_download_video');
   const { page: pg } = await ensureBrowser();
-  await pg.goto(tweetUrl, { waitUntil: 'networkidle2' });
+  await pg.goto(targetUrl, { waitUntil: 'networkidle2' });
   await randomDelay();
 
   const videoUrls = await pg.evaluate(() => {
@@ -793,9 +829,11 @@ export async function x_schedule_post({ text, scheduledAt }) {
   return { success: false, message: 'Could not schedule tweet' };
 }
 
-export async function x_delete_tweet({ url }) {
+export async function x_delete_tweet({ url, tweetUrl }) {
+  const targetUrl = url || tweetUrl;
+  if (!targetUrl) throw new Error('url or tweetUrl is required for x_delete_tweet');
   const { page: pg } = await ensureBrowser();
-  await pg.goto(url, { waitUntil: 'networkidle2' });
+  await pg.goto(targetUrl, { waitUntil: 'networkidle2' });
   await randomDelay();
 
   // Open the caret "⋯" menu on the tweet
@@ -817,9 +855,11 @@ export async function x_delete_tweet({ url }) {
 // 21–25. Engagement
 // ============================================================================
 
-export async function x_reply({ url, text }) {
+export async function x_reply({ url, tweetUrl, text }) {
+  const targetUrl = url || tweetUrl;
+  if (!targetUrl) throw new Error('url or tweetUrl is required for x_reply');
   const { page: pg } = await ensureBrowser();
-  await pg.goto(url, { waitUntil: 'networkidle2' });
+  await pg.goto(targetUrl, { waitUntil: 'networkidle2' });
   await randomDelay();
 
   const replyBox = await pg.$('[data-testid="tweetTextarea_0"]');
@@ -838,9 +878,11 @@ export async function x_reply({ url, text }) {
   return { success: false, message: 'Could not reply to tweet' };
 }
 
-export async function x_bookmark({ url }) {
+export async function x_bookmark({ url, tweetUrl }) {
+  const targetUrl = url || tweetUrl;
+  if (!targetUrl) throw new Error('url or tweetUrl is required for x_bookmark');
   const { page: pg } = await ensureBrowser();
-  await pg.goto(url, { waitUntil: 'networkidle2' });
+  await pg.goto(targetUrl, { waitUntil: 'networkidle2' });
   await randomDelay();
 
   if (await clickIfPresent(pg, '[data-testid="bookmark"]')) {
@@ -1598,6 +1640,11 @@ export async function fb_get_followers({ username, limit = 50 }) {
   return dispatchScrape('facebook', 'followers', { page: pg, username, limit });
 }
 
+export async function fb_get_following({ username, limit = 50 }) {
+  const { page: pg } = await ensureFbBrowser();
+  return dispatchScrape('facebook', 'following', { page: pg, username, limit });
+}
+
 export async function fb_search({ query, limit = 20 }) {
   const { page: pg } = await ensureFbBrowser();
   return dispatchScrape('facebook', 'search', { page: pg, query, limit });
@@ -1674,11 +1721,181 @@ export async function x_list_platforms() {
         auth: 'optional OAuth2 (clientId, clientSecret) or public JSON/RSS/Puppeteer',
         capabilities: ['subreddit', 'user', 'search', 'post_comments', 'subreddit_info', 'profile', 'tweets'],
       },
+      {
+        name: 'instagram',
+        displayName: 'Instagram',
+        aliases: ['ig'],
+        auth: 'session cookie or public web scraping',
+        capabilities: ['profile', 'posts', 'hashtag', 'search', 'post_comments', 'user_reels'],
+      },
+      {
+        name: 'tiktok',
+        displayName: 'TikTok',
+        aliases: ['tt'],
+        auth: 'public web scraping / mobile API signature',
+        capabilities: ['profile', 'posts', 'search', 'video_comments'],
+      },
+      {
+        name: 'youtube',
+        displayName: 'YouTube VN / Global',
+        aliases: ['yt'],
+        auth: 'public HTML / InnerTube API',
+        capabilities: ['search', 'channel', 'video_details', 'video_comments', 'trending', 'shorts'],
+      },
+      {
+        name: 'zalo',
+        displayName: 'Zalo OA',
+        aliases: ['zalo_oa'],
+        auth: 'Zalo official account credentials or public articles',
+        capabilities: ['oa_articles', 'feed', 'post_detail', 'profile'],
+      },
+      {
+        name: 'linkedin',
+        displayName: 'LinkedIn',
+        auth: 'session cookie li_at or public voyager API',
+        capabilities: ['jobs', 'company', 'profile', 'search'],
+      },
+      {
+        name: 'batdongsan',
+        displayName: 'Batdongsan.com.vn',
+        aliases: ['bds'],
+        auth: 'public web scraping',
+        capabilities: ['search_listings', 'project_detail'],
+      },
+      {
+        name: 'chotot',
+        displayName: 'Chợ Tốt',
+        auth: 'public web scraping',
+        capabilities: ['search_listings', 'listing_detail'],
+      },
+      {
+        name: 'shopee',
+        displayName: 'Shopee',
+        auth: 'public API / web scraping',
+        capabilities: ['product_search', 'product_detail', 'shop_products'],
+      },
     ],
   };
 }
 
+
+// ============================================================================
+// High-Value MCP Extension Tools (Shadowban, Account Backup, Viral Detector)
+// ============================================================================
+
+export async function x_shadowban_check({ username } = {}) {
+  const targetUser = username || process.env.XACTIONS_DEFAULT_USERNAME;
+  if (!targetUser) {
+    throw new Error("username is required for x_shadowban_check");
+  }
+
+  const cleanUser = targetUser.replace(/^@/, "");
+  const report = {
+    username: cleanUser,
+    tests: {
+      searchSuggestion: { passed: false, tested: true },
+      searchVisibility: { passed: false, tested: true, tweetsFound: 0 },
+      profileIndexed: { passed: false, tested: true },
+    },
+    status: "clean",
+    checkedAt: new Date().toISOString(),
+  };
+
+  const profile = await x_get_profile({ username: cleanUser }).catch(() => null);
+  if (profile && (profile.id || profile.username)) {
+    report.tests.profileIndexed.passed = true;
+    if (profile.protected) {
+      report.isProtected = true;
+      report.status = "protected_account";
+      return report;
+    }
+    if (profile.statuses_count === 0 || profile.tweetsCount === 0) {
+      report.status = "clean_no_tweets";
+      return report;
+    }
+  } else if (!profile) {
+    report.status = "account_not_found";
+    return report;
+  }
+
+  try {
+    const searchRes = await x_search_tweets({ query: `from:${cleanUser}`, limit: 5 }).catch(() => null);
+    const tweets = searchRes?.posts || searchRes?.tweets || (Array.isArray(searchRes) ? searchRes : []);
+    report.tests.searchVisibility.tweetsFound = tweets.length;
+    report.tests.searchVisibility.passed = tweets.length > 0;
+  } catch {}
+
+  try {
+    const mentionRes = await x_search_tweets({ query: `@${cleanUser}`, limit: 5 }).catch(() => null);
+    const mentions = mentionRes?.posts || mentionRes?.tweets || (Array.isArray(mentionRes) ? mentionRes : []);
+    report.tests.searchSuggestion.passed = mentions.length > 0 || report.tests.searchVisibility.passed;
+  } catch {}
+
+  if (!report.tests.searchVisibility.passed && !report.tests.searchSuggestion.passed) {
+    report.status = "suspected_search_ban";
+  } else if (!report.tests.searchVisibility.passed) {
+    report.status = "partially_deboosted";
+  } else {
+    report.status = "clean";
+  }
+
+  return report;
+}
+
+export async function x_backup_account({ username, limit = 50 } = {}) {
+  const targetUser = username || process.env.XACTIONS_DEFAULT_USERNAME;
+  if (!targetUser) {
+    throw new Error("username is required for x_backup_account");
+  }
+
+  const cleanUser = targetUser.replace(/^@/, "");
+  const profile = await x_get_profile({ username: cleanUser }).catch(() => null);
+  const tweetsResult = await x_get_tweets({ username: cleanUser, limit }).catch(() => []);
+  const tweets = Array.isArray(tweetsResult) ? tweetsResult : (tweetsResult?.posts || tweetsResult?.tweets || []);
+
+  return {
+    meta: {
+      username: cleanUser,
+      backedUpAt: new Date().toISOString(),
+      source: "XActions MCP Account Backup",
+      version: "2.0.0",
+    },
+    profile,
+    tweetCount: tweets.length,
+    tweets,
+  };
+}
+
+export async function x_viral_tweet_detector({ query, minLikes = 100, limit = 20 } = {}) {
+  if (!query || typeof query !== "string") {
+    throw new Error("query is required for x_viral_tweet_detector");
+  }
+
+  const searchQuery = `${query} min_faves:${minLikes}`;
+  const searchResult = await x_search_tweets({ query: searchQuery, limit: limit * 2 }).catch(() => null);
+  const tweets = searchResult?.posts || searchResult?.tweets || (Array.isArray(searchResult) ? searchResult : []);
+
+  const ranked = tweets.map(t => {
+    const likes = Number(t.likes || t.likesCount || 0);
+    const retweets = Number(t.repostsCount || t.retweets || t.retweetsCount || 0);
+    const replies = Number(t.replies || t.repliesCount || 0);
+    const viralScore = likes + (retweets * 2) + (replies * 1.5);
+    return { ...t, viralScore };
+  }).sort((a, b) => b.viralScore - a.viralScore);
+
+  return {
+    query,
+    minLikes,
+    count: Math.min(ranked.length, limit),
+    viralTweets: ranked.slice(0, limit),
+  };
+}
+
 export const toolMap = {
+  // Browser & Page lifecycle helpers
+  getPage,
+  getBrowser,
+  closeBrowser,
   // Auth
   x_login,
   // Scraping (delegated to scrapers/index.js — single source of truth)
@@ -1766,12 +1983,17 @@ export const toolMap = {
   fb_get_profile,
   fb_get_posts,
   fb_get_followers,
+  fb_get_following,
   fb_search,
   fb_like,
   fb_comment,
   fb_post,
   // Cross-Platform
   x_list_platforms,
+  // High-Value MCP Extension Tools
+  x_shadowban_check,
+  x_backup_account,
+  x_viral_tweet_detector,
   // Utility (not an MCP tool, used by server.js cleanup)
   closeBrowser,
 };

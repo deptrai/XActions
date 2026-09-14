@@ -59,6 +59,8 @@ export async function dispatchFacebookHybrid(action, options = {}) {
     search: 'search',
     marketplace: 'marketplace',
     post_comments: 'post_comments',
+    get_comments: 'post_comments',
+    comments: 'post_comments',
     group_posts: 'group_posts',
     group_comments: 'group_comments',
     group_search: 'group_search',
@@ -153,7 +155,14 @@ export async function dispatchFacebookHybrid(action, options = {}) {
     delete args.crawler;
     delete args.authToken;
 
-    // Resolve page/group identifiers from URL aliases (AC-2)
+    // Resolve page/group/profile identifiers from URL aliases (AC-2)
+    if ((mappedAction === 'followers' || mappedAction === 'following' || mappedAction === 'profile') && !args.username) {
+      const raw = args.url || args.handle || args.targetUrl;
+      if (typeof raw === 'string' && raw.trim()) {
+        args.username = resolveTargetKey(raw.trim());
+      }
+    }
+        // Resolve page/group identifiers from URL aliases (AC-2)
     if (mappedAction === 'page_posts' && !args.pageId) {
       const raw = args.url || args.username || args.targetUrl;
       if (typeof raw === 'string' && raw.trim()) {

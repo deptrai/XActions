@@ -43,6 +43,24 @@ describe('POST /api/facebook/scrape — Story 7.3 validations', () => {
     expect(res.body.error).toMatch(/requires url/);
   });
 
+  it("recognizes following as a valid action and requires url", async () => {
+    const res = await postScrape({ action: 'following', authCookie: VALID_COOKIE });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/requires url/);
+  });
+
+  it("recognizes get_comments as a valid action and requires url", async () => {
+    const res = await postScrape({ action: 'get_comments', authCookie: VALID_COOKIE });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/requires url/);
+  });
+
+  it("recognizes group_members as a valid action and requires url", async () => {
+    const res = await postScrape({ action: 'group_members', authCookie: VALID_COOKIE });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/requires url/);
+  });
+
   it(`[${nextTestId(TEST_SCOPE, 'API', 'P2')}] returns 400 when post_comments missing url`, async () => {
     const res = await postScrape({ action: 'post_comments', authCookie: VALID_COOKIE });
     expect(res.status).toBe(400);
