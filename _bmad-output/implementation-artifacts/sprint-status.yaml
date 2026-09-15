@@ -141,8 +141,10 @@ development_status:
   epic-19-retrospective: done
 
   epic-20: backlog
-  20-1-nowing-shadow-run-adapter-over-xactions-daemon: backlog
-  20-2-legacy-scraper-code-decommissioning: backlog
+  20-1-multi-consumer-service-contract-x-scrape-x-actions-list-action-matrix: 
+    backlog
+  20-2-universal-stream-publish-hook-snake-case-thin-event-map-to-thin-event: 
+    backlog
   epic-20-retrospective: optional
 
   epic-23: done

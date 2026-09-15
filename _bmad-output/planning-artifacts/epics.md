@@ -114,7 +114,7 @@ After new hybrid crawlers (Epics 13–18) are stable, the following legacy modul
 * **FR81 (VietnamWorks Job Scraper):** Cào tin tuyển dụng IT và Executive trên VietnamWorks qua API public / HTML parser.
 * **FR82 (LinkedIn Lead & Job Scraper):** Cào thông tin ứng viên, công ty và bài đăng tuyển dụng trên LinkedIn qua CDP Attach Port 9222.
 * **FR83 (Nowing Thin Event Stream Ingest):** Phát luồng dữ liệu cào dạng Thin Event Pointers (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 1000000` hoặc `MINID` theo thời gian, configurable) cho Nowing AI Hub.
-* **FR84 (Nowing Scrapers Cutover & Decommissioning):** Nâng cấp adapter Nowing sang Daemon MCP HTTP/SSE (Port 3001) và dọn dẹp, loại bỏ toàn bộ 20+ scraper cũ cùng browser dependencies khỏi Nowing backend. (Epic 20)
+* **FR84 (Multi-Consumer Service Contract & Decommissioning):** Biến `scrape()` dispatcher thành service-to-service contract cho multi-consumer (Nowing, ChainLens, AI agents) qua MCP `x_scrape` + Redis Stream `stream:social:raw_posts` + `x_actions_list` discovery. Gỡ bỏ 20+ scraper cũ khỏi Nowing backend sau shadow-run ≥99% parity. (Epic 20)
 * **FR85 (Internal Operator Dashboard & Admin CLI):** Cung cấp dashboard nội bộ và CLI `xactions admin` để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. (Epic 19)
 * **FR86 (Metadata Schema Contract for Consumers):** Mỗi platform/category publish JSON Schema cho `Post.metadata` và API/CLI/MCP discovery. (Story 10.5)
 * **FR87 (Data Retention Policy):** Dữ liệu raw crawl TTL 30 ngày; leads/processed output vĩnh viễn; checkpoints/audit logs 90 ngày. (Story 10.2, Epic 19)
@@ -1180,35 +1180,93 @@ So that **Claude/Cursor/Antigravity có thể hỏi "tình trạng proxy pool th
 
 ---
 
-## Epic 20: Nowing Cutover & Legacy Scraper Decommissioning
+## Epic 20: Multi-Consumer Scraping Platform Service Contract
 
-### Story 20.1: Nowing Shadow-Run Adapter over XActions Daemon
-As a **Nowing Integration Lead**,
-I want **nâng cấp adapter `nowing_backend/app/proprietary/platforms/xactions/adapter.py` để gọi XActions MCP Daemon HTTP/SSE (Port 3001) qua HTTP Keep-Alive Connection Pool**,
-So that **Nowing bắt đầu nhận dữ liệu từ XActions song song với scraper cũ để so sánh (shadow run) trước khi thay thế hoàn toàn**.
+> **Restructured 2026-09-15** — Kiến trúc kết nối thay đổi từ custom adapter sang MCP `x_scrape` + Redis Stream. Nowing đã wire phía mình; XActions cần expose service contract. Xem `sprint-change-proposal-2026-09-15-multi-consumer-scraping-platform.md`.
 
-**Pre-condition:** Epics 13–18 (crawler Social, Ecom, BĐS, Tuyển dụng) đã ổn định.
+### Story 20.1: Multi-Consumer Service Contract (x_scrape + x_actions_list + Action Matrix)
 
-**Acceptance Criteria:**
-* **Given** repository Nowing tại `/Users/luisphan/Documents/GitHub/nowing`
-* **When** cập nhật `adapter.py` gọi sang `http://xactions-service:3001`
-* **Then** Nowing nhận đủ 100% dữ liệu qua kiểm thử đối soát (Shadow Run) trong môi trường staging
-* **And** adapter ghi log diff (field-level) giữa dữ liệu cũ và mới cho từng platform
-
-### Story 20.2: Legacy Scraper Code Decommissioning
-As a **Nowing Maintainer**,
-I want **xóa bỏ an toàn các thư mục scraper cũ trong `nowing_backend/app/proprietary/platforms/`**,
-So that **codebase không còn chứa code cũ đã được thay thế, giảm rủi ro bảo trì và độ phức tạp**.
-
-**Pre-condition:** Story 20.1 shadow-run đạt ≥ 99% field parity trong 7 ngày liên tiếp.
+As a **XActions Platform Engineer**,
+I want **expose `scrape()` dispatcher thành service-to-service contract qua MCP `x_scrape` tool, mở rộng `x_actions_list` cho toàn bộ 24 platforms, và generate canonical action matrix doc**,
+So that **Nowing, ChainLens, và bất kỳ consumer nào đều gọi được XActions qua cùng một contract — control plane qua MCP, discovery qua `x_actions_list`**.
 
 **Acceptance Criteria:**
-* **Given** shadow-run đạt ≥ 99% field parity trong 7 ngày liên tiếp
-* **When** xóa các thư mục legacy trong Nowing repo (`shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`, `linkedin/`, v.v.)
-* **And** xóa các file/thư mục legacy trong XActions repo (`src/client/Scraper.js`, `src/scrapers/twitter/http/`, `src/scrapers/twitter/index.js`, `src/scrapers/facebook/`, `src/scrapers/threads/index.js`)
-* **Then** CI tests pass, Nowing Docker image < 500MB
-* **And** gỡ bỏ `selenium`, `playwright-python`, Chromium binaries khỏi Dockerfile Nowing
-* **And** XActions bundle size và dependency count giảm đáng kể
+
+* **Given** `scrape()` dispatcher đã có sẵn (Epic 25)
+* **When** implement `x_scrape` MCP tool trong `src/mcp/server.js`
+* **Then** `x_scrape` nhận input:
+  - `platform` (required), `action` (required), `args` (object, nested), `context` (`Record<string, unknown>` — mở cho multi-tenant: `targetId`, `workspaceId`, `traceId`...), `accountId`, `proxyUrl`, `dryRun` (default `false`), `artifactFormat`
+  - Forward `args` → `scrape(platform, action, args)` qua `descriptor.mapArgs` (đảm bảo alias resolution như `taxCode → q`)
+* **And** `x_scrape` trả unified envelope cùng shape cả stream và non-stream mode:
+  ```
+  { success, mode: 'stream'|'direct', metadata: {platform, action, durationMs, totalRecords},
+    stream: {enabled, name, cursor: lastEventId}, preview: [...≤10 items], data: [...] }
+  ```
+  - `mode='stream'` khi `REDIS_STREAM_ENABLED=true` → preview ≤10 items + stream cursor
+  - `mode='direct'` khi disabled → data = full result
+* **And** `dryRun=true` KHÔNG emit stream events
+* **And** Pre-validate `requiredArgs` → trả `XACT_4002` + `missing[]` + `example` khi thiếu args
+* **And** "Did You Mean?" suggestion khi action không tồn tại (dùng `DEPRECATED_ACTIONS` + `availableActions` trong `XACT_4001`)
+* **And** `context.workspaceId` missing khi stream enabled → WARN log `[StreamPublisher:MissingWorkspaceId]`
+
+* **When** mở rộng `src/scrapers/social/actions-list.js`
+* **Then** `x_actions_list` enumerate toàn bộ 24 platform descriptors (thêm fnb, healthcare, legal, automotive, b2b-registry-extended, tiktokShop)
+* **And** verify mỗi platform có Crawler class với `listActions()` — platform nào chưa có → flag `"no_crawler": true` trong output, KHÔNG silent-skip
+* **And** lọc bỏ `checkpointResolver` khỏi `ActionDescriptor` trước khi trả (function ref, không serialize)
+* **And** filter theo `category` + `detailLevel: 'summary'|'full'`
+* **And** `b2b-registry-extended` dùng `index.js` (không phải `crawler.js`) — loader cần xử lý
+
+* **When** generate canonical action/arg matrix
+* **Then** `npm run docs:matrix` auto-generate `docs/canonical-action-matrix.md` (human-readable) + `docs/canonical-action-matrix.json` (machine-readable cho Nowing CI validation)
+
+* **And** `src/mcp/envelope.js` `extractRecords()` thêm `'listings'`, `'products'`, `'jobs'` vào key list (fix VN crawler envelope)
+
+### Story 20.2: Universal Stream-Publish Hook (snake_case ThinEvent + mapToThinEvent)
+
+As a **XActions Platform Engineer**,
+I want **thêm universal stream-publish hook vào `AbstractCrawler` sau `entry.handler()` trong `start()`, normalize sang snake_case ThinEvent, và gỡ bỏ per-crawler direct emit**,
+So that **tất cả 23+ crawlers tự động emit thin events vào Redis Stream `stream:social:raw_posts` — zero per-crawler code**.
+
+**Acceptance Criteria:**
+
+* **Given** `AbstractCrawler.start()` gọi `entry.handler()` rồi return result
+* **When** thêm stream-publish hook sau `entry.handler()` trong `start()`
+* **Then** extract items từ result (`posts`, `products`, `listings`, `jobs`, `items`), chạy qua `mapToThinEvent(item, context)`, emit qua `RedisStreamPublisher`
+* **And** `formatPayload()` trong `redis-stream-publisher.js` sửa để map snake_case + hỗ trợ `content_snippet`, `target_id`, `workspace_id`, `schema_version` (hiện hardcode camelCase whitelist)
+
+* **When** định nghĩa `mapToThinEvent(item, context)` trong base hook
+* **Then** normalize sang snake_case ThinEvent schema:
+  ```
+  { id, platform, external_post_id, category, author_id, author_name,
+    post_url, crawled_at, storage_ref, scraper_id, content_snippet,
+    target_id, workspace_id, schema_version: 1 }
+  ```
+* **And** per-category field mapping:
+  - `PostItem` → `content_snippet` = text (truncate ≤4000), `author_id` = authorId
+  - `ProductItem` → `content_snippet` = title + description, `author_id` = shop_id
+  - `CompanyItem` → `content_snippet` = name + industry + address, `author_id` = taxCode
+  - `JobItem` → `content_snippet` = title + company + location, `author_id` = companyId
+  - `ListingItem` → `content_snippet` = title + price + area, `author_id` = sellerId
+* **And** `content_snippet` BẮT BUỘC — Nowing consumer drop nếu thiếu
+* **And** `target_id`/`workspace_id` từ `session.context` — forward nguyên vẹn
+* **And** `workspace_id` dùng `??` không `||` (vì `0` là falsy)
+* **And** Dual-emit camelCase + snake_case fields trong transition period (không break existing consumers)
+
+* **When** decommission per-crawler direct emit
+* **Then** gỡ bỏ `FacebookCrawler.#saveCheckpoint` direct `xAdd` → delegate sang base hook
+* **And** gỡ bỏ `ThreadsCrawler`, `Medium`, `Reddit`, `YouTube`, `Zalo` `#emitCheckpointAndStream` → delegate sang base hook
+* **And** gate bởi `REDIS_STREAM_ENABLED`, `MAXLEN ~200K` (khuyến nghị hạ từ 1M do `content_snippet` tăng event size ~4KB)
+
+* **When** `entry.handler()` completes và stream publish fails
+* **Then** log warn, KHÔNG crash crawler (non-blocking)
+* **And** `result.__streamCursor` = lastEventId (cho `x_scrape` trả về consumer)
+* **And** `x_scrape` response include `stream_delivery: 'ok'|'failed'` flag
+
+---
+
+> **External Milestones** (tracked ở Nowing repo, KHÔNG block Epic 20):
+> - **20.3** — Nowing Shadow-Run Validation: `x_scrape` + stream consumer parity ≥99% trong 7 ngày. Parity = `fields_matched/total_fields` trên matched records; volatile fields (`likesCount`, `viewsCount`, `publishedAt`, `crawledAt`) excluded.
+> - **20.4** — Nowing Legacy Decommissioning: xóa 20+ scraper dirs + Chromium/Selenium khỏi Dockerfile. Blocked by 20.3.
 
 ---
 
@@ -1227,18 +1285,18 @@ So that **codebase không còn chứa code cũ đã được thay thế, giảm 
 ## Cross-Epic Dependency Map
 
 ```
-Epic 20.2 (Legacy decommission) ─┐
-                                 ├──→ Epic 26 (Final legacy removal)
-Epic 23 (Bluesky/Mastodon) ──────┤
-Epic 24 (Utility/Adapters) ──────┤
-                                 │
-                                 ↓
-                         Epic 25 (Unified dispatcher)
+Epic 20.2 (Stream-publish hook) ───┐
+                                    ├──→ Epic 26 (Final legacy removal)
+Epic 23 (Bluesky/Mastodon) ─────────┤
+Epic 24 (Utility/Adapters) ─────────┤
+                                    │
+                                    ↓
+                            Epic 25 (Unified dispatcher)
 ```
 
 - **Epic 23** and **Epic 24** can run in parallel after Epic 13.1 (Tiered Signer) and 13.3 (Facebook hybrid) are done.
 - **Epic 25** depends on 23, 24, and Phase 4 integration stories (13.2.12, 13.10, 15.1.4).
-- **Epic 26** depends on 25 and the original Epic 20.2 decommission conditions (shadow-run parity ≥ 99% for 7 days).
+- **Epic 26** depends on 25 and Epic 20 external milestone 20.3 (Nowing shadow-run parity ≥ 99% for 7 days).
 
 ---
 
