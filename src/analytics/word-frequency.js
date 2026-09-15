@@ -46,7 +46,7 @@ function loadStopwords(lang) {
 // Hashtag extraction
 // ============================================================================
 
-const HASHTAG_RE = /#(?=[\p{L}])[\p{L}\p{N}_]+/gu;
+const HASHTAG_RE = /(?<![\w.])#(?=[\p{L}])[\p{L}\p{N}_]+/gu;
 
 /**
  * Extract hashtags from raw text (before tokenization strips '#').

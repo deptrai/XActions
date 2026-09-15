@@ -433,3 +433,29 @@ describe('extractKeywordFrequency — includeBuzzwords integration', () => {
     expect(result.summary.buzzwords.totalTokens).toBe(1000);
   });
 });
+
+describe('extractKeywordFrequency — hashtag URL/email exclusion', () => {
+  it('excludes hashtags inside URLs', () => {
+    const items = [makeItem('Visit https://example.com/page#section for details #realtag')];
+    const result = extractKeywordFrequency(items);
+    const tags = result.hashtags.map(h => h.tag);
+    expect(tags).toContain('realtag');
+    expect(tags).not.toContain('section');
+  });
+
+  it('excludes hashtags after dots (domain fragments)', () => {
+    const items = [makeItem('Check example.com#fragment and #valid')];
+    const result = extractKeywordFrequency(items);
+    const tags = result.hashtags.map(h => h.tag);
+    expect(tags).toContain('valid');
+    expect(tags).not.toContain('fragment');
+  });
+
+  it('excludes hashtags in email addresses', () => {
+    const items = [makeItem('Email user@domain#tag and #real')];
+    const result = extractKeywordFrequency(items);
+    const tags = result.hashtags.map(h => h.tag);
+    expect(tags).toContain('real');
+    expect(tags).not.toContain('tag');
+  });
+});
