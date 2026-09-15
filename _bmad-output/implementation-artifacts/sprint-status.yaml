@@ -92,7 +92,7 @@ development_status:
   13-10-facebook-hybrid-integration-caller-migration: done
   epic-13-retrospective: done
 
-  epic-14: in-progress
+  epic-14: done
   14-1-hierarchical-comment-tree-extraction-algorithm: done
   14-2-mcp-tool-exporters-daemon-http-sse-server: done
   14-3-realtime-thin-event-redis-stream-for-nowing-ai-lead-hub: done
