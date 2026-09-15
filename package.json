@@ -85,6 +85,7 @@
     "docs:audit": "node scripts/audit-docs.mjs",
     "docs:scripts": "node scripts/build-browser-scripts-doc.mjs",
     "docs:check": "node scripts/build-browser-scripts-doc.mjs --check && node scripts/audit-docs.mjs",
+    "docs:matrix": "node scripts/generate-action-matrix.js",
     "check:endpoints": "node scripts/check-endpoints.mjs",
     "deploy": "bash scripts/deploy.sh",
     "deploy:railway": "bash scripts/deploy.sh railway",

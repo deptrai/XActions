@@ -227,6 +227,8 @@ for (const descriptor of [
   }
 }
 
+export { DESCRIPTORS };
+
 /**
  * Unified scrape function — dispatches to the correct platform module
  *

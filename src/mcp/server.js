@@ -2794,7 +2794,54 @@ const TOOLS = [
           type: 'string',
           description: 'Filter by platform: facebook, threads, bluesky, mastodon, twitter, reddit',
         },
+        category: {
+          type: 'string',
+          description: 'Filter by category: social, ecom, recruitment, realestate, procurement, legal, fnb, healthcare, vehicles',
+        },
+        detailLevel: {
+          type: 'string',
+          enum: ['summary', 'full'],
+          description: 'Detail level (default: full)',
+        },
       },
+    },
+  },
+  {
+    name: 'x_scrape',
+    description: 'Generic scrape dispatcher — calls scrape(platform, action, args). Use x_actions_list to discover available platforms/actions/args. Data flows through Redis Stream when REDIS_STREAM_ENABLED=true (returns preview only).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        platform: {
+          type: 'string',
+          description: 'Canonical platform key from DESCRIPTORS (e.g. masothue, chotot, shopee, facebook). Run x_actions_list to discover.',
+        },
+        action: {
+          type: 'string',
+          description: 'Canonical action name from ActionDescriptor. Run x_actions_list to discover.',
+        },
+        args: {
+          type: 'object',
+          description: 'Action arguments as nested object (NOT flat). Forwarded to scrape(platform, action, args) via descriptor.mapArgs.',
+        },
+        context: {
+          type: 'object',
+          description: 'Multi-tenant context envelope forwarded to stream events. Recommended: { targetId, workspaceId }. Additional keys (traceId, jobId...) allowed.',
+        },
+        accountId: { type: 'string', description: 'Account ID for session resolution' },
+        proxyUrl: { type: 'string', description: 'Proxy URL for request routing' },
+        dryRun: {
+          type: 'boolean',
+          description: 'Preview mode — do NOT emit stream events or persist data (default: false)',
+          default: false,
+        },
+        artifactFormat: {
+          type: 'string',
+          enum: ['jsonl', 'csv'],
+          description: 'Artifact format when totalRecords > 100 (default: jsonl)',
+        },
+      },
+      required: ['platform', 'action', 'args'],
     },
   },
   {
@@ -3207,6 +3254,10 @@ async function executeTool(name, args) {
     return await executeMcpActionListTool(args);
   }
 
+  if (name === 'x_scrape') {
+    return await executeScrapeTool(args);
+  }
+
   // Generic cross-platform post/comment crawlers
   if (name === 'x_crawl_post') {
     return await executeCrawlPostTool(args);
@@ -3600,7 +3651,248 @@ async function executeAdminTool(name, args) {
  * @returns {Promise<Record<string, unknown>[]>}
  */
 async function executeMcpActionListTool(args) {
-  return executeActionListTool({ platform: args?.platform });
+  return executeActionListTool({
+    platform: args?.platform,
+    category: args?.category,
+    detailLevel: args?.detailLevel,
+  });
+}
+
+/**
+ * Execute the x_scrape tool.
+ * Generic dispatcher — calls scrape(platform, action, args).
+ *
+ * @param {Record<string, unknown>} args
+ * @returns {Promise<unknown>}
+ */
+async function executeScrapeTool(args) {
+  const {
+    platform,
+    action,
+    args: actionArgs,
+    context,
+    accountId,
+    proxyUrl,
+    dryRun,
+    artifactFormat,
+  } = args || {};
+
+  if (!platform || typeof platform !== 'string') {
+    throw new PlatformError({
+      code: 'XACT_4001',
+      type: ErrorTypes.INVALID_ARGS,
+      message: 'x_scrape requires a platform argument',
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+    });
+  }
+
+  if (!action || typeof action !== 'string') {
+    throw new PlatformError({
+      code: 'XACT_4001',
+      type: ErrorTypes.INVALID_ARGS,
+      message: 'x_scrape requires an action argument',
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      platform,
+    });
+  }
+
+  if (actionArgs === undefined || actionArgs === null) {
+    throw new PlatformError({
+      code: 'XACT_4001',
+      type: ErrorTypes.INVALID_ARGS,
+      message: 'x_scrape requires an args object (use {} for no arguments)',
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+    });
+  }
+  if (typeof actionArgs !== 'object' || actionArgs === null || Array.isArray(actionArgs)) {
+    throw new PlatformError({
+      code: 'XACT_4001',
+      type: ErrorTypes.INVALID_ARGS,
+      message: 'args must be an object',
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      platform,
+    });
+  }
+
+  const { scrape, DESCRIPTORS } = await import('../scrapers/index.js');
+  const platformKey = platform.toLowerCase();
+  const descriptor = DESCRIPTORS[platformKey];
+  if (!descriptor) {
+    const available = Object.keys(DESCRIPTORS);
+    throw new PlatformError({
+      code: 'XACT_4001',
+      type: ErrorTypes.INVALID_ARGS,
+      message: `Platform "${platform}" not supported. Available: ${available.join(', ')}`,
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      platform,
+      details: { available },
+    });
+  }
+
+  // Merge execution opts into the flat options scrape() expects
+  const scrapeOptions = {
+    ...(actionArgs && typeof actionArgs === 'object' ? actionArgs : {}),
+    ...(accountId ? { accountId } : {}),
+    ...(proxyUrl ? { proxyUrl } : {}),
+    ...(dryRun != null ? { dryRun } : {}),
+    ...(artifactFormat ? { artifactFormat } : {}),
+    ...(context && typeof context === 'object' ? { context } : {}),
+  };
+
+  // Pre-validate action: resolve alias via descriptor.mapAction / actionMap.
+  const ctx = { platform, platformName: platformKey, action };
+  let mappedAction = action;
+  let actionError;
+
+  try {
+    mappedAction = descriptor.mapAction
+      ? descriptor.mapAction(scrapeOptions, ctx)
+      : (descriptor.actionMap?.[action] || action);
+  } catch (mapErr) {
+    actionError = mapErr;
+  }
+  ctx.mappedAction = mappedAction;
+
+  // Collect available actions for error enrichment.
+  // If the descriptor has actionMap, use its values. Otherwise parse the error message.
+  let availableActions = descriptor.actionMap
+    ? [...new Set(Object.values(descriptor.actionMap))]
+    : [];
+
+  if (actionError) {
+    if (actionError instanceof PlatformError && availableActions.length === 0) {
+      // Parse "Available: a, b, c" from the error message
+      const match = actionError.message?.match(/Available: (.+)$/);
+      if (match) {
+        availableActions = match[1].split(', ').map((s) => s.trim());
+      }
+    }
+    if (actionError instanceof PlatformError && availableActions.length > 0) {
+      actionError.availableActions = availableActions;
+      actionError.details = { ...actionError.details, availableActions };
+    }
+    throw actionError;
+  }
+
+  const { isEnvTruthy } = await import('../utils/redis-stream-publisher.js');
+  const streamEnabled = isEnvTruthy(process.env.REDIS_STREAM_ENABLED);
+
+  // Workspace validation warning when stream enabled and not dryRun
+  if (streamEnabled && !dryRun) {
+    if (!context || context.workspaceId === undefined || context.workspaceId === null) {
+      console.warn(
+        `[StreamPublisher:MissingWorkspaceId] x_scrape called without context.workspaceId (target: ${context?.targetId ?? 'unknown'}) — Nowing consumer will drop stream events.`
+      );
+    }
+  }
+
+  // Pre-validate requiredArgs if we have action metadata.
+  // Populate the registry by instantiating only this platform's crawler.
+  let actionDesc;
+  try {
+    // Import the crawler module — its constructor registers actions via registerAction()
+    const crawlerModuleMap = {
+      twitter: '../scrapers/social/twitter/crawler.js',
+      bluesky: '../scrapers/social/bluesky/crawler.js',
+      mastodon: '../scrapers/social/mastodon/crawler.js',
+      facebook: '../scrapers/social/facebook/crawler.js',
+      threads: '../scrapers/social/threads/crawler.js',
+      reddit: '../scrapers/social/reddit/crawler.js',
+      medium: '../scrapers/social/medium/crawler.js',
+      instagram: '../scrapers/social/instagram/crawler.js',
+      tiktok: '../scrapers/social/tiktok/crawler.js',
+      youtube: '../scrapers/social/youtube/crawler.js',
+      zalo: '../scrapers/social/zalo/crawler.js',
+      tiktokshop: '../scrapers/ecom/tiktok-shop/crawler.js',
+      fnb: '../scrapers/fnb/merchant/crawler.js',
+      healthcare: '../scrapers/healthcare/crawler.js',
+      ipvietnam: '../scrapers/legal/ip-trademark/crawler.js',
+      automotive: '../scrapers/vehicles/automotive/crawler.js',
+      b2b_registry_extended: '../scrapers/procurement/b2b-registry-extended/index.js',
+      linkedin: '../scrapers/recruitment/linkedin/crawler.js',
+      batdongsan: '../scrapers/realestate/batdongsan/crawler.js',
+      chotot: '../scrapers/realestate/chotot/crawler.js',
+      shopee: '../scrapers/ecom/shopee/crawler.js',
+      topcv: '../scrapers/recruitment/topcv/crawler.js',
+      vietnamworks: '../scrapers/recruitment/vietnamworks/crawler.js',
+      masothue: '../scrapers/procurement/masothue/crawler.js',
+    };
+    const crawlerPath = crawlerModuleMap[platformKey];
+    if (crawlerPath) {
+      const mod = await import(crawlerPath);
+      const CrawlerClass = Object.values(mod).find((v) => typeof v === 'function' && /Crawler$/.test(v.name));
+      if (CrawlerClass) {
+        const crawler = new CrawlerClass();
+        if (typeof crawler.listActions === 'function') {
+          const platformActions = crawler.listActions();
+          actionDesc = platformActions.find((a) => a.action === mappedAction || a.action === action);
+        }
+        if (typeof crawler.cleanup === 'function') await crawler.cleanup().catch(() => {});
+      }
+    }
+  } catch {
+    // Crawler instantiation failed — skip requiredArgs pre-validation
+  }
+
+  if (actionDesc && Array.isArray(actionDesc.requiredArgs) && actionDesc.requiredArgs.length > 0) {
+    const mappedArgs = descriptor.mapArgs ? descriptor.mapArgs(scrapeOptions, { platform, action }) : scrapeOptions;
+    const missing = actionDesc.requiredArgs.filter(
+      (arg) => mappedArgs[arg] === undefined || mappedArgs[arg] === null || mappedArgs[arg] === ''
+    );
+    if (missing.length > 0) {
+      const err = new PlatformError({
+        code: 'XACT_4002',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `Action "${action}" on platform "${platform}" requires argument(s): ${missing.join(', ')}`,
+        statusCode: 400,
+        isRetryable: false,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform,
+        details: {
+          missing,
+          example: actionDesc.example || {},
+        },
+      });
+      err.missing = missing;
+      err.example = actionDesc.example || {};
+      throw err;
+    }
+  }
+
+  const { consumerContextStorage } = await import('./consumer-context.js');
+  const consumerCtx = { consumerId: context?.consumerId || 'internal', ...(context || {}) };
+  const startedAt = Date.now();
+  const result = await consumerContextStorage.run(consumerCtx, () => scrape(String(platform), String(action), scrapeOptions));
+
+  // Wrap in unified envelope
+  const envelope = await wrapToolResult('x_scrape', result, startedAt, {
+    args: { platform, action, ...scrapeOptions },
+    format: artifactFormat,
+  });
+
+  // Add stream metadata when enabled
+  if (streamEnabled && !dryRun) {
+    envelope.mode = 'stream';
+    envelope.stream = {
+      enabled: true,
+      name: process.env.REDIS_STREAM_NAME || 'stream:social:raw_posts',
+      cursor: result?.__streamCursor || null,
+    };
+    // Truncate data to preview when stream enabled
+    const previewItems = (envelope.data || []).slice(0, 10);
+    envelope.preview = previewItems;
+    envelope.data = [];
+    if (envelope.summary) {
+      envelope.summary.count = previewItems.length;
+      envelope.summary.sampleIds = previewItems.slice(0, 5).map((r) => r?.id || r?.externalId || null).filter(Boolean);
+    }
+  } else {
+    envelope.mode = 'direct';
+    envelope.stream = { enabled: false };
+    envelope.preview = (envelope.data || []).slice(0, 10);
+  }
+
+  return envelope;
 }
 
 /**
@@ -6434,4 +6726,4 @@ if (isEntryPoint()) {
 
 // Exported so the tool list can be inspected without starting a transport.
 // Also export Facebook automation tools for direct programmatic use.
-export { TOOLS, main, createMcpServer, initializeBackend, executeTool, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookScrapeTool, executeFacebookListAccounts, executeActionListTool, executeCrawlPostTool, executeCrawlCommentsTreeTool, startHttpTransport };
+export { TOOLS, main, createMcpServer, initializeBackend, executeTool, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookScrapeTool, executeFacebookListAccounts, executeActionListTool, executeCrawlPostTool, executeCrawlCommentsTreeTool, executeScrapeTool, startHttpTransport };

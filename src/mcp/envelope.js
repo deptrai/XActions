@@ -16,10 +16,14 @@ import { exportArtifact } from './artifact-exporter.js';
 /**
  * @typedef {Object} ToolEnvelope
  * @property {boolean} success
- * @property {string} platform
- * @property {ToolMeta} meta
- * @property {unknown[]} data
- * @property {ToolSummary} summary
+ * @property {string} [platform]
+ * @property {ToolMeta} [meta]
+ * @property {ToolMeta} [metadata]
+ * @property {string} [mode]
+ * @property {unknown[]} [data]
+ * @property {unknown[]} [preview]
+ * @property {{ enabled: boolean, name?: string, cursor?: string | null }} [stream]
+ * @property {ToolSummary} [summary]
  * @property {import('../core/types.js').ErrorEnvelope} [error]
  */
 
@@ -92,7 +96,8 @@ export function detectPlatform(toolName, args = {}, rawResult) {
   if (toolName.startsWith('x_mastodon_')) return 'mastodon';
   if (toolName === 'x_actions_list') return 'universal';
   if (toolName === 'x_list_platforms') return 'universal';
-  if (toolName.startsWith('x_')) return 'twitter';
+  if (toolName === 'x_scrape') return args?.platform || 'universal';
+  if (toolName.startsWith('x_')) return 'unknown';
 
   return 'unknown';
 }
@@ -114,10 +119,13 @@ function extractRecords(rawResult) {
   if (rawResult && typeof rawResult === 'object') {
     const obj = /** @type {Record<string, unknown>} */ (rawResult);
 
-    for (const key of ['comments', 'posts', 'items', 'data']) {
+    for (const key of ['comments', 'posts', 'items', 'data', 'listings', 'products', 'jobs', 'listing', 'job', 'post', 'product', 'company', 'record']) {
       const value = obj[key];
       if (Array.isArray(value)) {
         return value;
+      }
+      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        return [value];
       }
     }
 
@@ -160,22 +168,39 @@ function buildSampleIds(previewRecords) {
 /**
  * Wrap a successful tool result in the 3-Layer JSON Envelope.
  *
- * @param {string} toolName
- * @param {unknown} rawResult
- * @param {number} startedAt
- * @param {Object} [options]
- * @param {Record<string, unknown>} [options.args]
- * @param {string} [options.format]
+ * @param {string | Record<string, unknown>} toolName
+ * @param {unknown} [rawResult]
+ * @param {number} [startedAt]
+ * @param {{ args?: Record<string, unknown>, format?: string, artifactFormat?: string, tool?: string }} [options]
  * @returns {Promise<ToolEnvelope>}
  */
 export async function wrapToolResult(toolName, rawResult, startedAt, options = {}) {
-  const platform = detectPlatform(toolName, options.args, rawResult);
-  const records = extractRecords(rawResult);
+  // Support dual signature: wrapToolResult(toolName, rawResult, startedAt, options) or wrapToolResult(rawResult, options)
+  let actualToolName = typeof toolName === 'string' ? toolName : 'x_scrape';
+  let actualRawResult = rawResult;
+  let actualStartedAt = typeof startedAt === 'number' ? startedAt : Date.now();
+  /** @type {{ args?: Record<string, unknown>, format?: string, artifactFormat?: string, tool?: string }} */
+  let actualOptions = options;
+
+  if (typeof toolName === 'object' && toolName !== null) {
+    actualRawResult = toolName;
+    actualOptions = typeof rawResult === 'object' && rawResult !== null ? /** @type {typeof actualOptions} */ (rawResult) : {};
+    actualToolName = actualOptions.tool || 'x_scrape';
+    actualStartedAt = typeof startedAt === 'number' ? startedAt : Date.now();
+  }
+
+  // Passthrough if already a unified/wrapped envelope
+  if (actualRawResult && typeof actualRawResult === 'object' && 'mode' in actualRawResult && 'success' in actualRawResult) {
+    return /** @type {ToolEnvelope} */ (actualRawResult);
+  }
+
+  const platform = detectPlatform(actualToolName, actualOptions.args, actualRawResult);
+  const records = extractRecords(actualRawResult);
   const totalRecords = records.length;
   const data = records.slice(0, PREVIEW_LIMIT);
   const hasMore = totalRecords > data.length;
 
-  const durationMs = Math.max(0, Date.now() - startedAt);
+  const durationMs = Math.max(0, Date.now() - actualStartedAt);
 
   // AC-2: summary.count is the number of records returned in data; sampleIds
   // are taken from the preview records using the identifier priority list.
@@ -183,7 +208,7 @@ export async function wrapToolResult(toolName, rawResult, startedAt, options = {
 
   /** @type {ToolMeta} */
   const meta = {
-    tool: toolName,
+    tool: actualToolName,
     durationMs,
     totalRecords,
   };
@@ -197,10 +222,10 @@ export async function wrapToolResult(toolName, rawResult, startedAt, options = {
 
   if (totalRecords > ARTIFACT_THRESHOLD) {
     const artifactFormat =
-      options.format || options.args?.artifactFormat || 'jsonl';
+      actualOptions.format || actualOptions.artifactFormat || actualOptions.args?.artifactFormat || 'jsonl';
     try {
       meta.datasetArtifactPath = await exportArtifact(records, {
-        tool: toolName,
+        tool: actualToolName,
         platform,
         format: /** @type {'jsonl' | 'csv'} */ (artifactFormat),
       });
@@ -223,6 +248,7 @@ export async function wrapToolResult(toolName, rawResult, startedAt, options = {
         success: false,
         platform,
         meta,
+        metadata: meta,
         data,
         summary,
         error: errorEnvelope,
@@ -234,6 +260,7 @@ export async function wrapToolResult(toolName, rawResult, startedAt, options = {
     success: true,
     platform,
     meta,
+    metadata: meta,
     data,
     summary,
   };
