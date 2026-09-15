@@ -13,6 +13,7 @@ export { createMonitor, stopMonitor, getMonitor, getMonitorHistory, listMonitors
 export { checkAlerts, getAlerts, clearAlerts } from './alerts.js';
 export { generateReport } from './reports.js';
 export { analyzeTweetPriceCorrelation, alignTweetsWithPrices, computeCorrelationStats, fetchCoinGeckoPrices, fetchGeckoTerminalPrices } from './priceCorrelation.js';
+export { extractKeywordFrequency } from './word-frequency.js';
 
 // Competitive features (09-A, 09-B, 09-C)
 export { saveAccountSnapshot, saveTweetSnapshot, saveDailyEngagement, getAccountHistory, getTweetHistory, getGrowthRate, compareAccounts, exportHistory } from './historyStore.js';

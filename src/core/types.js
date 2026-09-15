@@ -270,6 +270,16 @@
  * @property {string} [status]
  */
 
+/**
+ * Result of N-gram keyword & hashtag frequency analysis (Story 14.4).
+ * @typedef {Object} KeywordFrequencyResult
+ * @property {Array<{term: string, count: number}>} unigrams
+ * @property {Array<{term: string, count: number}>} bigrams
+ * @property {Array<{tag: string, count: number}>} hashtags
+ * @property {number} totalTokens
+ * @property {string} lang
+ */
+
 export const CATEGORIES = Object.freeze({
   SOCIAL: 'social',
   ECOMMERCE: 'ecom',

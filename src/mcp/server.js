@@ -968,6 +968,40 @@ const TOOLS = [
   },
   // ====== Real-Time Streaming (continued) ======
   {
+    name: 'x_analytics_buzzwords',
+    description: 'Extract keyword and hashtag frequency from content items (posts/comments). Returns unigrams, bigrams, and hashtags sorted by count. Supports Vietnamese and English stopword filtering.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: { type: 'object', properties: { content: { type: 'string' } } },
+          description: 'Array of items with a `content` string field (PostItem[] or CommentItem[])',
+        },
+        filePath: {
+          type: 'string',
+          description: 'Path to a JSON file containing an array of items (alternative to items)',
+        },
+        minLength: {
+          type: 'number',
+          description: 'Minimum token length to include (default: 1)',
+        },
+        topN: {
+          type: 'number',
+          description: 'Max results per category (default: 10)',
+        },
+        lang: {
+          type: 'string',
+          description: 'Language code for stopword filtering: vi, en (default: auto)',
+        },
+        removeStopwords: {
+          type: 'boolean',
+          description: 'Filter stopwords (default: true)',
+        },
+      },
+    },
+  },
+  {
     name: 'x_stream_start',
     description: 'Start a real-time stream that polls an X/Twitter account and pushes new events. Types: tweet (new tweets), follower (follow/unfollow events), mention (new mentions). Events are emitted via Socket.IO. Rejects duplicates (same type + username).',
     inputSchema: {
@@ -3107,7 +3141,7 @@ async function executeTool(name, args) {
   }
 
   // Handle analytics/sentiment tools directly
-  if (name === 'x_analyze_sentiment' || name === 'x_monitor_reputation' || name === 'x_reputation_report') {
+  if (name === 'x_analyze_sentiment' || name === 'x_monitor_reputation' || name === 'x_reputation_report' || name === 'x_analytics_buzzwords') {
     return await executeAnalyticsTool(name, args);
   }
 
@@ -4933,6 +4967,28 @@ async function executeAnalyticsTool(name, args) {
 
       if (args.format === 'json') return report;
       return { report, markdown };
+    }
+
+    case 'x_analytics_buzzwords': {
+      let items = args.items;
+      if (!items && args.filePath) {
+        const fs = await import('fs/promises');
+        try {
+          const raw = await fs.readFile(args.filePath, 'utf-8');
+          items = JSON.parse(raw);
+        } catch (err) {
+          return { error: `Failed to read filePath: ${err instanceof Error ? err.message : String(err)}` };
+        }
+      }
+      if (!items || !Array.isArray(items)) {
+        return { error: 'Either "items" (array of {content: string}) or "filePath" (path to JSON array) is required' };
+      }
+      return analytics.extractKeywordFrequency(items, {
+        minLength: args.minLength,
+        topN: args.topN,
+        lang: args.lang,
+        removeStopwords: args.removeStopwords,
+      });
     }
 
     default:

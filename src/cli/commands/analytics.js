@@ -164,4 +164,93 @@ program
     console.log();
   });
 
+const analyticsCmd = program.command('analytics').description('Analytics tools — sentiment, buzzwords, monitoring');
+
+analyticsCmd
+  .command('buzzwords')
+  .description('Extract keyword and hashtag frequency from content items')
+  .option('-f, --file <path>', 'Path to JSON file containing array of items with content field')
+  .option('-m, --min-length <n>', 'Minimum token length', '1')
+  .option('-t, --top-n <n>', 'Max results per category', '10')
+  .option('-l, --lang <lang>', 'Language for stopword filtering (vi, en)', 'auto')
+  .option('--no-stopwords', 'Disable stopword filtering')
+  .option('-o, --output <file>', 'Output file (JSON)')
+  .action(async (options) => {
+    const spinner = ora('Analyzing keywords...').start();
+    try {
+      const { extractKeywordFrequency } = await import('../../analytics/word-frequency.js');
+      const fs = await import('fs/promises');
+
+      let items;
+      if (options.file) {
+        const raw = await fs.readFile(options.file, 'utf-8');
+        items = JSON.parse(raw);
+      } else {
+        // Read from stdin
+        const chunks = [];
+        for await (const chunk of process.stdin) {
+          chunks.push(chunk);
+        }
+        const raw = Buffer.concat(chunks).toString('utf-8').trim();
+        if (!raw) {
+          spinner.fail('No input provided');
+          console.log(chalk.yellow('Usage: xactions analytics buzzwords --file <path> or pipe JSON array via stdin'));
+          console.log(chalk.gray('Example: cat posts.json | xactions analytics buzzwords --lang vi'));
+          return;
+        }
+        items = JSON.parse(raw);
+      }
+
+      if (!Array.isArray(items)) {
+        spinner.fail('Input must be a JSON array of items with a "content" field');
+        return;
+      }
+
+      const result = extractKeywordFrequency(items, {
+        minLength: parseInt(options.minLength) || 1,
+        topN: parseInt(options.topN) || 10,
+        lang: options.lang,
+        removeStopwords: options.stopwords !== false,
+      });
+
+      spinner.succeed(`Analyzed ${result.totalTokens} tokens`);
+
+      // Print unigrams
+      if (result.unigrams.length > 0) {
+        console.log(chalk.cyan('\n📊 Top Keywords (Unigrams)'));
+        for (const { term, count } of result.unigrams) {
+          console.log(`  ${chalk.bold(term)}: ${count}`);
+        }
+      }
+
+      // Print bigrams
+      if (result.bigrams.length > 0) {
+        console.log(chalk.cyan('\n📊 Top Bigrams'));
+        for (const { term, count } of result.bigrams) {
+          console.log(`  ${chalk.bold(term)}: ${count}`);
+        }
+      }
+
+      // Print hashtags
+      if (result.hashtags.length > 0) {
+        console.log(chalk.cyan('\n#️⃣  Top Hashtags'));
+        for (const { tag, count } of result.hashtags) {
+          console.log(`  ${chalk.bold('#' + tag)}: ${count}`);
+        }
+      }
+
+      if (result.unigrams.length === 0 && result.bigrams.length === 0 && result.hashtags.length === 0) {
+        console.log(chalk.yellow('\nNo keywords or hashtags found.'));
+      }
+
+      if (options.output) {
+        await fs.writeFile(options.output, JSON.stringify(result, null, 2));
+        console.log(chalk.green(`\n✓ Saved to ${options.output}`));
+      }
+    } catch (error) {
+      spinner.fail('Analysis failed');
+      console.error(chalk.red(error.message));
+    }
+  });
+
 }

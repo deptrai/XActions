@@ -98,6 +98,9 @@ export class AbstractCrawler {
   /** @type {Map<string, { handler: Function, descriptor: Partial<ActionDescriptor> }>} */
   #registry = new Map();
 
+  /** @type {boolean} */
+  includeBuzzwords = false;
+
   /**
    * @param {object} [deps]
    * @param {ClientLike} [deps.client]
@@ -113,6 +116,7 @@ export class AbstractCrawler {
    * @param {import('./session-health-orchestrator.js').SessionHealthOrchestrator} [deps.healthOrchestrator]
    * @param {import('./schema-drift-guard.js').SchemaDriftGuard} [deps.driftGuard]
    * @param {import('./telemetry-emitter.js').TelemetryEmitter} [deps.telemetryEmitter]
+   * @param {boolean} [deps.includeBuzzwords] -- inject `summary.buzzwords` into crawl results (Story 14.4)
    */
   constructor(deps = {}) {
     if (new.target === AbstractCrawler) {
@@ -137,6 +141,7 @@ export class AbstractCrawler {
       this.category = deps.category;
     }
     this.telemetryEmitter = deps.telemetryEmitter || defaultTelemetryEmitter;
+    this.includeBuzzwords = deps.includeBuzzwords === true;
   }
 
   /**
@@ -434,6 +439,23 @@ export class AbstractCrawler {
       }
 
       result = await entry.handler(finalArgs, session);
+
+      // Story 14.4: inject keyword/hashtag frequency summary when opted in
+      if (this.includeBuzzwords && result && typeof result === 'object') {
+        const items = (/** @type {Record<string, unknown>} */ (result)).posts
+          || (/** @type {Record<string, unknown>} */ (result)).comments
+          || (/** @type {Record<string, unknown>} */ (result)).items
+          || [];
+        const capped = Array.isArray(items) ? items.slice(0, 500) : [];
+        const { extractKeywordFrequency } = await import('../analytics/word-frequency.js');
+        const buzzwords = extractKeywordFrequency(capped);
+        const resultObj = /** @type {Record<string, unknown>} */ (result);
+        const existingSummary = resultObj.summary && typeof resultObj.summary === 'object'
+          ? /** @type {Record<string, unknown>} */ (resultObj.summary)
+          : {};
+        resultObj.summary = { ...existingSummary, buzzwords };
+      }
+
       return result;
     } catch (err) {
       error = /** @type {Error & { code?: string }} */ (err);
