@@ -118,3 +118,9 @@ Post/Comment models lack `scrapeId`/`runId`; `Operation.result` is opaque JSON. 
 - `npm test -- tests/analytics/word-frequency.test.js` — all pass
 - `npm run typecheck` — exits 0
 - `node -e "import('./src/analytics/word-frequency.js').then(m=>console.log(m.extractKeywordFrequency([{content:'hello world #test'}])))"` — prints result
+
+### Review Findings
+
+- [x] [Review][Patch] Hashtag regex matches URL fragments and emails — `HASHTAG_RE` lacked negative lookbehind, so `example.com#frag` and `user@domain#tag` produced false positives [src/analytics/word-frequency.js:49] — fixed in 550d3a59 by adding `(?<![\w.])` prefix
+- [x] [Review][Defer] MCP tool `x_analytics_buzzwords` dispatch has no test — dispatch is a thin pass-through to `extractKeywordFrequency`; the handler validates input and returns error envelopes. Testing the full MCP call chain is out of scope for this story.
+- [x] [Review][Defer] CLI `xactions analytics buzzwords` has no test — thin wrapper over `extractKeywordFrequency`; the `filePath`/`stdin` input handling is trivial.

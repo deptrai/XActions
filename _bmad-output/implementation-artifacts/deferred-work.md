@@ -148,3 +148,13 @@
   summary: Downstream content store preservation and indexing of item.dataQuality metadata
   evidence: `AbstractCrawler.validateItem` attaches `item.dataQuality` to degraded in-memory items, but SQL/Prisma persistence adapters lack dedicated unit tests verifying whether `dataQuality` is stored in `metadata` or requires schema column mappings.
   status: PARTIALLY RESOLVED (2026-09-13) — added `base-crawler-drift.test.js` test asserting `item.dataQuality` survives a JSON store round-trip (`JsonStore` serializes via `JSON.stringify`/`JSON.parse`). Remaining open question: whether Prisma schema needs a dedicated `dataQuality` column vs. folding into `metadata` — that mapping decision is still deferred.
+
+## Deferred from: code review of spec-14-4 (2026-09-15)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-14-4-real-time-n-gram-keyword-hashtag-frequency-analytics-engine.md`
+  summary: MCP tool `x_analytics_buzzwords` dispatch has no test — dispatch is a thin pass-through; handler validates input and returns error envelopes
+  evidence: `executeTool` → `executeAnalyticsTool` case `x_analytics_buzzwords` — input validated before calling `extractKeywordFrequency`. Full MCP call chain testing is out of scope for this story.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-14-4-real-time-n-gram-keyword-hashtag-frequency-analytics-engine.md`
+  summary: CLI `xactions analytics buzzwords` has no test — thin wrapper over `extractKeywordFrequency`
+  evidence: `filePath`/`stdin` input handling is trivial; Commander option parsing is framework-tested.
