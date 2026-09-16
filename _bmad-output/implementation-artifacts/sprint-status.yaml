@@ -155,10 +155,10 @@ development_status:
   23-6-bluesky-mastodon-integration-caller-migration: done
   epic-23-retrospective: done
 
-  epic-24: in-progress
-  24-1-inventory-deprecation-decision-for-standalone-scripts: in-progress
+  epic-24: done
+  24-1-inventory-deprecation-decision-for-standalone-scripts: done
   24-2-browser-utility-features-as-crawler-actions: done
-  24-3-adapter-layer-consolidation: backlog
+  24-3-adapter-layer-consolidation: done
   24-4-archive-or-remove-unused-scraper-modules: done
   epic-24-retrospective: optional
 

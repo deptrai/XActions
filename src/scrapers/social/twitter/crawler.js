@@ -4230,7 +4230,7 @@ export class TwitterCrawler extends AbstractCrawler {
 
 /**
  * Extract author handle from a PostItem.
- * @param {import('../../../core/types.js').PostItem | Record<string, any>} post
+ * @param {Record<string, any>} post
  * @returns {string}
  */
 export function extractPostHandle(post) {
@@ -4257,7 +4257,7 @@ export function extractPostHandle(post) {
 
 /**
  * Extract display name from a PostItem.
- * @param {import('../../../core/types.js').PostItem | Record<string, any>} post
+ * @param {Record<string, any>} post
  * @returns {string}
  */
 export function extractPostDisplayName(post) {
@@ -4296,7 +4296,7 @@ function formatPostTime(val) {
 /**
  * Format an array of bookmarks as CSV.
  * Format: Handle,DisplayName,Text,URL,Time,Likes,Retweets,Replies,Views
- * @param {Array<import('../../../core/types.js').PostItem>} posts
+ * @param {Array<Record<string, any>>} posts
  * @returns {string}
  */
 export function formatBookmarksAsCSV(posts = []) {
@@ -4320,7 +4320,7 @@ export function formatBookmarksAsCSV(posts = []) {
 
 /**
  * Format an array of bookmarks as JSON.
- * @param {Array<import('../../../core/types.js').PostItem>} posts
+ * @param {Array<Record<string, any>>} posts
  * @returns {string}
  */
 export function formatBookmarksAsJSON(posts = []) {
@@ -4329,7 +4329,7 @@ export function formatBookmarksAsJSON(posts = []) {
 
 /**
  * Format a thread of tweets as Markdown.
- * @param {Array<import('../../../core/types.js').PostItem>} posts
+ * @param {Array<Record<string, any>>} posts
  * @returns {string}
  */
 export function formatThreadAsMarkdown(posts = []) {
@@ -4384,7 +4384,7 @@ export function formatThreadAsMarkdown(posts = []) {
 
 /**
  * Format a thread of tweets as plain text.
- * @param {Array<import('../../../core/types.js').PostItem>} posts
+ * @param {Array<Record<string, any>>} posts
  * @returns {string}
  */
 export function formatThreadAsText(posts = []) {
@@ -4407,7 +4407,7 @@ export function formatThreadAsText(posts = []) {
 
 /**
  * Format a thread of tweets as JSON.
- * @param {Array<import('../../../core/types.js').PostItem>} posts
+ * @param {Array<Record<string, any>>} posts
  * @returns {string}
  */
 export function formatThreadAsJSON(posts = []) {
