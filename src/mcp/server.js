@@ -1597,6 +1597,30 @@ const TOOLS = [
       },
     },
   },
+  // ====== Universal Media Pipeline (Story 31.1) ======
+  {
+    name: 'x_download_media',
+    description: 'Extract and normalize media attachments (photos, videos, audio, carousels, HLS) from social media post URLs across Twitter, Bluesky, Mastodon, Threads, Facebook, and TikTok.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        postUrl: {
+          type: 'string',
+          description: 'Full URL to the post/tweet',
+        },
+        platform: {
+          type: 'string',
+          description: 'Platform name (optional, auto-detected from URL if omitted): twitter, bluesky, mastodon, threads, facebook, tiktok',
+        },
+        quality: {
+          type: 'string',
+          enum: ['highest', 'lowest', 'all'],
+          description: 'Preferred media quality (default: highest)',
+        },
+      },
+      required: ['postUrl'],
+    },
+  },
   // ====== Facebook Automation ======
   {
     name: 'x_facebook_automate',
@@ -3436,6 +3460,26 @@ async function executeTool(name, args) {
       },
       options: { dryRun: args.dryRun === true },
     });
+  }
+
+  // Universal Media Pipeline (Story 31.1)
+  if (name === 'x_download_media') {
+    const { extractMedia } = await import('../scrapers/social/media-pipeline.js');
+    const postUrl = args.postUrl || args.url || args.targetUrl;
+    const platform = args.platform;
+    const mediaList = await extractMedia({
+      postUrl,
+      platform,
+      post: args.post,
+      options: args,
+    });
+    return {
+      success: true,
+      postUrl,
+      platform: platform || 'auto',
+      count: mediaList.length,
+      media: mediaList,
+    };
   }
 
   // Generic cross-platform post/comment crawlers

@@ -1946,6 +1946,40 @@ export async function x_follow_all(args = {}) {
   });
 }
 
+// ============================================================================
+// Universal Media Extraction (Story 31.1)
+// ============================================================================
+
+export async function x_download_media(args = {}) {
+  const { extractMedia } = await import('../scrapers/social/media-pipeline.js');
+  const postUrl = args.postUrl || args.url || args.targetUrl;
+  const platform = args.platform;
+
+  if (!postUrl && !args.post) {
+    return {
+      success: false,
+      error: 'postUrl or post object is required for x_download_media',
+      media: [],
+      count: 0,
+    };
+  }
+
+  const mediaList = await extractMedia({
+    postUrl,
+    platform,
+    post: args.post,
+    options: args,
+  });
+
+  return {
+    success: true,
+    postUrl,
+    platform: platform || 'auto',
+    count: mediaList.length,
+    media: mediaList,
+  };
+}
+
 export const toolMap = {
   // Browser & Page lifecycle helpers
   getPage,
@@ -2053,6 +2087,8 @@ export const toolMap = {
   x_publish_all,
   x_like_all,
   x_follow_all,
+  // Universal Media Pipeline (Story 31.1)
+  x_download_media,
   // Utility (not an MCP tool, used by server.js cleanup)
   closeBrowser,
 };

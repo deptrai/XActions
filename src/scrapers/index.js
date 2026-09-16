@@ -154,6 +154,13 @@ export {
   PLATFORM_MEDIA_LIMITS,
 } from './social/content-transformer.js';
 
+export {
+  UniversalMediaPipeline,
+  extractMedia,
+} from './social/media-pipeline.js';
+
+export { downloadMedia } from './videoDownloader.js';
+
 // ============================================================================
 // Adapter System (Multi-Framework Support)
 // ============================================================================

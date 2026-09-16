@@ -201,8 +201,8 @@ development_status:
   30-2-contenttransformer-thread-splitter-media-adapter-character-l: done
   epic-30-retrospective: optional
 
-  epic-31: backlog
-  31-1-universalmediapipeline-audio-carousel-hls-on-all-platforms: backlog
+  epic-31: done
+  31-1-universalmediapipeline-audio-carousel-hls-on-all-platforms: done
   epic-31-retrospective: optional
 
   epic-32: backlog
