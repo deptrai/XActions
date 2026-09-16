@@ -2,9 +2,9 @@
 title: 'Story 29.3 — Stream Replay & Missed-Event Recovery'
 type: 'feature'
 created: '2026-09-16'
-status: 'draft'
+status: 'done'
 route: 'dispatch'
-baseline_commit: ''
+baseline_commit: '0e22a72b'
 review_loop_iteration: 0
 context: []
 ---
@@ -62,11 +62,11 @@ context: []
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/streaming/stream-replay.js` — `getStreamReplay({ streamKey, since, cursor, limit })` function
-- [ ] `api/routes/streams.js` — `GET /api/streams/:id/replay` endpoint
-- [ ] `src/mcp/server.js` — `x_stream_replay` MCP tool
-- [ ] `src/streaming/index.js` — Export `getStreamReplay`
-- [ ] `tests/streaming/stream-replay.test.js` — Tests
+- [x] `src/streaming/stream-replay.js` — `getStreamReplay({ streamKey, since, cursor, limit })` function
+- [x] `api/routes/streams.js` — `GET /api/streams/:id/replay` endpoint
+- [x] `src/mcp/server.js` — `x_stream_replay` MCP tool
+- [x] `src/streaming/index.js` — Export `getStreamReplay`
+- [x] `tests/streaming/stream-replay.test.js` — Tests
 
 **Acceptance Criteria:**
 - Given events in `stream:social:raw_posts`, when `GET /api/streams/:id/replay?since=<ISO>`, then return matching events in order
@@ -77,7 +77,13 @@ context: []
 
 ## Implementation Notes
 
-<!-- Populated during implementation -->
+- Implemented `getStreamReplay({ streamKey, streamId, since, cursor, limit, deliver, subscriptionId, streamMeta, redisClient, dispatcher, subscriptionStore })` in `src/streaming/stream-replay.js`.
+- Implemented XRANGE range querying without advancing consumer group offset, dual-client parsing (ioredis RESP arrays & node-redis object formats), exclusive cursor resuming, and stream trimming detection (`warning: 'Requested range partially trimmed'`).
+- Integrated webhook replay delivery via `OutboundWebhookDispatcher` injecting `X-XActions-Replay: true` header alongside HMAC signature verification.
+- Added REST endpoint `GET /api/streams/:id/replay` in `api/routes/streams.js` with full validation and error status code mapping (400, 404, 200).
+- Registered MCP tool `x_stream_replay` in `src/mcp/server.js`.
+- Exported functions and types in `src/streaming/index.js` and `src/streaming/index.d.ts`.
+- Created comprehensive test suite with 25 passing tests in `tests/streaming/stream-replay.test.js` using real Redis stream, real HTTP webhook server, real Express router, and real MCP tool execution.
 
 ## Spec Change Log
 
@@ -85,7 +91,28 @@ context: []
 
 ## Review Triage Log
 
-<!-- Append-only. Populated by step-04 on every review pass. -->
+
+- **patch / medium** — negative `since` → Redis invalid stream ID — `ms < 0` rejected as INVALID_SINCE.
+- **patch / medium** — cursor/`lastBatchId` without dash → NaN seq — `Number.isFinite` fallback seq=1.
+- **false** — NaN `limit` bypass — `Number.isFinite(rawLimit)` already defaults to 100.
+- **patch / medium** — webhook delivery throw aborts replay — try/catch per event + `dispatchReplay`.
+- **false / spec** — empty stream omits trim warning — matrix says return empty; warning only when firstEntry exists.
+- **false / spec** — trim returns 200+warning not error — Design Notes / matrix: "Return what's available".
+- **patch / medium** — Redis client per request — shared singleton client, no quit-per-call.
+- **patch / medium** — unbounded filtered XRANGE scan — `maxScan = 50_000`.
+- **patch / medium** — hasMore false after dropping cursor — treat `rawEntries.length > limit` as hasMore.
+- **patch / medium** — `matchesStream` drops follower/mention/cdc — mapped to twitter/x/cdc/postgres.
+- **patch / low** — username vs handle — also checks `author_handle`/`handle`/`username`.
+- **false / spec** — 404 for unknown stream id — AC requires 404; use `id=all` for shared-stream recovery.
+- **defer / low** — same-ms trim sequence — warning is best-effort; XRANGE still returns remaining entries.
+- **defer / low** — empty `?since=` treated as omitted — empty query params are omitted in HTTP; malformed non-empty still 400.
+- **patch / low** — invalid `deliver` silently ignored — 400 INVALID_DELIVER.
+- **defer / low** — missing `sendCommand` XREVRANGE fallback — node-redis/ioredis helpers cover production clients.
+- **defer / low** — `parseStreamEntry`/`matchesStream` not barrel-exported — internals; tests import module directly.
+- **defer / medium** — unauthenticated replay route — same as other `/api/streams` GETs; auth is server-level.
+- **patch (VG)** — REST `deliver=webhook` error mapping untested — 400/404 tests added.
+- **defer (VG)** — registered-stream metadata REST test — library `matchesStream` + 404 unknown covered; createStream coupling is heavy for unit.
+
 
 ## Design Notes
 

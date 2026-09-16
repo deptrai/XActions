@@ -36,6 +36,7 @@ import {
   isHealthy,
   STREAM_TYPES,
   getPoolStatus,
+  getStreamReplay,
 } from '../../src/streaming/index.js';
 
 const router = express.Router();
@@ -228,6 +229,57 @@ router.get('/:id/history', async (req, res) => {
   } catch (error) {
     console.error('❌ GET /api/streams/:id/history error:', error);
     res.status(500).json({ error: (error instanceof Error ? error.message : String(error)) });
+  }
+});
+
+// ============================================================================
+// GET /api/streams/:id/replay — Replay events from Redis Stream by range/cursor
+// ============================================================================
+
+router.get('/:id/replay', async (req, res) => {
+  try {
+    const streamId = req.params.id;
+    let streamMeta = null;
+
+    if (streamId !== 'all' && streamId !== 'stream:social:raw_posts') {
+      streamMeta = await getStreamStatus(streamId);
+      if (!streamMeta) {
+        return res.status(404).json({ error: `Stream not found: ${streamId}` });
+      }
+    }
+
+    const { since, cursor, limit, deliver, subscriptionId, streamKey } = req.query;
+
+    if (deliver !== undefined && deliver !== '' && deliver !== 'webhook') {
+      return res.status(400).json({ error: 'Invalid deliver mode. Supported: webhook', code: 'INVALID_DELIVER' });
+    }
+
+    const parsedLimit = limit !== undefined && limit !== '' ? Number(limit) : undefined;
+    const safeLimit = parsedLimit !== undefined && Number.isFinite(parsedLimit) ? parsedLimit : undefined;
+
+    const result = await getStreamReplay({
+      streamKey: streamKey ? String(streamKey) : undefined,
+      streamId,
+      streamMeta,
+      since: since !== undefined && since !== '' ? String(since) : undefined,
+      cursor: cursor !== undefined && cursor !== '' ? String(cursor) : undefined,
+      limit: safeLimit,
+      deliver: deliver === 'webhook' ? 'webhook' : undefined,
+      subscriptionId: subscriptionId ? String(subscriptionId) : undefined,
+    });
+
+    res.json(result);
+  } catch (error) {
+    const code = /** @type {any} */ (error)?.code;
+    const msg = error instanceof Error ? error.message : String(error);
+    if (code === 'INVALID_CURSOR' || code === 'INVALID_SINCE' || code === 'MISSING_SUBSCRIPTION_ID') {
+      return res.status(400).json({ error: msg, code });
+    }
+    if (code === 'SUBSCRIPTION_NOT_FOUND') {
+      return res.status(404).json({ error: msg, code });
+    }
+    console.error('❌ GET /api/streams/:id/replay error:', error);
+    res.status(500).json({ error: msg });
   }
 });
 

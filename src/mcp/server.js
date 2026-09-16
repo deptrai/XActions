@@ -1110,6 +1110,44 @@ const TOOLS = [
       required: ['streamId'],
     },
   },
+  {
+    name: 'x_stream_replay',
+    description: 'Replay historical events from Redis Stream by ISO 8601 timestamp range or cursor, with optional webhook delivery.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        streamId: {
+          type: 'string',
+          description: 'The stream ID to filter for (or "all" for all streams)',
+        },
+        since: {
+          type: 'string',
+          description: 'ISO 8601 timestamp or epoch ms to replay events from',
+        },
+        cursor: {
+          type: 'string',
+          description: 'Stream entry ID to resume after (exclusive)',
+        },
+        limit: {
+          type: 'number',
+          description: 'Max events to return (default: 100, max: 1000)',
+        },
+        deliver: {
+          type: 'string',
+          enum: ['webhook'],
+          description: 'Optional delivery mode ("webhook")',
+        },
+        subscriptionId: {
+          type: 'string',
+          description: 'Webhook subscription ID when deliver is "webhook"',
+        },
+        streamKey: {
+          type: 'string',
+          description: 'Redis stream key (default: stream:social:raw_posts)',
+        },
+      },
+    },
+  },
   // ---- Workflow Tools ----
   {
     name: 'x_workflow_create',
@@ -5172,6 +5210,17 @@ async function executeStreamTool(name, args) {
       return await streaming.getStreamHistory(args.streamId, {
         limit: args.limit,
         eventType: args.eventType,
+      });
+    }
+    case 'x_stream_replay': {
+      return await streaming.getStreamReplay({
+        streamId: args.streamId,
+        since: args.since,
+        cursor: args.cursor,
+        limit: args.limit,
+        deliver: args.deliver,
+        subscriptionId: args.subscriptionId,
+        streamKey: args.streamKey,
       });
     }
     default:

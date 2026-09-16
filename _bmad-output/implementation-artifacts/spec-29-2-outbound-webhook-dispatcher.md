@@ -2,9 +2,9 @@
 title: 'Story 29.2 — Outbound Webhook Dispatcher with HMAC Signing & Retry'
 type: 'feature'
 created: '2026-09-16'
-status: 'draft'
+status: 'done'
 route: 'dispatch'
-baseline_commit: ''
+baseline_commit: '0e22a72b'
 review_loop_iteration: 0
 context: []
 ---
@@ -70,12 +70,12 @@ context: []
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/streaming/webhook-subscription-store.js` — `WebhookSubscriptionStore` with CRUD, Redis hash persistence
-- [ ] `src/streaming/outbound-webhook-dispatcher.js` — `OutboundWebhookDispatcher` class
-- [ ] `api/routes/webhook-admin.js` — REST endpoints for subscription + delivery log management
-- [ ] `api/server.js` — Mount webhook admin routes
-- [ ] `src/streaming/index.js` — Export dispatcher
-- [ ] `tests/streaming/webhook-dispatcher.test.js` — Tests for signing, retry, DLQ, subscription matching
+- [x] `src/streaming/webhook-subscription-store.js` — `WebhookSubscriptionStore` with CRUD, Redis hash persistence
+- [x] `src/streaming/outbound-webhook-dispatcher.js` — `OutboundWebhookDispatcher` class
+- [x] `api/routes/webhook-admin.js` — REST endpoints for subscription + delivery log management
+- [x] `api/server.js` — Mount webhook admin routes
+- [x] `src/streaming/index.js` — Export dispatcher
+- [x] `tests/streaming/webhook-dispatcher.test.js` — Tests for signing, retry, DLQ, subscription matching
 
 **Acceptance Criteria:**
 - Given subscription `{ url, events: ['bluesky'] }`, when bluesky ThinEvent published, then POST to url with signed body
@@ -95,7 +95,31 @@ context: []
 
 ## Review Triage Log
 
-<!-- Append-only. Populated by step-04 on every review pass. -->
+
+- **patch / high** — `_emitEvent`-class HMAC `createSignature(undefined)` TypeError — guarded stringify. Evidence: `createSignature` now coalesces null/undefined to `''`.
+- **patch / medium** — `verifySignature` swap when secret starts with `sha256=` — now requires full `sha256=<64hex>`.
+- **patch / high** — `deliverToSubscription` null input TypeError — early return `{ success: false }`.
+- **patch / medium** — unconsumed fetch body socket leak — drain/cancel response body.
+- **patch / medium** — HTTP 429/408 treated as permanent 4xx — now retryable.
+- **patch / high** — DLQ retry duplicates on failure — `skipDlq: true` on re-attempt.
+- **patch / medium** — metrics RMW race — `HINCRBY` when available; counts `attempts`.
+- **false** — consume loop NOGROUP tight spin — `start()` always `initGroup()` first; loop sleeps 1s on error.
+- **false** — ACK-on-throw discards events — `#processMessage` ACKs in `finally` after catch; spec: attempt all deliveries then ACK.
+- **patch / low** — `stop()` uncleared timeout — `clearTimeout` in `finally`.
+- **patch / medium** — `dispatchReplay(null)` TypeError — empty-array guard.
+- **patch / medium** — `WebhookSubscriptionStore.delete` returns true on Redis fail — now returns `deleted` only.
+- **defer / medium** — SSRF private IPs — loopback blocked in production; broader DNS-rebinding not in scope.
+- **patch / high** — plaintext secrets in GET subscriptions — `redactSecret` / `hasSecret`.
+- **defer / medium** — HOL blocking of consumer loop during backoff — architectural; would need job queue (spec forbids Bull).
+- **defer / low** — correlation ID per attempt — delivery IDs already unique; receivers can use event id.
+- **patch / medium** — NaN `limit` on logs/DLQ — `Number.isFinite` guard.
+- **patch (VG)** — `parseStreamPayload` untested — unit tests added.
+- **patch (VG)** — admin GET-by-id / metrics / lag untested — tests added.
+- **patch (VG)** — `dispatchReplay` unused by replay — `getStreamReplay` now delegates.
+- **defer (VG)** — consumer `start()`/`XACK` loop untested — needs live Redis group; covered by parse + deliver tests.
+- **defer (VG)** — `api/server.js` mount untested vs isolated router — router tests cover handlers; smoke list is optional.
+- **defer (VG)** — abort/timeout hanging endpoint test — AbortError path exists; 5xx retry already covered.
+
 
 ## Design Notes
 

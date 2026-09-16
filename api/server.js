@@ -36,6 +36,7 @@ import twitterRoutes from './routes/twitter.js';
 import sessionAuthRoutes from './routes/session-auth.js';
 import licenseRoutes from './routes/license.js';
 import adminRoutes from './routes/admin.js';
+import webhookAdminRoutes from './routes/webhook-admin.js';
 import webhookRoutes from './routes/webhooks.js';
 import billingRoutes from './routes/billing.js';
 // AI API routes - modular structure optimized for AI agent consumption
@@ -97,6 +98,7 @@ import { defaultCanaryRunner } from './services/benchmark/canary-runner.js';
 import { defaultTelemetryConsumer } from './services/benchmark/telemetry-consumer.js';
 import { globalSelectorCanary } from '../src/services/selector-canary.js';
 import { defaultHealthTierCache } from '../src/benchmark/health-tier-cache.js';
+import { defaultWebhookDispatcher } from '../src/streaming/outbound-webhook-dispatcher.js';
 import aiDetectorMiddleware from './middleware/ai-detector.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
 import { generateSpec as generateOpenAPISpec, generateWellKnown as generateX402WellKnown } from './openapi.js';
@@ -332,6 +334,7 @@ app.use('/api/facebook', facebookRoutes);
 app.use('/api/platform', platformRoutes);
 app.use('/api/session', sessionAuthRoutes);
 app.use('/api/license', licenseRoutes);
+app.use('/api/admin/webhooks', webhookAdminRoutes);
 app.use('/api/admin', adminRoutes);
 // Feature routes
 app.use('/api/profile', profileRoutes);
@@ -778,6 +781,13 @@ if (process.env.NODE_ENV !== 'test') {
     if (process.env.ENABLE_SELECTOR_CANARY === 'true') {
       globalSelectorCanary.startScheduler();
     }
+
+    // Start Outbound Webhook Dispatcher (Story 29.2)
+    if (process.env.ENABLE_OUTBOUND_WEBHOOK_DISPATCHER === 'true') {
+      defaultWebhookDispatcher.start().catch((err) => {
+        console.warn('⚠️ [OutboundWebhookDispatcher] Dispatcher start warning:', err.message);
+      });
+    }
   });
 
   // Graceful shutdown: stop cron schedulers and finish in-flight cleanup.
@@ -789,6 +799,7 @@ if (process.env.NODE_ENV !== 'test') {
       globalSelectorCanary.stopScheduler();
       defaultTelemetryConsumer.stop();
       defaultHealthTierCache.stopPolling();
+      defaultWebhookDispatcher.stop().catch(() => {});
       httpServer.close(async () => {
         console.log('✅ [Server] HTTP server closed.');
         // Wait for any in-flight retention cleanup to finish (with a safety cap).

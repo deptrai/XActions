@@ -47,3 +47,28 @@ export {
   getPoolStatus as getBrowserPoolStatus,
   isHealthy as isBrowserPoolHealthy,
 } from './browserPool.js';
+
+export {
+  OutboundWebhookDispatcher,
+  defaultWebhookDispatcher,
+  createWebhookDispatcher,
+  createSignature,
+  verifySignature,
+} from './outbound-webhook-dispatcher.js';
+
+export {
+  WebhookSubscriptionStore,
+  defaultWebhookSubscriptionStore,
+  isValidWebhookUrl,
+} from './webhook-subscription-store.js';
+
+export {
+  getStreamReplay,
+  validateCursor,
+  validateSince,
+  getStreamInfo,
+  DEFAULT_REPLAY_STREAM_KEY,
+  DEFAULT_REPLAY_LIMIT,
+  MAX_REPLAY_LIMIT,
+} from './stream-replay.js';
+

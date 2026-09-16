@@ -163,3 +163,19 @@
 
 - **Missing `Last-Event-ID` header on Mastodon SSE reconnect** — SSE resume is nice-to-have, not blocking; events still arrive on reconnect, just from latest position.
 - **`username` param ignored by JetstreamAdapter** — `options.wantedDids` is the intended API for DID filtering; `username` is for polling streams. Could add `username` → `wantedDids` mapping as convenience.
+- source_spec: `_bmad-output/implementation-artifacts/spec-29-2-outbound-webhook-dispatcher.md`
+  summary: Consumer-loop HOL blocking during webhook retry backoff (spec forbids Bull)
+  evidence: `deliverToSubscription` awaits 1s/2s/4s in the consume loop before XACK; fixing needs a delivery worker, not in this story.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-29-2-outbound-webhook-dispatcher.md`
+  summary: Dispatcher `start()`/`XACK` consumer-group loop not integration-tested
+  evidence: Tests cover parseStreamPayload, deliver, retry, DLQ; live XREADGROUP needs a dedicated Redis fixture.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-29-3-stream-replay-missed-event-recovery.md`
+  summary: Same-millisecond Redis trim warning ignores sequence number
+  evidence: Warning compares ms only; remaining entries still return via XRANGE.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-29-3-stream-replay-missed-event-recovery.md`
+  summary: GET /api/streams/:id/replay has no extra auth beyond other stream GETs
+  evidence: Same as list/history; server-level auth is the existing contract.
+
