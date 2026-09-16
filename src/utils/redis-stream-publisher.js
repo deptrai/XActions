@@ -144,15 +144,21 @@ export class RedisStreamPublisher {
   formatPayload(item, scraperId) {
     if (!item) return {};
 
-    const id = String(item.id || (item.platform && item.externalId ? `${item.platform}:${item.externalId}` : ''));
+    const id = String(item.id || (item.platform && (item.external_post_id || item.externalId) ? `${item.platform}:${item.external_post_id || item.externalId}` : ''));
     const platform = String(item.platform || '');
-    const externalId = String(item.externalId || '');
+    const externalId = String(item.external_post_id || item.externalId || '');
     const category = String(item.category || 'social');
-    const authorId = String(item.authorId || '');
-    const crawledAt = toIsoDate(/** @type {any} */ (item.crawledAt));
-    const storageRef = String(item.storageRef || id);
+    const authorId = String(item.author_id || item.authorId || '');
+    const authorName = String(item.author_name || item.authorName || '');
+    const postUrl = String(item.post_url || item.url || '');
+    const crawledAt = toIsoDate(/** @type {any} */ (item.crawled_at || item.crawledAt));
+    const storageRef = String(item.storage_ref || item.storageRef || id);
+    const contentSnippet = String(item.content_snippet || '');
+    const targetId = String(item.target_id || '');
+    const workspaceId = String(item.workspace_id || '');
+    const schemaVersion = String(item.schema_version || '1');
 
-    const resolvedScraperId = scraperId || item.scraperId || (platform ? `${platform}-hybrid` : '');
+    const resolvedScraperId = scraperId || item.scraper_id || item.scraperId || (platform ? `${platform}-hybrid` : '');
     let healthTier = item.benchmark_health;
     if (!healthTier && resolvedScraperId) {
       healthTier = this.#healthTierCache.get(resolvedScraperId);
@@ -172,17 +178,28 @@ export class RedisStreamPublisher {
     const payload = {
       id,
       platform,
-      externalId,
+      external_post_id: externalId,
+      externalId, // dual-emit camelCase
       category,
-      authorId,
-      crawledAt,
-      storageRef,
+      author_id: authorId,
+      authorId, // dual-emit camelCase
+      author_name: authorName,
+      post_url: postUrl,
+      crawled_at: crawledAt,
+      crawledAt, // dual-emit camelCase
+      storage_ref: storageRef,
+      storageRef, // dual-emit camelCase
+      content_snippet: contentSnippet,
+      target_id: targetId,
+      workspace_id: workspaceId,
+      schema_version: schemaVersion,
       benchmark_health: String(healthTier),
       benchmark_alert: String(isAlert),
     };
 
     if (resolvedScraperId) {
-      payload.scraperId = String(resolvedScraperId);
+      payload.scraper_id = String(resolvedScraperId);
+      payload.scraperId = String(resolvedScraperId); // dual-emit camelCase
     }
 
     return payload;

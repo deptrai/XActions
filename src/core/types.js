@@ -215,12 +215,23 @@
  * @typedef {Object} ThinEvent
  * @property {string} id - Namespaced id, e.g. "facebook:123" or "threads:abc:456"
  * @property {string} platform - Platform name, e.g. "facebook" | "threads"
- * @property {string} externalId - Platform-native id
+ * @property {string} externalId - Platform-native id (camelCase — legacy)
+ * @property {string} external_post_id - Platform-native id (snake_case — canonical)
  * @property {string} category - Category string, e.g. "social" | "ecom" | "realestate" | "recruitment" | "b2b"
- * @property {string} authorId - Author ID
- * @property {string} crawledAt - ISO 8601 timestamp string
- * @property {string} storageRef - Pointer to the stored row / item id
- * @property {string} [scraperId] - Canonical scraper identifier, e.g. "twitter-hybrid"
+ * @property {string} authorId - Author ID (camelCase — legacy)
+ * @property {string} author_id - Author ID (snake_case — canonical)
+ * @property {string} author_name - Author display name (snake_case)
+ * @property {string} post_url - URL to the post/listing (snake_case)
+ * @property {string} crawledAt - ISO 8601 timestamp string (camelCase — legacy)
+ * @property {string} crawled_at - ISO 8601 timestamp string (snake_case — canonical)
+ * @property {string} storageRef - Pointer to the stored row / item id (camelCase — legacy)
+ * @property {string} storage_ref - Pointer to the stored row / item id (snake_case — canonical)
+ * @property {string} [scraperId] - Canonical scraper identifier, e.g. "twitter-hybrid" (camelCase — legacy)
+ * @property {string} [scraper_id] - Canonical scraper identifier (snake_case — canonical)
+ * @property {string} content_snippet - Truncated content preview (≤4000 chars)
+ * @property {string} [target_id] - Target identifier from session.context
+ * @property {string} [workspace_id] - Workspace identifier from session.context
+ * @property {number} [schema_version] - Schema version (1 = initial)
  * @property {'A' | 'B' | 'C' | 'UNKNOWN'} [benchmark_health] - Scraper benchmark tier
  * @property {boolean} [benchmark_alert] - Degraded health alert flag
  */

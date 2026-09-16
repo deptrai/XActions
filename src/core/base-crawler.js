@@ -15,6 +15,7 @@ import { TelemetryContext } from './telemetry-context.js';
 import { globalChallengeSignatureDetector } from './challenge-signature-detector.js';
 import { globalSessionHealthOrchestrator } from './session-health-orchestrator.js';
 import { globalSchemaDriftGuard } from './schema-drift-guard.js';
+import { toIsoDate, isEnvTruthy, defaultRedisStreamPublisher } from '../utils/redis-stream-publisher.js';
 
 /** @typedef {import('./types.js').CrawlerCommand} CrawlerCommand */
 /** @typedef {import('./types.js').ActionDescriptor} ActionDescriptor */
@@ -142,6 +143,129 @@ export class AbstractCrawler {
     }
     this.telemetryEmitter = deps.telemetryEmitter || defaultTelemetryEmitter;
     this.includeBuzzwords = deps.includeBuzzwords === true;
+  }
+
+  /**
+   * Map a crawled item to a ThinEvent for stream publishing.
+   * Per-category field mapping — override in subclass if item type differs.
+   * @param {Record<string, unknown>} item
+   * @param {Record<string, unknown>} [context]
+   * @returns {Record<string, unknown>}
+   */
+  mapToThinEvent(item, context = {}) {
+    // Per-type field mapping — detect item type and map accordingly
+    let contentSnippet = '';
+    let authorId = '';
+    let postUrl = '';
+    
+    if (item.text || item.content) {
+      // PostItem (text) or GenericPostItem (content)
+      const content = item.text || item.content;
+      contentSnippet = String(content).slice(0, 4000);
+      authorId = item.authorId || item.author_id || '';
+      postUrl = item.url || item.postUrl || item.post_url || '';
+    } else if (item.title && item.description) {
+      // ProductItem
+      contentSnippet = `${item.title} ${item.description}`.slice(0, 4000);
+      authorId = item.shop_id || item.sellerId || item.authorId || '';
+      postUrl = item.productUrl || item.url || '';
+    } else if (item.name && item.industry) {
+      // CompanyItem
+      contentSnippet = `${item.name} ${item.industry} ${item.address || ''}`.slice(0, 4000);
+      authorId = item.taxCode || item.authorId || '';
+      postUrl = item.detailUrl || item.url || '';
+    } else if (item.title && item.company) {
+      // JobItem
+      contentSnippet = `${item.title} ${item.company} ${item.location || ''}`.slice(0, 4000);
+      authorId = item.companyId || item.authorId || '';
+      postUrl = item.jobUrl || item.url || '';
+    } else if (item.title && item.price) {
+      // ListingItem
+      contentSnippet = `${item.title} ${item.price} ${item.area || ''}`.slice(0, 4000);
+      authorId = item.sellerId || item.authorId || '';
+      postUrl = item.listingUrl || item.url || '';
+    }
+
+    const base = {
+      id: item.id || `${this.name}:${item.externalId || item.id}`,
+      platform: this.name,
+      external_post_id: item.externalId || item.id,
+      category: item.category || this.category,
+      author_id: authorId,
+      author_name: item.authorName || item.author_name || '',
+      post_url: postUrl,
+      crawled_at: toIsoDate(item.crawledAt || item.crawled_at),
+      storage_ref: item.storageRef || item.storage_ref || item.id,
+      scraper_id: this.scraperId,
+      content_snippet: contentSnippet,
+      target_id: context?.targetId,
+      workspace_id: context?.workspaceId,
+      schema_version: 1,
+      // Dual-emit: camelCase fields for backward compatibility
+      externalId: item.externalId || item.id,
+      authorId,
+      crawledAt: toIsoDate(item.crawledAt || item.crawled_at),
+      storageRef: item.storageRef || item.storage_ref || item.id,
+    };
+
+    return base;
+  }
+
+  /**
+   * Emit stream events for crawled items after handler completes.
+   * @param {unknown} result
+   * @param {Record<string, unknown>} [session]
+   * @returns {Promise<void>}
+   */
+  async #emitStreamEvents(result, session = {}, args = {}) {
+    if (!isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) return;
+    if (session?.dryRun || args?.dryRun) return;
+
+    const items = this.extractItems(result);
+    if (!items || items.length === 0) return;
+
+    const publisher = this.store?.publisher || this.redisPublisher || defaultRedisStreamPublisher;
+    if (!publisher || typeof publisher.publish !== 'function') return;
+
+    // context comes from args.context (x_scrape) or session.context (direct calls)
+    const context = args?.context || session?.context || {};
+    if (!context?.workspaceId) {
+      console.warn(`[StreamPublisher:MissingWorkspaceId] ${this.name} emitting stream events without workspaceId — Nowing consumer will drop events`);
+    }
+    for (const item of items) {
+      const thinEvent = this.mapToThinEvent(item, context);
+      if (!thinEvent.content_snippet) {
+        console.warn(`[StreamPublisher:MissingContentSnippet] ${this.name} item ${thinEvent.id} missing content_snippet — Nowing consumer will drop`);
+      }
+      try {
+        await publisher.publish(thinEvent);
+      } catch (err) {
+        console.warn(`[StreamPublisher] ${this.name} failed to publish item ${thinEvent.id}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+  }
+
+  /**
+   * Extract flat array of items from crawler result.
+   * @param {unknown} result
+   * @returns {Array<Record<string, unknown>>}
+   */
+  extractItems(result) {
+    if (!result || typeof result !== 'object') return [];
+    // Handle array results directly (e.g., Mastodon returns posts[])
+    if (Array.isArray(result)) return result;
+    const obj = /** @type {Record<string, unknown>} */ (result);
+    // Check for array-valued keys first
+    for (const key of ['items', 'posts', 'data', 'listings', 'products', 'jobs', 'comments']) {
+      if (Array.isArray(obj[key])) return obj[key];
+    }
+    // Check for single-item keys (post, item, listing, product, job, company)
+    for (const key of ['post', 'item', 'listing', 'product', 'job', 'company']) {
+      if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+        return [obj[key]];
+      }
+    }
+    return [obj];
   }
 
   /**
@@ -439,6 +563,9 @@ export class AbstractCrawler {
       }
 
       result = await entry.handler(finalArgs, session);
+
+      // Emit stream events for crawled items (Story 20.2)
+      await this.#emitStreamEvents(result, session, finalArgs);
 
       // Story 14.4: inject keyword/hashtag frequency summary when opted in
       if (this.includeBuzzwords && result && typeof result === 'object') {

@@ -2898,65 +2898,9 @@ export class FacebookCrawler extends AbstractCrawler {
         });
       }
 
-      const storeWithPublisher = /** @type {{ publisher?: { publish?: Function } } | null} */ (this.store);
-      const publisher = /** @type {{ publish?: Function } | null} */ (storeWithPublisher?.publisher || this.redisPublisher);
-      if (publisher && typeof publisher.publish === 'function' && isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
-        for (const item of items) {
-          const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
-          await publisher.publish({
-            id: item.id,
-            platform: 'facebook',
-            externalId: item.externalId,
-            category,
-            authorId: item.authorId || '',
-            crawledAt: toIsoDate(item.crawledAt),
-            storageRef: item.storageRef || item.id,
-            scraperId: this.scraperId,
-          });
-        }
-      }
 
-      const storeObj = /** @type {Record<string, unknown> | null} */ (this.store);
-      const sessObj = /** @type {Record<string, unknown> | null} */ (this.sessionManager);
-      const redisClient = /** @type {import('../../../core/types.js').RedisClientLike | null} */ ((storeObj?.redis || sessObj?.redis) ?? null);
-      if (redisClient && isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
-        for (const item of items) {
-          const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
-          const fields = {
-            id: item.id,
-            platform: 'facebook',
-            externalId: item.externalId,
-            category,
-            authorId: item.authorId || '',
-            crawledAt: toIsoDate(item.crawledAt),
-            storageRef: item.storageRef || item.id,
-          };
 
-          if (typeof redisClient.xAdd === 'function') {
-            await redisClient.xAdd(
-              'stream:social:raw_posts',
-              '*',
-              fields,
-              {
-                TRIM: {
-                  strategy: 'MAXLEN',
-                  strategyModifier: '~',
-                  threshold: 1000000,
-                },
-              }
-            );
-          } else if (typeof redisClient.xadd === 'function') {
-            await redisClient.xadd(
-              'stream:social:raw_posts',
-              'MAXLEN',
-              '~',
-              '1000000',
-              '*',
-              ...Object.entries(fields).flat()
-            );
-          }
-        }
-      }
+
     } catch (err) {
       console.warn(`[FB TELEMETRY] Checkpoint/stream emission warning: ${err instanceof Error ? err.message : String(err)}`);
     }

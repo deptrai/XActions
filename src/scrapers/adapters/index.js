@@ -53,18 +53,11 @@ function registerBuiltin(name, importFn) {
 // Register built-in adapters
 registerBuiltin('puppeteer', () => import('./puppeteer.js'));
 registerBuiltin('playwright', () => import('./playwright.js'));
-registerBuiltin('cheerio', () => import('./cheerio.js'));
-registerBuiltin('crawlee', () => import('./crawlee.js'));
-registerBuiltin('got-jsdom', () => import('./got-jsdom.js'));
-registerBuiltin('selenium', () => import('./selenium.js'));
 registerBuiltin('http', () => import('./http.js'));
 
 // Aliases
 registerBuiltin('pw', () => import('./playwright.js'));
 registerBuiltin('pptr', () => import('./puppeteer.js'));
-registerBuiltin('got', () => import('./got-jsdom.js'));
-registerBuiltin('jsdom', () => import('./got-jsdom.js'));
-registerBuiltin('apify', () => import('./crawlee.js'));
 
 // ============================================================================
 // Public API
