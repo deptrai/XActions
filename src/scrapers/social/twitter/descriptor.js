@@ -21,6 +21,8 @@ const TWITTER_ACTION_MAP = {
   thread: 'thread',
   likes: 'likes', likers: 'likes',
   bookmarks: 'bookmarks',
+  export_bookmarks: 'export_bookmarks', exportBookmarks: 'export_bookmarks',
+  unroll_thread: 'unroll_thread', unrollThread: 'unroll_thread',
   media: 'media',
   download_video: 'download_video', video: 'download_video',
   followers: 'followers',
@@ -106,6 +108,7 @@ export default {
     if (options.woeid != null) mappedArgs.woeid = options.woeid;
     if (options.quality) mappedArgs.quality = options.quality;
     if (options.destPath) mappedArgs.destPath = options.destPath;
+    if (options.format) mappedArgs.format = options.format;
     if (options.premium != null) mappedArgs.premium = options.premium;
     if (options.sensitive != null) mappedArgs.sensitive = options.sensitive;
     if (options.walkToRoot != null) mappedArgs.walkToRoot = options.walkToRoot;

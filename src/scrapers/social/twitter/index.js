@@ -6,7 +6,18 @@
  * @license Apache-2.0
  */
 
-export { TwitterCrawler, TWITTER_GRAPHQL_QUERY_IDS } from './crawler.js';
+export {
+  TwitterCrawler,
+  TWITTER_GRAPHQL_QUERY_IDS,
+  extractPostHandle,
+  extractPostDisplayName,
+  formatBookmarksAsCSV,
+  formatBookmarksAsJSON,
+  formatThreadAsMarkdown,
+  formatThreadAsText,
+  formatThreadAsJSON,
+  writeFormattedOutput,
+} from './crawler.js';
 export {
   TwitterClient,
   resolveTweetId,

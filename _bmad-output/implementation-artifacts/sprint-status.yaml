@@ -157,7 +157,7 @@ development_status:
 
   epic-24: in-progress
   24-1-inventory-deprecation-decision-for-standalone-scripts: in-progress
-  24-2-browser-utility-features-as-crawler-actions: backlog
+  24-2-browser-utility-features-as-crawler-actions: done
   24-3-adapter-layer-consolidation: backlog
   24-4-archive-or-remove-unused-scraper-modules: done
   epic-24-retrospective: optional

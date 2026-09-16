@@ -157,6 +157,18 @@ export class TwitterCrawler extends AbstractCrawler {
     });
 
     this.registerAction({
+      action: 'unroll_thread',
+      description: 'Unroll a Twitter conversation thread as formatted Markdown, text, or JSON (requires auth)',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['tweetId'],
+      optionalArgs: ['format', 'destPath', 'walkToRoot', 'cursor', 'limit'],
+      example: { tweetId: '1234567890', format: 'markdown', destPath: '/tmp/thread.md' },
+      outputType: '{ posts: PostItem[], markdown?: string, text?: string, json?: string, destPath?: string }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.unrollThread(args, session),
+    });
+
+    this.registerAction({
       action: 'likes',
       description: 'Scrape users who liked a tweet (favoriters) using GraphQL',
       requiredArgs: ['tweetId'],
@@ -207,6 +219,27 @@ export class TwitterCrawler extends AbstractCrawler {
         };
       },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.bookmarks(args, session),
+    });
+
+    this.registerAction({
+      action: 'export_bookmarks',
+      description: 'Export bookmarked tweets as formatted JSON, CSV, or both (requires auth)',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: [],
+      optionalArgs: ['format', 'destPath', 'limit', 'cursor'],
+      example: { format: 'csv', destPath: '/tmp/bookmarks.csv' },
+      outputType: '{ posts: PostItem[], json?: string, csv?: string, destPath?: string }',
+      checkpointResolver: (/** @type {Record<string, unknown>} */ args) => {
+        const targetKey = typeof args?.accountId === 'string' ? args.accountId : 'self';
+        return {
+          targetType: 'bookmarks',
+          targetKey,
+          cursorField: 'cursor',
+          fallbackCursorFields: ['after'],
+        };
+      },
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.exportBookmarks(args, session),
     });
 
     // ── Story 13.2.1 Actions: profile, followers, following, retweeters, list_members, non_followers ──
@@ -1419,6 +1452,77 @@ export class TwitterCrawler extends AbstractCrawler {
   }
 
   /**
+   * Action Handler: unroll_thread
+   * Unroll a Twitter conversation thread into ordered Markdown, plain text, or JSON.
+   * @param {Record<string, any>} args
+   * @param {any} [session]
+   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], markdown?: string, text?: string, json?: string, destPath?: string }>}
+   */
+  async unrollThread(args, session) {
+    if (!args || (!args.tweetId && !args.url)) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: tweetId',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    const format = String(args.format || 'markdown').toLowerCase();
+    if (!['text', 'markdown', 'json'].includes(format)) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `Invalid format "${args.format}". Allowed: text, markdown, json`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    if (!this.#hasAuth(session)) {
+      throw new PlatformError({
+        type: ErrorTypes.AUTH_EXPIRED,
+        code: 'XACT_4010',
+        message: 'Twitter unroll_thread requires an authenticated session (auth_token cookie).',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'twitter',
+      });
+    }
+
+    const threadResult = await this.thread(args, session);
+    const root = threadResult?.rootTweet;
+    const conversation = Array.isArray(threadResult?.conversation) ? threadResult.conversation : [];
+
+    // unroll_thread uses conversation array (ordered thread), prepended with rootTweet if not already present
+    const orderedPosts = (root && !conversation.some((p) => p.externalId === root.externalId || p.id === root.id))
+      ? [root, ...conversation]
+      : (conversation.length > 0 ? conversation : (root ? [root] : (threadResult?.posts || [])));
+
+    /** @type {{ posts: import('../../../core/types.js').PostItem[], markdown?: string, text?: string, json?: string, destPath?: string }} */
+    const result = { posts: orderedPosts };
+
+    if (format === 'markdown') {
+      result.markdown = formatThreadAsMarkdown(orderedPosts);
+    } else if (format === 'text') {
+      result.text = formatThreadAsText(orderedPosts);
+    } else if (format === 'json') {
+      result.json = formatThreadAsJSON(orderedPosts);
+    }
+
+    if (args.destPath) {
+      const contentToWrite = result.markdown || result.text || result.json || '';
+      await writeFormattedOutput(args.destPath, contentToWrite);
+      result.destPath = args.destPath;
+    }
+
+    return result;
+  }
+
+  /**
    * Action Handler: likes (Story 13.2.2)
    * @param {Record<string, any>} args
    * @param {any} [session]
@@ -1474,6 +1578,62 @@ export class TwitterCrawler extends AbstractCrawler {
 
     normalized.pageInfo = { ...normalized.pageInfo, has_next_page: hasMore };
     return normalized;
+  }
+
+  /**
+   * Action Handler: export_bookmarks
+   * Export bookmarked tweets as formatted JSON, CSV, or both.
+   * @param {Record<string, any>} [args]
+   * @param {any} [session]
+   * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], json?: string, csv?: string, destPath?: string }>}
+   */
+  async exportBookmarks(args = {}, session) {
+    const format = String(args?.format || 'both').toLowerCase();
+    if (!['json', 'csv', 'both'].includes(format)) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `Invalid format "${args?.format}". Allowed: json, csv, both`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'twitter',
+      });
+    }
+
+    if (!this.#hasAuth(session)) {
+      throw new PlatformError({
+        type: ErrorTypes.AUTH_EXPIRED,
+        code: 'XACT_4010',
+        message: 'Twitter export_bookmarks requires an authenticated session (auth_token cookie).',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'twitter',
+      });
+    }
+
+    const bookmarksResult = await this.bookmarks(args, session);
+    const posts = bookmarksResult?.posts || [];
+
+    /** @type {{ posts: import('../../../core/types.js').PostItem[], json?: string, csv?: string, destPath?: string }} */
+    const result = { posts };
+
+    if (format === 'json' || format === 'both') {
+      result.json = formatBookmarksAsJSON(posts);
+    }
+    if (format === 'csv' || format === 'both') {
+      result.csv = formatBookmarksAsCSV(posts);
+    }
+
+    if (args?.destPath) {
+      let contentToWrite = result.csv;
+      if (format === 'json' || (format === 'both' && String(args.destPath).endsWith('.json'))) {
+        contentToWrite = result.json;
+      }
+      await writeFormattedOutput(args.destPath, contentToWrite || '');
+      result.destPath = args.destPath;
+    }
+
+    return result;
   }
 
   /**
@@ -4066,4 +4226,207 @@ export class TwitterCrawler extends AbstractCrawler {
       await this.client.close();
     }
   }
+}
+
+/**
+ * Extract author handle from a PostItem.
+ * @param {import('../../../core/types.js').PostItem | Record<string, any>} post
+ * @returns {string}
+ */
+export function extractPostHandle(post) {
+  if (!post) return '';
+  if (post.handle) return String(post.handle).replace(/^@/, '');
+  if (post.authorHandle) return String(post.authorHandle).replace(/^@/, '');
+  if (post.authorUsername) return String(post.authorUsername).replace(/^@/, '');
+  if (post.metadata?.authorUsername) return String(post.metadata.authorUsername).replace(/^@/, '');
+  if (post.metadata?.handle) return String(post.metadata.handle).replace(/^@/, '');
+  if (post.authorUrl) {
+    const parts = String(post.authorUrl).split('/').filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && !['x.com', 'twitter.com', 'www.x.com', 'www.twitter.com'].includes(last.toLowerCase())) {
+      return last.replace(/^@/, '');
+    }
+  }
+  if (post.authorName) {
+    const match = String(post.authorName).match(/@(\w+)/);
+    if (match) return match[1];
+    return String(post.authorName).replace(/^@/, '');
+  }
+  return '';
+}
+
+/**
+ * Extract display name from a PostItem.
+ * @param {import('../../../core/types.js').PostItem | Record<string, any>} post
+ * @returns {string}
+ */
+export function extractPostDisplayName(post) {
+  if (!post) return '';
+  if (post.displayName) return String(post.displayName);
+  if (post.authorDisplayName) return String(post.authorDisplayName);
+  if (post.metadata?.displayName) return String(post.metadata.displayName);
+  if (post.authorName) return String(post.authorName);
+  return extractPostHandle(post) || 'Twitter User';
+}
+
+/**
+ * Format a date value to YYYY-MM-DD.
+ * @param {any} val
+ * @returns {string}
+ */
+function formatPostTime(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    return Number.isNaN(val.getTime()) ? '' : val.toISOString().split('T')[0];
+  }
+  if (typeof val === 'string') {
+    const d = new Date(val);
+    if (!Number.isNaN(d.getTime())) {
+      return d.toISOString().split('T')[0];
+    }
+    return val;
+  }
+  if (typeof val === 'number') {
+    const d = new Date(val);
+    return Number.isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+  }
+  return '';
+}
+
+/**
+ * Format an array of bookmarks as CSV.
+ * Format: Handle,DisplayName,Text,URL,Time,Likes,Retweets,Replies,Views
+ * @param {Array<import('../../../core/types.js').PostItem>} posts
+ * @returns {string}
+ */
+export function formatBookmarksAsCSV(posts = []) {
+  const header = 'Handle,DisplayName,Text,URL,Time,Likes,Retweets,Replies,Views';
+  const rows = (Array.isArray(posts) ? posts : []).map((b) => {
+    const handle = extractPostHandle(b);
+    const displayName = extractPostDisplayName(b);
+    const text = (b.content || b.text || '').replace(/"/g, '""').replace(/\r?\n/g, ' ');
+    const url = b.postUrl || b.url || (handle && (b.externalId || b.metadata?.tweetId) ? `https://x.com/${handle}/status/${b.externalId || b.metadata?.tweetId}` : '');
+    const time = formatPostTime(b.publishedAt || b.time || b.createdAt || b.crawledAt);
+    const likes = Number(b.likesCount ?? b.likes ?? b.metadata?.likeCount ?? 0);
+    const retweets = Number(b.repostsCount ?? b.retweets ?? b.metadata?.retweetCount ?? 0);
+    const replies = Number(b.repliesCount ?? b.replies ?? b.metadata?.replyCount ?? 0);
+    const views = Number(b.viewsCount ?? b.views ?? 0);
+
+    return `"@${handle}","${displayName.replace(/"/g, '""')}","${text}","${url}","${time}",${likes},${retweets},${replies},${views}`;
+  });
+
+  return [header, ...rows].join('\n');
+}
+
+/**
+ * Format an array of bookmarks as JSON.
+ * @param {Array<import('../../../core/types.js').PostItem>} posts
+ * @returns {string}
+ */
+export function formatBookmarksAsJSON(posts = []) {
+  return JSON.stringify(Array.isArray(posts) ? posts : [], null, 2);
+}
+
+/**
+ * Format a thread of tweets as Markdown.
+ * @param {Array<import('../../../core/types.js').PostItem>} posts
+ * @returns {string}
+ */
+export function formatThreadAsMarkdown(posts = []) {
+  const tweets = Array.isArray(posts) ? posts : [];
+  const first = tweets[0] || {};
+  const author = extractPostHandle(first) || 'user';
+  const total = tweets.length;
+
+  let dateStr = '';
+  const rawDate = first.publishedAt || first.time || first.createdAt || first.crawledAt;
+  if (rawDate) {
+    const d = new Date(rawDate);
+    if (!Number.isNaN(d.getTime())) {
+      dateStr = d.toLocaleDateString('en-US');
+    }
+  }
+  if (!dateStr) {
+    dateStr = new Date().toLocaleDateString('en-US');
+  }
+
+  let output = `# Thread by @${author}\n\n`;
+  output += `> ${total} tweets | ${dateStr}\n\n`;
+  output += `---\n\n`;
+
+  tweets.forEach((t, i) => {
+    output += `**${i + 1}/${total}**\n\n`;
+    const text = (t.content || t.text || '').trim();
+    if (text) {
+      output += `${text}\n\n`;
+    }
+
+    const images = Array.isArray(t.mediaUrls) && t.mediaUrls.length > 0
+      ? t.mediaUrls
+      : (Array.isArray(t.images) ? t.images : []);
+
+    images.forEach((img) => {
+      if (img) {
+        output += `![Image](${img})\n\n`;
+      }
+    });
+
+    output += `---\n\n`;
+  });
+
+  const originalUrl = first.postUrl || first.url || (first.externalId ? `https://x.com/${author}/status/${first.externalId}` : '');
+  if (originalUrl) {
+    output += `\n[Original Thread](${originalUrl})\n`;
+  }
+
+  return output;
+}
+
+/**
+ * Format a thread of tweets as plain text.
+ * @param {Array<import('../../../core/types.js').PostItem>} posts
+ * @returns {string}
+ */
+export function formatThreadAsText(posts = []) {
+  const tweets = Array.isArray(posts) ? posts : [];
+  const first = tweets[0] || {};
+  const author = extractPostHandle(first) || 'user';
+  const total = tweets.length;
+
+  let output = `Thread by @${author}\n`;
+  output += `${'='.repeat(40)}\n\n`;
+
+  tweets.forEach((t, i) => {
+    output += `[${i + 1}/${total}]\n`;
+    const text = (t.content || t.text || '').trim();
+    output += `${text}\n\n`;
+  });
+
+  return output;
+}
+
+/**
+ * Format a thread of tweets as JSON.
+ * @param {Array<import('../../../core/types.js').PostItem>} posts
+ * @returns {string}
+ */
+export function formatThreadAsJSON(posts = []) {
+  return JSON.stringify(Array.isArray(posts) ? posts : [], null, 2);
+}
+
+/**
+ * Write formatted output to destPath.
+ * @param {string} destPath
+ * @param {string} content
+ * @returns {Promise<string>}
+ */
+export async function writeFormattedOutput(destPath, content) {
+  const fs = await import('node:fs/promises');
+  const path = await import('node:path');
+  const outputDir = path.dirname(destPath);
+  if (outputDir) {
+    await fs.mkdir(outputDir, { recursive: true });
+  }
+  await fs.writeFile(destPath, content, 'utf-8');
+  return destPath;
 }
