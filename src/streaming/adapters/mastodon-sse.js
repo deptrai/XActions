@@ -86,17 +86,30 @@ export class MastodonSSEAdapter extends BasePushAdapter {
         method: 'GET',
         headers,
         signal: this._abortController.signal,
+        bodyTimeout: 0,
+        headersTimeout: 30000,
       });
 
       if (response.statusCode >= 400) {
         const err = new Error(`❌ Mastodon SSE connection rejected with HTTP ${response.statusCode}`);
         this._emitError(err);
+        // Drain response body to release connection
+        if (response.body && typeof response.body.dump === 'function') {
+          await response.body.dump().catch(() => {});
+        }
+        // 4xx client errors are non-retriable — halt instead of reconnect loop
+        if (response.statusCode >= 400 && response.statusCode < 500) {
+          this._connected = false;
+          this._emitStatus('error');
+          return;
+        }
         this._scheduleReconnect();
         return;
       }
 
       this._connected = true;
       this._resetReconnect();
+      this._startCursorFlush();
       this._emitStatus('running');
       console.log(`✅ [${this.streamId}] Mastodon SSE connected (status ${response.statusCode})`);
 

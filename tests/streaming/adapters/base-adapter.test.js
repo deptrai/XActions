@@ -1,5 +1,5 @@
 // by nichxbt
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { BasePushAdapter } from '../../../src/streaming/adapters/base-adapter.js';
 
 class TestPushAdapter extends BasePushAdapter {
@@ -109,5 +109,124 @@ describe('BasePushAdapter', () => {
     adapter.testError(new Error('Test failure'));
     expect(capturedErr).not.toBeNull();
     expect(capturedErr.message).toBe('Test failure');
+  });
+
+  it('calls publisher.publish with normalized ThinEvent fields', async () => {
+    const publishCalls = [];
+    const mockPublisher = {
+      publish: async (item) => { publishCalls.push(item); },
+      ensureClient: async () => null,
+    };
+    const adapter = new TestPushAdapter('test-stream-pub', {}, mockPublisher);
+
+    // Simulate a PostItem (content/postUrl) — should be mapped to content_snippet/post_url
+    await adapter.testEmit({ id: 'post-1', content: 'Hello world', postUrl: 'https://example.com/1', platform: 'test' });
+
+    expect(publishCalls).toHaveLength(1);
+    expect(publishCalls[0].content_snippet).toBe('Hello world');
+    expect(publishCalls[0].post_url).toBe('https://example.com/1');
+    // Original fields preserved
+    expect(publishCalls[0].content).toBe('Hello world');
+    expect(publishCalls[0].postUrl).toBe('https://example.com/1');
+  });
+
+  it('preserves existing content_snippet/post_url on already-normalized events', async () => {
+    const publishCalls = [];
+    const mockPublisher = {
+      publish: async (item) => { publishCalls.push(item); },
+      ensureClient: async () => null,
+    };
+    const adapter = new TestPushAdapter('test-stream-pub2', {}, mockPublisher);
+
+    // CDC-style ThinEvent — already has content_snippet/post_url
+    await adapter.testEmit({ id: 'cdc:1', content_snippet: 'CDC text', post_url: 'https://cdc.example.com/1' });
+
+    expect(publishCalls).toHaveLength(1);
+    expect(publishCalls[0].content_snippet).toBe('CDC text');
+    expect(publishCalls[0].post_url).toBe('https://cdc.example.com/1');
+  });
+
+  it('schedules reconnect with exponential backoff', async () => {
+    vi.useFakeTimers();
+    const adapter = new TestPushAdapter('test-stream-reconnect');
+
+    // Stub connect to fail
+    let connectCount = 0;
+    adapter.connect = async () => {
+      connectCount++;
+      throw new Error('connection failed');
+    };
+
+    const statuses = [];
+    adapter.on('status', (s) => statuses.push(s.status));
+
+    // Trigger first reconnect
+    adapter._scheduleReconnect();
+    expect(statuses).toContain('reconnecting');
+    expect(adapter.reconnectAttempts).toBe(1);
+
+    // Advance past first delay (1s)
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(connectCount).toBe(1);
+
+    // Should have scheduled second reconnect
+    expect(adapter.reconnectAttempts).toBe(2);
+
+    // Advance past second delay (2s)
+    await vi.advanceTimersByTimeAsync(2100);
+    expect(connectCount).toBe(2);
+    expect(adapter.reconnectAttempts).toBe(3);
+
+    adapter._closing = true;
+    vi.useRealTimers();
+  });
+
+  it('emits error status when max reconnect attempts reached', () => {
+    vi.useFakeTimers();
+    const adapter = new TestPushAdapter('test-stream-maxreconnect', {
+      maxReconnectAttempts: 2,
+      reconnectBaseDelayMs: 100,
+    });
+
+    const errors = [];
+    adapter.on('error', (e) => errors.push(e));
+
+    const statuses = [];
+    adapter.on('status', (s) => statuses.push(s.status));
+
+    adapter.reconnectAttempts = 2;
+    adapter._scheduleReconnect();
+
+    expect(errors.length).toBeGreaterThan(0);
+    expect(statuses).toContain('error');
+
+    adapter._closing = true;
+    vi.useRealTimers();
+  });
+
+  it('cursor persists across adapter instances via Redis', async () => {
+    // Use a mock Redis client to simulate persistence
+    const store = {};
+    const mockRedis = {
+      get: async (key) => store[key] || null,
+      set: async (key, val) => { store[key] = val; },
+    };
+    const mockPublisher = {
+      publish: async () => {},
+      ensureClient: async () => mockRedis,
+    };
+
+    // First instance saves cursor
+    const adapter1 = new TestPushAdapter('test-cursor-persist', {}, mockPublisher);
+    await adapter1.saveCursor('99999');
+
+    // Second instance with same streamId loads cursor from Redis
+    const adapter2 = new TestPushAdapter('test-cursor-persist', {}, mockPublisher);
+    const cursor = await adapter2.getCursor();
+    expect(cursor).toBe('99999');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 });

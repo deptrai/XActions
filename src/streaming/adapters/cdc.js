@@ -43,9 +43,33 @@ export class CDCAdapter extends BasePushAdapter {
     if (this._sourceRedis) {
       return this._sourceRedis;
     }
-    const client = await this._getRedisClient();
+    // Prefer caller-supplied dedicated client
+    if (this.options.sourceRedis) {
+      this._sourceRedis = this.options.sourceRedis;
+      return this._sourceRedis;
+    }
+    // Create a dedicated connection for blocking XREAD — don't tie up shared client
+    const client = await this._createDedicatedRedisClient();
     this._sourceRedis = client;
     return client;
+  }
+
+  /**
+   * Create a dedicated Redis client for blocking XREAD operations.
+   * Falls back to shared client only if dedicated creation fails.
+   * @returns {Promise<import('../../core/types.js').RedisClientLike | null>}
+   */
+  async _createDedicatedRedisClient() {
+    try {
+      const { createClient } = await import('redis');
+      const redisUrl = process.env.REDIS_URL || `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`;
+      const client = createClient({ url: redisUrl });
+      await client.connect();
+      return client;
+    } catch (err) {
+      console.warn(`⚠️ [${this.streamId}] Failed to create dedicated Redis client, falling back to shared:`, err instanceof Error ? err.message : String(err));
+      return this._getRedisClient();
+    }
   }
 
   /**
@@ -89,6 +113,7 @@ export class CDCAdapter extends BasePushAdapter {
     this._connected = true;
     this._running = true;
     this._resetReconnect();
+    this._startCursorFlush();
     this._emitStatus('running');
     console.log(`✅ [${this.streamId}] CDC adapter connected to ${this.sourceStreamKey} at cursor ${cursor}`);
 
@@ -117,6 +142,8 @@ export class CDCAdapter extends BasePushAdapter {
         if (Array.isArray(entries) && entries.length > 0) {
           for (const entry of entries) {
             if (this._closing) break;
+            // Skip processing while paused — don't advance cursor
+            if (this._paused) break;
             const { id: entryId, message } = entry;
             this._cursor = entryId;
 
@@ -139,6 +166,11 @@ export class CDCAdapter extends BasePushAdapter {
         console.error(`❌ [${this.streamId}] XREAD error:`, errMsg);
         this._connected = false;
         this._running = false;
+        // Reset source Redis so reconnect creates a fresh client
+        if (this._sourceRedis && this._sourceRedis !== this.options.sourceRedis) {
+          try { this._sourceRedis.disconnect?.(); } catch {}
+          this._sourceRedis = null;
+        }
         this._scheduleReconnect();
         break;
       }
@@ -230,6 +262,11 @@ export class CDCAdapter extends BasePushAdapter {
   async disconnect() {
     this._closing = true;
     this._running = false;
+    // Disconnect dedicated source Redis if we created one
+    if (this._sourceRedis && this._sourceRedis !== this.options.sourceRedis) {
+      try { this._sourceRedis.disconnect?.(); } catch {}
+      this._sourceRedis = null;
+    }
     await super.disconnect();
   }
 }

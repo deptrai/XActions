@@ -52,6 +52,12 @@ export class BasePushAdapter extends EventEmitter {
   /** @type {import('../../core/types.js').RedisClientLike | null} */
   _redisClient = null;
 
+  /** @type {NodeJS.Timeout | null} */
+  _cursorFlushTimer = null;
+
+  /** @type {number} */
+  _cursorFlushIntervalMs = 10000;
+
   /**
    * @param {string} streamId
    * @param {Record<string, any>} [options]
@@ -191,6 +197,7 @@ export class BasePushAdapter extends EventEmitter {
   async disconnect() {
     this._closing = true;
     this._clearReconnectTimer();
+    this._clearCursorFlushTimer();
     this._connected = false;
     if (this._cursor) {
       await this.saveCursor(this._cursor);
@@ -283,6 +290,33 @@ export class BasePushAdapter extends EventEmitter {
   }
 
   /**
+   * Start periodic cursor flush to Redis.
+   * @protected
+   * @returns {void}
+   */
+  _startCursorFlush() {
+    this._clearCursorFlushTimer();
+    this._cursorFlushTimer = setInterval(() => {
+      if (this._cursor && !this._closing) {
+        this.saveCursor(this._cursor).catch(() => {});
+      }
+    }, this._cursorFlushIntervalMs);
+    if (this._cursorFlushTimer.unref) this._cursorFlushTimer.unref();
+  }
+
+  /**
+   * Clear the cursor flush timer.
+   * @protected
+   * @returns {void}
+   */
+  _clearCursorFlushTimer() {
+    if (this._cursorFlushTimer) {
+      clearInterval(this._cursorFlushTimer);
+      this._cursorFlushTimer = null;
+    }
+  }
+
+  /**
    * Emit normalized event to listeners and publish to Redis Stream.
    * If adapter is paused, event is dropped/skipped.
    *
@@ -297,9 +331,15 @@ export class BasePushAdapter extends EventEmitter {
     this.emit('event', item);
 
     // Publish to stream:social:raw_posts via RedisStreamPublisher
+    // Normalize PostItem fields (content/postUrl) to ThinEvent fields (content_snippet/post_url)
     if (this.publisher && typeof this.publisher.publish === 'function') {
       try {
-        await this.publisher.publish(item);
+        const payload = {
+          ...item,
+          content_snippet: item.content_snippet || item.content || item.text || '',
+          post_url: item.post_url || item.postUrl || item.url || '',
+        };
+        await this.publisher.publish(payload);
       } catch (err) {
         console.warn(`⚠️ [${this.streamId}] Failed to publish event to Redis stream:`, err instanceof Error ? err.message : String(err));
       }

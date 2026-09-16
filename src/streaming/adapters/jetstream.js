@@ -56,7 +56,7 @@ export function normalizeJetstreamCommit(event) {
   const mediaUrls = [];
   if (record.embed) {
     const embed = record.embed;
-    // Check images array: embed.images
+    // Direct images: embed.images
     if (Array.isArray(embed.images)) {
       for (const img of embed.images) {
         if (img?.image?.ref?.$link) {
@@ -66,7 +66,24 @@ export function normalizeJetstreamCommit(event) {
         }
       }
     }
-    // Check external link thumbnail
+    // recordWithMedia: embed.media.images
+    if (embed.media && Array.isArray(embed.media.images)) {
+      for (const img of embed.media.images) {
+        if (img?.image?.ref?.$link) {
+          mediaUrls.push(`https://cdn.bsky.app/img/feed_thumbnail/plain/${did}/${img.image.ref.$link}@jpeg`);
+        } else if (typeof img?.alt === 'string' && img?.thumb) {
+          mediaUrls.push(String(img.thumb));
+        }
+      }
+    }
+    // Video embed: embed.video or embed.media.video
+    const videoEmbed = embed.video || embed.media?.video;
+    if (videoEmbed?.ref?.$link) {
+      mediaUrls.push(`https://video.bsky.app/watch/${did}/${videoEmbed.ref.$link}/playlist.m3u8`);
+    } else if (videoEmbed?.playlist) {
+      mediaUrls.push(String(videoEmbed.playlist));
+    }
+    // External link thumbnail
     if (embed.external?.thumb?.ref?.$link) {
       mediaUrls.push(`https://cdn.bsky.app/img/feed_thumbnail/plain/${did}/${embed.external.thumb.ref.$link}@jpeg`);
     }
@@ -106,6 +123,10 @@ export function normalizeJetstreamCommit(event) {
       rev: commit.rev || null,
       langs: Array.isArray(record.langs) ? record.langs : [],
       time_us: event.time_us || null,
+      reply: record.reply ? {
+        parent: record.reply.parent?.uri || null,
+        root: record.reply.root?.uri || null,
+      } : null,
     },
     publishedAt,
     crawledAt: new Date(),
@@ -191,6 +212,7 @@ export class JetstreamAdapter extends BasePushAdapter {
         ws.onopen = () => {
           this._connected = true;
           this._resetReconnect();
+          this._startCursorFlush();
           this._emitStatus('running');
           console.log(`✅ [${this.streamId}] Jetstream WebSocket connected`);
           if (!isResolved) {
@@ -223,6 +245,7 @@ export class JetstreamAdapter extends BasePushAdapter {
           const err = new Error(errEvent?.message || 'Jetstream WebSocket error');
           console.error(`❌ [${this.streamId}] Jetstream WebSocket error:`, err.message);
           this._emitError(err);
+          // Don't call _scheduleReconnect here — onclose will fire next and handle it
           if (!isResolved) {
             isResolved = true;
             reject(err);

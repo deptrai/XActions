@@ -166,7 +166,7 @@ export function setIO(io) {
 // ============================================================================
 
 function mapToThinEvent(item, streamMeta) {
-  const content = item.content || item.text || '';
+  const content = item.content || item.text || item.content_snippet || '';
   const contentSnippet = String(content).slice(0, 4000);
   const platform = item.platform || streamMeta.type;
   const externalId = String(item.externalId || item.external_post_id || item.id || '');
@@ -227,9 +227,19 @@ export async function createStream({ type, username, interval, authToken, userId
   const intervalMs = clampInterval(interval || DEFAULT_INTERVAL_MS);
 
   // Duplicate prevention — reject if same type + username stream already running
+  // For push types, also compare options fingerprint to allow multiple streams of the same type
+  const optionsFingerprint = isPush ? JSON.stringify(options || {}) : null;
   for (const existing of activeStreams.values()) {
-    if (existing.type === type && existing.username === cleanUsername && existing.status !== 'stopped') {
+    if (existing.status === 'stopped') continue;
+    if (existing.type !== type) continue;
+    if (!isPush && existing.username === cleanUsername) {
       throw new Error(`Stream already exists for ${type}:@${cleanUsername} → ${existing.id}. Stop it first or use update.`);
+    }
+    if (isPush) {
+      const existingFingerprint = JSON.stringify(existing.options || {});
+      if (existing.username === cleanUsername && existingFingerprint === optionsFingerprint) {
+        throw new Error(`Stream already exists for ${type}:@${cleanUsername} with identical options → ${existing.id}. Stop it first or use update.`);
+      }
     }
   }
 
@@ -281,55 +291,7 @@ export async function createStream({ type, username, interval, authToken, userId
 
     if (adapter) {
       activeAdapters.set(id, adapter);
-
-      // Handle adapter event
-      adapter.on('event', async (rawItem) => {
-        try {
-          const thinEvent = mapToThinEvent(rawItem, meta);
-          const historyEntry = {
-            type: `stream:${type}`,
-            streamId: id,
-            data: thinEvent,
-            timestamp: new Date().toISOString(),
-          };
-
-          // Append to history list
-          const r = await getRedis();
-          await r.lpush(historyKey(id), JSON.stringify(historyEntry));
-          await r.ltrim(historyKey(id), 0, MAX_HISTORY - 1);
-          await r.expire(historyKey(id), REDIS_KEY_TTL);
-
-          // Update memory & meta counts
-          meta.eventCount = (meta.eventCount || 0) + 1;
-          meta.lastPollAt = new Date().toISOString();
-          await saveMeta(id, meta);
-
-          // Emit to Socket.IO
-          if (_io) {
-            _io.to(`stream:${id}`).emit(`stream:${type}`, historyEntry);
-            _io.to('streams').emit(`stream:${type}`, historyEntry);
-          }
-        } catch (err) {
-          console.warn(`⚠️ [${id}] Error handling adapter event:`, err instanceof Error ? err.message : String(err));
-        }
-      });
-
-      // Handle adapter status change
-      adapter.on('status', async (stat) => {
-        meta.status = stat.status;
-        await saveMeta(id, meta);
-        if (_io) {
-          _io.to(`stream:${id}`).emit('stream:status', stat);
-          _io.to('streams').emit('stream:status', stat);
-        }
-      });
-
-      // Handle adapter error
-      adapter.on('error', async (err) => {
-        meta.errorCount = (meta.errorCount || 0) + 1;
-        meta.lastError = err.message;
-        await saveMeta(id, meta);
-      });
+      _wireAdapterEvents(adapter, id, meta);
 
       // Connect asynchronously
       adapter.connect().catch((err) => {
@@ -378,7 +340,7 @@ export async function stopStream(streamId) {
   // Clean Redis
   try {
     const redis = await getRedis();
-    await redis.del(stateKey(streamId), historyKey(streamId), metaKey(streamId), lockKey(streamId));
+    await redis.del(stateKey(streamId), historyKey(streamId), metaKey(streamId), lockKey(streamId), `xactions:adapter_cursor:${streamId}`);
   } catch { /* Redis may be down */ }
 
   activeStreams.delete(streamId);
@@ -570,6 +532,69 @@ export function getStreamStats() {
 export async function isHealthy() {
   const browserOk = await isBrowserPoolHealthy();
   return _redisHealthy && browserOk;
+}
+
+// ============================================================================
+// Adapter event wiring (shared between createStream and refreshFromRedis)
+// ============================================================================
+
+/** Pending saveMeta timers — batch meta updates to avoid Redis spam */
+const _pendingMetaSaves = new Map();
+
+function _scheduleSaveMeta(streamId, meta) {
+  if (_pendingMetaSaves.has(streamId)) return; // already scheduled
+  const timer = setTimeout(async () => {
+    _pendingMetaSaves.delete(streamId);
+    await saveMeta(streamId, meta);
+  }, 2000);
+  if (timer.unref) timer.unref();
+  _pendingMetaSaves.set(streamId, timer);
+}
+
+function _wireAdapterEvents(adapter, streamId, meta) {
+  const type = meta.type;
+  adapter.on('event', async (rawItem) => {
+    try {
+      const thinEvent = mapToThinEvent(rawItem, meta);
+      const historyEntry = {
+        type: `stream:${type}`,
+        streamId,
+        data: thinEvent,
+        timestamp: new Date().toISOString(),
+      };
+
+      const r = await getRedis();
+      await r.lpush(historyKey(streamId), JSON.stringify(historyEntry));
+      await r.ltrim(historyKey(streamId), 0, MAX_HISTORY - 1);
+      await r.expire(historyKey(streamId), REDIS_KEY_TTL);
+
+      meta.eventCount = (meta.eventCount || 0) + 1;
+      meta.lastPollAt = new Date().toISOString();
+      _scheduleSaveMeta(streamId, meta);
+
+      if (_io) {
+        _io.to(`stream:${streamId}`).emit(`stream:${type}`, historyEntry);
+        _io.to('streams').emit(`stream:${type}`, historyEntry);
+      }
+    } catch (err) {
+      console.warn(`⚠️ [${streamId}] Error handling adapter event:`, err instanceof Error ? err.message : String(err));
+    }
+  });
+
+  adapter.on('status', async (stat) => {
+    meta.status = stat.status;
+    await saveMeta(streamId, meta);
+    if (_io) {
+      _io.to(`stream:${streamId}`).emit('stream:status', stat);
+      _io.to('streams').emit('stream:status', stat);
+    }
+  });
+
+  adapter.on('error', async (err) => {
+    meta.errorCount = (meta.errorCount || 0) + 1;
+    meta.lastError = err.message;
+    await saveMeta(streamId, meta);
+  });
 }
 
 // ============================================================================
@@ -830,19 +855,39 @@ async function refreshFromRedis() {
       if (!activeStreams.has(meta.id)) {
         activeStreams.set(meta.id, meta);
 
-        // Re-register Bull job if stream should be running (polling streams only)
-        if (!PUSH_STREAM_TYPES.includes(meta.type) && (meta.status === 'running' || meta.status === 'backoff')) {
-          try {
-            const queue = getQueue();
-            const repeatableJobs = await queue.getRepeatableJobs();
-            const exists = repeatableJobs.find((j) => j.id === meta.id);
-            if (!exists) {
-              await queue.add('poll', { streamId: meta.id }, {
-                repeat: { every: meta.interval },
-                jobId: meta.id,
-              });
-            }
-          } catch { /* queue error */ }
+        if (meta.status === 'running' || meta.status === 'backoff') {
+          const isPush = PUSH_STREAM_TYPES.includes(meta.type);
+          if (isPush) {
+            // Restore push adapter
+            try {
+              let adapter;
+              if (meta.type === 'jetstream') {
+                adapter = new JetstreamAdapter(meta.id, meta.options || {}, defaultRedisStreamPublisher);
+              } else if (meta.type === 'mastodon_sse') {
+                adapter = new MastodonSSEAdapter(meta.id, meta.options || {}, defaultRedisStreamPublisher);
+              } else if (meta.type === 'cdc') {
+                adapter = new CDCAdapter(meta.id, meta.options || {}, defaultRedisStreamPublisher);
+              }
+              if (adapter) {
+                activeAdapters.set(meta.id, adapter);
+                _wireAdapterEvents(adapter, meta.id, meta);
+                adapter.connect().catch(() => {});
+              }
+            } catch { /* adapter creation error */ }
+          } else {
+            // Re-register Bull job for polling streams
+            try {
+              const queue = getQueue();
+              const repeatableJobs = await queue.getRepeatableJobs();
+              const exists = repeatableJobs.find((j) => j.id === meta.id);
+              if (!exists) {
+                await queue.add('poll', { streamId: meta.id }, {
+                  repeat: { every: meta.interval },
+                  jobId: meta.id,
+                });
+              }
+            } catch { /* queue error */ }
+          }
         }
       }
     }

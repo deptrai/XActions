@@ -158,3 +158,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-14-4-real-time-n-gram-keyword-hashtag-frequency-analytics-engine.md`
   summary: CLI `xactions analytics buzzwords` has no test — thin wrapper over `extractKeywordFrequency`
   evidence: `filePath`/`stdin` input handling is trivial; Commander option parsing is framework-tested.
+
+## Deferred from: code review of spec-29-1 (2026-09-16)
+
+- **Missing `Last-Event-ID` header on Mastodon SSE reconnect** — SSE resume is nice-to-have, not blocking; events still arrive on reconnect, just from latest position.
+- **`username` param ignored by JetstreamAdapter** — `options.wantedDids` is the intended API for DID filtering; `username` is for polling streams. Could add `username` → `wantedDids` mapping as convenience.

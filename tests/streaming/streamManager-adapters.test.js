@@ -92,7 +92,31 @@ describe('streamManager with Push Adapters', () => {
     expect(stream.type).toBe('cdc');
     createdStreamIds.push(stream.id);
 
+    const adapter = activeAdapters.get(stream.id);
+    expect(adapter).toBeDefined();
+
+    // Emit a valid ThinEvent through the adapter and verify it lands in history
+    const thinEvent = {
+      id: 'cdc:test:1',
+      platform: 'cdc',
+      external_post_id: '1',
+      content_snippet: 'CDC test event payload',
+      author_id: 'cdc-author',
+      author_name: 'CDC Author',
+      post_url: 'https://example.com/post/1',
+    };
+    await adapter._emitEvent(thinEvent);
+
+    // Allow async event handler to run
+    await new Promise((r) => setTimeout(r, 500));
+
     const history = await getStreamHistory(stream.id);
     expect(Array.isArray(history)).toBe(true);
+    expect(history.length).toBeGreaterThan(0);
+    expect(history[0].data).toBeDefined();
+    expect(history[0].data.content_snippet).toBe('CDC test event payload');
+
+    const status = await getStreamStatus(stream.id);
+    expect(status.eventCount).toBeGreaterThan(0);
   });
 });

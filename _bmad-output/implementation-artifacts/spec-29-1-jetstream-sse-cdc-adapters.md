@@ -5,7 +5,7 @@ created: '2026-09-16'
 status: 'done'
 route: 'dispatch'
 baseline_commit: 'd7c8e91b'
-review_loop_iteration: 0
+review_loop_iteration: 1
 context: []
 ---
 
@@ -192,3 +192,31 @@ createStream({ type, username, interval, authToken, userId, options })
 - `npm run typecheck` — expected: 0 errors in new files
 - `vitest run tests/streaming/` — expected: all tests pass
 - `node -e "import('./src/streaming/adapters/index.js').then(m => console.log(Object.keys(m)))"` — expected: adapter exports listed
+
+### Review Findings
+
+- [x] [Review][Patch] **Duplicate stream prevention chặn tạo nhiều push streams cùng type** — `createStream` checks `s.type === type && s.username === cleanUsername` where `cleanUsername` defaults to `'*'` for push streams. This blocks creating 2 `mastodon_sse` streams for different hashtags or 2 `cdc` streams for different keys. Options: (a) include options hash in duplicate check, (b) allow unlimited push streams, (c) keep as-is (intentional).
+- [x] [Review][Patch] **`_emitEvent` publishes raw PostItem → `content_snippet`/`post_url` rỗng** [src/streaming/adapters/base-adapter.js:294] — `publisher.publish(item)` passes PostItem with `content`/`postUrl` but `formatPayload` expects `content_snippet`/`post_url` → downstream consumers get empty strings.
+- [x] [Review][Patch] **`mapToThinEvent` misses `content_snippet` → CDC events lose content** [src/streaming/streamManager.js:169] — checks `item.content || item.text` but CDC events carry `content_snippet` → `contentSnippet = ''` in history.
+- [x] [Review][Patch] **`refreshFromRedis` không restore push adapters** [src/streaming/streamManager.js:830] — only re-creates Bull jobs for polling types; push streams marked `running` but no adapter instantiated → dead records after restart.
+- [x] [Review][Patch] **Double `_scheduleReconnect` on `onerror` + `onclose`** [src/streaming/adapters/jetstream.js:222-240] — both handlers call `_scheduleReconnect()`, `reconnectAttempts` increments twice → skips backoff step (1s→4s instead of 1s→2s).
+- [x] [Review][Patch] **`normalizeJetstreamCommit` misses `recordWithMedia` and video embeds** [src/streaming/adapters/jetstream.js:57-73] — only checks `embed.images` and `embed.external.thumb`, not `embed.media.images` (recordWithMedia) or `embed.video`.
+- [x] [Review][Patch] **HTTP 4xx errors trigger infinite reconnect loop** [src/streaming/adapters/mastodon-sse.js:91-96] — `response.statusCode >= 400` → `_scheduleReconnect()` with no distinction between retriable and non-retriable errors.
+- [x] [Review][Patch] **CDC `_consumeLoop` advances cursor while paused → data loss** [src/streaming/adapters/cdc.js:109-129] — loop doesn't check `_paused`, continues `XREAD` and sets `this._cursor` — events dropped by `_emitEvent` but cursor already advanced.
+- [x] [Review][Patch] **Blocking `XREAD BLOCK` on shared Redis client** [src/streaming/adapters/cdc.js:42-49] — `_getSourceRedis` falls back to `_getRedisClient()` (shared singleton) → `XREAD BLOCK 5000` ties up connection for concurrent ops.
+- [x] [Review][Patch] **Cursor not persisted on crash** [src/streaming/adapters/base-adapter.js] — `saveCursor` only called in `disconnect()`; `_cursor` updated in-memory on each event but never flushed to Redis until graceful shutdown.
+- [x] [Review][Patch] **Orphaned cursor keys in Redis** [src/streaming/streamManager.js:375-385] — `stopStream` deletes `stateKey`/`historyKey`/`metaKey`/`lockKey` but not `xactions:adapter_cursor:{streamId}`.
+- [x] [Review][Patch] **Unthrottled `saveMeta` per event** [src/streaming/streamManager.js:304-306] — every adapter event → `meta.eventCount++` → `await saveMeta(id, meta)` — Jetstream firehose generates hundreds/sec → Redis I/O contention.
+- [x] [Review][Patch] **Dead Redis client reference on CDC reconnect** [src/streaming/adapters/cdc.js:43-49] — `_sourceRedis` cached, not reset when `_scheduleReconnect` fires → reconnect reuses dead client.
+- [x] [Review][Patch] **Missing `bodyTimeout: 0` for SSE** [src/streaming/adapters/mastodon-sse.js:85-89] — undici default 300s body timeout → low-volume SSE streams disconnect after 5 min inactivity.
+- [x] [Review][Patch] **Tautological test assertion** [tests/streaming/streamManager-adapters.test.js:64-77] — `expect(Array.isArray(history)).toBe(true)` passes with empty history; no event emitted → no real verification.
+- [x] [Review][Patch] **Cursor persistence masked by in-memory cache** [tests/streaming/adapters/base-adapter.test.js:41-46] — `getCursor` returns `this._cursor` before checking Redis → test passes even if Redis write fails.
+- [x] [Review][Patch] **Reconnect logic untested** [tests/streaming/adapters/base-adapter.test.js] — no test triggers disconnect or verifies `_scheduleReconnect` backoff sequence.
+- [x] [Review][Patch] **API routes for push streams untested** [api/routes/streams.js] — no tests for POST/PATCH `/api/streams` with push types (options passthrough, no username required).
+- [x] [Review][Patch] **`publisher.publish` call unverified** [tests/streaming/adapters/base-adapter.test.js] — no spy/assertion that `publisher.publish` is called with correct payload shape.
+- [x] [Review][Defer] **Missing `Last-Event-ID` header on Mastodon SSE reconnect** [src/streaming/adapters/mastodon-sse.js:74-81] — deferred: SSE resume is nice-to-have, not blocking; events still arrive on reconnect, just from latest position.
+- [x] [Review][Defer] **`username` param ignored by JetstreamAdapter** [src/streaming/adapters/jetstream.js:159-162] — deferred: `options.wantedDids` is the intended API for DID filtering; `username` is for polling streams. Could add `username` → `wantedDids` mapping as convenience.
+
+#### Rejected
+
+_None — all findings verified as real defects._
