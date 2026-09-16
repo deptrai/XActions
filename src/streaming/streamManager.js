@@ -1,11 +1,12 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * XActions Stream Manager
- * Manages active streams, polling intervals, deduplication via Redis,
- * and emits diffs over Socket.IO.
+ * Manages active streams (both polling-based and push-based adapters),
+ * deduplication via Redis, and emits events/diffs over Socket.IO.
  *
  * Features:
  * - Bull-queue scheduled polling that survives restarts
+ * - Push-based adapters: Bluesky Jetstream, Mastodon SSE, CDC Redis streams
  * - Per-stream concurrency lock (prevents overlapping polls)
  * - Pause / resume / update interval
  * - Duplicate stream prevention (same type + username)
@@ -24,12 +25,17 @@ import { pollTweets } from './tweetStream.js';
 import { pollFollowers } from './followerStream.js';
 import { pollMentions } from './mentionStream.js';
 import { getPoolStatus, closeAll as closeBrowserPool, isHealthy as isBrowserPoolHealthy } from './browserPool.js';
+import { JetstreamAdapter } from './adapters/jetstream.js';
+import { MastodonSSEAdapter } from './adapters/mastodon-sse.js';
+import { CDCAdapter } from './adapters/cdc.js';
+import { defaultRedisStreamPublisher, toIsoDate } from '../utils/redis-stream-publisher.js';
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-const STREAM_TYPES = ['tweet', 'follower', 'mention'];
+const STREAM_TYPES = ['tweet', 'follower', 'mention', 'jetstream', 'mastodon_sse', 'cdc'];
+const PUSH_STREAM_TYPES = ['jetstream', 'mastodon_sse', 'cdc'];
 const DEFAULT_INTERVAL_MS = 60_000; // 60 seconds
 const MIN_INTERVAL_MS = 15_000;
 const MAX_INTERVAL_MS = 3_600_000; // 1 hour
@@ -105,6 +111,9 @@ const lockKey = (streamId) => `xactions:stream:${streamId}:lock`;
 /** @type {Map<string, Object>} */
 const activeStreams = new Map();
 
+/** @type {Map<string, import('./adapters/base-adapter.js').BasePushAdapter>} */
+const activeAdapters = new Map();
+
 // Track in-flight polls to prevent overlap
 const pollingNow = new Set();
 
@@ -153,27 +162,68 @@ export function setIO(io) {
 }
 
 // ============================================================================
+// Helper: Map item/post to ThinEvent
+// ============================================================================
+
+function mapToThinEvent(item, streamMeta) {
+  const content = item.content || item.text || '';
+  const contentSnippet = String(content).slice(0, 4000);
+  const platform = item.platform || streamMeta.type;
+  const externalId = String(item.externalId || item.external_post_id || item.id || '');
+  const authorId = String(item.authorId || item.author_id || '');
+  const authorName = String(item.authorName || item.author_name || '');
+  const postUrl = String(item.postUrl || item.post_url || item.url || '');
+  const id = String(item.id || `${platform}:${externalId}`);
+  const crawledAt = toIsoDate(item.crawledAt || item.crawled_at);
+
+  return {
+    id,
+    platform,
+    external_post_id: externalId,
+    externalId, // dual-emit
+    category: item.category || 'social',
+    author_id: authorId,
+    authorId, // dual-emit
+    author_name: authorName,
+    post_url: postUrl,
+    crawled_at: crawledAt,
+    crawledAt, // dual-emit
+    storage_ref: String(item.storageRef || item.storage_ref || id),
+    storageRef: String(item.storageRef || item.storage_ref || id),
+    content_snippet: contentSnippet,
+    schema_version: 1,
+  };
+}
+
+// ============================================================================
 // Core API
 // ============================================================================
 
 /**
  * Create and start a new stream.
+ * Supports polling streams (tweet, follower, mention) and push adapters (jetstream, mastodon_sse, cdc).
  *
  * @param {Object} params
- * @param {string} params.type - 'tweet' | 'follower' | 'mention'
- * @param {string} params.username - Target X/Twitter username (without @)
- * @param {number} [params.interval] - Poll interval in ms (default 60 000)
- * @param {string} [params.authToken] - X/Twitter auth_token cookie
+ * @param {string} params.type - 'tweet' | 'follower' | 'mention' | 'jetstream' | 'mastodon_sse' | 'cdc'
+ * @param {string} [params.username] - Target username (required for polling streams, optional for push adapters)
+ * @param {number} [params.interval] - Poll interval in ms (default 60 000, polling streams only)
+ * @param {string} [params.authToken] - Auth token or cookie
  * @param {string} [params.userId] - Owner user ID
+ * @param {Record<string, any>} [params.options] - Adapter-specific options
  * @returns {Promise<Object>} Stream descriptor
  */
-export async function createStream({ type, username, interval, authToken, userId }) {
+export async function createStream({ type, username, interval, authToken, userId, options = {} }) {
   if (!STREAM_TYPES.includes(type)) {
     throw new Error(`Invalid stream type "${type}". Must be one of: ${STREAM_TYPES.join(', ')}`);
   }
-  if (!username) throw new Error('username is required');
 
-  const cleanUsername = username.replace(/^@/, '');
+  const isPush = PUSH_STREAM_TYPES.includes(type);
+
+  if (!isPush && !username) {
+    throw new Error('username is required');
+  }
+
+  const cleanUsername = username ? username.replace(/^@/, '') : '*';
   const intervalMs = clampInterval(interval || DEFAULT_INTERVAL_MS);
 
   // Duplicate prevention — reject if same type + username stream already running
@@ -183,15 +233,16 @@ export async function createStream({ type, username, interval, authToken, userId
     }
   }
 
-  const id = `stream_${type}_${cleanUsername}_${randomUUID().slice(0, 8)}`;
+  const id = `stream_${type}_${cleanUsername === '*' ? 'all' : cleanUsername}_${randomUUID().slice(0, 8)}`;
 
   const meta = {
     id,
     type,
     username: cleanUsername,
-    interval: intervalMs,
+    interval: isPush ? null : intervalMs,
     authToken: authToken || null,
     userId: userId || null,
+    options: options || {},
     status: 'running',
     createdAt: new Date().toISOString(),
     lastPollAt: null,
@@ -208,26 +259,101 @@ export async function createStream({ type, username, interval, authToken, userId
   const pipeline = redis.pipeline();
   pipeline.set(metaKey(id), JSON.stringify(meta));
   pipeline.expire(metaKey(id), REDIS_KEY_TTL);
-  pipeline.set(stateKey(id), JSON.stringify({ seenIds: [], followers: [], followerCount: null }));
-  pipeline.expire(stateKey(id), REDIS_KEY_TTL);
+  if (!isPush) {
+    pipeline.set(stateKey(id), JSON.stringify({ seenIds: [], followers: [], followerCount: null }));
+    pipeline.expire(stateKey(id), REDIS_KEY_TTL);
+  }
   await pipeline.exec();
 
   // Register in memory
   activeStreams.set(id, meta);
 
-  // Schedule repeatable Bull job
-  const queue = getQueue();
-  await queue.add('poll', { streamId: id }, {
-    repeat: { every: intervalMs },
-    jobId: id,
-  });
+  if (isPush) {
+    // Instantiate appropriate push adapter
+    let adapter;
+    if (type === 'jetstream') {
+      adapter = new JetstreamAdapter(id, options, defaultRedisStreamPublisher);
+    } else if (type === 'mastodon_sse') {
+      adapter = new MastodonSSEAdapter(id, options, defaultRedisStreamPublisher);
+    } else if (type === 'cdc') {
+      adapter = new CDCAdapter(id, options, defaultRedisStreamPublisher);
+    }
 
-  // Immediate first poll (fire-and-forget)
-  executePoll(id).catch((err) => {
-    console.error(`⚠️ Stream ${id} initial poll failed:`, err.message);
-  });
+    if (adapter) {
+      activeAdapters.set(id, adapter);
 
-  console.log(`📡 Stream created: ${id} (${type} @${cleanUsername} every ${intervalMs / 1000}s)`);
+      // Handle adapter event
+      adapter.on('event', async (rawItem) => {
+        try {
+          const thinEvent = mapToThinEvent(rawItem, meta);
+          const historyEntry = {
+            type: `stream:${type}`,
+            streamId: id,
+            data: thinEvent,
+            timestamp: new Date().toISOString(),
+          };
+
+          // Append to history list
+          const r = await getRedis();
+          await r.lpush(historyKey(id), JSON.stringify(historyEntry));
+          await r.ltrim(historyKey(id), 0, MAX_HISTORY - 1);
+          await r.expire(historyKey(id), REDIS_KEY_TTL);
+
+          // Update memory & meta counts
+          meta.eventCount = (meta.eventCount || 0) + 1;
+          meta.lastPollAt = new Date().toISOString();
+          await saveMeta(id, meta);
+
+          // Emit to Socket.IO
+          if (_io) {
+            _io.to(`stream:${id}`).emit(`stream:${type}`, historyEntry);
+            _io.to('streams').emit(`stream:${type}`, historyEntry);
+          }
+        } catch (err) {
+          console.warn(`⚠️ [${id}] Error handling adapter event:`, err instanceof Error ? err.message : String(err));
+        }
+      });
+
+      // Handle adapter status change
+      adapter.on('status', async (stat) => {
+        meta.status = stat.status;
+        await saveMeta(id, meta);
+        if (_io) {
+          _io.to(`stream:${id}`).emit('stream:status', stat);
+          _io.to('streams').emit('stream:status', stat);
+        }
+      });
+
+      // Handle adapter error
+      adapter.on('error', async (err) => {
+        meta.errorCount = (meta.errorCount || 0) + 1;
+        meta.lastError = err.message;
+        await saveMeta(id, meta);
+      });
+
+      // Connect asynchronously
+      adapter.connect().catch((err) => {
+        console.error(`❌ [${id}] Push adapter connect error:`, err.message);
+      });
+    }
+
+    console.log(`📡 Push stream created: ${id} (${type})`);
+  } else {
+    // Schedule repeatable Bull job for polling
+    const queue = getQueue();
+    await queue.add('poll', { streamId: id }, {
+      repeat: { every: intervalMs },
+      jobId: id,
+    });
+
+    // Immediate first poll (fire-and-forget)
+    executePoll(id).catch((err) => {
+      console.error(`⚠️ Stream ${id} initial poll failed:`, err.message);
+    });
+
+    console.log(`📡 Stream created: ${id} (${type} @${cleanUsername} every ${intervalMs / 1000}s)`);
+  }
+
   return sanitizeMeta(meta);
 }
 
@@ -235,6 +361,18 @@ export async function createStream({ type, username, interval, authToken, userId
  * Stop and remove a stream.
  */
 export async function stopStream(streamId) {
+  // If active push adapter, disconnect
+  const adapter = activeAdapters.get(streamId);
+  if (adapter) {
+    try {
+      await adapter.disconnect();
+    } catch (err) {
+      console.warn(`⚠️ Error disconnecting adapter ${streamId}:`, err instanceof Error ? err.message : String(err));
+    }
+    activeAdapters.delete(streamId);
+  }
+
+  // Remove repeatable Bull job if any
   await removeRepeatableJob(streamId);
 
   // Clean Redis
@@ -265,14 +403,21 @@ export async function stopAllStreams() {
 }
 
 /**
- * Pause a stream (stops polling but retains state).
+ * Pause a stream (stops polling / pauses adapter but retains state).
  */
 export async function pauseStream(streamId) {
   const meta = await loadMeta(streamId);
   if (!meta) throw new Error(`Stream ${streamId} not found`);
   if (meta.status === 'paused') return sanitizeMeta(meta);
 
-  await removeRepeatableJob(streamId);
+  if (PUSH_STREAM_TYPES.includes(meta.type)) {
+    const adapter = activeAdapters.get(streamId);
+    if (adapter) {
+      adapter.pause();
+    }
+  } else {
+    await removeRepeatableJob(streamId);
+  }
 
   meta.status = 'paused';
   await saveMeta(streamId, meta);
@@ -294,15 +439,22 @@ export async function resumeStream(streamId) {
   meta.consecutiveErrors = 0;
   await saveMeta(streamId, meta);
 
-  // Re-schedule Bull job
-  const queue = getQueue();
-  await queue.add('poll', { streamId }, {
-    repeat: { every: meta.interval },
-    jobId: streamId,
-  });
+  if (PUSH_STREAM_TYPES.includes(meta.type)) {
+    const adapter = activeAdapters.get(streamId);
+    if (adapter) {
+      adapter.resume();
+    }
+  } else {
+    // Re-schedule Bull job
+    const queue = getQueue();
+    await queue.add('poll', { streamId }, {
+      repeat: { every: meta.interval },
+      jobId: streamId,
+    });
 
-  // Immediate poll
-  executePoll(streamId).catch(() => {});
+    // Immediate poll
+    executePoll(streamId).catch(() => {});
+  }
 
   console.log(`▶️ Stream resumed: ${streamId}`);
   return sanitizeMeta(meta);
@@ -317,7 +469,7 @@ export async function updateStream(streamId, updates = {}) {
 
   let rescheduled = false;
 
-  if (updates.interval !== undefined) {
+  if (updates.interval !== undefined && !PUSH_STREAM_TYPES.includes(meta.type)) {
     const newInterval = clampInterval(updates.interval);
     if (newInterval !== meta.interval) {
       meta.interval = newInterval;
@@ -325,10 +477,14 @@ export async function updateStream(streamId, updates = {}) {
     }
   }
 
+  if (updates.options && typeof updates.options === 'object') {
+    meta.options = { ...(meta.options || {}), ...updates.options };
+  }
+
   await saveMeta(streamId, meta);
 
-  // Reschedule the Bull job with the new interval
-  if (rescheduled && meta.status === 'running') {
+  // Reschedule the Bull job with the new interval for polling streams
+  if (rescheduled && meta.status === 'running' && !PUSH_STREAM_TYPES.includes(meta.type)) {
     await removeRepeatableJob(streamId);
     const queue = getQueue();
     await queue.add('poll', { streamId }, {
@@ -353,7 +509,7 @@ export async function listStreams() {
  * Get recent event history for a stream.
  * @param {string} streamId
  * @param {number} [limit=50]
- * @param {string} [eventType] - Optional filter: 'stream:tweet', 'stream:follower', 'stream:mention'
+ * @param {string} [eventType] - Optional filter
  */
 export async function getStreamHistory(streamId, limit = 50, eventType) {
   const redis = await getRedis();
@@ -386,7 +542,7 @@ export async function getStreamStatus(streamId) {
  */
 export function getStreamStats() {
   const streams = Array.from(activeStreams.values());
-  const byStatus = { running: 0, paused: 0, backoff: 0, stopped: 0, error: 0 };
+  const byStatus = { running: 0, paused: 0, backoff: 0, stopped: 0, error: 0, reconnecting: 0 };
   let totalPolls = 0;
   let totalEvents = 0;
   let totalErrors = 0;
@@ -674,8 +830,8 @@ async function refreshFromRedis() {
       if (!activeStreams.has(meta.id)) {
         activeStreams.set(meta.id, meta);
 
-        // Re-register Bull job if stream should be running
-        if (meta.status === 'running' || meta.status === 'backoff') {
+        // Re-register Bull job if stream should be running (polling streams only)
+        if (!PUSH_STREAM_TYPES.includes(meta.type) && (meta.status === 'running' || meta.status === 'backoff')) {
           try {
             const queue = getQueue();
             const repeatableJobs = await queue.getRepeatableJobs();
@@ -694,9 +850,17 @@ async function refreshFromRedis() {
 }
 
 /**
- * Clean shutdown — close pool and queue.
+ * Clean shutdown — close adapters, pool and queue.
  */
 export async function shutdown() {
+  // Disconnect all push adapters
+  for (const adapter of activeAdapters.values()) {
+    try {
+      await adapter.disconnect();
+    } catch { /* safe ignore */ }
+  }
+  activeAdapters.clear();
+
   if (streamQueue) {
     await streamQueue.close();
     streamQueue = null;
@@ -708,4 +872,4 @@ export async function shutdown() {
   }
 }
 
-export { STREAM_TYPES, getPoolStatus };
+export { STREAM_TYPES, getPoolStatus, activeAdapters };

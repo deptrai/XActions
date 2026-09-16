@@ -22,11 +22,21 @@ export {
   shutdown,
   STREAM_TYPES,
   getPoolStatus,
+  activeAdapters,
 } from './streamManager.js';
 
 export { pollTweets } from './tweetStream.js';
 export { pollFollowers } from './followerStream.js';
 export { pollMentions } from './mentionStream.js';
+
+export {
+  BasePushAdapter,
+  JetstreamAdapter,
+  normalizeJetstreamCommit,
+  JETSTREAM_ENDPOINTS,
+  MastodonSSEAdapter,
+  CDCAdapter,
+} from './adapters/index.js';
 
 export {
   acquireBrowser,

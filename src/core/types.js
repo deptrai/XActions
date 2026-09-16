@@ -250,6 +250,11 @@
 /**
  * Minimal duck-typed interface matching redis/ioredis clients for stream operations
  * @typedef {Object} RedisClientLike
+ * @property {Function} [get]
+ * @property {Function} [set]
+ * @property {Function} [del]
+ * @property {Function} [xRead]
+ * @property {Function} [xread]
  * @property {Function} [xAdd]
  * @property {Function} [xadd]
  * @property {Function} [xLen]

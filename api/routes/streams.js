@@ -40,6 +40,8 @@ import {
 
 const router = express.Router();
 
+const PUSH_STREAM_TYPES = ['jetstream', 'mastodon_sse', 'cdc'];
+
 // ============================================================================
 // POST /api/streams — Create a new stream
 // ============================================================================
@@ -50,8 +52,9 @@ router.post('/', async (req, res) => {
   try {
     const body = /** @type {Record<string, unknown>} */ (req.body);
     const type = /** @type {string} */ (body.type);
-    const username = /** @type {string} */ (body.username);
+    const username = /** @type {string | undefined} */ (body.username);
     const interval = /** @type {number | string | undefined} */ (body.interval);
+    const options = /** @type {Record<string, unknown> | undefined} */ (body.options || {});
 
     if (!type || !STREAM_TYPES.includes(type)) {
       return res.status(400).json({
@@ -59,7 +62,9 @@ router.post('/', async (req, res) => {
       });
     }
 
-    if (!username) {
+    const isPush = PUSH_STREAM_TYPES.includes(type);
+
+    if (!isPush && !username) {
       return res.status(400).json({ error: '"username" is required' });
     }
 
@@ -72,6 +77,7 @@ router.post('/', async (req, res) => {
       interval: intervalMs,
       authToken: /** @type {string | undefined} */ (body.authToken || reqUser?.sessionCookie || undefined),
       userId: /** @type {string | undefined} */ (reqUser?.id),
+      options,
     });
 
     res.status(201).json(stream);
@@ -143,7 +149,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // ============================================================================
-// PATCH /api/streams/:id — Update stream settings (interval)
+// PATCH /api/streams/:id — Update stream settings (interval / options)
 // ============================================================================
 
 router.patch('/:id', async (req, res) => {
@@ -152,6 +158,9 @@ router.patch('/:id', async (req, res) => {
     const updates = /** @type {Record<string, unknown>} */ ({});
     if (body.interval !== undefined) {
       updates.interval = Math.max(15, Number(body.interval)) * 1000;
+    }
+    if (body.options && typeof body.options === 'object') {
+      updates.options = body.options;
     }
     const stream = await updateStream(req.params.id, updates);
     res.json(stream);

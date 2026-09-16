@@ -42,14 +42,17 @@ describe('STREAM_TYPES', () => {
     expect(Array.isArray(STREAM_TYPES)).toBe(true);
   });
 
-  it('contains tweet, follower, and mention', () => {
+  it('contains all 6 stream types (polling + push)', () => {
     expect(STREAM_TYPES).toContain('tweet');
     expect(STREAM_TYPES).toContain('follower');
     expect(STREAM_TYPES).toContain('mention');
+    expect(STREAM_TYPES).toContain('jetstream');
+    expect(STREAM_TYPES).toContain('mastodon_sse');
+    expect(STREAM_TYPES).toContain('cdc');
   });
 
-  it('has exactly 3 entries', () => {
-    expect(STREAM_TYPES).toHaveLength(3);
+  it('has exactly 6 entries', () => {
+    expect(STREAM_TYPES).toHaveLength(6);
   });
 });
 
