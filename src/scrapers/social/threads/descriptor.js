@@ -28,6 +28,15 @@ const THREADS_ACTION_MAP = {
   search: 'search',
   followers: 'followers',
   following: 'following',
+  post_write: 'post',
+  publish: 'post',
+  reply: 'reply',
+  like: 'like',
+  favorite: 'like',
+  repost: 'repost',
+  retweet: 'repost',
+  follow: 'follow',
+  unfollow: 'unfollow',
 };
 
 export default {
@@ -39,6 +48,9 @@ export default {
    * @returns {string}
    */
   mapAction(options, ctx) {
+    if (ctx.action === 'post' && (options.text || options.content)) {
+      return 'post';
+    }
     const mappedAction = THREADS_ACTION_MAP[ctx.action];
     if (!mappedAction) {
       const available = Object.values(THREADS_ACTION_MAP);
@@ -96,6 +108,12 @@ export default {
     // Map cursor to after for post/comment actions.
     if (mappedArgs.cursor != null && ['post_detail', 'get_post_comments'].includes(mappedAction) && mappedArgs.after == null) {
       mappedArgs.after = mappedArgs.cursor;
+    }
+    if (options.text) mappedArgs.text = options.text;
+    if (options.content && !mappedArgs.text) mappedArgs.text = options.content;
+    if (options.userId) mappedArgs.userId = options.userId;
+    if (options.accountId || options.dryRun) {
+      mappedArgs.accountId = options.accountId || 'threads-guest';
     }
     if (options.resume !== undefined) mappedArgs.resume = options.resume;
     if (options.dryRun !== undefined) mappedArgs.dryRun = options.dryRun;

@@ -204,6 +204,91 @@ export class ThreadsCrawler extends AbstractCrawler {
       example: { username: 'zuck', count: 50 },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getFollowing(args, session),
     }));
+
+    // ── Write Actions: post, reply, like, repost, follow, unfollow ──
+    this.registerAction(/** @type {any} */ ({
+      action: 'post',
+      description: 'Publish a new post to Threads',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['text'],
+      optionalArgs: ['dryRun'],
+      example: { text: 'Hello Threads from XActions', dryRun: false },
+      outputType: '{ success: boolean, id?: string, dryRun?: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.post(args, session),
+    }));
+
+    this.registerAction(/** @type {any} */ ({
+      action: 'reply',
+      description: 'Reply to a post on Threads',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['text', 'postId'],
+      optionalArgs: ['dryRun'],
+      example: { text: 'Great point!', postId: '12345', dryRun: false },
+      outputType: '{ success: boolean, id?: string, dryRun?: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.reply(args, session),
+    }));
+
+    this.registerAction(/** @type {any} */ ({
+      action: 'like',
+      description: 'Like a post on Threads',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['postId'],
+      optionalArgs: ['dryRun'],
+      example: { postId: '12345', dryRun: false },
+      outputType: '{ success: boolean, dryRun?: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.like(args, session),
+    }));
+
+    this.registerAction(/** @type {any} */ ({
+      action: 'repost',
+      description: 'Repost a post on Threads',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['postId'],
+      optionalArgs: ['dryRun'],
+      example: { postId: '12345', dryRun: false },
+      outputType: '{ success: boolean, dryRun?: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.repost(args, session),
+    }));
+
+    this.registerAction(/** @type {any} */ ({
+      action: 'retweet',
+      description: 'Alias for repost on Threads',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['postId'],
+      optionalArgs: ['dryRun'],
+      example: { postId: '12345', dryRun: false },
+      outputType: '{ success: boolean, dryRun?: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.repost(args, session),
+    }));
+
+    this.registerAction(/** @type {any} */ ({
+      action: 'follow',
+      description: 'Follow a user on Threads',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['userId'],
+      optionalArgs: ['username', 'dryRun'],
+      example: { userId: '12345', dryRun: false },
+      outputType: '{ success: boolean, dryRun?: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.follow(args, session),
+    }));
+
+    this.registerAction(/** @type {any} */ ({
+      action: 'unfollow',
+      description: 'Unfollow a user on Threads',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['userId'],
+      optionalArgs: ['username', 'dryRun'],
+      example: { userId: '12345', dryRun: false },
+      outputType: '{ success: boolean, dryRun?: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.unfollow(args, session),
+    }));
   }
 
   /**
@@ -2217,6 +2302,237 @@ export class ThreadsCrawler extends AbstractCrawler {
     } catch {}
   }
 
+  /**
+   * Action Handler: post
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async post(args = {}, session = {}) {
+    const dryRun = args.dryRun !== false;
+    const text = args.text || args.content || '';
+
+    if (!text || typeof text !== 'string') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "text"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        id: 'dryrun_threads_post_id',
+        text,
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    throw new PlatformError({
+      type: ErrorTypes.UNSUPPORTED_ACTION,
+      code: 'XACT_5001',
+      message: 'Threads live posting requires official Meta Threads API token or browser-as-signer bridge',
+      statusCode: 501,
+      suggestedAction: SuggestedActions.RELOGIN,
+      platform: 'threads',
+    });
+  }
+
+  /**
+   * Action Handler: reply
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async reply(args = {}, session = {}) {
+    const dryRun = args.dryRun !== false;
+    const text = args.text || args.content || '';
+    const postId = args.postId || args.targetId;
+
+    if (!text || !postId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required arguments: "text" and "postId"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        id: 'dryrun_threads_reply_id',
+        replyTo: postId,
+        text,
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    throw new PlatformError({
+      type: ErrorTypes.UNSUPPORTED_ACTION,
+      code: 'XACT_5001',
+      message: 'Threads live reply requires official Meta Threads API token or browser-as-signer bridge',
+      statusCode: 501,
+      suggestedAction: SuggestedActions.RELOGIN,
+      platform: 'threads',
+    });
+  }
+
+  /**
+   * Action Handler: like
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async like(args = {}, session = {}) {
+    const dryRun = args.dryRun !== false;
+    const postId = args.postId || args.targetId;
+
+    if (!postId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "postId"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        postId,
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    throw new PlatformError({
+      type: ErrorTypes.UNSUPPORTED_ACTION,
+      code: 'XACT_5001',
+      message: 'Threads live like requires official Meta Threads API token or browser-as-signer bridge',
+      statusCode: 501,
+      suggestedAction: SuggestedActions.RELOGIN,
+      platform: 'threads',
+    });
+  }
+
+  /**
+   * Action Handler: repost
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async repost(args = {}, session = {}) {
+    const dryRun = args.dryRun !== false;
+    const postId = args.postId || args.targetId;
+
+    if (!postId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "postId"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        postId,
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    throw new PlatformError({
+      type: ErrorTypes.UNSUPPORTED_ACTION,
+      code: 'XACT_5001',
+      message: 'Threads live repost requires official Meta Threads API token or browser-as-signer bridge',
+      statusCode: 501,
+      suggestedAction: SuggestedActions.RELOGIN,
+      platform: 'threads',
+    });
+  }
+
+  /**
+   * Action Handler: follow
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async follow(args = {}, session = {}) {
+    const dryRun = args.dryRun !== false;
+    const userId = args.userId || args.targetId || args.username;
+
+    if (!userId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "userId" or "username"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        userId,
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    throw new PlatformError({
+      type: ErrorTypes.UNSUPPORTED_ACTION,
+      code: 'XACT_5001',
+      message: 'Threads live follow requires official Meta Threads API token or browser-as-signer bridge',
+      statusCode: 501,
+      suggestedAction: SuggestedActions.RELOGIN,
+      platform: 'threads',
+    });
+  }
+
+  /**
+   * Action Handler: unfollow
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async unfollow(args = {}, session = {}) {
+    const dryRun = args.dryRun !== false;
+    const userId = args.userId || args.targetId || args.username;
+
+    if (!userId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "userId" or "username"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'threads',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        userId,
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    throw new PlatformError({
+      type: ErrorTypes.UNSUPPORTED_ACTION,
+      code: 'XACT_5001',
+      message: 'Threads live unfollow requires official Meta Threads API token or browser-as-signer bridge',
+      statusCode: 501,
+      suggestedAction: SuggestedActions.RELOGIN,
+      platform: 'threads',
+    });
+  }
 
   /**
    * Cleanup crawler and client resources.

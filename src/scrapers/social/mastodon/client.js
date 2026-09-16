@@ -442,4 +442,140 @@ export class MastodonClient extends AbstractApiClient {
       throw err;
     }
   }
+
+  /**
+   * Post a new status (or reply) on Mastodon.
+   * Endpoint: POST /api/v1/statuses
+   * @param {Object} args
+   * @param {string} args.status - Status text
+   * @param {string} [args.in_reply_to_id]
+   * @param {string[]} [args.media_ids]
+   * @param {string} [args.visibility]
+   * @param {string} [args.instance]
+   * @returns {Promise<Record<string, any>>}
+   */
+  async postStatus(args = {}) {
+    const statusText = args.status || args.text;
+    if (!statusText || typeof statusText !== 'string') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing or empty status text',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'mastodon',
+      });
+    }
+
+    const body = {
+      status: statusText,
+      in_reply_to_id: args.in_reply_to_id || args.inReplyToId || args.replyToId,
+      media_ids: args.media_ids || args.mediaIds,
+      visibility: args.visibility,
+    };
+
+    const url = this.buildUrl('/api/v1/statuses', {}, args.instance);
+    const res = await this.post(url, { json: body, requiresAuth: true });
+    return res?.data !== undefined ? res.data : res;
+  }
+
+  /**
+   * Favourite (like) a status on Mastodon.
+   * Endpoint: POST /api/v1/statuses/:id/favourite
+   * @param {string | number} statusId
+   * @param {Object} [options={}]
+   * @returns {Promise<Record<string, any>>}
+   */
+  async favouriteStatus(statusId, options = {}) {
+    const cleanId = String(statusId || '').trim();
+    if (!cleanId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required statusId for favourite',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'mastodon',
+      });
+    }
+
+    const url = this.buildUrl(`/api/v1/statuses/${cleanId}/favourite`, {}, options.instance);
+    const res = await this.post(url, { requiresAuth: true });
+    return res?.data !== undefined ? res.data : res;
+  }
+
+  /**
+   * Reblog (boost / retweet) a status on Mastodon.
+   * Endpoint: POST /api/v1/statuses/:id/reblog
+   * @param {string | number} statusId
+   * @param {Object} [options={}]
+   * @returns {Promise<Record<string, any>>}
+   */
+  async reblogStatus(statusId, options = {}) {
+    const cleanId = String(statusId || '').trim();
+    if (!cleanId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required statusId for reblog',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'mastodon',
+      });
+    }
+
+    const url = this.buildUrl(`/api/v1/statuses/${cleanId}/reblog`, {}, options.instance);
+    const res = await this.post(url, { requiresAuth: true });
+    return res?.data !== undefined ? res.data : res;
+  }
+
+  /**
+   * Follow an account on Mastodon.
+   * Endpoint: POST /api/v1/accounts/:id/follow
+   * @param {string | number} accountId
+   * @param {Object} [options={}]
+   * @returns {Promise<Record<string, any>>}
+   */
+  async followAccount(accountId, options = {}) {
+    const cleanId = String(accountId || '').trim();
+    if (!cleanId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required accountId for follow',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'mastodon',
+      });
+    }
+
+    const url = this.buildUrl(`/api/v1/accounts/${cleanId}/follow`, {}, options.instance);
+    const res = await this.post(url, { requiresAuth: true });
+    return res?.data !== undefined ? res.data : res;
+  }
+
+  /**
+   * Unfollow an account on Mastodon.
+   * Endpoint: POST /api/v1/accounts/:id/unfollow
+   * @param {string | number} accountId
+   * @param {Object} [options={}]
+   * @returns {Promise<Record<string, any>>}
+   */
+  async unfollowAccount(accountId, options = {}) {
+    const cleanId = String(accountId || '').trim();
+    if (!cleanId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required accountId for unfollow',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'mastodon',
+      });
+    }
+
+    const url = this.buildUrl(`/api/v1/accounts/${cleanId}/unfollow`, {}, options.instance);
+    const res = await this.post(url, { requiresAuth: true });
+    return res?.data !== undefined ? res.data : res;
+  }
 }

@@ -25,6 +25,15 @@ const BLUESKY_ACTION_MAP = {
   search_posts: 'search',
   trending: 'trending',
   custom_feed: 'feed',
+  post: 'post',
+  publish: 'post',
+  reply: 'reply',
+  like: 'like',
+  favorite: 'like',
+  repost: 'repost',
+  retweet: 'repost',
+  follow: 'follow',
+  unfollow: 'unfollow',
 };
 
 export default {
@@ -89,6 +98,11 @@ export default {
     if (password) mappedArgs.password = password;
     ctx.identifier = identifier;
     ctx.password = password;
+
+    if (options.accountId || options.dryRun || identifier) {
+      mappedArgs.accountId = options.accountId || identifier || 'bluesky-guest';
+    }
+
     return mappedArgs;
   },
 

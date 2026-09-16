@@ -177,6 +177,96 @@ export class MastodonCrawler extends AbstractCrawler {
       example: { limit: 20 },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getTrending(args, session),
     });
+
+    // ── 8. Write Action: post ──
+    this.registerAction({
+      action: 'post',
+      description: 'Publish a new status to Mastodon',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['text'],
+      optionalArgs: ['status', 'media_ids', 'visibility', 'instance', 'dryRun', 'accessToken'],
+      outputType: '{ status: any, success: boolean }',
+      example: { text: 'Hello Mastodon from XActions', dryRun: false },
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.post(args, session),
+    });
+
+    // ── 9. Write Action: reply ──
+    this.registerAction({
+      action: 'reply',
+      description: 'Reply to an existing status on Mastodon',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['text', 'in_reply_to_id'],
+      optionalArgs: ['status', 'media_ids', 'instance', 'dryRun', 'accessToken'],
+      example: { text: 'Great point!', in_reply_to_id: '123456789' },
+      outputType: '{ status: any, success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.reply(args, session),
+    });
+
+    // ── 10. Write Action: like ──
+    this.registerAction({
+      action: 'like',
+      description: 'Favourite (like) a status on Mastodon',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['statusId'],
+      optionalArgs: ['instance', 'dryRun', 'accessToken'],
+      example: { statusId: '123456789' },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.like(args, session),
+    });
+
+    // ── 11. Write Action: retweet / reblog ──
+    this.registerAction({
+      action: 'reblog',
+      description: 'Boost (reblog) a status on Mastodon',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['statusId'],
+      optionalArgs: ['instance', 'dryRun', 'accessToken'],
+      example: { statusId: '123456789' },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.reblog(args, session),
+    });
+
+    this.registerAction({
+      action: 'retweet',
+      description: 'Alias for reblog on Mastodon',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['statusId'],
+      optionalArgs: ['instance', 'dryRun', 'accessToken'],
+      example: { statusId: '123456789' },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.reblog(args, session),
+    });
+
+    // ── 12. Write Action: follow ──
+    this.registerAction({
+      action: 'follow',
+      description: 'Follow an account on Mastodon',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['accountId'],
+      optionalArgs: ['username', 'instance', 'dryRun', 'accessToken'],
+      example: { accountId: '12345' },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.follow(args, session),
+    });
+
+    // ── 13. Write Action: unfollow ──
+    this.registerAction({
+      action: 'unfollow',
+      description: 'Unfollow an account on Mastodon',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['accountId'],
+      optionalArgs: ['username', 'instance', 'dryRun', 'accessToken'],
+      example: { accountId: '12345' },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.unfollow(args, session),
+    });
   }
 
   /**
@@ -444,6 +534,238 @@ export class MastodonCrawler extends AbstractCrawler {
    */
   async init() {
     // No-op for HTTP Mastodon
+  }
+
+  /**
+   * Action Handler: post
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async post(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const dryRun = args.dryRun === true;
+    const text = args.text || args.status || '';
+
+    if (!text || typeof text !== 'string') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "text" or "status"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'mastodon',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        status: { id: 'dryrun_status_id', content: text, created_at: new Date().toISOString() },
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    const res = await this.client.postStatus({
+      status: text,
+      media_ids: args.media_ids || args.mediaIds,
+      visibility: args.visibility,
+      instance: args.instance,
+    });
+
+    return {
+      status: res,
+      success: true,
+    };
+  }
+
+  /**
+   * Action Handler: reply
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async reply(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const dryRun = args.dryRun === true;
+    const text = args.text || args.status || '';
+    const inReplyToId = args.in_reply_to_id || args.inReplyToId || args.replyToId || args.targetId;
+
+    if (!text || !inReplyToId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required arguments: "text" and "in_reply_to_id"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'mastodon',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        status: { id: 'dryrun_reply_id', in_reply_to_id: inReplyToId, content: text },
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    const res = await this.client.postStatus({
+      status: text,
+      in_reply_to_id: inReplyToId,
+      media_ids: args.media_ids || args.mediaIds,
+      visibility: args.visibility,
+      instance: args.instance,
+    });
+
+    return {
+      status: res,
+      success: true,
+    };
+  }
+
+  /**
+   * Action Handler: like
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async like(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const dryRun = args.dryRun === true;
+    const statusId = args.statusId || args.targetId || args.id;
+
+    if (!statusId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "statusId"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'mastodon',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    await this.client.favouriteStatus(statusId, { instance: args.instance });
+    return {
+      success: true,
+    };
+  }
+
+  /**
+   * Action Handler: reblog
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async reblog(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const dryRun = args.dryRun === true;
+    const statusId = args.statusId || args.targetId || args.id;
+
+    if (!statusId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "statusId"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'mastodon',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    await this.client.reblogStatus(statusId, { instance: args.instance });
+    return {
+      success: true,
+    };
+  }
+
+  /**
+   * Action Handler: follow
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async follow(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const dryRun = args.dryRun === true;
+    let accountId = args.accountId || args.targetId || args.id;
+
+    if (!accountId && (args.username || args.handle)) {
+      const profile = await this.profile(args);
+      accountId = profile?.profile?.externalId || profile?.profile?.authorId;
+    }
+
+    if (!accountId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "accountId" or "username"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'mastodon',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    await this.client.followAccount(accountId, { instance: args.instance });
+    return {
+      success: true,
+    };
+  }
+
+  /**
+   * Action Handler: unfollow
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async unfollow(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const dryRun = args.dryRun === true;
+    let accountId = args.accountId || args.targetId || args.id;
+
+    if (!accountId && (args.username || args.handle)) {
+      const profile = await this.profile(args);
+      accountId = profile?.profile?.externalId || profile?.profile?.authorId;
+    }
+
+    if (!accountId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "accountId" or "username"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'mastodon',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    await this.client.unfollowAccount(accountId, { instance: args.instance });
+    return {
+      success: true,
+    };
   }
 
   /**

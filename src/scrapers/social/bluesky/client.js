@@ -361,4 +361,188 @@ export class BlueskyClient extends AbstractApiClient {
     const res = /** @type {Record<string, any>} */ (await this.request(method, url, reqOpts));
     return res?.data !== undefined ? res.data : res;
   }
+
+  /**
+   * Create a record in AT Protocol repository (com.atproto.repo.createRecord).
+   * @param {string} collection - NSID of record collection (e.g. app.bsky.feed.post)
+   * @param {Record<string, any>} record - The record payload
+   * @param {string} [repo] - Repo DID (defaults to client.did)
+   * @returns {Promise<{ uri: string, cid: string }>}
+   */
+  async createRecord(collection, record, repo) {
+    const targetRepo = repo || this.did;
+    if (!targetRepo) {
+      throw new PlatformError({
+        type: ErrorTypes.AUTH_EXPIRED,
+        code: 'XACT_4010',
+        message: 'Creating records on Bluesky requires authentication with user DID',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'bluesky',
+      });
+    }
+
+    return await this.xrpc(
+      'com.atproto.repo.createRecord',
+      {},
+      {
+        method: 'POST',
+        json: {
+          repo: targetRepo,
+          collection,
+          record,
+        },
+        requiresAuth: true,
+        skipResponseValidation: true,
+      }
+    );
+  }
+
+  /**
+   * Delete a record in AT Protocol repository (com.atproto.repo.deleteRecord).
+   * @param {string} collection - NSID of record collection
+   * @param {string} rkey - Record key
+   * @param {string} [repo] - Repo DID (defaults to client.did)
+   * @returns {Promise<void>}
+   */
+  async deleteRecord(collection, rkey, repo) {
+    const targetRepo = repo || this.did;
+    if (!targetRepo) {
+      throw new PlatformError({
+        type: ErrorTypes.AUTH_EXPIRED,
+        code: 'XACT_4010',
+        message: 'Deleting records on Bluesky requires authentication with user DID',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.RELOGIN,
+        platform: 'bluesky',
+      });
+    }
+
+    await this.xrpc(
+      'com.atproto.repo.deleteRecord',
+      {},
+      {
+        method: 'POST',
+        json: {
+          repo: targetRepo,
+          collection,
+          rkey,
+        },
+        requiresAuth: true,
+        skipResponseValidation: true,
+      }
+    );
+  }
+
+  /**
+   * Post a new text status or reply to Bluesky.
+   * @param {Object} args
+   * @param {string} args.text - Post text
+   * @param {Object} [args.reply] - Reply ref object { root: { uri, cid }, parent: { uri, cid } }
+   * @returns {Promise<{ uri: string, cid: string }>}
+   */
+  async post({ text, reply }) {
+    if (typeof text !== 'string' || !text.trim()) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing or empty text for Bluesky post',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'bluesky',
+      });
+    }
+
+    const record = {
+      $type: 'app.bsky.feed.post',
+      text,
+      createdAt: new Date().toISOString(),
+      ...(reply ? { reply } : {}),
+    };
+
+    return await this.createRecord('app.bsky.feed.post', record);
+  }
+
+  /**
+   * Like a post on Bluesky.
+   * @param {Object} args
+   * @param {string} args.uri - Subject AT-URI
+   * @param {string} args.cid - Subject CID
+   * @returns {Promise<{ uri: string, cid: string }>}
+   */
+  async like({ uri, cid }) {
+    if (!uri || !cid) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Liking on Bluesky requires both uri and cid',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'bluesky',
+      });
+    }
+
+    const record = {
+      $type: 'app.bsky.feed.like',
+      subject: { uri, cid },
+      createdAt: new Date().toISOString(),
+    };
+
+    return await this.createRecord('app.bsky.feed.like', record);
+  }
+
+  /**
+   * Repost (retweet) a post on Bluesky.
+   * @param {Object} args
+   * @param {string} args.uri - Subject AT-URI
+   * @param {string} args.cid - Subject CID
+   * @returns {Promise<{ uri: string, cid: string }>}
+   */
+  async repost({ uri, cid }) {
+    if (!uri || !cid) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Reposting on Bluesky requires both uri and cid',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'bluesky',
+      });
+    }
+
+    const record = {
+      $type: 'app.bsky.feed.repost',
+      subject: { uri, cid },
+      createdAt: new Date().toISOString(),
+    };
+
+    return await this.createRecord('app.bsky.feed.repost', record);
+  }
+
+  /**
+   * Follow a user on Bluesky.
+   * @param {Object} args
+   * @param {string} args.subject - User DID
+   * @returns {Promise<{ uri: string, cid: string }>}
+   */
+  async follow({ subject }) {
+    if (!subject) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Following on Bluesky requires user subject DID',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'bluesky',
+      });
+    }
+
+    const record = {
+      $type: 'app.bsky.graph.follow',
+      subject,
+      createdAt: new Date().toISOString(),
+    };
+
+    return await this.createRecord('app.bsky.graph.follow', record);
+  }
 }

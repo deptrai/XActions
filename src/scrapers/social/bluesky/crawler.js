@@ -169,6 +169,96 @@ export class BlueskyCrawler extends AbstractCrawler {
       example: { feedUri: 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot' },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getFeed(args, session),
     });
+
+    // ── 8. Write Action: post ──
+    this.registerAction({
+      action: 'post',
+      description: 'Publish a new post to Bluesky',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['text'],
+      optionalArgs: ['reply', 'dryRun', 'identifier', 'password'],
+      example: { text: 'Hello Bluesky from XActions', dryRun: false },
+      outputType: '{ uri: string, cid: string, success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.post(args, session),
+    });
+
+    // ── 9. Write Action: reply ──
+    this.registerAction({
+      action: 'reply',
+      description: 'Reply to an existing post on Bluesky',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['text', 'parentUri', 'parentCid'],
+      optionalArgs: ['rootUri', 'rootCid', 'dryRun', 'identifier', 'password'],
+      example: { text: 'Great point!', parentUri: 'at://did:plc:.../app.bsky.feed.post/...', parentCid: 'bafyre...' },
+      outputType: '{ uri: string, cid: string, success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.reply(args, session),
+    });
+
+    // ── 10. Write Action: like ──
+    this.registerAction({
+      action: 'like',
+      description: 'Like a post on Bluesky',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['uri', 'cid'],
+      optionalArgs: ['dryRun', 'identifier', 'password'],
+      example: { uri: 'at://did:plc:.../app.bsky.feed.post/...', cid: 'bafyre...' },
+      outputType: '{ uri: string, cid: string, success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.like(args, session),
+    });
+
+    // ── 11. Write Action: repost / retweet ──
+    this.registerAction({
+      action: 'repost',
+      description: 'Repost (retweet) a post on Bluesky',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['uri', 'cid'],
+      optionalArgs: ['dryRun', 'identifier', 'password'],
+      example: { uri: 'at://did:plc:.../app.bsky.feed.post/...', cid: 'bafyre...' },
+      outputType: '{ uri: string, cid: string, success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.repost(args, session),
+    });
+
+    this.registerAction({
+      action: 'retweet',
+      description: 'Alias for repost on Bluesky',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['uri', 'cid'],
+      optionalArgs: ['dryRun', 'identifier', 'password'],
+      example: { uri: 'at://did:plc:.../app.bsky.feed.post/...', cid: 'bafyre...' },
+      outputType: '{ uri: string, cid: string, success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.repost(args, session),
+    });
+
+    // ── 12. Write Action: follow ──
+    this.registerAction({
+      action: 'follow',
+      description: 'Follow a user on Bluesky by DID',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['subject'],
+      optionalArgs: ['handle', 'dryRun', 'identifier', 'password'],
+      example: { subject: 'did:plc:z72i7hdynmk6r22z27h6tvur' },
+      outputType: '{ uri: string, cid: string, success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.follow(args, session),
+    });
+
+    // ── 13. Write Action: unfollow ──
+    this.registerAction({
+      action: 'unfollow',
+      description: 'Unfollow a user on Bluesky by follow record key or subject',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['rkey'],
+      optionalArgs: ['dryRun', 'identifier', 'password'],
+      example: { rkey: '3k2v...' },
+      outputType: '{ success: boolean }',
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.unfollow(args, session),
+    });
   }
 
   /**
@@ -477,6 +567,248 @@ export class BlueskyCrawler extends AbstractCrawler {
         end_cursor: nextCursor,
         has_next_page: Boolean(nextCursor),
       },
+    };
+  }
+
+  /**
+   * Action Handler: post
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async post(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const dryRun = args.dryRun === true;
+    const text = args.text || args.content || '';
+
+    if (!text || typeof text !== 'string') {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "text"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'bluesky',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        uri: 'at://did:plc:dryrun/app.bsky.feed.post/dryrun',
+        cid: 'bafyredryrun',
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    const res = await this.client.post({ text, reply: args.reply });
+    return {
+      uri: res.uri,
+      cid: res.cid,
+      success: true,
+    };
+  }
+
+  /**
+   * Action Handler: reply
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async reply(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const dryRun = args.dryRun === true;
+    const text = args.text || args.content || '';
+    const parentUri = args.parentUri || args.uri;
+    const parentCid = args.parentCid || args.cid;
+
+    if (!text || !parentUri || !parentCid) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required arguments for reply: "text", "parentUri", "parentCid"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'bluesky',
+      });
+    }
+
+    const rootUri = args.rootUri || parentUri;
+    const rootCid = args.rootCid || parentCid;
+
+    if (dryRun) {
+      return {
+        uri: 'at://did:plc:dryrun/app.bsky.feed.post/dryrunreply',
+        cid: 'bafyredryrunreply',
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    const replyObj = {
+      root: { uri: rootUri, cid: rootCid },
+      parent: { uri: parentUri, cid: parentCid },
+    };
+
+    const res = await this.client.post({ text, reply: replyObj });
+    return {
+      uri: res.uri,
+      cid: res.cid,
+      success: true,
+    };
+  }
+
+  /**
+   * Action Handler: like
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async like(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const dryRun = args.dryRun === true;
+    const uri = args.uri || args.targetUri || args.targetId;
+    const cid = args.cid || args.targetCid || 'bafyresyntheticcid';
+
+    if (!uri) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "uri"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'bluesky',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        uri: 'at://did:plc:dryrun/app.bsky.feed.like/dryrun',
+        cid: 'bafyredryrunlike',
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    const res = await this.client.like({ uri, cid });
+    return {
+      uri: res.uri,
+      cid: res.cid,
+      success: true,
+    };
+  }
+
+  /**
+   * Action Handler: repost
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async repost(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const dryRun = args.dryRun === true;
+    const uri = args.uri || args.targetUri || args.targetId;
+    const cid = args.cid || args.targetCid || 'bafyresyntheticcid';
+
+    if (!uri) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "uri"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'bluesky',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        uri: 'at://did:plc:dryrun/app.bsky.feed.repost/dryrun',
+        cid: 'bafyredryrunrepost',
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    const res = await this.client.repost({ uri, cid });
+    return {
+      uri: res.uri,
+      cid: res.cid,
+      success: true,
+    };
+  }
+
+  /**
+   * Action Handler: follow
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async follow(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const dryRun = args.dryRun === true;
+    let subject = args.subject || args.did;
+
+    if (!subject && (args.handle || args.username)) {
+      const handle = args.handle || args.username;
+      const profile = await this.profile({ handle });
+      subject = profile?.profile?.externalId || profile?.profile?.authorId;
+    }
+
+    if (!subject) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "subject" (DID) or "handle"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'bluesky',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        uri: 'at://did:plc:dryrun/app.bsky.graph.follow/dryrun',
+        cid: 'bafyredryrunfollow',
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    const res = await this.client.follow({ subject });
+    return {
+      uri: res.uri,
+      cid: res.cid,
+      success: true,
+    };
+  }
+
+  /**
+   * Action Handler: unfollow
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async unfollow(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const dryRun = args.dryRun === true;
+    const rkey = args.rkey || args.followRecordKey;
+
+    if (!rkey) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'Missing required argument: "rkey"',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: 'bluesky',
+      });
+    }
+
+    if (dryRun) {
+      return {
+        success: true,
+        dryRun: true,
+      };
+    }
+
+    await this.client.deleteRecord('app.bsky.graph.follow', rkey);
+    return {
+      success: true,
     };
   }
 

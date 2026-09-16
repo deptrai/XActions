@@ -253,10 +253,22 @@ export { DESCRIPTORS };
  *   const posts = await scrape('threads', 'tweets', { page, username: 'zuck', limit: 20 });
  */
 export async function scrape(platform, action, options = {}) {
-  if (typeof platform !== 'string' || !platform) {
-    throw new Error('❌ platform must be a non-empty string');
+  if (!platform || (typeof platform !== 'string' && !Array.isArray(platform))) {
+    throw new Error('❌ platform must be a non-empty string or array of strings');
   }
   options = options || {};
+
+  // Support cross-platform write dispatch via UniversalActionDispatcher (Story 30.1)
+  if (platform === 'all' || Array.isArray(platform)) {
+    const { UniversalActionDispatcher } = await import('./social/dispatcher.js');
+    return await UniversalActionDispatcher.dispatch({
+      platform,
+      action,
+      args: options,
+      options,
+    });
+  }
+
   const platformName = platform.toLowerCase();
   const descriptor = DESCRIPTORS[platformName];
   // Every alias that had a scrape() block has a descriptor — a miss here means

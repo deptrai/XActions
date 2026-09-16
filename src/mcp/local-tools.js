@@ -1891,6 +1891,60 @@ export async function x_viral_tweet_detector({ query, minLikes = 100, limit = 20
   };
 }
 
+// ============================================================================
+// Cross-Platform Universal Write Tools (Story 30.1)
+// ============================================================================
+
+export async function x_publish_all(args = {}) {
+  const { UniversalActionDispatcher } = await import('../scrapers/social/dispatcher.js');
+  const platforms = args.platforms || args.platform || 'all';
+  const text = args.text || args.content || '';
+  const dryRun = args.dryRun === true;
+
+  return await UniversalActionDispatcher.dispatch({
+    platform: platforms,
+    action: 'post',
+    args: { text, mediaIds: args.mediaIds, ...args },
+    options: { dryRun },
+  });
+}
+
+export async function x_like_all(args = {}) {
+  const { UniversalActionDispatcher } = await import('../scrapers/social/dispatcher.js');
+  const platforms = args.platforms || args.platform || 'all';
+  const dryRun = args.dryRun === true;
+
+  return await UniversalActionDispatcher.dispatch({
+    platform: platforms,
+    action: 'like',
+    args: {
+      targetId: args.targetId || args.tweetId || args.statusId || args.postId,
+      uri: args.uri,
+      cid: args.cid,
+      ...args,
+    },
+    options: { dryRun },
+  });
+}
+
+export async function x_follow_all(args = {}) {
+  const { UniversalActionDispatcher } = await import('../scrapers/social/dispatcher.js');
+  const platforms = args.platforms || args.platform || 'all';
+  const dryRun = args.dryRun === true;
+
+  return await UniversalActionDispatcher.dispatch({
+    platform: platforms,
+    action: 'follow',
+    args: {
+      username: args.username || args.handle,
+      subject: args.subject || args.did,
+      accountId: args.accountId || args.userId,
+      ...args,
+    },
+    options: { dryRun },
+  });
+}
+
 export const toolMap = {
   // Browser & Page lifecycle helpers
   getPage,
@@ -1994,6 +2048,10 @@ export const toolMap = {
   x_shadowban_check,
   x_backup_account,
   x_viral_tweet_detector,
+  // Universal Multi-Platform Write Actions (Story 30.1)
+  x_publish_all,
+  x_like_all,
+  x_follow_all,
   // Utility (not an MCP tool, used by server.js cleanup)
   closeBrowser,
 };

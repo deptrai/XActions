@@ -32,6 +32,19 @@ const MASTODON_ACTION_MAP = {
   tag: 'hashtag',
   trending: 'trending',
   trends: 'trending',
+  post: 'post',
+  publish: 'post',
+  toot_post: 'post',
+  reply: 'reply',
+  like: 'like',
+  favorite: 'like',
+  favourite: 'like',
+  reblog: 'reblog',
+  repost: 'reblog',
+  retweet: 'reblog',
+  boost: 'reblog',
+  follow: 'follow',
+  unfollow: 'unfollow',
   // Legacy function-name aliases still accepted for backward compatibility
   scrapeProfile: 'profile',
   scrapeFollowers: 'followers',
@@ -138,6 +151,9 @@ export default {
     }
     if (options.type != null) {
       mappedArgs.type = options.type;
+    }
+    if (options.accountId || options.dryRun || accessToken) {
+      mappedArgs.accountId = options.accountId || accessToken || 'mastodon-guest';
     }
     return mappedArgs;
   },

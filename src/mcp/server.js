@@ -1504,6 +1504,95 @@ const TOOLS = [
       properties: {},
     },
   },
+  // ====== Universal Cross-Platform Actions (Story 30.1) ======
+  {
+    name: 'x_publish_all',
+    description: 'Publish a post/thread across multiple social media platforms (X/Twitter, Bluesky, Mastodon, Threads) in parallel with fault-isolated error handling.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Text content of the post to broadcast',
+        },
+        platforms: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Target platforms (default: all -> twitter, bluesky, mastodon, threads)',
+        },
+        mediaIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional media IDs/attachments',
+        },
+        dryRun: {
+          type: 'boolean',
+          description: 'Simulate without executing real posts (default: false)',
+        },
+      },
+      required: ['text'],
+    },
+  },
+  {
+    name: 'x_like_all',
+    description: 'Favorite/like a post across target social platforms in parallel.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        targetId: {
+          type: 'string',
+          description: 'Target post ID or URI',
+        },
+        platforms: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Target platforms (default: all)',
+        },
+        uri: {
+          type: 'string',
+          description: 'Subject AT-URI for Bluesky',
+        },
+        cid: {
+          type: 'string',
+          description: 'Subject CID for Bluesky',
+        },
+        dryRun: {
+          type: 'boolean',
+          description: 'Simulate without executing real likes (default: false)',
+        },
+      },
+    },
+  },
+  {
+    name: 'x_follow_all',
+    description: 'Follow a user across target social platforms in parallel.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        username: {
+          type: 'string',
+          description: 'Username or handle to follow',
+        },
+        platforms: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Target platforms (default: all)',
+        },
+        subject: {
+          type: 'string',
+          description: 'Subject DID for Bluesky',
+        },
+        accountId: {
+          type: 'string',
+          description: 'Numeric account ID for Mastodon',
+        },
+        dryRun: {
+          type: 'boolean',
+          description: 'Simulate without executing real follows (default: false)',
+        },
+      },
+    },
+  },
   // ====== Facebook Automation ======
   {
     name: 'x_facebook_automate',
@@ -3294,6 +3383,47 @@ async function executeTool(name, args) {
 
   if (name === 'x_scrape') {
     return await executeScrapeTool(args);
+  }
+
+  // Universal Multi-Platform Write Tools (Story 30.1)
+  if (name === 'x_publish_all') {
+    const { UniversalActionDispatcher } = await import('../scrapers/social/dispatcher.js');
+    return await UniversalActionDispatcher.dispatch({
+      platform: args.platforms || args.platform || 'all',
+      action: 'post',
+      args: { text: args.text || args.content || '', mediaIds: args.mediaIds, ...args },
+      options: { dryRun: args.dryRun === true },
+    });
+  }
+
+  if (name === 'x_like_all') {
+    const { UniversalActionDispatcher } = await import('../scrapers/social/dispatcher.js');
+    return await UniversalActionDispatcher.dispatch({
+      platform: args.platforms || args.platform || 'all',
+      action: 'like',
+      args: {
+        targetId: args.targetId || args.tweetId || args.statusId || args.postId,
+        uri: args.uri,
+        cid: args.cid,
+        ...args,
+      },
+      options: { dryRun: args.dryRun === true },
+    });
+  }
+
+  if (name === 'x_follow_all') {
+    const { UniversalActionDispatcher } = await import('../scrapers/social/dispatcher.js');
+    return await UniversalActionDispatcher.dispatch({
+      platform: args.platforms || args.platform || 'all',
+      action: 'follow',
+      args: {
+        username: args.username || args.handle,
+        subject: args.subject || args.did,
+        accountId: args.accountId || args.userId,
+        ...args,
+      },
+      options: { dryRun: args.dryRun === true },
+    });
   }
 
   // Generic cross-platform post/comment crawlers
