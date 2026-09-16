@@ -126,6 +126,12 @@ export default {
     if (accessToken) {
       mappedArgs.accessToken = accessToken;
     }
+    if (options.targetId && !mappedArgs.statusId) {
+      mappedArgs.statusId = options.targetId;
+    }
+    if (options.targetId && !mappedArgs.accountId) {
+      mappedArgs.accountId = options.targetId;
+    }
 
     delete mappedArgs.limit;
     const rawLimit = options.limit ?? options.count;

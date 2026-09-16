@@ -76,8 +76,11 @@ export default {
     if (['profile', 'followers', 'following', 'get_user_feed', 'tweets'].includes(mappedAction) && username) {
       mappedArgs.username = username;
     }
-    if (['post_detail', 'get_post_comments'].includes(mappedAction) && postId) {
+    if (postId) {
       mappedArgs.postId = postId;
+    }
+    if (options.targetId && !mappedArgs.postId) {
+      mappedArgs.postId = options.targetId;
     }
     if (mappedAction === 'search' && query) {
       mappedArgs.query = query;

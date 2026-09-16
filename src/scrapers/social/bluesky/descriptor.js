@@ -81,6 +81,12 @@ export default {
     if (mappedAction === 'feed' && feedUri) {
       mappedArgs.feedUri = feedUri;
     }
+    if (options.targetId && !mappedArgs.uri) {
+      mappedArgs.uri = options.targetId;
+    }
+    if (options.targetId && !mappedArgs.subject) {
+      mappedArgs.subject = options.targetId;
+    }
 
     if (options.limit != null) {
       mappedArgs.limit = Number(options.limit);

@@ -2,7 +2,7 @@
 title: 'Story 30.1 — UniversalActionDispatcher: Cross-Platform Write Actions'
 type: 'feature'
 created: '2026-09-16'
-status: 'in-review'
+status: 'done'
 route: 'dispatch'
 baseline_commit: '4b2f8a5e2d3dc255e36711c01cb8bfc752910dd8'
 review_loop_iteration: 0
@@ -86,3 +86,10 @@ context:
 ## Spec Change Log
 
 ## Review Triage Log
+
+- **patch / high** — Threads action map collision: action `post` with text content was mapped to `post_detail` which expected `postId`. Fixed by prioritizing `post` write action when `options.text` or `options.content` is present.
+- **patch / high** — Authenticated write actions failed with `XACT_4010` (No available account) during dryRun or direct calls without explicit session. Fixed by providing fallback `accountId` (`${platform}-dryrun` / `${platform}-guest`) in `UniversalActionDispatcher` and per-platform descriptors.
+- **patch / medium** — Threads `like`, `repost`, and `reply` actions omitted `postId` mapping in `ThreadsDescriptor.mapArgs`. Fixed by universally mapping `options.postId` and `options.targetId`.
+- **patch / medium** — Bluesky and Mastodon descriptors lacked `targetId` mapping for `like` and `repost`. Fixed by mapping `options.targetId` to `uri`/`statusId`.
+- **patch / low** — Syntax duplicate in `dispatcher.js` executionArgs. Fixed and validated via `node --check`.
+- **patch / medium** — Verified 16/16 tests passing in `tests/scrapers/social/universal-dispatcher.test.js` covering multi-platform write dispatch, fault isolation, and MCP tool registration.
