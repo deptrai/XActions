@@ -114,7 +114,7 @@ development_status:
   epic-16-retrospective: done
 
   epic-17: done
-  17-1-chợ-tốt-multi-category-scraper-with-phone-mask-detector: backlog
+  17-1-chợ-tốt-multi-category-scraper-with-phone-mask-detector: done
   17-2-batdongsan-com-vn-property-scraper: done
   epic-17-retrospective: done
 
@@ -140,9 +140,9 @@ development_status:
   19-10-admin-mcp-tools: done
   epic-19-retrospective: done
 
-  epic-20: in-progress
-  20-1-multi-consumer-service-contract-x-scrape-x-actions-list-action-matrix: review
-  20-2-universal-stream-publish-hook-snake-case-thin-event-map-to-thin-event: 
+  epic-20: done
+  20-1-multi-consumer-service-contract-x-scrape-x-actions-list-action-matrix: done
+  20-2-universal-stream-publish-hook-snake-case-thin-event-map-to-thin-event:
     done
   epic-20-retrospective: optional
 
@@ -196,8 +196,8 @@ development_status:
   29-3-stream-replay-missed-event-recovery: done
   epic-29-retrospective: optional
 
-  epic-30: backlog
-  30-1-universalactiondispatcher-cross-platform-write-actions: backlog
+  epic-30: in-progress
+  30-1-universalactiondispatcher-cross-platform-write-actions: in-progress
   30-2-contenttransformer-thread-splitter-media-adapter-character-l: backlog
   epic-30-retrospective: optional
 

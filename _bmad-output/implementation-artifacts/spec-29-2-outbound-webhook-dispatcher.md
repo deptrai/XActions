@@ -95,31 +95,17 @@ context: []
 
 ## Review Triage Log
 
-
-- **patch / high** — `_emitEvent`-class HMAC `createSignature(undefined)` TypeError — guarded stringify. Evidence: `createSignature` now coalesces null/undefined to `''`.
-- **patch / medium** — `verifySignature` swap when secret starts with `sha256=` — now requires full `sha256=<64hex>`.
-- **patch / high** — `deliverToSubscription` null input TypeError — early return `{ success: false }`.
-- **patch / medium** — unconsumed fetch body socket leak — drain/cancel response body.
-- **patch / medium** — HTTP 429/408 treated as permanent 4xx — now retryable.
-- **patch / high** — DLQ retry duplicates on failure — `skipDlq: true` on re-attempt.
-- **patch / medium** — metrics RMW race — `HINCRBY` when available; counts `attempts`.
-- **false** — consume loop NOGROUP tight spin — `start()` always `initGroup()` first; loop sleeps 1s on error.
-- **false** — ACK-on-throw discards events — `#processMessage` ACKs in `finally` after catch; spec: attempt all deliveries then ACK.
-- **patch / low** — `stop()` uncleared timeout — `clearTimeout` in `finally`.
-- **patch / medium** — `dispatchReplay(null)` TypeError — empty-array guard.
-- **patch / medium** — `WebhookSubscriptionStore.delete` returns true on Redis fail — now returns `deleted` only.
-- **defer / medium** — SSRF private IPs — loopback blocked in production; broader DNS-rebinding not in scope.
-- **patch / high** — plaintext secrets in GET subscriptions — `redactSecret` / `hasSecret`.
-- **defer / medium** — HOL blocking of consumer loop during backoff — architectural; would need job queue (spec forbids Bull).
-- **defer / low** — correlation ID per attempt — delivery IDs already unique; receivers can use event id.
-- **patch / medium** — NaN `limit` on logs/DLQ — `Number.isFinite` guard.
-- **patch (VG)** — `parseStreamPayload` untested — unit tests added.
-- **patch (VG)** — admin GET-by-id / metrics / lag untested — tests added.
-- **patch (VG)** — `dispatchReplay` unused by replay — `getStreamReplay` now delegates.
-- **defer (VG)** — consumer `start()`/`XACK` loop untested — needs live Redis group; covered by parse + deliver tests.
-- **defer (VG)** — `api/server.js` mount untested vs isolated router — router tests cover handlers; smoke list is optional.
-- **defer (VG)** — abort/timeout hanging endpoint test — AbortError path exists; 5xx retry already covered.
-
+- **patch / high** — Plaintext secret exposure in POST and PATCH subscription API responses (`api/routes/webhook-admin.js:148,219`) — use `redactSecret`.
+- **patch / high** — Consumer loop NOGROUP error swallowed in `#consumeBatch` causing infinite tight loop (`src/streaming/outbound-webhook-dispatcher.js:914`) — add backoff delay or rethrow.
+- **patch / medium** — `avgLatencyMs` overwritten with single-event latency instead of moving average in Redis metrics (`src/streaming/outbound-webhook-dispatcher.js:1413`).
+- **patch / medium** — Outbound webhook consumer disabled by default and missing from `.env.example` (`api/server.js:786`).
+- **patch / medium** — Server graceful shutdown does not await `dispatcher.stop()` completion (`api/server.js:802`).
+- **patch / medium** — Consumer group lag hardcoded to 0 in `getLag()` (`src/streaming/outbound-webhook-dispatcher.js:1749`).
+- **patch / medium** — Reclaimed messages in `XAUTOCLAIM` bypass in-flight tracking during shutdown (`src/streaming/outbound-webhook-dispatcher.js:1007`).
+- **patch / medium** — Broken verification: delivery logs endpoint never tested with actual data (`tests/streaming/webhook-dispatcher.test.js:673`).
+- **patch / low** — Regression gap: HTTP 429/408 retryability untested.
+- **patch / low** — Regression gap: `skipDlq` on retry failure untested.
+- **patch / low** — Regression gap: POST `/api/admin/webhooks/dlq/:id/retry` route untested.
 
 ## Design Notes
 

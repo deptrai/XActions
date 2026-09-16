@@ -91,28 +91,22 @@ context: []
 
 ## Review Triage Log
 
-
-- **patch / medium** — negative `since` → Redis invalid stream ID — `ms < 0` rejected as INVALID_SINCE.
-- **patch / medium** — cursor/`lastBatchId` without dash → NaN seq — `Number.isFinite` fallback seq=1.
-- **false** — NaN `limit` bypass — `Number.isFinite(rawLimit)` already defaults to 100.
-- **patch / medium** — webhook delivery throw aborts replay — try/catch per event + `dispatchReplay`.
-- **false / spec** — empty stream omits trim warning — matrix says return empty; warning only when firstEntry exists.
-- **false / spec** — trim returns 200+warning not error — Design Notes / matrix: "Return what's available".
-- **patch / medium** — Redis client per request — shared singleton client, no quit-per-call.
-- **patch / medium** — unbounded filtered XRANGE scan — `maxScan = 50_000`.
-- **patch / medium** — hasMore false after dropping cursor — treat `rawEntries.length > limit` as hasMore.
-- **patch / medium** — `matchesStream` drops follower/mention/cdc — mapped to twitter/x/cdc/postgres.
-- **patch / low** — username vs handle — also checks `author_handle`/`handle`/`username`.
-- **false / spec** — 404 for unknown stream id — AC requires 404; use `id=all` for shared-stream recovery.
-- **defer / low** — same-ms trim sequence — warning is best-effort; XRANGE still returns remaining entries.
-- **defer / low** — empty `?since=` treated as omitted — empty query params are omitted in HTTP; malformed non-empty still 400.
-- **patch / low** — invalid `deliver` silently ignored — 400 INVALID_DELIVER.
-- **defer / low** — missing `sendCommand` XREVRANGE fallback — node-redis/ioredis helpers cover production clients.
-- **defer / low** — `parseStreamEntry`/`matchesStream` not barrel-exported — internals; tests import module directly.
-- **defer / medium** — unauthenticated replay route — same as other `/api/streams` GETs; auth is server-level.
-- **patch (VG)** — REST `deliver=webhook` error mapping untested — 400/404 tests added.
-- **defer (VG)** — registered-stream metadata REST test — library `matchesStream` + 404 unknown covered; createStream coupling is heavy for unit.
-
+- **patch / high** — TypeScript typecheck failure: detached JSDoc on `resolveRedisClient` (`src/streaming/stream-replay.js:350-366`).
+- **patch / medium** — Premature return on empty stream bypasses webhook delivery validation (`src/streaming/stream-replay.js:465-483`).
+- **patch / medium** — `hasMore` falsely evaluated as true when cursor is stripped out in unfiltered mode (`src/streaming/stream-replay.js:485-499`).
+- **patch / medium** — `nextCursor` populated even when `hasMore` is false (`src/streaming/stream-replay.js:580-583`).
+- **patch / medium** — REST route rejects scraper/target IDs with 404 because of strict in-memory `getStreamStatus` check (`api/routes/streams.js:244`).
+- **patch / medium** — `matchesStream` does not strip leading '@' from event author handles (`src/streaming/stream-replay.js:320-335`).
+- **patch / medium** — MCP tool `x_stream_replay` does not validate stream ID existence (`src/mcp/server.js:5215`).
+- **patch / medium** — Filtered replay loop reaching 50k scan cap loses cursor and sets `hasMore=false` (`src/streaming/stream-replay.js:541-576`).
+- **patch / low** — Negative or non-positive `limit` parameter silently coerced to default 100 instead of 400 Bad Request (`api/routes/streams.js:256`).
+- **patch / low** — `deliver` parameter validation missing in core `getStreamReplay` (`src/streaming/stream-replay.js:610`).
+- **patch / low** — Error status code mapping in `api/routes/streams.js` misses `INVALID_DELIVER`.
+- **patch / low** — Trim detection compares milliseconds strictly, missing same-ms trimmed sequence IDs (`src/streaming/stream-replay.js:443`).
+- **patch / low** — `getStreamInfo` lacks `sendCommand` fallback for `XREVRANGE` (`src/streaming/stream-replay.js:230`).
+- **patch (VG)** — Webhook delivery success path on REST replay route untested (`api/routes/streams.js:239`).
+- **patch (VG)** — Registered stream metadata filtering via `getStreamStatus` untested in integration.
+- **patch (VG)** — Multi-batch pagination on filtered streams unverified across page boundaries.
 
 ## Design Notes
 

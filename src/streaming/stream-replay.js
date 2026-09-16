@@ -318,10 +318,11 @@ export function matchesStream(eventData, streamId, streamMeta) {
     const metaUsername = String(streamMeta.username || '').toLowerCase();
     const metaType = String(streamMeta.type || '').toLowerCase();
     const eventPlatform = String(eventData.platform || '').toLowerCase();
-    const eventAuthor = String(
+    const rawAuthor = String(
       eventData.author_handle || eventData.handle || eventData.username
       || eventData.author_name || eventData.author_id || eventData.authorId || ''
     ).toLowerCase();
+    const eventAuthor = rawAuthor.replace(/^@/, '');
 
     // Check username match (if not wildcard '*')
     if (metaUsername && metaUsername !== '*') {
@@ -348,6 +349,11 @@ export function matchesStream(eventData, streamId, streamMeta) {
   return false;
 }
 
+/** @type {import('../core/types.js').RedisClientLike | null} */
+let _sharedReplayClient = null;
+/** @type {Promise<import('../core/types.js').RedisClientLike> | null} */
+let _sharedReplayClientPromise = null;
+
 /**
  * Acquire Redis client instance for replay operations.
  *
@@ -355,11 +361,6 @@ export function matchesStream(eventData, streamId, streamMeta) {
  * @param {import('../core/types.js').RedisClientLike} [options.redisClient]
  * @returns {Promise<import('../core/types.js').RedisClientLike>}
  */
-/** @type {import('../core/types.js').RedisClientLike | null} */
-let _sharedReplayClient = null;
-/** @type {Promise<import('../core/types.js').RedisClientLike> | null} */
-let _sharedReplayClientPromise = null;
-
 async function resolveRedisClient(options = {}) {
   if (options.redisClient) {
     return options.redisClient;
@@ -576,9 +577,11 @@ export async function getStreamReplay(options = {}) {
       }
     }
 
-    // Set nextCursor from last event if available
-    if (matchedEvents.length > 0) {
+    // Set nextCursor from last event if available and there are more events
+    if (hasMore && matchedEvents.length > 0) {
       nextCursor = matchedEvents[matchedEvents.length - 1].id;
+    } else {
+      nextCursor = null;
     }
 
     /** @type {{

@@ -365,7 +365,12 @@ export class OutboundWebhookDispatcher {
       }
     } catch (err) {
       if (this.#running) {
-        console.warn('[OutboundWebhookDispatcher] XREADGROUP error:', err instanceof Error ? err.message : String(err));
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn('[OutboundWebhookDispatcher] XREADGROUP error:', errMsg);
+        if (errMsg.includes('NOGROUP')) {
+          await this.initGroup().catch(() => {});
+        }
+        await new Promise((r) => setTimeout(r, 1000));
       }
       return;
     }

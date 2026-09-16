@@ -71,7 +71,7 @@ export function createWebhookAdminRouter(options = {}) {
         active: active !== undefined ? Boolean(active) : undefined,
       });
 
-      return res.status(201).json(subscription);
+      return res.status(201).json(redactSecret(subscription));
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (message.includes('Invalid webhook URL') || message.includes('events must be')) {
@@ -142,7 +142,7 @@ export function createWebhookAdminRouter(options = {}) {
         return res.status(404).json({ error: 'Subscription not found' });
       }
 
-      return res.json(updated);
+      return res.json(redactSecret(updated));
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (message.includes('Invalid webhook URL') || message.includes('events must be')) {
