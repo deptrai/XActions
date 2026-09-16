@@ -190,8 +190,8 @@ development_status:
   28-3-autoselectorfallback-assisted-selector-re-discovery: done
   epic-28-retrospective: optional
 
-  epic-29: backlog
-  29-1-jetstream-sse-cdc-adapters-for-push-based-social-streams: backlog
+  epic-29: in-progress
+  29-1-jetstream-sse-cdc-adapters-for-push-based-social-streams: done
   29-2-outbound-webhook-dispatcher-with-hmac-signing-retry: backlog
   29-3-stream-replay-missed-event-recovery: backlog
   epic-29-retrospective: optional

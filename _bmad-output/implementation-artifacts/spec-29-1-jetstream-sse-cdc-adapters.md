@@ -2,7 +2,7 @@
 title: 'Story 29.1 — Jetstream/SSE/CDC Adapters for Push-Based Social Streams'
 type: 'feature'
 created: '2026-09-16'
-status: 'in-progress'
+status: 'done'
 route: 'dispatch'
 baseline_commit: 'd7c8e91b'
 review_loop_iteration: 0
