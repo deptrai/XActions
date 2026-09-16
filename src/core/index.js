@@ -54,3 +54,8 @@ export {
   FIELD_SHAPES,
   suggestSelectors,
 } from './auto-selector-fallback.js';
+export {
+  DistributedTokenBucket,
+  globalDistributedTokenBucket,
+  parseRateLimitHeaders,
+} from './distributed-token-bucket.js';

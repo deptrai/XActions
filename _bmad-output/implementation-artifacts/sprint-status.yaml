@@ -190,7 +190,7 @@ development_status:
   28-3-autoselectorfallback-assisted-selector-re-discovery: done
   epic-28-retrospective: optional
 
-  epic-29: in-progress
+  epic-29: done
   29-1-jetstream-sse-cdc-adapters-for-push-based-social-streams: done
   29-2-outbound-webhook-dispatcher-with-hmac-signing-retry: done
   29-3-stream-replay-missed-event-recovery: done
@@ -205,9 +205,9 @@ development_status:
   31-1-universalmediapipeline-audio-carousel-hls-on-all-platforms: done
   epic-31-retrospective: optional
 
-  epic-32: in-progress
+  epic-32: done
   32-1-ratebudgetdashboard-visual-quota-allocator-panic-stop: done
-  32-2-distributedtokenbucket-redis-backed-quota-with-header-parsin: backlog
+  32-2-distributedtokenbucket-redis-backed-quota-with-header-parsin: done
   epic-32-retrospective: optional
 
   epic-33: done

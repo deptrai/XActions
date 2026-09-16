@@ -88,15 +88,20 @@ export class AdaptiveRateGovernor {
   /** Platforms currently in emergency panic stop state (Story 32.1). */
   #panicStoppedPlatforms = new Set();
 
+  /** Distributed token bucket for multi-process synchronized limits (Story 32.2). */
+  #distributedBucket = null;
+
   /**
    * @param {Object} [deps]
    * @param {import('../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
    * @param {number} [deps.healthyProxyFloor]
+   * @param {import('./distributed-token-bucket.js').DistributedTokenBucket} [deps.distributedBucket]
    */
   constructor(deps = {}) {
     this.#proxyPool = deps.proxyPool || null;
     this.#healthyProxyFloor = Math.max(0, deps.healthyProxyFloor ?? 0);
     this.#windowStart = Date.now();
+    this.#distributedBucket = deps.distributedBucket || null;
 
     // AD-20 default consumer quotas. NOWING_RATE_LIMIT_RPM overrides the
     // Nowing workspace plan RPM; internal traffic is unmetered.
@@ -199,6 +204,16 @@ export class AdaptiveRateGovernor {
     const id = this.#resolveConsumerId(consumerId);
     const quota = this.#consumerQuotas.get(id);
     if (!quota || quota.rpmLimit === Infinity) return true;
+
+    // Delegate to DistributedTokenBucket if REDIS_TOKEN_BUCKET=1 or bucket provided (Story 32.2)
+    if (process.env.REDIS_TOKEN_BUCKET === '1' && this.#distributedBucket) {
+      // Sync check (canConsume)
+      return this.#distributedBucket.canConsume(`consumer:${id}`, 1, {
+        capacity: quota.burstLimit || quota.rpmLimit,
+        refillRate: quota.rpmLimit / 60,
+      });
+    }
+
     const timestamps = this.#pruneConsumerWindow(id);
     return timestamps.length < quota.rpmLimit;
   }
@@ -210,6 +225,15 @@ export class AdaptiveRateGovernor {
    */
   recordConsumerRequest(consumerId) {
     const id = this.#resolveConsumerId(consumerId);
+    const quota = this.#consumerQuotas.get(id) || { rpmLimit: Infinity, burstLimit: 1000 };
+
+    if (process.env.REDIS_TOKEN_BUCKET === '1' && this.#distributedBucket) {
+      this.#distributedBucket.consume(`consumer:${id}`, 1, {
+        capacity: quota.burstLimit || quota.rpmLimit,
+        refillRate: quota.rpmLimit / 60,
+      }).catch(() => {});
+    }
+
     const timestamps = this.#pruneConsumerWindow(id);
     timestamps.push(Date.now());
     this.#consumerRequestTimestamps.set(id, timestamps);
