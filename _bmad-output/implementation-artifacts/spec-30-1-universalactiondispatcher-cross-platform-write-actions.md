@@ -2,7 +2,7 @@
 title: 'Story 30.1 — UniversalActionDispatcher: Cross-Platform Write Actions'
 type: 'feature'
 created: '2026-09-16'
-status: 'in-progress'
+status: 'in-review'
 route: 'dispatch'
 baseline_commit: '4b2f8a5e2d3dc255e36711c01cb8bfc752910dd8'
 review_loop_iteration: 0
@@ -60,12 +60,12 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/scrapers/social/dispatcher.js` -- Tạo `UniversalActionDispatcher` với hỗ trợ `Promise.allSettled`, credential check, và failure aggregation
-- [ ] `src/scrapers/social/bluesky/client.js` & `crawler.js` -- Bổ sung XRPC write mutations cho Bluesky (`post`, `like`, `repost`, `follow`, `unfollow`)
-- [ ] `src/scrapers/social/mastodon/client.js` & `crawler.js` -- Bổ sung REST write endpoints cho Mastodon (`post`, `like`, `reblog`, `follow`, `unfollow`)
-- [ ] `src/scrapers/index.js` -- Tích hợp dispatcher vào entry point và exports
-- [ ] `src/mcp/local-tools.js` & `src/mcp/server.js` -- Thêm các tool `x_publish_all`, `x_like_all`, `x_follow_all`
-- [ ] `tests/scrapers/social/universal-dispatcher.test.js` -- Viết unit test & mock test cho các trường hợp all/partial success/error isolation
+- [x] `src/scrapers/social/dispatcher.js` -- Tạo `UniversalActionDispatcher` với hỗ trợ `Promise.allSettled`, credential check, và failure aggregation
+- [x] `src/scrapers/social/bluesky/client.js` & `crawler.js` -- Bổ sung XRPC write mutations cho Bluesky (`post`, `like`, `repost`, `follow`, `unfollow`)
+- [x] `src/scrapers/social/mastodon/client.js` & `crawler.js` -- Bổ sung REST write endpoints cho Mastodon (`post`, `like`, `reblog`, `follow`, `unfollow`)
+- [x] `src/scrapers/index.js` -- Tích hợp dispatcher vào entry point và exports
+- [x] `src/mcp/local-tools.js` & `src/mcp/server.js` -- Thêm các tool `x_publish_all`, `x_like_all`, `x_follow_all`
+- [x] `tests/scrapers/social/universal-dispatcher.test.js` -- Viết unit test & mock test cho các trường hợp all/partial success/error isolation
 
 **Acceptance Criteria:**
 - Given lệnh gọi `dispatchAction` với `platform: 'all'` và `action: 'post'`, when thực thi, then các nền tảng X, Bluesky, Mastodon, Threads được kích hoạt song song.
@@ -73,6 +73,15 @@ context:
 - Given người dùng gọi MCP tool `x_publish_all`, when cung cấp text và platforms, then lệnh gọi được ủy quyền tới `UniversalActionDispatcher` và trả về envelope hợp lệ.
 
 ## Implementation Notes
+
+- Created `UniversalActionDispatcher` in `src/scrapers/social/dispatcher.js` implementing parallel dispatch via `Promise.allSettled` to `scrape()`.
+- Implemented credentials auto-resolution from environment variables (`TWITTER_COOKIES`, `BLUESKY_IDENTIFIER`, `MASTODON_ACCESS_TOKEN`, `THREADS_COOKIES`) or session with per-platform override capability.
+- Added full AT Protocol XRPC record mutation methods (`createRecord`, `deleteRecord`, `post`, `like`, `repost`, `follow`) to `BlueskyClient` and registered corresponding actions in `BlueskyCrawler` and `descriptor.js`.
+- Added REST write methods (`postStatus`, `favouriteStatus`, `reblogStatus`, `followAccount`, `unfollowAccount`) to `MastodonClient` and registered actions in `MastodonCrawler` and `descriptor.js`.
+- Registered write action handlers in `ThreadsCrawler` with `dryRun` preview support and graceful error handling.
+- Extended `scrape()` dispatcher in `src/scrapers/index.js` to automatically route `platform === 'all'` or `Array.isArray(platform)` to `UniversalActionDispatcher.dispatch()`.
+- Added `x_publish_all`, `x_like_all`, `x_follow_all` tools to `src/mcp/local-tools.js` and registered their schemas and handlers in `src/mcp/server.js`.
+- Authored 16 comprehensive unit & integration tests in `tests/scrapers/social/universal-dispatcher.test.js` verifying target resolution, credential fallback, parallel dispatch, error isolation, convenience helpers, and MCP tool registrations. 16/16 tests passing.
 
 ## Spec Change Log
 
