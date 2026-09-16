@@ -1529,6 +1529,10 @@ const TOOLS = [
           type: 'boolean',
           description: 'Simulate without executing real posts (default: false)',
         },
+        autoThread: {
+          type: 'boolean',
+          description: 'Automatically split long posts into numbered threads per platform character limit (default: true)',
+        },
       },
       required: ['text'],
     },
@@ -3391,8 +3395,16 @@ async function executeTool(name, args) {
     return await UniversalActionDispatcher.dispatch({
       platform: args.platforms || args.platform || 'all',
       action: 'post',
-      args: { text: args.text || args.content || '', mediaIds: args.mediaIds, ...args },
-      options: { dryRun: args.dryRun === true },
+      args: {
+        text: args.text || args.content || '',
+        mediaIds: args.mediaIds,
+        autoThread: args.autoThread !== false,
+        ...args,
+      },
+      options: {
+        dryRun: args.dryRun === true,
+        autoThread: args.autoThread !== false,
+      },
     });
   }
 

@@ -105,6 +105,28 @@ describe('Story 30.1 — UniversalActionDispatcher (Cross-Platform Write Actions
       expect(res.results.mastodon).toBeDefined();
       expect(res.results.bluesky).toBeDefined();
     });
+
+    it('splits long broadcast into multi-part threads on all platforms when autoThread is true', async () => {
+      const sentence = 'Decentralized social networks allow users to own their identity, data, and social graph. ';
+      const longPost = sentence.repeat(8); // ~720 chars
+
+      const res = await dispatchAction({
+        platform: 'all',
+        action: 'post',
+        args: {
+          text: longPost,
+          autoThread: true,
+          dryRun: true,
+        },
+      });
+
+      expect(res.action).toBe('post');
+      expect(res.summary.total).toBe(4);
+      expect(res.results.twitter.thread.length).toBeGreaterThanOrEqual(3);
+      expect(res.results.bluesky.thread.length).toBeGreaterThanOrEqual(3);
+      expect(res.results.mastodon.thread.length).toBeGreaterThanOrEqual(2);
+      expect(res.results.threads.thread.length).toBeGreaterThanOrEqual(2);
+    });
   });
 
   describe('scrape() integration with multi-platform write', () => {

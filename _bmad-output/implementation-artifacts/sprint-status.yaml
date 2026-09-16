@@ -196,9 +196,9 @@ development_status:
   29-3-stream-replay-missed-event-recovery: done
   epic-29-retrospective: optional
 
-  epic-30: in-progress
+  epic-30: done
   30-1-universalactiondispatcher-cross-platform-write-actions: done
-  30-2-contenttransformer-thread-splitter-media-adapter-character-l: backlog
+  30-2-contenttransformer-thread-splitter-media-adapter-character-l: done
   epic-30-retrospective: optional
 
   epic-31: backlog

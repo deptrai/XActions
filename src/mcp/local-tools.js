@@ -1900,12 +1900,13 @@ export async function x_publish_all(args = {}) {
   const platforms = args.platforms || args.platform || 'all';
   const text = args.text || args.content || '';
   const dryRun = args.dryRun === true;
+  const autoThread = args.autoThread !== false;
 
   return await UniversalActionDispatcher.dispatch({
     platform: platforms,
     action: 'post',
-    args: { text, mediaIds: args.mediaIds, ...args },
-    options: { dryRun },
+    args: { text, mediaIds: args.mediaIds, autoThread, ...args },
+    options: { dryRun, autoThread },
   });
 }
 

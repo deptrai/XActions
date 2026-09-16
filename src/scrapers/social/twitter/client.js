@@ -154,7 +154,7 @@ export function resolveTweetId(input) {
     });
   }
   const trimmed = input.trim();
-  if (/^\d{1,30}$/.test(trimmed)) {
+  if (/^\d{1,30}$/.test(trimmed) || /^dry-run/i.test(trimmed)) {
     return trimmed;
   }
   const urlMatch = trimmed.match(/(?:status|statuses)\/(\d{1,30})/i);

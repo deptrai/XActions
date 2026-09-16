@@ -16,6 +16,13 @@ import {
   ErrorTypes,
   SuggestedActions,
 } from '../../core/error-envelope.js';
+import {
+  ContentTransformer,
+  PLATFORM_LIMITS,
+  PLATFORM_MEDIA_LIMITS,
+} from './content-transformer.js';
+
+export { ContentTransformer, PLATFORM_LIMITS, PLATFORM_MEDIA_LIMITS };
 
 export const SUPPORTED_WRITE_ACTIONS = new Set([
   'post',
@@ -172,6 +179,105 @@ export class UniversalActionDispatcher {
       };
 
       try {
+        const autoThread = options.autoThread !== false && args.autoThread !== false;
+        const isPostAction = action === 'post' || action === 'publish';
+
+        if (isPostAction && autoThread) {
+          const transformedPosts = ContentTransformer.transform(executionArgs, platform);
+
+          if (transformedPosts.length > 1) {
+            // Execute multi-part thread
+            const threadResults = [];
+
+            // 1. Post Part 1
+            const firstPost = transformedPosts[0];
+            const firstRes = await scrape(platform, 'post', {
+              ...executionArgs,
+              text: firstPost.text,
+              media: firstPost.media,
+              mediaIds: firstPost.mediaIds,
+            });
+            threadResults.push(firstRes);
+
+            // Extract reply tracking IDs per platform
+            let prevTwitterId =
+              firstRes?.tweet?.metadata?.tweetId ||
+              firstRes?.tweet?.externalId ||
+              firstRes?.tweet?.id?.replace(/^twitter:/, '');
+            let parentUri = firstRes?.uri;
+            let parentCid = firstRes?.cid;
+            let rootUri = firstRes?.uri;
+            let rootCid = firstRes?.cid;
+            let prevMastodonId = firstRes?.status?.id || firstRes?.id;
+            let prevThreadsId = firstRes?.id;
+
+            // 2. Reply Part 2..N sequentially
+            for (let pIdx = 1; pIdx < transformedPosts.length; pIdx++) {
+              const part = transformedPosts[pIdx];
+              /** @type {Record<string, any>} */
+              const replyArgs = {
+                ...executionArgs,
+                text: part.text,
+                media: part.media,
+                mediaIds: part.mediaIds,
+              };
+
+              if (platform === 'twitter' || platform === 'x') {
+                replyArgs.tweetId = prevTwitterId;
+              } else if (platform === 'bluesky' || platform === 'bsky') {
+                replyArgs.parentUri = parentUri;
+                replyArgs.parentCid = parentCid;
+                replyArgs.rootUri = rootUri;
+                replyArgs.rootCid = rootCid;
+              } else if (platform === 'mastodon' || platform === 'masto') {
+                replyArgs.in_reply_to_id = prevMastodonId;
+              } else if (platform === 'threads') {
+                replyArgs.postId = prevThreadsId;
+              }
+
+              const replyRes = await scrape(platform, 'reply', replyArgs);
+              threadResults.push(replyRes);
+
+              // Update tracking ID for the next tweet in thread
+              if (replyRes?.tweet) {
+                prevTwitterId =
+                  replyRes.tweet.metadata?.tweetId ||
+                  replyRes.tweet.externalId ||
+                  replyRes.tweet.id?.replace(/^twitter:/, '');
+              }
+              if (replyRes?.uri) {
+                parentUri = replyRes.uri;
+                parentCid = replyRes.cid;
+              }
+              if (replyRes?.status?.id || replyRes?.id) {
+                prevMastodonId = replyRes?.status?.id || replyRes?.id;
+              }
+              if (replyRes?.id) {
+                prevThreadsId = replyRes.id;
+              }
+            }
+
+            return {
+              platform,
+              success: true,
+              data: {
+                thread: threadResults,
+                total: transformedPosts.length,
+                success: true,
+              },
+            };
+          } else if (transformedPosts.length === 1) {
+            const singlePost = transformedPosts[0];
+            const res = await scrape(platform, action, {
+              ...executionArgs,
+              text: singlePost.text,
+              media: singlePost.media,
+              mediaIds: singlePost.mediaIds,
+            });
+            return { platform, success: true, data: res };
+          }
+        }
+
         const res = await scrape(platform, action, executionArgs);
         return { platform, success: true, data: res };
       } catch (err) {

@@ -148,6 +148,12 @@ import { defaultStore } from '../store/index.js';
 
 export { createHttpScraper } from './social/twitter/http/index.js';
 
+export {
+  ContentTransformer,
+  PLATFORM_LIMITS,
+  PLATFORM_MEDIA_LIMITS,
+} from './social/content-transformer.js';
+
 // ============================================================================
 // Adapter System (Multi-Framework Support)
 // ============================================================================
