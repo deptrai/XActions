@@ -85,6 +85,9 @@ export class AdaptiveRateGovernor {
   /** Platform DOM selector drift statuses (Story 28.2). */
   #platformDrift = new Map();
 
+  /** Platforms currently in emergency panic stop state (Story 32.1). */
+  #panicStoppedPlatforms = new Set();
+
   /**
    * @param {Object} [deps]
    * @param {import('../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
@@ -538,7 +541,8 @@ export class AdaptiveRateGovernor {
     }
 
     const healthyProxyRatio = this.#totalProxyCount ? this.#healthyProxyCount / this.#totalProxyCount : 0;
-    const isCritical = this.#totalProxyCount > 0 && (healthyProxyRatio < 0.1 || (this.#healthyProxyFloor > 0 && this.#healthyProxyCount < this.#healthyProxyFloor));
+    const isPanic = this.#panicStoppedPlatforms.size > 0;
+    const isCritical = isPanic || (this.#totalProxyCount > 0 && (healthyProxyRatio < 0.1 || (this.#healthyProxyFloor > 0 && this.#healthyProxyCount < this.#healthyProxyFloor)));
     const isBackpressure = this.#isBackpressureActive || this.#redisConsumerLag > 10000;
     const throttleLevel =
       isCritical ? 'critical' :
@@ -574,10 +578,89 @@ export class AdaptiveRateGovernor {
         reason: h.reason,
       })),
       throttleLevel,
+      panicStoppedPlatforms: Array.from(this.#panicStoppedPlatforms),
       dualPool,
       consumerQuotas,
       platformDrift: Object.fromEntries(this.#platformDrift.entries()),
     };
+  }
+
+  /**
+   * Activate emergency Panic Stop for a platform or globally (Story 32.1).
+   * Hibernates accounts and enforces critical throttle level.
+   *
+   * @param {string} [platform='all']
+   * @param {Object} [options={}]
+   * @param {number} [options.durationMs=3600000] - Default 1 hour
+   * @param {string} [options.reason='emergency_panic_stop']
+   * @returns {{ success: boolean, platform: string, hibernatedCount: number }}
+   */
+  panicStop(platform = 'all', options = {}) {
+    const targetPlatform = platform.toLowerCase();
+    const durationMs = options.durationMs || 60 * 60 * 1000;
+    const reason = options.reason || 'emergency_panic_stop';
+
+    this.#panicStoppedPlatforms.add(targetPlatform);
+
+    let hibernatedCount = 0;
+    // Hibernate all tracked accounts matching the platform
+    for (const key of this.#accountRequestTimestamps.keys()) {
+      if (targetPlatform === 'all' || key.startsWith(`${targetPlatform}:`)) {
+        this.hibernateAccount(key, reason, durationMs);
+        hibernatedCount++;
+      }
+    }
+
+    // Also hibernate wildcard key for the platform
+    this.hibernateAccount(`${targetPlatform}:*`, reason, durationMs);
+
+    return {
+      success: true,
+      platform: targetPlatform,
+      hibernatedCount,
+      throttleLevel: 'critical',
+    };
+  }
+
+  /**
+   * Resume operations after a panic stop (Story 32.1).
+   * @param {string} [platform='all']
+   * @returns {{ success: boolean, platform: string }}
+   */
+  resumePanic(platform = 'all') {
+    const targetPlatform = platform.toLowerCase();
+    if (targetPlatform === 'all') {
+      this.#panicStoppedPlatforms.clear();
+      this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.reason !== 'emergency_panic_stop');
+    } else {
+      this.#panicStoppedPlatforms.delete(targetPlatform);
+      this.#hibernatingAccounts = this.#hibernatingAccounts.filter(
+        (h) => !(h.reason === 'emergency_panic_stop' && (h.accountId.startsWith(`${targetPlatform}:`) || h.accountId === `${targetPlatform}:*`))
+      );
+    }
+
+    return {
+      success: true,
+      platform: targetPlatform,
+      remainingPanics: Array.from(this.#panicStoppedPlatforms),
+    };
+  }
+
+  /**
+   * Update the execution priority of a registered consumer quota (Story 32.1).
+   * @param {string} consumerId
+   * @param {number} priority
+   * @returns {boolean}
+   */
+  setConsumerPriority(consumerId, priority) {
+    if (!consumerId) return false;
+    const existing = this.#consumerQuotas.get(consumerId);
+    if (!existing) return false;
+    this.#consumerQuotas.set(consumerId, {
+      ...existing,
+      priority: Number(priority) || existing.priority,
+    });
+    return true;
   }
 
   /**

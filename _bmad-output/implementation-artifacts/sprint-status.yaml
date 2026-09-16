@@ -205,8 +205,8 @@ development_status:
   31-1-universalmediapipeline-audio-carousel-hls-on-all-platforms: done
   epic-31-retrospective: optional
 
-  epic-32: backlog
-  32-1-ratebudgetdashboard-visual-quota-allocator-panic-stop: backlog
+  epic-32: in-progress
+  32-1-ratebudgetdashboard-visual-quota-allocator-panic-stop: done
   32-2-distributedtokenbucket-redis-backed-quota-with-header-parsin: backlog
   epic-32-retrospective: optional
 

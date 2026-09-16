@@ -881,6 +881,70 @@
       </div>
     </div>
 
+    <!-- Rate Budget & Quota Governance (Story 32.1) -->
+    <div class="section-card" style="margin-bottom: 24px;">
+      <div class="checkpoint-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3>⚡ Rate Budget & Quota Allocation</h3>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-panic-stop" class="btn-test-webhook" style="width: auto; margin-top: 0; background: var(--error); border-color: var(--error); color: #fff;" onclick="openPanicModal()">🛑 Panic Stop</button>
+          <button id="btn-panic-resume" class="btn-test-webhook" style="width: auto; margin-top: 0; background: var(--success); border-color: var(--success); color: #fff;" onclick="resumePanic('all')">🟢 Resume All</button>
+        </div>
+      </div>
+
+      <!-- Throttle Level Visual Gauge -->
+      <div style="background: var(--bg-tertiary); padding: 16px; border-radius: 12px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="font-size: 0.875rem; font-weight: 600;">System Throttle Gauge</span>
+          <span id="throttle-gauge-badge" class="status-badge-throttle status-throttle-normal">NORMAL</span>
+        </div>
+        <div style="height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; display: flex;">
+          <div id="gauge-bar-normal" style="width: 25%; background: var(--success); opacity: 0.9;"></div>
+          <div id="gauge-bar-reduced" style="width: 25%; background: var(--warning); opacity: 0.2;"></div>
+          <div id="gauge-bar-backpressure" style="width: 25%; background: #f97316; opacity: 0.2;"></div>
+          <div id="gauge-bar-critical" style="width: 25%; background: var(--error); opacity: 0.2;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+          <span>Normal</span>
+          <span>Reduced</span>
+          <span>Backpressure</span>
+          <span>Critical</span>
+        </div>
+      </div>
+
+      <!-- Consumer Quotas & Priority Queue Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+        <div>
+          <h4 style="margin: 0 0 12px 0; font-size: 0.95rem;">📊 Per-Consumer RPM Limits</h4>
+          <div class="checkpoint-table-wrap">
+            <table class="checkpoint-table">
+              <thead>
+                <tr>
+                  <th>Consumer</th>
+                  <th>Priority</th>
+                  <th>RPM Limit</th>
+                  <th>Burst</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="consumer-quotas-body">
+                <tr><td colspan="5" class="empty-state small">Loading consumer quotas...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; font-size: 0.95rem;">🔀 Queue Priority Allocator (Drag & Drop)</h4>
+            <span style="font-size: 0.75rem; color: var(--text-secondary);">Highest priority first</span>
+          </div>
+          <ul id="priority-queue-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
+            <!-- Rendered dynamically -->
+          </ul>
+        </div>
+      </div>
+    </div>
+
     <!-- Platform DOM Selector Drift Status (Story 28.2) -->
     <div id="platform-drift-card" class="section-card" style="margin-bottom: 24px; display: none;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -1901,6 +1965,220 @@
         } else if (driftCard) {
           driftCard.style.display = 'none';
         }
+
+        // Render Throttle Gauge (Story 32.1)
+        renderThrottleGauge(status.throttleLevel || 'normal');
+
+        // Render Consumer Quotas & Priority List (Story 32.1)
+        if (status.consumerQuotas && typeof status.consumerQuotas === 'object') {
+          renderConsumerQuotas(status.consumerQuotas);
+          renderPriorityQueueList(status.consumerQuotas);
+        }
+      }
+    }
+
+    function renderThrottleGauge(level) {
+      const gaugeBadge = document.getElementById('throttle-gauge-badge');
+      const barNormal = document.getElementById('gauge-bar-normal');
+      const barReduced = document.getElementById('gauge-bar-reduced');
+      const barBackpressure = document.getElementById('gauge-bar-backpressure');
+      const barCritical = document.getElementById('gauge-bar-critical');
+
+      if (!gaugeBadge) return;
+      const cleanLevel = String(level).toLowerCase();
+      gaugeBadge.textContent = cleanLevel.toUpperCase();
+      gaugeBadge.className = `status-badge-throttle status-throttle-${cleanLevel}`;
+
+      if (barNormal) barNormal.style.opacity = cleanLevel === 'normal' ? '1' : '0.2';
+      if (barReduced) barReduced.style.opacity = cleanLevel === 'reduced' ? '1' : '0.2';
+      if (barBackpressure) barBackpressure.style.opacity = cleanLevel === 'backpressure' ? '1' : '0.2';
+      if (barCritical) barCritical.style.opacity = cleanLevel === 'critical' ? '1' : '0.2';
+    }
+
+    function renderConsumerQuotas(quotas) {
+      const tbody = document.getElementById('consumer-quotas-body');
+      if (!tbody) return;
+
+      const rows = Object.entries(quotas).map(([id, q]) => {
+        const rpm = q.rpmLimit === Infinity ? 'Unlimited' : `${q.rpmLimit} RPM`;
+        const burst = q.burstLimit || '—';
+        const active = q.activeRequests || 0;
+        return `
+          <tr>
+            <td><strong>${esc(id)}</strong></td>
+            <td><span class="status-pill">${esc(String(q.priority ?? 99))}</span></td>
+            <td>${esc(rpm)}</td>
+            <td>${esc(String(burst))}</td>
+            <td><span class="status-pill ${active > 0 ? 'status-active' : ''}">${active > 0 ? `${active} active` : 'Idle'}</span></td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="5">No consumers registered</td></tr>';
+    }
+
+    let dragSrcEl = null;
+
+    function renderPriorityQueueList(quotas) {
+      const list = document.getElementById('priority-queue-list');
+      if (!list) return;
+
+      const entries = Object.entries(quotas).sort((a, b) => {
+        const pA = a[1]?.priority ?? 99;
+        const pB = b[1]?.priority ?? 99;
+        return pA - pB;
+      });
+
+      list.innerHTML = entries.map(([id, q], idx) => {
+        return `
+          <li draggable="true" data-consumer-id="${esc(id)}" style="background: var(--bg-secondary); border: 1px solid var(--border); padding: 10px 14px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: grab; user-select: none;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="color: var(--text-secondary); font-family: monospace;">#${idx + 1}</span>
+              <strong>${esc(id)}</strong>
+              <span style="font-size: 0.75rem; color: var(--text-secondary);">${q.rpmLimit === Infinity ? 'Unmetered' : `${q.rpmLimit} RPM`}</span>
+            </div>
+            <div style="display: flex; gap: 4px;">
+              <button type="button" class="btn-action-small" onclick="movePriority('${esc(id)}', -1)" ${idx === 0 ? 'disabled' : ''}>▲</button>
+              <button type="button" class="btn-action-small" onclick="movePriority('${esc(id)}', 1)" ${idx === entries.length - 1 ? 'disabled' : ''}>▼</button>
+            </div>
+          </li>
+        `;
+      }).join('');
+
+      const items = list.querySelectorAll('li');
+      items.forEach((item) => {
+        item.addEventListener('dragstart', (e) => {
+          dragSrcEl = item;
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', item.dataset.consumerId);
+          item.style.opacity = '0.4';
+        });
+        item.addEventListener('dragend', () => {
+          item.style.opacity = '1';
+        });
+        item.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+        item.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          if (dragSrcEl && dragSrcEl !== item) {
+            const srcId = dragSrcEl.dataset.consumerId;
+            const targetId = item.dataset.consumerId;
+            await swapConsumerPriority(srcId, targetId);
+          }
+        });
+      });
+    }
+
+    async function movePriority(consumerId, direction) {
+      const list = document.getElementById('priority-queue-list');
+      if (!list) return;
+      const ids = Array.from(list.querySelectorAll('li')).map(el => el.dataset.consumerId);
+      const idx = ids.indexOf(consumerId);
+      if (idx < 0) return;
+      const targetIdx = idx + direction;
+      if (targetIdx < 0 || targetIdx >= ids.length) return;
+
+      const temp = ids[idx];
+      ids[idx] = ids[targetIdx];
+      ids[targetIdx] = temp;
+
+      localStorage.setItem('xactions_priority_order', JSON.stringify(ids));
+      await syncPrioritiesToBackend(ids);
+    }
+
+    async function swapConsumerPriority(srcId, targetId) {
+      const list = document.getElementById('priority-queue-list');
+      if (!list) return;
+      const ids = Array.from(list.querySelectorAll('li')).map(el => el.dataset.consumerId);
+      const srcIdx = ids.indexOf(srcId);
+      const targetIdx = ids.indexOf(targetId);
+      if (srcIdx < 0 || targetIdx < 0) return;
+
+      ids.splice(srcIdx, 1);
+      ids.splice(targetIdx, 0, srcId);
+
+      localStorage.setItem('xactions_priority_order', JSON.stringify(ids));
+      await syncPrioritiesToBackend(ids);
+    }
+
+    async function syncPrioritiesToBackend(orderedIds) {
+      const priorities = orderedIds.map((id, index) => ({
+        consumerId: id,
+        priority: index + 1,
+      }));
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/governor/priorities`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ priorities })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showCheckpointToast('✅ Queue priorities updated', 'success');
+          await loadProxiesAndAccounts({ background: true });
+        }
+      } catch (err) {
+        console.error('Failed to sync priorities:', err);
+      }
+    }
+
+    async function openPanicModal() {
+      const platform = prompt('🛑 EMERGENCY PANIC STOP\n\nEnter target platform to halt and hibernate (e.g. "twitter", "threads", "all"):', 'all');
+      if (!platform) return;
+
+      const confirmText = prompt(`Type "PANIC" to confirm emergency halt for "${platform}":`);
+      if (confirmText !== 'PANIC') {
+        showCheckpointToast('Panic stop cancelled', 'info');
+        return;
+      }
+
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/governor/panic-stop`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ platform: platform.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showCheckpointToast(`🛑 Panic Stop activated for ${platform}!`, 'error');
+          await loadProxiesAndAccounts({ background: true });
+        } else {
+          showCheckpointToast(`Error: ${data.error?.message || 'Panic stop failed'}`, 'error');
+        }
+      } catch (err) {
+        showCheckpointToast(`Panic stop failed: ${err.message}`, 'error');
+      }
+    }
+
+    async function resumePanic(platform = 'all') {
+      const token = getAuthToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const res = await fetch(`${API_URL}/api/governor/panic-resume`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ platform })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showCheckpointToast(`🟢 Panic Stop resumed for ${platform}`, 'success');
+          await loadProxiesAndAccounts({ background: true });
+        }
+      } catch (err) {
+        showCheckpointToast(`Resume failed: ${err.message}`, 'error');
       }
     }
 
