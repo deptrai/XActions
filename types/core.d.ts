@@ -63,17 +63,55 @@ export interface ProfileItem {
   dataQuality?: DataQualityMetadata;
 }
 
+export interface CloudEventEnvelope {
+  specversion: '1.0';
+  id: string;
+  source: string;
+  type: string;
+  time: string;
+  datacontenttype: 'application/json';
+  data: string;
+  idempotencyKey: string;
+  idempotencykey?: string;
+}
+
+export function computeIdempotencyKey(item: Record<string, unknown>): string;
+export function validateCloudEvent(
+  event: unknown,
+  out?: { reason?: string; errors?: string[] }
+): boolean;
+
 export interface ThinEvent {
   id: string;
   platform: string;
   externalId: string;
+  external_post_id?: string;
   category: string;
   authorId: string;
+  author_id?: string;
+  authorName?: string;
+  author_name?: string;
+  post_url?: string;
   crawledAt: string;
+  crawled_at?: string;
   storageRef: string;
+  storage_ref?: string;
   scraperId?: string;
+  scraper_id?: string;
+  content_snippet?: string;
+  target_id?: string;
+  workspace_id?: string;
+  schema_version?: number | string;
   benchmark_health?: 'A' | 'B' | 'C' | 'UNKNOWN';
   benchmark_alert?: boolean | string;
+  specversion?: '1.0';
+  source?: string;
+  type?: string;
+  time?: string;
+  datacontenttype?: 'application/json' | string;
+  data?: string;
+  idempotencyKey?: string;
+  idempotencykey?: string;
 }
 
 export interface StreamMetrics {

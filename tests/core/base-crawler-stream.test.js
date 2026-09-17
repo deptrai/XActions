@@ -115,6 +115,15 @@ describe('mapToThinEvent', () => {
     expect(event.target_id).toBe('t1');
     expect(event.workspace_id).toBe('w1');
     expect(event.schema_version).toBe(1);
+
+    // CloudEvents v1.0 Envelope assertions
+    expect(event.specversion).toBe('1.0');
+    expect(event.source).toBe('org.xactions.crawler.test');
+    expect(event.type).toBe('org.xactions.scrape.completed');
+    expect(event.datacontenttype).toBe('application/json');
+    expect(event.time).toBeDefined();
+    expect(event.data).toBeDefined();
+    expect(event.idempotencyKey).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it('maps ProductItem to ThinEvent', () => {

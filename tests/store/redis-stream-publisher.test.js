@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
-import { RedisStreamPublisher } from '../../src/utils/redis-stream-publisher.js';
+import { RedisStreamPublisher, computeIdempotencyKey, validateCloudEvent } from '../../src/utils/redis-stream-publisher.js';
 
 describe('Story 14.3: RedisStreamPublisher Unit & Contract Tests', () => {
   const origEnv = process.env.REDIS_STREAM_ENABLED;
@@ -43,25 +43,184 @@ describe('Story 14.3: RedisStreamPublisher Unit & Contract Tests', () => {
     expect(typeof publisher.xgroupEnsure).toBe('function');
   });
 
-  it('formats thin event to string-valued record correctly for XADD', () => {
+  it('formats thin event to string-valued record correctly for XADD with CloudEvents v1.0 attributes', () => {
     const publisher = new RedisStreamPublisher();
     const formatted = publisher.formatPayload(sampleEvent);
+    const expectedIdempotencyKey = computeIdempotencyKey(sampleEvent);
+
     expect(formatted).toEqual({
+      // CloudEvents v1.0 Envelope attributes
+      specversion: '1.0',
       id: 'facebook:123456789',
+      source: 'org.xactions.crawler.facebook',
+      type: 'org.xactions.scrape.completed',
+      time: '2026-08-28T00:00:00.000Z',
+      datacontenttype: 'application/json',
+      data: JSON.stringify(sampleEvent),
+      idempotencyKey: expectedIdempotencyKey,
+      idempotencykey: expectedIdempotencyKey,
+
+      // Canonical snake_case flat fields
       platform: 'facebook',
-      externalId: '123456789',
+      external_post_id: '123456789',
       category: 'social',
+      author_id: 'user_999',
+      author_name: '',
+      post_url: '',
+      crawled_at: '2026-08-28T00:00:00.000Z',
+      storage_ref: 'facebook:123456789',
+      content_snippet: '',
+      target_id: '',
+      workspace_id: '',
+      schema_version: '1',
+      benchmark_health: 'UNKNOWN',
+      benchmark_alert: 'false',
+      scraper_id: 'facebook-hybrid',
+
+      // Dual-emit legacy camelCase flat fields
+      externalId: '123456789',
       authorId: 'user_999',
       crawledAt: '2026-08-28T00:00:00.000Z',
       storageRef: 'facebook:123456789',
       scraperId: 'facebook-hybrid',
-      benchmark_health: 'UNKNOWN',
-      benchmark_alert: 'false',
     });
+
     // Ensure all values are strings
     for (const val of Object.values(formatted)) {
       expect(typeof val).toBe('string');
     }
+
+    // Ensure CloudEvents validation passes on formatted record
+    expect(validateCloudEvent(formatted)).toBe(true);
+  });
+
+  describe('CloudEvents & Idempotency Key Utilities', () => {
+    it('computes deterministic SHA-256 idempotency key using default hourly bucket', () => {
+      const itemA = {
+        platform: 'facebook',
+        externalId: 'post-100',
+        crawledAt: '2026-09-17T14:15:30.000Z',
+      };
+      const itemB = {
+        platform: 'facebook',
+        externalId: 'post-100',
+        crawledAt: '2026-09-17T14:59:59.999Z',
+      };
+      const keyA = computeIdempotencyKey(itemA);
+      const keyB = computeIdempotencyKey(itemB);
+
+      expect(keyA).toBe(keyB);
+      expect(keyA).toMatch(/^[a-f0-9]{64}$/);
+    });
+
+    it('produces different idempotency key across different hour buckets', () => {
+      const item1 = {
+        platform: 'facebook',
+        externalId: 'post-100',
+        crawledAt: '2026-09-17T14:15:00.000Z',
+      };
+      const item2 = {
+        platform: 'facebook',
+        externalId: 'post-100',
+        crawledAt: '2026-09-17T15:15:00.000Z',
+      };
+      expect(computeIdempotencyKey(item1)).not.toBe(computeIdempotencyKey(item2));
+    });
+
+    it('incorporates custom timestamp_bucket when provided', () => {
+      const itemCustom1 = {
+        platform: 'facebook',
+        externalId: 'post-100',
+        timestamp_bucket: '2026-09-17',
+      };
+      const itemCustom2 = {
+        platform: 'facebook',
+        externalId: 'post-100',
+        timestampBucket: '2026-09-17',
+      };
+      expect(computeIdempotencyKey(itemCustom1)).toBe(computeIdempotencyKey(itemCustom2));
+    });
+
+    it('falls back to item id when externalId is missing', () => {
+      const itemWithoutExt = {
+        platform: 'facebook',
+        id: 'fallback-id-123',
+        crawledAt: '2026-09-17T10:00:00.000Z',
+      };
+      const key = computeIdempotencyKey(itemWithoutExt);
+      expect(key).toMatch(/^[a-f0-9]{64}$/);
+    });
+
+    it('returns empty string for invalid item input in computeIdempotencyKey', () => {
+      expect(computeIdempotencyKey(null)).toBe('');
+      expect(computeIdempotencyKey(undefined)).toBe('');
+      expect(computeIdempotencyKey('string')).toBe('');
+    });
+
+    it('validates compliant CloudEvents v1.0 records', () => {
+      const validEvent = {
+        specversion: '1.0',
+        id: 'facebook:post-1',
+        source: 'org.xactions.crawler.facebook',
+        type: 'org.xactions.scrape.completed',
+        time: new Date().toISOString(),
+        datacontenttype: 'application/json',
+        data: '{"message":"hello"}',
+        idempotencyKey: 'a'.repeat(64),
+      };
+      expect(validateCloudEvent(validEvent)).toBe(true);
+    });
+
+    it('rejects events missing mandatory CloudEvents attributes with descriptive reasons', () => {
+      const out = {};
+
+      expect(validateCloudEvent(null, out)).toBe(false);
+      expect(out.reason).toContain('Event must be a non-null object');
+
+      expect(validateCloudEvent({ specversion: '0.3' }, out)).toBe(false);
+      expect(out.reason).toContain('Missing or invalid "specversion"');
+
+      expect(validateCloudEvent({ specversion: '1.0', id: '' }, out)).toBe(false);
+      expect(out.reason).toContain('Missing or invalid "id"');
+
+      expect(validateCloudEvent({ specversion: '1.0', id: '1', source: '' }, out)).toBe(false);
+      expect(out.reason).toContain('Missing or invalid "source"');
+
+      expect(validateCloudEvent({ specversion: '1.0', id: '1', source: 'org.xactions', type: '' }, out)).toBe(false);
+      expect(out.reason).toContain('Missing or invalid "type"');
+
+      expect(validateCloudEvent({ specversion: '1.0', id: '1', source: 'org.xactions', type: 't', time: 'invalid' }, out)).toBe(false);
+      expect(out.reason).toContain('Invalid "time" timestamp');
+
+      expect(validateCloudEvent({ specversion: '1.0', id: '1', source: 'org.xactions', type: 't', time: new Date().toISOString() }, out)).toBe(false);
+      expect(out.reason).toContain('Missing "datacontenttype"');
+
+      expect(validateCloudEvent({ specversion: '1.0', id: '1', source: 'org.xactions', type: 't', time: new Date().toISOString(), datacontenttype: 'application/json' }, out)).toBe(false);
+      expect(out.reason).toContain('Missing "data"');
+
+      expect(validateCloudEvent({
+        specversion: '1.0',
+        id: '1',
+        source: 'org.xactions',
+        type: 't',
+        time: new Date().toISOString(),
+        datacontenttype: 'application/json',
+        data: 'invalid json{',
+      }, out)).toBe(false);
+      expect(out.reason).toContain('Invalid "data": failed to parse JSON data payload');
+
+      expect(validateCloudEvent({
+        specversion: '1.0',
+        id: '1',
+        source: 'org.xactions',
+        type: 't',
+        time: new Date().toISOString(),
+        datacontenttype: 'application/json',
+        data: '{}',
+        idempotencyKey: 'short-key',
+      }, out)).toBe(false);
+      expect(out.reason).toContain('Invalid "idempotencyKey": must be a 64-character hex string');
+    });
   });
 
   it('handles node-redis xAdd API with MAXLEN trimming', async () => {

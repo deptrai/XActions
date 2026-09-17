@@ -15,7 +15,7 @@ import { TelemetryContext } from './telemetry-context.js';
 import { globalChallengeSignatureDetector } from './challenge-signature-detector.js';
 import { globalSessionHealthOrchestrator } from './session-health-orchestrator.js';
 import { globalSchemaDriftGuard } from './schema-drift-guard.js';
-import { toIsoDate, isEnvTruthy, defaultRedisStreamPublisher } from '../utils/redis-stream-publisher.js';
+import { toIsoDate, isEnvTruthy, defaultRedisStreamPublisher, computeIdempotencyKey } from '../utils/redis-stream-publisher.js';
 
 /** @typedef {import('./types.js').CrawlerCommand} CrawlerCommand */
 /** @typedef {import('./types.js').ActionDescriptor} ActionDescriptor */
@@ -212,26 +212,72 @@ export class AbstractCrawler {
     const resolvedWorkspaceId = context?.workspaceId ?? context?.workspace_id ?? item.workspace_id ?? item.workspaceId;
     const resolvedTargetId = context?.targetId ?? context?.target_id ?? item.target_id ?? item.targetId;
 
+    const platform = item.platform || this.name;
+    const externalId = item.externalId || item.external_post_id || item.id;
+    const id = item.id || `${platform}:${externalId}`;
+    const crawledAt = toIsoDate(/** @type {any} */ (item.crawledAt || item.crawled_at));
+    const storageRef = item.storageRef || item.storage_ref || item.id;
+    const source = item.source || `org.xactions.crawler.${platform}`;
+    const type = item.type || 'org.xactions.scrape.completed';
+    const specversion = '1.0';
+    const datacontenttype = 'application/json';
+    const time = toIsoDate(/** @type {any} */ (item.time || crawledAt));
+
+    let data = item.data;
+    if (data === undefined || data === null) {
+      try {
+        data = JSON.stringify(item);
+      } catch {
+        data = JSON.stringify({ id, platform, externalId });
+      }
+    } else if (typeof data === 'object') {
+      try {
+        data = JSON.stringify(data);
+      } catch {
+        data = JSON.stringify({ id, platform, externalId });
+      }
+    }
+
+    const idempotencyKey = item.idempotencyKey || item.idempotencykey || computeIdempotencyKey({
+      platform,
+      externalId,
+      id,
+      crawledAt,
+      timestamp_bucket: item.timestamp_bucket || item.timestampBucket,
+    });
+
     const base = {
-      id: item.id || `${this.name}:${item.externalId || item.external_post_id || item.id}`,
-      platform: item.platform || this.name,
-      external_post_id: item.external_post_id || item.externalId || item.id,
+      // CloudEvents v1.0 Standard Attributes (Story 38.2)
+      specversion,
+      id,
+      source,
+      type,
+      time,
+      datacontenttype,
+      data,
+      idempotencyKey,
+      idempotencykey: idempotencyKey,
+
+      // Canonical snake_case fields
+      platform,
+      external_post_id: externalId,
       category: item.category || this.category || 'social',
       author_id: authorId,
       author_name: item.authorName || item.author_name || item.username || item.handle || item.name || '',
       post_url: postUrl,
-      crawled_at: toIsoDate(item.crawledAt || item.crawled_at),
-      storage_ref: item.storageRef || item.storage_ref || item.id,
+      crawled_at: crawledAt,
+      storage_ref: storageRef,
       scraper_id: item.scraper_id || item.scraperId || this.scraperId,
       content_snippet: contentSnippet,
       target_id: resolvedTargetId !== undefined && resolvedTargetId !== null ? resolvedTargetId : undefined,
       workspace_id: resolvedWorkspaceId !== undefined && resolvedWorkspaceId !== null ? resolvedWorkspaceId : undefined,
       schema_version: 1,
+
       // Dual-emit: camelCase fields for backward compatibility
-      externalId: item.externalId || item.external_post_id || item.id,
+      externalId,
       authorId,
-      crawledAt: toIsoDate(item.crawledAt || item.crawled_at),
-      storageRef: item.storageRef || item.storage_ref || item.id,
+      crawledAt,
+      storageRef,
       scraperId: item.scraperId || item.scraper_id || this.scraperId,
     };
 

@@ -7,6 +7,7 @@
  * @license MIT
  */
 
+import { createHash } from 'node:crypto';
 import { defaultHealthTierCache } from '../benchmark/health-tier-cache.js';
 
 /**
@@ -40,6 +41,133 @@ export function toIsoDate(val) {
     return new Date().toISOString();
   }
 }
+
+/**
+ * Compute a deterministic SHA-256 idempotency key for an event.
+ * Hash formula: sha256(`${platform}:${entityId}:${timestampBucket}`)
+ * where timestampBucket defaults to hourly resolution (YYYY-MM-DDTHH)
+ *
+ * @param {Record<string, unknown>} item
+ * @returns {string} 64-character lowercase hex SHA-256 hash
+ */
+export function computeIdempotencyKey(item) {
+  if (!item || typeof item !== 'object') {
+    return '';
+  }
+  try {
+    const platform = String(item.platform || '');
+    let entityId = String(item.external_post_id || item.externalId || item.id || '');
+    if (platform && entityId.startsWith(`${platform}:`)) {
+      entityId = entityId.slice(platform.length + 1);
+    }
+    const rawBucket = item.timestamp_bucket || item.timestampBucket;
+    const timestampBucket = rawBucket
+      ? String(rawBucket)
+      : toIsoDate(item.crawled_at || item.crawledAt || item.time).slice(0, 13);
+    const rawKey = `${platform}:${entityId}:${timestampBucket}`;
+    return createHash('sha256').update(rawKey).digest('hex');
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Validate that an event record complies with the CloudEvents v1.0 specification.
+ * Returns true if valid, or false with failure reason recorded if invalid.
+ *
+ * @param {unknown} event
+ * @param {{ reason?: string, errors?: string[] }} [out] - Optional container to receive failure reason/errors
+ * @returns {boolean}
+ */
+export function validateCloudEvent(event, out) {
+  const errors = [];
+  const setFailure = (reason) => {
+    errors.push(reason);
+    if (out && typeof out === 'object') {
+      out.reason = reason;
+      out.errors = errors;
+    }
+    validateCloudEvent.lastReason = reason;
+    validateCloudEvent.lastErrors = errors;
+    return false;
+  };
+
+  if (!event || typeof event !== 'object') {
+    return setFailure('Event must be a non-null object');
+  }
+
+  const candidate = /** @type {Record<string, unknown>} */ (event);
+
+  // 1. specversion: MUST be "1.0"
+  if (candidate.specversion !== '1.0') {
+    return setFailure('Missing or invalid "specversion": must be "1.0"');
+  }
+
+  // 2. id: MUST be non-empty string
+  if (!candidate.id || typeof candidate.id !== 'string' || candidate.id.trim().length === 0) {
+    return setFailure('Missing or invalid "id": must be a non-empty string');
+  }
+
+  // 3. source: MUST be non-empty string (URI reference)
+  if (!candidate.source || typeof candidate.source !== 'string' || candidate.source.trim().length === 0) {
+    return setFailure('Missing or invalid "source": must be a non-empty URI reference');
+  }
+
+  // 4. type: MUST be non-empty string
+  if (!candidate.type || typeof candidate.type !== 'string' || candidate.type.trim().length === 0) {
+    return setFailure('Missing or invalid "type": must be a non-empty string');
+  }
+
+  // 5. time: MUST be RFC 3339 timestamp
+  if (!candidate.time || typeof candidate.time !== 'string') {
+    return setFailure('Missing or invalid "time": must be an RFC 3339 timestamp string');
+  }
+  const timeDate = new Date(candidate.time);
+  if (isNaN(timeDate.getTime())) {
+    return setFailure(`Invalid "time" timestamp: "${candidate.time}"`);
+  }
+
+  // 6. datacontenttype: string ("application/json")
+  if (candidate.datacontenttype !== undefined && candidate.datacontenttype !== null) {
+    if (typeof candidate.datacontenttype !== 'string' || candidate.datacontenttype.trim().length === 0) {
+      return setFailure('Invalid "datacontenttype": must be a non-empty string');
+    }
+  } else {
+    return setFailure('Missing "datacontenttype": must be provided (e.g. "application/json")');
+  }
+
+  // 7. data: payload must be present
+  if (candidate.data === undefined || candidate.data === null) {
+    return setFailure('Missing "data": payload data must be present');
+  }
+  const contentType = String(candidate.datacontenttype).toLowerCase();
+  if (typeof candidate.data === 'string' && contentType.includes('json')) {
+    try {
+      JSON.parse(candidate.data);
+    } catch {
+      return setFailure('Invalid "data": failed to parse JSON data payload');
+    }
+  }
+
+  // 8. idempotencyKey / idempotencykey: if present, must be 64-character hex string
+  const idempotency = candidate.idempotencyKey ?? candidate.idempotencykey;
+  if (idempotency !== undefined && idempotency !== null) {
+    if (typeof idempotency !== 'string' || !/^[a-f0-9]{64}$/i.test(idempotency)) {
+      return setFailure('Invalid "idempotencyKey": must be a 64-character hex string');
+    }
+  }
+
+  if (out && typeof out === 'object') {
+    delete out.reason;
+    out.errors = [];
+  }
+  validateCloudEvent.lastReason = null;
+  validateCloudEvent.lastErrors = [];
+  return true;
+}
+
+validateCloudEvent.lastReason = null;
+validateCloudEvent.lastErrors = [];
 
 export class RedisStreamPublisher {
   /** @type {import('../core/types.js').RedisClientLike | null} */
@@ -151,12 +279,39 @@ export class RedisStreamPublisher {
     const authorId = String(item.author_id || item.authorId || '');
     const authorName = String(item.author_name || item.authorName || '');
     const postUrl = String(item.post_url || item.url || '');
-    const crawledAt = toIsoDate(/** @type {any} */ (item.crawled_at || item.crawledAt));
+    const crawledAt = toIsoDate(/** @type {any} */ (item.crawled_at || item.crawledAt || item.time));
     const storageRef = String(item.storage_ref || item.storageRef || id);
     const contentSnippet = String(item.content_snippet || '');
     const targetId = String(item.target_id || '');
     const workspaceId = String(item.workspace_id || '');
     const schemaVersion = String(item.schema_version || '1');
+
+    // CloudEvents v1.0 standard attributes
+    const specversion = '1.0';
+    const source = String(item.source || (platform ? `org.xactions.crawler.${platform}` : 'org.xactions.crawler'));
+    const type = String(item.type || 'org.xactions.scrape.completed');
+    const time = item.time ? toIsoDate(item.time) : crawledAt;
+    const datacontenttype = String(item.datacontenttype || 'application/json');
+
+    const idempotencyKey = String(item.idempotencyKey || item.idempotencykey || computeIdempotencyKey(item));
+
+    let dataStr = '{}';
+    try {
+      if (typeof item.data === 'string') {
+        try {
+          JSON.parse(item.data);
+          dataStr = item.data;
+        } catch {
+          dataStr = JSON.stringify({ raw: item.data });
+        }
+      } else if (item.data && typeof item.data === 'object') {
+        dataStr = JSON.stringify(item.data);
+      } else {
+        dataStr = JSON.stringify(item);
+      }
+    } catch {
+      dataStr = JSON.stringify({ id, platform, externalId });
+    }
 
     const resolvedScraperId = scraperId || item.scraper_id || item.scraperId || (platform ? `${platform}-hybrid` : '');
     let healthTier = item.benchmark_health;
@@ -176,25 +331,38 @@ export class RedisStreamPublisher {
 
     /** @type {Record<string, string>} */
     const payload = {
+      // CloudEvents v1.0 Envelope attributes
+      specversion,
       id,
+      source,
+      type,
+      time,
+      datacontenttype,
+      data: dataStr,
+      idempotencyKey,
+      idempotencykey: idempotencyKey, // dual-emit lowercase extension
+
+      // Canonical snake_case fields (backward compatibility)
       platform,
       external_post_id: externalId,
-      externalId, // dual-emit camelCase
       category,
       author_id: authorId,
-      authorId, // dual-emit camelCase
       author_name: authorName,
       post_url: postUrl,
       crawled_at: crawledAt,
-      crawledAt, // dual-emit camelCase
       storage_ref: storageRef,
-      storageRef, // dual-emit camelCase
       content_snippet: contentSnippet,
       target_id: targetId,
       workspace_id: workspaceId,
       schema_version: schemaVersion,
       benchmark_health: String(healthTier),
       benchmark_alert: String(isAlert),
+
+      // Dual-emit camelCase fields (backward compatibility)
+      externalId,
+      authorId,
+      crawledAt,
+      storageRef,
     };
 
     if (resolvedScraperId) {

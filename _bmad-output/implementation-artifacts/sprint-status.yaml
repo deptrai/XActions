@@ -226,9 +226,9 @@ development_status:
   epic-35-retrospective: done
 
   # --- Phase 7: Stream Unification & Frugal Scaling (Epics 36-40) ---
-  epic-38: in-progress
+  epic-38: done
   38-1-crawler-lifecycle-cleanup-and-stream-unification: done
-  38-2-cloudevents-compliance-and-idempotent-publishing: ready-for-dev
+  38-2-cloudevents-compliance-and-idempotent-publishing: done
   epic-38-retrospective: optional
 
   epic-36: ready-for-dev
