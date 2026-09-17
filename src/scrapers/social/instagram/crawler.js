@@ -331,31 +331,6 @@ export class InstagramCrawler extends AbstractCrawler {
           storageRef,
         });
       }
-      if (isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
-        const storeRecord = this.store ? asRecord(this.store) : null;
-        const rawStorePublisher = storeRecord && storeRecord.publisher;
-        const storePublisher = rawStorePublisher && typeof rawStorePublisher === 'object'
-          ? /** @type {import('../../../utils/redis-stream-publisher.js').RedisStreamPublisher} */ (/** @type {unknown} */ (rawStorePublisher))
-          : null;
-        const publisher = this.redisPublisher || storePublisher || defaultRedisStreamPublisher;
-        if (publisher && typeof publisher.publish === 'function') {
-          for (const item of items) {
-            const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
-            const authorId = 'authorId' in item && typeof item.authorId === 'string' ? item.authorId : item.externalId || '';
-            const crawledAt = 'crawledAt' in item && item.crawledAt ? toIsoDate(item.crawledAt) : new Date().toISOString();
-            await publisher.publish({
-              id: item.id,
-              platform: 'instagram',
-              externalId: item.externalId,
-              category,
-              authorId,
-              crawledAt,
-              storageRef: item.id,
-              scraperId: this.scraperId,
-            });
-          }
-        }
-      }
     } catch (err) {
       console.warn(`⚠️ [INSTAGRAM TELEMETRY] Checkpoint/stream emission warning: ${err instanceof Error ? err.message : String(err)}`);
     }

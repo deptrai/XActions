@@ -1838,14 +1838,17 @@ export class ThreadsCrawler extends AbstractCrawler {
         maxDepth: effectiveMaxDepth,
       }, session);
 
+      post.__streamEmitted = true;
       return {
         post,
         comments: commentsResult.comments,
         pageInfo: commentsResult.pageInfo,
+        __streamEmitted: true,
       };
     }
 
-    return { post };
+    post.__streamEmitted = true;
+    return { post, __streamEmitted: true };
   }
 
   /**
@@ -1948,6 +1951,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     // 4. Save Checkpoint & emit thin event
     await this.#emitProfileCheckpointAndStream([profile], 'profile', username, null, 'completed');
 
+    profile.__streamEmitted = true;
     return profile;
   }
 

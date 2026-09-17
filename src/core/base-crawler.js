@@ -220,6 +220,7 @@ export class AbstractCrawler {
   async #emitStreamEvents(result, session = {}, args = {}) {
     if (!isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) return;
     if (session?.dryRun || args?.dryRun) return;
+    if (result && typeof result === 'object' && (result.__streamEmitted || result.posts?.__streamEmitted)) return;
 
     const items = this.extractItems(result);
     if (!items || items.length === 0) return;
