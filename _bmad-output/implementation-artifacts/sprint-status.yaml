@@ -232,7 +232,7 @@ development_status:
   epic-38-retrospective: optional
 
   epic-36: ready-for-dev
-  36-1-mcp-tool-x-social-find-profiles: ready-for-dev
+  36-1-mcp-tool-x-social-find-profiles: done
   36-2-osint-fault-isolation-and-circuit-breaker: backlog
   epic-36-retrospective: optional
 
