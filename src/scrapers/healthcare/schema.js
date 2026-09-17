@@ -6,6 +6,8 @@
  * @license Apache-2.0
  */
 
+import { parseVnPhone } from '../../utils/vn-phone.js';
+
 export const HEALTHCARE_PLATFORMS = Object.freeze([
   'medpro',
   'youmed',
@@ -82,29 +84,5 @@ export function normalizeSpecialtySlug(specialty) {
   return removeVietnameseDiacritics(specialty);
 }
 
-const VN_PHONE_RE = /^(?:02[0-9]{9}|1[89]00[0-9]{4,6}|(?:\+84|84|0)(?:3[2-9]|5[689]|7[06-9]|8[1-9]|9[0-9])[0-9]{7})$/;
-const MASKED_PHONE_RE = /[*xX]{2,}|\.{3,}|không hiển thị|ẩn|liên hệ/i;
-
-/**
- * Parse and validate Vietnamese phone number (mobile, landline with area code, or 1800/1900 hotline).
- * @param {string | null | undefined} rawPhone
- * @returns {{ phone: string | null, phoneMasked: boolean }}
- */
-export function parseVnPhone(rawPhone) {
-  if (!rawPhone || typeof rawPhone !== 'string') {
-    return { phone: null, phoneMasked: false };
-  }
-  const cleaned = rawPhone.replace(/[\s().-]/g, '').trim();
-  if (MASKED_PHONE_RE.test(cleaned)) {
-    return { phone: null, phoneMasked: true };
-  }
-  const normalized = cleaned.startsWith('+84')
-    ? '0' + cleaned.slice(3)
-    : cleaned.startsWith('84') && cleaned.length >= 11
-      ? '0' + cleaned.slice(2)
-      : cleaned;
-  if (VN_PHONE_RE.test(normalized)) {
-    return { phone: normalized, phoneMasked: false };
-  }
-  return { phone: null, phoneMasked: false };
-}
+// Re-export so existing `import { parseVnPhone } from './schema.js'` callers keep working.
+export { parseVnPhone };

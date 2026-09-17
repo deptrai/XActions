@@ -3000,6 +3000,46 @@ const TOOLS = [
     },
   },
   {
+    name: 'x_social_find_profiles',
+    description:
+      'Unified Person OSINT lookup — fan-out a person query (name, username, phone, email) across 10+ social/recruitment/ecom platforms via the Universal Scrape Dispatcher and return normalized ProfileItem[]. Pure harvesting: no PII persistence, no entity resolution.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Person lookup query: name, username, phone number, or email.',
+        },
+        queryType: {
+          type: 'string',
+          enum: ['auto', 'name', 'username', 'phone', 'email'],
+          description: 'Query type. "auto" (default) detects phone/email/username/name from the query shape.',
+        },
+        platforms: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'Target platforms (e.g. ["twitter","threads","linkedin","chotot"]). Default: all platforms that support person lookup. Unsupported platforms are reported per-platform, never thrown.',
+        },
+        locale: {
+          type: 'string',
+          description: 'Locale hint (e.g. vi_VN, en_US) forwarded to scrapers.',
+        },
+        timeoutMs: {
+          type: 'number',
+          description: 'Per-platform deadline in ms (default: 15000). Slow platforms are reported as status:"timeout" without failing the batch.',
+        },
+        accountId: { type: 'string', description: 'Account ID for session resolution' },
+        proxyUrl: { type: 'string', description: 'Proxy URL for request routing' },
+        context: {
+          type: 'object',
+          description: 'Multi-tenant context envelope forwarded to stream events. Recommended: { targetId, workspaceId }.',
+        },
+      },
+      required: ['query'],
+    },
+  },
+  {
     name: 'x_crawl_post',
     description: 'Crawl a single post or page/group feed by URL. Tries post_detail first, then falls back to posts.',
     inputSchema: {
@@ -3411,6 +3451,10 @@ async function executeTool(name, args) {
 
   if (name === 'x_scrape') {
     return await executeScrapeTool(args);
+  }
+
+  if (name === 'x_social_find_profiles') {
+    return await executeSocialFindProfilesTool(args);
   }
 
   // Universal Multi-Platform Write Tools (Story 30.1)
@@ -3880,6 +3924,18 @@ async function executeMcpActionListTool(args) {
     category: args?.category,
     detailLevel: args?.detailLevel,
   });
+}
+
+/**
+ * Execute the x_social_find_profiles tool.
+ * Thin wrapper around the OSINT fan-out engine in `./osint-find-profiles.js`.
+ *
+ * @param {Record<string, unknown>} args
+ * @returns {Promise<unknown>}
+ */
+async function executeSocialFindProfilesTool(args) {
+  const { executeSocialFindProfiles } = await import('./osint-find-profiles.js');
+  return await executeSocialFindProfiles(args || {});
 }
 
 /**
@@ -6961,4 +7017,4 @@ if (isEntryPoint()) {
 
 // Exported so the tool list can be inspected without starting a transport.
 // Also export Facebook automation tools for direct programmatic use.
-export { TOOLS, main, createMcpServer, initializeBackend, executeTool, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookScrapeTool, executeFacebookListAccounts, executeActionListTool, executeCrawlPostTool, executeCrawlCommentsTreeTool, executeScrapeTool, startHttpTransport };
+export { TOOLS, main, createMcpServer, initializeBackend, executeTool, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookScrapeTool, executeFacebookListAccounts, executeActionListTool, executeCrawlPostTool, executeCrawlCommentsTreeTool, executeScrapeTool, executeSocialFindProfilesTool, startHttpTransport };
