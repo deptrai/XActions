@@ -224,6 +224,30 @@ development_status:
   35-3-instagram-scraper-client-crawler-session-proxy-tests: done
   35-4-unified-proxy-docs: done
   epic-35-retrospective: done
+
+  # --- Phase 7: Stream Unification & Frugal Scaling (Epics 36-40) ---
+  epic-38: in-progress
+  38-1-crawler-lifecycle-cleanup-and-stream-unification: ready-for-dev
+  38-2-cloudevents-compliance-and-idempotent-publishing: backlog
+  epic-38-retrospective: optional
+
+  epic-36: ready-for-dev
+  36-1-mcp-tool-x-social-find-profiles: ready-for-dev
+  36-2-osint-fault-isolation-and-circuit-breaker: backlog
+  epic-36-retrospective: optional
+
+  epic-37: backlog
+  37-1-static-http-first-routing-lightweight-targets: backlog
+  epic-37-retrospective: optional
+
+  epic-40: backlog
+  40-1-cost-aware-proxy-escalation-in-proxy-pool: backlog
+  epic-40-retrospective: optional
+
+  epic-39: backlog
+  39-1-selector-canary-expansion-heuristic-drift: backlog
+  39-2-gitops-patch-assistant-cli: backlog
+  epic-39-retrospective: optional
 action_items:
   - id: "epic-35-retro-item-1-gate-proxy_exhausted-at-base-client-js-9"
     epic: 35

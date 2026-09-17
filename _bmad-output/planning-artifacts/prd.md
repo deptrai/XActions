@@ -196,12 +196,19 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-91 (Utility Scripts & Adapters Consolidation):** Audit và quyết định deprecation cho `src/scrapers/*.js` độc lập và `src/scrapers/adapters/`; convert tính năng hữu ích thành `CrawlerCommand` action hoặc archive; thu gọn adapter layer.
 * **FR-92 (Unified Dispatcher & Backward Compatibility):** `src/scrapers/index.js` trở thành thin dispatcher duy nhất qua `scrape(platform, action, args)`; tất cả caller gọi `CrawlerCommand`; giữ `package.json` exports backward-compatible.
 * **FR-93 (Legacy Decommission):** Xóa legacy modules sau khi đạt shadow-run parity ≥ 99% trong 7 ngày.
+* **FR-102 (Unified Person OSINT Data Harvesting):** Cung cấp MCP tool `x_social_find_profiles` cho phép fan-out truy vấn hồ sơ đồng thời trên Twitter, Facebook, Threads, LinkedIn, Bluesky, Mastodon, TikTok, Zalo OA, Masothue, Chợ Tốt, TopCV. Tuân thủ Option D: XActions chỉ đóng vai trò Data Harvesting, trả về raw `ProfileItem[]`, không lưu trữ Golden Record PII, không tạo bảng thực thể người trong DB.
+* **FR-103 (Crawler Lifecycle Stream Unification & CloudEvents v1.0):** Hợp nhất toàn bộ luồng phát sự kiện vào Template Method của `AbstractCrawler.execute()`. Xóa bỏ 100% cờ tạm `__streamEmitted` và các lệnh publish trực tiếp trong crawler con; đảm bảo 100% event đẩy vào Redis Stream tuân thủ chuẩn CloudEvents v1.0 với `idempotencyKey` chống duplicate.
+* **FR-104 (Platform-Static Zero-Browser HTTP Routing):** Định tuyến tĩnh Tier 0 (HTTP-First / got-jsdom) cho các domain tĩnh/SSR nhẹ (Masothue, Batdongsan, tin tức, RSS); cắt giảm 85% RAM và tăng tốc độ xử lý so với Headless Browser.
+* **FR-105 (Cost-Aware Proxy Escalation & Budget Ceiling):** Bổ sung metadata phân tầng chi phí (`datacenter`, `residential`, `mobile`) vào `ProxyIpPool`. Mặc định dùng Datacenter/Free proxy; tự động leo thang lên Residential khi gặp Cloudflare/Bot Challenge; kích hoạt Soft Degradation khi chạm ngưỡng ngân sách ngày qua `DistributedTokenBucket`.
+* **FR-106 (Heuristic Selector Drift Canary & GitOps Assistant):** Mở rộng `SelectorCanary` định kỳ phát hiện trôi dạt DOM và CLI tool `xactions canary heal` sinh bản vá selector dưới dạng GitHub Draft PR kèm sandbox validation, bảo đảm tính bất biến của mã nguồn.
 
-### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17 ➔ NFR-18)
+### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17 ➔ NFR-21)
 
 * **NFR-17 (Operational Observability):** Hệ thống phải expose real-time metrics qua `GET /governor/status`, `GET /metrics/stream`, dashboard SSE/polling mỗi 5–30s, và alert khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`.
 * **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
 * **NFR-19 (Vietnam Geo-Consistent Proxy & Locale):** Tất cả request đến VN platforms (Zalo, VN e-commerce, VN government sites) phải sử dụng VN residential proxy hoặc VN-located server IP; timezone `Asia/Ho_Chi_Minh` và locale `vi-VN` phải consistent với proxy region. Áp dụng từ Epic 21 trở đi.
+* **NFR-20 (Zero Mocks & Fast Test Execution):** Cấm mock/stub cho network calls trong integration tests; kiểm thử HTTP-first/TLS handshake qua Local Ephemeral Server (`127.0.0.1:0`). Bắt buộc hỗ trợ `XACTIONS_TEST_FAST_DELAYS=1` đưa độ trễ về 0ms; unit test không được vượt quá 1.5 giây.
+* **NFR-21 (Option D Privacy & PII Protection):** XActions không duy trì bất kỳ cơ chế lưu trữ lâu dài thông tin định danh cá nhân tổng hợp (Golden Record). Dữ liệu hồ sơ chỉ luân chuyển tạm thời qua response/stream phục vụ consumer.
 
 ### 7.3. Lộ trình phân kỳ cập nhật
 
@@ -214,6 +221,7 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 * **Phase 5: Operational Observability & Nowing Cutover (Stories 19.1 ➔ 19.10, 20.1)**
 * **Phase A — Vietnam Core (inserted before Phase 6):** Epic 21 (B2B registry + automotive), Epic 22 (F&B + healthcare + legal), Epic 33 (Zalo + YouTube VN). Reactivated from backlog + net-new per VN market pivot 2026-09-05.
 * **Phase 6: Universalization & Legacy Decommission (Stories 23.1 ➔ 26.2)**
+* **Phase 7: Stream Unification & Frugal Scaling (Epics 36, 37, 38, 39, 40):** Hợp nhất lifecycle phát sự kiện (Epic 38), cung cấp OSINT Harvester tool (Epic 36), tối ưu hoá tài nguyên và chi phí proxy (Epic 37/40), hỗ trợ GitOps selector assistant (Epic 39).
 
 ### 7.4. Traceability ngắn gọn
 
@@ -240,6 +248,11 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 | Instagram Scraper | FR-100 → Epic 35 |
 | Epic 35 | FR-98, FR-99, FR-100, FR-101 |
 | SocialAccount Storage | FR-101 → Epic 35.4 |
+| Epic 36 (OSINT Harvesting) | FR-102, NFR-21 |
+| Epic 38 (Stream Lifecycle) | FR-103 |
+| Epic 37 (Zero-Browser HTTP) | FR-104, NFR-20 |
+| Epic 40 (Proxy Cost Governor) | FR-105 |
+| Epic 39 (Selector Canary GitOps) | FR-106 |
 
 ### 7.5. Canonicalization & Related Documents
 

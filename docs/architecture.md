@@ -252,3 +252,26 @@ Following our full audit of the repository, the following technical debt items a
 - [x] Real-time Rate Budget Dashboard with Panic Stop and Drag-and-Drop Queue Priorities.
 - [x] Distributed Token Bucket with Redis Lua script atomic execution.
 - [x] 100% of all 112 sprint stories marked done and verified.
+
+---
+
+## 13. Phase 7 Architecture Decisions & Core Invariants (Epics 36–40)
+
+### 13.1. Five Core Architectural Invariants
+
+1. **Template Method for Streaming (Zero `__streamEmitted`):**
+   `AbstractCrawler.execute()` is the **Single Source of Truth** for event streaming to Redis Streams. Subclasses are strictly forbidden from directly importing or invoking `publisher.publish()`, and must never attach arbitrary status flags (such as `__streamEmitted`) to domain payloads.
+2. **Option D Identity Cleanliness (Strict PII Boundary):**
+   XActions operates purely as a **Stateless Data Harvester**. It returns platform-native raw `ProfileItem[]` via `x_social_find_profiles`. It must never create identity tables (`PersonEntity`, `GoldenContact`), nor perform fuzzy entity resolution (Jaro-Winkler, pHash) in Node.js.
+3. **Platform-Static HTTP Routing (No Sequential Escalation Loops):**
+   Lightweight public domains (e.g., Masothue, Batdongsan, RSS) route directly through Tier 0 (`got-jsdom`), while bot-protected social platforms route directly to Tier 1 (CDP / Stealth Browser). Sequential 3-tier trial-and-error escalation that induces up to 16s latency is rejected.
+4. **GitOps-Driven DOM Drift Healing (No Runtime Code Injection):**
+   Selectors remain immutable in source control (`selectors.json`, `selectors.md`). When `SelectorCanary` detects drift, `AutoSelectorFallback` produces an AST-validated `unified-diff` and automatically generates a GitHub Draft PR. Direct runtime hot-patching of unverified selectors into Redis is rejected.
+5. **No Mocks in Integration & Zero Delay in Test:**
+   Testing Tier 0 HTTP engines must use in-process Local Ephemeral Servers (`127.0.0.1:0` with HTTP/2 and TLS) instead of external mocks or internet endpoints. All delay/jitter utilities must check `process.env.XACTIONS_TEST_FAST_DELAYS === '1'` to ensure unit tests finish in <1.5s.
+
+### 13.2. Architecture Decision Records (Phase 7)
+
+- **AD-40 (Person OSINT Tool Boundary):** `x_social_find_profiles` wraps `UniversalScrapeDispatcher` with `Promise.allSettled()` and per-platform deadlines (4s for HTTP, 10s for Browser). Downstream consumers (Nowing/ChainLens) handle clustering and persistence.
+- **AD-41 (CloudEvents v1.0 Envelope):** All stream items pushed to Redis Streams must comply with the CloudEvents 1.0 JSON format and include an `idempotencyKey` computed from `sha256(platform + entityId + timestamp_bucket)`.
+- **AD-42 (Cost-Aware Proxy Escalation):** `ProxyIpPool` nodes carry `tier: 'free' | 'datacenter' | 'residential' | 'mobile_4g'`. Requests default to `datacenter` and only escalate to `residential` upon receiving explicit bot challenges (`XACT_5030` or HTTP 403). Daily budget ceilings are atomically governed by `DistributedTokenBucket`.

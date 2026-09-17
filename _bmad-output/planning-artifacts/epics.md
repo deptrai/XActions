@@ -2155,3 +2155,106 @@ XActions hiện hỗ trợ 10+ nền tảng social nhưng thiếu ba nguồn n�
 - PRD: `_bmad-output/planning-artifacts/prd.md` (FR-98, FR-99, FR-100)
 - Proxy module: `src/proxy/index.js`, `src/proxy/providers.js`, `src/proxy/proxy-pool.js`
 - Scraper pattern: `src/scrapers/social/*/index.js`, `src/scrapers/adapters/base.js`
+
+---
+
+# Epic 36: Unified Person OSINT & Identity Harvesting Dispatcher
+
+## Business Context
+Nowing Lead Hub và ChainLens Research cần một điểm chạm tập trung để tìm kiếm dấu chân số của một cá nhân đồng thời trên 10+ nền tảng mạng xã hội và kênh tuyển dụng/doanh nghiệp. Tuân thủ quyết định kiến trúc Option D (`PROPOSAL-person-reconnaissance-osint.md`), XActions đóng vai trò Data Harvesting thuần túy: thực hiện fan-out truy vấn, thu thập dữ liệu thô (`ProfileItem[]`) và trả về caller mà không lưu trữ thực thể hay PII trong cơ sở dữ liệu.
+
+## Scope
+**Trong scope:**
+- MCP Tool `x_social_find_profiles` với input schema giàu ngữ nghĩa (`query`, `queryType`, `locale`, `platforms`, `timeoutMs`).
+- Tự động chuẩn hoá định dạng số điện thoại Việt Nam trước khi cào dữ liệu qua Chợ Tốt, Zalo, Masothue.
+- Tận dụng `src/scrapers/index.js` (`scrape(platform, action, args)`) để kích hoạt các scraper đã có.
+- Điều phối fan-out bằng `Promise.allSettled()` với deadline timeout độc lập per-platform.
+- Circuit breaker tự động cách ly platform lỗi liên tiếp.
+
+**Ngoài scope:**
+- Viết mới các scraper Việt Nam (đã tồn tại 100%).
+- Thuật toán Entity Resolution (Jaro-Winkler, Levenshtein, pHash) trong Node.js.
+- Tạo bảng thực thể người (`PersonEntity`, `GoldenContact`) trong Prisma.
+
+## Stories
+- **Story 36.1**: Triển khai MCP Tool `x_social_find_profiles` kết nối Universal Scrape Dispatcher.
+- **Story 36.2**: Khả năng chịu lỗi từng phần (Fault Isolation) và Circuit Breaker per-platform.
+
+---
+
+# Epic 38: Crawler Lifecycle Unification & CloudEvents Standardization
+
+## Business Context
+Hệ thống xuất hiện nợ kỹ thuật Split-Brain Publishing: crawler con và crawler cha cùng xuất bản sự kiện lên Redis Stream, dẫn đến việc phải dùng cờ tạm `__streamEmitted` làm bẩn domain payload. Epic này giải quyết triệt để vấn đề trên bằng cách chuyển toàn bộ trách nhiệm phát sự kiện về Template Method của `AbstractCrawler.execute()`.
+
+## Scope
+**Trong scope:**
+- Xoá bỏ hoàn toàn cờ `__streamEmitted` khỏi toàn bộ codebase (`base-crawler.js`, `threads/crawler.js`, `facebook/crawler.js`, `instagram/crawler.js`).
+- Xoá bỏ tất cả các lệnh gọi `publisher.publish(...)` trong các crawler con.
+- Chuẩn hoá Template Method `execute()` trong `AbstractCrawler` với điểm phát sự kiện duy nhất `emitStreamBatch()`.
+- Quản lý `Set<string> emittedItemIds` trong từng phiên chạy để chống duplicate sự kiện tại nguồn.
+- Đóng gói sự kiện theo chuẩn CloudEvents v1.0 kèm thuộc tính `idempotencyKey`.
+
+**Ngoài scope:**
+- Xây dựng Event Lake hay Parquet Export nội bộ trong XActions (đã giao cho downstream consumer).
+
+## Stories
+- **Story 38.1**: Xóa bỏ `__streamEmitted` và tái cấu trúc Template Method `AbstractCrawler.execute()`.
+- **Story 38.2**: Chuẩn hóa định dạng CloudEvents v1.0 và cơ chế phát idempotent trên Redis Stream.
+
+---
+
+# Epic 37: Lightweight Zero-Browser Engine (Platform-Static Routing)
+
+## Business Context
+Các tác vụ cào dữ liệu công khai trên các nền tảng nhẹ (như Masothue, Batdongsan, RSS feed) không đòi hỏi môi trường trình duyệt Chromium hoàn chỉnh. Việc dùng Headless Browser ngốn 250MB+ RAM/tab và làm chậm thời gian phản hồi.
+
+## Scope
+**Trong scope:**
+- Cấu hình phân tầng tĩnh `engineTier` cho từng platform: Tier 0 (`got-jsdom`) cho static/SSR targets; Tier 1 (CDP/Puppeteer stealth) cho complex social targets.
+- Sử dụng `src/scrapers/adapters/got-jsdom.js` để parse DOM ảo, cắt giảm 85% RAM và đưa độ trễ về dưới 800ms.
+- Phản hồi minh bạch metadata trong response: `engineUsed` và `durationMs`.
+
+**Ngoài scope:**
+- Universal 3-tier escalation dây chuyền gây trễ 16 giây.
+- Nhúng native C++ TLS binaries (như curl-impersonate) vào Node.js.
+
+## Stories
+- **Story 37.1**: Định tuyến tĩnh HTTP-First (Tier 0) cho các target công khai/nhẹ.
+
+---
+
+# Epic 40: Cost-Aware Proxy Escalation & Budget Ceiling
+
+## Business Context
+Residential và Mobile 4G proxy có chi phí rất đắt ($3–$15/GB). Việc cào diện rộng mà không phân tầng chi phí dẫn đến nguy cơ lạm chi nghiêm trọng.
+
+## Scope
+**Trong scope:**
+- Bổ sung metadata `tier: 'free' | 'datacenter' | 'residential' | 'mobile_4g'` vào `ProxyIpPool`.
+- Chính sách leo thang thông minh: Mặc định dùng Datacenter IP; chỉ tự động leo thang lên Residential IP khi gặp mã lỗi `PLATFORM_BLOCKED` (HTTP 403 / Captcha).
+- Quản lý hạn ngạch trần chi phí ngày qua `DistributedTokenBucket` (`PROXY_DAILY_BUDGET_USD`).
+- Cơ chế Soft Degradation: Tự động hạ tier và gắn cờ cảnh báo `BUDGET_CEILING_REACHED` thay vì làm sập job khi chạm trần ngân sách.
+
+## Stories
+- **Story 40.1**: Tích hợp Cost-Aware Proxy Escalation và Soft Degradation vào `ProxyIpPool`.
+
+---
+
+# Epic 39: Heuristic Selector Drift Canary & GitOps Assistant
+
+## Business Context
+Giao diện các mạng xã hội thường xuyên thay đổi khiến CSS/XPath selectors bị trôi dạt (DOM Drift). Để đảm bảo tính bất biến của mã nguồn và an toàn dữ liệu, hệ thống tự động phát hiện selector hỏng và sinh bản vá qua Pull Request thay vì tự ý nạp code động vào Redis production.
+
+## Scope
+**Trong scope:**
+- Mở rộng `SelectorCanary` định kỳ probe các target kiểm tra tỷ lệ thành công của selector.
+- Khi tỷ lệ rơi xuống dưới 80%, kích hoạt `AutoSelectorFallback.investigate()` tìm selector thay thế qua AST/Accessibility heuristic.
+- Đóng gói CLI command `xactions canary heal` kiểm thử cú pháp selector trong sandbox và tự động sinh GitHub Draft PR / Issue chứa `unified-diff`.
+
+**Ngoài scope:**
+- LLM tự động sửa selector và nạp thẳng vào Redis runtime mà không qua review.
+
+## Stories
+- **Story 39.1**: Mở rộng Selector Canary và phát hiện trôi dạt heuristic.
+- **Story 39.2**: Trợ lý sinh bản vá GitOps Patch Assistant CLI (`npm run canary:heal`).
