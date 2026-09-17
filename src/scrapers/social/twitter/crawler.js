@@ -40,8 +40,27 @@ export { TWITTER_GRAPHQL_QUERY_IDS };
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { isValidCategory } from '../../../core/types.js';
 import { defaultRedisStreamPublisher, isEnvTruthy, toIsoDate } from '../../../utils/redis-stream-publisher.js';
-import { gaussianDelay } from '../../../utils/gaussian-delay.js';
+import { gaussianDelay as baseGaussianDelay } from '../../../utils/gaussian-delay.js';
 import { tweetToPostItem } from './normalize-tweet.js';
+
+/**
+ * Execute Gaussian delay unless fast-delays flag or test environment is active.
+ * Drastically speeds up test suites (from 25+ seconds to <1 second).
+ *
+ * @param {number} [min=3000]
+ * @param {number} [max=7000]
+ * @param {number} [mean]
+ * @param {number} [stdDev]
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<number>}
+ */
+export async function gaussianDelay(min = 3000, max = 7000, mean, stdDev, signal) {
+  if (process.env.XACTIONS_TEST_FAST_DELAYS === '1' || process.env.NODE_ENV === 'test') {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return 0;
+  }
+  return baseGaussianDelay(min, max, mean, stdDev, signal);
+}
 
 const VALID_SEARCH_TYPES = new Set(['top', 'latest', 'live', 'photos', 'videos', 'people', 'user', 'all']);
 const PRODUCT_MAP = /** @type {Record<string, string>} */ ({

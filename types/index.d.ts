@@ -775,6 +775,8 @@ export {
   AccountPool,
   globalAccountPool,
   CheckpointResolution,
+  DistributedTokenBucket,
+  globalDistributedTokenBucket,
 } from './core';
 
 export {

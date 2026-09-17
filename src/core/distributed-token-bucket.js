@@ -156,6 +156,22 @@ export class DistributedTokenBucket {
   }
 
   /**
+   * Underlying Redis client instance if configured.
+   * @returns {any}
+   */
+  get redis() {
+    return this.#redisClient;
+  }
+
+  /**
+   * Underlying Redis client instance alias if configured.
+   * @returns {any}
+   */
+  get redisClient() {
+    return this.#redisClient;
+  }
+
+  /**
    * Check and consume tokens atomically.
    *
    * @param {string} key - Bucket key (e.g., 'consumer:chainlens', 'account:twitter:123')

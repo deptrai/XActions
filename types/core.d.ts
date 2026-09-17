@@ -477,7 +477,14 @@ export class PlatformRateLimit {
 }
 
 export class AdaptiveRateGovernor {
-  constructor(deps?: { proxyPool?: unknown; healthyProxyFloor?: number });
+  constructor(deps?: {
+    proxyPool?: unknown;
+    healthyProxyFloor?: number;
+    distributedBucket?: unknown;
+    redis?: unknown;
+    redisClient?: unknown;
+  });
+  get redis(): unknown;
   setPlatformLimit(platform: string, limits?: Partial<PlatformRateLimit>): void;
   getPlatformLimit(platform: string): PlatformRateLimit;
   isAuthRequired(platform: string): boolean;
@@ -494,6 +501,19 @@ export class AdaptiveRateGovernor {
   recordBotChallenge(accountId: string, platform?: string, durationMs?: number): void;
   wakeAccount(accountId: string, platform?: string): void;
   isHibernating(accountId: string, platform?: string): boolean;
+  isHibernatingAsync(accountId: string, platform?: string): Promise<boolean>;
+  panicStop(platform?: string, options?: { durationMs?: number; reason?: string }): {
+    success: boolean;
+    platform: string;
+    hibernatedCount: number;
+    throttleLevel: string;
+  };
+  resumePanic(platform?: string): {
+    success: boolean;
+    platform: string;
+    remainingPanics: string[];
+  };
+  setConsumerPriority(consumerId: string, priority: number): boolean;
   /** Set or update a consumer quota (AD-20). */
   setConsumerQuota(consumerId: string, config: Partial<Omit<ConsumerQuotaConfig, 'consumerId'>>): void;
   /** True when the consumer has remaining quota in the current sliding window (AD-20). */
@@ -511,6 +531,18 @@ export class AdaptiveRateGovernor {
 }
 
 export const globalAdaptiveRateGovernor: AdaptiveRateGovernor;
+
+export class DistributedTokenBucket {
+  constructor(options?: { redis?: unknown });
+  get redis(): unknown;
+  get redisClient(): unknown;
+  consume(key: string, tokens?: number, options?: { capacity?: number; refillRate?: number; ttlSeconds?: number }): Promise<{ allowed: boolean; remaining: number; retryAfterMs: number }>;
+  canConsume(key: string, tokens?: number, options?: { capacity?: number; refillRate?: number }): Promise<boolean>;
+  syncFromHeaders(key: string, headers: unknown): void;
+  reset(key: string): void;
+}
+
+export const globalDistributedTokenBucket: DistributedTokenBucket;
 
 export class PreSignedTokenRing {
   constructor(options?: { capacity?: number });

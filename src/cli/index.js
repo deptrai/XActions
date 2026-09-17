@@ -10,6 +10,9 @@
  */
 
 import { Command, Help } from 'commander';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import fs from 'node:fs';
 import { VERSION } from '../version.js';
 import chalk from 'chalk';
 import { registerConnectCommand } from './commands/connect.js';
@@ -20,7 +23,9 @@ import { registerCompletionCommand } from './commands/completion.js';
 import { registerLoginCommand } from './commands/login.js';
 import { registerAuthCommand } from './commands/auth.js';
 import { registerLogoutCommand } from './commands/logout.js';
-import { registerScrapeCommand } from './commands/scrape.js';
+import { registerScrapingCommands } from './commands/scraping.js';
+import { registerSyndicationCommands } from './commands/syndication.js';
+import { registerGovernorCommands } from './commands/governor.js';
 import { registerAutomateCommand } from './commands/automate.js';
 import { registerReadCommands } from './commands/read.js';
 import { registerPluginCommand } from './commands/plugin.js';
@@ -89,7 +94,9 @@ registerCompletionCommand(program);
 registerLoginCommand(program);
 registerAuthCommand(program);
 registerLogoutCommand(program);
-registerScrapeCommand(program);
+registerScrapingCommands(program);
+registerSyndicationCommands(program);
+registerGovernorCommands(program);
 registerAutomateCommand(program);
 registerReadCommands(program);
 registerPluginCommand(program);
@@ -121,16 +128,8 @@ registerAgentCommand(program);
 registerClientCommand(program);
 registerAdminCommand(program);
 registerRetentionCommand(program);
-registerActionsCommand(program);
 registerBenchmarkCommand(program);
 registerToolsCommand(program);
-
-
-
-
-
-
-
 
 // ============================================================================
 // Parse and Run
@@ -153,4 +152,21 @@ program.configureHelp({
 // `xactions quickstart` in three places, which is where a first-time user
 // should go; there is deliberately no redirect here, because an implicit jump
 // would hide the command list from someone who ran the binary to see it.
-program.parse();
+const isDirectExecution = Boolean(
+  process.argv[1] &&
+  (path.resolve(process.argv[1]) === fileURLToPath(import.meta.url) ||
+    (() => {
+      try {
+        return fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+      } catch {
+        return false;
+      }
+    })())
+);
+
+if (isDirectExecution) {
+  program.parse();
+}
+
+export { program };
+export default program;

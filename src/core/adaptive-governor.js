@@ -91,17 +91,23 @@ export class AdaptiveRateGovernor {
   /** Distributed token bucket for multi-process synchronized limits (Story 32.2). */
   #distributedBucket = null;
 
+  /** Redis client for distributed state synchronization (Story 32.2). */
+  #redis = null;
+
   /**
    * @param {Object} [deps]
    * @param {import('../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
    * @param {number} [deps.healthyProxyFloor]
    * @param {import('./distributed-token-bucket.js').DistributedTokenBucket} [deps.distributedBucket]
+   * @param {any} [deps.redis]
+   * @param {any} [deps.redisClient]
    */
   constructor(deps = {}) {
     this.#proxyPool = deps.proxyPool || null;
     this.#healthyProxyFloor = Math.max(0, deps.healthyProxyFloor ?? 0);
     this.#windowStart = Date.now();
     this.#distributedBucket = deps.distributedBucket || null;
+    this.#redis = deps.redis || deps.redisClient || deps.distributedBucket?.redis || deps.distributedBucket?.redisClient || null;
 
     // AD-20 default consumer quotas. NOWING_RATE_LIMIT_RPM overrides the
     // Nowing workspace plan RPM; internal traffic is unmetered.
@@ -461,6 +467,14 @@ export class AdaptiveRateGovernor {
   }
 
   /**
+   * Underlying Redis client instance if configured.
+   * @returns {any}
+   */
+  get redis() {
+    return this.#redis;
+  }
+
+  /**
    * @param {string} accountId
    * @param {string} reason
    * @param {number} [durationMs]
@@ -471,6 +485,20 @@ export class AdaptiveRateGovernor {
     const until = Date.now() + durationMs;
     this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.accountId !== key);
     this.#hibernatingAccounts.push({ accountId: key, until, reason });
+
+    if (this.#redis && typeof this.#redis.set === 'function') {
+      const ttl = Math.ceil(durationMs / 1000);
+      try {
+        const res = this.#redis.set(`xact:hibernated:${key}`, String(reason), 'EX', ttl);
+        if (res && typeof res.catch === 'function') {
+          res.catch((err) => {
+            console.warn('[AdaptiveRateGovernor] Redis hibernateAccount failed:', err?.message || err);
+          });
+        }
+      } catch (err) {
+        console.warn('[AdaptiveRateGovernor] Redis hibernateAccount failed:', err?.message || err);
+      }
+    }
   }
 
   /**
@@ -501,9 +529,23 @@ export class AdaptiveRateGovernor {
   wakeAccount(accountId, platform) {
     const key = this.#resolveAccountId(accountId, platform);
     this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.accountId !== key);
+    if (this.#redis && typeof this.#redis.del === 'function') {
+      try {
+        const res = this.#redis.del(`xact:hibernated:${key}`);
+        if (res && typeof res.catch === 'function') {
+          res.catch((err) => {
+            console.warn('[AdaptiveRateGovernor] Redis wakeAccount failed:', err?.message || err);
+          });
+        }
+      } catch (err) {
+        console.warn('[AdaptiveRateGovernor] Redis wakeAccount failed:', err?.message || err);
+      }
+    }
   }
 
   /**
+   * Check hibernation status synchronously against local in-memory state.
+   *
    * @param {string} accountId
    * @param {string} [platform]
    * @returns {boolean}
@@ -513,6 +555,34 @@ export class AdaptiveRateGovernor {
     const now = Date.now();
     this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.until > now);
     return this.#hibernatingAccounts.some((h) => h.accountId === key);
+  }
+
+  /**
+   * Check hibernation status asynchronously, querying Redis key xact:hibernated:${key}
+   * if available, falling back gracefully to in-memory check.
+   *
+   * @param {string} accountId
+   * @param {string} [platform]
+   * @returns {Promise<boolean>}
+   */
+  async isHibernatingAsync(accountId, platform) {
+    if (this.isHibernating(accountId, platform)) {
+      return true;
+    }
+
+    if (this.#redis && typeof this.#redis.get === 'function') {
+      const key = this.#resolveAccountId(accountId, platform);
+      try {
+        const val = await this.#redis.get(`xact:hibernated:${key}`);
+        if (val !== null && val !== undefined) {
+          return true;
+        }
+      } catch (err) {
+        console.warn('[AdaptiveRateGovernor] Redis isHibernatingAsync failed:', err?.message || err);
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -638,6 +708,20 @@ export class AdaptiveRateGovernor {
     // Also hibernate wildcard key for the platform
     this.hibernateAccount(`${targetPlatform}:*`, reason, durationMs);
 
+    if (this.#redis && typeof this.#redis.set === 'function') {
+      const ttl = Math.ceil(durationMs / 1000);
+      try {
+        const res = this.#redis.set(`xact:panic:${targetPlatform}`, String(reason), 'EX', ttl);
+        if (res && typeof res.catch === 'function') {
+          res.catch((err) => {
+            console.warn('[AdaptiveRateGovernor] Redis panicStop failed:', err?.message || err);
+          });
+        }
+      } catch (err) {
+        console.warn('[AdaptiveRateGovernor] Redis panicStop failed:', err?.message || err);
+      }
+    }
+
     return {
       success: true,
       platform: targetPlatform,
@@ -649,7 +733,7 @@ export class AdaptiveRateGovernor {
   /**
    * Resume operations after a panic stop (Story 32.1).
    * @param {string} [platform='all']
-   * @returns {{ success: boolean, platform: string }}
+   * @returns {{ success: boolean, platform: string, remainingPanics: string[] }}
    */
   resumePanic(platform = 'all') {
     const targetPlatform = platform.toLowerCase();
@@ -661,6 +745,19 @@ export class AdaptiveRateGovernor {
       this.#hibernatingAccounts = this.#hibernatingAccounts.filter(
         (h) => !(h.reason === 'emergency_panic_stop' && (h.accountId.startsWith(`${targetPlatform}:`) || h.accountId === `${targetPlatform}:*`))
       );
+    }
+
+    if (this.#redis && typeof this.#redis.del === 'function') {
+      try {
+        const res = this.#redis.del(`xact:panic:${targetPlatform}`);
+        if (res && typeof res.catch === 'function') {
+          res.catch((err) => {
+            console.warn('[AdaptiveRateGovernor] Redis resumePanic failed:', err?.message || err);
+          });
+        }
+      } catch (err) {
+        console.warn('[AdaptiveRateGovernor] Redis resumePanic failed:', err?.message || err);
+      }
     }
 
     return {
