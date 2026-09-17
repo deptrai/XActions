@@ -2898,29 +2898,7 @@ export class FacebookCrawler extends AbstractCrawler {
         });
       }
 
-      if (isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
-        const publisher = this.redisPublisher || (this.store && /** @type {any} */ (this.store).publisher);
-        if (publisher && typeof publisher.publish === 'function') {
-          for (const item of items) {
-            const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
-            const authorId = 'authorId' in item && typeof item.authorId === 'string' ? item.authorId : '';
-            const crawledAt = item.crawledAt instanceof Date ? item.crawledAt.toISOString() : (item.crawledAt ? String(item.crawledAt) : new Date().toISOString());
-            await publisher.publish({
-              id: item.id,
-              platform: 'facebook',
-              externalId: item.externalId,
-              category,
-              authorId,
-              crawledAt,
-              storageRef: item.storageRef || item.id,
-              scraperId: this.scraperId,
-            });
-          }
-          if (items && typeof items === 'object') {
-            /** @type {any} */ (items).__streamEmitted = true;
-          }
-        }
-      }
+      await this.emitStreamBatch(items, { targetType, targetKey });
     } catch (err) {
       console.warn(`[FB TELEMETRY] Checkpoint/stream emission warning: ${err instanceof Error ? err.message : String(err)}`);
     }

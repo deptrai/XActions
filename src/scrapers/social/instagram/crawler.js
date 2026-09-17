@@ -331,6 +331,8 @@ export class InstagramCrawler extends AbstractCrawler {
           storageRef,
         });
       }
+
+      await this.emitStreamBatch(items, { targetType, targetKey });
     } catch (err) {
       console.warn(`⚠️ [INSTAGRAM TELEMETRY] Checkpoint/stream emission warning: ${err instanceof Error ? err.message : String(err)}`);
     }

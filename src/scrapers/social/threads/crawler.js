@@ -317,24 +317,7 @@ export class ThreadsCrawler extends AbstractCrawler {
         });
       }
 
-      if (isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
-        const publisher = this.redisPublisher || (this.store && /** @type {any} */ (this.store).publisher) || defaultRedisStreamPublisher;
-        if (publisher && typeof publisher.publish === 'function') {
-          for (const item of items) {
-            const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
-            await publisher.publish({
-              id: item.id,
-              platform: 'threads',
-              externalId: item.externalId,
-              category,
-              authorId: item.authorId || '',
-              crawledAt: item.crawledAt ? toIsoDate(item.crawledAt) : new Date().toISOString(),
-              storageRef: item.id,
-              scraperId: this.scraperId,
-            });
-          }
-        }
-      }
+      await this.emitStreamBatch(items, { targetType, targetKey });
     } catch (err) {
       // Non-blocking telemetry warning
       console.warn(`⚠️ [THREADS TELEMETRY] Checkpoint/stream emission warning: ${err instanceof Error ? err.message : String(err)}`);
@@ -1838,17 +1821,14 @@ export class ThreadsCrawler extends AbstractCrawler {
         maxDepth: effectiveMaxDepth,
       }, session);
 
-      post.__streamEmitted = true;
       return {
         post,
         comments: commentsResult.comments,
         pageInfo: commentsResult.pageInfo,
-        __streamEmitted: true,
       };
     }
 
-    post.__streamEmitted = true;
-    return { post, __streamEmitted: true };
+    return { post };
   }
 
   /**
@@ -1951,7 +1931,6 @@ export class ThreadsCrawler extends AbstractCrawler {
     // 4. Save Checkpoint & emit thin event
     await this.#emitProfileCheckpointAndStream([profile], 'profile', username, null, 'completed');
 
-    profile.__streamEmitted = true;
     return profile;
   }
 
@@ -2285,23 +2264,9 @@ export class ThreadsCrawler extends AbstractCrawler {
         });
       }
 
-      if (items.length > 0 && isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
-        const publisher = this.redisPublisher || (this.store && /** @type {any} */ (this.store).publisher) || defaultRedisStreamPublisher;
-        if (publisher && typeof publisher.publish === 'function') {
-          for (const item of items) {
-            const postItem = profileItemToPostItem(item);
-            await publisher.publish({
-              id: postItem.id,
-              platform: 'threads',
-              externalId: postItem.externalId,
-              category: 'social',
-              authorId: postItem.authorId,
-              crawledAt: toIsoDate(postItem.crawledAt),
-              storageRef: postItem.id,
-              scraperId: this.scraperId,
-            });
-          }
-        }
+      if (items.length > 0) {
+        const postItems = items.map((item) => profileItemToPostItem(item));
+        await this.emitStreamBatch(postItems, { targetType, targetKey });
       }
     } catch {}
   }

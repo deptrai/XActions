@@ -848,29 +848,7 @@ export class TwitterCrawler extends AbstractCrawler {
         });
       }
 
-      if (isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
-        const publisher =
-          this.redisPublisher ||
-          (this.store && /** @type {any} */ (this.store).publisher) ||
-          defaultRedisStreamPublisher;
-
-        if (publisher && typeof publisher.publish === 'function') {
-          for (const item of items) {
-            const anyItem = /** @type {any} */ (item);
-            const category = 'category' in anyItem && typeof anyItem.category === 'string' ? anyItem.category : 'social';
-            await publisher.publish({
-              id: anyItem.id,
-              platform: 'twitter',
-              externalId: anyItem.externalId,
-              category,
-              authorId: anyItem.authorId || anyItem.externalId || '',
-              crawledAt: anyItem.crawledAt ? toIsoDate(anyItem.crawledAt) : new Date().toISOString(),
-              storageRef: anyItem.id,
-              scraperId: this.scraperId,
-            });
-          }
-        }
-      }
+      await this.emitStreamBatch(items, { targetType, targetKey });
     } catch (err) {
       console.warn(`⚠️ [TWITTER TELEMETRY] Checkpoint/stream emission warning: ${err instanceof Error ? err.message : String(err)}`);
     }

@@ -102,6 +102,18 @@ export class AbstractCrawler {
   /** @type {boolean} */
   includeBuzzwords = false;
 
+  /** @type {Set<string>} */
+  _emittedItemIds = new Set();
+
+  /** @type {boolean} */
+  _currentDryRun = false;
+
+  /** @type {Record<string, unknown> | null} */
+  _currentContext = null;
+
+  /** @type {import('../utils/redis-stream-publisher.js').RedisStreamPublisher | null} */
+  redisPublisher = null;
+
   /**
    * @param {object} [deps]
    * @param {ClientLike} [deps.client]
@@ -117,6 +129,7 @@ export class AbstractCrawler {
    * @param {import('./session-health-orchestrator.js').SessionHealthOrchestrator} [deps.healthOrchestrator]
    * @param {import('./schema-drift-guard.js').SchemaDriftGuard} [deps.driftGuard]
    * @param {import('./telemetry-emitter.js').TelemetryEmitter} [deps.telemetryEmitter]
+   * @param {import('../utils/redis-stream-publisher.js').RedisStreamPublisher} [deps.redisPublisher]
    * @param {boolean} [deps.includeBuzzwords] -- inject `summary.buzzwords` into crawl results (Story 14.4)
    */
   constructor(deps = {}) {
@@ -125,6 +138,8 @@ export class AbstractCrawler {
     }
     this.client = deps.client || null;
     this.store = deps.store || null;
+    this.redisPublisher = deps.redisPublisher || null;
+    this._emittedItemIds = new Set();
     this.sessionManager = deps.sessionManager || deps.client?.sessionManager || null;
     this.governor = deps.governor || deps.client?.governor || null;
     this.accountPool = deps.accountPool || deps.client?.accountPool || null;
@@ -155,95 +170,189 @@ export class AbstractCrawler {
   mapToThinEvent(item, context = {}) {
     // Per-type field mapping — detect item type and map accordingly
     let contentSnippet = '';
-    let authorId = '';
-    let postUrl = '';
-    
+    let authorId = item.authorId || item.author_id || '';
+    let postUrl = item.url || item.postUrl || item.post_url || '';
+
     if (item.text || item.content) {
       // PostItem (text) or GenericPostItem (content)
       const content = item.text || item.content;
       contentSnippet = String(content).slice(0, 4000);
       authorId = item.authorId || item.author_id || '';
       postUrl = item.url || item.postUrl || item.post_url || '';
+    } else if (item.bio || item.biography || item.profileUrl || item.username || item.handle) {
+      // ProfileItem
+      const content = item.bio || item.biography || item.name || item.username || item.handle || '';
+      contentSnippet = String(content).slice(0, 4000);
+      authorId = item.id || item.externalId || item.authorId || item.author_id || item.username || '';
+      postUrl = item.url || item.profileUrl || '';
     } else if (item.title && item.description) {
       // ProductItem
       contentSnippet = `${item.title} ${item.description}`.slice(0, 4000);
-      authorId = item.shop_id || item.sellerId || item.authorId || '';
+      authorId = item.shop_id || item.sellerId || item.authorId || item.author_id || '';
       postUrl = item.productUrl || item.url || '';
     } else if (item.name && item.industry) {
       // CompanyItem
       contentSnippet = `${item.name} ${item.industry} ${item.address || ''}`.slice(0, 4000);
-      authorId = item.taxCode || item.authorId || '';
+      authorId = item.taxCode || item.authorId || item.author_id || '';
       postUrl = item.detailUrl || item.url || '';
     } else if (item.title && item.company) {
       // JobItem
       contentSnippet = `${item.title} ${item.company} ${item.location || ''}`.slice(0, 4000);
-      authorId = item.companyId || item.authorId || '';
+      authorId = item.companyId || item.authorId || item.author_id || '';
       postUrl = item.jobUrl || item.url || '';
     } else if (item.title && item.price) {
       // ListingItem
       contentSnippet = `${item.title} ${item.price} ${item.area || ''}`.slice(0, 4000);
-      authorId = item.sellerId || item.authorId || '';
+      authorId = item.sellerId || item.authorId || item.author_id || '';
       postUrl = item.listingUrl || item.url || '';
+    } else if (item.content_snippet) {
+      contentSnippet = String(item.content_snippet).slice(0, 4000);
     }
 
+    const resolvedWorkspaceId = context?.workspaceId ?? context?.workspace_id ?? item.workspace_id ?? item.workspaceId;
+    const resolvedTargetId = context?.targetId ?? context?.target_id ?? item.target_id ?? item.targetId;
+
     const base = {
-      id: item.id || `${this.name}:${item.externalId || item.id}`,
-      platform: this.name,
-      external_post_id: item.externalId || item.id,
-      category: item.category || this.category,
+      id: item.id || `${this.name}:${item.externalId || item.external_post_id || item.id}`,
+      platform: item.platform || this.name,
+      external_post_id: item.external_post_id || item.externalId || item.id,
+      category: item.category || this.category || 'social',
       author_id: authorId,
-      author_name: item.authorName || item.author_name || '',
+      author_name: item.authorName || item.author_name || item.username || item.handle || item.name || '',
       post_url: postUrl,
       crawled_at: toIsoDate(item.crawledAt || item.crawled_at),
       storage_ref: item.storageRef || item.storage_ref || item.id,
-      scraper_id: this.scraperId,
+      scraper_id: item.scraper_id || item.scraperId || this.scraperId,
       content_snippet: contentSnippet,
-      target_id: context?.targetId,
-      workspace_id: context?.workspaceId,
+      target_id: resolvedTargetId !== undefined && resolvedTargetId !== null ? resolvedTargetId : undefined,
+      workspace_id: resolvedWorkspaceId !== undefined && resolvedWorkspaceId !== null ? resolvedWorkspaceId : undefined,
       schema_version: 1,
       // Dual-emit: camelCase fields for backward compatibility
-      externalId: item.externalId || item.id,
+      externalId: item.externalId || item.external_post_id || item.id,
       authorId,
       crawledAt: toIsoDate(item.crawledAt || item.crawled_at),
       storageRef: item.storageRef || item.storage_ref || item.id,
+      scraperId: item.scraperId || item.scraper_id || this.scraperId,
     };
 
     return base;
   }
 
   /**
+   * Universal batch stream event emitter with session-scoped deduplication.
+   * Central authoritative stream publisher for all crawlers (Story 38.1).
+   *
+   * @param {Array<Record<string, unknown>> | Record<string, unknown>} items
+   * @param {Record<string, unknown>} [context={}]
+   * @returns {Promise<void>}
+   */
+  async emitStreamBatch(items, context = {}) {
+    if (!isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) return;
+    if (!items || (Array.isArray(items) && items.length === 0)) return;
+
+    const effectiveContext = {
+      ...(this._currentContext || {}),
+      ...(context || {}),
+    };
+
+    if (effectiveContext?.dryRun || this._currentDryRun) return;
+
+    const publisher = this.store?.publisher || this.redisPublisher || defaultRedisStreamPublisher;
+    if (!publisher || typeof publisher.publish !== 'function') return;
+
+    const hasWorkspaceId = effectiveContext?.workspaceId !== undefined && effectiveContext?.workspaceId !== null
+      ? Boolean(String(effectiveContext.workspaceId))
+      : (effectiveContext?.workspace_id !== undefined && effectiveContext?.workspace_id !== null ? Boolean(String(effectiveContext.workspace_id)) : false);
+
+    if (!hasWorkspaceId) {
+      console.warn(`[StreamPublisher:MissingWorkspaceId] ${this.name} emitting stream events without workspaceId — Nowing consumer will drop events`);
+    }
+
+    if (!this._emittedItemIds) {
+      this._emittedItemIds = new Set();
+    }
+
+    const flatItems = Array.isArray(items) ? items : [items];
+
+    for (const item of flatItems) {
+      if (!item || typeof item !== 'object') continue;
+
+      // Extract candidate identifiers for deduplication
+      const candidateIds = [
+        item.id ? String(item.id) : null,
+        item.externalId ? String(item.externalId) : null,
+        item.external_post_id ? String(item.external_post_id) : null,
+        item.storageRef ? String(item.storageRef) : null,
+        item.storage_ref ? String(item.storage_ref) : null,
+        item.externalId ? `${this.name}:${item.externalId}` : null,
+      ].filter(Boolean);
+
+      const isAlreadyEmitted = candidateIds.some((id) => this._emittedItemIds.has(id));
+      if (isAlreadyEmitted) {
+        continue;
+      }
+
+      const thinEvent = this.mapToThinEvent(item, effectiveContext);
+      if (
+        (thinEvent.id && this._emittedItemIds.has(String(thinEvent.id))) ||
+        (thinEvent.storage_ref && this._emittedItemIds.has(String(thinEvent.storage_ref))) ||
+        (thinEvent.storageRef && this._emittedItemIds.has(String(thinEvent.storageRef)))
+      ) {
+        continue;
+      }
+
+      if (!thinEvent.content_snippet) {
+        console.warn(`[StreamPublisher:MissingContentSnippet] ${this.name} item ${thinEvent.id} missing content_snippet — Nowing consumer will drop`);
+      }
+
+      let publishOk = false;
+      try {
+        const pubResult = await publisher.publish(thinEvent);
+        if (pubResult && typeof pubResult === 'object' && pubResult.ok === false) {
+          publishOk = false;
+          console.warn(`[StreamPublisher] ${this.name} failed to publish item ${thinEvent.id}: ${pubResult.error || 'publish failed'}`);
+        } else {
+          publishOk = true;
+        }
+      } catch (err) {
+        console.warn(`[StreamPublisher] ${this.name} failed to publish item ${thinEvent.id}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+
+      // Mark all identifiers as emitted to prevent duplicates from any representation only on success
+      if (publishOk) {
+        if (thinEvent.id) this._emittedItemIds.add(String(thinEvent.id));
+        if (thinEvent.storage_ref) this._emittedItemIds.add(String(thinEvent.storage_ref));
+        if (thinEvent.storageRef) this._emittedItemIds.add(String(thinEvent.storageRef));
+        if (thinEvent.externalId) this._emittedItemIds.add(String(thinEvent.externalId));
+        if (thinEvent.external_post_id) this._emittedItemIds.add(String(thinEvent.external_post_id));
+        for (const cid of candidateIds) {
+          this._emittedItemIds.add(cid);
+        }
+      }
+    }
+  }
+
+  /**
    * Emit stream events for crawled items after handler completes.
    * @param {unknown} result
    * @param {Record<string, unknown>} [session]
+   * @param {Record<string, unknown>} [args]
    * @returns {Promise<void>}
    */
   async #emitStreamEvents(result, session = {}, args = {}) {
     if (!isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) return;
     if (session?.dryRun || args?.dryRun) return;
-    if (result && typeof result === 'object' && (result.__streamEmitted || result.posts?.__streamEmitted)) return;
 
     const items = this.extractItems(result);
     if (!items || items.length === 0) return;
 
-    const publisher = this.store?.publisher || this.redisPublisher || defaultRedisStreamPublisher;
-    if (!publisher || typeof publisher.publish !== 'function') return;
+    const context = {
+      ...(session?.context || {}),
+      ...(args?.context || {}),
+      dryRun: Boolean(session?.dryRun || args?.dryRun),
+    };
 
-    // context comes from args.context (x_scrape) or session.context (direct calls)
-    const context = args?.context || session?.context || {};
-    if (!context?.workspaceId) {
-      console.warn(`[StreamPublisher:MissingWorkspaceId] ${this.name} emitting stream events without workspaceId — Nowing consumer will drop events`);
-    }
-    for (const item of items) {
-      const thinEvent = this.mapToThinEvent(item, context);
-      if (!thinEvent.content_snippet) {
-        console.warn(`[StreamPublisher:MissingContentSnippet] ${this.name} item ${thinEvent.id} missing content_snippet — Nowing consumer will drop`);
-      }
-      try {
-        await publisher.publish(thinEvent);
-      } catch (err) {
-        console.warn(`[StreamPublisher] ${this.name} failed to publish item ${thinEvent.id}: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    }
+    await this.emitStreamBatch(items, context);
   }
 
   /**
@@ -256,12 +365,23 @@ export class AbstractCrawler {
     // Handle array results directly (e.g., Mastodon returns posts[])
     if (Array.isArray(result)) return result;
     const obj = /** @type {Record<string, unknown>} */ (result);
+
+    // If both post and comments are present (e.g. post_detail with replies)
+    if (obj.post && typeof obj.post === 'object' && !Array.isArray(obj.post) && Array.isArray(obj.comments)) {
+      return [obj.post, ...obj.comments];
+    }
+
+    // If both profile and posts are present (e.g. user action returning { profile, posts })
+    if (obj.profile && typeof obj.profile === 'object' && !Array.isArray(obj.profile) && Array.isArray(obj.posts)) {
+      return [obj.profile, ...obj.posts];
+    }
+
     // Check for array-valued keys first
-    for (const key of ['items', 'posts', 'data', 'listings', 'products', 'jobs', 'comments']) {
+    for (const key of ['items', 'posts', 'data', 'listings', 'products', 'jobs', 'comments', 'profiles']) {
       if (Array.isArray(obj[key])) return obj[key];
     }
-    // Check for single-item keys (post, item, listing, product, job, company)
-    for (const key of ['post', 'item', 'listing', 'product', 'job', 'company']) {
+    // Check for single-item keys (post, item, listing, product, job, company, profile)
+    for (const key of ['post', 'item', 'listing', 'product', 'job', 'company', 'profile']) {
       if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
         return [obj[key]];
       }
@@ -428,10 +548,26 @@ export class AbstractCrawler {
   }
 
   /**
+   * Execute command — alias for start() matching Template Method lifecycle pattern (Story 38.1).
+   * @param {CrawlerCommand} command
+   * @returns {Promise<any>}
+   */
+  async execute(command) {
+    return this.start(command);
+  }
+
+  /**
    * @param {CrawlerCommand} command
    * @returns {Promise<PostItem[] | CommentItem[] | PostItem | any>}
    */
   async start(command) {
+    this._emittedItemIds = new Set();
+    this._currentDryRun = Boolean(command?.args?.dryRun || command?.session?.dryRun);
+    this._currentContext = {
+      ...(command?.session?.context || {}),
+      ...(command?.args?.context || {}),
+    };
+
     if (!command || typeof command.action !== 'string') {
       throw new PlatformError({
         type: ErrorTypes.INVALID_ARGS,
@@ -534,6 +670,15 @@ export class AbstractCrawler {
     // Resolve checkpoint and auto-inject cursor before calling handler (Story 25.5)
     const resolvedArgs = await this.resolveCheckpoint(command.action, command.args);
     const finalArgs = resolvedArgs || command.args;
+    if (finalArgs?.dryRun !== undefined) {
+      this._currentDryRun = Boolean(finalArgs.dryRun);
+    }
+    if (finalArgs?.context) {
+      this._currentContext = {
+        ...(this._currentContext || {}),
+        ...finalArgs.context,
+      };
+    }
 
     const session = {
       ...(command.session || {}),
@@ -589,6 +734,9 @@ export class AbstractCrawler {
       error = /** @type {Error & { code?: string }} */ (err);
       throw err;
     } finally {
+      this._currentDryRun = false;
+      this._currentContext = null;
+
       if (this.client) {
         const baseClient = /** @type {AbstractApiClient} */ (this.client);
         baseClient.telemetryContext = null;

@@ -175,24 +175,7 @@ export class TikTokCrawler extends AbstractCrawler {
         });
       }
 
-      if (isEnvTruthy(process.env.REDIS_STREAM_ENABLED)) {
-        const publisher = this.redisPublisher || (this.store && /** @type {any} */ (this.store).publisher) || defaultRedisStreamPublisher;
-        if (publisher && typeof publisher.publish === 'function') {
-          for (const item of items) {
-            const category = 'category' in item && typeof item.category === 'string' ? item.category : 'social';
-            await publisher.publish({
-              id: item.id,
-              platform: 'tiktok',
-              externalId: item.externalId,
-              category,
-              authorId: item.authorId || '',
-              crawledAt: item.crawledAt ? toIsoDate(item.crawledAt) : new Date().toISOString(),
-              storageRef: item.id,
-              scraperId: this.scraperId,
-            });
-          }
-        }
-      }
+      await this.emitStreamBatch(items, { targetType, targetKey, dryRun });
     } catch (err) {
       console.warn(`⚠️ [TIKTOK TELEMETRY] Checkpoint/stream emission warning: ${err instanceof Error ? err.message : String(err)}`);
     }
