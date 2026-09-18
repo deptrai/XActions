@@ -775,6 +775,21 @@ export class AbstractCrawler {
         resultObj.summary = { ...existingSummary, buzzwords };
       }
 
+      // Story 37.1: inject engine telemetry metadata into result payload
+      // so downstream callers can observe which transport engine was used
+      // (http for AbstractApiClient-based lightweight platforms, browser for
+      // Puppeteer/CDP-backed stealth platforms) and how long the crawl took.
+      if (result && typeof result === 'object' && !Array.isArray(result)) {
+        const baseClient = /** @type {AbstractApiClient} */ (this.client);
+        const resultObj = /** @type {Record<string, unknown>} */ (result);
+        resultObj._metadata = {
+          engineUsed: baseClient?.requiresBrowser === false ? 'http' : 'browser',
+          durationMs: Date.now() - startTime,
+          platform: this.name,
+          action: command.action,
+        };
+      }
+
       return result;
     } catch (err) {
       error = /** @type {Error & { code?: string }} */ (err);

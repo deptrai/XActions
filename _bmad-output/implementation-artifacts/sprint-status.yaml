@@ -236,8 +236,8 @@ development_status:
   36-2-osint-fault-isolation-and-circuit-breaker: done
   epic-36-retrospective: optional
 
-  epic-37: backlog
-  37-1-static-http-first-routing-lightweight-targets: backlog
+  epic-37: done
+  37-1-static-http-first-routing-lightweight-targets: done
   epic-37-retrospective: optional
 
   epic-40: backlog

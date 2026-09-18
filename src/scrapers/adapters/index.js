@@ -54,6 +54,7 @@ function registerBuiltin(name, importFn) {
 registerBuiltin('puppeteer', () => import('./puppeteer.js'));
 registerBuiltin('playwright', () => import('./playwright.js'));
 registerBuiltin('http', () => import('./http.js'));
+registerBuiltin('got-jsdom', () => import('./got-jsdom.js'));
 
 // Aliases
 registerBuiltin('pw', () => import('./playwright.js'));
