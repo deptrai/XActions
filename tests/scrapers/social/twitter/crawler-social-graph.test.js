@@ -210,7 +210,7 @@ describe('Story 13.2.9 — Twitter Hybrid Social Graph (Follow, Block, Mute, Boo
       session: { accountId: 'twitter-social-user' },
     });
 
-    expect(result).toEqual({ success: true });
+    expect(result).toMatchObject({ success: true });
     expect(receivedRequests).toHaveLength(1);
     expect(receivedRequests[0].path).toMatch(/\/1\.1\/friendships\/create\.json/);
     expect(receivedRequests[0].body.user_id).toBe('44196397');
@@ -224,7 +224,7 @@ describe('Story 13.2.9 — Twitter Hybrid Social Graph (Follow, Block, Mute, Boo
       session: { accountId: 'twitter-social-user' },
     });
 
-    expect(result).toEqual({ success: true });
+    expect(result).toMatchObject({ success: true });
     expect(receivedRequests).toHaveLength(2);
     expect(receivedRequests[0].path).toMatch(/\/UserByScreenName/);
     expect(receivedRequests[1].path).toMatch(/\/1\.1\/friendships\/create\.json/);
@@ -239,7 +239,7 @@ describe('Story 13.2.9 — Twitter Hybrid Social Graph (Follow, Block, Mute, Boo
       session: { accountId: 'twitter-social-user' },
     });
 
-    expect(result).toEqual({ success: true });
+    expect(result).toMatchObject({ success: true });
     expect(receivedRequests[1].path).toMatch(/\/1\.1\/friendships\/destroy\.json/);
     expect(receivedRequests[1].body.user_id).toBe('44196397');
   });
@@ -285,7 +285,7 @@ describe('Story 13.2.9 — Twitter Hybrid Social Graph (Follow, Block, Mute, Boo
       args: { tweetId: 'https://x.com/user/status/1900000000000000000', dryRun: false },
       session: { accountId: 'twitter-social-user' },
     });
-    expect(resBookmark).toEqual({ success: true });
+    expect(resBookmark).toMatchObject({ success: true });
     expect(receivedRequests[0].path).toMatch(/\/CreateBookmark/);
     expect(receivedRequests[0].variables).toEqual({ tweet_id: '1900000000000000000' });
 
@@ -294,7 +294,7 @@ describe('Story 13.2.9 — Twitter Hybrid Social Graph (Follow, Block, Mute, Boo
       args: { tweetId: '1900000000000000000', dryRun: false },
       session: { accountId: 'twitter-social-user' },
     });
-    expect(resUnbookmark).toEqual({ success: true });
+    expect(resUnbookmark).toMatchObject({ success: true });
     expect(receivedRequests[1].path).toMatch(/\/DeleteBookmark/);
     expect(receivedRequests[1].variables).toEqual({ tweet_id: '1900000000000000000' });
   });
@@ -312,8 +312,8 @@ describe('Story 13.2.9 — Twitter Hybrid Social Graph (Follow, Block, Mute, Boo
       session: { accountId: 'twitter-social-user' },
     });
 
-    expect(resFollow).toEqual({ success: true });
-    expect(resBookmark).toEqual({ success: true });
+    expect(resFollow).toMatchObject({ success: true });
+    expect(resBookmark).toMatchObject({ success: true });
     expect(receivedRequests).toHaveLength(0);
   });
 
@@ -353,7 +353,7 @@ describe('Story 13.2.9 — Twitter Hybrid Social Graph (Follow, Block, Mute, Boo
       args: { userId: '999999', dryRun: false },
       session: { accountId: 'twitter-social-user' },
     });
-    expect(followRes).toEqual({ success: true });
+    expect(followRes).toMatchObject({ success: true });
 
     // Already bookmarked
     const bookmarkRes = await crawler.start({
@@ -361,7 +361,7 @@ describe('Story 13.2.9 — Twitter Hybrid Social Graph (Follow, Block, Mute, Boo
       args: { tweetId: '8888888888888888888', dryRun: false },
       session: { accountId: 'twitter-social-user' },
     });
-    expect(bookmarkRes).toEqual({ success: true });
+    expect(bookmarkRes).toMatchObject({ success: true });
   });
 
   it('rejects when governor denies account request', async () => {

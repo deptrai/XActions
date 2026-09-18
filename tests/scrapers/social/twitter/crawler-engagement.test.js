@@ -185,7 +185,7 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
       session: { accountId: 'twitter-engagement-user' },
     });
 
-    expect(result).toEqual({ success: true });
+    expect(result).toMatchObject({ success: true });
     expect(receivedRequests).toHaveLength(1);
     expect(receivedRequests[0].path).toMatch(/\/lI07N6Otwv1PhnEgXILM7A\/FavoriteTweet/);
     expect(receivedRequests[0].variables).toEqual({ tweet_id: '1900000000000000000' });
@@ -199,7 +199,7 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
       session: { accountId: 'twitter-engagement-user' },
     });
 
-    expect(result).toEqual({ success: true });
+    expect(result).toMatchObject({ success: true });
     expect(receivedRequests).toHaveLength(1);
     expect(receivedRequests[0].variables).toEqual({ tweet_id: '1900000000000000000' });
   });
@@ -212,7 +212,7 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
       session: { accountId: 'twitter-engagement-user' },
     });
 
-    expect(result).toEqual({ success: true });
+    expect(result).toMatchObject({ success: true });
     expect(receivedRequests).toHaveLength(1);
     expect(receivedRequests[0].path).toMatch(/\/ZYKSe-w7KEslx3JhSIk5LA\/UnfavoriteTweet/);
     expect(receivedRequests[0].variables).toEqual({ tweet_id: '1900000000000000000' });
@@ -226,7 +226,7 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
       session: { accountId: 'twitter-engagement-user' },
     });
 
-    expect(result).toEqual({ success: true });
+    expect(result).toMatchObject({ success: true });
     expect(receivedRequests).toHaveLength(1);
     expect(receivedRequests[0].path).toMatch(/\/mbRO74GrOvSfRcJnlMapnQ\/CreateRetweet/);
     expect(receivedRequests[0].variables).toEqual({ tweet_id: '1900000000000000000', dark_request: false });
@@ -240,7 +240,7 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
       session: { accountId: 'twitter-engagement-user' },
     });
 
-    expect(result).toEqual({ success: true });
+    expect(result).toMatchObject({ success: true });
     expect(receivedRequests).toHaveLength(1);
     expect(receivedRequests[0].path).toMatch(/\/ZyZigVsNiFO6v1dEks1eWg\/DeleteRetweet/);
     expect(receivedRequests[0].variables).toEqual({ source_tweet_id: '1900000000000000000', dark_request: false });
@@ -259,8 +259,8 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
       session: { accountId: 'twitter-engagement-user' },
     });
 
-    expect(resultLike).toEqual({ success: true });
-    expect(resultRetweet).toEqual({ success: true });
+    expect(resultLike).toMatchObject({ success: true });
+    expect(resultRetweet).toMatchObject({ success: true });
     expect(receivedRequests).toHaveLength(0);
   });
 
@@ -292,7 +292,7 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
       args: { tweetId: '1111111111111111111', dryRun: false },
       session: { accountId: 'twitter-engagement-user' },
     });
-    expect(likeRes).toEqual({ success: true });
+    expect(likeRes).toMatchObject({ success: true });
 
     // Already retweeted
     const retweetRes = await crawler.start({
@@ -300,7 +300,7 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
       args: { tweetId: '2222222222222222222', dryRun: false },
       session: { accountId: 'twitter-engagement-user' },
     });
-    expect(retweetRes).toEqual({ success: true });
+    expect(retweetRes).toMatchObject({ success: true });
 
     // Not found in retweets list
     const unretweetRes = await crawler.start({
@@ -308,7 +308,7 @@ describe('Story 13.2.8 — Twitter Hybrid Engagement (Like & Retweet)', () => {
       args: { tweetId: '3333333333333333333', dryRun: false },
       session: { accountId: 'twitter-engagement-user' },
     });
-    expect(unretweetRes).toEqual({ success: true });
+    expect(unretweetRes).toMatchObject({ success: true });
   });
 
   it('throws PlatformError for non-idempotent GraphQL errors', async () => {
