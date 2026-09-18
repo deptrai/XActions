@@ -1075,3 +1075,42 @@ export class CanaryHealer {
     }
   ): Promise<HealingResult>;
 }
+
+// ---------------------------------------------------------------------------
+// Story 40.1 — Cost-Aware Proxy Escalation & Budget Ceiling
+// ---------------------------------------------------------------------------
+
+export type ProxyTier = 'free' | 'datacenter' | 'residential' | 'mobile_4g';
+
+export interface BudgetStatus {
+  allowed: boolean;
+  remaining: number;
+  estimatedCostUsd: number;
+  dailyBudgetUsd: number;
+}
+
+export interface EscalationResult {
+  proxy: NormalizedProxy | null;
+  tier: ProxyTier;
+  escalatedFrom?: ProxyTier;
+  degraded?: boolean;
+  reason?: string;
+}
+
+export interface ProxyBudgetGovernorOptions {
+  bucket?: DistributedTokenBucket;
+  dailyBudgetUsd?: number;
+}
+
+export class ProxyBudgetGovernor {
+  constructor(options?: ProxyBudgetGovernorOptions);
+  readonly dailyBudgetUsd: number;
+  estimateCostUsd(tier: ProxyTier | string, estimatedBytes?: number): number;
+  canAfford(tier: ProxyTier | string, estimatedBytes?: number): Promise<BudgetStatus>;
+  consume(tier: ProxyTier | string, bytesUsed?: number): Promise<{ allowed: boolean; remaining: number; spentUsd: number }>;
+  checkRemaining(): Promise<{ remaining: number; dailyBudgetUsd: number }>;
+}
+
+export const globalProxyBudgetGovernor: ProxyBudgetGovernor;
+export const TIER_COST_USD_PER_GB: Record<string, number>;
+export const PROXY_TIERS: readonly ProxyTier[];

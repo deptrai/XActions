@@ -59,3 +59,8 @@ export {
   globalDistributedTokenBucket,
   parseRateLimitHeaders,
 } from './distributed-token-bucket.js';
+export {
+  ProxyBudgetGovernor,
+  globalProxyBudgetGovernor,
+  TIER_COST_USD_PER_GB,
+} from './proxy-budget-governor.js';

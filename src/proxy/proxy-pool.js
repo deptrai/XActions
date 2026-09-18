@@ -221,17 +221,21 @@ export class ProxyIpPool {
    * @param {boolean} [requiresResidential=false]
    * @returns {any | null}
    */
-  getNext(requiresResidential = false) {
+  getNext(requiresResidential = false, tier = null) {
     const total = this.#proxies.length;
     if (total === 0) return null;
 
     const now = Date.now();
+    // Story 40.1: tier takes precedence over requiresResidential boolean
+    const effectiveTier = tier || (requiresResidential ? 'residential' : null);
+
     for (let i = 0; i < total; i++) {
       const idx = (this.#roundRobinIndex + i) % total;
       const p = this.#proxies[idx];
       const normalized = this.#normalize(p);
       if (this.#isQuarantined(normalized, now)) continue;
-      if (requiresResidential && !normalized.residential) continue;
+      if (effectiveTier && normalized.tier !== effectiveTier) continue;
+      if (!effectiveTier && requiresResidential && !normalized.residential) continue;
 
       this.#roundRobinIndex = (idx + 1) % total;
       return { ...normalized };
@@ -279,7 +283,7 @@ export class ProxyIpPool {
    * @param {'realtime' | 'bulk'} pool
    * @returns {any | null}
    */
-  #findHealthyInRange(start, end, requiresResidential, pool) {
+  #findHealthyInRange(start, end, requiresResidential, pool, tier = null) {
     const span = end - start;
     if (span <= 0) return null;
 
@@ -291,7 +295,9 @@ export class ProxyIpPool {
       const idx = start + ((offset + i) % span);
       const normalized = this.#normalize(this.#proxies[idx]);
       if (this.#isQuarantined(normalized, now)) continue;
-      if (requiresResidential && !normalized.residential) continue;
+      const effectiveTier = tier || (requiresResidential ? 'residential' : null);
+      if (effectiveTier && normalized.tier !== effectiveTier) continue;
+      if (!effectiveTier && requiresResidential && !normalized.residential) continue;
 
       if (pool === 'realtime') {
         this.#realtimeOffset = (offset + i + 1) % span;
@@ -330,6 +336,8 @@ export class ProxyIpPool {
     const safeOptions = options || {};
     const pool = safeOptions.pool === 'realtime' ? 'realtime' : 'bulk';
     const requiresResidential = options.requiresResidential === true;
+    // Story 40.1: explicit tier takes precedence over requiresResidential boolean
+    const tier = safeOptions.tier || (requiresResidential ? 'residential' : null);
     const accountKey = safeOptions.accountId ? String(safeOptions.accountId) : null;
 
     if (accountKey) {
@@ -344,7 +352,7 @@ export class ProxyIpPool {
     const realtimeCount = this.#realtimeCount();
     const [start, end] = pool === 'realtime' ? [0, realtimeCount] : [realtimeCount, total];
 
-    const found = this.#findHealthyInRange(start, end, requiresResidential, pool);
+    const found = this.#findHealthyInRange(start, end, requiresResidential, pool, tier);
     if (found) {
       if (accountKey) this.#stickyMap.set(accountKey, this.#key(found));
       return { ...found };
@@ -352,7 +360,7 @@ export class ProxyIpPool {
 
     // Dynamic yield: realtime may borrow from bulk when its partition is dry.
     if (pool === 'realtime' && safeOptions.yieldFromBulk !== false && realtimeCount < total) {
-      const yielded = this.#findHealthyInRange(realtimeCount, total, requiresResidential, 'bulk');
+      const yielded = this.#findHealthyInRange(realtimeCount, total, requiresResidential, 'bulk', tier);
       if (yielded) {
         this.#yieldedCount += 1;
         // The proxy stays in the bulk partition; the sticky binding (if any)
@@ -431,13 +439,18 @@ export class ProxyIpPool {
     if (total === 0) return null;
 
     const safeOptions = options || {};
+    // Story 40.1: tier option takes precedence over requiresResidential boolean
+    const tier = safeOptions.tier || (requiresResidential ? 'residential' : null);
 
     const accountKey = String(accountId || '');
     const boundKey = this.#stickyMap.get(accountKey);
     if (boundKey) {
       const existing = this.#findHealthyByKey(boundKey);
-      if (existing && (!requiresResidential || existing.residential)) return { ...existing };
-      if (existing && requiresResidential && !existing.residential) this.#stickyMap.delete(accountKey);
+      if (existing && tier && existing.tier === tier) return { ...existing };
+      if (existing && !tier && requiresResidential && existing.residential) return { ...existing };
+      if (existing && !tier && !requiresResidential) return { ...existing };
+      // Tier mismatch — unbind and re-scan
+      if (existing) this.#stickyMap.delete(accountKey);
     }
 
     const pool = safeOptions?.pool === 'realtime' || safeOptions?.pool === 'bulk' ? safeOptions.pool : null;
@@ -453,7 +466,8 @@ export class ProxyIpPool {
       const p = this.#proxies[idx];
       const normalized = this.#normalize(p);
       if (this.#isQuarantined(normalized, now)) continue;
-      if (requiresResidential && !normalized.residential) continue;
+      if (tier && normalized.tier !== tier) continue;
+      if (!tier && requiresResidential && !normalized.residential) continue;
 
       this.#stickyMap.set(accountKey, this.#key(normalized));
       return { ...normalized };

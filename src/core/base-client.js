@@ -20,6 +20,7 @@ import {
 import { globalProxyPool } from '../proxy/proxy-pool.js';
 import { PureCryptoSignerRegistry } from './signer-pool.js';
 import { globalSessionHealthOrchestrator } from './session-health-orchestrator.js';
+import { globalProxyBudgetGovernor } from './proxy-budget-governor.js';
 import { globalChallengeSignatureDetector } from './challenge-signature-detector.js';
 
 /**
@@ -207,6 +208,7 @@ export class AbstractApiClient {
    * @param {boolean} [options.isCanary]
    * @param {import('./session-health-orchestrator.js').SessionHealthOrchestrator} [options.healthOrchestrator]
    * @param {import('./challenge-signature-detector.js').ChallengeSignatureDetector} [options.challengeDetector]
+   * @param {import('./proxy-budget-governor.js').ProxyBudgetGovernor} [options.proxyBudgetGovernor]
    */
   constructor(options = {}) {
     if (new.target === AbstractApiClient) {
@@ -227,6 +229,7 @@ export class AbstractApiClient {
     this.isCanary = Boolean(options.isCanary);
     this.healthOrchestrator = options.healthOrchestrator !== undefined ? options.healthOrchestrator : globalSessionHealthOrchestrator;
     this.challengeDetector = options.challengeDetector !== undefined ? options.challengeDetector : globalChallengeSignatureDetector;
+    this.proxyBudgetGovernor = options.proxyBudgetGovernor !== undefined ? options.proxyBudgetGovernor : globalProxyBudgetGovernor;
 
     if (options.platform !== undefined) this.platform = options.platform;
     if (options.client !== undefined) this.client = options.client;
@@ -294,12 +297,14 @@ export class AbstractApiClient {
    */
   resolveProxy(accountId, requiresResidential = false, requiresAuth = this.requiresAuth, options = {}) {
     const safeOptions = options || {};
+    // Story 40.1: tier option takes precedence over requiresResidential boolean
+    const tier = safeOptions.tier || (requiresResidential ? 'residential' : null);
     const rawAccountId = typeof accountId === 'string' ? accountId : accountId?.accountId;
     const pool = typeof safeOptions.pool === 'string' ? safeOptions.pool : null;
     let proxy = null;
 
     if (this.proxyProvider && typeof this.proxyProvider.getProxy === 'function') {
-      const opts = /** @type {Record<string, unknown>} */ ({ accountId: rawAccountId, requiresResidential, pool: pool || undefined, consumerId: safeOptions.consumerId });
+      const opts = /** @type {Record<string, unknown>} */ ({ accountId: rawAccountId, requiresResidential, tier: tier || undefined, pool: pool || undefined, consumerId: safeOptions.consumerId });
       const safeRecord = /** @type {Record<string, unknown>} */ (safeOptions);
       // Forward geo/session targeting hints (country/isp/sessionId/...) to
       // provider-class pools (DynamicTunnelProvider) that honour them (AC-5).
@@ -309,15 +314,16 @@ export class AbstractApiClient {
       proxy = this.proxyProvider.getProxy(opts);
     } else if (this.proxyPool && (this._hasExplicitProxy || this.requiresProxy || requiresResidential)) {
       if (requiresAuth && rawAccountId && typeof this.proxyPool.getStickyProxy === 'function') {
-        proxy = this.proxyPool.getStickyProxy(rawAccountId, requiresResidential, pool ? { pool } : undefined);
+        proxy = this.proxyPool.getStickyProxy(rawAccountId, requiresResidential, { ...(pool ? { pool } : {}), ...(tier ? { tier } : {}) });
       } else if (pool && typeof this.proxyPool.getProxy === 'function') {
         proxy = this.proxyPool.getProxy({
           pool,
           requiresResidential,
+          tier: tier || undefined,
           yieldFromBulk: pool === 'realtime',
         });
       } else if (typeof this.proxyPool.getNext === 'function') {
-        proxy = this.proxyPool.getNext(requiresResidential);
+        proxy = this.proxyPool.getNext(requiresResidential, tier);
       } else if (typeof this.proxyPool.getRotatingProxy === 'function') {
         proxy = this.proxyPool.getRotatingProxy(requiresResidential);
       } else if (typeof this.proxyPool.getRoundRobinProxy === 'function') {

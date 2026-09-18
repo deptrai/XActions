@@ -52,6 +52,14 @@ export const PROVIDER_SID_LIMITS = Object.freeze({
 });
 
 /**
+ * Proxy cost tiers (Story 40.1). `free` = $0/GB, `datacenter` ~$0.50/GB,
+ * `residential` ~$8/GB, `mobile_4g` ~$15/GB.
+ * @typedef {'free' | 'datacenter' | 'residential' | 'mobile_4g'} ProxyTier
+ */
+
+export const PROXY_TIERS = Object.freeze(['free', 'datacenter', 'residential', 'mobile_4g']);
+
+/**
  * @typedef {Object} NormalizedProxy
  * @property {string} scheme
  * @property {string} host
@@ -60,6 +68,9 @@ export const PROVIDER_SID_LIMITS = Object.freeze({
  * @property {string} [password]
  * @property {string} server - Canonical host:port with scheme (e.g., "http://1.2.3.4:8080").
  *                              IPv6 addresses are bracketed (e.g., "http://[2001:db8::1]:8080").
+ * @property {ProxyTier} [tier='datacenter'] - Cost tier (Story 40.1). Default 'datacenter'.
+ * @property {boolean} [residential] - DEPRECATED: use `tier` instead. Kept for one
+ *                              release cycle; `residential: true` maps to tier 'residential'.
  */
 
 /**
@@ -276,6 +287,17 @@ export function normalizeProxy(input) {
     if (record.username !== undefined && record.username !== '') result.username = String(record.username);
     if (record.password !== undefined) result.password = String(record.password);
     if (record.residential !== undefined) result.residential = Boolean(record.residential);
+
+    // Story 40.1 — ProxyTier: explicit tier wins; otherwise map residential boolean.
+    if (record.tier !== undefined && PROXY_TIERS.includes(record.tier)) {
+      result.tier = record.tier;
+      // Keep residential flag consistent with tier for backward compat.
+      result.residential = record.tier === 'residential' || record.tier === 'mobile_4g';
+    } else if (record.residential !== undefined) {
+      result.tier = Boolean(record.residential) ? 'residential' : 'datacenter';
+    } else {
+      result.tier = 'datacenter';
+    }
 
     return result;
   }

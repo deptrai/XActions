@@ -19,6 +19,7 @@ export const ErrorTypes = Object.freeze({
   INTERNAL: 'internal',
   DEPRECATED: 'deprecated', // Story 25.4 — unified deprecation error envelope
   DEGRADED_DATA: 'degraded_data', // Story 28.1 — schema drift corrupted data
+  BUDGET_CEILING_REACHED: 'budget_ceiling_reached', // Story 40.1 — proxy daily budget exhausted
 });
 
 export const SuggestedActions = Object.freeze({
