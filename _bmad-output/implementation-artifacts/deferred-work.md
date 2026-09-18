@@ -194,3 +194,9 @@
   evidence: `replace(/[\s().\-]/g,'')` removes dots before the masked test; pre-existing bug carried from healthcare schema, not caused by this change.
   location: src/utils/vn-phone.js
   severity: low
+
+### Resolved (2026-09-18 — deferred items addressed)
+
+- RESOLVED: Half-open circuit now has single-probe semantics — `probing` flag lets exactly one caller through after `CIRCUIT_COOLDOWN_MS`; concurrent callers still see `circuit_open` until the probe settles.
+- RESOLVED: `_failureCounts` now keyed by `platform:accountId` — one account's failure no longer trips the circuit for other accounts on that platform; `evictCircuits` caps the map at 200 entries.
+- RESOLVED: `MASKED_PHONE_RE` now tested on the raw input before `.` is stripped — `090...` is flagged `phoneMasked:true`; `VN_PHONE_RE` broadened to `5[25689]` so 052/055 prefixes normalize.

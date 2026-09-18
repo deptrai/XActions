@@ -188,3 +188,11 @@ Defer (deferred — not this story's problem / 36.2 scope):
 
 Rejected (with refutation):
 - `false` — LinkedIn `profileUrl` only set for linkedin.com URLs is intentional; username path still populated via `username`/`handle`.
+
+
+### Review Findings — Defer items resolved (2026-09-18 follow-up)
+
+All three `defer` findings were resolved in commit on `main`:
+- [x] [Review][Resolved] Half-open circuit single-probe semantics — `probing` flag; concurrent callers stay `circuit_open` until probe settles. [src/mcp/osint-find-profiles.js]
+- [x] [Review][Resolved] Circuit scoped per `platform:accountId` + `evictCircuits` cap (200). [src/mcp/osint-find-profiles.js]
+- [x] [Review][Resolved] `MASKED_PHONE_RE` `\.{3,}` now tested pre-strip → `090...` flagged masked; `VN_PHONE_RE` broadened to `5[25689]`. [src/utils/vn-phone.js]

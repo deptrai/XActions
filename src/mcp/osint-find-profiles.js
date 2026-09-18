@@ -68,38 +68,91 @@ const VN_PHONE_PLATFORMS = new Set(['chotot', 'zalo', 'masothue']);
 
 const CIRCUIT_FAILURE_THRESHOLD = 3;
 const CIRCUIT_COOLDOWN_MS = 60_000;
+const CIRCUIT_MAX_ENTRIES = 200;
 
 /**
- * In-memory per-platform failure counters.
- * `Map<platform, { failures:number, openedAt:number }>`
- * @type {Map<string, { failures: number, openedAt: number }>}
+ * In-memory failure counters, keyed by `platform` or `platform:accountId` so a
+ * transient failure on one account does not trip the circuit for every account
+ * on that platform.
+ *
+ * State per key:
+ *  - `failures` — consecutive failures.
+ *  - `openedAt` — epoch ms the circuit last tripped (>= threshold).
+ *  - `probing`  — true while a single half-open probe is in flight; concurrent
+ *                 callers see the circuit as still open until the probe settles.
+ *
+ * @type {Map<string, { failures: number, openedAt: number, probing: boolean }>}
  */
 const _failureCounts = new Map();
 
 /**
+ * Circuit key scoped to the account when one is supplied, else platform-wide.
+ * @param {string} platform
+ * @param {string} [accountId]
+ * @returns {string}
+ */
+function circuitKey(platform, accountId) {
+  return accountId ? `${platform}:${accountId}` : platform;
+}
+
+/**
+ * Evict stale entries once the map grows past `CIRCUIT_MAX_ENTRIES`, keeping the
+ * most-recently-opened circuits. Prevents unbounded growth across many distinct
+ * platform/account keys over a long-running process.
+ * @param {number} now
+ */
+function evictCircuits(now) {
+  if (_failureCounts.size <= CIRCUIT_MAX_ENTRIES) return;
+  // Drop fully-recovered / long-idle entries first (oldest openedAt).
+  const entries = [..._failureCounts.entries()].sort((a, b) => a[1].openedAt - b[1].openedAt);
+  const excess = _failureCounts.size - CIRCUIT_MAX_ENTRIES;
+  for (let i = 0; i < excess; i++) _failureCounts.delete(entries[i][0]);
+}
+
+/**
  * True when the platform's circuit is currently open (skip dispatch).
- * Half-open: after `CIRCUIT_COOLDOWN_MS` a single attempt is allowed through.
+ *
+ * Half-open with single-probe semantics: after `CIRCUIT_COOLDOWN_MS` exactly one
+ * caller is allowed through to probe; it sets `probing` so concurrent callers
+ * still observe the circuit as open until the probe's success/failure is
+ * recorded.
+ *
  * @param {string} platform
  * @param {number} now
- * @returns {boolean}
+ * @param {string} [accountId]
+ * @returns {boolean} true → skip dispatch
  */
-function isCircuitOpen(platform, now) {
-  const s = _failureCounts.get(platform);
+function isCircuitOpen(platform, now, accountId) {
+  const s = _failureCounts.get(circuitKey(platform, accountId));
   if (!s || s.failures < CIRCUIT_FAILURE_THRESHOLD) return false;
-  return now - s.openedAt < CIRCUIT_COOLDOWN_MS;
+  if (now - s.openedAt < CIRCUIT_COOLDOWN_MS) return true;
+  // Cooldown elapsed — allow ONE probe through; others stay open until it settles.
+  if (s.probing) return true;
+  s.probing = true;
+  return false;
 }
 
-/** @param {string} platform @param {number} now */
-function recordPlatformFailure(platform, now) {
-  const s = _failureCounts.get(platform) || { failures: 0, openedAt: 0 };
+/**
+ * @param {string} platform
+ * @param {number} now
+ * @param {string} [accountId]
+ */
+function recordPlatformFailure(platform, now, accountId) {
+  const key = circuitKey(platform, accountId);
+  const s = _failureCounts.get(key) || { failures: 0, openedAt: 0, probing: false };
   s.failures += 1;
+  s.probing = false;
   if (s.failures >= CIRCUIT_FAILURE_THRESHOLD) s.openedAt = now;
-  _failureCounts.set(platform, s);
+  _failureCounts.set(key, s);
+  evictCircuits(now);
 }
 
-/** @param {string} platform */
-function recordPlatformSuccess(platform) {
-  _failureCounts.delete(platform);
+/**
+ * @param {string} platform
+ * @param {string} [accountId]
+ */
+function recordPlatformSuccess(platform, accountId) {
+  _failureCounts.delete(circuitKey(platform, accountId));
 }
 
 /** Test-only: reset the in-memory circuit counters. */
@@ -444,7 +497,7 @@ export async function executeSocialFindProfiles(args) {
     if (queryType === 'phone' && VN_PHONE_PLATFORMS.has(platform) && !vnNormalized) {
       return { ...base, status: 'skipped', reason: 'invalid VN phone', durationMs: elapsed(), profiles: [] };
     }
-    if (isCircuitOpen(platform, pStarted)) {
+    if (isCircuitOpen(platform, pStarted, accountId)) {
       return { ...base, status: 'circuit_open', durationMs: elapsed(), profiles: [] };
     }
 
@@ -464,7 +517,7 @@ export async function executeSocialFindProfiles(args) {
     try {
       const raw = await withTimeout(scrape(platform, action, options), deadlineMs, controller.signal);
       const profiles = normalizeToProfileItems(platform, raw);
-      recordPlatformSuccess(platform);
+      recordPlatformSuccess(platform, accountId);
       return {
         ...base,
         status: 'ok',
@@ -474,7 +527,7 @@ export async function executeSocialFindProfiles(args) {
       };
     } catch (err) {
       controller.abort(); // signal any cooperative crawler to stop early
-      recordPlatformFailure(platform, Date.now());
+      recordPlatformFailure(platform, Date.now(), accountId);
       const isTimeout = err && err.code === 'OSINT_TIMEOUT';
       return {
         ...base,

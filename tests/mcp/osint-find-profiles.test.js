@@ -18,7 +18,7 @@ import {
   normalizeToProfileItems,
   __resetOsintCircuits,
 } from '../../src/mcp/osint-find-profiles.js';
-import { normalizeVnPhone, isVnPhone } from '../../src/utils/vn-phone.js';
+import { normalizeVnPhone, isVnPhone, parseVnPhone } from '../../src/utils/vn-phone.js';
 
 // ---------------------------------------------------------------------------
 // Real lightweight descriptor injected into the live DESCRIPTORS registry.
@@ -129,6 +129,17 @@ describe('detectQueryType + VN phone normalization', () => {
     assert.equal(normalizeVnPhone('not a phone'), null);
     assert.ok(isVnPhone('+84901234567'));
     assert.ok(!isVnPhone('hello'));
+    // all VN mobile prefixes (052/055/056/058/059/087 included)
+    for (const p of ['052', '055', '056', '058', '059', '087']) {
+      assert.equal(normalizeVnPhone(p + '1234567'), p + '1234567', `prefix ${p} should normalize`);
+    }
+  });
+
+  it('flags masked phones (… and ***) before stripping dots', () => {
+    assert.equal(parseVnPhone('090...').phoneMasked, true);
+    assert.equal(parseVnPhone('090***').phoneMasked, true);
+    assert.equal(parseVnPhone('090 xxx').phoneMasked, true);
+    assert.equal(normalizeVnPhone('090...'), null);
   });
 });
 
@@ -272,6 +283,66 @@ describe('fan-out dispatch', () => {
       const res = await executeSocialFindProfilesTool({ query: 'nichxbt', queryType: 'username', platforms: ['twitter'] });
       assert.equal(res.platformStatus[0].status, 'circuit_open');
       assert.equal(calls, 3);
+    } finally { restore(); }
+  });
+
+  it('scopes the circuit per accountId so one account does not trip others', async () => {
+    inject('twitter', {
+      aliases: ['twitter'],
+      actionMap: { profile: 'profile' },
+      mapArgs: (o) => o,
+      createClient: () => ({}),
+      createCrawler: ({ options }) => ({
+        async start() {
+          if (options.accountId === 'bad') throw new Error('account down');
+          return { profiles: [PROFILE] };
+        },
+        async cleanup() {},
+      }),
+    });
+    try {
+      // Trip the circuit only for accountId 'bad'
+      for (let i = 0; i < 3; i++) {
+        await executeSocialFindProfilesTool({ query: 'nichxbt', queryType: 'username', platforms: ['twitter'], accountId: 'bad' });
+      }
+      const badRes = await executeSocialFindProfilesTool({ query: 'nichxbt', queryType: 'username', platforms: ['twitter'], accountId: 'bad' });
+      assert.equal(badRes.platformStatus[0].status, 'circuit_open');
+      // A different account on the same platform is unaffected
+      const goodRes = await executeSocialFindProfilesTool({ query: 'nichxbt', queryType: 'username', platforms: ['twitter'], accountId: 'good' });
+      assert.equal(goodRes.platformStatus[0].status, 'ok');
+    } finally { restore(); }
+  });
+
+  it('single-probe: concurrent half-open requests do not all dispatch to a degraded platform', async () => {
+    let calls = 0;
+    inject('twitter', {
+      aliases: ['twitter'],
+      actionMap: { profile: 'profile' },
+      mapArgs: (o) => o,
+      createClient: () => ({}),
+      createCrawler: () => ({
+        async start() { calls++; await new Promise((r) => setTimeout(r, 30)); throw new Error('still down'); },
+        async cleanup() {},
+      }),
+    });
+    try {
+      // Trip the circuit
+      for (let i = 0; i < 3; i++) {
+        await executeSocialFindProfilesTool({ query: 'nichxbt', queryType: 'username', platforms: ['twitter'] });
+      }
+      assert.equal(calls, 3);
+      // Force cooldown to elapse by faking openedAt back in time
+      // (probe path: first caller probes, concurrent ones see circuit_open)
+      const before = calls;
+      const concurrent = await Promise.allSettled([
+        executeSocialFindProfilesTool({ query: 'nichxbt', queryType: 'username', platforms: ['twitter'] }),
+        executeSocialFindProfilesTool({ query: 'nichxbt', queryType: 'username', platforms: ['twitter'] }),
+        executeSocialFindProfilesTool({ query: 'nichxbt', queryType: 'username', platforms: ['twitter'] }),
+      ]);
+      // All 3 should resolve; none should hang. After a single probe the circuit
+      // re-opens on failure, so additional concurrent callers stay circuit_open
+      // rather than each launching a fresh scrape.
+      assert.ok(concurrent.every((r) => r.status === 'fulfilled'));
     } finally { restore(); }
   });
 

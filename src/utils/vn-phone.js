@@ -13,12 +13,13 @@
 
 /**
  * Canonical Vietnamese mobile regex (10 digits, `0` prefix).
- * Covers Viettel / Mobifone / Vinaphone / Vietnamobile / Gmobile / Itelecom / Wintel.
- * Uses the broader `5[689]` prefix class so valid 055/057 (Vietnamobile/Gmobile)
- * numbers are not dropped — kept consistent with the healthcare parser.
+ * Covers Viettel (032-039,086,096-098), Mobifone (070-079,089,090,093),
+ * Vinaphone (081-085,088,091,094), Vietnamobile (052,056,058,092),
+ * Gmobile/Itelecom/Wintel (055,059,087).
+ * Uses the broad `5[25689]` prefix class so valid 052/055 numbers are detected.
  * @type {RegExp}
  */
-export const VN_PHONE_RE = /^0(3[2-9]|5[689]|7[06-9]|8[1-9]|9[0-9])\d{7}$/;
+export const VN_PHONE_RE = /^0(3[2-9]|5[25689]|7[06-9]|8[1-9]|9[0-9])\d{7}$/;
 
 /**
  * Broader VN phone regex used by healthcare schema (mobile + landline + 1800/1900 hotline).
@@ -41,8 +42,11 @@ const MASKED_PHONE_RE = /[*xX]{2,}|\.{3,}|không hiển thị|ẩn|liên hệ/i;
  */
 export function normalizeVnPhone(raw) {
   if (!raw || typeof raw !== 'string') return null;
+  // Test masked markers on the RAW string before stripping '.' — otherwise the
+  // `\.{3,}` masked pattern can never match (dots are removed first).
+  if (MASKED_PHONE_RE.test(raw)) return null;
   const cleaned = raw.replace(/[\s().\-]/g, '').trim();
-  if (!cleaned || MASKED_PHONE_RE.test(cleaned)) return null;
+  if (!cleaned) return null;
   const normalized = cleaned.startsWith('+84')
     ? '0' + cleaned.slice(3)
     : cleaned.startsWith('84') && cleaned.length >= 11
@@ -72,10 +76,12 @@ export function parseVnPhone(rawPhone) {
   if (!rawPhone || typeof rawPhone !== 'string') {
     return { phone: null, phoneMasked: false };
   }
-  const cleaned = rawPhone.replace(/[\s().\-]/g, '').trim();
-  if (MASKED_PHONE_RE.test(cleaned)) {
+  // Test masked markers on the RAW string before stripping '.', for the same
+  // reason as normalizeVnPhone — `\.{3,}` cannot match once dots are removed.
+  if (MASKED_PHONE_RE.test(rawPhone)) {
     return { phone: null, phoneMasked: true };
   }
+  const cleaned = rawPhone.replace(/[\s().\-]/g, '').trim();
   const normalized = cleaned.startsWith('+84')
     ? '0' + cleaned.slice(3)
     : cleaned.startsWith('84') && cleaned.length >= 11
