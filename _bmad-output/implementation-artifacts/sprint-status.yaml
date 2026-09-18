@@ -244,9 +244,9 @@ development_status:
   40-1-cost-aware-proxy-escalation-in-proxy-pool: backlog
   epic-40-retrospective: optional
 
-  epic-39: in-progress
+  epic-39: done
   39-1-selector-canary-expansion-heuristic-drift: done
-  39-2-gitops-patch-assistant-cli: in-progress
+  39-2-gitops-patch-assistant-cli: done
   epic-39-retrospective: optional
   - id: "epic-39-rescope-gitops-healing-only"
     epic: 39
