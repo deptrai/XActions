@@ -2224,20 +2224,30 @@ Các tác vụ cào dữ liệu công khai trên các nền tảng nhẹ (như M
 
 ---
 
-# Epic 40: Cost-Aware Proxy Escalation & Budget Ceiling
+# Epic 40: Cost-Aware Proxy Escalation & Budget Ceiling (Rescoped)
 
 ## Business Context
 Residential và Mobile 4G proxy có chi phí rất đắt ($3–$15/GB). Việc cào diện rộng mà không phân tầng chi phí dẫn đến nguy cơ lạm chi nghiêm trọng.
 
-## Scope
-**Trong scope:**
-- Bổ sung metadata `tier: 'free' | 'datacenter' | 'residential' | 'mobile_4g'` vào `ProxyIpPool`.
-- Chính sách leo thang thông minh: Mặc định dùng Datacenter IP; chỉ tự động leo thang lên Residential IP khi gặp mã lỗi `PLATFORM_BLOCKED` (HTTP 403 / Captcha).
-- Quản lý hạn ngạch trần chi phí ngày qua `DistributedTokenBucket` (`PROXY_DAILY_BUDGET_USD`).
-- Cơ chế Soft Degradation: Tự động hạ tier và gắn cờ cảnh báo `BUDGET_CEILING_REACHED` thay vì làm sập job khi chạm trần ngân sách.
+> **⚠️ Rescope Note (2026-09-18):** Sau duplication review, ~40% Epic 40 đã được implement (quarantine, dual-pool partitioning, sticky map, `DistributedTokenBucket`). Phần còn lại chỉ là **`tier` metadata + cost-aware escalation + budget ceiling** — net-new implementation.
 
-## Stories
-- **Story 40.1**: Tích hợp Cost-Aware Proxy Escalation và Soft Degradation vào `ProxyIpPool`.
+## Scope (Rescoped)
+**Trong scope:**
+- `tier` metadata (`free`/`datacenter`/`residential`/`mobile_4g`) vào `NormalizedProxy`; migration `residential: boolean` → `tier` enum.
+- `ProxyBudgetGovernor` enforces `PROXY_DAILY_BUDGET_USD` ceiling via `DistributedTokenBucket`.
+- Cost-aware escalation: default `datacenter` → `residential` on 403/Captcha challenge detection.
+- `BUDGET_CEILING_REACHED` soft degradation — trả degraded result thay vì throw `PROXY_EXHAUSTED`.
+- `mobile_4g` tier available only when `PROXY_ESCALATION_ENABLED=1`.
+
+**Ngoài scope (rejected):**
+- Per-request byte-level cost accounting (estimation ~50MB/request is sufficient).
+- Multi-day budget tracking (daily reset only).
+- Proxy provider API integration for real-time pricing.
+- Automatic proxy purchasing / top-up.
+- Re-implementing `DistributedTokenBucket`, quarantine, dual-pool, sticky map (đã có sẵn).
+
+## Stories (Rescoped)
+- **Story 40.1**: Tích hợp `tier` metadata + Cost-Aware Escalation + `ProxyBudgetGovernor` + Soft Degradation vào `ProxyIpPool`.
 
 ---
 
