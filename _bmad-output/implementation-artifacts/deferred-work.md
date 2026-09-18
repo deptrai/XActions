@@ -179,3 +179,18 @@
   summary: GET /api/streams/:id/replay has no extra auth beyond other stream GETs
   evidence: Same as list/history; server-level auth is the existing contract.
 
+
+## Deferred from: code review of spec-36-1-mcp-tool-x-social-find-profiles (2026-09-18)
+
+- summary: Half-open circuit lacks single-probe semantics — after cooldown, N concurrent requests all dispatch to a still-degraded platform before the next failure is recorded.
+  evidence: `isCircuitOpen` returns false for every caller once `CIRCUIT_COOLDOWN_MS` elapses until a new failure lands; minimal breaker per spec. Adaptive breaker is Story 36.2 scope.
+  location: src/mcp/osint-find-profiles.js
+  severity: medium
+- summary: `_failureCounts` keyed only by platform — one account's transient failure trips the circuit for all accounts on that platform; entries never evicted.
+  evidence: `Map<platform, {failures, openedAt}>` ignores `accountId`; account-scoped breaker is Story 36.2 scope.
+  location: src/mcp/osint-find-profiles.js
+  severity: low
+- summary: `MASKED_PHONE_RE` `\.{3,}` tested after `.` stripped from cleaned input, so `090...` is never flagged masked (`***`/`xxx` still match).
+  evidence: `replace(/[\s().\-]/g,'')` removes dots before the masked test; pre-existing bug carried from healthcare schema, not caused by this change.
+  location: src/utils/vn-phone.js
+  severity: low
