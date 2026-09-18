@@ -17,7 +17,10 @@ import {
   buildScrapeArgs,
   normalizeToProfileItems,
   __resetOsintCircuits,
+  classifyPlatformError,
+  PLATFORM_TIMEOUTS_MS,
 } from '../../src/mcp/osint-find-profiles.js';
+import { globalAdaptiveRateGovernor } from '../../src/core/adaptive-governor.js';
 import { normalizeVnPhone, isVnPhone, parseVnPhone } from '../../src/utils/vn-phone.js';
 
 // ---------------------------------------------------------------------------
@@ -409,5 +412,78 @@ describe('fan-out dispatch', () => {
       assert.equal(res.queryType, 'name');
       assert.equal(res.platformStatus[0].status, 'ok');
     } finally { restore(); }
+  });
+});
+
+describe('Story 36.2 — Error Taxonomy, Tier-Aware Timeouts & Account Health Guard', () => {
+  it('classifyPlatformError correctly classifies rate limits, bot challenges, auth, and timeouts', () => {
+    const rateLimitErr = classifyPlatformError({ code: 'XACT_4291', message: 'Too Many Requests' });
+    assert.equal(rateLimitErr.category, 'RATE_LIMITED');
+    assert.equal(rateLimitErr.code, 'XACT_4291');
+
+    const botErr = classifyPlatformError({ statusCode: 403, message: 'Cloudflare captcha challenge' });
+    assert.equal(botErr.category, 'BOT_BLOCKED');
+
+    const authErr = classifyPlatformError({ code: 'XACT_4010', message: 'Session expired' });
+    assert.equal(authErr.category, 'AUTH_REQUIRED');
+
+    const timeoutErr = classifyPlatformError({ code: 'OSINT_TIMEOUT', message: 'deadline reached' });
+    assert.equal(timeoutErr.category, 'PLATFORM_TIMEOUT');
+  });
+
+  it('Tier-aware timeouts: tier 0 platforms use lower deadlines than tier 1', () => {
+    assert.equal(PLATFORM_TIMEOUTS_MS.masothue, 4000);
+    assert.equal(PLATFORM_TIMEOUTS_MS.chotot, 4000);
+    assert.equal(PLATFORM_TIMEOUTS_MS.twitter, 15000);
+    assert.equal(PLATFORM_TIMEOUTS_MS.facebook, 15000);
+  });
+
+  it('Account Health Guard skips dispatch with account_sick when account is hibernating', async () => {
+    const hibernatingAccount = 'acc_hibernated_test';
+    globalAdaptiveRateGovernor.hibernateAccount(hibernatingAccount, 'bot_challenge', 60_000, 'twitter');
+
+    try {
+      const res = await executeSocialFindProfilesTool({
+        query: 'nichxbt',
+        queryType: 'username',
+        platforms: ['twitter'],
+        accountId: hibernatingAccount,
+      });
+
+      assert.equal(res.success, true);
+      assert.equal(res.platformStatus[0].platform, 'twitter');
+      assert.equal(res.platformStatus[0].status, 'account_sick');
+      assert.equal(res.platformStatus[0].reason, 'account is hibernating');
+      assert.equal(res.profiles.length, 0);
+    } finally {
+      globalAdaptiveRateGovernor.wakeAccount(hibernatingAccount, 'twitter');
+    }
+  });
+
+  it('Tier-aware timeouts pass platform-specific deadline to crawler options when timeoutMs is omitted', async () => {
+    let seenTimeout;
+    const ORIG = DESCRIPTORS.chotot;
+    DESCRIPTORS.chotot = {
+      aliases: ['chotot'],
+      actionMap: { search_listings: 'search_listings' },
+      mapArgs: (o) => o,
+      createClient: () => ({}),
+      createCrawler: ({ options }) => ({
+        async start() { seenTimeout = options.timeout; return { items: [] }; },
+        async cleanup() {},
+      }),
+    };
+
+    try {
+      await executeSocialFindProfilesTool({
+        query: '+84901234567',
+        queryType: 'phone',
+        platforms: ['chotot'],
+      });
+      assert.equal(seenTimeout, 4000, 'tier 0 chotot should have 4000ms default deadline');
+    } finally {
+      if (ORIG) DESCRIPTORS.chotot = ORIG;
+      else delete DESCRIPTORS.chotot;
+    }
   });
 });

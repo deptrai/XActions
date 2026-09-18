@@ -18,6 +18,7 @@
 import { scrape, DESCRIPTORS } from '../scrapers/index.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
 import { normalizeVnPhone } from '../utils/vn-phone.js';
+import { globalAdaptiveRateGovernor } from '../core/adaptive-governor.js';
 
 // ---------------------------------------------------------------------------
 // Platform → action map for person lookup
@@ -408,6 +409,68 @@ export function normalizeToProfileItems(platform, raw) {
 // ---------------------------------------------------------------------------
 
 const DEFAULT_TIMEOUT_MS = 15_000;
+
+/**
+ * Per-platform default timeout budgets (Story 36.2: Tier-Aware Deadlines).
+ * Tier 0 (static/lightweight REST) = 4s - 5s to avoid holding up the fan-out.
+ * Tier 1 (browser / GraphQL / complex anti-bot) = 15s.
+ * @type {Record<string, number>}
+ */
+export const PLATFORM_TIMEOUTS_MS = {
+  // Tier 0: Lightweight REST / static HTML
+  masothue: 4_000,
+  chotot: 4_000,
+  topcv: 4_000,
+  vietnamworks: 4_000,
+  reddit: 5_000,
+  medium: 5_000,
+  bluesky: 6_000,
+  mastodon: 6_000,
+  zalo: 10_000,
+
+  // Tier 1: Browser / heavy anti-bot
+  twitter: 15_000,
+  facebook: 15_000,
+  threads: 15_000,
+  instagram: 15_000,
+  tiktok: 15_000,
+  youtube: 15_000,
+  linkedin: 15_000,
+};
+
+/**
+ * Classify a scrape error into a high-level error taxonomy (Story 36.2).
+ * Enables downstream callers (Nowing AI Lead Hub / ChainLens) to make automated
+ * recovery decisions (backoff, retry with proxy, auth refresh).
+ *
+ * @param {any} err
+ * @returns {{ code: string, message: string }}
+ */
+export function classifyPlatformError(err) {
+  if (!err) return { code: 'SCRAPE_ERROR', category: 'SCRAPE_ERROR', message: 'Unknown error' };
+  if (err.code === 'OSINT_TIMEOUT') {
+    return { code: 'OSINT_TIMEOUT', category: 'PLATFORM_TIMEOUT', message: err.message || 'platform timeout' };
+  }
+  const rawCode = err.code || '';
+  const msg = err.message || String(err);
+  const status = err.status || err.statusCode;
+
+  let category = 'SCRAPE_ERROR';
+  if (rawCode === 'XACT_4291' || status === 429 || /rate limit/i.test(msg)) {
+    category = 'RATE_LIMITED';
+  } else if (rawCode === 'XACT_5030' || status === 403 || /captcha|challenge|blocked|forbidden|anti-bot/i.test(msg)) {
+    category = 'BOT_BLOCKED';
+  } else if (rawCode === 'XACT_4010' || status === 401 || /auth|login|unauthorized|session expired/i.test(msg)) {
+    category = 'AUTH_REQUIRED';
+  }
+
+  return {
+    code: rawCode || category,
+    category,
+    message: msg,
+  };
+}
+
 const MAX_CONCURRENT_PLATFORMS = 4;
 const DEFAULT_PLATFORMS = Object.keys(PROFILE_ACTION_MAP);
 
@@ -468,7 +531,7 @@ export async function executeSocialFindProfiles(args) {
     queryType = 'name';
   }
 
-  const deadlineMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_TIMEOUT_MS;
+  const callerTimeout = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : null;
 
   // Resolve target platform list (dedup + lowercase).
   const requested = Array.isArray(platforms) && platforms.length > 0
@@ -497,17 +560,21 @@ export async function executeSocialFindProfiles(args) {
     if (queryType === 'phone' && VN_PHONE_PLATFORMS.has(platform) && !vnNormalized) {
       return { ...base, status: 'skipped', reason: 'invalid VN phone', durationMs: elapsed(), profiles: [] };
     }
+    if (accountId && globalAdaptiveRateGovernor?.isHibernating(accountId, platform)) {
+      return { ...base, status: 'account_sick', reason: 'account is hibernating', durationMs: elapsed(), profiles: [] };
+    }
     if (isCircuitOpen(platform, pStarted, accountId)) {
       return { ...base, status: 'circuit_open', durationMs: elapsed(), profiles: [] };
     }
 
+    const platformDeadline = callerTimeout || PLATFORM_TIMEOUTS_MS[platform] || DEFAULT_TIMEOUT_MS;
     const scrapeArgs = buildScrapeArgs(platform, queryType, effectiveQuery, locale);
     // Per-platform abort signal + HTTP timeout so a hanging crawl can be cut
     // short by well-behaved crawlers; the outer withTimeout still bounds the wait.
     const controller = new AbortController();
     const options = {
       ...scrapeArgs,
-      timeout: deadlineMs,
+      timeout: platformDeadline,
       signal: controller.signal,
       ...(accountId ? { accountId } : {}),
       ...(proxyUrl ? { proxyUrl } : {}),
@@ -515,7 +582,7 @@ export async function executeSocialFindProfiles(args) {
     };
 
     try {
-      const raw = await withTimeout(scrape(platform, action, options), deadlineMs, controller.signal);
+      const raw = await withTimeout(scrape(platform, action, options), platformDeadline, controller.signal);
       const profiles = normalizeToProfileItems(platform, raw);
       recordPlatformSuccess(platform, accountId);
       return {
@@ -529,13 +596,11 @@ export async function executeSocialFindProfiles(args) {
       controller.abort(); // signal any cooperative crawler to stop early
       recordPlatformFailure(platform, Date.now(), accountId);
       const isTimeout = err && err.code === 'OSINT_TIMEOUT';
+      const classified = classifyPlatformError(err);
       return {
         ...base,
         status: isTimeout ? 'timeout' : 'error',
-        error: {
-          code: isTimeout ? 'OSINT_TIMEOUT' : (err?.code || 'SCRAPE_ERROR'),
-          message: err?.message || String(err),
-        },
+        error: classified,
         profiles: [],
         durationMs: elapsed(),
       };
