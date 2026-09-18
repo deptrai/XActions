@@ -2178,7 +2178,7 @@ Nowing Lead Hub và ChainLens Research cần một điểm chạm tập trung đ
 
 ## Stories
 - **Story 36.1**: Triển khai MCP Tool `x_social_find_profiles` kết nối Universal Scrape Dispatcher.
-- **Story 36.2**: Khả năng chịu lỗi từng phần (Fault Isolation) và Circuit Breaker per-platform.
+- **Story 36.2**: Khả năng chịu lỗi từng phần (Fault Isolation) và Circuit Breaker per-platform. *(Đã hợp nhất và hoàn thành 100% cùng Story 36.1)*.
 
 ---
 

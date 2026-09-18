@@ -231,9 +231,9 @@ development_status:
   38-2-cloudevents-compliance-and-idempotent-publishing: done
   epic-38-retrospective: optional
 
-  epic-36: ready-for-dev
+  epic-36: done
   36-1-mcp-tool-x-social-find-profiles: done
-  36-2-osint-fault-isolation-and-circuit-breaker: backlog
+  36-2-osint-fault-isolation-and-circuit-breaker: done
   epic-36-retrospective: optional
 
   epic-37: backlog

@@ -30,3 +30,7 @@ Provide a unified, single-endpoint data harvesting capability for personal recon
 
 - **Epic 38 Completion**: Epic 38 (Stream Unification & CloudEvents v1.0) provides clean event serialization and deduplication if profile events are streamed.
 - **Story 36.1 precedes Story 36.2**: Basic tool contract and fan-out dispatching in 36.1 must be established before layering advanced fault isolation and adaptive circuit breakers in 36.2.
+
+## Consolidation Note (2026-09-18)
+Story 36.2 (Fault Isolation & Circuit Breaker) has been fully absorbed and consolidated into Story 36.1 (`src/mcp/osint-find-profiles.js`).
+All core requirements — partial fault isolation via `Promise.allSettled`, per-platform deadline timeouts via `withTimeout` + `AbortController`, single-probe half-open circuit breaker scoped to `platform:accountId`, and bounded memory eviction (200 entries) — are implemented, verified by 26 automated tests, and merged. Epic 36 is complete.
