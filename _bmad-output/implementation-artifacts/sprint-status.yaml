@@ -240,8 +240,8 @@ development_status:
   37-1-static-http-first-routing-lightweight-targets: done
   epic-37-retrospective: optional
 
-  epic-40: in-progress
-  40-1-cost-aware-proxy-escalation-in-proxy-pool: in-progress
+  epic-40: done
+  40-1-cost-aware-proxy-escalation-in-proxy-pool: done
   epic-40-retrospective: optional
 
   epic-39: done
