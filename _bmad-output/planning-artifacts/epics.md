@@ -2241,20 +2241,26 @@ Residential và Mobile 4G proxy có chi phí rất đắt ($3–$15/GB). Việc 
 
 ---
 
-# Epic 39: Heuristic Selector Drift Canary & GitOps Assistant
+# Epic 39: GitOps Selector Healing Assistant (Rescoped)
 
 ## Business Context
-Giao diện các mạng xã hội thường xuyên thay đổi khiến CSS/XPath selectors bị trôi dạt (DOM Drift). Để đảm bảo tính bất biến của mã nguồn và an toàn dữ liệu, hệ thống tự động phát hiện selector hỏng và sinh bản vá qua Pull Request thay vì tự ý nạp code động vào Redis production.
+Giao diện các mạng xã hội thường xuyên thay đổi khiến CSS/XPath selectors bị trôi dạt (DOM Drift). Để đảm bảo tính bất biến của mã nguồn và an toàn dữ liệu, hệ thống phát hiện selector hỏng và sinh bản vá qua Pull Request thay vì tự ý nạp code động vào Redis production.
 
-## Scope
+> **⚠️ Rescope Note (2026-09-18):** Sau duplication review, ~70% Epic 39 đã được implement trong Stories 28.2 (`SelectorCanary`) và 28.3 (`AutoSelectorFallback`). Phần còn lại chỉ là **GitOps Patch Assistant** — CLI orchestration layer.
+
+## Scope (Rescoped)
 **Trong scope:**
-- Mở rộng `SelectorCanary` định kỳ probe các target kiểm tra tỷ lệ thành công của selector.
-- Khi tỷ lệ rơi xuống dưới 80%, kích hoạt `AutoSelectorFallback.investigate()` tìm selector thay thế qua AST/Accessibility heuristic.
-- Đóng gói CLI command `xactions canary heal` kiểm thử cú pháp selector trong sandbox và tự động sinh GitHub Draft PR / Issue chứa `unified-diff`.
+- `xactions canary heal` CLI orchestrating: drift status → `AutoSelectorFallback.investigate()` → `SelectorSandbox` validation → `unified-diff` → GitHub Draft PR.
+- `SelectorSandbox` validates candidates against `expectedShape` in isolated page context.
+- `CanaryHealer` service coordinating the full healing pipeline.
+- `expectedShape` field added to `canary-targets.json` for validation.
 
-**Ngoài scope:**
-- LLM tự động sửa selector và nạp thẳng vào Redis runtime mà không qua review.
+**Ngoài scope (rejected):**
+- Auto-heal on drift detection (violates Invariant #4 — requires human review).
+- LLM-based selector generation (non-deterministic).
+- Runtime hot-patching into Redis (rejected — selectors immutable in source control).
+- Re-implementing `SelectorCanary` or `AutoSelectorFallback` (already exist).
 
-## Stories
-- **Story 39.1**: Mở rộng Selector Canary và phát hiện trôi dạt heuristic.
-- **Story 39.2**: Trợ lý sinh bản vá GitOps Patch Assistant CLI (`npm run canary:heal`).
+## Stories (Rescoped)
+- **Story 39.1**: Mở rộng canary targets config + `expectedShape` fields. ✅ **Done** — config expansion only.
+- **Story 39.2**: GitOps Patch Assistant CLI (`xactions canary heal`) — net-new implementation.

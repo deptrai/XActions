@@ -200,7 +200,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-103 (Crawler Lifecycle Stream Unification & CloudEvents v1.0):** Hợp nhất toàn bộ luồng phát sự kiện vào Template Method của `AbstractCrawler.execute()`. Xóa bỏ 100% cờ tạm `__streamEmitted` và các lệnh publish trực tiếp trong crawler con; đảm bảo 100% event đẩy vào Redis Stream tuân thủ chuẩn CloudEvents v1.0 với `idempotencyKey` chống duplicate.
 * **FR-104 (Platform-Static Zero-Browser HTTP Routing):** Định tuyến tĩnh Tier 0 (HTTP-First / got-jsdom) cho các domain tĩnh/SSR nhẹ (Masothue, Batdongsan, tin tức, RSS); cắt giảm 85% RAM và tăng tốc độ xử lý so với Headless Browser.
 * **FR-105 (Cost-Aware Proxy Escalation & Budget Ceiling):** Bổ sung metadata phân tầng chi phí (`datacenter`, `residential`, `mobile`) vào `ProxyIpPool`. Mặc định dùng Datacenter/Free proxy; tự động leo thang lên Residential khi gặp Cloudflare/Bot Challenge; kích hoạt Soft Degradation khi chạm ngưỡng ngân sách ngày qua `DistributedTokenBucket`.
-* **FR-106 (Heuristic Selector Drift Canary & GitOps Assistant):** Mở rộng `SelectorCanary` định kỳ phát hiện trôi dạt DOM và CLI tool `xactions canary heal` sinh bản vá selector dưới dạng GitHub Draft PR kèm sandbox validation, bảo đảm tính bất biến của mã nguồn.
+* **FR-106 (GitOps Selector Healing Assistant):** [Rescoped — ~70% đã có sẵn] CLI tool `xactions canary heal` orchestrates: `SelectorCanary` drift status → `AutoSelectorFallback.investigate()` candidates → `SelectorSandbox` validation → `unified-diff` generation → GitHub Draft PR. Không auto-heal, không runtime injection — tuân thủ Invariant #4 (GitOps-Driven DOM Drift Healing).
 
 ### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17 ➔ NFR-21)
 
@@ -252,7 +252,7 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 | Epic 38 (Stream Lifecycle) | FR-103 |
 | Epic 37 (Zero-Browser HTTP) | FR-104, NFR-20 |
 | Epic 40 (Proxy Cost Governor) | FR-105 |
-| Epic 39 (Selector Canary GitOps) | FR-106 |
+| Epic 39 (GitOps Selector Healing — Rescoped) | FR-106 |
 
 ### 7.5. Canonicalization & Related Documents
 

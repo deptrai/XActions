@@ -244,10 +244,16 @@ development_status:
   40-1-cost-aware-proxy-escalation-in-proxy-pool: backlog
   epic-40-retrospective: optional
 
-  epic-39: backlog
-  39-1-selector-canary-expansion-heuristic-drift: backlog
-  39-2-gitops-patch-assistant-cli: backlog
+  epic-39: in-progress
+  39-1-selector-canary-expansion-heuristic-drift: done
+  39-2-gitops-patch-assistant-cli: in-progress
   epic-39-retrospective: optional
+  - id: "epic-39-rescope-gitops-healing-only"
+    epic: 39
+    action: "Rescoped after duplication review: 70% already implemented (SelectorCanary + AutoSelectorFallback). Story 39.2 reduced to GitOps patch assistant only: canary heal CLI, sandbox validation, unified-diff, Draft PR."
+    owner: "dev"
+    status: in-progress
+    ref: "_bmad-output/implementation-artifacts/spec-39-1-2-gitops-selector-healing-rescope.md"
 action_items:
   - id: "epic-35-retro-item-1-gate-proxy_exhausted-at-base-client-js-9"
     epic: 35
