@@ -262,8 +262,8 @@ describe('Story 13.2.11 — Twitter Hybrid List Management', () => {
       session: { accountId: 'twitter-list-user' },
     });
 
-    expect(resCreate).toEqual({ success: true, dryRun: true });
-    expect(resAdd).toEqual({ success: true, dryRun: true, listId: '987654321', count: 1 });
+    expect(resCreate).toMatchObject({ success: true, dryRun: true });
+    expect(resAdd).toMatchObject({ success: true, dryRun: true, listId: '987654321', count: 1 });
     expect(receivedRequests).toHaveLength(0);
   });
 

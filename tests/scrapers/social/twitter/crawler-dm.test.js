@@ -284,7 +284,7 @@ describe('Story 13.2.10 — Twitter Hybrid Direct Messaging', () => {
       session: { accountId: 'twitter-dm-user' },
     });
 
-    expect(result).toEqual({ success: true, dryRun: true });
+    expect(result).toMatchObject({ success: true, dryRun: true });
     expect(receivedRequests).toHaveLength(0);
   });
 

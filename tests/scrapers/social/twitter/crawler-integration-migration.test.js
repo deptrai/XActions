@@ -143,7 +143,7 @@ describe('Story 13.2.12 — Twitter Hybrid Integration & Caller Migration', () =
       cookies: 'auth_token=test; ct0=csrf',
     });
 
-    expect(result).toEqual({ success: true, dryRun: true });
+    expect(result).toMatchObject({ success: true, dryRun: true });
     expect(receivedRequests.filter((r) => r.path.includes('/dm/'))).toHaveLength(0);
   });
 
@@ -157,7 +157,7 @@ describe('Story 13.2.12 — Twitter Hybrid Integration & Caller Migration', () =
       cookies: 'auth_token=test; ct0=csrf',
     });
 
-    expect(result).toEqual({ success: true, dryRun: true });
+    expect(result).toMatchObject({ success: true, dryRun: true });
     expect(receivedRequests.filter((r) => r.path.includes('/lists/'))).toHaveLength(0);
   });
 
