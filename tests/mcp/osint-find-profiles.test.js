@@ -98,6 +98,17 @@ describe('validation', () => {
       (err) => err.code === 'XACT_4001'
     );
   });
+
+  it('throws XACT_4001 for non-string queryType instead of coercing to auto', async () => {
+    await assert.rejects(
+      () => executeSocialFindProfilesTool({ query: 'x', queryType: 5 }),
+      (err) => err.code === 'XACT_4001'
+    );
+    await assert.rejects(
+      () => executeSocialFindProfilesTool({ query: 'x', queryType: true }),
+      (err) => err.code === 'XACT_4001'
+    );
+  });
 });
 
 describe('detectQueryType + VN phone normalization', () => {
@@ -152,6 +163,11 @@ describe('normalizeToProfileItems', () => {
   it('returns [] for null/non-object', () => {
     assert.deepEqual(normalizeToProfileItems('p', null), []);
     assert.deepEqual(normalizeToProfileItems('p', 'x'), []);
+  });
+  it('unwraps plural wrappers {users}/{leads}/{result}', () => {
+    assert.equal(normalizeToProfileItems('p', { users: [PROFILE, PROFILE] }).length, 2);
+    assert.equal(normalizeToProfileItems('p', { leads: [PROFILE] }).length, 1);
+    assert.equal(normalizeToProfileItems('p', { result: PROFILE }).length, 1);
   });
 });
 
@@ -256,6 +272,71 @@ describe('fan-out dispatch', () => {
       const res = await executeSocialFindProfilesTool({ query: 'nichxbt', queryType: 'username', platforms: ['twitter'] });
       assert.equal(res.platformStatus[0].status, 'circuit_open');
       assert.equal(calls, 3);
+    } finally { restore(); }
+  });
+
+  it('still returns success:true with empty profiles when all platforms fail', async () => {
+    inject('twitter', makeDescriptor(null, { fail: new Error('down') }));
+    inject('threads', makeDescriptor(null, { fail: new Error('down') }));
+    try {
+      const res = await executeSocialFindProfilesTool({ query: 'nichxbt', queryType: 'username', platforms: ['twitter', 'threads'] });
+      assert.equal(res.success, true);
+      assert.deepEqual(res.profiles, []);
+      assert.ok(res.platformStatus.every((s) => s.status === 'error'));
+    } finally { restore(); }
+  });
+
+  it('forwards locale/accountId/proxyUrl into scrape options', async () => {
+    let seen;
+    inject('twitter', {
+      aliases: ['twitter'],
+      actionMap: { profile: 'profile' },
+      mapArgs: (o) => o,
+      createClient: () => ({}),
+      createCrawler: ({ options }) => ({
+        async start() { seen = options; return { profiles: [PROFILE] }; },
+        async cleanup() {},
+      }),
+    });
+    try {
+      await executeSocialFindProfilesTool({
+        query: 'nichxbt', queryType: 'username', platforms: ['twitter'],
+        locale: 'vi_VN', accountId: 'acc1', proxyUrl: 'http://p',
+      });
+      assert.equal(seen.locale, 'vi_VN');
+      assert.equal(seen.accountId, 'acc1');
+      assert.equal(seen.proxyUrl, 'http://p');
+      assert.ok(seen.signal instanceof AbortSignal, 'per-platform AbortSignal passed');
+      assert.equal(typeof seen.timeout, 'number');
+    } finally { restore(); }
+  });
+
+  it('normalizes +84 VN phone before dispatch to a VN platform', async () => {
+    let seen;
+    inject('chotot', {
+      aliases: ['chotot'],
+      actionMap: { search_listings: 'search_listings' },
+      mapArgs: (o) => o,
+      createClient: () => ({}),
+      createCrawler: ({ options }) => ({
+        async start() { seen = options; return { items: [] }; },
+        async cleanup() {},
+      }),
+    });
+    try {
+      await executeSocialFindProfilesTool({ query: '+84901234567', queryType: 'auto', platforms: ['chotot'] });
+      assert.equal(seen.phone, '0901234567');
+      assert.equal(seen.query, '0901234567');
+    } finally { restore(); }
+  });
+
+  it('falls back to name lookup when a numeric query is not a VN phone', async () => {
+    inject('twitter', makeDescriptor({ items: [PROFILE] }));
+    try {
+      const res = await executeSocialFindProfilesTool({ query: '12345678901', queryType: 'auto', platforms: ['twitter'] });
+      // non-VN numeric → queryType resolves to 'name', twitter dispatches 'search'
+      assert.equal(res.queryType, 'name');
+      assert.equal(res.platformStatus[0].status, 'ok');
     } finally { restore(); }
   });
 });

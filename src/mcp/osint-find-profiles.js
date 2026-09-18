@@ -12,7 +12,7 @@
  * Story 36.2: adaptive circuit breaker / richer fault isolation (out of scope).
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 import { scrape, DESCRIPTORS } from '../scrapers/index.js';
@@ -113,12 +113,22 @@ export function __resetOsintCircuits() {
 
 /**
  * Race a promise against a millisecond deadline.
+ *
+ * NOTE on cleanup: the losing `scrape()` promise is NOT abandoned to leak —
+ * `scrape()` itself wraps `crawler.start()` in try/finally with `crawler.cleanup()`,
+ * so once the underlying crawl settles the browser/session is released. The
+ * timeout only abandons the *caller-side* wait; the crawler finishes and cleans
+ * up in the background. We additionally pass a `signal`/`timeout` into the
+ * scrape options so well-behaved crawlers can abort early instead of running
+ * the full crawl.
+ *
  * @template T
  * @param {Promise<T>} promise
  * @param {number} ms
+ * @param {AbortSignal} [signal]
  * @returns {Promise<T>}
  */
-function withTimeout(promise, ms) {
+function withTimeout(promise, ms, signal) {
   let timer;
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => {
@@ -127,7 +137,31 @@ function withTimeout(promise, ms) {
       reject(err);
     }, ms);
   });
+  if (signal) {
+    signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
+  }
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * Simple promise pool — run `fn(item)` over `items` with at most `limit` in flight.
+ * @template T,R
+ * @param {T[]} items
+ * @param {number} limit
+ * @param {(item:T)=>Promise<R>} fn
+ * @returns {Promise<R[]>}
+ */
+async function runPool(items, limit, fn) {
+  const results = new Array(items.length);
+  let i = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (i < items.length) {
+      const idx = i++;
+      results[idx] = await fn(items[idx]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
 }
 
 /**
@@ -167,7 +201,13 @@ export function buildScrapeArgs(platform, queryType, query, locale) {
       args.target = uname;      // fallback alias used by several descriptors
       if (platform === 'youtube') args.channel = uname;
       if (platform === 'zalo') args.oaId = uname;
-      if (platform === 'linkedin') args.profileUrl = uname.includes('linkedin.com') ? uname : undefined;
+      if (platform === 'linkedin') {
+        // lead_profile expects a LinkedIn URL or /in/<slug> handle. A bare
+        // username maps to the /in/ profile URL so the lookup actually resolves.
+        args.profileUrl = uname.includes('linkedin.com')
+          ? uname
+          : `https://www.linkedin.com/in/${uname.replace(/\/+$/, '')}`;
+      }
       break;
     }
     case 'name': {
@@ -206,9 +246,36 @@ export function buildScrapeArgs(platform, queryType, query, locale) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Produce a JSON-safe, size-bounded copy of a raw crawler record for embedding
+ * in `ProfileItem.metadata.raw`. Strips non-serializable values (functions,
+ * class instances, circular refs) and truncates deep nesting so the MCP
+ * envelope can always be `JSON.stringify`'d and PII-bearing blobs stay bounded.
+ * @param {unknown} v
+ * @param {number} [depth]
+ * @returns {unknown}
+ */
+function sanitizeRaw(v, depth = 0) {
+  if (v == null || typeof v === 'number' || typeof v === 'boolean') return v;
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === 'string') return v.length > 2000 ? v.slice(0, 2000) + '…' : v;
+  if (typeof v !== 'object') return undefined; // functions, symbols, bigint
+  if (depth > 4) return '[truncated]';
+  if (Array.isArray(v)) return v.slice(0, 50).map((e) => sanitizeRaw(e, depth + 1));
+  const out = {};
+  let n = 0;
+  for (const [k, val] of Object.entries(v)) {
+    if (n++ > 60) { out._truncated = true; break; }
+    const sv = sanitizeRaw(val, depth + 1);
+    if (sv !== undefined) out[k] = sv;
+  }
+  return out;
+}
+
+/**
  * Normalize one platform's raw scrape result into `ProfileItem[]`.
  * Handles the common shapes: single profile object, `{ company }`,
  * `{ profile }`, `{ profiles: [] }`, `{ items: [] }`, `{ data: [] }`,
+ * `{ users/channels/leads/accounts: [] }`, `{ result }`,
  * PostItem-ish records carrying author fields, and bare arrays.
  *
  * @param {string} platform
@@ -243,7 +310,7 @@ export function normalizeToProfileItems(platform, raw) {
         : typeof r.followers === 'number' ? r.followers : undefined,
       followingCount: typeof r.followingCount === 'number' ? r.followingCount
         : typeof r.following === 'number' ? r.following : undefined,
-      metadata: { ...(r.metadata && typeof r.metadata === 'object' ? r.metadata : {}), raw: r },
+      metadata: { ...(r.metadata && typeof r.metadata === 'object' ? r.metadata : {}), raw: sanitizeRaw(r) },
       crawledAt: r.crawledAt instanceof Date ? r.crawledAt : now,
     };
   };
@@ -267,11 +334,16 @@ export function normalizeToProfileItems(platform, raw) {
   if (Array.isArray(r.items)) pushFrom(r.items);
   if (Array.isArray(r.data)) pushFrom(r.data);
   if (Array.isArray(r.results)) pushFrom(r.results);
+  if (Array.isArray(r.users)) pushFrom(r.users);
+  if (Array.isArray(r.channels)) pushFrom(r.channels);
+  if (Array.isArray(r.leads)) pushFrom(r.leads);
+  if (Array.isArray(r.accounts)) pushFrom(r.accounts);
   if (r.profile) pushFrom(r.profile);
   if (r.company) pushFrom(r.company);
   if (r.user) pushFrom(r.user);
   if (r.lead) pushFrom(r.lead);
   if (r.channel) pushFrom(r.channel);
+  if (r.result && typeof r.result === 'object' && !Array.isArray(r.result)) pushFrom(r.result);
 
   // If nothing matched a wrapper key, treat the object itself as a profile.
   if (out.length === 0) pushFrom(r);
@@ -283,6 +355,7 @@ export function normalizeToProfileItems(platform, raw) {
 // ---------------------------------------------------------------------------
 
 const DEFAULT_TIMEOUT_MS = 15_000;
+const MAX_CONCURRENT_PLATFORMS = 4;
 const DEFAULT_PLATFORMS = Object.keys(PROFILE_ACTION_MAP);
 
 /**
@@ -311,8 +384,19 @@ export async function executeSocialFindProfiles(args) {
     });
   }
 
+  // Reject non-string queryType outright (numbers, booleans, arrays) instead of
+  // silently coercing to 'auto' — malformed input must surface as XACT_4001.
+  if (args.queryType !== undefined && args.queryType !== null && typeof args.queryType !== 'string') {
+    throw new PlatformError({
+      code: 'XACT_4001',
+      type: ErrorTypes.INVALID_ARGS,
+      message: `Invalid queryType "${JSON.stringify(args.queryType)}". Use auto|name|username|phone|email`,
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+    });
+  }
+
   const requestedType = typeof args.queryType === 'string' ? args.queryType.toLowerCase() : 'auto';
-  const queryType = /** @type {QueryType} */ (
+  let queryType = /** @type {QueryType} */ (
     requestedType === 'auto' ? detectQueryType(query) : requestedType
   );
   if (!['username', 'name', 'phone', 'email'].includes(queryType)) {
@@ -322,6 +406,13 @@ export async function executeSocialFindProfiles(args) {
       message: `Invalid queryType "${args.queryType}". Use auto|name|username|phone|email`,
       suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
     });
+  }
+
+  // If auto/explicit 'phone' was detected but the number is not a VN phone,
+  // every platform's phone path would skip (only VN platforms support phone and
+  // they require a valid VN number) — degrade to 'name' so the query still runs.
+  if (queryType === 'phone' && !normalizeVnPhone(query)) {
+    queryType = 'name';
   }
 
   const deadlineMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_TIMEOUT_MS;
@@ -338,34 +429,40 @@ export async function executeSocialFindProfiles(args) {
 
   const startedAt = Date.now();
 
-  const jobs = targets.map((platform) => (async () => {
+  const runOne = async (platform) => {
     const pStarted = Date.now();
-    const base = { platform, durationMs: 0, count: 0 };
+    const base = { platform, count: 0 };
+    const elapsed = () => Date.now() - pStarted;
 
     if (!DESCRIPTORS[platform] || !PROFILE_ACTION_MAP[platform]) {
-      return { ...base, status: 'unsupported', profiles: [] };
+      return { ...base, status: 'unsupported', durationMs: elapsed(), profiles: [] };
     }
     const action = PROFILE_ACTION_MAP[platform][queryType];
     if (!action) {
-      return { ...base, status: 'skipped', reason: `no ${queryType} lookup supported`, profiles: [] };
+      return { ...base, status: 'skipped', reason: `no ${queryType} lookup supported`, durationMs: elapsed(), profiles: [] };
     }
     if (queryType === 'phone' && VN_PHONE_PLATFORMS.has(platform) && !vnNormalized) {
-      return { ...base, status: 'skipped', reason: 'invalid VN phone', profiles: [] };
+      return { ...base, status: 'skipped', reason: 'invalid VN phone', durationMs: elapsed(), profiles: [] };
     }
     if (isCircuitOpen(platform, pStarted)) {
-      return { ...base, status: 'circuit_open', profiles: [] };
+      return { ...base, status: 'circuit_open', durationMs: elapsed(), profiles: [] };
     }
 
     const scrapeArgs = buildScrapeArgs(platform, queryType, effectiveQuery, locale);
+    // Per-platform abort signal + HTTP timeout so a hanging crawl can be cut
+    // short by well-behaved crawlers; the outer withTimeout still bounds the wait.
+    const controller = new AbortController();
     const options = {
       ...scrapeArgs,
+      timeout: deadlineMs,
+      signal: controller.signal,
       ...(accountId ? { accountId } : {}),
       ...(proxyUrl ? { proxyUrl } : {}),
       ...(context && typeof context === 'object' ? { context } : {}),
     };
 
     try {
-      const raw = await withTimeout(scrape(platform, action, options), deadlineMs);
+      const raw = await withTimeout(scrape(platform, action, options), deadlineMs, controller.signal);
       const profiles = normalizeToProfileItems(platform, raw);
       recordPlatformSuccess(platform);
       return {
@@ -373,9 +470,10 @@ export async function executeSocialFindProfiles(args) {
         status: 'ok',
         count: profiles.length,
         profiles,
-        durationMs: Date.now() - pStarted,
+        durationMs: elapsed(),
       };
     } catch (err) {
+      controller.abort(); // signal any cooperative crawler to stop early
       recordPlatformFailure(platform, Date.now());
       const isTimeout = err && err.code === 'OSINT_TIMEOUT';
       return {
@@ -386,26 +484,31 @@ export async function executeSocialFindProfiles(args) {
           message: err?.message || String(err),
         },
         profiles: [],
-        durationMs: Date.now() - pStarted,
+        durationMs: elapsed(),
       };
     }
-  })());
+  };
 
-  const settled = await Promise.allSettled(jobs);
+  // Fan-out with a bounded concurrency pool: default queries hit up to 16
+  // platforms, many Puppeteer-backed — cap in-flight dispatches to avoid
+  // exhausting memory / file descriptors / platform rate limits.
+  const settledResults = await runPool(targets, MAX_CONCURRENT_PLATFORMS, (p) =>
+    runOne(p).then((v) => ({ status: 'fulfilled', value: v })).catch((reason) => ({ status: 'rejected', reason }))
+  );
 
   /** @type {import('../core/types.js').ProfileItem[]} */
   const profiles = [];
   /** @type {Array<Record<string, unknown>>} */
   const platformStatus = [];
 
-  settled.forEach((res, i) => {
+  settledResults.forEach((res, i) => {
     const platform = targets[i];
     if (res.status === 'fulfilled') {
       const { profiles: ps, ...status } = res.value;
       profiles.push(...ps);
       platformStatus.push(status);
     } else {
-      // Defensive: jobs never reject, but keep the batch partial-failure tolerant.
+      // Defensive: runOne never rejects, but keep the batch partial-failure tolerant.
       platformStatus.push({
         platform,
         status: 'error',
@@ -416,11 +519,14 @@ export async function executeSocialFindProfiles(args) {
     }
   });
 
+  const dispatched = platformStatus.filter((s) => s.status === 'ok' || s.status === 'error' || s.status === 'timeout').length;
+
   return {
     success: true,
     query,
     queryType,
     platformsQueried: targets.length,
+    platformsAttempted: dispatched,
     totalProfiles: profiles.length,
     profiles,
     platformStatus,

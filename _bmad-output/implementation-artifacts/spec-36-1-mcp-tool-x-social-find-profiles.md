@@ -164,3 +164,27 @@ Residual risks:
 - Circuit breaker is intentionally minimal (in-memory, per-process, fixed 3-fail/60s cooldown); Story 36.2 replaces it with an adaptive breaker.
 - `normalizeToProfileItems` best-effort across heterogeneous crawler return shapes; unusual shapes still land in `metadata.raw` so no data is lost.
 - Fan-out against real platforms depends on their live descriptors/selectors; per-platform `platformStatus` surfaces failures rather than hiding them.
+
+### Review Findings
+
+Patch (unchecked — pending user choice):
+- [x] [Review][Patch] `withTimeout` abandons `scrape()` promise → Puppeteer crawler leaks; `crawler.cleanup()` only runs when `start()` settles [src/mcp/osint-find-profiles.js]
+- [x] [Review][Patch] No concurrency limit on default 16-platform fan-out (many Puppeteer) → RAM/FD/rate-limit exhaustion [src/mcp/osint-find-profiles.js]
+- [x] [Review][Patch] `metadata.raw` embeds full raw record → payload bloat, PII leak, non-serializable values may break MCP envelope JSON [src/mcp/osint-find-profiles.js]
+- [x] [Review][Patch] `normalizeToProfileItems` misses plural wrappers `{users,channels,leads,accounts,result}` → 1 junk item instead of N [src/mcp/osint-find-profiles.js]
+- [x] [Review][Patch] `detectQueryType` classifies non-VN numeric (`+1555…`,`12345678`) as phone → all VN platforms skip → all-skipped [src/mcp/osint-find-profiles.js]
+- [x] [Review][Patch] `buildScrapeArgs` spreads many aliases; LinkedIn `profileUrl:undefined` for plain username → `lead_profile` fails silently [src/mcp/osint-find-profiles.js]
+- [x] [Review][Patch] `VN_PHONE_RE` (`5[25689]`) vs `VN_PHONE_BROAD_RE` (`5[689]`) inconsistent → valid `055`/`057` mobiles not detected as VN phone [src/utils/vn-phone.js]
+- [x] [Review][Patch] Test gap: no test for all-platforms-fail → `success:true, profiles:[]` (AC-listed); no locale/accountId/proxyUrl/context pass-through; no end-to-end VN-phone dispatch; no non-string queryType coercion test [tests/mcp/osint-find-profiles.test.js]
+- [x] [Review][Patch] Non-string `queryType` silently coerces to `auto` instead of throwing `XACT_4001` [src/mcp/osint-find-profiles.js]
+- [x] [Review][Patch] `platformsQueried` counts unsupported/skipped/circuit_open — misleading name [src/mcp/osint-find-profiles.js]
+- [x] [Review][Patch] `durationMs` hard-coded 0 for early-return statuses (unsupported/skipped/circuit_open) [src/mcp/osint-find-profiles.js]
+- [x] [Review][Patch] License header inconsistency: top comment "Apache-2.0" but `@license MIT` [src/utils/vn-phone.js, src/mcp/osint-find-profiles.js, tests/mcp/osint-find-profiles.test.js]
+
+Defer (deferred — not this story's problem / 36.2 scope):
+- [x] [Review][Defer] Half-open circuit lacks single-probe semantics → N concurrent retries hit degraded platform after cooldown — deferred: minimal breaker per spec; adaptive breaker is Story 36.2 scope
+- [x] [Review][Defer] `_failureCounts` keyed only by platform → one account's failure trips circuit for all accounts; never evicted — deferred: account-scoped breaker is Story 36.2 scope
+- [x] [Review][Defer] `MASKED_PHONE_RE` `\.{3,}` tested after `.` stripped → `090...` not flagged masked — deferred: pre-existing bug carried from healthcare schema, not caused by this change
+
+Rejected (with refutation):
+- `false` — LinkedIn `profileUrl` only set for linkedin.com URLs is intentional; username path still populated via `username`/`handle`.

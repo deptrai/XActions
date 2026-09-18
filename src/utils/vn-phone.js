@@ -8,15 +8,17 @@
  * Normalizes to the canonical 10-digit `0xxxxxxxxx` mobile form.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @license MIT
+ * @license Apache-2.0
  */
 
 /**
  * Canonical Vietnamese mobile regex (10 digits, `0` prefix).
  * Covers Viettel / Mobifone / Vinaphone / Vietnamobile / Gmobile / Itelecom / Wintel.
+ * Uses the broader `5[689]` prefix class so valid 055/057 (Vietnamobile/Gmobile)
+ * numbers are not dropped — kept consistent with the healthcare parser.
  * @type {RegExp}
  */
-export const VN_PHONE_RE = /^0(3[2-9]|5[25689]|7[06-9]|8[1-9]|9[0-9])\d{7}$/;
+export const VN_PHONE_RE = /^0(3[2-9]|5[689]|7[06-9]|8[1-9]|9[0-9])\d{7}$/;
 
 /**
  * Broader VN phone regex used by healthcare schema (mobile + landline + 1800/1900 hotline).
