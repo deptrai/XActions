@@ -7,7 +7,13 @@
         "[data-testid=\"UserName\"]",
         "[data-testid=\"UserDescription\"]",
         "main [role=\"main\"]"
-      ]
+      ],
+      "expectedShape": {
+        "tagName": "div",
+        "attributes": {
+          "data-testid": "UserName"
+        }
+      }
     }
   ],
   "facebook": [
@@ -18,7 +24,12 @@
         "[role=\"main\"]",
         "h1",
         "div[data-pagelet=\"ProfileActions\"]"
-      ]
+      ],
+      "expectedShape": {
+        "attributes": {
+          "role": "main"
+        }
+      }
     }
   ],
   "youtube": [
@@ -29,7 +40,10 @@
         "ytd-channel-name",
         "#channel-header",
         "tp-yt-paper-tabs"
-      ]
+      ],
+      "expectedShape": {
+        "tagName": "ytd-channel-name"
+      }
     }
   ],
   "threads": [
@@ -40,7 +54,12 @@
         "[role=\"main\"]",
         "h1",
         "header"
-      ]
+      ],
+      "expectedShape": {
+        "attributes": {
+          "role": "main"
+        }
+      }
     }
   ]
 }

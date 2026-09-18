@@ -987,3 +987,91 @@ export function suggestSelectors(
   shapeOrFieldName: string | ExpectedShape,
   opts?: AutoSelectorFallbackOptions
 ): Promise<SelectorCandidate[]>;
+
+
+// ---------------------------------------------------------------------------
+// Story 39.2 — CanaryHealer: GitOps-Driven DOM Drift Healing
+// ---------------------------------------------------------------------------
+
+export interface SelectorSandboxOptions {
+  browserFactory?: () => Promise<unknown>;
+  createPage?: (browser: unknown) => Promise<unknown>;
+  closeBrowser?: (browser: unknown) => Promise<void>;
+  delayMs?: number;
+  backend?: 'obscura' | 'chrome';
+}
+
+export interface SelectorSandboxResult {
+  valid: boolean;
+  extractedSample?: {
+    tagName?: string;
+    text?: string;
+    attributes?: Record<string, string>;
+    childCount?: number;
+    [key: string]: unknown;
+  };
+  error?: string;
+}
+
+export class SelectorSandbox {
+  constructor(options?: SelectorSandboxOptions);
+  validate(
+    url: string,
+    selector: string,
+    expectedShape: ExpectedShape,
+    opts?: SelectorSandboxOptions
+  ): Promise<SelectorSandboxResult>;
+}
+
+export interface PatchCandidate extends SelectorCandidate {
+  extractedSample?: SelectorSandboxResult['extractedSample'];
+}
+
+export type HealingStatus =
+  | 'draft-pr'
+  | 'patch-file'
+  | 'preview'
+  | 'no-candidates'
+  | 'error';
+
+export interface HealingResult {
+  platform: string;
+  target: string;
+  url: string;
+  oldChain: string[];
+  newChain?: string[];
+  candidateCount: number;
+  validatedCandidates: PatchCandidate[];
+  rejectionReasons: Array<{ selector: string; reason: string }>;
+  status: HealingStatus;
+  patch?: string;
+  patchFile?: string;
+  prUrl?: string;
+  issueUrl?: string;
+  message?: string;
+}
+
+export interface CanaryHealerOptions {
+  configPath?: string;
+  autoSelectorFallback?: AutoSelectorFallback;
+  selectorSandbox?: SelectorSandbox;
+  fallbackOptions?: AutoSelectorFallbackOptions;
+  sandboxOptions?: SelectorSandboxOptions;
+  execFn?: (cmd: string, args: string[]) => Promise<{ stdout: string; stderr: string }>;
+  log?: (...args: unknown[]) => void;
+}
+
+export class CanaryHealer {
+  constructor(options?: CanaryHealerOptions);
+  heal(
+    platform: string,
+    targetName: string,
+    opts?: {
+      preview?: boolean;
+      output?: string;
+      createIssue?: boolean;
+      fallbackOpts?: AutoSelectorFallbackOptions;
+      sandboxOpts?: SelectorSandboxOptions;
+    }
+  ): Promise<HealingResult>;
+}

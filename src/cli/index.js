@@ -60,6 +60,7 @@ import { registerRetentionCommand } from './commands/retention.js';
 import { registerActionsCommand } from './commands/actions.js';
 import { registerBenchmarkCommand } from './commands/benchmark.js';
 import { registerToolsCommand } from './commands/tools.js';
+import { registerCanaryCommand } from './commands/canary.js';
 import { renderRootHelp } from './help-groups.js';
 
 const program = new Command();
@@ -130,6 +131,7 @@ registerAdminCommand(program);
 registerRetentionCommand(program);
 registerBenchmarkCommand(program);
 registerToolsCommand(program);
+registerCanaryCommand(program);
 
 // ============================================================================
 // Parse and Run
