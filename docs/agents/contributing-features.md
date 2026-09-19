@@ -87,3 +87,23 @@ Resolution order (implemented in `AbstractApiClient.resolveProxy` + platform ove
 Failure handling: `isProxyConnectionError(err)` (exported from `base-client.js`) detects tunnel failures → `quarantineProxy(proxy)` (5 min) → retry once with `disableProxy: true` when `requiresProxy` is false.
 
 Tests: see `tests/scrapers/proxy-injection.test.js` — real `ProxyIpPool`/`DynamicTunnelProvider` instances and the `httpClient` transport seam; no mocks (repo rule).
+
+### Proxy tiers & daily budget (Epic 40)
+
+Proxy nodes carry a cost `tier` — never use the deprecated `residential` boolean in new code:
+
+```javascript
+tier: 'free' | 'datacenter' | 'residential' | 'mobile_4g'   // PROXY_TIERS in src/proxy/providers.js
+```
+
+- Default requests use `datacenter`; escalate to `residential` **only** on explicit bot challenges (`XACT_5030` / HTTP 403). Never escalate speculatively.
+- `ProxyIpPool.getNext(requiresResidential, tier)` — pass `tier` explicitly; the boolean is legacy.
+- Paid-tier requests must pass through `ProxyBudgetGovernor` (`src/core/proxy-budget-governor.js`): `canAfford(tier)` pre-flight → request → `consume(tier, bytes)` debit. When the `PROXY_DAILY_BUDGET_USD` ceiling is hit, return a **degraded result with `BUDGET_CEILING_REACHED`** — do not throw `PROXY_EXHAUSTED` for budget exhaustion.
+
+### Selector drift & GitOps healing (Epic 39)
+
+When you add or change a scraper's selectors:
+
+1. Register the target in `config/canary-targets.json` with `name`, `url`, `selectorChain`, and a precise `expectedShape` — the shape is what `SelectorSandbox` validates candidate replacements against.
+2. Never hot-patch selectors at runtime (Redis/in-memory). Drift healing is GitOps-only: `SelectorCanary` detects → `CanaryHealer` produces a unified-diff → GitHub Draft PR via `xactions canary heal` (AD-44).
+3. Verify with `xactions canary probe` after merging.

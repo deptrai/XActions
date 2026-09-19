@@ -60,6 +60,7 @@ The XActions CLI provides command-line tools for X/Twitter automation, scraping,
 - [Environment Variables](#environment-variables)
 - [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
+- [Canary Commands](#canary-commands-epic-39)
 
 ---
 
@@ -2072,6 +2073,7 @@ XActions supports the following environment variables:
 | `XACTIONS_HEADLESS`   | Run browser in headless mode                     | `true`               |
 | `XACTIONS_TIMEOUT`    | Request timeout in milliseconds                  | `30000`              |
 | `XACTIONS_PROXY`      | HTTP/SOCKS proxy URL                             | —                    |
+| `PROXY_DAILY_BUDGET_USD` | Daily proxy spend ceiling in USD (Epic 40); exhausted budget returns `BUDGET_CEILING_REACHED` soft degradation | `50` |
 | `DEBUG`               | Enable debug logging (`xactions:*`)              | —                    |
 
 ### Examples
@@ -2302,6 +2304,67 @@ DEBUG=xactions:* xactions followers nichxbt
 | `export-data` | Export to format | `xactions export-data data.json --to csv` |
 | `convert` | Convert formats | `xactions convert data.json --to csv` |
 | `mcp-config` | Generate MCP config | `xactions mcp-config -c claude --write` |
+| `canary status` | Selector drift status | `xactions canary status --json` |
+| `canary probe` | Run canary probe cycle | `xactions canary probe` |
+| `canary heal` | GitOps selector healing | `xactions canary heal --platform twitter --preview` |
+
+---
+
+## Canary Commands (Epic 39)
+
+Selector drift detection and GitOps healing. Targets are configured in `config/canary-targets.json` (`{ platform: [{ name, url, selectorChain, expectedShape }] }`). Healing is manual-trigger only — auto-heal on detection is prohibited (AD-44).
+
+### xactions canary status
+
+Display per-platform drift status from the rate governor (`platformDrift`): success rate, consecutive failures, last probe time, and last working selector.
+
+```bash
+xactions canary status
+xactions canary status --json
+```
+
+### xactions canary probe
+
+Run a single `SelectorCanary` probe cycle across all configured targets. Reports `successRate`, `drift`, and whether a fallback selector was used per platform.
+
+```bash
+xactions canary probe
+xactions canary probe --json
+```
+
+### xactions canary heal
+
+Heal drifted selectors via the GitOps pipeline (`SelectorCanary` → `AutoSelectorFallback` → `SelectorSandbox` → `CanaryHealer` → GitHub Draft PR). Never mutates selectors at runtime.
+
+```bash
+# Preview the unified-diff without creating anything
+xactions canary heal --platform twitter --target twitter-profile --preview
+
+# Create a GitHub Draft PR (branch canary-heal/<platform>-<target>-<ts>)
+xactions canary heal --platform twitter
+
+# Heal every target for a platform
+xactions canary heal --platform facebook
+
+# Heal all configured targets
+xactions canary heal
+
+# Write a patch file instead of a PR
+xactions canary heal --output fix.patch
+
+# Structured JSON output
+xactions canary heal --json
+```
+
+| Option | Description |
+|--------|-------------|
+| `--platform <platform>` | Platform to heal (`twitter`, `facebook`, `youtube`, `threads`) |
+| `--target <target>` | Target name inside the platform (e.g. `twitter-profile`); requires `--platform` |
+| `--preview` | Print the diff to stdout, do not create a PR |
+| `--output <path>` | Write a patch file instead of creating a PR |
+| `--json` | Emit structured JSON results |
+
+Result statuses: `preview`, `draft-pr`, `patch-file`, `no-candidates` (an issue is filed automatically when no validated replacement is found), `error`.
 
 ---
 

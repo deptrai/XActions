@@ -94,6 +94,55 @@ npm link
 
 ---
 
+## Selector Drift & Canary (Epic 39)
+
+### Selectors stopped working after an X/Twitter DOM change
+1. Run `xactions canary status` — shows per-platform `successRate`, `consecutiveFailures`, and the last working selector
+2. Run `xactions canary probe` — one probe cycle across all targets in `config/canary-targets.json`
+3. Run `xactions canary heal --platform twitter --preview` — prints the unified-diff without touching anything
+4. Review the diff, then run without `--preview` to create a GitHub **Draft PR** (branch `canary-heal/<platform>-<target>-<ts>`)
+5. Merge the PR — selectors live in source control, never hot-patched at runtime (AD-44)
+
+### `canary heal` reports "No valid replacement selectors found"
+**Cause:** `AutoSelectorFallback` produced no candidates that passed `SelectorSandbox` validation against the target's `expectedShape`.
+**Fix:** Inspect the live page in DevTools, update `selectorChain`/`expectedShape` in `config/canary-targets.json` manually, and file/track the issue (the healer files one automatically when it fails).
+
+### `canary-targets.json not found or invalid`
+**Fix:** The config must exist at `config/canary-targets.json` with a `{ platform: [{ name, url, selectorChain, expectedShape }] }` shape. Validate the JSON parses: `node -e "JSON.parse(require('fs').readFileSync('config/canary-targets.json'))"`.
+
+---
+
+## Proxy Tiers & Daily Budget (Epic 40)
+
+### Requests fail with `BUDGET_CEILING_REACHED`
+**Cause:** The daily proxy spend ceiling (`PROXY_DAILY_BUDGET_USD`, default $50) is exhausted. This is **soft degradation** — callers receive a degraded result, not a thrown `PROXY_EXHAUSTED`.
+**Fix:** Wait for the daily bucket to reset (key `proxy:budget:YYYY-MM-DD` auto-expires via 24h TTL) or raise `PROXY_DAILY_BUDGET_USD` in `.env`.
+
+### `PROXY_EXHAUSTED` (XACT_5030) instead of budget error
+**Cause:** Different failure — no proxy node of the requested tier could serve the request (all quarantined or none configured).
+**Fix:** Check `xactions governor status` for proxy health; add proxies of the needed tier (`free | datacenter | residential | mobile_4g`) or set `requiresProxy: false` where a direct connection is acceptable.
+
+### Paid-tier costs appear even though I only use free proxies
+**Cost model:** `ProxyBudgetGovernor` estimates ~50MB per request × tier rate (datacenter $0.5/GB, residential $8/GB, mobile_4g $15/GB; free = $0). Verify proxy records carry the right `tier` — the deprecated `residential: true` boolean maps to `tier: 'residential'`, so migrate proxy configs to the explicit `tier` field.
+
+---
+
+## OSINT Find Profiles (Epic 36)
+
+### `x_social_find_profiles` returns `status: 'circuit_open'` for a platform
+**Cause:** 3 consecutive failures tripped the per-`platform:accountId` circuit breaker (60s half-open cooldown, single probe).
+**Fix:** Wait ~60s for the half-open probe, or fix the underlying cause (check the `error.category` in `platformStatus`: `RATE_LIMITED`, `BOT_BLOCKED`, `AUTH_REQUIRED`).
+
+### A platform returns `status: 'timeout'`
+**Cause:** Per-platform tiered deadline hit — Tier 0 lightweight platforms get 4–6s, Tier 1 browser platforms get 15s (`PLATFORM_TIMEOUTS_MS`).
+**Fix:** Pass an explicit `timeoutMs` to override, or check whether the platform is genuinely slow/down. The timeout only abandons the caller-side wait; the crawler finishes in the background.
+
+### A platform returns `status: 'account_sick'`
+**Cause:** The supplied `accountId` is hibernating (rate-limited or panic-stopped via the Adaptive Rate Governor).
+**Fix:** Check `xactions governor status` for hibernation state and wait out the hibernation window, or supply a different `accountId`.
+
+---
+
 ## Database / API Server
 
 ### Prisma errors on startup
@@ -137,6 +186,8 @@ npx vitest run tests/specific/test.js
 |-------|-----------|-----|
 | `require` is not defined | ESM-only project (`"type":"module"` in package.json) | Use `import`/`export` only |
 | `window` is not defined | Browser script running in Node.js | Browser scripts are console-only; Node.js alternatives are in `src/scrapers/` |
-| Selector stopped working | X/Twitter changed DOM | Check `docs/agents/selectors.md`; use DevTools to find new `data-testid` |
+| Selector stopped working | X/Twitter changed DOM | Run `xactions canary status` / `canary heal --preview`; check `docs/agents/selectors.md` |
 | Rate limit after few actions | No delay between actions | Add `await sleep(1000 + Math.random() * 2000)` between each action |
+| `BUDGET_CEILING_REACHED` | Daily proxy budget exhausted | Wait for daily reset (TTL) or raise `PROXY_DAILY_BUDGET_USD` |
+| `circuit_open` in OSINT results | 3 consecutive platform failures | Wait 60s half-open cooldown; fix root cause in `error.category` |
 | Puppeteer hangs | Headless Chrome issue | Set `PUPPETEER_HEADLESS=false` to debug; check `docs/troubleshooting.md` |

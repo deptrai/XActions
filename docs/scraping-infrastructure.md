@@ -394,6 +394,21 @@ const mastoProfile = await mastodon.getProfile('user', 'https://mastodon.social'
 
 ---
 
+## Modern Proxy Stack (Epic 40)
+
+For new work, prefer the tiered proxy stack over the legacy `ProxyManager`:
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `ProxyIpPool` | `src/proxy/proxy-pool.js` | Dual-pool (realtime/bulk) rotation, quarantine, tier filtering |
+| `StaticProxyProvider` / `DynamicTunnelProvider` | `src/proxy/providers.js` | Proxy sources; nodes carry `tier: free \| datacenter \| residential \| mobile_4g` |
+| `ProxyBudgetGovernor` | `src/core/proxy-budget-governor.js` | Daily spend ceiling via `PROXY_DAILY_BUDGET_USD` (default $50); exhaustion returns `BUDGET_CEILING_REACHED` soft degradation |
+| `DistributedTokenBucket` | `src/core/distributed-token-bucket.js` | Redis Lua atomic rate limiting backing consumer quotas and the proxy budget |
+
+See [architecture.md](architecture.md) §2.5 (Phase 7 Subsystems) and AD-42 for the escalation policy: default `datacenter`, escalate to `residential` only on explicit bot challenges.
+
+---
+
 ## Tips
 
 - **Start without proxies** — Most use cases don't need them for moderate volumes

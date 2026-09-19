@@ -10,7 +10,7 @@
 
 **XActions** is an enterprise-grade, distributed scraping, interaction, and content syndication platform designed for both human operators and autonomous AI agents (via Model Context Protocol - MCP).
 
-Originally started as a Twitter/X browser automation utility, XActions has evolved through 35 Epics and 112 Stories into a **universal 24-platform scraping and cross-platform write syndication engine**. It combines stealth headless browser automation (Puppeteer/Playwright/CDP) with direct reverse-engineered internal APIs (GraphQL, AT Protocol, REST, SSE, JetStream) and resilient governance infrastructure (Adaptive Rate Governor, Distributed Token Bucket, Proxy Dual-Pool, Schema Drift Canary, and Outbound Webhooks).
+Originally started as a Twitter/X browser automation utility, XActions has evolved through 40 Epics (including Phase 7: OSINT Find Profiles, Distributed Token Bucket, Account Pool & Health Guard, GitOps Selector Healing, and Cost-Aware Proxy Escalation) into a **universal 24-platform scraping and cross-platform write syndication engine**. It combines stealth headless browser automation (Puppeteer/Playwright/CDP) with direct reverse-engineered internal APIs (GraphQL, AT Protocol, REST, SSE, JetStream) and resilient governance infrastructure (Adaptive Rate Governor, Distributed Token Bucket, Proxy Dual-Pool, Schema Drift Canary, and Outbound Webhooks).
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -118,15 +118,56 @@ Every platform in XActions implements a standard contract conforming to `Abstrac
   - Automated detection of social network DOM mutations.
   - Canary monitoring and heuristic selector healing based on semantic roles and accessibility trees.
 
-### 2.5. Streaming & Event Lifecycle (Epic 29)
+### 2.5. Phase 7 Subsystems (Epics 36–40)
+
+#### OSINT Find Profiles (`src/mcp/osint-find-profiles.js`, Epic 36)
+- **`x_social_find_profiles` MCP tool**: fan-out people search across up to 16 platforms via `UniversalScrapeDispatcher` with `Promise.allSettled()` and a bounded concurrency pool (`MAX_CONCURRENT_PLATFORMS`).
+- **Query typing**: `detectQueryType()` auto-classifies queries as `username | name | phone | email`; VN phone numbers are normalized (`0xxxxxxxxx`) for `chotot`/`zalo`/`masothue`. Non-VN phone queries degrade to `name`.
+- **Tiered per-platform deadlines (`PLATFORM_TIMEOUTS_MS`, Story 36.2)**: Tier 0 lightweight REST platforms (masothue, chotot, topcv, vietnamworks = 4s; reddit, medium = 5s; bluesky, mastodon = 6s) vs Tier 1 browser/anti-bot platforms (twitter, facebook, threads, instagram, tiktok, youtube, linkedin = 15s). Caller `timeoutMs` overrides per-platform defaults; each dispatch receives an `AbortSignal` so cooperative crawlers stop early.
+- **Per-platform status**: every response includes a `platformStatus[]` array with `status` of `ok | error | timeout | skipped | unsupported | circuit_open | account_sick`, plus `count`, `durationMs`, and a classified `error` (`RATE_LIMITED`, `BOT_BLOCKED`, `AUTH_REQUIRED`, `PLATFORM_TIMEOUT`).
+- **Adaptive rate governor integration**: hibernating accounts short-circuit to `account_sick`; per-`platform:accountId` circuit breakers (3 consecutive failures, 60s half-open cooldown with single-probe semantics) short-circuit to `circuit_open`.
+- **Stateless identity boundary (AD-40 / Option D)**: returns raw `ProfileItem[]` only — no entity resolution or identity tables in Node.js.
+
+#### Distributed Token Bucket (`src/core/distributed-token-bucket.js`, Epic 37)
+- Redis Lua script (`TOKEN_BUCKET_LUA`) for atomic multi-process token refill/consume; transparent in-memory sliding-window fallback when Redis is offline.
+- `consume(key, tokens, { capacity, refillRate, ttlSeconds })` and `canConsume()` (non-spending check).
+- `parseRateLimitHeaders()` synchronizes bucket state from `X-RateLimit-*` and RFC 6585 headers.
+- Also backs the daily proxy budget bucket (`proxy:budget:YYYY-MM-DD`, TTL 24h — see AD-42).
+
+#### Account Pool & Health Guard (`src/core/account-pool.js`, Epic 38)
+- **`AccountPool`** (`globalAccountPool`): multi-account rotation per platform with round-robin over healthy accounts only.
+- **Health Guard**: rate-limited or failing accounts are marked unavailable and hibernated (default 15 min) via `AdaptiveRateGovernor.hibernateAccount()`; hibernation auto-expires and accounts wake to `active`.
+- Composite `platform:accountId` keys, per-account local velocity timestamps, and `listAccountDetails()` observability (status, `hibernatingUntil`, velocity, assigned proxy).
+- Exposed through MCP tools (`x_account_list`, `x_account_get`, `x_account_release`) and consumed by the OSINT fan-out (`account_sick` status).
+
+#### GitOps Selector Healing (Epic 39)
+Pipeline (strictly manual-trigger; auto-heal on detection is prohibited per AD-44):
+```
+SelectorCanary (drift detection, successRate < 0.8 for 2 runs → alert)
+  → AutoSelectorFallback.investigate() (ranked candidates)
+  → SelectorSandbox.validate() (expectedShape check in isolated page)
+  → CanaryHealer (unified-diff for config/canary-targets.json)
+  → GitHub Draft PR (branch canary-heal/{platform}-{target}-{ts})
+```
+- Components: `src/services/selector-canary.js` (probes + alert dispatcher), `src/services/selector-sandbox.js`, `src/services/canary-healer.js`.
+- CLI: `xactions canary status | probe | heal` (`src/cli/commands/canary.js`); targets configured in `config/canary-targets.json`.
+- `heal` modes: `--preview` (print diff), `--output <path>` (patch file), default Draft PR; `--platform`/`--target` scope; `--json` structured output.
+
+#### Cost-Aware Proxy Escalation (Epic 40)
+- **`ProxyTier` enum (`src/proxy/providers.js`)**: `free | datacenter | residential | mobile_4g` (`PROXY_TIERS`). `normalizeProxy()` maps the deprecated `residential: true` boolean to `tier: 'residential'`; explicit `tier` always wins.
+- **Escalation**: requests default to `datacenter`; `AbstractApiClient` escalates to `residential` only on explicit bot challenges (`XACT_5030` / HTTP 403). `ProxyIpPool.getNext(requiresResidential, tier)` filters by tier.
+- **`ProxyBudgetGovernor` (`src/core/proxy-budget-governor.js`)**: daily spend ceiling via `DistributedTokenBucket` key `proxy:budget:YYYY-MM-DD` (TTL auto-reset). Cost model: fixed ~50MB/request × tier rate (`TIER_COST_USD_PER_GB`: datacenter $0.5, residential $8, mobile_4g $15 per GB). API: `canAfford(tier)` pre-flight, `consume(tier, bytes)` debit, `checkRemaining()`.
+- **Budget ceiling**: `PROXY_DAILY_BUDGET_USD` env var (default 50). When exhausted, `BUDGET_CEILING_REACHED` soft degradation returns a degraded result instead of throwing `PROXY_EXHAUSTED` (error type registered in `src/core/error-envelope.js`).
+
+### 2.6. Streaming & Event Lifecycle (Epic 29)
 - **Unified Redis Streams**: Publishes events into tenant-isolated Redis streams (`xact:stream:{workspaceId}`).
 - **Push Consumers**: Connectors for JetStream (NATS/AT Protocol Firehose), Server-Sent Events (SSE), and PostgreSQL CDC (Logical Replication).
 - **Outbound Webhooks**: HMAC-SHA256 signature generation, exponential backoff retries, dead-letter queues (DLQ), and consumer lag monitoring.
 - **Stream Replay (`src/streaming/stream-replay.js`)**: Cursor-based recovery (`XRANGE`) for missed events with sequence number deduplication.
 
-### 2.6. Model Context Protocol (MCP) Server (`src/mcp/server.js`)
+### 2.7. Model Context Protocol (MCP) Server (`src/mcp/server.js`)
 - Full compliance with `@modelcontextprotocol/sdk`.
-- Over 50 registered tools including `x_scrape`, `x_actions_list`, `x_publish_all`, `x_like_all`, `x_follow_all`, `x_download_media`, `x_crawl_post`, etc.
+- Over 50 registered tools including `x_scrape`, `x_actions_list`, `x_publish_all`, `x_like_all`, `x_follow_all`, `x_download_media`, `x_crawl_post`, and the OSINT fan-out tool `x_social_find_profiles` (Epic 36), plus account-pool management tools (`x_account_list`, `x_account_get`, `x_account_release`).
 - Multi-consumer quota gate (AD-20) protecting shared resources from AI agent runaway loops.
 - Exposes structured resources (`xactions://platforms`, `xactions://actions`, `xactions://system/status`).
 
@@ -162,18 +203,23 @@ XActions/
 │   └── *.html                          # Feature dashboards (analytics, scheduler, etc.)
 ├── prisma/                             # Database schema and migrations
 │   └── schema.prisma                   # Account, Session, Job, Post models
+├── config/                             # Agent configs, persona templates, canary-targets.json
 ├── src/                                # Core Engine Source Code
+│   ├── services/                       # Selector canary, sandbox, GitOps healer (Epic 39)
 │   ├── core/                           # Foundation classes & Resiliency
 │   │   ├── base-crawler.js             # AbstractCrawler with ActionRegistry
 │   │   ├── base-client.js              # AbstractApiClient with proxy & retry
 │   │   ├── adaptive-governor.js        # Velocity throttling, panic stop, queue priority
 │   │   ├── distributed-token-bucket.js # Redis Lua token bucket & header parsing
+│   │   ├── proxy-budget-governor.js    # Daily proxy spend ceiling (Epic 40 / AD-42)
+│   │   ├── account-pool.js             # Multi-account rotation & health guard (Epic 38)
 │   │   ├── session-manager.js          # Multi-account session lifecycle
 │   │   ├── error-envelope.js           # 3-Layer ErrorEnvelope standard
 │   │   └── schema-drift-guard.js       # DOM selector mutation detection
 │   ├── mcp/                            # Model Context Protocol implementation
 │   │   ├── server.js                   # MCP server entry (Tools, Resources, Prompts)
-│   │   └── local-tools.js              # In-process tool bindings
+│   │   ├── local-tools.js              # In-process tool bindings
+│   │   └── osint-find-profiles.js      # x_social_find_profiles fan-out engine (Epic 36)
 │   ├── scrapers/                       # Unified Scraper Spine
 │   │   ├── index.js                    # scrape() universal dispatcher
 │   │   ├── adapters/                   # Puppeteer / Playwright / Cheerio adapters
@@ -251,7 +297,12 @@ Following our full audit of the repository, the following technical debt items a
 - [x] Universal Media Pipeline supporting MP4 bitrate selection and HLS playlists.
 - [x] Real-time Rate Budget Dashboard with Panic Stop and Drag-and-Drop Queue Priorities.
 - [x] Distributed Token Bucket with Redis Lua script atomic execution.
-- [x] 100% of all 112 sprint stories marked done and verified.
+- [x] 100% of all sprint stories through Phase 7 (Epics 36–40) marked done and verified.
+- [x] OSINT `x_social_find_profiles` with tiered deadlines, platform status, and circuit breakers.
+- [x] Distributed Token Bucket (Redis Lua) backing both consumer quotas and the daily proxy budget.
+- [x] Account Pool health guard with hibernation synced to the Adaptive Rate Governor.
+- [x] GitOps selector healing via `xactions canary status | probe | heal` (Draft PR output only).
+- [x] Cost-aware proxy escalation with `PROXY_DAILY_BUDGET_USD` ceiling and `BUDGET_CEILING_REACHED` soft degradation.
 
 ---
 

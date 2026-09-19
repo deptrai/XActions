@@ -1399,3 +1399,4 @@ Full documentation site: **https://nirholas.github.io/XActions/**
 
 - [Getting started](docs/getting-started.md) covers install and first run.
 - [Examples](docs/examples.md) has copy-paste snippets.
+- [Architecture](docs/architecture.md) covers the full system design, including the Phase 7 resiliency subsystems: OSINT Find Profiles (Epic 36), Distributed Token Bucket (Epic 37), Account Pool & Health Guard (Epic 38), GitOps Selector Healing via `xactions canary` (Epic 39), and Cost-Aware Proxy Escalation with the `PROXY_DAILY_BUDGET_USD` daily budget ceiling (Epic 40).
