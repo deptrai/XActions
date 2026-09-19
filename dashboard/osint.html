@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OSINT Find Profiles — XActions</title>
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --accent: #38bdf8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --border: #334155;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    h1 { color: var(--accent); margin-bottom: 24px; font-size: 28px; }
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; margin-bottom: 6px; color: var(--text-secondary); font-size: 14px; }
+    input, select {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    button {
+      background: var(--accent);
+      color: var(--bg-primary);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    button:hover { background: #0ea5e9; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); }
+    .btn-secondary:hover { background: #475569; }
+    .results { margin-top: 24px; }
+    .platform-status {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+    .status-ok { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+    .status-error { background: rgba(239, 68, 68, 0.2); color: var(--error); }
+    .status-timeout { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+    .status-account_sick { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+    .status-circuit_open { background: rgba(239, 68, 68, 0.2); color: var(--error); }
+    .status-skipped { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
+    .profile-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .profile-header { display: flex; align-items: center; margin-bottom: 8px; }
+    .profile-avatar { width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; }
+    .profile-name { font-weight: 600; font-size: 16px; }
+    .profile-username { color: var(--text-secondary); font-size: 14px; }
+    .profile-bio { color: var(--text-secondary); font-size: 14px; margin-top: 8px; }
+    .profile-meta { display: flex; gap: 16px; margin-top: 8px; font-size: 13px; color: var(--text-secondary); }
+    .loading { text-align: center; padding: 40px; color: var(--text-secondary); }
+    .error-msg { background: rgba(239, 68, 68, 0.2); color: var(--error); padding: 12px; border-radius: 8px; margin-top: 16px; }
+    .success-msg { background: rgba(16, 185, 129, 0.2); color: var(--success); padding: 12px; border-radius: 8px; margin-top: 16px; }
+    .platforms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
+    .platform-item { background: var(--bg-tertiary); padding: 12px; border-radius: 8px; font-size: 14px; }
+    .platform-item code { color: var(--accent); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 OSINT Find Profiles</h1>
+    <p style="color: var(--text-secondary); margin-bottom: 24px;">Fan-out query across social platforms to find profiles by username, name, phone, or email.</p>
+
+    <div class="card">
+      <div class="form-group">
+        <label for="query">Search Query</label>
+        <input type="text" id="query" placeholder="Enter username, name, phone, or email" value="nichxbt">
+      </div>
+      <div class="form-group">
+        <label for="queryType">Query Type</label>
+        <select id="queryType">
+          <option value="auto">Auto-detect</option>
+          <option value="username">Username</option>
+          <option value="name">Name</option>
+          <option value="phone">Phone</option>
+          <option value="email">Email</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="platforms">Platforms (comma-separated, optional)</label>
+        <input type="text" id="platforms" placeholder="twitter,threads,reddit,medium,masothue,chotot">
+      </div>
+      <div class="form-group">
+        <label for="accountId">Account ID (optional, for health guard)</label>
+        <input type="text" id="accountId" placeholder="acc_pilot">
+      </div>
+      <button id="btn-search" onclick="runOsint()">🔍 Search Profiles</button>
+      <button id="btn-platforms" class="btn-secondary" onclick="listPlatforms()" style="margin-left: 8px;">📋 List Platforms</button>
+    </div>
+
+    <div id="results" class="results"></div>
+    <div id="platforms-list" class="results" style="display: none;"></div>
+  </div>
+
+  <script>
+    const API_URL = '/api/osint';
+
+    async function runOsint() {
+      const query = document.getElementById('query').value.trim();
+      const queryType = document.getElementById('queryType').value;
+      const platforms = document.getElementById('platforms').value.trim();
+      const accountId = document.getElementById('accountId').value.trim();
+      const resultsEl = document.getElementById('results');
+      const platformsEl = document.getElementById('platforms-list');
+
+      if (!query) {
+        resultsEl.innerHTML = '<div class="error-msg">Please enter a search query.</div>';
+        return;
+      }
+
+      resultsEl.innerHTML = '<div class="loading">🔍 Searching across platforms...</div>';
+      platformsEl.style.display = 'none';
+
+      try {
+        const body = { query, queryType };
+        if (platforms) body.platforms = platforms.split(',').map(p => p.trim());
+        if (accountId) body.accountId = accountId;
+
+        const res = await fetch(`${API_URL}/find-profiles`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          resultsEl.innerHTML = `<div class="error-msg">❌ ${data.error || 'Search failed'}</div>`;
+          return;
+        }
+
+        renderResults(data);
+      } catch (err) {
+        resultsEl.innerHTML = `<div class="error-msg">❌ ${err.message}</div>`;
+      }
+    }
+
+    function renderResults(data) {
+      const resultsEl = document.getElementById('results');
+      let html = '<div class="card"><h3>📊 Platform Status</h3>';
+
+      if (data.platformStatus && data.platformStatus.length > 0) {
+        html += '<div style="margin-bottom: 16px;">';
+        for (const s of data.platformStatus) {
+          const statusClass = `status-${s.status}`;
+          html += `<span class="platform-status ${statusClass}">${s.platform}: ${s.status}${s.error ? ` (${s.error.category})` : ''} ${s.durationMs}ms</span>`;
+        }
+        html += '</div>';
+      }
+
+      if (data.profiles && data.profiles.length > 0) {
+        html += `<h3>👤 Profiles Found (${data.profiles.length})</h3>`;
+        for (const p of data.profiles) {
+          html += `
+            <div class="profile-card">
+              <div class="profile-header">
+                <img class="profile-avatar" src="${p.avatar || 'https://via.placeholder.com/48'}" alt="${p.username}" onerror="this.src='https://via.placeholder.com/48'">
+                <div>
+                  <div class="profile-name">${escapeHtml(p.name || p.username)}</div>
+                  <div class="profile-username">@${escapeHtml(p.username)}</div>
+                </div>
+              </div>
+              ${p.bio ? `<div class="profile-bio">${escapeHtml(p.bio)}</div>` : ''}
+              <div class="profile-meta">
+                ${p.followersCount ? `<span>👥 ${p.followersCount} followers</span>` : ''}
+                ${p.profileUrl ? `<a href="${escapeHtml(p.profileUrl)}" target="_blank" style="color: var(--accent);">🔗 View Profile</a>` : ''}
+                <span style="color: var(--text-secondary);">Platform: ${p.platform}</span>
+              </div>
+            </div>
+          `;
+        }
+      } else {
+        html += '<div class="loading">No profiles found.</div>';
+      }
+
+      html += '</div>';
+      resultsEl.innerHTML = html;
+    }
+
+    async function listPlatforms() {
+      const platformsEl = document.getElementById('platforms-list');
+      const resultsEl = document.getElementById('results');
+      
+      platformsEl.style.display = 'block';
+      platformsEl.innerHTML = '<div class="loading">📋 Loading supported platforms...</div>';
+      resultsEl.innerHTML = '';
+
+      try {
+        const res = await fetch(`${API_URL}/platforms`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          platformsEl.innerHTML = `<div class="error-msg">❌ ${data.error || 'Failed to load platforms'}</div>`;
+          return;
+        }
+
+        let html = '<div class="card"><h3>🌐 Supported Platforms</h3><div class="platforms-grid">';
+        for (const p of data.platforms || []) {
+          html += `<div class="platform-item"><code>${escapeHtml(p)}</code></div>`;
+        }
+        html += '</div></div>';
+        platformsEl.innerHTML = html;
+      } catch (err) {
+        platformsEl.innerHTML = `<div class="error-msg">❌ ${err.message}</div>`;
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>

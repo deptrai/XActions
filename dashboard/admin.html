@@ -954,6 +954,25 @@
       <div id="platform-drift-badges" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
     </div>
 
+    <!-- Proxy Budget & Tier Section (Epic 40) -->
+    <div class="section-card" style="margin-bottom: 24px;">
+      <div class="checkpoint-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3>💰 Proxy Budget & Tier (Epic 40)</h3>
+      </div>
+      <div id="budget-status" class="loading">Loading budget status...</div>
+      <div id="tier-costs" style="margin-top: 16px;"></div>
+      <div id="proxy-tier-filter" style="margin-top: 16px;">
+        <label for="tier-filter" style="color: var(--text-secondary); font-size: 13px;">Filter by Tier:</label>
+        <select id="tier-filter" onchange="filterProxiesByTier()" style="margin-left: 8px; padding: 6px 10px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+          <option value="">All Tiers</option>
+          <option value="free">Free</option>
+          <option value="datacenter">Datacenter</option>
+          <option value="residential">Residential</option>
+          <option value="mobile_4g">Mobile 4G</option>
+        </select>
+      </div>
+    </div>
+
     <!-- Proxies Section -->
     <div class="section-card" style="margin-bottom: 24px;">
       <div class="checkpoint-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -1849,6 +1868,61 @@
       }
     }
 
+    async function loadProxyBudget() {
+      try {
+        const res = await fetch(`${API_URL}/api/proxy/budget/status`, { headers });
+        const data = await res.json();
+        
+        if (!res.ok) {
+          document.getElementById('budget-status').innerHTML = 
+            `<div style="color: var(--error);">Failed to load budget: ${esc(data.error || 'Unknown error')}</div>`;
+          return;
+        }
+
+        const budgetEl = document.getElementById('budget-status');
+        budgetEl.innerHTML = `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 12px;">
+            <div>
+              <div style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Daily Budget</div>
+              <div style="font-size: 24px; font-weight: 700; color: var(--accent);">$${Number(data.dailyBudgetUsd).toFixed(2)}</div>
+            </div>
+            <div>
+              <div style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Remaining</div>
+              <div style="font-size: 24px; font-weight: 700; color: ${data.remainingUsd > 0 ? 'var(--success)' : 'var(--error)'};">$${Number(data.remainingUsd).toFixed(2)}</div>
+            </div>
+            <div>
+              <div style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Spent Today</div>
+              <div style="font-size: 24px; font-weight: 700; color: var(--warning);">$${(data.dailyBudgetUsd - data.remainingUsd).toFixed(2)}</div>
+            </div>
+          </div>
+        `;
+
+        const tierEl = document.getElementById('tier-costs');
+        tierEl.innerHTML = `
+          <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 8px;">Tier Costs (per GB):</div>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <span class="status-pill">free: $0.00</span>
+            <span class="status-pill status-active">datacenter: $0.50</span>
+            <span class="status-pill" style="background: rgba(124, 58, 237, 0.2); color: #a78bfa;">residential: $8.00</span>
+            <span class="status-pill" style="background: rgba(225, 29, 72, 0.2); color: #f87171;">mobile_4g: $15.00</span>
+          </div>
+        `;
+      } catch (err) {
+        document.getElementById('budget-status').innerHTML = 
+          `<div style="color: var(--error);">Failed to load budget: ${esc(err.message)}</div>`;
+      }
+    }
+
+    function filterProxiesByTier() {
+      const tier = document.getElementById('tier-filter').value;
+      if (proxiesState.lastProxies) {
+        const filtered = tier 
+          ? proxiesState.lastProxies.filter(p => p.tier === tier)
+          : proxiesState.lastProxies;
+        renderProxiesTable(filtered);
+      }
+    }
+
     async function loadProxiesAndAccounts(opts = {}) {
       if (proxiesState.activeFetch) {
         proxiesState.activeFetch.abort();
@@ -2199,6 +2273,7 @@
         return;
       }
 
+      proxiesState.lastProxies = proxies;
       tbody.innerHTML = proxies.map(p => {
         const isQuarantined = p.isQuarantined === true || p.status === 'quarantined';
         const status = isQuarantined ? 'quarantined' : (p.status || (p.healthy ? 'healthy' : 'unhealthy'));
@@ -2210,7 +2285,7 @@
           <tr data-proxy-key="${esc(proxyKey)}" data-proxy-server="${esc(proxyServer)}">
             <td><strong>${esc(proxyServer)}</strong></td>
             <td>${esc(p.protocol ? p.protocol.toUpperCase() : 'HTTP')}</td>
-            <td>${p.residential ? '<span class="status-pill status-active">Residential</span>' : '<span class="status-pill">Datacenter</span>'}</td>
+            <td>${p.tier ? `<span class="status-pill ${p.tier === 'residential' ? 'status-active' : p.tier === 'mobile_4g' ? 'status-error' : ''}">${esc(p.tier)}</span>` : (p.residential ? '<span class="status-pill status-active">Residential</span>' : '<span class="status-pill">Datacenter</span>')}</td>
             <td><span class="status-pill status-${esc(status)}">${esc(status)}${failCount ? ` (${failCount})` : ''}</span></td>
             <td>${isQuarantined && p.quarantinedUntil ? `Until ${esc(new Date(p.quarantinedUntil).toLocaleTimeString())}` : (p.expiresAt ? `Expires ${renderRelativeTime(p.expiresAt)}` : 'Permanent')}</td>
             <td>
@@ -2306,6 +2381,7 @@
         select.addEventListener('change', () => {
           proxiesState.selectedPlatform = select.value;
           loadProxiesAndAccounts();
+          loadProxyBudget();
         });
       }
     }
@@ -2507,6 +2583,7 @@
 
     function refreshProxiesAndAccounts() {
       loadProxiesAndAccounts();
+      loadProxyBudget();
     }
 
     // -------------------------

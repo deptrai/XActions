@@ -61,6 +61,8 @@ import { registerActionsCommand } from './commands/actions.js';
 import { registerBenchmarkCommand } from './commands/benchmark.js';
 import { registerToolsCommand } from './commands/tools.js';
 import { registerCanaryCommand } from './commands/canary.js';
+import { registerOsintCommand } from './commands/osint.js';
+import { registerProxyBudgetCommand } from './commands/proxy-budget.js';
 import { renderRootHelp } from './help-groups.js';
 
 const program = new Command();
@@ -132,6 +134,8 @@ registerRetentionCommand(program);
 registerBenchmarkCommand(program);
 registerToolsCommand(program);
 registerCanaryCommand(program);
+registerOsintCommand(program);
+registerProxyBudgetCommand(program);
 
 // ============================================================================
 // Parse and Run
