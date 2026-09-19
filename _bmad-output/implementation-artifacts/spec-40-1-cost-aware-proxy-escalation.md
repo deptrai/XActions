@@ -2,7 +2,7 @@
 title: 'Story 40.1 — Cost-Aware Proxy Escalation & Budget Ceiling'
 type: 'feature'
 created: '2026-09-18'
-status: 'in-progress'
+status: 'done'
 baseline_revision: '25186637db017e728399d930b2cf039550f0ebad'
 review_loop_iteration: 0
 followup_review_recommended: false

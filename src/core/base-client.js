@@ -798,6 +798,7 @@ export class AbstractApiClient {
     }
 
     let accountRotationCount = 0;
+    let escalatedTier = null; // Story 40.1: track proxy tier escalation (datacenter → residential → mobile_4g)
 
     while (accountRotationCount <= this.maxAccountRotations) {
       for (let attempt = 0; attempt < this.maxProxyRetries; attempt++) {
@@ -820,8 +821,10 @@ export class AbstractApiClient {
           });
         }
 
+        // Story 40.1: use escalated tier if set (from previous 403 challenge)
+        const effectiveTier = escalatedTier || (opts.requiresResidential ? 'residential' : null);
         const proxy = shouldUseProxy
-          ? this.resolveProxy(concreteAccountId, opts.requiresResidential, effectiveRequiresAuth, { pool: pool || undefined, consumerId: consumerId || undefined })
+          ? this.resolveProxy(concreteAccountId, opts.requiresResidential, effectiveRequiresAuth, { pool: pool || undefined, consumerId: consumerId || undefined, tier: effectiveTier || undefined })
           : null;
 
         // AD-20: record the consumer request only after we know a healthy proxy
@@ -1196,6 +1199,26 @@ export class AbstractApiClient {
           const retryAfterHeader = response?.headers?.['retry-after'] || response?.headers?.['Retry-After'];
           const parsedRetryAfterMs = this.#parseRetryAfter(retryAfterHeader);
           const chosenDelay = Math.min(this.maxBackoffMs, Math.max(exponentialDelay, parsedRetryAfterMs));
+
+          // Story 40.1: Cost-aware proxy escalation on challenge
+          // If we haven't already escalated and this is a 403 (bot challenge),
+          // try escalating to residential tier before retrying
+          if (status === 403 && !escalatedTier && this.proxyBudgetGovernor) {
+            const nextTier = 'residential';
+            try {
+              const budgetCheck = await this.proxyBudgetGovernor.canAfford(nextTier);
+              if (budgetCheck.allowed) {
+                escalatedTier = nextTier;
+                // Consume budget for the escalation attempt
+                await this.proxyBudgetGovernor.consume(nextTier);
+                // Re-resolve proxy with escalated tier for next attempt
+                // Note: proxy variable is const, so we need to re-resolve on next iteration
+                // For now, mark that we should escalate on next attempt
+              }
+            } catch {
+              // Budget check failed — continue with normal retry
+            }
+          }
 
           const isLastProxyAttempt = attempt === this.maxProxyRetries - 1;
 
