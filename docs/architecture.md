@@ -1,6 +1,6 @@
 # XActions — System Architecture
 
-> **Version:** 4.0.0 (September 2026)  
+> **Version:** 4.1.0 (September 2026)  
 > **Status:** Production / Distributed Multi-Platform Autonomous Scraping & Syndication Engine  
 > **Author:** nich (@nichxbt) & DeepMind Advanced Agentic Coding Team  
 
@@ -10,7 +10,7 @@
 
 **XActions** is an enterprise-grade, distributed scraping, interaction, and content syndication platform designed for both human operators and autonomous AI agents (via Model Context Protocol - MCP).
 
-Originally started as a Twitter/X browser automation utility, XActions has evolved through 40 Epics (including Phase 7: OSINT Find Profiles, Distributed Token Bucket, Account Pool & Health Guard, GitOps Selector Healing, and Cost-Aware Proxy Escalation) into a **universal 24-platform scraping and cross-platform write syndication engine**. It combines stealth headless browser automation (Puppeteer/Playwright/CDP) with direct reverse-engineered internal APIs (GraphQL, AT Protocol, REST, SSE, JetStream) and resilient governance infrastructure (Adaptive Rate Governor, Distributed Token Bucket, Proxy Dual-Pool, Schema Drift Canary, and Outbound Webhooks).
+Originally started as a Twitter/X browser automation utility, XActions has evolved through 41 Epics (including Phase 7: OSINT Find Profiles, Distributed Token Bucket, Account Pool & Health Guard, GitOps Selector Healing, Cost-Aware Proxy Escalation, and Epic 41: Developer Registries & Entity Resolution) into a **universal 26-platform scraping and cross-platform write syndication engine**. It combines stealth headless browser automation (Puppeteer/Playwright/CDP) with direct reverse-engineered internal APIs (GraphQL, AT Protocol, REST, SSE, JetStream) and resilient governance infrastructure (Adaptive Rate Governor, Distributed Token Bucket, Proxy Dual-Pool, Schema Drift Canary, and Outbound Webhooks).
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -35,13 +35,15 @@ Originally started as a Twitter/X browser automation utility, XActions has evolv
 ┌───────────────────────────────────┐       ┌────────────────────────────────────────────┐
 │      UNIVERSAL SCRAPER SPINE      │       │          CORE RESILIENCY & GOVERNANCE      │
 ├───────────────────────────────────┤       ├────────────────────────────────────────────┤
-│ 24 Canonical Platform Descriptors:│       │ • AdaptiveRateGovernor (Velocity/Backpress)│
+│ 26 Canonical Platform Descriptors:│       │ • AdaptiveRateGovernor (Velocity/Backpress)│
 │ • Social: Twitter, Bluesky, Masto,│       │ • DistributedTokenBucket (Redis Lua Script)│
 │   Threads, Facebook, TikTok, Insta│       │ • ProxyIpPool (Realtime vs Bulk Dual-Pool) │
-│ • Video/Audio: YouTube VN, Spaces │       │ • SessionHealthOrchestrator (Circuit Break)│
-│ • E-Commerce: Shopee, TikTokShop  │       │ • SchemaDriftGuard & SelectorCanary        │
-│ • Local: Zalo OA, TopCV, Masothue │       │ • AutoSelectorFallback (Heuristic Discovery│
-│ • B2B / Realestate: Batdongsan... │       │ • 3-Layer ErrorEnvelope (XACT_4xxx/5xxx)   │
+│ • Identity: GitHub, Gravatar      │       │ • SessionHealthOrchestrator (Circuit Break)│
+│   (zero-auth OSINT registries)    │       │ • SchemaDriftGuard & SelectorCanary        │
+│ • Video/Audio: YouTube VN, Spaces │       │ • AutoSelectorFallback (Heuristic Discovery│
+│ • E-Commerce: Shopee, TikTokShop  │       │ • 3-Layer ErrorEnvelope (XACT_4xxx/5xxx)   │
+│ • Local: Zalo OA, TopCV, Masothue │       │ • EntityResolver (in-mem identity cluster) │
+│ • B2B / Realestate: Batdongsan... │       │                                            │
 └─────────────────┬─────────────────┘       └─────────────────────┬──────────────────────┘
                   │                                               │
                   ▼                                               ▼
@@ -75,8 +77,9 @@ Every platform in XActions implements a standard contract conforming to `Abstrac
    - Dispatches via descriptor lookup (`DESCRIPTORS[platform]`).
    - Supports `platform: 'all'` or arrays of platforms via `UniversalActionDispatcher`.
 2. **Action Registry**: Each crawler constructor registers typed actions with `requiredArgs`, `optionalArgs`, `outputType`, `example`, and `checkpointResolver`.
-3. **Canonical Supported Platforms (24 platforms)**:
+3. **Canonical Supported Platforms (26 descriptors)**:
    - **Social Networks**: Twitter/X, Bluesky (AT Protocol), Mastodon (ActivityPub REST), Threads (Barcelona GraphQL/SSR), Facebook (GraphQL/CDP), Reddit, Medium, Instagram.
+   - **Identity Registries (Epic 41, zero-auth)**: GitHub (`api.github.com/users/{u}`), Gravatar (`api.gravatar.com/v3/profiles/{sha256(email)}`).
    - **Vietnam Local Ecosystem**: Zalo OA, YouTube VN, TopCV, VietnamWorks, Chotot, Batdongsan, MaSoThue, B2B Registry Extended, Foody/Pasgo, Medpro/LongChau.
    - **E-Commerce & Video**: Shopee, TikTok, TikTok Shop.
 
@@ -118,15 +121,24 @@ Every platform in XActions implements a standard contract conforming to `Abstrac
   - Automated detection of social network DOM mutations.
   - Canary monitoring and heuristic selector healing based on semantic roles and accessibility trees.
 
-### 2.5. Phase 7 Subsystems (Epics 36–40)
+### 2.5. Phase 7 Subsystems (Epics 36–41)
 
-#### OSINT Find Profiles (`src/mcp/osint-find-profiles.js`, Epic 36)
-- **`x_social_find_profiles` MCP tool**: fan-out people search across up to 16 platforms via `UniversalScrapeDispatcher` with `Promise.allSettled()` and a bounded concurrency pool (`MAX_CONCURRENT_PLATFORMS`).
+#### OSINT Find Profiles (`src/mcp/osint-find-profiles.js`, Epic 36 + 41)
+- **`x_social_find_profiles` MCP tool**: fan-out people search across up to 18 platforms via `UniversalScrapeDispatcher` with `Promise.allSettled()` and a bounded concurrency pool (`MAX_CONCURRENT_PLATFORMS`).
 - **Query typing**: `detectQueryType()` auto-classifies queries as `username | name | phone | email`; VN phone numbers are normalized (`0xxxxxxxxx`) for `chotot`/`zalo`/`masothue`. Non-VN phone queries degrade to `name`.
-- **Tiered per-platform deadlines (`PLATFORM_TIMEOUTS_MS`, Story 36.2)**: Tier 0 lightweight REST platforms (masothue, chotot, topcv, vietnamworks = 4s; reddit, medium = 5s; bluesky, mastodon = 6s) vs Tier 1 browser/anti-bot platforms (twitter, facebook, threads, instagram, tiktok, youtube, linkedin = 15s). Caller `timeoutMs` overrides per-platform defaults; each dispatch receives an `AbortSignal` so cooperative crawlers stop early.
+- **Developer/Identity registries (Epic 41.1)**: `github` (username) and `gravatar` (email) are registered in `PROFILE_ACTION_MAP` as zero-auth Tier-0 direct fetches. GitHub rate limit is enforced via `DistributedTokenBucket` — 60 req/h unauthenticated, 5000 req/h with `GITHUB_TOKEN`. 404 responses degrade to graceful empty (`count=0`), not errors.
+- **Tiered per-platform deadlines (`PLATFORM_TIMEOUTS_MS`, Story 36.2)**: Tier 0 lightweight REST platforms (masothue, chotot, topcv, vietnamworks, github, gravatar = 4s; reddit, medium = 5s; bluesky, mastodon = 6s) vs Tier 1 browser/anti-bot platforms (twitter, facebook, threads, instagram, tiktok, youtube, linkedin = 15s). Caller `timeoutMs` overrides per-platform defaults; each dispatch receives an `AbortSignal` so cooperative crawlers stop early.
 - **Per-platform status**: every response includes a `platformStatus[]` array with `status` of `ok | error | timeout | skipped | unsupported | circuit_open | account_sick`, plus `count`, `durationMs`, and a classified `error` (`RATE_LIMITED`, `BOT_BLOCKED`, `AUTH_REQUIRED`, `PLATFORM_TIMEOUT`).
 - **Adaptive rate governor integration**: hibernating accounts short-circuit to `account_sick`; per-`platform:accountId` circuit breakers (3 consecutive failures, 60s half-open cooldown with single-probe semantics) short-circuit to `circuit_open`.
-- **Stateless identity boundary (AD-40 / Option D)**: returns raw `ProfileItem[]` only — no entity resolution or identity tables in Node.js.
+- **In-memory identity resolution (Epic 41.2 / Option D refined)**: returns both the raw `ProfileItem[]` **and** an `identityClusters[]` array computed per-request by `EntityResolver`. No identity tables, no PII persistence — clustering is computed in-process and discarded.
+
+#### EntityResolver — Identity Clustering (`src/mcp/entity-resolver.js`, Epic 41.2)
+- **Pure-JS, zero-I/O module**: groups flat `profiles[]` into `identityClusters[]` — sets of cross-platform profiles likely belonging to the same real person.
+- **Jaro-Winkler similarity** (`jaroWinkler`): standard Jaro + Winkler prefix boost (scaling 0.1, max prefix 4), verified against published reference vectors.
+- **Additive confidence model** (`scorePair`): `username_exact` +40, `name_similar` (JW > 0.85) +30, `avatar_match` +30, `crosslink_bio` +20 → capped at 100, confidence = score/100.
+- **Union-find clustering** (`resolveIdentities`): two profiles merge when pairwise score ≥ `MERGE_THRESHOLD` (40); each cluster carries `clusterId`, `confidence`, `profiles[]`, `matchedSignals[]`, and `primaryProfile` (highest-followers member).
+- **Backward compatible**: `identityClusters[]` is additive — `profiles[]` and `platformStatus[]` shapes are unchanged.
+- **PII boundary preserved**: this is *in-memory* resolution only — no `PersonEntity`/`GoldenContact` Prisma models, no persistence (the rescoped Option D; see AD-45).
 
 #### Distributed Token Bucket (`src/core/distributed-token-bucket.js`, Epic 37)
 - Redis Lua script (`TOKEN_BUCKET_LUA`) for atomic multi-process token refill/consume; transparent in-memory sliding-window fallback when Redis is offline.
@@ -167,7 +179,7 @@ SelectorCanary (drift detection, successRate < 0.8 for 2 runs → alert)
 
 ### 2.7. Model Context Protocol (MCP) Server (`src/mcp/server.js`)
 - Full compliance with `@modelcontextprotocol/sdk`.
-- Over 50 registered tools including `x_scrape`, `x_actions_list`, `x_publish_all`, `x_like_all`, `x_follow_all`, `x_download_media`, `x_crawl_post`, and the OSINT fan-out tool `x_social_find_profiles` (Epic 36), plus account-pool management tools (`x_account_list`, `x_account_get`, `x_account_release`).
+- Over 190 registered tools including `x_scrape`, `x_actions_list`, `x_publish_all`, `x_like_all`, `x_follow_all`, `x_download_media`, `x_crawl_post`, and the OSINT fan-out tool `x_social_find_profiles` (Epic 36), plus account-pool management tools (`x_account_list`, `x_account_get`, `x_account_release`).
 - Multi-consumer quota gate (AD-20) protecting shared resources from AI agent runaway loops.
 - Exposes structured resources (`xactions://platforms`, `xactions://actions`, `xactions://system/status`).
 
@@ -219,27 +231,55 @@ XActions/
 │   ├── mcp/                            # Model Context Protocol implementation
 │   │   ├── server.js                   # MCP server entry (Tools, Resources, Prompts)
 │   │   ├── local-tools.js              # In-process tool bindings
-│   │   └── osint-find-profiles.js      # x_social_find_profiles fan-out engine (Epic 36)
+│   │   ├── osint-find-profiles.js      # x_social_find_profiles fan-out engine (Epic 36)
+│   │   └── entity-resolver.js          # Jaro-Winkler + identityClusters[] (Epic 41.2)
 │   ├── scrapers/                       # Unified Scraper Spine
-│   │   ├── index.js                    # scrape() universal dispatcher
+│   │   ├── index.js                    # scrape() universal dispatcher + DESCRIPTORS
 │   │   ├── adapters/                   # Puppeteer / Playwright / Cheerio adapters
 │   │   ├── videoDownloader.js          # Media downloader delegate
-│   │   └── social/                     # Social network scrapers & syndication
-│   │       ├── dispatcher.js           # UniversalActionDispatcher (parallel writes)
-│   │       ├── content-transformer.js  # Thread splitter, media adapter, limits
-│   │       ├── media-pipeline.js       # UniversalMediaPipeline (MP4/HLS/Audio)
-│   │       ├── twitter/                # Twitter hybrid crawler & GraphQL client
-│   │       ├── bluesky/                # Bluesky XRPC crawler & client
-│   │       ├── mastodon/               # Mastodon REST crawler & client
-│   │       ├── threads/                # Threads Barcelona crawler & client
-│   │       ├── facebook/               # Facebook hybrid CDP/GraphQL crawler
-│   │       ├── reddit/                 # Reddit JSON/Listing crawler
-│   │       ├── tiktok/                 # TikTok video & music crawler
-│   │       └── ...                     # Remaining 17 platform modules
+│   │   ├── social/                     # Social network scrapers & syndication
+│   │   │   ├── dispatcher.js           # UniversalActionDispatcher (parallel writes)
+│   │   │   ├── content-transformer.js  # Thread splitter, media adapter, limits
+│   │   │   ├── media-pipeline.js       # UniversalMediaPipeline (MP4/HLS/Audio)
+│   │   │   ├── twitter/                # Twitter hybrid crawler & GraphQL client
+│   │   │   ├── bluesky/                # Bluesky XRPC crawler & client
+│   │   │   ├── mastodon/               # Mastodon REST crawler & client
+│   │   │   ├── threads/                # Threads Barcelona crawler & client
+│   │   │   ├── facebook/               # Facebook hybrid CDP/GraphQL crawler
+│   │   │   ├── reddit/                 # Reddit JSON/Listing crawler
+│   │   │   ├── medium/                 # Medium RSS/HTML crawler
+│   │   │   ├── instagram/              # Instagram crawler
+│   │   │   ├── tiktok/                 # TikTok video & music crawler
+│   │   │   ├── youtube/                # YouTube VN channel crawler
+│   │   │   └── zalo/                   # Zalo OA crawler
+│   │   ├── identity/                   # Zero-auth OSINT identity registries (Epic 41)
+│   │   │   ├── github/                 # GitHub REST adapter (rate-limited via bucket)
+│   │   │   └── gravatar/               # Gravatar v3 adapter (sha256 email lookup)
+│   │   ├── ecom/                       # E-commerce scrapers (shopee, tiktok-shop)
+│   │   ├── procurement/                # masothue, b2b-registry-extended
+│   │   ├── recruitment/                # topcv, vietnamworks, linkedin
+│   │   ├── realestate/                 # chotot, batdongsan
+│   │   ├── vehicles/                   # automotive
+│   │   ├── fnb/                        # merchant (Foody/Pasgo)
+│   │   ├── healthcare/                 # Medpro/LongChau/YouMed
+│   │   └── legal/                      # ip-trademark (ipvietnam)
 │   ├── streaming/                      # Event Streaming & Ingestion
 │   │   ├── outbound-webhook-dispatcher.js # HMAC signing, retries, DLQ
 │   │   ├── stream-replay.js            # Missed event recovery via XRANGE
 │   │   └── push-consumers/             # JetStream, SSE, Postgres CDC
+│   ├── services/                       # Selector canary, sandbox, GitOps healer (Epic 39)
+│   ├── graph/                          # Network graph algorithms (PageRank, community)
+│   ├── a2a/                            # Agent-to-Agent protocol bridge & discovery
+│   ├── portability/                    # Account archive export/import/diff
+│   ├── benchmark/                      # Epic 34 reliability scoring & canary config
+│   ├── proxy/                          # ProxyIpPool, providers, tier escalation (Epic 40)
+│   ├── plugins/                        # Plugin system + excel/google-sheets connectors
+│   ├── automation/                     # Browser automation scripts (paste-in-console)
+│   ├── agents/                         # Thought-leader agent, persona engine
+│   ├── ai/                             # LLM integrations (content, voice, optimize)
+│   ├── scheduler/                      # Post scheduling & webhook triggers
+│   ├── spaces/                         # X Spaces AI voice agent
+│   ├── scraping/                       # stealthBrowser, paginationEngine, proxyManager
 │   └── utils/                          # Shared logging, dates, stream publishers
 ├── tests/                              # Comprehensive Vitest Test Suite
 └── docs/                               # Architectural and technical documentation
@@ -291,14 +331,16 @@ Following our full audit of the repository, the following technical debt items a
 
 ## 7. Operational Readiness Checklist
 
-- [x] All 24 canonical scraping platform descriptors active and registered.
+- [x] All 26 canonical scraping platform descriptors active and registered.
 - [x] Universal Cross-Platform Write Actions (`post`, `like`, `reply`, `repost`, `follow`, `unfollow`) verified.
 - [x] Dynamic Thread Splitter with token boundary protection and media chunking active.
 - [x] Universal Media Pipeline supporting MP4 bitrate selection and HLS playlists.
 - [x] Real-time Rate Budget Dashboard with Panic Stop and Drag-and-Drop Queue Priorities.
 - [x] Distributed Token Bucket with Redis Lua script atomic execution.
-- [x] 100% of all sprint stories through Phase 7 (Epics 36–40) marked done and verified.
+- [x] 100% of all sprint stories through Phase 7 (Epics 36–41) marked done and verified.
 - [x] OSINT `x_social_find_profiles` with tiered deadlines, platform status, and circuit breakers.
+- [x] GitHub + Gravatar zero-auth identity adapters registered (Epic 41.1), GitHub rate-limited via `DistributedTokenBucket`.
+- [x] `EntityResolver` producing `identityClusters[]` in-memory alongside `profiles[]` (Epic 41.2).
 - [x] Distributed Token Bucket (Redis Lua) backing both consumer quotas and the daily proxy budget.
 - [x] Account Pool health guard with hibernation synced to the Adaptive Rate Governor.
 - [x] GitOps selector healing via `xactions canary status | probe | heal` (Draft PR output only).
@@ -306,14 +348,14 @@ Following our full audit of the repository, the following technical debt items a
 
 ---
 
-## 13. Phase 7 Architecture Decisions & Core Invariants (Epics 36–40)
+## 13. Phase 7 Architecture Decisions & Core Invariants (Epics 36–41)
 
 ### 13.1. Five Core Architectural Invariants
 
 1. **Template Method for Streaming (Zero `__streamEmitted`):**
    `AbstractCrawler.execute()` is the **Single Source of Truth** for event streaming to Redis Streams. Subclasses are strictly forbidden from directly importing or invoking `publisher.publish()`, and must never attach arbitrary status flags (such as `__streamEmitted`) to domain payloads.
-2. **Option D Identity Cleanliness (Strict PII Boundary):**
-   XActions operates purely as a **Stateless Data Harvester**. It returns platform-native raw `ProfileItem[]` via `x_social_find_profiles`. It must never create identity tables (`PersonEntity`, `GoldenContact`), nor perform fuzzy entity resolution (Jaro-Winkler, pHash) in Node.js.
+2. **Option D Identity Cleanliness (Strict PII Boundary — rescoped by Epic 41):**
+   XActions operates purely as a **Stateless Data Harvester** with respect to persistence: `x_social_find_profiles` returns platform-native `ProfileItem[]` and an `identityClusters[]` array computed **in-memory per request** by `EntityResolver` (Jaro-Winkler + additive confidence scoring). It must never create identity tables (`PersonEntity`, `GoldenContact`) or persist resolved PII in Node.js/Prisma. Entity resolution is allowed only as a **pure, stateless, per-request computation** — persistence remains prohibited.
 3. **Platform-Static HTTP Routing (No Sequential Escalation Loops):**
    Lightweight public domains (e.g., Masothue, Batdongsan, RSS) route directly through Tier 0 (`got-jsdom`), while bot-protected social platforms route directly to Tier 1 (CDP / Stealth Browser). Sequential 3-tier trial-and-error escalation that induces up to 16s latency is rejected.
 4. **GitOps-Driven DOM Drift Healing (No Runtime Code Injection):**
@@ -328,3 +370,4 @@ Following our full audit of the repository, the following technical debt items a
 - **AD-42 (Cost-Aware Proxy Escalation):** `ProxyIpPool` nodes carry `tier: 'free' | 'datacenter' | 'residential' | 'mobile_4g'`. Requests default to `datacenter` and only escalate to `residential` upon receiving explicit bot challenges (`XACT_5030` or HTTP 403). Daily budget ceilings are atomically governed by `DistributedTokenBucket`. [Rescoped 2026-09-18] Migration: `residential: boolean` → `tier` enum; backward compat `residential: true` → `tier: 'residential'`. `ProxyBudgetGovernor` enforces `PROXY_DAILY_BUDGET_USD` ceiling; `BUDGET_CEILING_REACHED` soft degradation returns degraded result instead of throwing `PROXY_EXHAUSTED`.
 - **AD-43 (Zero-Browser Engine Invariant):** Lightweight platforms (Masothue, Batdongsan, Chotot, TopCV, VietnamWorks, Shopee) are HTTP-first by design. Their `DESCRIPTORS` map to `AbstractApiClient`-based clients using `got`/`undici` — no Chromium process is spawned. Engine metadata (`engineUsed`, `durationMs`, `platform`, `action`) is injected into `_metadata` on every `AbstractCrawler.start()` result so downstream consumers can observe transport choice and latency without inspecting client classes.
 - **AD-44 (GitOps Selector Healing — No Runtime Injection):** Selector drift healing follows a strict GitOps pipeline: `SelectorCanary` detects drift → `AutoSelectorFallback.investigate()` generates ranked candidates → `SelectorSandbox` validates candidates against `expectedShape` → `CanaryHealer` produces a `unified-diff` for `canary-targets.json` → GitHub Draft PR is created for human review. Runtime hot-patching of selectors into Redis or in-memory config is strictly rejected. The `xactions canary heal` CLI orchestrates this flow manually; auto-heal on detection is prohibited.
+- **AD-45 (In-Memory Identity Resolution — Epic 41, rescopes Option D):** `x_social_find_profiles` may compute `identityClusters[]` in-memory via `EntityResolver` (Jaro-Winkler similarity + additive confidence scoring over 4 signals: exact-username +40, name-similarity>0.85 +30, avatar-match +30, cross-link-in-bio +20, merged by union-find at threshold ≥40). This refines the earlier "no entity resolution" reading of AD-40: the prohibition is on **persistence** (`PersonEntity`/`GoldenContact` tables, stored PII), not on stateless per-request clustering. Zero-auth identity registries (`github` → username, `gravatar` → email) are registered in `PROFILE_ACTION_MAP`; GitHub's 60 req/h (5000 with `GITHUB_TOKEN`) budget is enforced via `DistributedTokenBucket`. Out of scope (Mr.Holmes domain): dorking, breach/leak checks, BFS recursive profiling, Maigret-style mass scans.
