@@ -249,6 +249,11 @@ development_status:
   39-1-selector-canary-expansion-heuristic-drift: done
   39-2-gitops-patch-assistant-cli: done
   epic-39-retrospective: optional
+
+  epic-41: done
+  41-1-github-gravatar-adapters: done
+  41-2-entity-resolver-identity-clusters: done
+  epic-41-retrospective: done
 action_items:
   - id: "epic-39-rescope-gitops-healing-only"
     epic: 39
