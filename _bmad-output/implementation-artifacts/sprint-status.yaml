@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: 2026-09-16
+last_updated: 09-19-2026 11:02
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -141,8 +141,9 @@ development_status:
   epic-19-retrospective: done
 
   epic-20: done
-  20-1-multi-consumer-service-contract-x-scrape-x-actions-list-action-matrix: done
-  20-2-universal-stream-publish-hook-snake-case-thin-event-map-to-thin-event:
+  20-1-multi-consumer-service-contract-x-scrape-x-actions-list-action-matrix: 
+    done
+  20-2-universal-stream-publish-hook-snake-case-thin-event-map-to-thin-event: 
     done
   epic-20-retrospective: optional
 
@@ -242,25 +243,30 @@ development_status:
 
   epic-40: done
   40-1-cost-aware-proxy-escalation-in-proxy-pool: done
-  epic-40-retrospective: optional
+  epic-40-retrospective: done
 
   epic-39: done
   39-1-selector-canary-expansion-heuristic-drift: done
   39-2-gitops-patch-assistant-cli: done
   epic-39-retrospective: optional
+action_items:
   - id: "epic-39-rescope-gitops-healing-only"
     epic: 39
-    action: "Rescoped after duplication review: 70% already implemented (SelectorCanary + AutoSelectorFallback). Story 39.2 reduced to GitOps patch assistant only: canary heal CLI, sandbox validation, unified-diff, Draft PR."
+    action: "Rescoped after duplication review: 70% already implemented (SelectorCanary
+      + AutoSelectorFallback). Story 39.2 reduced to GitOps patch assistant only:
+      canary heal CLI, sandbox validation, unified-diff, Draft PR."
     owner: "dev"
     status: in-progress
     ref: "_bmad-output/implementation-artifacts/spec-39-1-2-gitops-selector-healing-rescope.md"
   - id: "epic-40-rescope-cost-aware-proxy-only"
     epic: 40
-    action: "Rescoped after duplication review: ~40% already implemented (quarantine, dual-pool, sticky map, DistributedTokenBucket). Story 40.1 reduced to: tier metadata (4 levels), cost-aware escalation, ProxyBudgetGovernor, BUDGET_CEILING_REACHED soft degradation."
+    action: "Rescoped after duplication review: ~40% already implemented (quarantine,
+      dual-pool, sticky map, DistributedTokenBucket). Story 40.1 reduced to: tier
+      metadata (4 levels), cost-aware escalation, ProxyBudgetGovernor, BUDGET_CEILING_REACHED
+      soft degradation."
     owner: "dev"
     status: in-progress
     ref: "_bmad-output/implementation-artifacts/spec-40-1-cost-aware-proxy-escalation-rescope.md"
-action_items:
   - id: "epic-35-retro-item-1-gate-proxy_exhausted-at-base-client-js-9"
     epic: 35
     action: "Gate PROXY_EXHAUSTED at base-client.js:978 on shouldUseProxy so direct-request
