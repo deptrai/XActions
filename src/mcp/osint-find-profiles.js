@@ -19,6 +19,7 @@ import { scrape, DESCRIPTORS } from '../scrapers/index.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
 import { normalizeVnPhone } from '../utils/vn-phone.js';
 import { globalAdaptiveRateGovernor } from '../core/adaptive-governor.js';
+import { resolveIdentities } from './entity-resolver.js';
 
 // ---------------------------------------------------------------------------
 // Platform → action map for person lookup
@@ -645,6 +646,12 @@ export async function executeSocialFindProfiles(args) {
 
   const dispatched = platformStatus.filter((s) => s.status === 'ok' || s.status === 'error' || s.status === 'timeout').length;
 
+  // Story 41.2 — group the flat fan-out results into identity clusters so the
+  // caller can tell which cross-platform profiles belong to the same person.
+  // In-memory per-request only (Option D): no PII persistence. `profiles[]`
+  // and `platformStatus[]` are unchanged — `identityClusters` is additive.
+  const identityClusters = resolveIdentities(profiles, query);
+
   return {
     success: true,
     query,
@@ -653,6 +660,7 @@ export async function executeSocialFindProfiles(args) {
     platformsAttempted: dispatched,
     totalProfiles: profiles.length,
     profiles,
+    identityClusters,
     platformStatus,
     durationMs: Date.now() - startedAt,
   };
