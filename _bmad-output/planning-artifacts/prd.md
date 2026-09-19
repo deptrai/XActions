@@ -200,7 +200,9 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-103 (Crawler Lifecycle Stream Unification & CloudEvents v1.0):** Hợp nhất toàn bộ luồng phát sự kiện vào Template Method của `AbstractCrawler.execute()`. Xóa bỏ 100% cờ tạm `__streamEmitted` và các lệnh publish trực tiếp trong crawler con; đảm bảo 100% event đẩy vào Redis Stream tuân thủ chuẩn CloudEvents v1.0 với `idempotencyKey` chống duplicate.
 * **FR-104 (Platform-Static Zero-Browser HTTP Routing):** Định tuyến tĩnh Tier 0 (HTTP-First / got-jsdom) cho các domain tĩnh/SSR nhẹ (Masothue, Batdongsan, tin tức, RSS); cắt giảm 85% RAM và tăng tốc độ xử lý so với Headless Browser.
 * **FR-105 (Cost-Aware Proxy Escalation & Budget Ceiling):** [Rescoped — ~40% đã có sẵn] Bổ sung `tier` metadata (4 levels: `free`/`datacenter`/`residential`/`mobile_4g`) vào `ProxyIpPool`. `ProxyBudgetGovernor` enforces `PROXY_DAILY_BUDGET_USD` ceiling via `DistributedTokenBucket`. Cost-aware escalation: default `datacenter` → `residential` on 403/Captcha challenge. `BUDGET_CEILING_REACHED` soft degradation trả degraded result thay vì throw `PROXY_EXHAUSTED`.
-* **FR-106 (GitOps Selector Healing Assistant):** [Rescoped — ~70% đã có sẵn] CLI tool `xactions canary heal` orchestrates: `SelectorCanary` drift status → `AutoSelectorFallback.investigate()` candidates → `SelectorSandbox` validation → `unified-diff` generation → GitHub Draft PR. Không auto-heal, không runtime injection — tuân thủ Invariant #4 (GitOps-Driven DOM Drift Healing).
+* **FR-106 (GitOps Selector Healing Assistant):** [Rescoped — ~70% đã có sẵn] CLI tool `xactions canary heal` orchestrates: `SelectorCanary` drift status → `AutoSelectorFallback.investigate()` → `SelectorSandbox` validation → `unified-diff` generation → GitHub Draft PR. Không auto-heal, không runtime injection — tuân thủ Invariant #4 (GitOps-Driven DOM Drift Healing).
+* **FR-107 (OSINT Developer & Identity Registries):** Mở rộng platform matrix của `x_social_find_profiles` với 2 nguồn public API zero-auth: **GitHub** (`https://api.github.com/users/{username}` — trả về name, bio, avatar, company, location, public repos; hỗ trợ `username` queryType) và **Gravatar** (`https://api.gravatar.com/v3/profiles/{sha256(email)}` — resolve email → avatar + linked accounts; hỗ trợ queryType `email`). Direct fetch, không cần proxy, không cần crawler mới — chỉ adapter + đăng ký trong `PROFILE_ACTION_MAP`. Rate limit GitHub unauthenticated (60 req/h) quản lý qua `DistributedTokenBucket`; optional `GITHUB_TOKEN` env var nâng lên 5000 req/h. (Epic 41.1)
+* **FR-108 (OSINT Entity Resolution & Confidence Clustering):** Cung cấp `EntityResolver` module (pure JS, port thuật toán Jaro-Winkler từ Mr.Holmes `entity_resolver.py` — không port code Python) gộp kết quả fan-out của `x_social_find_profiles` thành `identityClusters[]` với confidence score (0.0–1.0). Scoring: exact username match (+40), display-name similarity > 0.85 (+30), avatar URL/pHash match (+30), cross-link trong bio (+20). Output contract: `identityClusters[]` bổ sung bên cạnh `profiles[]` phẳng (backward compat — profiles[] giữ nguyên). Không persist PII (Option D), tính toán in-memory per-request. (Epic 41.2)
 
 ### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17 ➔ NFR-21)
 
@@ -222,6 +224,7 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 * **Phase A — Vietnam Core (inserted before Phase 6):** Epic 21 (B2B registry + automotive), Epic 22 (F&B + healthcare + legal), Epic 33 (Zalo + YouTube VN). Reactivated from backlog + net-new per VN market pivot 2026-09-05.
 * **Phase 6: Universalization & Legacy Decommission (Stories 23.1 ➔ 26.2)**
 * **Phase 7: Stream Unification & Frugal Scaling (Epics 36, 37, 38, 39, 40):** Hợp nhất lifecycle phát sự kiện (Epic 38), cung cấp OSINT Harvester tool (Epic 36), tối ưu hoá tài nguyên và chi phí proxy (Epic 37/40), hỗ trợ GitOps selector assistant (Epic 39).
+* **Phase 8: OSINT Enhancement (Epic 41):** Mở rộng platform matrix với Developer/Identity Registries (GitHub, Gravatar) và Entity Resolution clustering — nâng cấp `x_social_find_profiles` từ danh sách phẳng sang hồ sơ hợp nhất có confidence score.
 
 ### 7.4. Traceability ngắn gọn
 
@@ -253,6 +256,7 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 | Epic 37 (Zero-Browser HTTP) | FR-104, NFR-20 |
 | Epic 40 (Cost-Aware Proxy — Rescoped) | FR-105 |
 | Epic 39 (GitOps Selector Healing — Rescoped) | FR-106 |
+| Epic 41 (OSINT Registries & Entity Resolution) | FR-107, FR-108 |
 
 ### 7.5. Canonicalization & Related Documents
 

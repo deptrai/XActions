@@ -2274,3 +2274,31 @@ Giao diện các mạng xã hội thường xuyên thay đổi khiến CSS/XPath
 ## Stories (Rescoped)
 - **Story 39.1**: Mở rộng canary targets config + `expectedShape` fields. ✅ **Done** — config expansion only.
 - **Story 39.2**: GitOps Patch Assistant CLI (`xactions canary heal`) — net-new implementation.
+
+---
+
+# Epic 41: OSINT Enhancement — Developer Registries & Entity Resolution (Rescoped)
+
+## Business Context
+Live verification của `x_social_find_profiles` (Epic 36) với query thực tế `deptraidapxichlo` đã lộ ra 2 gap: (1) các developer/identity registries công khai (GitHub, Gravatar) chưa có trong platform matrix dù là nguồn dữ liệu mở giàu metadata nhất và không tốn proxy; (2) kết quả trả về là danh sách phẳng `profiles[]` — caller không biết được profile nào trên platform nào thuộc cùng một người thật.
+
+> **⚠️ Boundary Note (2026-09-19):** Sau duplication audit với Mr.Holmes (`docs/proposals/PROPOSAL-person-reconnaissance-osint-v1-xactions-only.md`), Epic 41 chỉ port **thuật toán** (Jaro-Winkler similarity) chứ không port code Python. Các khả năng thuộc domain điều tra của Mr.Holmes bị loại khỏi scope: Google/Yandex Dorking, breach/leak check (HIBP/Shodan), BFS Recursive Profiler, Mindmap/LLM Report, quét 2500 sites (Maigret). Nếu cần các khả năng này, operator orchestrate qua MCP của Mr.Holmes — không duplicate trong XActions.
+
+## Scope
+**Trong scope:**
+- GitHub adapter: direct fetch `https://api.github.com/users/{username}`, đăng ký vào `PROFILE_ACTION_MAP` với queryType `username`. Rate limit 60 req/h (unauthenticated) qua `DistributedTokenBucket`; optional `GITHUB_TOKEN` → 5000 req/h.
+- Gravatar adapter: direct fetch `https://api.gravatar.com/v3/profiles/{sha256(email)}`, đăng ký với queryType `email`.
+- `EntityResolver` module (pure JS): Jaro-Winkler similarity + confidence scoring, gộp `profiles[]` thành `identityClusters[]`.
+- Output contract mở rộng: `identityClusters[]` bổ sung cạnh `profiles[]` (backward compat).
+
+**Ngoài scope (rejected — thuộc Mr.Holmes domain):**
+- Google/Yandex Dorking (`Core/Dork.py`).
+- Breach/leak check (HIBP, Shodan, LeakLookup, IntelX).
+- BFS Recursive Profiler (`autonomous_agent.py`).
+- Mindmap HTML + LLM Report (`mindmap_generator.py`, `llm_synthesizer.py`).
+- Quét 2500 sites (Maigret-style scan pipeline).
+- Persist PII / PersonEntity trong Prisma (Option D — in-memory per-request only).
+
+## Stories
+- **Story 41.1**: GitHub + Gravatar adapters — public API zero-auth, đăng ký vào `PROFILE_ACTION_MAP`, rate limit qua `DistributedTokenBucket`.
+- **Story 41.2**: `EntityResolver` (Jaro-Winkler + confidence scoring) — gộp fan-out results thành `identityClusters[]`, bổ sung vào output của `x_social_find_profiles` (backward compat).
