@@ -55,6 +55,9 @@ export const PROFILE_ACTION_MAP = {
   vietnamworks: { name: 'company_detail' },
   chotot:       { phone: 'search_listings',   name: 'search_listings' },
   masothue:     { phone: 'search',            name: 'search' },
+  // Epic 41 — zero-auth identity registries (direct fetch, no proxy).
+  github:       { username: 'profile' },
+  gravatar:     { email: 'profile' },
 };
 
 /**
@@ -427,6 +430,9 @@ export const PLATFORM_TIMEOUTS_MS = {
   bluesky: 6_000,
   mastodon: 6_000,
   zalo: 10_000,
+  // Epic 41 — Tier-0 identity registries (direct REST, no browser).
+  github: 4_000,
+  gravatar: 4_000,
 
   // Tier 1: Browser / heavy anti-bot
   twitter: 15_000,
