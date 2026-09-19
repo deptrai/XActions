@@ -22,6 +22,7 @@ describe('ProxyIpPool Acceptance Tests (Story 11.1 - TDD Red Phase)', () => {
         username: 'user',
         password: 'pass',
         server: 'http://1.2.3.4:8080',
+        tier: 'datacenter',
       });
     });
 

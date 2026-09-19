@@ -85,6 +85,7 @@ export default {
       requiresProxy: options.requiresProxy,
       timeout: options.timeout,
       userAgent: options.userAgent,
+      httpClient: options.httpClient,
     });
   },
 

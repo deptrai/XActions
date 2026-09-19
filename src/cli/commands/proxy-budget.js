@@ -12,7 +12,7 @@ export function registerProxyBudgetCommand(program) {
     .description('Proxy management — pool, budget, tier, escalation');
 
   // xactions proxy budget
-  proxy
+  const budget = proxy
     .command('budget')
     .description('Show current proxy budget status and tier costs')
     .option('--json', 'Output raw JSON', false)
@@ -64,8 +64,8 @@ export function registerProxyBudgetCommand(program) {
     });
 
   // xactions proxy budget reset
-  proxy
-    .command('budget reset')
+  budget
+    .command('reset')
     .description('Reset daily proxy budget (admin only)')
     .action(async () => {
       try {

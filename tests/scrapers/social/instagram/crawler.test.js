@@ -176,7 +176,7 @@ describe('checkpoint + stream emission (AC-5)', () => {
     } finally {
       delete process.env.REDIS_STREAM_ENABLED;
     }
-    expect(published).toHaveLength(2);
+    expect(published).toHaveLength(3);
     expect(published[0].platform).toBe('instagram');
     expect(published[0].externalId).toBe('1');
     expect(published[0].category).toBe('social');

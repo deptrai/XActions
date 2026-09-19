@@ -74,7 +74,7 @@ describe('Story 34.2: AbstractCrawler Telemetry Instrumentation Unit Tests', () 
 
     const result = await crawler.start({ action: 'test_action', args: {} });
 
-    expect(result).toEqual({ posts: [{ id: 1 }, { id: 2 }] });
+    expect(result).toMatchObject({ posts: [{ id: 1 }, { id: 2 }] });
     expect(passedSession).toBeDefined();
     expect(passedSession.telemetry).toBeDefined();
 

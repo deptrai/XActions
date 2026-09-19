@@ -97,7 +97,7 @@ export function detectPlatform(toolName, args = {}, rawResult) {
   if (toolName === 'x_actions_list') return 'universal';
   if (toolName === 'x_list_platforms') return 'universal';
   if (toolName === 'x_scrape') return args?.platform || 'universal';
-  if (toolName.startsWith('x_')) return 'unknown';
+  if (toolName.startsWith('x_')) return 'twitter';
 
   return 'unknown';
 }
