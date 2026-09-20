@@ -10,8 +10,13 @@ import {
   jaroWinkler,
   scorePair,
   resolveIdentities,
+  prefetchAvatarHashes,
   MERGE_THRESHOLD,
 } from '../../src/mcp/entity-resolver.js';
+import { computeDHash } from '../../src/osint/phash.js';
+import { decodeImage } from '../../src/osint/image-decode.js';
+import fs from 'node:fs';
+import path from 'node:path';
 import { executeSocialFindProfiles } from '../../src/mcp/osint-find-profiles.js';
 import { DESCRIPTORS } from '../../src/scrapers/index.js';
 import { __resetOsintCircuits } from '../../src/mcp/osint-find-profiles.js';
@@ -198,3 +203,81 @@ describe('executeSocialFindProfiles → identityClusters (integration)', () => {
     assert.ok(all.includes('github'));
   });
 });
+
+// ---------------------------------------------------------------------------
+// Story 41.3 — avatar pHash path (avatarHashMap)
+// ---------------------------------------------------------------------------
+
+const PHASH_FIXTURES = path.resolve(__dirname, '../osint/fixtures');
+const hashOf = (name) => {
+  const d = decodeImage(fs.readFileSync(path.join(PHASH_FIXTURES, name)));
+  return computeDHash(d.rgba, d.width, d.height);
+};
+
+describe('Story 41.3 — avatar pHash matching', () => {
+  it('scorePair fires avatar_match for different URLs with same image (hamming ≤ 10)', () => {
+    const h = hashOf('avatar_64.png');
+    const h2 = hashOf('avatar_128_reencoded.png'); // same photo, different size/encode
+    const map = new Map([
+      ['https://fbcdn.example/a.jpg', h],
+      ['https://cdninstagram.example/b.jpg', h2],
+    ]);
+    const a = prof('facebook', { username: 'u1', name: 'A', avatar: 'https://fbcdn.example/a.jpg' });
+    const b = prof('instagram', { username: 'u2', name: 'B', avatar: 'https://cdninstagram.example/b.jpg' });
+    const { signals } = scorePair(a, b, map);
+    assert.ok(signals.includes('avatar_match'), `expected avatar_match, got ${signals}`);
+  });
+
+  it('scorePair does NOT fire avatar_match when hashes differ beyond threshold', () => {
+    const map = new Map([
+      ['https://a.example/x.png', hashOf('avatar_64.png')],
+      ['https://b.example/y.png', hashOf('different_64.png')],
+    ]);
+    const a = prof('a', { username: 'u1', name: 'X', avatar: 'https://a.example/x.png' });
+    const b = prof('b', { username: 'u2', name: 'Y', avatar: 'https://b.example/y.png' });
+    const { signals } = scorePair(a, b, map);
+    assert.ok(!signals.includes('avatar_match'));
+  });
+
+  it('resolveIdentities merges same-person profiles across CDNs via pHash', () => {
+    const map = new Map([
+      ['https://fbcdn.example/a.jpg', hashOf('avatar_64.png')],
+      ['https://cdninstagram.example/b.jpg', hashOf('avatar_32.png')],
+    ]);
+    const clusters = resolveIdentities([
+      prof('facebook', { username: 'nichxbt', name: 'Nicholas', avatar: 'https://fbcdn.example/a.jpg' }),
+      prof('instagram', { username: 'nichxbt', name: 'Nicholas', avatar: 'https://cdninstagram.example/b.jpg' }),
+    ], 'nichxbt', map);
+    assert.equal(clusters.length, 1);
+    assert.ok(clusters[0].matchedSignals.includes('avatar_match'));
+  });
+
+  it('prefetchAvatarHashes returns Map keyed by normalized URL (injected client, no network)', async () => {
+    const buf = fs.readFileSync(path.join(PHASH_FIXTURES, 'avatar_64.png'));
+    const client = { request: async () => ({ body: buf }) };
+    const map = await prefetchAvatarHashes(
+      [prof('a', { avatar: 'https://A.example/Avatar.PNG' }), prof('b', { avatar: 'https://a.example/avatar.png' })],
+      { httpClient: client }
+    );
+    assert.ok(map instanceof Map);
+    assert.equal(map.size, 1, 'dedupes normalized URLs');
+    assert.equal(typeof map.get('https://a.example/avatar.png'), 'bigint');
+  });
+
+  it('prefetchAvatarHashes returns empty Map when OSINT_AVATAR_PHASH=0', async () => {
+    const prev = process.env.OSINT_AVATAR_PHASH;
+    process.env.OSINT_AVATAR_PHASH = '0';
+    try {
+      const map = await prefetchAvatarHashes([prof('a', { avatar: 'https://x/a.png' })]);
+      assert.equal(map.size, 0);
+    } finally {
+      if (prev === undefined) delete process.env.OSINT_AVATAR_PHASH; else process.env.OSINT_AVATAR_PHASH = prev;
+    }
+  });
+
+  it('prefetchAvatarHashes never throws on non-array input', async () => {
+    const map = await prefetchAvatarHashes(null);
+    assert.equal(map.size, 0);
+  });
+});
+

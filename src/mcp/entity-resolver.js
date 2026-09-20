@@ -24,6 +24,8 @@
  * @license Apache-2.0
  */
 
+import { fetchAvatarHash, getAvatarPHashThreshold, isAvatarPHashEnabled, hammingDistance } from '../osint/phash.js';
+
 // ---------------------------------------------------------------------------
 // Jaro-Winkler similarity
 // ---------------------------------------------------------------------------
@@ -72,6 +74,7 @@ function jaro(s1, s2) {
 
   return (matches / len1 + matches / len2 + (matches - t) / matches) / 3;
 }
+
 
 const WINKLER_PREFIX_SCALING = 0.1;
 const WINKLER_MAX_PREFIX = 4;
@@ -156,9 +159,10 @@ function crossLinks(a, b) {
  * Score a pair of profiles; returns total score + which signals fired.
  * @param {Record<string, any>} a
  * @param {Record<string, any>} b
+ * @param {Map<string, bigint>} [avatarHashMap] — pre-fetched avatar pHash map (url → hash)
  * @returns {{ score: number, signals: string[] }}
  */
-export function scorePair(a, b) {
+export function scorePair(a, b, avatarHashMap, phashEnabled = isAvatarPHashEnabled(), phashThreshold = getAvatarPHashThreshold()) {
   let score = 0;
   const signals = [];
 
@@ -178,7 +182,22 @@ export function scorePair(a, b) {
 
   const aAv = norm(a.avatar);
   const bAv = norm(b.avatar);
+  let avatarMatched = false;
   if (aAv && bAv && aAv === bAv) {
+    // Fast-path: identical URL
+    avatarMatched = true;
+  } else if (aAv && bAv && avatarHashMap && phashEnabled) {
+    // pHash path: compare perceptual hashes (enabled/threshold resolved by caller)
+    const aHash = avatarHashMap.get(aAv);
+    const bHash = avatarHashMap.get(bAv);
+    if (aHash !== undefined && bHash !== undefined) {
+      const dist = hammingDistance(aHash, bHash);
+      if (dist <= phashThreshold) {
+        avatarMatched = true;
+      }
+    }
+  }
+  if (avatarMatched) {
     score += 30;
     signals.push('avatar_match');
   }
@@ -221,9 +240,13 @@ function pickPrimary(members) {
  * @param {Array<Record<string, any>>} profiles
  * @param {string} [query] — original lookup query (reserved; boosts nothing yet
  *                          but kept for future query-anchored scoring).
+ * @param {Map<string, bigint>} [avatarHashMap] — pre-fetched avatar pHash map (url → hash)
  * @returns {Array<{ clusterId: string, confidence: number, profiles: Array, matchedSignals: string[], primaryProfile: any }>}
  */
-export function resolveIdentities(profiles, query) {
+export function resolveIdentities(profiles, query, avatarHashMap) {
+  // Story 41.3 — evaluate pHash config once per call, not per pair (env reads in the O(n^2) loop).
+  const phashEnabled = isAvatarPHashEnabled();
+  const phashThreshold = phashEnabled ? getAvatarPHashThreshold() : 0;
   const list = Array.isArray(profiles) ? profiles.filter((p) => p && typeof p === 'object') : [];
   if (list.length === 0) return [];
 
@@ -248,7 +271,7 @@ export function resolveIdentities(profiles, query) {
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       // Same-platform duplicates still allowed to merge, but carry less meaning.
-      const { score, signals } = scorePair(list[i], list[j]);
+      const { score, signals } = scorePair(list[i], list[j], avatarHashMap, phashEnabled, phashThreshold);
       pairSignals.push([i, j, score, signals]);
       if (score >= MERGE_THRESHOLD) {
         union(i, j);
@@ -304,4 +327,49 @@ export function resolveIdentities(profiles, query) {
   return clusters;
 }
 
-export default { jaroWinkler, scorePair, resolveIdentities, MERGE_THRESHOLD };
+/**
+ * Pre-fetch avatar perceptual hashes for all unique avatar URLs in profiles.
+ *
+ * Fetches images in parallel via Promise.allSettled with a ≤3s timeout each,
+ * dedupes by URL, and returns a Map<avatarUrl, hash>. Failures return null and
+ * are excluded from the map — never throws.
+ *
+ * @param {Array<Record<string, any>>} profiles
+ * @param {object} [options]
+ * @param {object} [options.httpClient] — HTTP client with .request(url, {signal})
+ * @param {number} [options.timeoutMs=3000] — fetch timeout per avatar
+ * @returns {Promise<Map<string, bigint>>}
+ */
+export async function prefetchAvatarHashes(profiles, options = {}) {
+  const map = new Map();
+  if (!isAvatarPHashEnabled()) return map;
+
+  const list = Array.isArray(profiles) ? profiles : [];
+  // norm() lowercases — but signed CDN URLs are case-sensitive. Fetch the raw
+  // URL, key the map by the normalized form that scorePair looks up.
+  const urlByNorm = new Map();
+  for (const p of list) {
+    const raw = String(p?.avatar || '').trim();
+    const av = norm(raw);
+    if (av && !urlByNorm.has(av)) urlByNorm.set(av, raw);
+  }
+
+  // Cap concurrency + per-fetch timeout so a slow CDN can't stall the tool.
+  const { default: pLimit } = await import('p-limit');
+  const limit = pLimit(Number.isFinite(options.concurrency) ? options.concurrency : 8);
+  const perFetchTimeout = Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
+    ? Math.min(options.timeoutMs, 3000)
+    : 3000;
+
+  await Promise.allSettled(
+    [...urlByNorm.entries()].map(([normKey, rawUrl]) =>
+      limit(async () => {
+        const res = await fetchAvatarHash(rawUrl, { ...options, timeoutMs: perFetchTimeout });
+        if (res) map.set(normKey, res.hash);
+      })
+    )
+  );
+  return map;
+}
+
+export default { jaroWinkler, scorePair, resolveIdentities, prefetchAvatarHashes, MERGE_THRESHOLD };

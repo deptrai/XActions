@@ -1,6 +1,6 @@
 # Canonical Action/Arg Matrix
 
-> Auto-generated 2026-09-19T15:49:27.375Z. Do not edit manually.
+> Auto-generated 2026-09-20T07:26:35.210Z. Do not edit manually.
 
 | Platform | Category | Action | Required Args | Optional Args | Example |
 |----------|----------|--------|---------------|---------------|---------|
@@ -86,7 +86,7 @@
 | facebook | social | group_members | — | groupUrl, groupId, limit, cursor | `{"groupUrl":"https://www.facebook.com/groups/123456","limit":50}` |
 | facebook | social | search | query | type, location, limit, cursor | `{"query":"artificial intelligence","type":"posts","limit":20}` |
 | facebook | social | group_search | groupUrl, query | limit, cursor | `{"groupUrl":"https://www.facebook.com/groups/123456","query":"ai tools","limit":20}` |
-| facebook | social | marketplace | query | location, category, categoryId, minPrice, maxPrice, limit, cursor, after, radiusKm, latitude, longitude, dryRun, priceMin, priceMax | `{"query":"macbook pro 14","location":"Ho Chi Minh City","minPrice":800,"maxPrice":1200,"limit":20}` |
+| facebook | social | marketplace | query | location, category, categoryId, minPrice, maxPrice, limit, cursor, after, radiusKm, latitude, longitude, dryRun, priceMin, priceMax, sortBy, condition | `{"query":"macbook pro 14","location":"Ho Chi Minh City","minPrice":800,"maxPrice":1200,"limit":20}` |
 | facebook | social | like | postUrl | postUrls, dryRun, delayMin, delayMax, maxBatch | `{"postUrl":"https://www.facebook.com/zuck/posts/1011565502"}` |
 | facebook | social | comment | postUrl, text | postUrls, dryRun, delayMin, delayMax, maxBatch | `{"postUrl":"https://www.facebook.com/zuck/posts/1011565502","text":"Great update!"}` |
 | facebook | social | post | text | mediaUrls, groupUrl, groupUrls, groupIds, profileUrl, profileUrls, dryRun, delayMin, delayMax, maxBatch | `{"text":"Hello Facebook from XActions Hybrid Crawler!"}` |

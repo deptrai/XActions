@@ -1,10 +1,23 @@
 ---
 epic: 41
 story: 41.3
-status: ready-for-dev
+status: done
+review_loop_iteration: 0
+followup_review_recommended: false
+deferred:
+  - summary: >-
+      WebP avatar decode not supported — detectFormat handles PNG/JPEG/GIF only;
+      WebP avatars silently fall back to URL-equality.
+    evidence: >-
+      AC-1 Given lists WebP but AC-2 and Out-of-Scope restrict to PNG/JPEG/GIF —
+      spec-internal ambiguity. WebP needs a heavier dep (sharp/@jsquash) which
+      violates the zero/light-dep NFR-15; documented as a module limitation.
+    location: >-
+      src/osint/image-decode.js:detectFormat
+    severity: low
 created: '2026-09-19'
-updated: '2026-09-19'
-baseline_commit: ace25a82
+updated: '2026-09-20'
+baseline_commit: ca15f47654e2aaf66fcafef09cf43bb48b4e53cf
 ---
 
 # Story 41.3: Avatar Perceptual Hashing — `phash.js` + `EntityResolver` async avatar signal
@@ -120,3 +133,49 @@ Chỉ match khi `avatar` URL string **giống hệt nhau**. Thực tế cùng 1 
 - On fetch/decode failure → `null` hash → treat as "no avatar_match" (URL-exact still applies); never throw.
 - Keep `profiles[]`/`platformStatus[]` shape unchanged (backward compat, Option D no-persist).
 - Reference retro: `epic-41-retrospective.md` Action Item #1.
+
+## Review Triage Log
+
+### 2026-09-20 — Review pass
+- verdicts: 19 findings — high 0, medium 3, low 9, false 5, maybe-false 1 (plus 4 descriptive intent-alignment notes folded in)
+- findings:
+  - `[medium]` `[patch]` pHash resolver path untested end-to-end (Intent+VeriGap+Blind) — added 6 tests to `entity-resolver.test.js`: `scorePair`/`resolveIdentities` with populated `avatarHashMap`, `prefetchAvatarHashes` dedup + disabled + non-array.
+  - `[medium]` `[patch]` Raw `timeoutMs` passed to per-avatar fetch; `0`/huge values bypass the ≤3s bound (Intent+VeriGap+Edge+Blind) — `osint-find-profiles.js:654` now passes clamped `callerTimeout`; `prefetchAvatarHashes` caps each fetch at 3000ms.
+  - `[medium]` `[patch]` Unbounded avatar-fetch concurrency + no response-size cap (Blind) — `p-limit` (existing dep) caps at 8 concurrent; `fetchAvatarHash` rejects >5MB payloads.
+  - `[low]` `[patch]` `norm()` lowercases URL before fetch — breaks case-sensitive signed CDN URLs (Edge) — fetch raw URL, key map by normalized form.
+  - `[low]` `[patch]` `isAvatarPHashEnabled`/`getAvatarPHashThreshold` re-read env inside O(n²) pair loop (Blind) — resolved once in `resolveIdentities`, passed as explicit args to `scorePair`.
+  - `[low]` `[patch]` `prefetchAvatarHashes` threw TypeError on non-array input (Edge) — `Array.isArray` guard.
+  - `[low]` `[patch]` `decodeGif` used frame rect, not logical screen → cropped hash on optimized GIFs (Blind) — uses `reader.width/height` full buffer.
+  - `[low]` `[patch]` Test made a real external `undici.fetch` to `cdn.example.com` violating NFR-20 no-network (Intent+Blind) — switched to unroutable `127.0.0.1:1`.
+  - `[low]` `[patch]` `OSINT_AVATAR_PHASH*` env vars missing from `.env.example` (Blind) — added documented block.
+  - `[low]` `[patch]` Mid-file `import` at entity-resolver.js:76 (Blind) — hoisted to top with other imports.
+  - `[false]` `[reject]` "prefetch fetches identical URLs, defeating fast-path" (Edge claim) — `urlByNorm` dedupes; same URL fetches once, and the map is needed to compare that URL against *other* URLs. Fast-path semantics (skip pHash compare when equal) still hold.
+  - `[false]` `[reject]` `avatar_phash` distinct signal for auditability (Blind) — renaming/adding a second signal alters the downstream `matchedSignals` contract; cosmetic gain vs contract churn.
+  - `[false]` `[reject]` `canonical-action-matrix` regeneration riding along (Blind+Intent) — auto-generated file correctly reflecting 13.11's `optionalArgs`; committing it is correct, not contamination.
+  - `[false]` `[reject]` Injected `httpClient` not checking `resp.ok` (Blind) — injected-client contract is a test seam; decode-failure on a 404 HTML body already returns null gracefully.
+  - `[maybe-false]` `[defer]` WebP decode absent (Intent+Edge+Blind) — spec-internal ambiguity (AC-1 vs AC-2/Out-of-Scope); recorded in `deferred`.
+  - `[low]` `[reject]` Dead alpha guard `rgba[idx+3] !== undefined` (Blind) — defensive dead code, removal is cosmetic churn.
+  - `[low]` `[reject]` Double full-image pass in `resizeToGrayscale` (Blind) — perf note only, no named harm.
+
+## Auto Run Result
+
+**Summary.** Story 41.3 completed: `avatar_match` signal upgraded from URL-string-equality to perceptual hashing. New `src/osint/phash.js` (dHash/aHash → 64-bit BigInt, `hammingDistance`, `fetchAvatarHash` with ≤3s timeout + 5MB cap + concurrency-limited prefetch) and `src/osint/image-decode.js` (PNG/JPEG/GIF → RGBA via `pngjs`/`jpeg-js`/`omggif`). `EntityResolver` gained `prefetchAvatarHashes` (async, O(n) `Promise.allSettled`) while `scorePair`/`resolveIdentities` stayed **sync** — the preferred design that avoids a breaking signature change. Caller `osint-find-profiles.js:654` awaits prefetch then resolves.
+
+**Files changed.**
+- `src/osint/phash.js` — new; hash primitives + fetch + env config.
+- `src/osint/image-decode.js` — new; PNG/JPEG/GIF → RGBA (WebP documented as unsupported).
+- `src/mcp/entity-resolver.js` — `avatarHashMap` param on `scorePair`/`resolveIdentities`, `prefetchAvatarHashes`, hoisted env config, raw-URL fetch.
+- `src/mcp/osint-find-profiles.js` — `await prefetchAvatarHashes` with clamped timeout.
+- `tests/osint/phash.test.js` + `tests/osint/fixtures/` — new; 21 tests, 6 fixture images.
+- `tests/mcp/entity-resolver.test.js` — +6 resolver-level pHash tests.
+- `package.json` — `pngjs`, `jpeg-js`, `omggif` (pure-JS, light per NFR-15).
+- `.env.example` — `OSINT_AVATAR_PHASH` / `OSINT_AVATAR_PHASH_THRESHOLD` documented.
+- `docs/canonical-action-matrix.*` — regenerated (carries Story 13.11 `optionalArgs`).
+
+**Review findings.** 19 findings → 10 patched (3 medium, 7 low), 5 rejected false/refuted, 1 deferred (WebP), rest descriptive.
+
+**Verification performed.** `vitest run tests/osint tests/mcp/entity-resolver.test.js tests/mcp/osint-find-profiles.test.js` → **72/72 pass**; unit `phash.test.js` <1.5s no-network. Full-suite spot-check: 5292 pass, 1 pre-existing unrelated failure (`admin-retention.test.js` Prisma unique constraint — reproduced on baseline).
+
+**Residual risks.** WebP avatars fall back to URL-equality (deferred). GraphQL/PII boundary honored — all processing in-memory per-request (Option D).
+
+**Follow-up review recommended:** false — patched entries are low/medium with direct test coverage; no unverified high-severity change.

@@ -19,7 +19,7 @@ import { scrape, DESCRIPTORS } from '../scrapers/index.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
 import { normalizeVnPhone } from '../utils/vn-phone.js';
 import { globalAdaptiveRateGovernor } from '../core/adaptive-governor.js';
-import { resolveIdentities } from './entity-resolver.js';
+import { resolveIdentities, prefetchAvatarHashes } from './entity-resolver.js';
 
 // ---------------------------------------------------------------------------
 // Platform → action map for person lookup
@@ -650,7 +650,9 @@ export async function executeSocialFindProfiles(args) {
   // caller can tell which cross-platform profiles belong to the same person.
   // In-memory per-request only (Option D): no PII persistence. `profiles[]`
   // and `platformStatus[]` are unchanged — `identityClusters` is additive.
-  const identityClusters = resolveIdentities(profiles, query);
+  // Story 41.3 — fetch avatar perceptual hashes for cross-CDN matching
+  const avatarHashMap = await prefetchAvatarHashes(profiles, { timeoutMs: callerTimeout ?? undefined });
+  const identityClusters = resolveIdentities(profiles, query, avatarHashMap);
 
   return {
     success: true,
