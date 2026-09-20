@@ -14,7 +14,7 @@
  * @license Apache-2.0
  */
 
-import { decodeImage } from './image-decode.js';
+import { decodeImageAsync } from './image-decode.js';
 
 const DEFAULT_AVATAR_PHASH_THRESHOLD = 10;
 const DEFAULT_FETCH_TIMEOUT_MS = 3000;
@@ -122,7 +122,7 @@ export function hammingDistance(hashA, hashB) {
  * Fetch an avatar image and compute its perceptual hash.
  *
  * Fetches bytes via injected httpClient/undici with a timeout, decodes to RGBA
- * via `decodeImage`, and computes dHash. Returns null on any failure (network,
+ * via `decodeImageAsync`, and computes dHash. Returns null on any failure (network,
  * timeout, decode error) — never throws.
  *
  * @param {string} url - Avatar image URL (http/https)
@@ -155,7 +155,7 @@ export async function fetchAvatarHash(url, options = {}) {
       buffer = Buffer.from(arr);
     }
     if (!buffer || buffer.length === 0 || buffer.length > MAX_BYTES) return null;
-    const decoded = decodeImage(buffer);
+    const decoded = await decodeImageAsync(buffer);
     if (!decoded) return null;
     const { rgba, width, height } = decoded;
     const hash = algorithm === 'ahash'

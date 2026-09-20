@@ -4,17 +4,7 @@ story: 41.3
 status: done
 review_loop_iteration: 0
 followup_review_recommended: false
-deferred:
-  - summary: >-
-      WebP avatar decode not supported — detectFormat handles PNG/JPEG/GIF only;
-      WebP avatars silently fall back to URL-equality.
-    evidence: >-
-      AC-1 Given lists WebP but AC-2 and Out-of-Scope restrict to PNG/JPEG/GIF —
-      spec-internal ambiguity. WebP needs a heavier dep (sharp/@jsquash) which
-      violates the zero/light-dep NFR-15; documented as a module limitation.
-    location: >-
-      src/osint/image-decode.js:detectFormat
-    severity: low
+deferred: []
 created: '2026-09-19'
 updated: '2026-09-20'
 baseline_commit: ca15f47654e2aaf66fcafef09cf43bb48b4e53cf
@@ -176,6 +166,8 @@ Chỉ match khi `avatar` URL string **giống hệt nhau**. Thực tế cùng 1 
 
 **Verification performed.** `vitest run tests/osint tests/mcp/entity-resolver.test.js tests/mcp/osint-find-profiles.test.js` → **72/72 pass**; unit `phash.test.js` <1.5s no-network. Full-suite spot-check: 5292 pass, 1 pre-existing unrelated failure (`admin-retention.test.js` Prisma unique constraint — reproduced on baseline).
 
-**Residual risks.** WebP avatars fall back to URL-equality (deferred). GraphQL/PII boundary honored — all processing in-memory per-request (Option D).
+**Deferred resolution (2026-09-20 follow-up).** The WebP decode gap was resolved: `decodeImageAsync` added to `image-decode.js` using `@jsquash/webp` WASM (lazy-compiled from disk via `WebAssembly.compile` — bypasses the lib's `fetch()`-based auto-init that fails under Node ESM). `detectFormat` detects RIFF/WEBP magic; `fetchAvatarHash` now uses the async decoder. Sync `decodeImage` intentionally returns `null` for WebP (async-only format). `tests/osint/fixtures/avatar_64.webp` (same photo) + 3 tests added — cross-format webp↔png hamming ≤ threshold verified.
+
+**Residual risks.** None material. GraphQL/PII boundary honored — all processing in-memory per-request (Option D).
 
 **Follow-up review recommended:** false — patched entries are low/medium with direct test coverage; no unverified high-severity change.

@@ -16,7 +16,7 @@ import {
   getAvatarPHashThreshold,
   isAvatarPHashEnabled,
 } from '../../src/osint/phash.js';
-import { decodeImage } from '../../src/osint/image-decode.js';
+import { decodeImage, decodeImageAsync } from '../../src/osint/image-decode.js';
 
 const FIXTURES_DIR = path.resolve(__dirname, 'fixtures');
 
@@ -41,6 +41,18 @@ describe('decodeImage', () => {
     assert.equal(decoded.width, 64);
     assert.equal(decoded.height, 64);
     assert.ok(decoded.rgba.length === 64 * 64 * 4);
+  });
+
+  it('decodes WebP to RGBA via decodeImageAsync', async () => {
+    const decoded = await decodeImageAsync(readFixture('avatar_64.webp'));
+    assert.ok(decoded, 'webp should decode');
+    assert.equal(decoded.width, 64);
+    assert.equal(decoded.height, 64);
+    assert.ok(decoded.rgba.length === 64 * 64 * 4);
+  });
+
+  it('sync decodeImage returns null for webp (async-only format)', () => {
+    assert.equal(decodeImage(readFixture('avatar_64.webp')), null);
   });
 
   it('returns null for corrupt input', () => {
@@ -126,6 +138,21 @@ describe('hammingDistance', () => {
 // ---------------------------------------------------------------------------
 // fetchAvatarHash — real HTTP client injection
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Cross-format: same avatar as webp vs png (Story 41.3 deferred item resolved)
+// ---------------------------------------------------------------------------
+
+describe('cross-format avatar matching', () => {
+  it('same avatar as .webp vs .png produces hamming ≤ threshold', async () => {
+    const pngDec = decodeImage(readFixture('avatar_64.png'));
+    const webpDec = await decodeImageAsync(readFixture('avatar_64.webp'));
+    const hPng = computeDHash(pngDec.rgba, pngDec.width, pngDec.height);
+    const hWebp = computeDHash(webpDec.rgba, webpDec.width, webpDec.height);
+    const dist = hammingDistance(hPng, hWebp);
+    assert.ok(dist <= getAvatarPHashThreshold(), `hamming ${dist} should be ≤ ${getAvatarPHashThreshold()}`);
+  });
+});
 
 describe('fetchAvatarHash', () => {
   const realHttpClient = {

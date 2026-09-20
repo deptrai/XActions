@@ -3,12 +3,10 @@
 /**
  * image-decode.js — Minimal image decoder for avatar perceptual hashing.
  *
- * Decodes PNG, JPEG, and GIF buffers to RGBA pixel data for hashing.
- * Uses zero-dependency pure-JS libraries (pngjs, jpeg-js, omggif).
+ * Decodes PNG, JPEG, GIF, and WebP buffers to RGBA pixel data for hashing.
+ * Uses zero-dependency pure-JS libraries (pngjs, jpeg-js, omggif) plus
+ * @jsquash/webp (WASM, lazy-instantiated from disk — no fetch).
  * Returns null on any failure — never throws.
- *
- * Limitation: WebP is NOT decoded (returns null → falls back to URL-equality).
- * WebP decode needs a heavier dep (sharp/@jsquash) — out of scope for 41.3.
  *
  * Story 41.3 — Option D: in-memory only, no image content persisted.
  *
@@ -33,6 +31,9 @@ function detectFormat(buffer) {
   if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return 'jpeg';
   // GIF: 47 49 46 38 (GIF8)
   if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38) return 'gif';
+  // WebP: RIFF....WEBP (52 49 46 46 <4 bytes size> 57 45 42 50)
+  if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+      buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) return 'webp';
   return null;
 }
 
@@ -97,5 +98,58 @@ export function decodeImage(buffer) {
   if (format === 'png') return decodePng(buf);
   if (format === 'jpeg') return decodeJpeg(buf);
   if (format === 'gif') return decodeGif(buf);
+  // WebP requires async WASM — use decodeImageAsync for that format.
   return null;
+}
+
+// --- WebP (WASM via @jsquash/webp) -------------------------------------------
+// The library's auto-init uses fetch() which fails under Node ESM, so we compile
+// the .wasm file from disk once and inject the module manually.
+let _webpDecode = null;
+let _webpInitFailed = false;
+
+/**
+ * Lazily initialise and return the @jsquash/webp decode function.
+ * @returns {Promise<((buf: Buffer|Uint8Array) => Promise<{data: Uint8ClampedArray, width: number, height: number}>) | null>}
+ */
+async function getWebpDecoder() {
+  if (_webpDecode) return _webpDecode;
+  if (_webpInitFailed) return null;
+  try {
+    const [{ readFile }, { createRequire }] = await Promise.all([
+      import('node:fs/promises'),
+      import('node:module'),
+    ]);
+    const require = createRequire(import.meta.url);
+    const wasmPath = require.resolve('@jsquash/webp/codec/dec/webp_dec.wasm');
+    const wasmModule = await WebAssembly.compile(await readFile(wasmPath));
+    const decMod = await import('@jsquash/webp/decode.js');
+    await decMod.init(wasmModule);
+    _webpDecode = decMod.default;
+    return _webpDecode;
+  } catch {
+    _webpInitFailed = true;
+    return null;
+  }
+}
+
+/**
+ * Async variant of decodeImage — additionally supports WebP via WASM.
+ * PNG/JPEG/GIF resolve through the same sync decoders.
+ *
+ * @param {Buffer|Uint8Array} buffer - Image bytes
+ * @returns {Promise<{rgba: Uint8Array|Uint8ClampedArray, width: number, height: number} | null>}
+ */
+export async function decodeImageAsync(buffer) {
+  if (!buffer || buffer.length === 0) return null;
+  const buf = buffer instanceof Buffer ? buffer : Buffer.from(buffer);
+  if (detectFormat(buf) !== 'webp') return decodeImage(buf);
+  const decode = await getWebpDecoder();
+  if (!decode) return null;
+  try {
+    const out = await decode(buf);
+    return { rgba: out.data, width: out.width, height: out.height };
+  } catch {
+    return null;
+  }
 }

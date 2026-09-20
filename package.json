@@ -115,6 +115,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@jsquash/webp": "^1.5.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@prisma/client": "^5.7.1",
     "@remotion/bundler": "^4.0.428",
