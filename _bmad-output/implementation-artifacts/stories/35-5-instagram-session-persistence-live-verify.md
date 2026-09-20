@@ -1,10 +1,10 @@
 ---
 epic: 35
 story: 35.5
-status: ready-for-dev
+status: blocked
 created: '2026-09-19'
-updated: '2026-09-19'
-baseline_commit: ace25a82
+updated: '2026-09-20'
+baseline_commit: 275d5059b0164a08e96a2bac271f333c60e96784
 resolves_action_item: epic-35-retro-item-4
 ---
 
@@ -101,3 +101,15 @@ Epic 35 retro (2026-09-12, verdict `accepted-with-open-items`) ghi nhận:
   - Existing env the client DOES honor: `INSTAGRAM_TRANSPORT` (`puppeteer`|`instagrapi`), `INSTAGRAM_USER_AGENT`, `INSTAGRAM_GRAPHQL_BASE`, `INSTAGRAPI_BIN`/`INSTAGRAPI_URL`, and the shared `PROXY_URL`/`ProxyProvider` for proxy injection.
   - The verify script (`scripts/verify-instagram-session.mjs`) should read `IG_TEST_SESSIONID`/`IG_TEST_USER`/`IG_TEST_PASS` from env and **translate** them into the credentials object the client expects — keep test-only vars out of the client.
   - Precedent: env-driven live runners exist at `scripts/test-fb-*.mjs`, `scripts/audit-instagram*.mjs` — mirror that pattern.
+
+## Auto Run Result
+
+Status: blocked
+Blocking condition: live run requires operator-provided Instagram credentials (IG_TEST_SESSIONID or IG_TEST_USER+IG_TEST_PASS) and a stable residential PROXY_URL — neither is present in env/.env. This is a verification story; the runnable deliverable is complete.
+
+**Delivered (2026-09-20).**
+- `scripts/verify-instagram-session.mjs` — live verification runner: translates `IG_TEST_*` env → client credentials object (cookie path preferred, username/password fallback), establishes session via `ensureSession` (AC-2), runs 12 sequential `user`/`hashtag` requests with 1–3s gaussian jitter (AC-3), classifies `PlatformError` BOT_CHALLENGE/checkpoint responses, tests `loadSession` without re-login (AC-4), writes `_bmad-output/implementation-artifacts/instagram-session-verify-report.md` with request log + PASS/FAIL verdict (AC-5) and contingency recommendations on challenge (AC-6). Exits 1 with clear guidance when credentials/proxy are missing.
+- `_bmad-output/implementation-artifacts/instagram-session-verify-report.md` — report template with operator checklist.
+- Retro addendum appended to `epic-35-retro-2026-09-12.md`.
+
+**Remaining (operator).** Run `node scripts/verify-instagram-session.mjs` with credentials set; then flip `sprint-status.yaml` action item `epic-35-retro-item-4` → done and story → done (or file a follow-up bug story if the run fails).

@@ -229,7 +229,7 @@ development_status:
   35-2-medium-scraper-client-crawler-validator-tests: done
   35-3-instagram-scraper-client-crawler-session-proxy-tests: done
   35-4-unified-proxy-docs: done
-  35-5-instagram-session-persistence-live-verify: ready-for-dev
+  35-5-instagram-session-persistence-live-verify: blocked
   epic-35-retrospective: done
 
   # --- Phase 7: Stream Unification & Frugal Scaling (Epics 36-40) ---
