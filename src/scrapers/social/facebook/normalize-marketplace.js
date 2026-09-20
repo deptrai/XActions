@@ -237,6 +237,8 @@ export function buildMarketplaceSearchUrl(query, options = {}) {
     longitude,
     lng,
     cursor,
+    sortBy,
+    condition,
     baseUrl,
   } = options;
   const base = typeof baseUrl === 'string' && baseUrl.trim() ? baseUrl.trim() : FACEBOOK_BASE;
@@ -266,6 +268,29 @@ export function buildMarketplaceSearchUrl(query, options = {}) {
   if (resolvedLng != null) params.push(`lng=${resolvedLng}`);
   if (resolvedRadius != null) params.push(`radius=${resolvedRadius}`);
   if (typeof cursor === 'string' && cursor.trim()) params.push(`cursor=${encodeURIComponent(cursor.trim())}`);
+
+  // sortBy: omit when 'relevance' (Facebook default). Map logical keys → FB sort keys.
+  const SORT_BY_MAP = {
+    price_asc: 'price_ascend',
+    price_desc: 'price_descend',
+    date_listed: 'creation_time_descend',
+  };
+  const sortKey = typeof sortBy === 'string' ? sortBy.trim().toLowerCase() : '';
+  if (sortKey && sortKey !== 'relevance') {
+    const mapped = SORT_BY_MAP[sortKey];
+    if (mapped) params.push(`sortBy=${encodeURIComponent(mapped)}`);
+  }
+
+  // condition: single string or array of 'new'|'used'. Comma-joined per Facebook itemCondition.
+  if (condition != null) {
+    const condArr = Array.isArray(condition) ? condition : [condition];
+    const condList = condArr
+      .map((c) => String(c).trim().toLowerCase())
+      .filter((c) => c === 'new' || c === 'used');
+    if (condList.length > 0) {
+      params.push(`itemCondition=${encodeURIComponent(condList.join(','))}`);
+    }
+  }
 
   return `${basePath}/search/?${params.join('&')}`;
 }

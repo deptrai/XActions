@@ -1820,6 +1820,13 @@ const TOOLS = [
         minPrice: { type: 'number', description: 'Minimum price filter' },
         maxPrice: { type: 'number', description: 'Maximum price filter' },
         category: { type: 'string', description: 'Marketplace category slug' },
+        categoryId: { type: 'string', description: 'Numeric Marketplace category ID' },
+        latitude: { type: 'number', description: 'Latitude (-90 to 90); must pair with longitude' },
+        longitude: { type: 'number', description: 'Longitude (-180 to 180); must pair with latitude' },
+        radiusKm: { type: 'number', description: 'Search radius in kilometers (default: 50 when coords provided)' },
+        cursor: { type: 'string', description: 'Pagination cursor from previous pageInfo.end_cursor' },
+        sortBy: { type: 'string', enum: ['relevance', 'price_asc', 'price_desc', 'date_listed'], description: 'Sort order (default: relevance)' },
+        condition: { oneOf: [{ type: 'string', enum: ['new', 'used'] }, { type: 'array', items: { type: 'string', enum: ['new', 'used'] } }], description: 'Item condition filter (new, used, or array of both)' },
         dryRun: { type: 'boolean', description: 'Preview without scraping (default: true)' },
         authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
       },
@@ -4659,7 +4666,7 @@ async function executeFacebookEpic4Tool(name, args) {
   }
 
   if (name === 'x_facebook_marketplace') {
-    const { query, location, limit, minPrice, maxPrice, category, categoryId, latitude, longitude, radiusKm, cursor } = rest;
+    const { query, location, limit, minPrice, maxPrice, category, categoryId, latitude, longitude, radiusKm, cursor, sortBy, condition } = rest;
     if (typeof query !== 'string' || !query.trim()) {
       throw new Error('❌ x_facebook_marketplace: query is required');
     }
@@ -4675,6 +4682,26 @@ async function executeFacebookEpic4Tool(name, args) {
     if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
       throw new Error('❌ x_facebook_marketplace: minPrice cannot be greater than maxPrice');
     }
+    const VALID_SORT_BY = new Set(['relevance', 'price_asc', 'price_desc', 'date_listed']);
+    const normalizedSortBy = sortBy != null ? String(sortBy).trim().toLowerCase() : undefined;
+    if (normalizedSortBy != null && normalizedSortBy !== '' && !VALID_SORT_BY.has(normalizedSortBy)) {
+      throw new Error('❌ x_facebook_marketplace: sortBy must be one of: relevance, price_asc, price_desc, date_listed');
+    }
+    const VALID_CONDITIONS = new Set(['new', 'used']);
+    let normalizedCondition = undefined;
+    if (condition != null) {
+      const condArr = Array.isArray(condition) ? condition : [condition];
+      normalizedCondition = [];
+      for (const c of condArr) {
+        const cv = String(c).trim().toLowerCase();
+        if (!VALID_CONDITIONS.has(cv)) {
+          throw new Error('❌ x_facebook_marketplace: condition must be "new", "used", or an array of those');
+        }
+        if (!normalizedCondition.includes(cv)) normalizedCondition.push(cv);
+      }
+      if (normalizedCondition.length === 0) normalizedCondition = undefined;
+      else if (normalizedCondition.length === 1) normalizedCondition = normalizedCondition[0];
+    }
     const options = {
       query: query.trim(),
       ...(limit != null && { limit }),
@@ -4687,6 +4714,8 @@ async function executeFacebookEpic4Tool(name, args) {
       ...(longitude != null && { longitude: Number(longitude) }),
       ...(radiusKm != null && { radiusKm: Number(radiusKm) }),
       ...(cursor && { cursor: String(cursor).trim() }),
+      ...(normalizedSortBy && { sortBy: normalizedSortBy }),
+      ...(normalizedCondition != null && { condition: normalizedCondition }),
       dryRun: resolvedDryRun,
     };
     const { buildMarketplaceSearchUrl } = await import('../scrapers/social/facebook/normalize-marketplace.js');

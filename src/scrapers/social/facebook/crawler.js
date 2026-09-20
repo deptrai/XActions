@@ -563,7 +563,7 @@ export class FacebookCrawler extends AbstractCrawler {
       action: 'marketplace',
       description: 'Search products and listings on Facebook Marketplace',
       requiredArgs: ['query'],
-      optionalArgs: ['location', 'category', 'categoryId', 'minPrice', 'maxPrice', 'limit', 'cursor', 'after', 'radiusKm', 'latitude', 'longitude', 'dryRun', 'priceMin', 'priceMax'],
+      optionalArgs: ['location', 'category', 'categoryId', 'minPrice', 'maxPrice', 'limit', 'cursor', 'after', 'radiusKm', 'latitude', 'longitude', 'dryRun', 'priceMin', 'priceMax', 'sortBy', 'condition'],
       example: { query: 'macbook pro 14', location: 'Ho Chi Minh City', minPrice: 800, maxPrice: 1200, limit: 20 },
       outputType: '{ posts: PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, searchUrl?: string, dryRun?: boolean, note?: string }',
       requiresAuth: false,
@@ -1827,6 +1827,8 @@ export class FacebookCrawler extends AbstractCrawler {
    * @param {number} [args.radiusKm] - Radius in kilometers
    * @param {number} [args.latitude] - Location latitude [-90 to 90]
    * @param {number} [args.longitude] - Location longitude [-180 to 180]
+   * @param {'relevance'|'price_asc'|'price_desc'|'date_listed'} [args.sortBy='relevance'] - Result sort order
+   * @param {'new'|'used'|Array<'new'|'used'>} [args.condition] - Item condition filter (single or multi)
    * @param {boolean} [args.dryRun] - If true, returns searchUrl preview without calling network
    * @param {Record<string, any>} [session={}]
    * @returns {Promise<{ posts: import('../../../core/types.js').PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, searchUrl?: string, dryRun?: boolean, note?: string }>}
@@ -2056,6 +2058,44 @@ export class FacebookCrawler extends AbstractCrawler {
     const cursor = (typeof args?.cursor === 'string' ? args.cursor.trim() : '') ||
                    (typeof args?.after === 'string' ? args.after.trim() : '') || null;
 
+    // sortBy validation: 'relevance' | 'price_asc' | 'price_desc' | 'date_listed'. Default 'relevance'.
+    const MARKETPLACE_SORT_BY = new Set(['relevance', 'price_asc', 'price_desc', 'date_listed']);
+    let sortBy = 'relevance';
+    if (args?.sortBy != null && String(args.sortBy).trim() !== '') {
+      const s = String(args.sortBy).trim().toLowerCase();
+      if (!MARKETPLACE_SORT_BY.has(s)) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: `sortBy must be one of: ${Array.from(MARKETPLACE_SORT_BY).join(', ')}`,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        });
+      }
+      sortBy = s;
+    }
+
+    // condition validation: 'new' | 'used'. Accepts single value or array.
+    const MARKETPLACE_CONDITIONS = new Set(['new', 'used']);
+    let condition = undefined;
+    if (args?.condition != null) {
+      const raw = Array.isArray(args.condition) ? args.condition : [args.condition];
+      const list = [];
+      for (const c of raw) {
+        const s = String(c).trim().toLowerCase();
+        if (s === '') continue;
+        if (!MARKETPLACE_CONDITIONS.has(s)) {
+          throw new PlatformError({
+            code: 'XACT_4001',
+            type: ErrorTypes.INVALID_ARGS,
+            message: `condition must be one of: ${Array.from(MARKETPLACE_CONDITIONS).join(', ')}`,
+            suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          });
+        }
+        if (!list.includes(s)) list.push(s);
+      }
+      if (list.length > 0) condition = list;
+    }
+
     const dryRun = Boolean(args?.dryRun);
     if (dryRun) {
       const searchUrl = buildMarketplaceSearchUrl(rawQuery, {
@@ -2069,6 +2109,8 @@ export class FacebookCrawler extends AbstractCrawler {
         longitude,
         radiusKm,
         cursor,
+        sortBy,
+        condition,
       });
       return {
         dryRun: true,
@@ -2099,6 +2141,14 @@ export class FacebookCrawler extends AbstractCrawler {
           ...(maxPrice != null && { filter_price_upper_bound: Math.round(maxPrice * 100) }),
           ...(radiusKm != null && { filter_radius_km: radiusKm }),
           ...(categoryId != null && { commerce_search_and_rp_category_id: categoryId }),
+          ...(sortBy && sortBy !== 'relevance' && {
+            sort_by: ({
+              price_asc: 'price_ascend',
+              price_desc: 'price_descend',
+              date_listed: 'creation_time_descend',
+            })[sortBy],
+          }),
+          ...(condition && condition.length > 0 && { item_condition: condition }),
         },
       },
     };
@@ -2151,6 +2201,8 @@ export class FacebookCrawler extends AbstractCrawler {
         longitude,
         radiusKm,
         cursor,
+        sortBy,
+        condition,
       });
 
       let html = '';
@@ -2219,7 +2271,7 @@ export class FacebookCrawler extends AbstractCrawler {
     }
 
     const hasMore = Boolean(pageInfo?.has_next_page) && !stopPagination;
-    const targetKey = [rawQuery, location, category, categoryId, minPrice, maxPrice].filter((v) => v !== undefined && v !== null && v !== '').join(':');
+    const targetKey = [rawQuery, location, category, categoryId, minPrice, maxPrice, sortBy, Array.isArray(condition) ? condition.join(',') : condition].filter((v) => v !== undefined && v !== null && v !== '').join(':');
 
     // Browser-DOM fallback: Marketplace renders listings to guests on clean IPs.
     if (postItems.length === 0 && this.client?.browserBridge) {

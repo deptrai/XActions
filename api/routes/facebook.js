@@ -382,6 +382,8 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
     const longitude = /** @type {number | string | undefined} */ (body.longitude);
     const radiusKm = /** @type {number | string | undefined} */ (body.radiusKm);
     const dryRun = /** @type {boolean | string | null | undefined} */ (body.dryRun);
+    const sortBy = /** @type {string | undefined} */ (body.sortBy);
+    const condition = /** @type {string | string[] | undefined} */ (body.condition);
     const cursor = /** @type {string | undefined} */ (body.cursor);
     const after = /** @type {string | undefined} */ (body.after);
     const limit = /** @type {number | string | undefined} */ (body.limit);
@@ -584,6 +586,8 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
               ...(longitude !== undefined && longitude !== null && { longitude: Number(longitude) }),
               ...(radiusKm !== undefined && radiusKm !== null && { radiusKm: Number(radiusKm) }),
               ...(resolvedDryRun !== undefined && { dryRun: resolvedDryRun }),
+              ...(sortBy !== undefined && sortBy !== null && { sortBy: String(sortBy).trim() }),
+              ...(condition !== undefined && condition !== null && { condition }),
               ...(cursor !== undefined && cursor !== null && { cursor: String(cursor).trim() }),
               ...(after !== undefined && after !== null && { after: String(after).trim() }),
               ...(limit !== undefined && limit !== null && { limit: Number(limit) }),

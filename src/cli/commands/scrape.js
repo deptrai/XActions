@@ -32,6 +32,8 @@ export function registerScrapeCommand(program) {
     .option('--longitude <lng>', 'Longitude (for marketplace)')
     .option('--radius-km <km>', 'Radius in km (for marketplace)')
     .option('--location <location>', 'Location filter (for search or marketplace)')
+    .option('--sort-by <sortBy>', 'Sort order for marketplace: relevance, price_asc, price_desc, date_listed')
+    .option('--condition <condition>', 'Item condition for marketplace: new, used (comma-separated for multi)')
     .option('--cursor <cursor>', 'Pagination cursor')
     .option('--include-replies', 'Include nested replies (for comments)')
     .option('--dry-run', 'Preview without making network requests')
@@ -81,6 +83,13 @@ export function registerScrapeCommand(program) {
           longitude: parseNum(options.longitude),
           radiusKm: parseNum(options.radiusKm),
           location: options.location,
+          sortBy: options.sortBy == null ? undefined : String(options.sortBy).trim().toLowerCase(),
+          condition: (() => {
+            if (options.condition == null) return undefined;
+            const parts = String(options.condition).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+            if (parts.length === 0) return undefined;
+            return parts.length === 1 ? parts[0] : parts;
+          })(),
           cursor: options.cursor,
           includeReplies: options.includeReplies,
           dryRun: options.dryRun,
