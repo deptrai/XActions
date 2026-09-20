@@ -171,7 +171,7 @@ So that **tôi có thể thêm nền tảng mới (Shopee, LinkedIn, v.v.) mà k
 * **And** `GovernorStatusApi` định nghĩa shape `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 * **And** `node src/core/index.js` parse thành công và `npx prisma validate` pass.
 
-### Story 10.2: Prisma Post & Comment Schema with Namespaced ID, JSONB GIN & Batch Chunking
+### Story 10.2: prisma-post-comment-relational-schema-migration
 As a **Data Platform Engineer / Nowing Integrator**,
 I want **mở rộng `prisma/schema.prisma` với model `Post` và `Comment` (hỗ trợ Namespaced ID `${platform}:${externalId}`, cột `metadata Json?`), đồng thời triển khai `PrismaStore`**,
 So that **toàn bộ dữ liệu cào đa ngành được lưu trữ tập trung, không bị collision ID, và cho phép Nowing query lọc giá/sđt/lương nhanh bằng GIN/expression indexes**.
@@ -207,7 +207,7 @@ So that **toàn bộ dữ liệu cào đa ngành được lưu trữ tập trung
 * **And** `storeBatch()` trả về object `{ insertedCount, duplicateCount, totalCount, schemaValid }`.
 * **And** `AbstractStore` / `PrismaStore` implement `findExistingIds(ids): Promise<string[]>` để kiểm tra danh sách items đã tồn tại trước khi lưu.
 
-### Story 10.3: AI Dataset Export Utility (Streaming JSONL & CSV with Sanitization)
+### Story 10.3: ai-dataset-export-utility-streaming-jsonl-csv
 As an **AI Engineer / Data Scientist**,
 I want **một utility xuất dữ liệu từ PostgreSQL ra định dạng JSON Lines (`.jsonl`) và CSV dạng stream có xử lý Backpressure và sanitize ký tự xuống dòng**,
 So that **tôi có thể trích xuất dataset theo filter (`platform`, `keyword`, `dateRange`) phục vụ huấn luyện LLM hoặc Vector DB RAG mà không bị lỗi format hay tràn RAM**.
@@ -253,7 +253,7 @@ So that **consumer biết trước field nào tồn tại và kiểu dữ liệu
 
 > **Implementation Order:** Story 11.1 (Proxy/AccountPool) → 11.2 (Providers) → 11.4 (Governor) → 11.7 (Crawler-Governor + Validator) → 11.5 (End-to-End Pipeline) → 11.6 (Rate-Limit/Bot-Challenge Defense) → 11.3 (429/403 Interceptor). Story 11.3 đã được thu nhỏ scope và có thể được hấp thụ bởi 11.5/11.6 nếu cần; hiện tại giữ riêng để theo dõi interceptor unit.
 
-### Story 11.1: ProxyIpPool & AccountPool for Sticky/Round-Robin IP and Multi-Account Rotation
+### Story 11.1: proxyippool-accountpool-sticky-round-robin
 As an **Automation Operator**,
 I want **hệ thống quản lý tập trung proxy (sticky IP cho tài khoản, round-robin IP cho no-auth) và một account pool để xoay tài khoản khi gặp rate-limit hoặc hibernation**,
 So that **request gửi đi luôn sử dụng IP sống, an toàn, không bị lộ IP gốc, và tài khoản auth-required không bị die hàng loạt**.
@@ -290,7 +290,7 @@ So that **tôi có thể linh hoạt sử dụng các nhà cung cấp proxy ph�
 * **And** `DynamicTunnelProvider` phù hợp cho no-auth platforms (residential IP xoay per-request) hoặc khi cần đổi IP mỗi request.
 * **And** tích hợp tương thích với `undici.ProxyAgent` và `playwright.chromium.launch({ proxy })`.
 
-### Story 11.3: End-to-End Request Pipeline with 429/403 Auto-Quarantine, Exponential Backoff & Two-Mode IP Strategy
+### Story 11.3.429: 403-auto-quarantine-exponential-backoff
 As a **Reliability Engineer**,
 I want **`AbstractApiClient` wire `ProxyIpPool`/`ProxyProvider`, `AdaptiveRateGovernor` và `AccountPool` thành một pipeline rõ ràng: sticky IP cho tài khoản auth-required và rotating IP cho no-auth platforms, tự động cách ly proxy bị chặn và replay request với exponential backoff**,
 So that **mọi request đều đi qua proxy đúng chế độ, pipeline không bao giờ bị crash khi nền tảng kích hoạt bảo vệ diện rộng, và không bao giờ fallback về direct connection**.
@@ -310,7 +310,7 @@ So that **mọi request đều đi qua proxy đúng chế độ, pipeline không
   7. Nếu toàn bộ proxy bị cách ly → Standby Backoff 30s và throw `ProxyDeadError` thay vì loop vô tận.
 * **And** `types/core.d.ts` đồng bộ với constructor/options/properties của `AbstractApiClient`.
 
-### Story 11.4: Adaptive Infrastructure-Aware Rate Limiter & Account Protection Governor (Surface & Backpressure)
+### Story 11.4: adaptive-rate-limiter-account-protection-governor
 As a **Platform Governor & Account Security Engineer**,
 I want **hệ thống tự động tính toán Throughput cào dựa trên số lượng Proxy sống, đưa tài khoản vào trạng thái Ngủ đông khi gặp thử thách bảo vệ, và expose trạng thái governor qua API/CLI**,
 So that **hệ thống không bị quá tải khi Proxy xoay không kịp và triệt tiêu 100% nguy cơ die tài khoản hàng loạt**.
@@ -327,7 +327,7 @@ So that **hệ thống không bị quá tải khi Proxy xoay không kịp và tr
 * **And** hãm tốc độ cào khi hàng đợi Redis Stream `stream:social:raw_posts` vượt quá 10,000 unread messages (Consumer Lag Backpressure)
 * **And** cung cấp `GET /governor/status` và CLI `xactions status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 
-### Story 11.5: End-to-End Request Pipeline (Two-Mode IP Strategy)
+### Story 11.5: end-to-end-request-pipeline-two-mode-ip
 As a **Reliability Engineer**,
 I want **`AbstractApiClient` wire `ProxyIpPool`, `AdaptiveRateGovernor` và `AccountPool` thành một pipeline rõ ràng: sticky IP cho tài khoản auth-required và rotating IP cho no-auth platforms**,
 So that **mọi request đều đi qua proxy đúng chế độ mà không bao giờ fallback về direct connection**.
@@ -345,7 +345,7 @@ So that **mọi request đều đi qua proxy đúng chế độ mà không bao g
 * **And** Auth-required requests (theo action-level — ví dụ Facebook `group_posts`/social actions — hoặc platform mặc định như TikTok, Shopee, X, Threads, LinkedIn, TopCV, VietnamWorks) sử dụng sticky IP; no-auth requests (Batdongsan, Chotot, và các action public như Facebook `marketplace`/`search`/`page_posts`/`profile`) sử dụng rotating residential proxy.
 * **And** không bao giờ fallback về direct connection khi proxy fail; mọi request phải qua `ProxyIpPool`.
 
-### Story 11.6: Rate-Limit & Bot-Challenge Defense (Quarantine, Retry, Hibernation)
+### Story 11.6: rate-limit-bot-challenge-defense
 As a **Reliability Engineer**,
 I want **hệ thống tự động xử lý 429/403 và WAF/captcha bằng cách cách ly proxy, retry với proxy mới, và đưa tài khoản vào hibernation**,
 So that **hệ thống không die hàng loạt khi nền tảng kích hoạt bảo vệ**.
@@ -357,7 +357,7 @@ So that **hệ thống không die hàng loạt khi nền tảng kích hoạt b�
 * **And** khi `isBotChallenge` hoặc WAF/captcha → throw `BotChallengeError`, `proxyPool.quarantine(proxy, 5 phút)`, `governor.hibernateAccount(accountId, 'bot_challenge', 15–30 phút)`, `accountPool.markUnavailable(accountId)` và chuyển sang account/proxy tiếp theo.
 * **And** toàn bộ proxy bị quarantine → chuyển Standby Backoff 30s thay vì loop vô tận.
 
-### Story 11.7: Crawler-Governor Integration & Platform Response Validator Contract
+### Story 11.7: crawler-governor-integration-validator-contract
 As a **Platform Scraper Developer**,
 I want **`AbstractCrawler` kiểm tra governor trước mỗi action và một `AbstractPlatformResponseValidator` contract để scraper con tự implement logic nhận diện bot**,
 So that **mỗi platform có thể định nghĩa riêng payload hợp lệ, WAF, và rate-limit mà không làm rối core**.
@@ -384,7 +384,7 @@ So that **tôi có thể dùng SocksNode trong `ProxyIpPool` / `DynamicTunnelPro
 * **And** tự động refresh / rotate session khi proxy bị quarantine
 * **And** kiểm tra tính khả dụng của proxy (health check) trước khi trả về.
 
-### Story 11.9: Proactive Proxy TTL Buffer & Auto-Refresh Interceptor
+### Story 11.9: dual-pool-consumer-quota
 As a **Reliability Engineer**,
 I want **`ProxyIpPool` chủ động kiểm tra TTL `expiresAt` và tự động đổi proxy trước khi hết hạn 30s (`expiresAt` buffer)**,
 So that **triệt tiêu 100% tình trạng đứt gãy kết nối `ECONNRESET` giữa chừng khi cào dữ liệu lớn**.
@@ -402,7 +402,7 @@ So that **triệt tiêu 100% tình trạng đứt gãy kết nối `ECONNRESET` 
 
 ## Epic 12: Frictionless Authentication (Terminal QR & CDP Attach)
 
-### Story 12.1: Terminal ASCII QR Code Login Module with Countdown & Timeout
+### Story 12.1: terminal-ascii-qr-code-login-module
 As a **CLI User**,
 I want **mã QR đăng nhập hiển thị trực tiếp bằng ký tự ASCII chuẩn 1:1 trên Terminal console kèm countdown timer 60s**,
 So that **tôi có thể dùng app điện thoại quét mã đăng nhập tức thì mà không bị tràn màn hình hay treo process**.
@@ -417,7 +417,7 @@ So that **tôi có thể dùng app điện thoại quét mã đăng nhập tức
 * **And** thông báo lỗi rõ ràng: `[QR EXPIRED] ...`, `[ACCOUNT CHECKPOINTED] ...`
 * **And** tự động lưu cookie vào session storage khi đăng nhập thành công và dọn dẹp terminal.
 
-### Story 12.2: CDP Remote Attach Mode with Launch Helper & Gaussian Jitter
+### Story 12.2: cdp-remote-attach-mode-chrome-devtools-protocol
 As a **Power User**,
 I want **kết nối XActions trực tiếp vào Chrome thật của tôi qua cổng 9222 với helper tự mở Chrome và độ trễ ngẫu nhiên Gaussian**,
 So that **hệ thống sử dụng nguyên vẹn profile và fingerprint thật của tôi để cào LinkedIn/TopCV mà không bị phát hiện automation**.
@@ -428,7 +428,7 @@ So that **hệ thống sử dụng nguyên vẹn profile và fingerprint thật 
 * **Then** Playwright kết nối thành công tới browser instance đang mở mà không spawn process mới
 * **And** áp dụng độ trễ phân phối ngẫu nhiên Gaussian Jitter (3–7s) giữa các thao tác cào.
 
-### Story 12.3: Multi-Browser Path Resolution & Advanced Anti-Automation Flags
+### Story 12.3: terminal-qr-full-backfill
 As a **Power User / Automation Engineer**,
 I want **`src/core/cdp-launcher.js` tự động nhận diện Microsoft Edge, Brave, Chromium Canary, Snap Chromium trên Windows, macOS, Linux kèm các cờ bypass anti-bot**,
 So that **XActions có thể khởi chạy và kết nối CDP thành công trên mọi máy trạm của người dùng mà không bị WAF phát hiện automation control**.
@@ -457,7 +457,7 @@ So that **XActions có thể khởi chạy và kết nối CDP thành công trê
 
 > **Epic grouping note:** This epic is a *platform suite*. Stories 13.2 + 13.2.1–13.2.12 (Twitter) and Stories 13.3–13.10 (Facebook) are independent sub-threads that share the same Tiered Signer foundation (Story 13.1). Each sub-thread can be implemented, tested, and shipped independently; they are grouped here because they both validate the hybrid engine.
 
-### Story 13.1: Tiered Signer Architecture (Pre-Signed Token Ring & Worker Page Pool)
+### Story 13.1: tiered-signer-architecture-token-ring-worker-pool
 As a **Scraper Architect**,
 I want **hệ thống Tiered Signer gồm Pre-Signed Token Ring cho session tokens và Worker Page Pool cho dynamic signatures có timeout 3s**,
 So that **các request cần chữ ký mã hóa phức tạp đạt throughput >500 req/s mà không bị nghẽn đơn luồng hay crash process**.
@@ -657,7 +657,7 @@ So that **tôi có thể theo dõi cộng đồng với độ trễ thấp và k
 * **And** action `group_posts` khai báo `requiresAuth: true` (nhóm kín — account từ pool + Sticky Residential Proxy cố định suốt session); action `page_posts` khai báo `requiresAuth: false` (fanpage public — guest token `lsd`/`jazoest` từ Pre-Signed Ring + Rotating Residential Proxy xoay per-request, không rút account pool).
 * **And (Scope & Deprecation Marker)** story này chỉ làm group/page posts; các tính năng còn lại (search, comments, marketplace, messenger, profile/followers/group-members, automation) sẽ được chuyển sang kiến trúc hybrid trong Story 13.5–13.10. Gắn `@deprecated` cho `src/scrapers/facebook/` (legacy) và ghi nhận trong `docs/deprecation-plan.md` để xoá ở Epic 20.2.
 
-### Story 13.4: Facebook Browser-as-Signer Integration
+### Story 13.4: facebook-browser-as-signer-bridge
 As a **Facebook Scraper Operator**,  
 I want **`FacebookClient` to extract `lsd`, `fb_dtsg`, `jazoest`, and `spin` tokens from a real Chrome browser instead of only HTML regex**,  
 So that **token extraction is resilient to Facebook DOM/script changes, supports authenticated user profiles, and falls back to the existing HTTP path when no browser signer is configured**.
@@ -758,7 +758,7 @@ So that **người dùng cuối và các service nội bộ không còn phụ th
 * **And** toàn bộ test `tests/scrapers/facebook-index.test.js`, `tests/scrapers/facebook-*.test.js` chuyển sang test `FacebookCrawler` tương ứng hoặc được đánh dấu `@deprecated`
 * **And (Scope & Deprecation Marker)** `src/scrapers/facebook/` được đánh dấu `@deprecated` toàn bộ; `docs/deprecation-plan.md` status tracker cập nhật sang `deprecated-planned` và ghi rõ dependency vào Story 13.10.
 
-### Story 13.11: Facebook Marketplace Advanced Filters — sortBy/condition + MCP/CLI exposure
+### Story 13.11: marketplace-advanced-filters-sort-condition
 - **Phase:** Post-retro hardening (appended 2026-09-19, completes FUTURE-WORK "Marketplace Advanced Filters" remainder)
 - **Estimate:** 0.5 sprint
 - **File:** [stories/13-11-marketplace-advanced-filters-sort-condition.md](../implementation-artifacts/stories/13-11-marketplace-advanced-filters-sort-condition.md)
@@ -767,7 +767,7 @@ So that **người dùng cuối và các service nội bộ không còn phụ th
 ---
 
 
-### Story 13.12 *(gated — activation required)*: GraphQL Replay Engine (FR-62)
+### Story 13.12: graphql-replay-engine-conditional
 - **Status:** `backlog-blocked`. Capture `doc_id` + `fb_dtsg`/`lsd`/`__dyn`/`__csr` từ Puppeteer request, replay bằng HTTP client với replay cache + DOM/hydration fallback khi doc_id rotate.
 - **Activation:** ≥80% `doc_id` mapping ổn định 30 ngày production-like traffic + replay cache storage + Product Council approve Phase 3.
 - **Stub:** [stories/13-12-graphql-replay-engine-conditional.md](../implementation-artifacts/stories/13-12-graphql-replay-engine-conditional.md)
@@ -775,7 +775,7 @@ So that **người dùng cuối và các service nội bộ không còn phụ th
 
 ## Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream
 
-### Story 14.1: Hierarchical Comment Tree Extraction with Topological Sort
+### Story 14.1: hierarchical-comment-tree-extraction-algorithm
 As an **AI Persona / Sentiment Researcher**,
 I want **cào toàn bộ cây bình luận phân cấp và lưu vào PostgreSQL theo thứ tự Topological Sort**,
 So that **tôi nắm bắt trọn vẹn ngữ cảnh tranh luận mà không bị lỗi Foreign Key violation hay Deadlock CSDL**.
@@ -897,7 +897,7 @@ So that **tôi có thể phân tích toàn bộ conversation mà không bị m�
 * **And** dữ liệu trả về `PostItem` cho root post và `CommentItem[]` cho cây trả lời, với `parentCommentId` đúng
 * **And (Scope & Deprecation Marker)** gắn `@deprecated` cho logic `scrapeThread` trong `src/scrapers/threads/index.js`; cập nhật `docs/deprecation-plan.md`.
 
-### Story 15.1.3: Threads Hybrid DocID Hardening for Search & Comments
+### Story 15.1.3: threads-hybrid-docid-hardening-search-comments
 As a **Threads Platform Engineer**,
 I want **thay thế SSR fallback của `search` và `get_post_comments` bằng GraphQL `doc_id` ổn định**,
 So that **crawler không phụ thuộc HTML parsing dễ vỡ và đạt throughput cao hơn**.
@@ -923,7 +923,7 @@ So that **người dùng cuối không còn phụ thuộc `src/scrapers/threads/
 * **And** `tests/scrapers/threads-*.test.js` chuyển sang test `ThreadsCrawler` tương ứng hoặc được đánh dấu `@deprecated`
 * **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` status tracker sang `deprecated-planned` cho toàn bộ Threads legacy và ghi rõ dependency vào Story 15.1.4.
 
-### Story 15.2: TikTok Video, Hashtag & Comment Scraper with Anti-Bot Payload Validation
+### Story 15.2: tiktok-video-hashtag-comment-scraper
 As a **Short-Form Content Creator / E-commerce Researcher**,
 I want **cào video trending và hàng ngàn bình luận trên TikTok có kiểm tra mã chặn False 200 OK**,
 So that **tôi có thể phân tích xu hướng video mà không lưu phải dữ liệu rỗng khi bị chặn ngầm**.
@@ -941,7 +941,7 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 
 > **Epic grouping note:** This epic is a *platform suite*. Stories 16.1 (Shopee) and 16.2 (TikTok Shop) are independent e-commerce platform crawlers. They are grouped under one epic because they share the same e-commerce domain and operational rollout for Vietnam market intelligence.
 
-### Story 16.1: Shopee Search, Product & Review Scraper with TLS Spoofing
+### Story 16.1: shopee-search-product-review-scraper-tls-spoofing
 As an **E-Commerce Merchant / Data Analyst**,
 I want **cào danh mục sản phẩm, flash sale, giá bán và đánh giá từ Shopee Việt Nam qua TLS Spoofing**,
 So that **tôi có thể phân tích đối thủ cạnh tranh mà không bị chặn bởi Akamai WAF**.
@@ -1021,7 +1021,7 @@ So that **tôi có thể tìm kiếm cơ hội tuyển dụng cho ứng viên**.
 * **Then** scraper gọi API public của VietnamWorks lấy danh sách công việc và JD chi tiết
 * **And** tự động làm mới public guest token nếu nhận mã 401.
 
-### Story 18.3: LinkedIn B2B Lead & Job Scraper (via CDP Remote Attach & Gaussian Jitter)
+### Story 18.3: linkedin-b2b-lead-job-scraper-via-cdp-remote-attach
 As a **B2B Sales Director**,
 I want **cào thông tin công ty và nhân sự chủ chốt trên LinkedIn qua CDP Attach với độ trễ Gaussian Jitter (3–7s)**,
 So that **tôi có thể tạo danh sách khách hàng doanh nghiệp B2B chất lượng cao mà không bị khóa tài khoản**.
@@ -1179,7 +1179,7 @@ So that **operator nhận cảnh báo khi `pendingMessages > 50,000` hoặc `las
 * **And** alert tự động bật khi vượt ngưỡng (`pendingMessages > 50,000` hoặc `lastAckTime > 60s`) và gửi webhook/email nếu configured
 * **And** tất cả endpoints yêu cầu `admin` permission; auth dùng internal admin API key hoặc A2A token.
 
-### Story 19.10: Admin MCP Tools for AI Agents
+### Story 19.10: admin-mcp-tools
 As an **AI Agent Operator**,
 I want **các MCP tool `x_admin_*` để AI agents có thể kiểm tra status và thực hiện vận hành cơ bản**,
 So that **Claude/Cursor/Antigravity có thể hỏi "tình trạng proxy pool thế nào" hoặc "đánh thức account fb:123"**.
@@ -1197,7 +1197,7 @@ So that **Claude/Cursor/Antigravity có thể hỏi "tình trạng proxy pool th
 
 > **Restructured 2026-09-15** — Kiến trúc kết nối thay đổi từ custom adapter sang MCP `x_scrape` + Redis Stream. Nowing đã wire phía mình; XActions cần expose service contract. Xem `sprint-change-proposal-2026-09-15-multi-consumer-scraping-platform.md`.
 
-### Story 20.1: Multi-Consumer Service Contract (x_scrape + x_actions_list + Action Matrix)
+### Story 20.1: multi-consumer-service-contract-x-scrape-x-actions
 
 As a **XActions Platform Engineer**,
 I want **expose `scrape()` dispatcher thành service-to-service contract qua MCP `x_scrape` tool, mở rộng `x_actions_list` cho toàn bộ 24 platforms, và generate canonical action matrix doc**,
@@ -1234,7 +1234,7 @@ So that **Nowing, ChainLens, và bất kỳ consumer nào đều gọi được 
 
 * **And** `src/mcp/envelope.js` `extractRecords()` thêm `'listings'`, `'products'`, `'jobs'` vào key list (fix VN crawler envelope)
 
-### Story 20.2: Universal Stream-Publish Hook (snake_case ThinEvent + mapToThinEvent)
+### Story 20.2: universal-stream-publish-hook-snake-case-thin-event
 
 As a **XActions Platform Engineer**,
 I want **thêm universal stream-publish hook vào `AbstractCrawler` sau `entry.handler()` trong `start()`, normalize sang snake_case ThinEvent, và gỡ bỏ per-crawler direct emit**,
@@ -1521,7 +1521,7 @@ So that **migrations không gây breaking change đột ngột**.
 * **And** `package.json` exports giữ mapping cho ít nhất 1 release cycle
 * **And** `docs/deprecation-plan.md` liệt kê mapping đầy đủ từ legacy API → new API
 
-### Story 25.5: Core Checkpoint Resume & Early Termination Engine
+### Story 25.5: core-checkpoint-resume-engine
 As a **Nowing Integrator**,  
 I want **`AbstractCrawler` to automatically resume scraping from the last saved checkpoint and stop early when all page items already exist in DB**,  
 So that **we save proxy cost and avoid duplicate full re-crawls on every scheduled run**.
@@ -1536,7 +1536,7 @@ So that **we save proxy cost and avoid duplicate full re-crawls on every schedul
 * **And** `PrismaStore.storeBatch()` returns `{ insertedCount, duplicateCount, totalCount, schemaValid }`
 * **And** existing benchmark telemetry is not broken
 
-### Story 25.6: Checkpoint Resolvers for Top Platforms
+### Story 25.6: checkpoint-resolvers-top-platforms
 As a **Platform Engineer**,  
 I want **each major platform crawler to define a stable `checkpointResolver` for its paginated actions**,  
 So that **auto resume works correctly and consistently across platforms**.
@@ -1548,7 +1548,7 @@ So that **auto resume works correctly and consistently across platforms**.
 * **And** `targetKey` is stable (sorted key-value pairs, trimmed, lowercased, no pagination params)
 * **And** resolvers cover at least: `group_posts`, `page_posts`, `search`, `marketplace` (Facebook); `search`, `hashtag`, `followers`, `following` (Twitter); `search`, `hashtag_feed` (TikTok); `search`, `get_user_feed` (Threads); `search_products` (Shopee); `search_listings` (Batdongsan)
 
-### Story 25.7: Early Termination in Crawler Pagination Loops
+### Story 25.7: early-termination-pagination-loops
 As a **Reliability Engineer**,  
 I want **crawler pagination loops to stop as soon as a full page of already-stored items is detected**,  
 So that **scheduled re-scrapes do not waste proxy requests on data we already have**.
@@ -1686,7 +1686,7 @@ So that **the crawler can record `bot_challenge` hibernation immediately instead
 * **And** on detection, `AbstractApiClient` calls `governor.recordBotChallenge()` automatically
 * **And** the detector is unit-tested with real HTML/JSON samples from each platform
 
-### Story 27.4: Obscura Browser Backend — Public-Scraping Transport & Watch/Promote Gate
+### Story 27.4: obscura-public-scraping-backend-watch-gate
 As a **Scraping Reliability Engineer**,  
 I want **a pluggable browser backend in `stealthBrowser.js` where `obscura` (CDP) serves guest-visible scraping while `chrome` stays default for post-auth automation, plus a watch gate that promotes `obscura-for-auth` only after spike-verify**,  
 So that **we cut ~85% browser RAM on public scrapes without risking React-hydration failures on logged-in automation**.
@@ -1708,7 +1708,7 @@ So that **we cut ~85% browser RAM on public scrapes without risking React-hydrat
 
 ---
 
-### Story 27.5 *(gated — activation required)*: Advanced Canvas/WebGL/Audio Fingerprint Spoofing
+### Story 27.5: canvas-webgl-audio-fingerprint-spoofing-conditional
 - **Status:** `backlog-blocked`. Inject noise động vào `HTMLCanvasElement.toDataURL`/`getImageData`, WebGL buffer readback, `AudioContext`/`AnalyserNode` cho bot-challenge targets. `stealthBrowser.js` hiện chỉ spoof WebGL vendor/renderer tĩnh.
 - **Activation:** FR-40..FR-54 stable + checkpoint rate vẫn > 5%.
 - **Stub:** [stories/27-5-canvas-webgl-audio-fingerprint-spoofing-conditional.md](../implementation-artifacts/stories/27-5-canvas-webgl-audio-fingerprint-spoofing-conditional.md)
@@ -1936,12 +1936,12 @@ So that **Nowing AI can monitor trending VN YouTube channels, video comments, an
 * **And** VN-specific: `regionCode: 'VN'` filter, VN trending via `chart=mostPopular&regionCode=VN`
 * **And** persists via `PrismaStore` and publishes `ThinEvent` to `stream:social:raw_posts`
 
-### Story 33.3 *(gated — activation required)*: Zalo Personal Messaging Scrape
+### Story 33.3: zalo-personal-messaging-research-spike-conditional
 - **Status:** `backlog-blocked` — research-gated. Cào Zalo cá nhân (tin nhắn, nhóm, friend list) qua reverse-engineered private mobile/Web API.
 - **Activation:** research spike 2 tuần + Nowing concrete need + legal/compliance approve.
 - **Stub:** [stories/33-3-zalo-personal-messaging-research-spike-conditional.md](../implementation-artifacts/stories/33-3-zalo-personal-messaging-research-spike-conditional.md)
 
-### Story 33.4 *(gated — activation required)*: YouTube VN Advanced Data
+### Story 33.4: youtube-vn-advanced-data-conditional
 - **Status:** `backlog-blocked`. Live stream chat, Shorts deep analytics, subscriber history qua InnerTube/extended API.
 - **Activation:** Epic 33.2 stable production ≥2 tuần + YouTube API quota optimization.
 - **Stub:** [stories/33-4-youtube-vn-advanced-data-conditional.md](../implementation-artifacts/stories/33-4-youtube-vn-advanced-data-conditional.md)
@@ -2150,12 +2150,12 @@ XActions hiện hỗ trợ 10+ nền tảng social nhưng thiếu ba nguồn n�
 - **Estimate:** 1.5 sprints
 - **File:** [stories/35-3-instagram-scraper.md](../implementation-artifacts/stories/35-3-instagram-scraper.md)
 
-### Story 35.4: Unified ProxyProvider Injection + SocialAccount Schema + Docs & Selector Registry
+### Story 35.4: unified-proxy-docs
 - **Phase:** Hardening
 - **Estimate:** 0.5 sprint
 - **File:** [stories/35-4-unified-proxy-docs.md](../implementation-artifacts/stories/35-4-unified-proxy-docs.md)
 
-### Story 35.5: Instagram Session Persistence — Live Verification (≥10 requests)
+### Story 35.5: instagram-session-persistence-live-verify
 - **Phase:** Post-retro verification (appended 2026-09-19)
 - **Estimate:** 0.5 sprint
 - **File:** [stories/35-5-instagram-session-persistence-live-verify.md](../implementation-artifacts/stories/35-5-instagram-session-persistence-live-verify.md)
@@ -2212,8 +2212,8 @@ Nowing Lead Hub và ChainLens Research cần một điểm chạm tập trung đ
 - Tạo bảng thực thể người (`PersonEntity`, `GoldenContact`) trong Prisma.
 
 ## Stories
-- **Story 36.1**: Triển khai MCP Tool `x_social_find_profiles` kết nối Universal Scrape Dispatcher.
-- **Story 36.2**: Khả năng chịu lỗi từng phần (Fault Isolation) và Circuit Breaker per-platform. *(Đã hợp nhất và hoàn thành 100% cùng Story 36.1)*.
+### Story 36.1: mcp-tool-x-social-find-profiles
+### Story 36.2: osint-fault-isolation-and-circuit-breaker
 
 ---
 
@@ -2234,8 +2234,8 @@ Hệ thống xuất hiện nợ kỹ thuật Split-Brain Publishing: crawler con
 - Xây dựng Event Lake hay Parquet Export nội bộ trong XActions (đã giao cho downstream consumer).
 
 ## Stories
-- **Story 38.1**: Xóa bỏ `__streamEmitted` và tái cấu trúc Template Method `AbstractCrawler.execute()`.
-- **Story 38.2**: Chuẩn hóa định dạng CloudEvents v1.0 và cơ chế phát idempotent trên Redis Stream.
+### Story 38.1: crawler-lifecycle-cleanup-and-stream-unification
+### Story 38.2: cloudevents-compliance-and-idempotent-publishing
 
 ---
 
@@ -2255,7 +2255,7 @@ Các tác vụ cào dữ liệu công khai trên các nền tảng nhẹ (như M
 - Nhúng native C++ TLS binaries (như curl-impersonate) vào Node.js.
 
 ## Stories
-- **Story 37.1**: Định tuyến tĩnh HTTP-First (Tier 0) cho các target công khai/nhẹ.
+### Story 37.1: static-http-first-routing-lightweight-targets
 
 ---
 
@@ -2282,7 +2282,7 @@ Residential và Mobile 4G proxy có chi phí rất đắt ($3–$15/GB). Việc 
 - Re-implementing `DistributedTokenBucket`, quarantine, dual-pool, sticky map (đã có sẵn).
 
 ## Stories (Rescoped)
-- **Story 40.1**: Tích hợp `tier` metadata + Cost-Aware Escalation + `ProxyBudgetGovernor` + Soft Degradation vào `ProxyIpPool`.
+### Story 40.1: cost-aware-proxy-escalation-in-proxy-pool
 
 ---
 
@@ -2307,8 +2307,8 @@ Giao diện các mạng xã hội thường xuyên thay đổi khiến CSS/XPath
 - Re-implementing `SelectorCanary` or `AutoSelectorFallback` (already exist).
 
 ## Stories (Rescoped)
-- **Story 39.1**: Mở rộng canary targets config + `expectedShape` fields. ✅ **Done** — config expansion only.
-- **Story 39.2**: GitOps Patch Assistant CLI (`xactions canary heal`) — net-new implementation.
+### Story 39.1: selector-canary-expansion-heuristic-drift
+### Story 39.2: gitops-patch-assistant-cli
 
 ---
 
@@ -2335,6 +2335,6 @@ Live verification của `x_social_find_profiles` (Epic 36) với query thực t�
 - Persist PII / PersonEntity trong Prisma (Option D — in-memory per-request only).
 
 ## Stories
-- **Story 41.1**: GitHub + Gravatar adapters — public API zero-auth, đăng ký vào `PROFILE_ACTION_MAP`, rate limit qua `DistributedTokenBucket`.
-- **Story 41.2**: `EntityResolver` (Jaro-Winkler + confidence scoring) — gộp fan-out results thành `identityClusters[]`, bổ sung vào output của `x_social_find_profiles` (backward compat).
-- **Story 41.3** *(post-retro, appended 2026-09-19)*: Avatar Perceptual Hashing — `src/osint/phash.js` (pure-JS dHash/aHash + Hamming distance) nâng cấp `avatar_match` signal từ URL-equality → image-content match khi CDN URL khác nhau; async scoring, Option D no-persist. Resolves retro Action Item #1.
+### Story 41.1: github-gravatar-adapters
+### Story 41.2: entity-resolver-identity-clusters
+### Story 41.3: avatar-perceptual-hashing-entity-resolver

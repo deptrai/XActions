@@ -71,7 +71,7 @@ index 00000000..50245221
 +
 +# Spec — Story 20.1: Multi-Consumer Service Contract
 +
-+> **Story:** `20-1-multi-consumer-service-contract-x-scrape-x-actions-list-action-matrix`
++> **Story:** `20-1-multi-consumer-service-contract-x-scrape-x-actions`
 +> **Status:** `draft`
 +> **Epic:** Epic 20 — Multi-Consumer Scraping Platform Service Contract
 +> **Effort:** ~2 dev days
@@ -577,11 +577,11 @@ index 5b98109e..d340833d 100644
    epic-19-retrospective: done
  
 -  epic-20: backlog
--  20-1-multi-consumer-service-contract-x-scrape-x-actions-list-action-matrix: 
+-  20-1-multi-consumer-service-contract-x-scrape-x-actions: 
 -    backlog
 +  epic-20: in-progress
-+  20-1-multi-consumer-service-contract-x-scrape-x-actions-list-action-matrix: review
-   20-2-universal-stream-publish-hook-snake-case-thin-event-map-to-thin-event: 
++  20-1-multi-consumer-service-contract-x-scrape-x-actions: review
+   20-2-universal-stream-publish-hook-snake-case-thin-event: 
      backlog
    epic-20-retrospective: optional
 diff --git a/docs/canonical-action-matrix.json b/docs/canonical-action-matrix.json

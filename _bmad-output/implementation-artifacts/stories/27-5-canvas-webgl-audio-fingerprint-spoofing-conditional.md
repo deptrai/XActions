@@ -1,7 +1,7 @@
 ---
 epic: 27
 story: 27.5
-status: backlog-blocked
+status: ready-for-dev
 created: '2026-09-19'
 gated: true
 activation_conditions:

@@ -1,7 +1,7 @@
 ---
 epic: 35
 story: 35.5
-status: blocked
+status: ready-for-dev
 created: '2026-09-19'
 updated: '2026-09-20'
 baseline_commit: 275d5059b0164a08e96a2bac271f333c60e96784

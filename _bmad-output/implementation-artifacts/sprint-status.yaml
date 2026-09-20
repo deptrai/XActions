@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: 09-19-2026 11:02
+last_updated: 09-21-2026 03:08
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -50,9 +50,8 @@ development_status:
   epic-11: done
   11-1-proxyippool-accountpool-sticky-round-robin: done
   11-2-static-dynamic-residential-tunnel-proxy-providers: done
-  11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor: done
-  11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor: 
-    done
+  11-3-429-403-auto-quarantine-exponential-backoff: done
+  11-4-adaptive-rate-limiter-account-protection-governor: done
   11-5-end-to-end-request-pipeline-two-mode-ip: done
   11-6-rate-limit-bot-challenge-defense: done
   11-7-crawler-governor-integration-validator-contract: done
@@ -91,7 +90,7 @@ development_status:
   13-9-facebook-hybrid-social-actions-write-messenger: done
   13-10-facebook-hybrid-integration-caller-migration: done
   13-11-marketplace-advanced-filters-sort-condition: done
-  13-12-graphql-replay-engine-conditional: backlog-blocked
+  13-12-graphql-replay-engine-conditional: ready-for-dev
   epic-13-retrospective: done
 
   epic-14: done
@@ -143,11 +142,9 @@ development_status:
   epic-19-retrospective: done
 
   epic-20: done
-  20-1-multi-consumer-service-contract-x-scrape-x-actions-list-action-matrix: 
-    done
-  20-2-universal-stream-publish-hook-snake-case-thin-event-map-to-thin-event: 
-    done
-  epic-20-retrospective: optional
+  20-1-multi-consumer-service-contract-x-scrape-x-actions: done
+  20-2-universal-stream-publish-hook-snake-case-thin-event: done
+  epic-20-retrospective: done
 
   epic-23: done
   23-1-bluesky-at-protocol-client: done
@@ -185,7 +182,7 @@ development_status:
   27-2-sessionhealthorchestrator-continuous-health-score-circuit-br: done
   27-3-challengesignaturedetector-automated-bot-detection-page-dete: done
   27-4-obscura-public-scraping-backend-watch-gate: done
-  27-5-canvas-webgl-audio-fingerprint-spoofing-conditional: backlog-blocked
+  27-5-canvas-webgl-audio-fingerprint-spoofing-conditional: ready-for-dev
   epic-27-retrospective: optional
 
   epic-28: done
@@ -217,8 +214,8 @@ development_status:
   epic-33: done
   33-1-zalo-oa-public-content-crawler: done
   33-2-youtube-vn-channel-video-crawler: done
-  33-3-zalo-personal-messaging-research-spike-conditional: backlog-blocked
-  33-4-youtube-vn-advanced-data-conditional: backlog-blocked
+  33-3-zalo-personal-messaging-research-spike-conditional: ready-for-dev
+  33-4-youtube-vn-advanced-data-conditional: ready-for-dev
   epic-33-retrospective: optional
 
   epic-34: done
@@ -229,7 +226,7 @@ development_status:
   35-2-medium-scraper-client-crawler-validator-tests: done
   35-3-instagram-scraper-client-crawler-session-proxy-tests: done
   35-4-unified-proxy-docs: done
-  35-5-instagram-session-persistence-live-verify: blocked
+  35-5-instagram-session-persistence-live-verify: ready-for-dev
   epic-35-retrospective: done
 
   # --- Phase 7: Stream Unification & Frugal Scaling (Epics 36-40) ---
@@ -269,7 +266,7 @@ action_items:
       + AutoSelectorFallback). Story 39.2 reduced to GitOps patch assistant only:
       canary heal CLI, sandbox validation, unified-diff, Draft PR."
     owner: "dev"
-    status: in-progress
+    status: done
     ref: "_bmad-output/implementation-artifacts/spec-39-1-2-gitops-selector-healing-rescope.md"
   - id: "epic-40-rescope-cost-aware-proxy-only"
     epic: 40
@@ -278,7 +275,7 @@ action_items:
       metadata (4 levels), cost-aware escalation, ProxyBudgetGovernor, BUDGET_CEILING_REACHED
       soft degradation."
     owner: "dev"
-    status: in-progress
+    status: done
     ref: "_bmad-output/implementation-artifacts/spec-40-1-cost-aware-proxy-escalation-rescope.md"
   - id: "epic-35-retro-item-1-gate-proxy_exhausted-at-base-client-js-9"
     epic: 35
@@ -345,3 +342,12 @@ action_items:
     owner: "dev"
     status: done
     ref: "_bmad-output/implementation-artifacts/epic-25-retro-2026-09-12.md"
+  - id: "epic-20-retro-item-12-reconcile-sprint-status-yaml-story-key-d"
+    epic: 20
+    action: "Reconcile sprint-status.yaml story-key derivation drift: sprint_plan.py
+      generate --dry-run derives keys differing from file (33 orphans + 33 new). Reconcile
+      epics.md headings vs file keys before any non-dry-run generate to avoid corrupting
+      tracking."
+    owner: "dev"
+    status: done
+    ref: "_bmad-output/implementation-artifacts/epic-20-retro-2026-09-21.md"

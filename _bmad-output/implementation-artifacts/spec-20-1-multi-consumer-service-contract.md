@@ -13,7 +13,7 @@ context:
 
 # Spec — Story 20.1: Multi-Consumer Service Contract
 
-> **Story:** `20-1-multi-consumer-service-contract-x-scrape-x-actions-list-action-matrix`
+> **Story:** `20-1-multi-consumer-service-contract-x-scrape-x-actions`
 > **Status:** `draft`
 > **Epic:** Epic 20 — Multi-Consumer Scraping Platform Service Contract
 > **Effort:** ~2 dev days
