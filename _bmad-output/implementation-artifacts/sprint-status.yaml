@@ -259,7 +259,7 @@ development_status:
   epic-41: in-progress
   41-1-github-gravatar-adapters: done
   41-2-entity-resolver-identity-clusters: done
-  41-3-avatar-perceptual-hashing-entity-resolver: ready-for-dev
+  41-3-avatar-perceptual-hashing-entity-resolver: done
   epic-41-retrospective: done
 
 action_items:
