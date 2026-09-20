@@ -86,3 +86,13 @@ Final verification: nhiều test suites cho Twitter + Facebook, số lượng te
 - All 17 Twitter sub-stories + 5 Facebook stories: **done**
 - Retrospective: **done**
 - Hybrid architecture ready cho Epic 15, 17, 18, 21, 22
+
+---
+
+## Post-Retrospective Addendum (2026-09-19)
+
+Sau khi retro đóng, hai story nối tiếp được append vào Epic 13 (promoted từ `FUTURE-WORK.md` + Correct Course 2026-09-19):
+- **Story 13.11** — Marketplace Advanced Filters (`sortBy`/`condition` + MCP/CLI exposure), `ready-for-dev`.
+- **Story 13.12** — GraphQL Replay Engine (FR-62), `backlog-blocked` (gated: doc_id 30-day stability + replay cache + Council approve).
+
+Epic 13 status flipped `done → in-progress` until 13.11 completes.

@@ -87,3 +87,12 @@
 
 ### Sprint Status Update
 - Epic 41 marked as completed in planning and documentation.
+
+---
+
+## Post-Retrospective Addendum (2026-09-19)
+
+Action Item #1 (Avatar pHash Upgrade) được promote thành story trong chính epic này thay vì Epic 42 riêng:
+- **Story 41.3** — Avatar Perceptual Hashing (`src/osint/phash.js` + `EntityResolver` async avatar signal), `ready-for-dev`, resolves Action Item #1.
+
+Epic 41 status flipped `done → in-progress` until 41.3 completes.

@@ -35,7 +35,7 @@ Tài liệu này liệt kê các tài liệu quy hoạch canonical và các tài
 | Phạm vi | Canonical | Deprecated / Reference |
 |---|---|---|
 | Epics 1–9 (Facebook) | `archive/epics-1-9-legacy.md` | — |
-| Epics 10–20 (Universal) | `epics.md` | — |
+| Epics 10–20, 21–43 (Universal + VN + OSINT) | `epics.md` | — |
 
 ## UX
 

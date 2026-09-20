@@ -758,7 +758,20 @@ So that **người dùng cuối và các service nội bộ không còn phụ th
 * **And** toàn bộ test `tests/scrapers/facebook-index.test.js`, `tests/scrapers/facebook-*.test.js` chuyển sang test `FacebookCrawler` tương ứng hoặc được đánh dấu `@deprecated`
 * **And (Scope & Deprecation Marker)** `src/scrapers/facebook/` được đánh dấu `@deprecated` toàn bộ; `docs/deprecation-plan.md` status tracker cập nhật sang `deprecated-planned` và ghi rõ dependency vào Story 13.10.
 
+### Story 13.11: Facebook Marketplace Advanced Filters — sortBy/condition + MCP/CLI exposure
+- **Phase:** Post-retro hardening (appended 2026-09-19, completes FUTURE-WORK "Marketplace Advanced Filters" remainder)
+- **Estimate:** 0.5 sprint
+- **File:** [stories/13-11-marketplace-advanced-filters-sort-condition.md](../implementation-artifacts/stories/13-11-marketplace-advanced-filters-sort-condition.md)
+- **Scope:** `marketplace()` đã có `minPrice/maxPrice/category/categoryId/radiusKm/lat/lng/cursor` (Story 13.8); story này thêm `sortBy` (`relevance|price_asc|price_desc|date_listed`), `condition` (`new|used`), và expose đầy đủ `radiusKm/latitude/longitude/categoryId/sortBy/condition` vào MCP `x_facebook_marketplace` inputSchema + CLI flags.
+
 ---
+
+
+### Story 13.12 *(gated — activation required)*: GraphQL Replay Engine (FR-62)
+- **Status:** `backlog-blocked`. Capture `doc_id` + `fb_dtsg`/`lsd`/`__dyn`/`__csr` từ Puppeteer request, replay bằng HTTP client với replay cache + DOM/hydration fallback khi doc_id rotate.
+- **Activation:** ≥80% `doc_id` mapping ổn định 30 ngày production-like traffic + replay cache storage + Product Council approve Phase 3.
+- **Stub:** [stories/13-12-graphql-replay-engine-conditional.md](../implementation-artifacts/stories/13-12-graphql-replay-engine-conditional.md)
+
 
 ## Epic 14: Deep Conversation Scraper, MCP Daemon & Nowing Event Stream
 
@@ -1695,6 +1708,12 @@ So that **we cut ~85% browser RAM on public scrapes without risking React-hydrat
 
 ---
 
+### Story 27.5 *(gated — activation required)*: Advanced Canvas/WebGL/Audio Fingerprint Spoofing
+- **Status:** `backlog-blocked`. Inject noise động vào `HTMLCanvasElement.toDataURL`/`getImageData`, WebGL buffer readback, `AudioContext`/`AnalyserNode` cho bot-challenge targets. `stealthBrowser.js` hiện chỉ spoof WebGL vendor/renderer tĩnh.
+- **Activation:** FR-40..FR-54 stable + checkpoint rate vẫn > 5%.
+- **Stub:** [stories/27-5-canvas-webgl-audio-fingerprint-spoofing-conditional.md](../implementation-artifacts/stories/27-5-canvas-webgl-audio-fingerprint-spoofing-conditional.md)
+
+
 ## Epic 28: Schema Drift & Selector Resilience
 
 > **Epic grouping note:** This epic hardens data quality. It does not replace existing crawlers; it wraps them with validation, drift detection, and self-healing selector fallback so silent data degradation is impossible.
@@ -1917,6 +1936,16 @@ So that **Nowing AI can monitor trending VN YouTube channels, video comments, an
 * **And** VN-specific: `regionCode: 'VN'` filter, VN trending via `chart=mostPopular&regionCode=VN`
 * **And** persists via `PrismaStore` and publishes `ThinEvent` to `stream:social:raw_posts`
 
+### Story 33.3 *(gated — activation required)*: Zalo Personal Messaging Scrape
+- **Status:** `backlog-blocked` — research-gated. Cào Zalo cá nhân (tin nhắn, nhóm, friend list) qua reverse-engineered private mobile/Web API.
+- **Activation:** research spike 2 tuần + Nowing concrete need + legal/compliance approve.
+- **Stub:** [stories/33-3-zalo-personal-messaging-research-spike-conditional.md](../implementation-artifacts/stories/33-3-zalo-personal-messaging-research-spike-conditional.md)
+
+### Story 33.4 *(gated — activation required)*: YouTube VN Advanced Data
+- **Status:** `backlog-blocked`. Live stream chat, Shorts deep analytics, subscriber history qua InnerTube/extended API.
+- **Activation:** Epic 33.2 stable production ≥2 tuần + YouTube API quota optimization.
+- **Stub:** [stories/33-4-youtube-vn-advanced-data-conditional.md](../implementation-artifacts/stories/33-4-youtube-vn-advanced-data-conditional.md)
+
 ---
 
 ## Revised Epic Priority & Execution Order (Vietnam Market Pivot — 2026-09-05)
@@ -2126,6 +2155,12 @@ XActions hiện hỗ trợ 10+ nền tảng social nhưng thiếu ba nguồn n�
 - **Estimate:** 0.5 sprint
 - **File:** [stories/35-4-unified-proxy-docs.md](../implementation-artifacts/stories/35-4-unified-proxy-docs.md)
 
+### Story 35.5: Instagram Session Persistence — Live Verification (≥10 requests)
+- **Phase:** Post-retro verification (appended 2026-09-19)
+- **Estimate:** 0.5 sprint
+- **File:** [stories/35-5-instagram-session-persistence-live-verify.md](../implementation-artifacts/stories/35-5-instagram-session-persistence-live-verify.md)
+- **Resolves:** action item `epic-35-retro-item-4` — live-verify `InstagramClient` session ≥10 requests without challenge under stable residential proxy.
+
 **Tổng:** 4 stories, ~4 sprints
 
 ## Success Metrics
@@ -2302,3 +2337,4 @@ Live verification của `x_social_find_profiles` (Epic 36) với query thực t�
 ## Stories
 - **Story 41.1**: GitHub + Gravatar adapters — public API zero-auth, đăng ký vào `PROFILE_ACTION_MAP`, rate limit qua `DistributedTokenBucket`.
 - **Story 41.2**: `EntityResolver` (Jaro-Winkler + confidence scoring) — gộp fan-out results thành `identityClusters[]`, bổ sung vào output của `x_social_find_profiles` (backward compat).
+- **Story 41.3** *(post-retro, appended 2026-09-19)*: Avatar Perceptual Hashing — `src/osint/phash.js` (pure-JS dHash/aHash + Hamming distance) nâng cấp `avatar_match` signal từ URL-equality → image-content match khi CDN URL khác nhau; async scoring, Option D no-persist. Resolves retro Action Item #1.

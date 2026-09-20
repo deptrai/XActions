@@ -1,6 +1,6 @@
 # Canonical Action/Arg Matrix
 
-> Auto-generated 2026-09-15T16:12:55.052Z. Do not edit manually.
+> Auto-generated 2026-09-19T15:49:27.375Z. Do not edit manually.
 
 | Platform | Category | Action | Required Args | Optional Args | Example |
 |----------|----------|--------|---------------|---------------|---------|
@@ -8,9 +8,11 @@
 | twitter | social | hashtag | tag | hashtag, type, filter, since, until, minLikes, minRetweets, lang, limit, cursor | `{"tag":"AI","type":"Latest","limit":50}` |
 | twitter | social | trending | — | woeid, limit, includePromoted | `{"woeid":1,"limit":30}` |
 | twitter | social | thread | tweetId | cursor, limit, walkToRoot | `{"tweetId":"1234567890"}` |
+| twitter | social | unroll_thread | tweetId | format, destPath, walkToRoot, cursor, limit | `{"tweetId":"1234567890","format":"markdown","destPath":"/tmp/thread.md"}` |
 | twitter | social | likes | tweetId | limit, cursor | `{"tweetId":"1234567890","limit":100}` |
 | twitter | social | likers | tweetId | limit, cursor | `{"tweetId":"1234567890","limit":100}` |
 | twitter | social | bookmarks | — | limit, cursor | `{"limit":50}` |
+| twitter | social | export_bookmarks | — | format, destPath, limit, cursor | `{"format":"csv","destPath":"/tmp/bookmarks.csv"}` |
 | twitter | social | profile | — | username, url | `{"username":"elonmusk"}` |
 | twitter | social | followers | username | limit, cursor | `{"username":"elonmusk","limit":100}` |
 | twitter | social | following | username | limit, cursor | `{"username":"elonmusk","limit":100}` |
@@ -51,6 +53,13 @@
 | bluesky | social | search | query | limit, cursor, sort, since, until, author, identifier, password | `{"query":"bluesky","limit":25}` |
 | bluesky | social | trending | — | limit, identifier, password | `{"limit":20}` |
 | bluesky | social | feed | feedUri | feed, uri, limit, cursor, identifier, password | `{"feedUri":"at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot"}` |
+| bluesky | social | post | text | reply, dryRun, identifier, password | `{"text":"Hello Bluesky from XActions","dryRun":false}` |
+| bluesky | social | reply | text, parentUri, parentCid | rootUri, rootCid, dryRun, identifier, password | `{"text":"Great point!","parentUri":"at://did:plc:.../app.bsky.feed.post/...","parentCid":"bafyre..."}` |
+| bluesky | social | like | uri, cid | dryRun, identifier, password | `{"uri":"at://did:plc:.../app.bsky.feed.post/...","cid":"bafyre..."}` |
+| bluesky | social | repost | uri, cid | dryRun, identifier, password | `{"uri":"at://did:plc:.../app.bsky.feed.post/...","cid":"bafyre..."}` |
+| bluesky | social | retweet | uri, cid | dryRun, identifier, password | `{"uri":"at://did:plc:.../app.bsky.feed.post/...","cid":"bafyre..."}` |
+| bluesky | social | follow | subject | handle, dryRun, identifier, password | `{"subject":"did:plc:z72i7hdynmk6r22z27h6tvur"}` |
+| bluesky | social | unfollow | rkey | dryRun, identifier, password | `{"rkey":"3k2v..."}` |
 | mastodon | social | profile | username | instance, target, accessToken | `{"username":"Gargron","instance":"https://mastodon.social"}` |
 | mastodon | social | followers | username | instance, limit, max_id, onProgress, accessToken | `{"username":"Gargron","limit":40}` |
 | mastodon | social | following | username | instance, limit, max_id, onProgress, accessToken | `{"username":"Gargron","limit":40}` |
@@ -59,6 +68,13 @@
 | mastodon | social | search | query | instance, type, limit, max_id, accessToken | `{"query":"open source","limit":20}` |
 | mastodon | social | hashtag | hashtag | instance, limit, max_id, accessToken | `{"hashtag":"technology","limit":20}` |
 | mastodon | social | trending | — | instance, limit, accessToken | `{"limit":20}` |
+| mastodon | social | post | text | status, media_ids, visibility, instance, dryRun, accessToken | `{"text":"Hello Mastodon from XActions","dryRun":false}` |
+| mastodon | social | reply | text, in_reply_to_id | status, media_ids, instance, dryRun, accessToken | `{"text":"Great point!","in_reply_to_id":"123456789"}` |
+| mastodon | social | like | statusId | instance, dryRun, accessToken | `{"statusId":"123456789"}` |
+| mastodon | social | reblog | statusId | instance, dryRun, accessToken | `{"statusId":"123456789"}` |
+| mastodon | social | retweet | statusId | instance, dryRun, accessToken | `{"statusId":"123456789"}` |
+| mastodon | social | follow | accountId | username, instance, dryRun, accessToken | `{"accountId":"12345"}` |
+| mastodon | social | unfollow | accountId | username, instance, dryRun, accessToken | `{"accountId":"12345"}` |
 | facebook | social | group_posts | groupId | count, cursor | `{}` |
 | facebook | social | page_posts | pageId | count, cursor | `{}` |
 | facebook | social | get_comments | postId | maxDepth, maxComments, after | `{}` |
@@ -89,6 +105,13 @@
 | threads | social | profile | username | — | `{"username":"zuck"}` |
 | threads | social | followers | username | count, cursor | `{"username":"zuck","count":50}` |
 | threads | social | following | username | count, cursor | `{"username":"zuck","count":50}` |
+| threads | social | post | text | dryRun | `{"text":"Hello Threads from XActions","dryRun":false}` |
+| threads | social | reply | text, postId | dryRun | `{"text":"Great point!","postId":"12345","dryRun":false}` |
+| threads | social | like | postId | dryRun | `{"postId":"12345","dryRun":false}` |
+| threads | social | repost | postId | dryRun | `{"postId":"12345","dryRun":false}` |
+| threads | social | retweet | postId | dryRun | `{"postId":"12345","dryRun":false}` |
+| threads | social | follow | userId | username, dryRun | `{"userId":"12345","dryRun":false}` |
+| threads | social | unfollow | userId | username, dryRun | `{"userId":"12345","dryRun":false}` |
 | reddit | social | subreddit | name | subreddit, limit, sort, time, cursor, after | `{"name":"programming","limit":25,"sort":"new"}` |
 | reddit | social | user | username | name, user, limit, sort, cursor, after | `{"username":"spez","limit":25}` |
 | reddit | social | search | query | q, limit, sort, time, cursor, after | `{"query":"machine learning","limit":25}` |

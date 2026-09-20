@@ -13,6 +13,8 @@ Tài liệu này tập hợp các yêu cầu, ý tưởng, và tính năng bị 
 
 ## FR-62: GraphQL Replay (Facebook / Universal)
 
+**Trạng thái:** 🟡 **Story stub → Story 13.12 (Epic 13, `backlog-blocked`).** `FacebookClient.requestGraphQl()` đã replay doc_id qua HTTP, nhưng chưa có capture→cache→replay engine tổng quát. Awaiting activation conditions below.
+
 **Nguồn:** `archive/prds/prd-XActions-2026-08-14-epic7/prd.md` §4.5, `archive/epics-1-9-legacy.md` Epic 7.
 
 **Mô tả:** Capture `doc_id` từ `api/graphql` request trong Puppeteer và replay bằng HTTP client (`axios`/`undici`) với `fb_dtsg`, `lsd`, `__dyn`, `__csr`. Fallback sang hydration/DOM nếu `doc_id` rotate.
@@ -36,6 +38,8 @@ Tài liệu này tập hợp các yêu cầu, ý tưởng, và tính năng bị 
 
 ## Facebook Marketplace Advanced Filters
 
+**Trạng thái:** 🟢 **Partially Reactivated 2026-09-19 → Story 13.11 (Epic 13).** `minPrice`/`maxPrice`/`category`/`categoryId`/`radiusKm`/`latitude`/`longitude`/`cursor` đã implement sẵn trong `FacebookCrawler.marketplace()`; phần còn lại (sortBy, condition, MCP/CLI exposure) là Story 13.11.
+
 **Mô tả:** Lọc theo giá min/max, khoảng cách, category, sort by date/price.
 
 **Điều kiện mở lại:** FR-28..FR-31 stable, có real-user feedback.
@@ -43,6 +47,8 @@ Tài liệu này tập hợp các yêu cầu, ý tưởng, và tính năng bị 
 ---
 
 ## Advanced Fingerprint Spoofing (Canvas / WebGL / Audio)
+
+**Trạng thái:** 🟡 **Story stub → Story 27.5 (Epic 27, `backlog-blocked`).** Hiện `stealthBrowser.js` chỉ spoof WebGL vendor/renderer tĩnh; canvas/audio noise injection là net-new. Awaiting FR-40..54 stable + checkpoint-rate confirmation.
 
 **Mô tả:** Spoofing canvas fingerprint, WebGL vendor/renderer, audio context để tránh bot detection nâng cao.
 
@@ -74,6 +80,8 @@ Tài liệu này tập hợp các yêu cầu, ý tưởng, và tính năng bị 
 
 ## Zalo Personal Messaging Scrape — Deferred
 
+**Trạng thái:** 🟡 **Story stub → Story 33.3 (Epic 33, `backlog-blocked`).** Cần research spike 2 tuần + legal/compliance review trước khi implementation.
+
 **Nguồn:** Epic 33.1 scope note (2026-09-05).
 
 **Mô tả:** Cào Zalo cá nhân (tin nhắn, nhóm, friend list) qua mobile API reverse engineering.
@@ -91,6 +99,8 @@ Tài liệu này tập hợp các yêu cầu, ý tưởng, và tính năng bị 
 ---
 
 ## YouTube VN Advanced Features — Deferred
+
+**Trạng thái:** 🟡 **Story stub → Story 33.4 (Epic 33, `backlog-blocked`).** Cần Epic 33.2 stable ≥2 tuần production + API quota optimization.
 
 **Nguồn:** Epic 33.2 scope note (2026-09-05).
 

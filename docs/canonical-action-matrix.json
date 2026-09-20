@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-15T16:12:55.050Z",
+  "generated": "2026-09-19T15:49:27.373Z",
   "platforms": {
     "twitter": {
       "category": "social",
@@ -92,6 +92,27 @@
           "requiresAuth": false
         },
         {
+          "action": "unroll_thread",
+          "description": "Unroll a Twitter conversation thread as formatted Markdown, text, or JSON (requires auth)",
+          "requiredArgs": [
+            "tweetId"
+          ],
+          "optionalArgs": [
+            "format",
+            "destPath",
+            "walkToRoot",
+            "cursor",
+            "limit"
+          ],
+          "example": {
+            "tweetId": "1234567890",
+            "format": "markdown",
+            "destPath": "/tmp/thread.md"
+          },
+          "outputType": "{ posts: PostItem[], markdown?: string, text?: string, json?: string, destPath?: string }",
+          "requiresAuth": true
+        },
+        {
           "action": "likes",
           "description": "Scrape users who liked a tweet (favoriters) using GraphQL",
           "requiredArgs": [
@@ -137,6 +158,23 @@
             "limit": 50
           },
           "outputType": "{ posts: PostItem[], pageInfo: any }",
+          "requiresAuth": true
+        },
+        {
+          "action": "export_bookmarks",
+          "description": "Export bookmarked tweets as formatted JSON, CSV, or both (requires auth)",
+          "requiredArgs": [],
+          "optionalArgs": [
+            "format",
+            "destPath",
+            "limit",
+            "cursor"
+          ],
+          "example": {
+            "format": "csv",
+            "destPath": "/tmp/bookmarks.csv"
+          },
+          "outputType": "{ posts: PostItem[], json?: string, csv?: string, destPath?: string }",
           "requiresAuth": true
         },
         {
@@ -867,6 +905,140 @@
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
           "requiresAuth": false
+        },
+        {
+          "action": "post",
+          "description": "Publish a new post to Bluesky",
+          "requiredArgs": [
+            "text"
+          ],
+          "optionalArgs": [
+            "reply",
+            "dryRun",
+            "identifier",
+            "password"
+          ],
+          "example": {
+            "text": "Hello Bluesky from XActions",
+            "dryRun": false
+          },
+          "outputType": "{ uri: string, cid: string, success: boolean }",
+          "requiresAuth": true
+        },
+        {
+          "action": "reply",
+          "description": "Reply to an existing post on Bluesky",
+          "requiredArgs": [
+            "text",
+            "parentUri",
+            "parentCid"
+          ],
+          "optionalArgs": [
+            "rootUri",
+            "rootCid",
+            "dryRun",
+            "identifier",
+            "password"
+          ],
+          "example": {
+            "text": "Great point!",
+            "parentUri": "at://did:plc:.../app.bsky.feed.post/...",
+            "parentCid": "bafyre..."
+          },
+          "outputType": "{ uri: string, cid: string, success: boolean }",
+          "requiresAuth": true
+        },
+        {
+          "action": "like",
+          "description": "Like a post on Bluesky",
+          "requiredArgs": [
+            "uri",
+            "cid"
+          ],
+          "optionalArgs": [
+            "dryRun",
+            "identifier",
+            "password"
+          ],
+          "example": {
+            "uri": "at://did:plc:.../app.bsky.feed.post/...",
+            "cid": "bafyre..."
+          },
+          "outputType": "{ uri: string, cid: string, success: boolean }",
+          "requiresAuth": true
+        },
+        {
+          "action": "repost",
+          "description": "Repost (retweet) a post on Bluesky",
+          "requiredArgs": [
+            "uri",
+            "cid"
+          ],
+          "optionalArgs": [
+            "dryRun",
+            "identifier",
+            "password"
+          ],
+          "example": {
+            "uri": "at://did:plc:.../app.bsky.feed.post/...",
+            "cid": "bafyre..."
+          },
+          "outputType": "{ uri: string, cid: string, success: boolean }",
+          "requiresAuth": true
+        },
+        {
+          "action": "retweet",
+          "description": "Alias for repost on Bluesky",
+          "requiredArgs": [
+            "uri",
+            "cid"
+          ],
+          "optionalArgs": [
+            "dryRun",
+            "identifier",
+            "password"
+          ],
+          "example": {
+            "uri": "at://did:plc:.../app.bsky.feed.post/...",
+            "cid": "bafyre..."
+          },
+          "outputType": "{ uri: string, cid: string, success: boolean }",
+          "requiresAuth": true
+        },
+        {
+          "action": "follow",
+          "description": "Follow a user on Bluesky by DID",
+          "requiredArgs": [
+            "subject"
+          ],
+          "optionalArgs": [
+            "handle",
+            "dryRun",
+            "identifier",
+            "password"
+          ],
+          "example": {
+            "subject": "did:plc:z72i7hdynmk6r22z27h6tvur"
+          },
+          "outputType": "{ uri: string, cid: string, success: boolean }",
+          "requiresAuth": true
+        },
+        {
+          "action": "unfollow",
+          "description": "Unfollow a user on Bluesky by follow record key or subject",
+          "requiredArgs": [
+            "rkey"
+          ],
+          "optionalArgs": [
+            "dryRun",
+            "identifier",
+            "password"
+          ],
+          "example": {
+            "rkey": "3k2v..."
+          },
+          "outputType": "{ success: boolean }",
+          "requiresAuth": true
         }
       ]
     },
@@ -1025,6 +1197,135 @@
             "limit": 20
           },
           "outputType": "PostItem[]",
+          "requiresAuth": false
+        },
+        {
+          "action": "post",
+          "description": "Publish a new status to Mastodon",
+          "requiredArgs": [
+            "text"
+          ],
+          "optionalArgs": [
+            "status",
+            "media_ids",
+            "visibility",
+            "instance",
+            "dryRun",
+            "accessToken"
+          ],
+          "example": {
+            "text": "Hello Mastodon from XActions",
+            "dryRun": false
+          },
+          "outputType": "{ status: any, success: boolean }",
+          "requiresAuth": false
+        },
+        {
+          "action": "reply",
+          "description": "Reply to an existing status on Mastodon",
+          "requiredArgs": [
+            "text",
+            "in_reply_to_id"
+          ],
+          "optionalArgs": [
+            "status",
+            "media_ids",
+            "instance",
+            "dryRun",
+            "accessToken"
+          ],
+          "example": {
+            "text": "Great point!",
+            "in_reply_to_id": "123456789"
+          },
+          "outputType": "{ status: any, success: boolean }",
+          "requiresAuth": false
+        },
+        {
+          "action": "like",
+          "description": "Favourite (like) a status on Mastodon",
+          "requiredArgs": [
+            "statusId"
+          ],
+          "optionalArgs": [
+            "instance",
+            "dryRun",
+            "accessToken"
+          ],
+          "example": {
+            "statusId": "123456789"
+          },
+          "outputType": "{ success: boolean }",
+          "requiresAuth": false
+        },
+        {
+          "action": "reblog",
+          "description": "Boost (reblog) a status on Mastodon",
+          "requiredArgs": [
+            "statusId"
+          ],
+          "optionalArgs": [
+            "instance",
+            "dryRun",
+            "accessToken"
+          ],
+          "example": {
+            "statusId": "123456789"
+          },
+          "outputType": "{ success: boolean }",
+          "requiresAuth": false
+        },
+        {
+          "action": "retweet",
+          "description": "Alias for reblog on Mastodon",
+          "requiredArgs": [
+            "statusId"
+          ],
+          "optionalArgs": [
+            "instance",
+            "dryRun",
+            "accessToken"
+          ],
+          "example": {
+            "statusId": "123456789"
+          },
+          "outputType": "{ success: boolean }",
+          "requiresAuth": false
+        },
+        {
+          "action": "follow",
+          "description": "Follow an account on Mastodon",
+          "requiredArgs": [
+            "accountId"
+          ],
+          "optionalArgs": [
+            "username",
+            "instance",
+            "dryRun",
+            "accessToken"
+          ],
+          "example": {
+            "accountId": "12345"
+          },
+          "outputType": "{ success: boolean }",
+          "requiresAuth": false
+        },
+        {
+          "action": "unfollow",
+          "description": "Unfollow an account on Mastodon",
+          "requiredArgs": [
+            "accountId"
+          ],
+          "optionalArgs": [
+            "username",
+            "instance",
+            "dryRun",
+            "accessToken"
+          ],
+          "example": {
+            "accountId": "12345"
+          },
+          "outputType": "{ success: boolean }",
           "requiresAuth": false
         }
       ]
@@ -1596,6 +1897,122 @@
             "count": 50
           },
           "outputType": "{ profiles: ProfileItem[], counts: object, note?: string }",
+          "requiresAuth": true
+        },
+        {
+          "action": "post",
+          "description": "Publish a new post to Threads",
+          "requiredArgs": [
+            "text"
+          ],
+          "optionalArgs": [
+            "dryRun"
+          ],
+          "example": {
+            "text": "Hello Threads from XActions",
+            "dryRun": false
+          },
+          "outputType": "{ success: boolean, id?: string, dryRun?: boolean }",
+          "requiresAuth": true
+        },
+        {
+          "action": "reply",
+          "description": "Reply to a post on Threads",
+          "requiredArgs": [
+            "text",
+            "postId"
+          ],
+          "optionalArgs": [
+            "dryRun"
+          ],
+          "example": {
+            "text": "Great point!",
+            "postId": "12345",
+            "dryRun": false
+          },
+          "outputType": "{ success: boolean, id?: string, dryRun?: boolean }",
+          "requiresAuth": true
+        },
+        {
+          "action": "like",
+          "description": "Like a post on Threads",
+          "requiredArgs": [
+            "postId"
+          ],
+          "optionalArgs": [
+            "dryRun"
+          ],
+          "example": {
+            "postId": "12345",
+            "dryRun": false
+          },
+          "outputType": "{ success: boolean, dryRun?: boolean }",
+          "requiresAuth": true
+        },
+        {
+          "action": "repost",
+          "description": "Repost a post on Threads",
+          "requiredArgs": [
+            "postId"
+          ],
+          "optionalArgs": [
+            "dryRun"
+          ],
+          "example": {
+            "postId": "12345",
+            "dryRun": false
+          },
+          "outputType": "{ success: boolean, dryRun?: boolean }",
+          "requiresAuth": true
+        },
+        {
+          "action": "retweet",
+          "description": "Alias for repost on Threads",
+          "requiredArgs": [
+            "postId"
+          ],
+          "optionalArgs": [
+            "dryRun"
+          ],
+          "example": {
+            "postId": "12345",
+            "dryRun": false
+          },
+          "outputType": "{ success: boolean, dryRun?: boolean }",
+          "requiresAuth": true
+        },
+        {
+          "action": "follow",
+          "description": "Follow a user on Threads",
+          "requiredArgs": [
+            "userId"
+          ],
+          "optionalArgs": [
+            "username",
+            "dryRun"
+          ],
+          "example": {
+            "userId": "12345",
+            "dryRun": false
+          },
+          "outputType": "{ success: boolean, dryRun?: boolean }",
+          "requiresAuth": true
+        },
+        {
+          "action": "unfollow",
+          "description": "Unfollow a user on Threads",
+          "requiredArgs": [
+            "userId"
+          ],
+          "optionalArgs": [
+            "username",
+            "dryRun"
+          ],
+          "example": {
+            "userId": "12345",
+            "dryRun": false
+          },
+          "outputType": "{ success: boolean, dryRun?: boolean }",
           "requiresAuth": true
         }
       ]

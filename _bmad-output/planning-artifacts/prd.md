@@ -203,6 +203,13 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-106 (GitOps Selector Healing Assistant):** [Rescoped — ~70% đã có sẵn] CLI tool `xactions canary heal` orchestrates: `SelectorCanary` drift status → `AutoSelectorFallback.investigate()` → `SelectorSandbox` validation → `unified-diff` generation → GitHub Draft PR. Không auto-heal, không runtime injection — tuân thủ Invariant #4 (GitOps-Driven DOM Drift Healing).
 * **FR-107 (OSINT Developer & Identity Registries):** Mở rộng platform matrix của `x_social_find_profiles` với 2 nguồn public API zero-auth: **GitHub** (`https://api.github.com/users/{username}` — trả về name, bio, avatar, company, location, public repos; hỗ trợ `username` queryType) và **Gravatar** (`https://api.gravatar.com/v3/profiles/{sha256(email)}` — resolve email → avatar + linked accounts; hỗ trợ queryType `email`). Direct fetch, không cần proxy, không cần crawler mới — chỉ adapter + đăng ký trong `PROFILE_ACTION_MAP`. Rate limit GitHub unauthenticated (60 req/h) quản lý qua `DistributedTokenBucket`; optional `GITHUB_TOKEN` env var nâng lên 5000 req/h. (Epic 41.1)
 * **FR-108 (OSINT Entity Resolution & Confidence Clustering):** Cung cấp `EntityResolver` module (pure JS, port thuật toán Jaro-Winkler từ Mr.Holmes `entity_resolver.py` — không port code Python) gộp kết quả fan-out của `x_social_find_profiles` thành `identityClusters[]` với confidence score (0.0–1.0). Scoring: exact username match (+40), display-name similarity > 0.85 (+30), avatar URL/pHash match (+30), cross-link trong bio (+20). Output contract: `identityClusters[]` bổ sung bên cạnh `profiles[]` phẳng (backward compat — profiles[] giữ nguyên). Không persist PII (Option D), tính toán in-memory per-request. (Epic 41.2)
+* **FR-109 (Avatar Perceptual Hashing for Entity Resolution):** `EntityResolver` dùng pHash (dHash/aHash + Hamming distance) để so khớp avatar cross-platform khi CDN URL khác nhau. Pure JS module `src/osint/phash.js`, async scoring, không persist PII (Option D). (Story 41.3)
+* **FR-110 (Instagram Session Stability Verification):** Nghiệm thu `InstagramClient` duy trì session ≥10 requests liên tiếp không challenge/checkpoint dưới stable residential proxy — đóng action item `epic-35-retro-item-4`. (Story 35.5)
+* **FR-111 (Marketplace Advanced Filters — Sort & Condition):** Bổ sung `sortBy` (`relevance|price_asc|price_desc|date_listed`) và `condition` (`new|used`) vào `marketplace()` action; expose đầy đủ `radiusKm/latitude/longitude/categoryId/sortBy/condition` qua MCP `x_facebook_marketplace` inputSchema và CLI flags. (Story 13.11)
+* **FR-112 (GraphQL Replay Engine — conditional):** Capture `doc_id` + `fb_dtsg`/`lsd`/`__dyn`/`__csr` từ Puppeteer request, replay bằng HTTP client với replay cache (`redis`/`sqlite`) và DOM/hydration fallback khi doc_id rotate. (Story 13.12 — gated, xem FUTURE-WORK.md activation conditions)
+* **FR-113 (Advanced Canvas/WebGL/Audio Fingerprint Spoofing — conditional):** Inject noise động vào `HTMLCanvasElement.toDataURL`/`getImageData`, WebGL buffer readback, `AudioContext`/`AnalyserNode` cho bot-challenge targets. (Story 27.5 — gated)
+* **FR-114 (Zalo Personal Messaging — conditional, research-gated):** Cào Zalo cá nhân (tin nhắn, nhóm, friend list) qua reverse-engineered private API sau research spike 2 tuần. (Story 33.3 — gated)
+* **FR-115 (YouTube VN Advanced Data — conditional):** Live stream chat, Shorts deep analytics, channel subscriber history qua InnerTube/extended API. (Story 33.4 — gated)
 
 ### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17 ➔ NFR-21)
 
@@ -257,6 +264,13 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 | Epic 40 (Cost-Aware Proxy — Rescoped) | FR-105 |
 | Epic 39 (GitOps Selector Healing — Rescoped) | FR-106 |
 | Epic 41 (OSINT Registries & Entity Resolution) | FR-107, FR-108 |
+| Story 41.3 (Avatar pHash — Epic 41) | FR-109 |
+| Story 35.5 (IG Session Verify — Epic 35) | FR-110 |
+| Story 13.11 (Marketplace Filters — Epic 13) | FR-111 |
+| Story 13.12 (GraphQL Replay — Epic 13, gated) | FR-112 |
+| Story 27.5 (Fingerprint Spoofing — Epic 27, gated) | FR-113 |
+| Story 33.3 (Zalo Personal — Epic 33, gated) | FR-114 |
+| Story 33.4 (YouTube VN Advanced — Epic 33, gated) | FR-115 |
 
 ### 7.5. Canonicalization & Related Documents
 

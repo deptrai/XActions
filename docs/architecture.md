@@ -1,6 +1,6 @@
 # XActions — System Architecture
 
-> **Version:** 4.1.0 (September 2026)  
+> **Version:** 4.2.0 (September 2026)  
 > **Status:** Production / Distributed Multi-Platform Autonomous Scraping & Syndication Engine  
 > **Author:** nich (@nichxbt) & DeepMind Advanced Agentic Coding Team  
 
@@ -135,7 +135,7 @@ Every platform in XActions implements a standard contract conforming to `Abstrac
 #### EntityResolver — Identity Clustering (`src/mcp/entity-resolver.js`, Epic 41.2)
 - **Pure-JS, zero-I/O module**: groups flat `profiles[]` into `identityClusters[]` — sets of cross-platform profiles likely belonging to the same real person.
 - **Jaro-Winkler similarity** (`jaroWinkler`): standard Jaro + Winkler prefix boost (scaling 0.1, max prefix 4), verified against published reference vectors.
-- **Additive confidence model** (`scorePair`): `username_exact` +40, `name_similar` (JW > 0.85) +30, `avatar_match` +30, `crosslink_bio` +20 → capped at 100, confidence = score/100.
+- **Additive confidence model** (`scorePair`): `username_exact` +40, `name_similar` (JW > 0.85) +30, `avatar_match` +30, `crosslink_bio` +20 → capped at 100, confidence = score/100.  `avatar_match` is being upgraded (Story 41.3 / AD-46) from URL-string-equality to **async perceptual hashing** — URL-exact stays the fast-path; on miss, `src/osint/phash.js` fetches+decodes the avatar and compares Hamming distance ≤ 10.
 - **Union-find clustering** (`resolveIdentities`): two profiles merge when pairwise score ≥ `MERGE_THRESHOLD` (40); each cluster carries `clusterId`, `confidence`, `profiles[]`, `matchedSignals[]`, and `primaryProfile` (highest-followers member).
 - **Backward compatible**: `identityClusters[]` is additive — `profiles[]` and `platformStatus[]` shapes are unchanged.
 - **PII boundary preserved**: this is *in-memory* resolution only — no `PersonEntity`/`GoldenContact` Prisma models, no persistence (the rescoped Option D; see AD-45).
@@ -233,6 +233,9 @@ XActions/
 │   │   ├── local-tools.js              # In-process tool bindings
 │   │   ├── osint-find-profiles.js      # x_social_find_profiles fan-out engine (Epic 36)
 │   │   └── entity-resolver.js          # Jaro-Winkler + identityClusters[] (Epic 41.2)
+│   ├── osint/                          # OSINT helpers (Epic 41.3)
+│   │   ├── phash.js                    # Avatar perceptual hashing (dHash/aHash + Hamming)
+│   │   └── image-decode.js             # Minimal PNG/JPEG/GIF → RGBA decode for pHash
 │   ├── scrapers/                       # Unified Scraper Spine
 │   │   ├── index.js                    # scrape() universal dispatcher + DESCRIPTORS
 │   │   ├── adapters/                   # Puppeteer / Playwright / Cheerio adapters
@@ -341,6 +344,7 @@ Following our full audit of the repository, the following technical debt items a
 - [x] OSINT `x_social_find_profiles` with tiered deadlines, platform status, and circuit breakers.
 - [x] GitHub + Gravatar zero-auth identity adapters registered (Epic 41.1), GitHub rate-limited via `DistributedTokenBucket`.
 - [x] `EntityResolver` producing `identityClusters[]` in-memory alongside `profiles[]` (Epic 41.2).
+- [ ] **Post-retro appended stories (2026-09-19):** Story 41.3 avatar pHash (Epic 41), Story 35.5 IG session live-verify (Epic 35), Story 13.11 marketplace filters (Epic 13) — `ready-for-dev`, Epics flipped back to `in-progress`. Gated: 13.12, 27.5, 33.3, 33.4 (`backlog-blocked` pending activation).
 - [x] Distributed Token Bucket (Redis Lua) backing both consumer quotas and the daily proxy budget.
 - [x] Account Pool health guard with hibernation synced to the Adaptive Rate Governor.
 - [x] GitOps selector healing via `xactions canary status | probe | heal` (Draft PR output only).
@@ -371,3 +375,5 @@ Following our full audit of the repository, the following technical debt items a
 - **AD-43 (Zero-Browser Engine Invariant):** Lightweight platforms (Masothue, Batdongsan, Chotot, TopCV, VietnamWorks, Shopee) are HTTP-first by design. Their `DESCRIPTORS` map to `AbstractApiClient`-based clients using `got`/`undici` — no Chromium process is spawned. Engine metadata (`engineUsed`, `durationMs`, `platform`, `action`) is injected into `_metadata` on every `AbstractCrawler.start()` result so downstream consumers can observe transport choice and latency without inspecting client classes.
 - **AD-44 (GitOps Selector Healing — No Runtime Injection):** Selector drift healing follows a strict GitOps pipeline: `SelectorCanary` detects drift → `AutoSelectorFallback.investigate()` generates ranked candidates → `SelectorSandbox` validates candidates against `expectedShape` → `CanaryHealer` produces a `unified-diff` for `canary-targets.json` → GitHub Draft PR is created for human review. Runtime hot-patching of selectors into Redis or in-memory config is strictly rejected. The `xactions canary heal` CLI orchestrates this flow manually; auto-heal on detection is prohibited.
 - **AD-45 (In-Memory Identity Resolution — Epic 41, rescopes Option D):** `x_social_find_profiles` may compute `identityClusters[]` in-memory via `EntityResolver` (Jaro-Winkler similarity + additive confidence scoring over 4 signals: exact-username +40, name-similarity>0.85 +30, avatar-match +30, cross-link-in-bio +20, merged by union-find at threshold ≥40). This refines the earlier "no entity resolution" reading of AD-40: the prohibition is on **persistence** (`PersonEntity`/`GoldenContact` tables, stored PII), not on stateless per-request clustering. Zero-auth identity registries (`github` → username, `gravatar` → email) are registered in `PROFILE_ACTION_MAP`; GitHub's 60 req/h (5000 with `GITHUB_TOKEN`) budget is enforced via `DistributedTokenBucket`. Out of scope (Mr.Holmes domain): dorking, breach/leak checks, BFS recursive profiling, Maigret-style mass scans.
+- **AD-46 (Avatar Perceptual Hashing — Story 41.3, Epic 41):** `EntityResolver`'s `avatar_match` signal is upgraded from URL-string-equality to **perceptual hashing** (`src/osint/phash.js`, pure JS, zero-dep): dHash/aHash over decoded RGBA + Hamming distance on a 64-bit hash, threshold ≤ 10. This closes the CDN-rotation gap where the same avatar served from `fbcdn.net` vs `cdninstagram.com` vs `avatars.githubusercontent.com` produces different URLs. URL-exact match remains the fast-path; pHash fetch+decode only runs on URL miss, is async, and respects Option D — no hash or PII is persisted (in-memory per-request).
+- **AD-47 (GraphQL Replay Engine — Story 13.12, Epic 13, conditional):** When activated, captured Facebook `doc_id` + tokens (`fb_dtsg`, `lsd`, `__dyn`, `__csr`) are replayed via the HTTP client with a replay cache (`redis`/`sqlite`) and a DOM/hydration fallback on doc_id rotation. Gated on ≥80% doc_id stability over 30 days of production-like traffic.
