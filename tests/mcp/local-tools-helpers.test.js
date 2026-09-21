@@ -36,7 +36,7 @@ describe('local-tools browser lifecycle and parameter compatibility', () => {
     try {
       await mod.x_like({ tweetUrl: 'https://x.com/user/status/123456' });
     } catch (err) {
-      assert.notMatch(err.message, /url or tweetUrl is required for x_like/);
+      assert.doesNotMatch(err.message, /url or tweetUrl is required for x_like/);
     }
   });
 
@@ -53,7 +53,7 @@ describe('local-tools browser lifecycle and parameter compatibility', () => {
     try {
       await mod.x_retweet({ tweetUrl: 'https://x.com/user/status/123456' });
     } catch (err) {
-      assert.notMatch(err.message, /url or tweetUrl is required for x_retweet/);
+      assert.doesNotMatch(err.message, /url or tweetUrl is required for x_retweet/);
     }
   });
 
