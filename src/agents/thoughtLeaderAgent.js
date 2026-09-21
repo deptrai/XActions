@@ -517,6 +517,24 @@ class ThoughtLeaderAgent {
 
     try {
       const trends = await this.browser.getTrendingTopics().catch(() => []);
+
+      // Jev trend safety + opportunity filter (Story 42.6)
+      let filteredTrends = trends;
+      if (trends.length > 0) {
+        try {
+          const { analyzeTrends } = await import('../trending/jevTrendAnalyzer.js');
+          const brandSafeThreshold = this.jev.confidenceThresholds.brandSafety ?? 0.5;
+          const opportunityThreshold = this.jev.confidenceThresholds.trendOpportunity ?? 2;
+          const analysis = await analyzeTrends(trends, { brain: this.jev, brandSafeThreshold, opportunityThreshold });
+          if (!analysis.degraded && analysis.filtered.length > 0) {
+            filteredTrends = analysis.filtered;
+            console.log(`   🎯 Jev trend filter: ${filteredTrends.length}/${trends.length} trends passed safety+opportunity`);
+          }
+        } catch (err) {
+          console.log(`   ⚠️ Trend analysis failed (using raw trends): ${err.message}`);
+        }
+      }
+
       const recentPosts = this.db.getRecentPosts(20);
 
       // Pull network discoveries for inspiration if available
@@ -528,7 +546,7 @@ class ThoughtLeaderAgent {
         type,
         persona: this.persona.toJSON(),
         niche: this.config.niche,
-        trends: trends.slice(0, 5),
+        trends: filteredTrends.slice(0, 5),
         recentPosts,
         networkDiscoveries: networkContent.map((d) => d.content),
       });

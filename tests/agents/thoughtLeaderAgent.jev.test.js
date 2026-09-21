@@ -203,4 +203,72 @@ describe('ThoughtLeaderAgent Jev adoption (Story 42.2)', () => {
       expect(agent.browser.postTweet).toHaveBeenCalledWith('draft post content');
     });
   });
+
+  describe('_createContent — Jev trend safety + opportunity filter (Story 42.6)', () => {
+    it('filters unsafe trends before generateContent', async () => {
+      agent.browser.getTrendingTopics.mockResolvedValue(['Earthquake kills hundreds', 'AI agents breakthrough']);
+      // First decide() = trend analysis for 'Earthquake...' (called by analyzeTrends inside _createContent)
+      // Second decide() = trend analysis for 'AI agents breakthrough'
+      // Third decide() = safety Noul for safeToSend
+      agent.jev.decide = vi.fn()
+        .mockResolvedValueOnce({
+          answers: {
+            vertical: { type: 'choice', choice: 'other', confidence: 0.8 },
+            brandSafe: { type: 'noul', noul: 0.9 },
+            opportunity: { type: 'score', score: 0, confidence: 0.9 },
+          },
+          usage: { input_tokens: 50, output_tokens: 20 },
+          meta: { degraded: false, source: 'jev' },
+        })
+        .mockResolvedValueOnce({
+          answers: {
+            vertical: { type: 'choice', choice: 'tech_ai', confidence: 0.9 },
+            brandSafe: { type: 'noul', noul: 0.05 },
+            opportunity: { type: 'score', score: 3, confidence: 0.85 },
+          },
+          usage: { input_tokens: 50, output_tokens: 20 },
+          meta: { degraded: false, source: 'jev' },
+        })
+        .mockResolvedValueOnce({
+          answers: { safeToSend: { type: 'noul', noul: 0.95 } },
+          usage: { input_tokens: 10, output_tokens: 5 },
+          meta: { degraded: false, source: 'jev' },
+        });
+      await agent._createContent();
+      // generateContent should only get the safe+hook trend
+      expect(agent.llm.generateContent).toHaveBeenCalledWith(expect.objectContaining({
+        trends: ['AI agents breakthrough'],
+      }));
+      expect(agent.browser.postTweet).toHaveBeenCalled();
+    });
+
+    it('keeps raw trends when Jev trend analysis is fully degraded', async () => {
+      agent.browser.getTrendingTopics.mockResolvedValue(['Topic A', 'Topic B']);
+      agent.jev.decide = vi.fn()
+        // Both trend analyses degrade
+        .mockResolvedValue({
+          answers: {},
+          usage: { input_tokens: 0, output_tokens: 0 },
+          meta: { degraded: true, reason: 'missing-key', source: 'llmbrain' },
+        });
+      await agent._createContent();
+      // Degraded → keep original trends
+      expect(agent.llm.generateContent).toHaveBeenCalledWith(expect.objectContaining({
+        trends: ['Topic A', 'Topic B'],
+      }));
+    });
+
+    it('skips trend filter when no trends returned', async () => {
+      agent.browser.getTrendingTopics.mockResolvedValue([]);
+      agent.jev.decide = vi.fn().mockResolvedValue({
+        answers: { safeToSend: { type: 'noul', noul: 0.95 } },
+        usage: { input_tokens: 10, output_tokens: 5 },
+        meta: { degraded: false, source: 'jev' },
+      });
+      await agent._createContent();
+      expect(agent.llm.generateContent).toHaveBeenCalledWith(expect.objectContaining({
+        trends: [],
+      }));
+    });
+  });
 });
