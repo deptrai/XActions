@@ -24,6 +24,7 @@
  */
 
 import { JevBrain } from '../agents/jevBrain.js';
+import { globalChallengeSignatureDetector } from './challenge-signature-detector.js';
 
 const SNIPPET_MAX_CHARS = 500;
 /** Bound on input BEFORE any regex runs — multi-MB bodies must not reach the HTML stripper. */
@@ -301,5 +302,73 @@ export class JevChallengeDiagnoser {
 
 /** Global singleton — lazy brain; enabled/threshold resolve env per diagnose() call. */
 export const globalJevChallengeDiagnoser = new JevChallengeDiagnoser();
+
+/**
+ * Browser-path counterpart of the HTTP suspicious-2xx hook (Story 42.4
+ * deferred item). Runs the static signature detector first on rendered page
+ * HTML — free, first-line — and only when it misses does Jev get a second
+ * opinion on the same evidence. Pure and side-effect-free: the caller decides
+ * what a `detected` result means (bridges run their notify path then throw
+ * BotChallengeError, mirroring the HTTP spine).
+ *
+ * @param {object} input
+ * @param {string} [input.html] - rendered page HTML (adapter.getContent output)
+ * @param {string} [input.url] - page URL, improves static signature matching
+ * @param {string} [input.platform]
+ * @param {string | null} [input.accountId]
+ * @param {any} [input.detector] - ChallengeSignatureDetector-like (default global)
+ * @param {any} [input.diagnoser] - JevChallengeDiagnoser-like (default global; tests inject)
+ * @returns {Promise<{
+ *   detected: boolean, via: 'signature' | 'jev' | null, type: string,
+ *   confidence: number, suggestedHibernationMs: number, signature: string | null,
+ * }>}
+ */
+export async function checkBrowserPageHtml({
+  html,
+  url = '',
+  platform = 'unknown',
+  accountId = null,
+  detector = null,
+  diagnoser = null,
+} = {}) {
+  const clean = {
+    detected: false, via: null, type: 'unknown', confidence: 0,
+    suggestedHibernationMs: 10 * 60 * 1000, signature: null,
+  };
+  if (typeof html !== 'string' || !html.trim()) return clean;
+
+  // Static detector first — cheap, known signatures, no API call.
+  const det = detector || globalChallengeSignatureDetector;
+  try {
+    const staticResult = det?.detectFromHtml?.(html, { url, platform });
+    if (staticResult?.detected) {
+      return { ...staticResult, via: 'signature' };
+    }
+  } catch { /* static detector failure never blocks the Jev opinion */ }
+
+  const diag = diagnoser || globalJevChallengeDiagnoser;
+  let jevDiag = null;
+  try {
+    jevDiag = await diag.diagnose({ snippet: html, platform, accountId });
+  } catch {
+    jevDiag = null;
+  }
+
+  if (jevDiag?.escalate) {
+    return {
+      detected: true,
+      via: 'jev',
+      type: jevDiag.verdict || 'unknown',
+      confidence: jevDiag.confidence,
+      suggestedHibernationMs: 20 * 60 * 1000,
+      signature: 'jev_semantic',
+    };
+  }
+  return {
+    ...clean,
+    type: jevDiag?.verdict ?? 'unknown',
+    confidence: jevDiag?.confidence ?? 0,
+  };
+}
 
 export default JevChallengeDiagnoser;

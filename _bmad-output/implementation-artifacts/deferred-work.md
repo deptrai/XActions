@@ -195,12 +195,9 @@
   location: src/utils/vn-phone.js
   severity: low
 
-- source_spec: `_bmad-output/implementation-artifacts/spec-42-4-jev-challenge-diagnostics.md`
-  summary: Browser-path Jev challenge second-opinion — `detectChallengeOnPage`/`detectFromHtml` là dead seam (0 callers); wire cần page access trong per-platform crawler handlers (facebook pagePosts...), không có uniform hook ở spine.
-  evidence: `grep detectChallengeOnPage` chỉ trả definition tại base-crawler.js:1007; `this.page`/`session.page` không tồn tại trong AbstractCrawler — page chỉ tồn tại trong handler internals của từng browser crawler.
-
-
 ### Resolved (2026-09-18 — deferred items addressed)
+
+- RESOLVED (2026-09-22): Browser-path Jev challenge second-opinion — shared helper `checkBrowserPageHtml` trong `src/core/jev-challenge-diagnoser.js` (static `detectFromHtml` first → Jev on miss → `{detected, via:'signature'|'jev'}`); `#assertPageUsable` wired post-`adapter.goto` trong 4 bridges: facebook signer-bridge (6 sites: extractTokens, scrapeProfile, scrapeGroupMembers, scrapePagePosts, scrapePostComments, #scrapeDomList→groupPosts/marketplace/followList), reddit (start), medium (start/getPost/#scrapeFeed), tiktok (2 foryou paths). `onBotChallenge` option wired từ FacebookClient + TikTokClient → notify-trio (sentinels `fb-guest`/`guest`/`default` → null). `detectChallengeOnPage` trong base-crawler giờ dùng chung helper (Jev-ized, trả `via`). Detection → `BotChallengeError XACT_4030`, contract giống HTTP spine.
 
 - RESOLVED: Half-open circuit now has single-probe semantics — `probing` flag lets exactly one caller through after `CIRCUIT_COOLDOWN_MS`; concurrent callers still see `circuit_open` until the probe settles.
 - RESOLVED: `_failureCounts` now keyed by `platform:accountId` — one account's failure no longer trips the circuit for other accounts on that platform; `evictCircuits` caps the map at 200 entries.

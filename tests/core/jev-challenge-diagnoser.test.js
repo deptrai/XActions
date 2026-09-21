@@ -15,6 +15,7 @@ import {
   extractSnippet,
   isJevChallengeDiagEnabled,
   resolvePageStatusThreshold,
+  checkBrowserPageHtml,
 } from '../../src/core/jev-challenge-diagnoser.js';
 import { JevBrain } from '../../src/agents/jevBrain.js';
 import { AbstractCrawler } from '../../src/core/base-crawler.js';
@@ -592,5 +593,212 @@ describe('client → crawler end-to-end (real AbstractApiClient inside AbstractC
     expect(brain.decide).not.toHaveBeenCalled(); // no re-diagnosis of punished evidence
     expect(client.lastResponseSnippet).toBeNull();
     log.mockRestore();
+  });
+});
+
+describe('checkBrowserPageHtml — browser-path challenge gate (deferred item)', () => {
+  let savedBrain;
+  let savedEnabled;
+
+  beforeEach(() => {
+    savedBrain = globalJevChallengeDiagnoser.brain;
+    savedEnabled = globalJevChallengeDiagnoser._enabledOverride;
+    globalJevChallengeDiagnoser.enabled = true;
+  });
+
+  afterEach(() => {
+    globalJevChallengeDiagnoser.brain = savedBrain;
+    globalJevChallengeDiagnoser._enabledOverride = savedEnabled;
+  });
+
+  it('static signature hit → detected via signature, Jev never consulted', async () => {
+    const brain = makeBrain('bot_challenge', 0.99);
+    globalJevChallengeDiagnoser.brain = brain;
+    const html = '<html><body><div class="cf-challenge-running">cf-chl-bypass</div></body></html>';
+    const result = await checkBrowserPageHtml({ html, url: 'https://x.test/', platform: 'facebook' });
+    expect(result.detected).toBe(true);
+    expect(result.via).toBe('signature');
+    expect(brain.decide).not.toHaveBeenCalled();
+  });
+
+  it('static miss + Jev bot_challenge conf≥0.8 → detected via jev', async () => {
+    const brain = makeBrain('bot_challenge', 0.92);
+    globalJevChallengeDiagnoser.brain = brain;
+    const html = '<html><body><form>Please solve this puzzle to prove you are real</form></body></html>';
+    const result = await checkBrowserPageHtml({ html, url: 'https://x.test/', platform: 'facebook' });
+    expect(result.detected).toBe(true);
+    expect(result.via).toBe('jev');
+    expect(result.type).toBe('bot_challenge');
+    expect(result.signature).toBe('jev_semantic');
+    expect(result.suggestedHibernationMs).toBe(20 * 60 * 1000);
+    expect(brain.decide).toHaveBeenCalledTimes(1);
+  });
+
+  it('static miss + Jev ok → detected false, page usable', async () => {
+    const brain = makeBrain('ok', 0.9);
+    globalJevChallengeDiagnoser.brain = brain;
+    const result = await checkBrowserPageHtml({
+      html: '<html><body><article>real content</article></body></html>',
+      platform: 'reddit',
+    });
+    expect(result.detected).toBe(false);
+    expect(result.via).toBeNull();
+    expect(brain.decide).toHaveBeenCalledTimes(1);
+  });
+
+  it('degraded Jev → detected false, no escalation on degraded data', async () => {
+    const brain = makeBrain('bot_challenge', 0.99, { degraded: true });
+    globalJevChallengeDiagnoser.brain = brain;
+    const result = await checkBrowserPageHtml({ html: '<html><body>x</body></html>', platform: 'tiktok' });
+    expect(result.detected).toBe(false);
+  });
+
+  it('kill-switch → detected false and decide never called', async () => {
+    const brain = makeBrain('bot_challenge', 0.99);
+    globalJevChallengeDiagnoser.brain = brain;
+    globalJevChallengeDiagnoser.enabled = false;
+    const result = await checkBrowserPageHtml({ html: '<html><body>x</body></html>', platform: 'medium' });
+    expect(result.detected).toBe(false);
+    expect(brain.decide).not.toHaveBeenCalled();
+  });
+
+  it('empty/whitespace html → detected false, no calls at all', async () => {
+    const detector = { detectFromHtml: vi.fn() };
+    const brain = makeBrain('bot_challenge', 0.99);
+    const result = await checkBrowserPageHtml({ html: '   ', detector, diagnoser: { diagnose: brain.decide } });
+    expect(result.detected).toBe(false);
+    expect(detector.detectFromHtml).not.toHaveBeenCalled();
+  });
+
+  it('detector throwing → falls through to Jev (failure never blocks opinion)', async () => {
+    const brain = makeBrain('login_wall', 0.85);
+    globalJevChallengeDiagnoser.brain = brain;
+    const detector = { detectFromHtml: () => { throw new Error('boom'); } };
+    const result = await checkBrowserPageHtml({ html: '<html><body>login</body></html>', detector, platform: 'facebook' });
+    expect(result.detected).toBe(true);
+    expect(result.via).toBe('jev');
+    expect(result.type).toBe('login_wall');
+  });
+});
+
+describe('AbstractCrawler.detectChallengeOnPage — Jev-ized seam', () => {
+  class TestCrawler extends AbstractCrawler {
+    name = 'test-crawler';
+  }
+
+  let savedBrain;
+  let savedEnabled;
+
+  beforeEach(() => {
+    savedBrain = globalJevChallengeDiagnoser.brain;
+    savedEnabled = globalJevChallengeDiagnoser._enabledOverride;
+    globalJevChallengeDiagnoser.enabled = true;
+  });
+
+  afterEach(() => {
+    globalJevChallengeDiagnoser.brain = savedBrain;
+    globalJevChallengeDiagnoser._enabledOverride = savedEnabled;
+  });
+
+  it('static miss + Jev escalate → detected via jev + notify-trio fires', async () => {
+    const brain = makeBrain('bot_challenge', 0.95);
+    globalJevChallengeDiagnoser.brain = brain;
+    const markUnavailable = vi.fn();
+    const recordBotChallenge = vi.fn();
+    const crawler = new TestCrawler({
+      client: {},
+      accountPool: { markUnavailable },
+      governor: { recordBotChallenge },
+      healthOrchestrator: { recordBotChallenge },
+      challengeDetector: new ChallengeSignatureDetector(),
+    });
+    const page = {
+      content: async () => '<html><body><form>novel puzzle wall</form></body></html>',
+      url: () => 'https://facebook.com/x',
+    };
+    const result = await crawler.detectChallengeOnPage(page, { accountId: 'acct1' });
+    expect(result.detected).toBe(true);
+    expect(result.via).toBe('jev');
+    expect(markUnavailable).toHaveBeenCalledWith('acct1', 'bot_challenge', 20 * 60 * 1000, 'test-crawler');
+    expect(recordBotChallenge).toHaveBeenCalledTimes(2); // governor + orchestrator
+  });
+
+  it('clean page → detected false', async () => {
+    const brain = makeBrain('ok', 0.95);
+    globalJevChallengeDiagnoser.brain = brain;
+    const crawler = new TestCrawler({ client: {}, challengeDetector: new ChallengeSignatureDetector() });
+    const page = { content: async () => '<html><body>hello</body></html>', url: () => 'https://x' };
+    const result = await crawler.detectChallengeOnPage(page, {});
+    expect(result.detected).toBe(false);
+  });
+});
+
+describe('FacebookBrowserBridge — post-goto challenge gate', () => {
+  let savedBrain;
+  let savedEnabled;
+
+  beforeEach(() => {
+    savedBrain = globalJevChallengeDiagnoser.brain;
+    savedEnabled = globalJevChallengeDiagnoser._enabledOverride;
+    globalJevChallengeDiagnoser.enabled = true;
+  });
+
+  afterEach(() => {
+    globalJevChallengeDiagnoser.brain = savedBrain;
+    globalJevChallengeDiagnoser._enabledOverride = savedEnabled;
+  });
+
+  function makeFakeAdapter(html) {
+    return {
+      launch: vi.fn().mockResolvedValue({ fake: 'browser' }),
+      newPage: vi.fn().mockResolvedValue({}),
+      setCookies: vi.fn().mockResolvedValue(undefined),
+      goto: vi.fn().mockResolvedValue(undefined),
+      getContent: vi.fn().mockResolvedValue(html),
+      evaluate: vi.fn().mockResolvedValue([]),
+      scroll: vi.fn().mockResolvedValue(undefined),
+      closePage: vi.fn().mockResolvedValue(undefined),
+    };
+  }
+
+  it('static challenge page → onBotChallenge fires + BotChallengeError (XACT_4030), Jev skipped', async () => {
+    const { FacebookBrowserBridge } = await import('../../src/scrapers/social/facebook/signer-bridge.js');
+    const brain = makeBrain('ok', 0.9);
+    globalJevChallengeDiagnoser.brain = brain;
+    const challengeHtml = '<html><body><div class="cf-challenge-running">cf-chl-bypass</div></body></html>';
+    const onBotChallenge = vi.fn();
+    const bridge = new FacebookBrowserBridge({ adapter: makeFakeAdapter(challengeHtml), onBotChallenge });
+
+    await expect(bridge.scrapePagePosts('somepage', { accountId: 'acct_fb' })).rejects.toThrow(BotChallengeError);
+    expect(onBotChallenge).toHaveBeenCalledTimes(1);
+    expect(onBotChallenge.mock.calls[0][0]).toMatchObject({ accountId: 'acct_fb', via: 'signature' });
+    expect(brain.decide).not.toHaveBeenCalled();
+  });
+
+  it('static miss + Jev verdict → throws via jev path', async () => {
+    const { FacebookBrowserBridge } = await import('../../src/scrapers/social/facebook/signer-bridge.js');
+    const brain = makeBrain('login_wall', 0.9);
+    globalJevChallengeDiagnoser.brain = brain;
+    const onBotChallenge = vi.fn();
+    const bridge = new FacebookBrowserBridge({
+      adapter: makeFakeAdapter('<html><body><form>sign in required</form></body></html>'),
+      onBotChallenge,
+    });
+    await expect(bridge.scrapePagePosts('somepage', {})).rejects.toThrow(BotChallengeError);
+    expect(onBotChallenge.mock.calls[0][0]).toMatchObject({ via: 'jev', type: 'login_wall' });
+  });
+
+  it('clean page → scrape proceeds, no escalation', async () => {
+    const { FacebookBrowserBridge } = await import('../../src/scrapers/social/facebook/signer-bridge.js');
+    const brain = makeBrain('ok', 0.9);
+    globalJevChallengeDiagnoser.brain = brain;
+    const onBotChallenge = vi.fn();
+    const bridge = new FacebookBrowserBridge({
+      adapter: makeFakeAdapter('<html><body><article>post content</article></body></html>'),
+      onBotChallenge,
+    });
+    const result = await bridge.scrapePagePosts('somepage', {});
+    expect(result.posts).toEqual([]);
+    expect(onBotChallenge).not.toHaveBeenCalled();
   });
 });

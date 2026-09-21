@@ -16,7 +16,7 @@ import { globalChallengeSignatureDetector } from './challenge-signature-detector
 import { globalSessionHealthOrchestrator } from './session-health-orchestrator.js';
 import { globalSchemaDriftGuard } from './schema-drift-guard.js';
 import { AbstractApiClient } from './base-client.js';
-import { globalJevChallengeDiagnoser } from './jev-challenge-diagnoser.js';
+import { globalJevChallengeDiagnoser, checkBrowserPageHtml } from './jev-challenge-diagnoser.js';
 import { toIsoDate, isEnvTruthy, defaultRedisStreamPublisher, computeIdempotencyKey } from '../utils/redis-stream-publisher.js';
 
 /** @typedef {import('./types.js').CrawlerCommand} CrawlerCommand */
@@ -1064,10 +1064,12 @@ export class AbstractCrawler {
   async cleanup() { throw new Error('Method not implemented: cleanup()'); }
 
   /**
-   * Story 27.3 — run `ChallengeSignatureDetector` against a Puppeteer page's
-   * rendered DOM. Returns the normalized ChallengeResult; never throws.
-   * When `detected`, this crawler's `governor`/`accountPool`/`healthOrchestrator`
-   * are notified (mirroring AbstractApiClient behaviour).
+   * Story 27.3 + 42.4 — run challenge detection against a Puppeteer page's
+   * rendered DOM: static `ChallengeSignatureDetector` first, Jev second
+   * opinion when it misses (`checkBrowserPageHtml`). Returns the normalized
+   * ChallengeResult plus a `via` discriminator ('signature' | 'jev'); never
+   * throws. When `detected`, this crawler's `governor`/`accountPool`/
+   * `healthOrchestrator` are notified (mirroring AbstractApiClient behaviour).
    *
    * @param {import('puppeteer').Page} page
    * @param {Object} [opts]
@@ -1085,10 +1087,12 @@ export class AbstractCrawler {
       const safeOpts = (opts && typeof opts === 'object') ? opts : {};
       const html = await page.content();
       const url = typeof page.url === 'function' ? page.url() : '';
-      const detector = this.challengeDetector || globalChallengeSignatureDetector;
-      const result = detector.detectFromHtml(html, { url, platform: this.name });
+      const accountId = safeOpts.accountId || null;
+      const result = await checkBrowserPageHtml({
+        html, url, platform: this.name, accountId,
+        detector: this.challengeDetector || globalChallengeSignatureDetector,
+      });
       if (result.detected) {
-        const accountId = safeOpts.accountId || null;
         if (accountId && this.accountPool && typeof this.accountPool.markUnavailable === 'function') {
           try { this.accountPool.markUnavailable(accountId, 'bot_challenge', result.suggestedHibernationMs, this.name); } catch {}
         }

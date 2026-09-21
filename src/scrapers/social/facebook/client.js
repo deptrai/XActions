@@ -235,6 +235,21 @@ export class FacebookClient extends AbstractApiClient {
       proxyPool: this.proxyPool ?? null,
       proxyProvider: this.proxyProvider ?? null,
       extraArgs: this.extraArgs,
+      // Story 42.4 deferred — rendered-page challenge detection (static
+      // signature or Jev verdict) escalates through the same notify-trio as
+      // the HTTP spine. Sentinel accounts are never hibernated (G7 rule).
+      onBotChallenge: ({ accountId, hibernationMs }) => {
+        const cid =
+          accountId === 'fb-guest' || accountId === 'guest' || accountId === 'default' ? null : accountId;
+        if (!cid || !this.accountPool) return;
+        try { this.accountPool.markUnavailable(cid, 'bot_challenge', hibernationMs, 'facebook'); } catch {}
+        if (this.governor && typeof this.governor.recordBotChallenge === 'function') {
+          try { this.governor.recordBotChallenge(cid, 'facebook', hibernationMs); } catch {}
+        }
+        if (this.healthOrchestrator && typeof this.healthOrchestrator.recordBotChallenge === 'function') {
+          try { this.healthOrchestrator.recordBotChallenge('facebook', cid); } catch {}
+        }
+      },
     });
   }
 

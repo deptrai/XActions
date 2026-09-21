@@ -43,6 +43,7 @@ export {
   extractSnippet,
   isJevChallengeDiagEnabled,
   resolvePageStatusThreshold,
+  checkBrowserPageHtml,
 } from './jev-challenge-diagnoser.js';
 export { TlsProfileProvider, globalTlsProfileProvider, browserFamilyFromUA } from './tls-profile-provider.js';
 export {

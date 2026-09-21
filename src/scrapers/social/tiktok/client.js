@@ -224,6 +224,20 @@ export class TikTokClient extends AbstractApiClient {
       proxyProvider: this.proxyProvider ?? null,
       adapterName: this.adapterName,
       headless: this.headless,
+      // Story 42.4 deferred — rendered-page challenge detection escalates
+      // through the same notify-trio as the HTTP spine; sentinels never
+      // hibernate.
+      onBotChallenge: ({ accountId, hibernationMs }) => {
+        const cid = accountId === 'guest' || accountId === 'default' ? null : accountId;
+        if (!cid || !this.accountPool) return;
+        try { this.accountPool.markUnavailable(cid, 'bot_challenge', hibernationMs, 'tiktok'); } catch {}
+        if (this.governor && typeof this.governor.recordBotChallenge === 'function') {
+          try { this.governor.recordBotChallenge(cid, 'tiktok', hibernationMs); } catch {}
+        }
+        if (this.healthOrchestrator && typeof this.healthOrchestrator.recordBotChallenge === 'function') {
+          try { this.healthOrchestrator.recordBotChallenge('tiktok', cid); } catch {}
+        }
+      },
     });
   }
 

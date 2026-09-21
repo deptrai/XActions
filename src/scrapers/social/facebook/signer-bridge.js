@@ -10,7 +10,8 @@
 
 import { getAdapter } from '../../adapters/index.js';
 import { launchBrowserWithCdp, launchChrome } from '../../../core/cdp-launcher.js';
-import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
+import { PlatformError, BotChallengeError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
+import { checkBrowserPageHtml } from '../../../core/jev-challenge-diagnoser.js';
 import { assertFacebookUrlLocal, NON_PROFILE_SEGMENTS } from './actions.js';
 import { normalizeProfile, normalizeGroupMember, normalizeHandle } from './normalize.js';
 import { normalizeFacebookProfile, normalizeFacebookGroupMember } from './normalize-profile.js';
@@ -651,6 +652,61 @@ export class FacebookBrowserBridge {
     this.proxyProvider = options.proxyProvider || null;
     this.extraArgs = options.extraArgs || [];
     this.requiresResidential = Boolean(options.requiresResidential);
+    /**
+     * Story 42.4 deferred — notify callback fired when a rendered page is
+     * judged a bot challenge/login wall (static signature or Jev verdict).
+     * The owning client wires this to the accountPool/governor/orchestrator
+     * notify-trio; bridge stays decoupled from account infra.
+     * @type {((info: {accountId: string | null, hibernationMs: number, url: string, via: string | null, type: string, confidence: number}) => void) | null}
+     */
+    this.onBotChallenge = typeof options.onBotChallenge === 'function' ? options.onBotChallenge : null;
+  }
+
+  /**
+   * Post-navigation challenge gate (Story 42.4 deferred item). Static
+   * signature detection first on the rendered DOM; Jev second opinion only
+   * when it misses. On detection: fire `onBotChallenge` (notify path lives in
+   * the client) then throw BotChallengeError — identical contract to the
+   * AbstractApiClient 2xx challenge path. Never throws for unreadable pages.
+   * @param {import('../../adapters/base.js').BaseAdapter} adapter
+   * @param {any} page
+   * @param {string} url
+   * @param {string | null} accountId
+   */
+  async #assertPageUsable(adapter, page, url, accountId) {
+    let html = '';
+    try {
+      html = typeof adapter.getContent === 'function' ? await adapter.getContent(page) : '';
+    } catch {
+      return; // can't read content → skip; never break a scrape on the check itself
+    }
+    const result = await checkBrowserPageHtml({
+      html, url, platform: 'facebook',
+      accountId: accountId === 'fb-guest' || accountId === 'guest' || accountId === 'default' ? null : accountId,
+    });
+    if (!result.detected) return;
+    try {
+      this.onBotChallenge?.({
+        accountId, hibernationMs: result.suggestedHibernationMs,
+        url, via: result.via, type: result.type, confidence: result.confidence,
+      });
+    } catch { /* notify failure must not mask the challenge verdict */ }
+    throw new BotChallengeError({
+      code: 'XACT_4030',
+      message: `Bot challenge detected on facebook page (${result.type})`,
+      statusCode: 403,
+      suggestedAction: accountId ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
+      accountId,
+      platform: 'facebook',
+      details: {
+        challengeType: result.type,
+        challengeSignature: result.signature,
+        confidence: result.confidence,
+        via: result.via,
+        url,
+        suggestedHibernationMs: result.suggestedHibernationMs,
+      },
+    });
   }
 
   /**
@@ -869,6 +925,7 @@ export class FacebookBrowserBridge {
           waitUntil: 'networkidle',
           timeout: navTimeout,
         });
+        await this.#assertPageUsable(adapter, page, `${this.baseUrl}/`, effectiveAccountId);
 
         const evalTimeout = this.#isFirstCall ? 8000 : 3000;
         this.#isFirstCall = false;
@@ -1033,6 +1090,7 @@ export class FacebookBrowserBridge {
         waitUntil: 'domcontentloaded',
         timeout,
       });
+      await this.#assertPageUsable(adapter, page, profileUrl, accountId);
 
       const raw = /** @type {Record<string, any> | null} */ (await adapter.evaluate(page, /** @type {any} */ (extractMbasicProfileFromDom), handle));
 
@@ -1143,6 +1201,7 @@ export class FacebookBrowserBridge {
         waitUntil: 'domcontentloaded',
         timeout,
       });
+      await this.#assertPageUsable(adapter, page, membersUrl, accountId);
 
       const memberSelector = 'a[href*="/groups/"][href*="/user/"]';
       const hasMembers = await this.#pollForSelector(adapter, page, memberSelector, 10000);
@@ -1249,6 +1308,7 @@ export class FacebookBrowserBridge {
       if (parsedCookies.length > 0) await adapter.setCookies(page, parsedCookies);
 
       await adapter.goto(page, targetUrl, { waitUntil: 'domcontentloaded', timeout });
+      await this.#assertPageUsable(adapter, page, targetUrl, accountId);
       // Wait briefly for feed units then scroll once to lazy-load more.
       await this.#pollForSelector(adapter, page, 'div[role="article"], div[data-pagelet*="FeedUnit"], div[data-pagelet*="ProfileTimeline"]', 8000);
       await adapter.scroll(page, { y: 1200 }).catch(() => {});
@@ -1303,6 +1363,7 @@ export class FacebookBrowserBridge {
       if (parsedCookies.length > 0) await adapter.setCookies(page, parsedCookies);
 
       await adapter.goto(page, targetUrl, { waitUntil: 'domcontentloaded', timeout });
+      await this.#assertPageUsable(adapter, page, targetUrl, accountId);
       await this.#sleep(1500);
       await adapter.scroll(page, { y: 800 }).catch(() => {});
       await this.#sleep(1000);
@@ -1340,6 +1401,7 @@ export class FacebookBrowserBridge {
       const parsedCookies = this.#parseCookies(options.cookies || '');
       if (parsedCookies.length > 0) await adapter.setCookies(page, parsedCookies);
       await adapter.goto(page, targetUrl, { waitUntil: 'domcontentloaded', timeout });
+      await this.#assertPageUsable(adapter, page, targetUrl, accountId);
       await this.#sleep(2000);
       await adapter.scroll(page, { y: scrollY }).catch(() => {});
       await this.#sleep(1500);

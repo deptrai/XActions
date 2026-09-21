@@ -10,6 +10,8 @@
  */
 
 import { getAdapter } from '../../adapters/index.js';
+import { BotChallengeError, SuggestedActions } from '../../../core/error-envelope.js';
+import { checkBrowserPageHtml } from '../../../core/jev-challenge-diagnoser.js';
 import { asRecord, extractPostId } from './normalizer.js';
 
 /**
@@ -90,6 +92,55 @@ export class MediumBrowserBridge {
     this.#adapter = options.adapter
       ? /** @type {import('../../adapters/base.js').BaseAdapter & Record<string, unknown>} */ (options.adapter)
       : null;
+    /**
+     * Story 42.4 deferred — notify callback when a rendered page is judged a
+     * bot challenge/login wall. Owning client may wire the notify-trio.
+     * @type {((info: {accountId: string | null, hibernationMs: number, url: string, via: string | null, type: string, confidence: number}) => void) | null}
+     */
+    this.onBotChallenge = typeof options.onBotChallenge === 'function' ? options.onBotChallenge : null;
+  }
+
+  /**
+   * Post-navigation challenge gate (Story 42.4 deferred item). Static
+   * signature detection first; Jev second opinion on miss. Detection →
+   * onBotChallenge + BotChallengeError, same contract as the HTTP spine.
+   * Never throws for unreadable pages.
+   * @param {any} adapter
+   * @param {any} page
+   * @param {string} url
+   * @param {string | null} accountId
+   */
+  async #assertPageUsable(adapter, page, url, accountId = null) {
+    let html = '';
+    try {
+      html = typeof adapter.getContent === 'function' ? await adapter.getContent(page) : '';
+    } catch {
+      return;
+    }
+    const result = await checkBrowserPageHtml({ html, url, platform: 'medium', accountId });
+    if (!result.detected) return;
+    try {
+      this.onBotChallenge?.({
+        accountId, hibernationMs: result.suggestedHibernationMs,
+        url, via: result.via, type: result.type, confidence: result.confidence,
+      });
+    } catch { /* notify failure must not mask the challenge verdict */ }
+    throw new BotChallengeError({
+      code: 'XACT_4030',
+      message: `Bot challenge detected on medium page (${result.type})`,
+      statusCode: 403,
+      suggestedAction: accountId ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
+      accountId,
+      platform: 'medium',
+      details: {
+        challengeType: result.type,
+        challengeSignature: result.signature,
+        confidence: result.confidence,
+        via: result.via,
+        url,
+        suggestedHibernationMs: result.suggestedHibernationMs,
+      },
+    });
   }
 
   /**
@@ -243,6 +294,7 @@ export class MediumBrowserBridge {
             waitUntil: 'networkidle',
             timeout: 45000,
           });
+          await this.#assertPageUsable(adapter, page, `${this.baseUrl}/`);
 
           // Allow a short settle for JS-rendered state / cookie refresh.
           await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -430,6 +482,7 @@ export class MediumBrowserBridge {
     if (!adapter) throw new Error('MediumBrowserBridge adapter not initialized');
 
     await adapter.goto(page, url, { waitUntil: 'networkidle', timeout: 45000 });
+    await this.#assertPageUsable(adapter, page, url);
 
     const apolloState = await this.#extractApolloState(adapter, page);
     if (apolloState && Object.keys(apolloState).length > 0) {
@@ -467,6 +520,7 @@ export class MediumBrowserBridge {
     if (!adapter) throw new Error('MediumBrowserBridge adapter not initialized');
 
     await adapter.goto(page, url, { waitUntil: 'networkidle', timeout: 45000 });
+    await this.#assertPageUsable(adapter, page, url);
 
     const apolloState = await this.#extractApolloState(adapter, page);
     /** @type {Record<string, unknown>[]} */
