@@ -444,7 +444,9 @@ describe('Story 29.3: Stream Replay & Missed-Event Recovery', () => {
         expect(delivery.headers['x-xactions-signature']).toBeDefined();
 
         const sig = delivery.headers['x-xactions-signature'];
-        const valid = verifySignature(delivery.body, sig, testSecret);
+        const ts = delivery.headers['x-xactions-timestamp'];
+        // Signature is bound to the timestamp (Story 31 fix — replay protection).
+        const valid = verifySignature(delivery.body, sig, testSecret, { timestamp: ts });
         expect(valid).toBe(true);
       }
     });

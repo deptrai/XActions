@@ -170,6 +170,19 @@ export class BlueskyCrawler extends AbstractCrawler {
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getFeed(args, session),
     });
 
+    // ── 7b. Action: post_detail (single post by URL/URI) — Story 31.1 fix ──
+    this.registerAction({
+      action: 'post_detail',
+      description: 'Fetch a single Bluesky post (+ optional replies) by at:// URI or bsky.app URL via getPostThread',
+      category: 'social',
+      requiresAuth: false,
+      requiredArgs: [],
+      optionalArgs: ['uri', 'url', 'postUrl', 'postId', 'depth', 'parentHeight', 'identifier', 'password'],
+      outputType: '{ post: PostItem, posts: PostItem[] }',
+      example: { postUrl: 'https://bsky.app/profile/alice.bsky.social/post/3abc' },
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPostDetail(args, session),
+    });
+
     // ── 8. Write Action: post ──
     this.registerAction({
       action: 'post',
@@ -568,6 +581,25 @@ export class BlueskyCrawler extends AbstractCrawler {
         has_next_page: Boolean(nextCursor),
       },
     };
+  }
+
+  /**
+   * Action Handler: post_detail — fetch a single post by at:// URI or bsky.app
+   * URL via app.bsky.feed.getPostThread. Returns `{ post, posts }` (post +
+   * replies when depth>0). Story 31.1 fix — backs x_download_media postUrl-only.
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async getPostDetail(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const raw = await this.client.getPostThread(args);
+    const thread = raw?.thread;
+    const post = thread?.post ? normalizeBlueskyPost(thread.post) : null;
+    const replies = Array.isArray(thread?.replies)
+      ? thread.replies.map((r) => normalizeBlueskyPost(r?.post || r)).filter(Boolean)
+      : [];
+    const posts = [post, ...replies].filter(Boolean);
+    return { post, posts };
   }
 
   /**

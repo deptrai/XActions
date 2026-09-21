@@ -270,5 +270,67 @@ describe('Story 31.1 — UniversalMediaPipeline (Audio, Carousel, HLS on All Pla
       expect(tool).toBeDefined();
       expect(tool.inputSchema.required).toContain('postUrl');
     });
+
+    it('returns XACT_4001 envelope for an invalid postUrl (not silent)', async () => {
+      const res = await toolMap.x_download_media({ postUrl: 'not-a-url' });
+      expect(res.success).toBe(false);
+      expect(res.code).toBe('XACT_4001');
+      expect(res.media).toEqual([]);
+      expect(res.count).toBe(0);
+    });
+
+    it('returns XACT_4001 envelope for a missing postUrl/post', async () => {
+      const res = await toolMap.x_download_media({});
+      expect(res.success).toBe(false);
+      expect(res.count).toBe(0);
+    });
+  });
+
+  describe('post_detail action wiring (Story 31.1 fix)', () => {
+    it('twitter descriptor maps post_detail → thread', async () => {
+      const d = (await import('../../../src/scrapers/social/twitter/descriptor.js')).default;
+      expect(d.mapAction({}, { platform: 'twitter', action: 'post_detail' })).toBe('thread');
+    });
+
+    it('bluesky descriptor maps post_detail → post_detail', async () => {
+      const d = (await import('../../../src/scrapers/social/bluesky/descriptor.js')).default;
+      expect(d.mapAction({}, { platform: 'bluesky', action: 'post_detail' })).toBe('post_detail');
+    });
+
+    it('mastodon descriptor maps post_detail → post_detail', async () => {
+      const d = (await import('../../../src/scrapers/social/mastodon/descriptor.js')).default;
+      expect(d.mapAction({}, { platform: 'mastodon', action: 'post_detail' })).toBe('post_detail');
+    });
+
+    it('facebook crawler registers a post_detail action', async () => {
+      const { FacebookCrawler, FacebookClient } = await import('../../../src/scrapers/social/facebook/index.js');
+      const crawler = new FacebookCrawler({ client: new FacebookClient({}) });
+      const actions = crawler.listActions().map((a) => a.action);
+      expect(actions).toContain('post_detail');
+    });
+
+    it('bluesky client resolves a bsky.app post URL to an at:// URI', async () => {
+      const { BlueskyClient } = await import('../../../src/scrapers/social/bluesky/client.js');
+      const client = new BlueskyClient({});
+      // Stub resolveHandle + xrpc to assert URI construction without network.
+      client.resolveHandle = async () => 'did:plc:alice';
+      let captured;
+      client.xrpc = async (nsid, params) => { captured = { nsid, params }; return { thread: { post: { uri: params.uri } } }; };
+      await client.getPostThread({ url: 'https://bsky.app/profile/alice.bsky.social/post/3abc' });
+      expect(captured.nsid).toBe('app.bsky.feed.getPostThread');
+      expect(captured.params.uri).toBe('at://did:plc:alice/app.bsky.feed.post/3abc');
+    });
+
+    it('mastodon client extracts numeric status id + instance from a post URL', async () => {
+      const { MastodonClient } = await import('../../../src/scrapers/social/mastodon/client.js');
+      const client = new MastodonClient({});
+      let captured;
+      client.buildUrl = (path, params, instance) => { captured = { path, instance }; return `https://${instance}${path}`; };
+      client.get = async () => ({ data: { id: '1234567890' } });
+      const status = await client.getStatus({ url: 'https://mastodon.social/@Gargron/1234567890' });
+      expect(captured.path).toBe('/api/v1/statuses/1234567890');
+      expect(captured.instance).toBe('https://mastodon.social');
+      expect(status.id).toBe('1234567890');
+    });
   });
 });

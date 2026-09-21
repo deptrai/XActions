@@ -1964,12 +1964,27 @@ export async function x_download_media(args = {}) {
     };
   }
 
-  const mediaList = await extractMedia({
-    postUrl,
-    platform,
-    post: args.post,
-    options: args,
-  });
+  let mediaList;
+  try {
+    mediaList = await extractMedia({
+      postUrl,
+      platform,
+      post: args.post,
+      options: args,
+    });
+  } catch (err) {
+    // Surface a structured XACT_4001 envelope instead of letting the raw
+    // PlatformError propagate or silently returning empty (Story 31.1 fix).
+    const code = err?.code || 'XACT_4001';
+    return {
+      success: false,
+      error: err?.message || String(err),
+      code,
+      platform: platform || 'auto',
+      media: [],
+      count: 0,
+    };
+  }
 
   return {
     success: true,

@@ -390,6 +390,17 @@ export class FacebookCrawler extends AbstractCrawler {
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.postComments(args, session),
     });
 
+    // Story 31.1 fix: single-post read for x_download_media postUrl-only path.
+    this.registerAction({
+      action: 'post_detail',
+      description: 'Fetch a single Facebook post (content + attachments/media) by URL or numeric postId via hybrid GraphQL + browser fallback',
+      requiredArgs: [],
+      optionalArgs: ['url', 'postUrl', 'postId'],
+      outputType: '{ post: PostItem | null, posts: PostItem[] }',
+      requiresAuth: false,
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPostDetail(args, session),
+    });
+
     this.registerAction({
       action: 'group_comments',
       description: 'Scrape hierarchical comments from a Facebook group post using hybrid GraphQL + browser fallback',
@@ -2461,15 +2472,105 @@ export class FacebookCrawler extends AbstractCrawler {
   }
 
   /**
-   * @param {Object} _args
-   * @returns {Promise<import('../../../core/types.js').PostItem>}
+   * Action Handler: post_detail — fetch a single Facebook post (content +
+   * attachments/media) by URL or numeric postId. Story 31.1 fix — backs the
+   * x_download_media postUrl-only path. Resolves the post's feedback context,
+   * queries the comment-roots GraphQL doc (which returns the post node with its
+   * attachments), and normalizes via #normalizePostItem. Falls back to the
+   * browser DOM permalink when a browser bridge is available. Throws XACT_4001
+   * when the post cannot be resolved — never silently returns empty.
+   *
+   * @param {Object} args
+   * @param {string} [args.url] - facebook.com post URL or numeric postId
+   * @param {string} [args.postId]
+   * @param {Record<string, any>} [session={}]
+   * @returns {Promise<{ post: import('../../../core/types.js').PostItem | null, posts: import('../../../core/types.js').PostItem[] }>}
    */
-  async getPostDetail(_args) {
+  async getPostDetail(args = {}, session = {}) {
+    const rawTarget = String(args?.url || args?.postUrl || args?.postId || '').trim();
+    if (!rawTarget) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Missing required argument: url or postId',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const postExternalId = this.#extractPostExternalId(rawTarget);
+    if (!postExternalId) {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: 'Could not resolve post external ID from input',
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+
+    const accountId = session?.accountId;
+    const cookies = this.#resolveCookies(session);
+    const context = await this.#resolvePostFeedbackContext(postExternalId, cookies, accountId, session);
+
+    // GraphQL path: the comment-roots doc returns the post node carrying
+    // message + attachments — enough to extract media.
+    const docId = this.docIds.COMMENT_ROOTS;
+    if (docId && context?.feedbackId) {
+      try {
+        const variables = {
+          clientKey: null,
+          expansionToken: null,
+          feedLocation: 'POST_PERMALINK_DIALOG',
+          focusCommentID: null,
+          id: context.feedbackId,
+          scale: 2,
+          useDefaultActor: false,
+          commentsAfterCount: 1,
+          commentsAfterCursor: null,
+          commentsBeforeCount: null,
+          commentsBeforeCursor: null,
+          commentsIntentToken: null,
+          targetDialect: null,
+        };
+        Object.assign(variables, FB_COMMENT_RELAY_PROVIDERS);
+        const res = await this.client.requestGraphQl(docId, variables, {
+          accountId,
+          cookies,
+          requiresAuth: session?.requiresAuth,
+        });
+        const node = res?.data?.node;
+        if (node) {
+          const post = this.#normalizePostItem(node, 'https://www.facebook.com');
+          if (post) return { post, posts: [post] };
+        }
+      } catch (err) {
+        // fall through to DOM/browser path below
+        console.warn(`⚠️ [FB] post_detail GraphQL failed for ${postExternalId}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    // DOM fallback via browser bridge — guest-visible public post permalink.
+    if (this.client?.browserBridge) {
+      const postUrl = /^https?:\/\//i.test(rawTarget)
+        ? rawTarget
+        : `${this.client.baseUrl}/permalink.php?story_fbid=${postExternalId}&id=4`;
+      try {
+        const domRes = await this.client.scrapePostCommentsWithBrowser(postUrl, {
+          cookies, accountId, limit: 1, baseUrl: this.client.baseUrl,
+        });
+        const rawPost = domRes?.post || domRes?.target || null;
+        if (rawPost) {
+          const post = this.#normalizePostItem(rawPost, 'https://www.facebook.com');
+          if (post) return { post, posts: [post] };
+        }
+      } catch {}
+    }
+
     throw new PlatformError({
       code: 'XACT_4001',
       type: ErrorTypes.INVALID_ARGS,
-      message: 'getPostDetail is not supported on FacebookCrawler',
+      message: `Could not fetch Facebook post detail for ${postExternalId} (post may be private, deleted, or require auth)`,
       suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      platform: 'facebook',
     });
   }
 

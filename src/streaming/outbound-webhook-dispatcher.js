@@ -27,14 +27,22 @@ export const DELIVERY_LOGS_KEY = 'xactions:webhook:delivery_logs';
  * @param {string} [secret]
  * @returns {string}
  */
-export function createSignature(payload, secret) {
+export function createSignature(payload, secret, timestamp) {
   if (!secret || typeof secret !== 'string') {
     return '';
   }
   const body = typeof payload === 'string'
     ? payload
     : (payload === undefined || payload === null ? '' : JSON.stringify(payload));
-  const digest = crypto.createHmac('sha256', secret).update(body ?? '').digest('hex');
+  // Sign `<timestamp>.<body>` (Stripe/GitHub convention) so the timestamp is
+  // bound into the MAC — a captured delivery cannot be replayed by rewriting
+  // the X-XActions-Timestamp header to the present. When no timestamp is given
+  // the signature covers the body alone (backward-compat for tests/verifiers
+  // that haven't migrated yet).
+  const signed = Number.isFinite(Number(timestamp))
+    ? `${timestamp}.${body ?? ''}`
+    : (body ?? '');
+  const digest = crypto.createHmac('sha256', secret).update(signed).digest('hex');
   return `sha256=${digest}`;
 }
 
@@ -47,7 +55,7 @@ export function createSignature(payload, secret) {
  * @param {string} signatureOrSecret
  * @returns {boolean}
  */
-export function verifySignature(payload, secretOrSignature, signatureOrSecret) {
+export function verifySignature(payload, secretOrSignature, signatureOrSecret, options = {}) {
   if (!secretOrSignature || !signatureOrSecret) {
     return false;
   }
@@ -68,7 +76,24 @@ export function verifySignature(payload, secretOrSignature, signatureOrSecret) {
   if (!secret || !signatureHeader) {
     return false;
   }
-  const expected = createSignature(payload, secret);
+
+  // When a timestamp is supplied it is part of the signed payload — verify it
+  // for freshness too (rejects captured-delivery replays). `options.timestamp`
+  // carries the value of the X-XActions-Timestamp header; `toleranceSeconds`
+  // bounds how old a delivery may be (default 300s; <=0 disables the window).
+  const timestamp = options.timestamp;
+  const hasTimestamp = Number.isFinite(Number(timestamp));
+  if (hasTimestamp) {
+    const tolerance = options.toleranceSeconds ?? 300;
+    if (tolerance > 0) {
+      const now = options.now ?? Math.floor(Date.now() / 1000);
+      if (Math.abs(now - Number(timestamp)) > tolerance) {
+        return false;
+      }
+    }
+  }
+
+  const expected = createSignature(payload, secret, hasTimestamp ? Number(timestamp) : undefined);
   const expectedBuf = Buffer.from(expected);
   const actualBuf = Buffer.from(signatureHeader);
   if (expectedBuf.length !== actualBuf.length) {
@@ -578,7 +603,10 @@ export class OutboundWebhookDispatcher {
     const platform = String(payload.platform || '');
 
     const body = JSON.stringify(payload);
-    const signature = createSignature(body, secret);
+    // Unix-seconds timestamp bound into the HMAC (Story 31 fix — prevents replay
+    // of captured deliveries; same construction as the inbound webhook signer).
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signature = createSignature(body, secret, timestamp);
 
     /** @type {Record<string, string>} */
     const headers = {
@@ -586,6 +614,7 @@ export class OutboundWebhookDispatcher {
       'User-Agent': 'XActions-Webhook-Dispatcher/1.0',
       'X-XActions-Delivery': `del_${crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 16) : Math.random().toString(36).slice(2, 12)}`,
       'X-XActions-Event': platform,
+      'X-XActions-Timestamp': String(timestamp),
     };
     if (options.isReplay || options.headers?.['X-XActions-Replay']) {
       headers['X-XActions-Replay'] = 'true';

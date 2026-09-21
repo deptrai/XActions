@@ -61,6 +61,10 @@ export async function dispatchFacebookHybrid(action, options = {}) {
     post_comments: 'post_comments',
     get_comments: 'post_comments',
     comments: 'post_comments',
+    // Story 31.1 fix: single-post read for x_download_media postUrl-only path
+    post_detail: 'post_detail',
+    postDetail: 'post_detail',
+    get_post: 'post_detail',
     group_posts: 'group_posts',
     group_comments: 'group_comments',
     group_search: 'group_search',

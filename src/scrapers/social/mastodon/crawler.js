@@ -127,6 +127,19 @@ export class MastodonCrawler extends AbstractCrawler {
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPosts(args, session),
     });
 
+    // Story 31.1 fix: single-post read for x_download_media postUrl-only path.
+    this.registerAction({
+      action: 'post_detail',
+      description: 'Fetch a single Mastodon status by numeric ID or public post URL via GET /api/v1/statuses/:id',
+      category: 'social',
+      requiresAuth: false,
+      requiredArgs: [],
+      optionalArgs: ['statusId', 'id', 'url', 'postUrl', 'postId', 'instance', 'accessToken'],
+      outputType: '{ post: PostItem, posts: PostItem[] }',
+      example: { postUrl: 'https://mastodon.social/@Gargron/1234567890' },
+      handler: (/** @type {any} */ args, /** @type {any} */ session) => this.getPostDetail(args, session),
+    });
+
     this.registerAction({
       action: 'get_user_feed',
       description: 'Alias for posts action',
@@ -440,6 +453,26 @@ export class MastodonCrawler extends AbstractCrawler {
     }
 
     return posts;
+  }
+
+  /**
+   * Action Handler: post_detail — fetch a single status by ID or public post
+   * URL via GET /api/v1/statuses/:id. Story 31.1 fix — backs x_download_media
+   * postUrl-only path. Returns `{ post, posts }`.
+   * @param {Record<string, any>} args
+   * @param {Record<string, any>} [session]
+   */
+  async getPostDetail(args = {}, session = {}) {
+    await this.#maybeAuthenticate(args, session);
+    const status = await this.client.getStatus(args);
+    const instance = args.instance || this.client.baseUrl;
+    const post = status ? normalizeMastodonStatus(status, instance) : null;
+    const posts = post ? [post] : [];
+    const validPosts = this.filterValidItems(posts);
+    if (this.store && validPosts.length > 0) {
+      await this.store.storeBatch(validPosts).catch(() => {});
+    }
+    return { post, posts };
   }
 
   /**

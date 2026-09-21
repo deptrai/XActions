@@ -84,6 +84,28 @@ describe('Story 29.2: HMAC Signing & Verification', () => {
     expect(verifySignature(tamperedPayload, signature, secret)).toBe(false);
     expect(verifySignature(payload, 'sha256=invalidhex0000000000000000000000000000000000000000000000000000', secret)).toBe(false);
   });
+
+  it('binds the timestamp into the MAC — a captured delivery cannot be replayed', () => {
+    const ts = Math.floor(Date.now() / 1000);
+    const signature = createSignature(payload, secret, ts);
+    // Valid with the correct timestamp
+    expect(verifySignature(payload, signature, secret, { timestamp: ts })).toBe(true);
+    // A replayed signature with a rewritten (fresh) timestamp no longer verifies —
+    // the timestamp is inside the signed payload.
+    const futureTs = ts + 60;
+    expect(verifySignature(payload, signature, secret, { timestamp: futureTs })).toBe(false);
+  });
+
+  it('rejects a timestamp outside the freshness tolerance window', () => {
+    const now = Math.floor(Date.now() / 1000);
+    const staleTs = now - 400; // older than default 300s tolerance
+    const signature = createSignature(payload, secret, staleTs);
+    expect(verifySignature(payload, signature, secret, { timestamp: staleTs, now })).toBe(false);
+    // Same timestamp within tolerance verifies
+    const freshTs = now - 10;
+    const freshSig = createSignature(payload, secret, freshTs);
+    expect(verifySignature(payload, freshSig, secret, { timestamp: freshTs, now })).toBe(true);
+  });
 });
 
 describe('Story 29.2: WebhookSubscriptionStore CRUD & Validation', () => {
@@ -298,10 +320,15 @@ describe('Story 29.2: Dispatcher Delivery, Signing, Retries & DLQ', () => {
     expect(req.url).toBe('/webhook-bluesky');
     expect(req.headers['x-xactions-event']).toBe('bluesky');
     expect(req.headers['x-xactions-signature']).toMatch(/^sha256=[a-f0-9]{64}$/);
-
-    // Verify received signature matches body
-    const expectedSig = createSignature(req.body, 'bluesky-secret-key');
+    // Timestamp header is sent and bound into the signature (Story 31 fix —
+    // replay protection). Verify the signature over `<timestamp>.<body>`.
+    const ts = req.headers['x-xactions-timestamp'];
+    expect(ts).toBeDefined();
+    expect(Number.isFinite(Number(ts))).toBe(true);
+    const expectedSig = createSignature(req.body, 'bluesky-secret-key', Number(ts));
     expect(req.headers['x-xactions-signature']).toBe(expectedSig);
+    // And it round-trips through verifySignature with freshness.
+    expect(verifySignature(req.body, 'bluesky-secret-key', req.headers['x-xactions-signature'], { timestamp: ts })).toBe(true);
   });
 
   it('delivers to wildcard subscription for any platform (AC2)', async () => {

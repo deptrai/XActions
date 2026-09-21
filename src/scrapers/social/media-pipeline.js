@@ -366,15 +366,53 @@ export class UniversalMediaPipeline {
     const platform = (params.platform || (postUrl ? detectPlatformFromUrl(postUrl) : 'twitter')).toLowerCase();
     let payload = params.post || params.rawData || {};
 
-    // If payload is empty but postUrl is given, fetch via scrape()
+    // Validate postUrl early — emit XACT_4001 envelope for invalid input (Story 31.1 fix).
+    if (!params.post && !params.rawData) {
+      if (!postUrl || typeof postUrl !== 'string' || !/^https?:\/\//i.test(postUrl)) {
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: `x_download_media requires a valid http(s) postUrl, got: ${JSON.stringify(postUrl)}`,
+          suggestedAction: SuggestedActions.FIX_ARGS,
+          platform,
+        });
+      }
+    }
+
+    // If payload is empty but postUrl is given, fetch via scrape() using the
+    // platform's real single-post read action. post_detail only exists on
+    // instagram/medium/reddit/threads/tiktok — map the others to their
+    // equivalent read action (Story 31.1 fix; was a silent catch{} → empty {}).
     if (Object.keys(payload).length === 0 && postUrl) {
+      const POST_DETAIL_ACTION = {
+        twitter: 'thread',   // reads rootTweet (+replies) — works guest for root
+        x: 'thread',
+        bluesky: 'post_detail',
+        bsky: 'post_detail',
+        mastodon: 'post_detail',
+        masto: 'post_detail',
+        facebook: 'post_detail',
+        fb: 'post_detail',
+        threads: 'post_detail',
+        tiktok: 'post_detail',
+        instagram: 'post_detail',
+      };
+      const action = POST_DETAIL_ACTION[platform] || 'post_detail';
       try {
         const { scrape } = await import('../index.js');
-        const scraped = await scrape(platform, 'post_detail', { url: postUrl, postId: postUrl });
-        payload = scraped?.post || scraped || {};
-      } catch {
-        // Fallback to basic payload with just url
-        payload = { url: postUrl };
+        const scraped = await scrape(platform, action, { url: postUrl, postUrl, postId: postUrl, tweetId: postUrl });
+        payload = scraped?.post || scraped?.rootTweet || scraped?.posts?.[0] || scraped || {};
+      } catch (err) {
+        // Re-throw as XACT_4001 with the underlying reason preserved — never
+        // silently fall back to an empty payload (was `catch {}`).
+        throw new PlatformError({
+          code: 'XACT_4001',
+          type: ErrorTypes.INVALID_ARGS,
+          message: `Failed to fetch post for media extraction on ${platform}: ${err?.message || err}`,
+          suggestedAction: SuggestedActions.FIX_ARGS,
+          platform,
+          cause: err,
+        });
       }
     }
 

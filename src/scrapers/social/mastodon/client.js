@@ -266,6 +266,53 @@ export class MastodonClient extends AbstractApiClient {
   }
 
   /**
+   * Get a single status by ID or public post URL.
+   * Endpoint: GET /api/v1/statuses/:id  (public — no auth required for public posts)
+   * Accepts a numeric status ID or a mastodon post URL like
+   *   https://mastodon.social/@user/1234567890  →  id = 1234567890
+   * Used by the `post_detail` action (Story 31.1 fix — x_download_media postUrl-only).
+   *
+   * @param {Object} args
+   * @param {string|number} [args.statusId]
+   * @param {string} [args.url] - mastodon post URL
+   * @param {string} [args.postUrl] - alias for url
+   * @param {string} [args.instance]
+   * @returns {Promise<Record<string, any>>} - the status object
+   */
+  async getStatus(args = {}) {
+    let statusId = args.statusId || args.id;
+    const url = args.url || args.postUrl || args.postId;
+    let instance = args.instance;
+
+    // Extract numeric status id + instance host from a public mastodon URL.
+    if (!statusId && typeof url === 'string' && url) {
+      const m = url.match(/(https?:\/\/[^/]+)\/@[^/]+\/(\d+)/i);
+      if (m) {
+        instance = instance || m[1];
+        statusId = m[2];
+      } else if (/^\d+$/.test(url.trim())) {
+        statusId = url.trim();
+      }
+    }
+
+    const cleanId = String(statusId || '').trim();
+    if (!cleanId || !/^\d+$/.test(cleanId)) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `getStatus requires a numeric status ID or mastodon post URL, got: ${JSON.stringify(url || statusId)}`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.FIX_ARGS,
+        platform: 'mastodon',
+      });
+    }
+
+    const endpoint = this.buildUrl(`/api/v1/statuses/${cleanId}`, {}, instance);
+    const res = await this.get(endpoint, { accessToken: args.accessToken });
+    return res?.data || res;
+  }
+
+  /**
    * Get followers for an account.
    * Endpoint: GET /api/v1/accounts/:id/followers
    * @param {string | number} accountId

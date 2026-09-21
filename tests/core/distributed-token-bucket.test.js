@@ -181,6 +181,8 @@ describe('Story 32.2 — DistributedTokenBucket & Header Parsing', () => {
     it('delegates to DistributedTokenBucket when REDIS_TOKEN_BUCKET=1', async () => {
       process.env.REDIS_TOKEN_BUCKET = '1';
       const mockBucket = {
+        // Sync twin used by the synchronous canConsumerRequest path (Story 32 fix).
+        canConsumeSync: vi.fn().mockReturnValue(true),
         canConsume: vi.fn().mockResolvedValue(true),
         consume: vi.fn().mockResolvedValue({ allowed: true, remaining: 9, retryAfterMs: 0 }),
       };
@@ -188,10 +190,35 @@ describe('Story 32.2 — DistributedTokenBucket & Header Parsing', () => {
       const governor = new AdaptiveRateGovernor({ distributedBucket: mockBucket });
       const can = await governor.canConsumerRequest('chainlens');
       expect(can).toBe(true);
-      expect(mockBucket.canConsume).toHaveBeenCalledWith('consumer:chainlens', 1, expect.any(Object));
+      expect(mockBucket.canConsumeSync).toHaveBeenCalledWith('consumer:chainlens', 1, expect.any(Object));
 
       governor.recordConsumerRequest('chainlens');
       expect(mockBucket.consume).toHaveBeenCalledWith('consumer:chainlens', 1, expect.any(Object));
+    });
+
+    it('returns a real boolean (not a truthy Promise) — regression for the async/sync fail-open bug', async () => {
+      process.env.REDIS_TOKEN_BUCKET = '1';
+      // A bucket reporting DENY via canConsumeSync must produce `false`, not a
+      // truthy Promise that the sync caller would read as "allowed".
+      const mockBucket = {
+        canConsumeSync: vi.fn().mockReturnValue(false),
+        canConsume: vi.fn().mockResolvedValue(false),
+        consume: vi.fn().mockResolvedValue({ allowed: false, remaining: 0, retryAfterMs: 5000 }),
+      };
+      const governor = new AdaptiveRateGovernor({ distributedBucket: mockBucket });
+      const result = governor.canConsumerRequest('chainlens');
+      // The sync path must yield a boolean, never a Promise.
+      expect(typeof result).toBe('boolean');
+      expect(result).toBe(false);
+    });
+
+    it('canConsumeSync reflects a depleted in-memory bucket', async () => {
+      const b = new DistributedTokenBucket();
+      // Fill then drain a 5-token bucket; requested tokens are clamped to >=1.
+      await b.consume('sync-key', 5, { capacity: 5, refillRate: 0 });
+      expect(b.canConsumeSync('sync-key', 1, { capacity: 5, refillRate: 0 })).toBe(false);
+      // A fresh key (no bucket yet) always reports capacity.
+      expect(b.canConsumeSync('fresh-key', 1, { capacity: 5, refillRate: 0 })).toBe(true);
     });
   });
 });

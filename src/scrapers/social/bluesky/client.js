@@ -299,6 +299,57 @@ export class BlueskyClient extends AbstractApiClient {
   }
 
   /**
+   * Fetch a single post + its reply thread via app.bsky.feed.getPostThread.
+   * Accepts an at:// URI, a bsky.app post URL, or a bare post URI. Used by the
+   * `post_detail` action (Story 31.1 fix — x_download_media postUrl-only path).
+   *
+   * @param {Object} args
+   * @param {string} [args.uri] - at:// URI of the post
+   * @param {string} [args.url] - bsky.app post URL (converted to at:// URI)
+   * @param {string} [args.postUrl] - alias for url
+   * @param {number} [args.depth=0] - reply depth (0 = post only)
+   * @param {number} [args.parentHeight=0] - ancestor height
+   * @returns {Promise<Record<string, any>>} - { thread: { post, replies? } }
+   */
+  async getPostThread(args = {}) {
+    let uri = args.uri || args.postUri;
+    const url = args.url || args.postUrl || args.postId;
+
+    // Convert a public bsky.app URL to an at:// URI if needed:
+    //   https://bsky.app/profile/<handle>/post/<rkey> → at://<did>/app.bsky.feed.post/<rkey>
+    if (!uri && typeof url === 'string' && url) {
+      const m = url.match(/bsky\.app\/profile\/([^/]+)\/post\/([^/?#]+)/i);
+      if (m) {
+        const [, handleOrDid, rkey] = m;
+        const repo = handleOrDid.startsWith('did:')
+          ? handleOrDid
+          : await this.resolveHandle(handleOrDid).catch(() => handleOrDid);
+        uri = `at://${repo}/app.bsky.feed.post/${rkey}`;
+      } else if (url.startsWith('at://')) {
+        uri = url;
+      }
+    }
+
+    if (!uri || typeof uri !== 'string' || !uri.startsWith('at://')) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: `getPostThread requires an at:// URI or bsky.app post URL, got: ${JSON.stringify(url || uri)}`,
+        statusCode: 400,
+        suggestedAction: SuggestedActions.FIX_ARGS,
+        platform: 'bluesky',
+      });
+    }
+
+    const data = await this.xrpc('app.bsky.feed.getPostThread', {
+      uri,
+      depth: args.depth ?? 0,
+      parentHeight: args.parentHeight ?? 0,
+    });
+    return data;
+  }
+
+  /**
    * Execute an XRPC call through the resilient AbstractApiClient request pipeline.
    *
    * @param {string} nsid - AT Protocol method name (e.g. app.bsky.actor.getProfile)

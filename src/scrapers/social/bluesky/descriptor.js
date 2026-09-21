@@ -27,6 +27,10 @@ const BLUESKY_ACTION_MAP = {
   custom_feed: 'feed',
   post: 'post',
   publish: 'post',
+  // Story 31.1 fix: single-post read for x_download_media postUrl-only path
+  post_detail: 'post_detail',
+  postDetail: 'post_detail',
+  thread: 'post_detail',
   reply: 'reply',
   like: 'like',
   favorite: 'like',

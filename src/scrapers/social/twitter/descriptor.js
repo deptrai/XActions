@@ -19,6 +19,11 @@ const TWITTER_ACTION_MAP = {
   hashtag: 'hashtag',
   trending: 'trending',
   thread: 'thread',
+  // Story 31.1 fix: x_download_media postUrl-only path calls 'post_detail' — map to
+  // 'thread' which resolves the root tweet (+ replies) from a tweetId/URL.
+  post_detail: 'thread',
+  postDetail: 'thread',
+  tweet_detail: 'thread',
   likes: 'likes', likers: 'likes',
   bookmarks: 'bookmarks',
   export_bookmarks: 'export_bookmarks', exportBookmarks: 'export_bookmarks',

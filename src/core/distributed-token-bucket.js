@@ -155,6 +155,43 @@ export class DistributedTokenBucket {
     this.#redisClient = options.redis || null;
   }
 
+  /** @type {Promise<any> | null} */
+  #connecting = null;
+
+  /**
+   * Lazily connect to Redis from REDIS_URL / REDIS_HOST when REDIS_TOKEN_BUCKET=1
+   * and no client was injected (Story 32 fix — makes the flag actually engage a
+   * shared backend instead of staying on the in-memory fallback forever).
+   * Safe to call repeatedly; concurrent callers share one connect promise.
+   * @returns {Promise<any | null>}
+   */
+  async ensureClient() {
+    if (this.#redisClient) return this.#redisClient;
+    if (this.#connecting) return this.#connecting;
+    this.#connecting = (async () => {
+      try {
+        const { createClient } = await import('redis');
+        const url = process.env.REDIS_URL ||
+          (process.env.REDIS_HOST
+            ? `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}`
+            : 'redis://localhost:6379');
+        const client = createClient({ url });
+        client.on('error', (err) => {
+          console.warn('[DistributedTokenBucket] Redis client error:', (err instanceof Error ? err.message : String(err)));
+        });
+        await client.connect();
+        this.#redisClient = client;
+        return client;
+      } catch (err) {
+        console.warn('[DistributedTokenBucket] Failed to connect to Redis (using in-memory):', (err instanceof Error ? err.message : String(err)));
+        return null;
+      } finally {
+        this.#connecting = null;
+      }
+    })();
+    return this.#connecting;
+  }
+
   /**
    * Underlying Redis client instance if configured.
    * @returns {any}
@@ -188,6 +225,12 @@ export class DistributedTokenBucket {
     const requested = Math.max(1, Number(tokens) || 1);
     const ttlSeconds = Number(options.ttlSeconds) || 3600;
     const now = Date.now();
+
+    // Lazily connect to Redis when the distributed flag is on and no client was
+    // injected (Story 32 fix — engages the shared backend on first use).
+    if (!this.#redisClient && process.env.REDIS_TOKEN_BUCKET === '1') {
+      await this.ensureClient();
+    }
 
     // 1. Try Redis Lua script if available
     if (this.#redisClient && typeof this.#redisClient.eval === 'function') {
@@ -248,12 +291,31 @@ export class DistributedTokenBucket {
   /**
    * Check if tokens can be consumed without actually consuming them.
    *
+   * NOTE (Story 32 fix): this only inspects the in-memory bucket — it does not
+   * call Redis — so it is safe to expose a synchronous twin for callers that
+   * cannot await. `canConsumeSync` returns the same answer without a Promise.
+   *
    * @param {string} key
    * @param {number} [tokens=1]
    * @param {Object} [options={}]
    * @returns {Promise<boolean>}
    */
   async canConsume(key, tokens = 1, options = {}) {
+    return this.canConsumeSync(key, tokens, options);
+  }
+
+  /**
+   * Synchronous twin of {@link canConsume}. Reads the in-memory bucket only;
+   * a bucket that exists only in Redis (not yet synced via consume/syncFromHeaders)
+   * reports as having capacity. Story 32 fix — prevents the async/sync mismatch
+   * that made callers treat a Promise (always truthy) as "allowed" (fail-open).
+   *
+   * @param {string} key
+   * @param {number} [tokens=1]
+   * @param {Object} [options={}]
+   * @returns {boolean}
+   */
+  canConsumeSync(key, tokens = 1, options = {}) {
     const capacity = Number(options.capacity) || 60;
     const refillRate = Number(options.refillRate) || (capacity / 60);
     const requested = Math.max(1, Number(tokens) || 1);

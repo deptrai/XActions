@@ -35,6 +35,10 @@ const MASTODON_ACTION_MAP = {
   post: 'post',
   publish: 'post',
   toot_post: 'post',
+  // Story 31.1 fix: single-post read for x_download_media postUrl-only path
+  post_detail: 'post_detail',
+  postDetail: 'post_detail',
+  status: 'post_detail',
   reply: 'reply',
   like: 'like',
   favorite: 'like',

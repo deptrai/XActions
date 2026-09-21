@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: 09-21-2026 14:30
+last_updated: 09-21-2026 16:15
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -468,7 +468,7 @@ action_items:
       theo pattern commit 196de448, thêm header X-XActions-Timestamp, xác minh freshness
       khi verify — tránh replay attack trên captured deliveries"
     owner: "nich (dev)"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-29-retro-2026-09-21.md"
   - id: "epic-29-retro-item-26-thêm-enable_outbound_webhook_dispatcher"
     epic: 29
@@ -514,7 +514,7 @@ action_items:
       (map về thread/timeline tương đương) hoặc đổi extractMedia sang action đúng
       từng platform — để x_download_media hoạt động URL-only đủ 6 platform theo AC"
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-31-retro-2026-09-21.md"
   - id: "epic-31-retro-item-32-hiện-thực-envelope-xact_4001-platformerr"
     epic: 31
@@ -522,14 +522,14 @@ action_items:
       cho postUrl invalid trong extractMedia/local-tools theo I/O matrix frozen; bỏ
       catch trống để lỗi dispatch không bị nuốt thành rỗng"
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-31-retro-2026-09-21.md"
   - id: "epic-31-retro-item-33-bổ-sung-test-posturl-only-qua-scrape-dis"
     epic: 31
     action: "Bổ sung test: postUrl-only qua scrape dispatch (không inject post), invalid-URL
       trả XACT_4001 envelope, hành vi quality — chặn regression đường MCP thật"
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-31-retro-2026-09-21.md"
   - id: "epic-32-retro-item-34-sửa-async-sync-mismatch-tách-canconsumes"
     epic: 32
@@ -538,7 +538,7 @@ action_items:
       phỏng caller đồng bộ kiểu base-client khóa hồi quy. Chặn bật flag production
       tới khi xong."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-32-retro-2026-09-21.md"
   - id: "epic-32-retro-item-35-wiring-nối-globaladaptiverategovernor-vớ"
     epic: 32
@@ -546,7 +546,7 @@ action_items:
       + redis client (đọc REDIS_TOKEN_BUCKET/REDIS_URL lúc bootstrap); nếu chưa bật
       thì disable rõ (log warn khi flag set mà thiếu bucket)."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-32-retro-2026-09-21.md"
   - id: "epic-32-retro-item-36-đọc-lại-xact-panic-khi-governor-khởi-độn"
     epic: 32

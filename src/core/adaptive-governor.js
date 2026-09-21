@@ -7,6 +7,7 @@
 
 import { globalProxyPool } from '../proxy/proxy-pool.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
+import { globalDistributedTokenBucket } from './distributed-token-bucket.js';
 
 /** @typedef {import('./types.js').GovernorStatus} GovernorStatus */
 
@@ -213,11 +214,18 @@ export class AdaptiveRateGovernor {
 
     // Delegate to DistributedTokenBucket if REDIS_TOKEN_BUCKET=1 or bucket provided (Story 32.2)
     if (process.env.REDIS_TOKEN_BUCKET === '1' && this.#distributedBucket) {
-      // Sync check (canConsume)
-      return this.#distributedBucket.canConsume(`consumer:${id}`, 1, {
-        capacity: quota.burstLimit || quota.rpmLimit,
-        refillRate: quota.rpmLimit / 60,
-      });
+      // Story 32 fix: use the synchronous twin — canConsume() is async and a
+      // returned Promise is always truthy, which made this check fail-open.
+      if (typeof this.#distributedBucket.canConsumeSync === 'function') {
+        return this.#distributedBucket.canConsumeSync(`consumer:${id}`, 1, {
+          capacity: quota.burstLimit || quota.rpmLimit,
+          refillRate: quota.rpmLimit / 60,
+        });
+      }
+      // Defensive: a bucket without the sync twin must not fail-open — fall back
+      // to the in-memory sliding window rather than returning a truthy Promise.
+      const timestamps = this.#pruneConsumerWindow(id);
+      return timestamps.length < quota.rpmLimit;
     }
 
     const timestamps = this.#pruneConsumerWindow(id);
@@ -816,4 +824,10 @@ export class AdaptiveRateGovernor {
   }
 }
 
-export const globalAdaptiveRateGovernor = new AdaptiveRateGovernor({ proxyPool: globalProxyPool });
+// Story 32 fix: inject the shared DistributedTokenBucket so REDIS_TOKEN_BUCKET=1
+// actually engages distributed quota instead of silently no-op'ing. When the flag
+// is unset the bucket stays inert (in-memory only) — see canConsumerRequest.
+export const globalAdaptiveRateGovernor = new AdaptiveRateGovernor({
+  proxyPool: globalProxyPool,
+  distributedBucket: globalDistributedTokenBucket,
+});
