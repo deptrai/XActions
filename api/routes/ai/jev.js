@@ -111,4 +111,35 @@ router.post('/decide', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/ai/jev/lead-icp — Batch lead qualification via Jev (Story 42.7).
+ *
+ * Body: { profiles: [{username, bio, recentTweets[]}], icp?: string }
+ * Returns: { success, qualified: [...], stats: {total, qualified, avgScore, degraded}, usage }
+ */
+router.post('/lead-icp', async (req, res) => {
+  const { profiles, icp } = req.body || {};
+
+  if (!profiles || !Array.isArray(profiles) || profiles.length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: 'INVALID_ARGS',
+      message: 'Provide "profiles" — a non-empty array of {username, bio, recentTweets}.',
+    });
+  }
+
+  try {
+    const { scoreProfiles, DEFAULT_ICP } = await import('../../../src/leads/jevLeadScorer.js');
+    const brain = getBrain();
+    const { qualified, all, stats } = await scoreProfiles(profiles, icp || DEFAULT_ICP, { brain });
+    return res.json({ success: true, qualified, all, stats });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: 'JEV_LEAD_ICP_FAILED',
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
 export default router;
