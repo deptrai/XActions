@@ -66,6 +66,23 @@ describe('JevBrain', () => {
       expect(res.answers.action.choice).toBe('reply');
       expect(res.answers.isSpam.noul).toBe(0.05);
       expect(res.usage.input_tokens).toBe(120);
+
+      // HTTP contract verification
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.typesafe.ai/v1/systemone',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer test-jev-key-xyz',
+          }),
+        })
+      );
+      const reqBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(reqBody.model).toBe('jev-latest');
+      expect(reqBody.questions.relevance.type).toBe('score');
+      expect(reqBody.questions.action.type).toBe('choice');
+      expect(reqBody.questions.isSpam.type).toBe('noul');
     });
   });
 
