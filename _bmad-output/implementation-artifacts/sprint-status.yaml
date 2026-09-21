@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: 09-21-2026 03:08
+last_updated: 09-21-2026 14:30
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -160,7 +160,7 @@ development_status:
   24-2-browser-utility-features-as-crawler-actions: done
   24-3-adapter-layer-consolidation: done
   24-4-archive-or-remove-unused-scraper-modules: done
-  epic-24-retrospective: optional
+  epic-24-retrospective: done
 
   epic-25: done
   25-1-universal-scrape-dispatcher: done
@@ -175,7 +175,7 @@ development_status:
   epic-26: done
   26-1-pre-decommission-parity-rollback-preparation: done
   26-2-final-legacy-removal: done
-  epic-26-retrospective: optional
+  epic-26-retrospective: done
 
   epic-27: done
   27-1-fingerprintmanager-tls-ja4-spoofing-geo-consistent-profiles: done
@@ -183,43 +183,51 @@ development_status:
   27-3-challengesignaturedetector-automated-bot-detection-page-dete: done
   27-4-obscura-public-scraping-backend-watch-gate: done
   27-5-canvas-webgl-audio-fingerprint-spoofing-conditional: ready-for-dev
-  epic-27-retrospective: optional
+  epic-27-retrospective: done
 
   epic-28: done
   28-1-schemadriftguard-runtime-contract-validation-completeness-cl: done
   28-2-selectorcanary-periodic-dom-probe-drift-alert: done
   28-3-autoselectorfallback-assisted-selector-re-discovery: done
-  epic-28-retrospective: optional
+  epic-28-retrospective: done
 
   epic-29: done
   29-1-jetstream-sse-cdc-adapters-for-push-based-social-streams: done
   29-2-outbound-webhook-dispatcher-with-hmac-signing-retry: done
   29-3-stream-replay-missed-event-recovery: done
-  epic-29-retrospective: optional
+  epic-29-retrospective: done
 
   epic-30: done
   30-1-universalactiondispatcher-cross-platform-write-actions: done
   30-2-contenttransformer-thread-splitter-media-adapter-character-l: done
-  epic-30-retrospective: optional
+  epic-30-retrospective: done
 
   epic-31: done
   31-1-universalmediapipeline-audio-carousel-hls-on-all-platforms: done
-  epic-31-retrospective: optional
+  epic-31-retrospective: done
 
   epic-32: done
   32-1-ratebudgetdashboard-visual-quota-allocator-panic-stop: done
   32-2-distributedtokenbucket-redis-backed-quota-with-header-parsin: done
-  epic-32-retrospective: optional
+  epic-32-retrospective: done
 
   epic-33: done
   33-1-zalo-oa-public-content-crawler: done
   33-2-youtube-vn-channel-video-crawler: done
   33-3-zalo-personal-messaging-research-spike-conditional: ready-for-dev
   33-4-youtube-vn-advanced-data-conditional: ready-for-dev
-  epic-33-retrospective: optional
+  epic-33-retrospective: done
 
   epic-34: done
-  epic-34-retrospective: optional
+  34-1-benchmark-telemetry-schema-storage: done
+  34-2-production-telemetry-hooks: done
+  34-3-platform-validators-false-200: done
+  34-4-benchmark-scoring-engine: done
+  34-5-operator-scorecard-cli-dashboard: done
+  34-6-nowing-integration-health-flag: done
+  34-7-synthetic-canary-probe-scheduler: done
+  34-8-active-alerting-requalification-workflow: done
+  epic-34-retrospective: done
 
   epic-35: in-progress
   35-1-reddit-scraper-client-crawler-validator-tests: done
@@ -229,29 +237,28 @@ development_status:
   35-5-instagram-session-persistence-live-verify: ready-for-dev
   epic-35-retrospective: done
 
-  # --- Phase 7: Stream Unification & Frugal Scaling (Epics 36-40) ---
-  epic-38: done
-  38-1-crawler-lifecycle-cleanup-and-stream-unification: done
-  38-2-cloudevents-compliance-and-idempotent-publishing: done
-  epic-38-retrospective: optional
-
   epic-36: done
   36-1-mcp-tool-x-social-find-profiles: done
   36-2-osint-fault-isolation-and-circuit-breaker: done
-  epic-36-retrospective: optional
+  epic-36-retrospective: done
 
   epic-37: done
   37-1-static-http-first-routing-lightweight-targets: done
-  epic-37-retrospective: optional
+  epic-37-retrospective: done
 
-  epic-40: done
-  40-1-cost-aware-proxy-escalation-in-proxy-pool: done
-  epic-40-retrospective: done
+  epic-38: done
+  38-1-crawler-lifecycle-cleanup-and-stream-unification: done
+  38-2-cloudevents-compliance-and-idempotent-publishing: done
+  epic-38-retrospective: done
 
   epic-39: done
   39-1-selector-canary-expansion-heuristic-drift: done
   39-2-gitops-patch-assistant-cli: done
-  epic-39-retrospective: optional
+  epic-39-retrospective: done
+
+  epic-40: done
+  40-1-cost-aware-proxy-escalation-in-proxy-pool: done
+  epic-40-retrospective: done
 
   epic-41: in-progress
   41-1-github-gravatar-adapters: done
@@ -259,6 +266,17 @@ development_status:
   41-3-avatar-perceptual-hashing-entity-resolver: done
   epic-41-retrospective: done
 
+  epic-42: backlog
+  42-1-jevbrain-core-decision-plane-src-agents-jevbrain-js-rest-cli: backlog
+  42-2-agentic-adoption-cắm-jevbrain-vào-thoughtleaderagent-action: backlog
+  42-3-jev-verify-regression-guard-nâng-scripts-jev-verify-thành-ci: backlog
+  epic-42-retrospective: optional
+
+  epic-43: backlog
+  43-1-jev-workflow-conditions-condition-type-jev-trong-src-workflo: backlog
+  43-2-jev-write-path-gate-noul-score-choice-trước-mọi-write-conten: backlog
+  43-3-jev-inbox-triage-dm-notification-choice-intent-noul-toxic-tr: backlog
+  epic-43-retrospective: optional
 action_items:
   - id: "epic-39-rescope-gitops-healing-only"
     epic: 39
@@ -351,3 +369,363 @@ action_items:
     owner: "dev"
     status: done
     ref: "_bmad-output/implementation-artifacts/epic-20-retro-2026-09-21.md"
+  - id: "epic-24-retro-item-13-wire-story-24-2-ac-còn-thiếu-cli-xaction"
+    epic: 24
+    action: "Wire Story 24.2 AC còn thiếu: CLI 'xactions download video <tweetId>'
+      / 'xactions export bookmarks <username>' + tool MCP map tới export_bookmarks
+      + unroll_thread crawler actions (thay vì chỉ actions list)."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-24-retro-2026-09-21.md"
+  - id: "epic-24-retro-item-14-refactor-mcp-x_download_video-local-tool"
+    epic: 24
+    action: "Refactor MCP x_download_video (local-tools.js:637) + x_get_bookmarks
+      (server.js:532) delegate sang TwitterCrawler.download_video/export_bookmarks,
+      xoá bản regex-scrape trùng."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-24-retro-2026-09-21.md"
+  - id: "epic-24-retro-item-15-cập-nhật-readme-md-344-docs-stale-featur"
+    epic: 24
+    action: "Cập nhật README.md:344 + docs stale (FEATURE_INVENTORY.md:200-202, examples/bookmark-exporter.md:17,
+      thread-unroller.md:18, video-downloader.md:20, scraper-adapters.md:406-408,
+      architecture.md:242) trỏ vị trí mới/archive theo AC 24.4."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-24-retro-2026-09-21.md"
+  - id: "epic-24-retro-item-16-dọn-dead-fallback-names-crawlee-selenium"
+    epic: 24
+    action: "Dọn dead fallback names 'crawlee'/'selenium'/'cheerio' khỏi candidates
+      list adapters/index.js:114."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-24-retro-2026-09-21.md"
+  - id: "epic-26-retro-item-17-sửa-semantic-drift-src-client-index-js-s"
+    epic: 26
+    action: "Sửa semantic drift src/client/index.js stub: getLikedTweets(username)
+      gọi action 'likes' (likers-of-tweet, cần tweetId) thay vì tweets user đã like
+      — bổ sung action 'liked_tweets' backend hoặc throw explicit unsupported; getListTweets(listId)
+      map 'list_members' trả members thay list timeline — làm rõ unsupported hoặc
+      implement. Thêm test chặn regression cả 2."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-26-retro-2026-09-21.md"
+  - id: "epic-26-retro-item-18-push-tag-rollback-lên-origin-git-push-or"
+    epic: 26
+    action: "Push tag rollback lên origin: git push origin pre-decommission-2026-09-12
+      — checklist §6 yêu cầu 'đã tạo và push', hiện chỉ local."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-26-retro-2026-09-21.md"
+  - id: "epic-26-retro-item-19-tạo-story-artifact-story-26-2-stories-26"
+    epic: 26
+    action: "Tạo story artifact Story 26.2 (stories/26-2-final-legacy-removal.md)
+      hoặc ghi nhận chính thức sprint-status 26.2 chạy không-có-story-file, kèm record
+      accepted-deviation shadow-run 7 ngày → functional parity fallback."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-26-retro-2026-09-21.md"
+  - id: "epic-26-retro-item-20-sửa-git-author-config-git-config-user-na"
+    epic: 26
+    action: "Sửa git author config: git config user.name nirholas (hiện 'user.email')
+      để commit tương lai đúng attribution CLAUDE.md."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-26-retro-2026-09-21.md"
+  - id: "epic-28-retro-item-21-đồng-bộ-epics-md-stories-28-1-28-2-ac-te"
+    epic: 28
+    action: "Đồng bộ epics.md Stories 28.1/28.2 AC text với spec frozen (cap min(20,5×missingOptional),
+      complete=0 missingOptional, scheduler node-cron) — chấm dứt planning-artifact
+      drift cùng lớp Epic 20 key-drift."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-28-retro-2026-09-21.md"
+  - id: "epic-28-retro-item-22-chốt-quyết-định-prisma-persistence-cho-i"
+    epic: 28
+    action: "Chốt quyết định Prisma persistence cho item.dataQuality (column riêng
+      vs fold vào metadata) trong deferred-work.md PARTIALLY RESOLVED của spec-28-1."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-28-retro-2026-09-21.md"
+  - id: "epic-28-retro-item-23-wire-filtervaliditems-vào-githubcrawler"
+    epic: 28
+    action: "Wire filterValidItems vào GitHubCrawler + GravatarCrawler (Epic 41) để
+      mọi crawler qua contract validation thống nhất."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-28-retro-2026-09-21.md"
+  - id: "epic-28-retro-item-24-chạy-xactions-canary-probe-1-lần-trên-ta"
+    epic: 28
+    action: "Chạy 'xactions canary probe' 1 lần trên target thật (đặc biệt facebook.com/Meta)
+      xác nhận chuỗi selector còn sống khi unauthenticated; nếu login-wall chặn thay
+      target public khác (vd m.facebook.com) trong canary-targets.json."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-28-retro-2026-09-21.md"
+  - id: "epic-29-retro-item-25-ký-timestamp-vào-hmac-outbound-webhook-đ"
+    epic: 29
+    action: "Ký timestamp vào HMAC outbound webhook: đổi createSignature thành HMAC(<timestamp>.<body>)
+      theo pattern commit 196de448, thêm header X-XActions-Timestamp, xác minh freshness
+      khi verify — tránh replay attack trên captured deliveries"
+    owner: "nich (dev)"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-29-retro-2026-09-21.md"
+  - id: "epic-29-retro-item-26-thêm-enable_outbound_webhook_dispatcher"
+    epic: 29
+    action: "Thêm ENABLE_OUTBOUND_WEBHOOK_DISPATCHER=false + comment vào .env.example
+      (triage medium chưa đóng)"
+    owner: "nich (dev)"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-29-retro-2026-09-21.md"
+  - id: "epic-29-retro-item-27-cập-nhật-docs-streaming-md-và-docs-strea"
+    epic: 29
+    action: "Cập nhật docs/streaming.md và docs/streams.md: 6 stream types, adapters
+      push-based, outbound webhook API + signature scheme, replay endpoint + MCP x_stream_replay"
+    owner: "nich (docs)"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-29-retro-2026-09-21.md"
+  - id: "epic-29-retro-item-28-hiệu-chỉnh-epics-md-ac-29-1-host-jetstre"
+    epic: 29
+    action: "Hiệu chỉnh epics.md AC 29.1 (host Jetstream) và đánh dấu trạng thái 3
+      VG entries của spec-29-3 (webhook success path test, metadata filtering test,
+      multi-batch pagination) — applied hoặc chuyển deferred-work"
+    owner: "nich (PM/dev)"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-29-retro-2026-09-21.md"
+  - id: "epic-30-retro-item-29-thêm-disclosure-vào-description-của-x_pu"
+    epic: 30
+    action: "Thêm disclosure vào description của x_publish_all/x_like_all/x_follow_all
+      trong src/mcp/server.js: 'Threads live write chưa hỗ trợ (chỉ dryRun — cần Meta
+      Threads API token)'. Người gọi MCP hiện không biết Threads sẽ luôn lỗi live."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-30-retro-2026-09-21.md"
+  - id: "epic-30-retro-item-30-quyết-định-cli-surface-hoặc-implement-cờ"
+    epic: 30
+    action: "Quyết định CLI surface: hoặc implement cờ --sync-all cho lệnh post trong
+      src/cli/index.js, hoặc sửa wording user story trong epics.md từ 'post --sync-all'
+      thành MCP-only để spec khớp thực tế."
+    owner: "pm"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-30-retro-2026-09-21.md"
+  - id: "epic-31-retro-item-31-thêm-mapping-post_detail-vào-descriptor"
+    epic: 31
+    action: "Thêm mapping 'post_detail' vào descriptor twitter/bluesky/mastodon/facebook
+      (map về thread/timeline tương đương) hoặc đổi extractMedia sang action đúng
+      từng platform — để x_download_media hoạt động URL-only đủ 6 platform theo AC"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-31-retro-2026-09-21.md"
+  - id: "epic-31-retro-item-32-hiện-thực-envelope-xact_4001-platformerr"
+    epic: 31
+    action: "Hiện thực envelope XACT_4001 (PlatformError+SuggestedActions InvalidArgs)
+      cho postUrl invalid trong extractMedia/local-tools theo I/O matrix frozen; bỏ
+      catch trống để lỗi dispatch không bị nuốt thành rỗng"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-31-retro-2026-09-21.md"
+  - id: "epic-31-retro-item-33-bổ-sung-test-posturl-only-qua-scrape-dis"
+    epic: 31
+    action: "Bổ sung test: postUrl-only qua scrape dispatch (không inject post), invalid-URL
+      trả XACT_4001 envelope, hành vi quality — chặn regression đường MCP thật"
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-31-retro-2026-09-21.md"
+  - id: "epic-32-retro-item-34-sửa-async-sync-mismatch-tách-canconsumes"
+    epic: 32
+    action: "Sửa async/sync mismatch: tách canConsumeSync cho in-memory path hoặc
+      chuyển nhánh delegation canConsumerRequest sang check đồng bộ; thêm test mô
+      phỏng caller đồng bộ kiểu base-client khóa hồi quy. Chặn bật flag production
+      tới khi xong."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-32-retro-2026-09-21.md"
+  - id: "epic-32-retro-item-35-wiring-nối-globaladaptiverategovernor-vớ"
+    epic: 32
+    action: "Wiring: nối globalAdaptiveRateGovernor với globalDistributedTokenBucket
+      + redis client (đọc REDIS_TOKEN_BUCKET/REDIS_URL lúc bootstrap); nếu chưa bật
+      thì disable rõ (log warn khi flag set mà thiếu bucket)."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-32-retro-2026-09-21.md"
+  - id: "epic-32-retro-item-36-đọc-lại-xact-panic-khi-governor-khởi-độn"
+    epic: 32
+    action: "Đọc lại 'xact:panic:*' khi governor khởi động (và khi canConsumerRequest)
+      để khôi phục panic sau restart/đa instance; xử lý wildcard '{platform}:*' trong
+      isHibernating (prefix match) hoặc bỏ wildcard entry."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-32-retro-2026-09-21.md"
+  - id: "epic-32-retro-item-37-quyết-rõ-32-2-32-1-bổ-sung-delegation-ac"
+    epic: 32
+    action: "Quyết rõ 32.2/32.1: bổ sung delegation account-level (canAccountRequest/recordAccountRequest)
+      + cột Per-Account RPM dashboard, HOẶC ghi descope chính thức vào spec."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-32-retro-2026-09-21.md"
+  - id: "epic-32-retro-item-38-thay-nâng-test-multi-process-contention"
+    epic: 32
+    action: "Thay/nâng test 'multi-process contention' bằng test Redis thật (ioredis+testcontainer
+      hoặc redis-server local) 2+ process/concurrent eval xác nhận Lua atomic; giữ
+      mock cho fallback."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-32-retro-2026-09-21.md"
+  - id: "epic-33-retro-item-39-thêm-youtube_api_key-và-zalo_oa_access_t"
+    epic: 33
+    action: "Thêm YOUTUBE_API_KEY và ZALO_OA_ACCESS_TOKEN vào .env.example kèm chú
+      ý về quota (YouTube 10k units/ngày) — cả 2 crawler đọc env này nhưng file mẫu
+      không có"
+    owner: "dev (nirholas)"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-33-retro-2026-09-21.md"
+  - id: "epic-33-retro-item-40-quyết-định-chính-thức-số-phận-ac-html-fa"
+    epic: 33
+    action: "Quyết định chính thức số phận AC 'HTML fallback yt-dlp/invidious' của
+      story 33.2: hoặc mở follow-up task hiện thực, hoặc ghi descope có chữ ký PM
+      vào story file (hiện bị bỏ lặng khi nâng cấp story lên BDD)"
+    owner: "PM + dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-33-retro-2026-09-21.md"
+  - id: "epic-33-retro-item-41-bổ-sung-section-zalo-youtube-vào-docs-ap"
+    epic: 33
+    action: "Bổ sung section zalo/youtube vào docs/api-reference.md (hiện chỉ có trong
+      canonical-action-matrix)"
+    owner: "dev/docs"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-33-retro-2026-09-21.md"
+  - id: "epic-34-retro-item-42-backfill-8-story-keys-vào-sprint-status"
+    epic: 34
+    action: "Backfill 8 story keys vào sprint-status.yaml dưới epic-34, tất cả 'done':
+      34-1-benchmark-telemetry-schema-storage, 34-2-production-telemetry-hooks, 34-3-platform-validators-false-200,
+      34-4-benchmark-scoring-engine, 34-5-operator-scorecard-cli-dashboard, 34-6-nowing-integration-health-flag,
+      34-7-synthetic-canary-probe-scheduler, 34-8-active-alerting-requalification-workflow
+      (dùng tên file, không hậu tố -stream-events ở 34-6)."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-34-retro-2026-09-21.md"
+  - id: "epic-34-retro-item-43-sửa-root-cause-convert-bảng-story-của-ep"
+    epic: 34
+    action: "Sửa root cause: convert bảng '| Story |' của Epic 34 trong epics.md sang
+      '### Story' headings parser-compatible (như fix Epic 35 tại ee7073c5) để regenerate
+      sau không xóa keys 34-* nữa."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-34-retro-2026-09-21.md"
+  - id: "epic-34-retro-item-44-đồng-bộ-frontmatter-3-story-files-drift"
+    epic: 34
+    action: "Đồng bộ frontmatter 3 story files drift: 34-3 (review→done), 34-4 và
+      34-5 (in-progress→done)."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-34-retro-2026-09-21.md"
+  - id: "epic-34-retro-item-45-track-5-commits-hardening-hậu-epic-e2790"
+    epic: 34
+    action: "Track 5 commits hardening hậu-epic (e2790fea, fbda88e1, 4f382f3f, 41e96224,
+      fc038311) vào ghi chú/debt item hoặc backlog Epic 34."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-34-retro-2026-09-21.md"
+  - id: "epic-36-retro-item-46-thêm-authorization-header-bearer-vào-fet"
+    epic: 36
+    action: "Thêm Authorization header (Bearer) vào fetch trong dashboard/osint.html
+      cho /find-profiles + /platforms — hiện luôn 401 vì route authenticateToken;
+      xử lý 401 hiển thị prompt đăng nhập."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-36-retro-2026-09-21.md"
+  - id: "epic-36-retro-item-47-mount-heavylimiter-10-req-15min-cho-api"
+    epic: 36
+    action: "Mount heavyLimiter (10 req/15min) cho /api/osint trong api/server.js
+      — fan-out OSINT tốn resource tương đương /api/graph,/api/crm; cân nhắc tier
+      gating (pro/enterprise)."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-36-retro-2026-09-21.md"
+  - id: "epic-36-retro-item-48-đồng-bộ-prefix-class-trong-src-utils-vn"
+    epic: 36
+    action: "Đồng bộ prefix class trong src/utils/vn-phone.js: VN_PHONE_BROAD_RE đổi
+      5[689]→5[25689] để parseVnPhone nhận 052/059 như normalizeVnPhone; thêm test
+      052 qua parseVnPhone."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-36-retro-2026-09-21.md"
+  - id: "epic-37-retro-item-49-thêm-trường-requiresbrowser-false-defaul"
+    epic: 37
+    action: "Thêm trường requiresBrowser=false (default) vào AbstractApiClient (base-client.js,
+      lưu từ options.requiresBrowser??false trong constructor) — HTTP client HTTP-first
+      mặc định; Puppeteer crawler client override true. Sửa JSDoc @param. Sau đó engineUsed
+      cho MaSoThue/Batdongsan/Chotot báo 'http' đúng."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-37-retro-2026-09-21.md"
+  - id: "epic-37-retro-item-50-bổ-sung-test-engine-metadata-test-js-dùn"
+    epic: 37
+    action: "Bổ sung test engine-metadata.test.js dùng AbstractApiClient subclass
+      THẬT không gán tay requiresBrowser (vd MaSoThueClient) assert engineUsed==='http'
+      — khóa contract chống tái phát."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-37-retro-2026-09-21.md"
+  - id: "epic-37-retro-item-51-sửa-engineused-guard-fail-safe-nếu-clien"
+    epic: 37
+    action: "Sửa engineUsed guard fail-safe: nếu client là AbstractApiClient (instanceof)
+      → 'http', ngược lại 'browser', thay vì so sánh flag có thể undefined — phòng
+      thủ khi field chưa thêm."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-37-retro-2026-09-21.md"
+  - id: "epic-38-retro-item-52-migrate-persistposts-và-các-persist-meth"
+    epic: 38
+    action: "Migrate #persistPosts (và các persist method tương tự) của YouTubeVNCrawler
+      và ZaloCrawler sang this.emitStreamBatch(valid, { targetType, targetKey }) thay
+      cho vòng lặp this.publisher.publish trực tiếp, khép kín split-brain theo đúng
+      prose scope 'xoá bỏ TẤT CẢ publisher.publish trong crawler con' của Epic 38
+      và AC decommission của Story 20.2."
+    owner: "bmad-dev (follow-up patch gắn nhãn Epic 38/Story 38.1 fix-now)"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-38-retro-2026-09-21.md"
+  - id: "epic-38-retro-item-53-khôi-phục-__streamcursor-hoặc-trường-mới"
+    epic: 38
+    action: "Khôi phục __streamCursor (hoặc trường mới streamCursor) từ lastEventId
+      của lần publish thành công cuối trong emitStreamBatch để src/mcp/server.js:4166
+      trả cursor thật; nếu quyết định bỏ contract này thì xóa dòng đọc cursor và cập
+      nhật sprint-status ghi chú decision cho 20-2."
+    owner: "bmad-dev (cursor) + bmad-sm (cập nhật 20-2 status note)"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-38-retro-2026-09-21.md"
+  - id: "epic-38-retro-item-54-định-đoạt-ac-stream_delivery-ok-failed-c"
+    epic: 38
+    action: "Định đoạt AC stream_delivery:'ok'|'failed' của Story 20.2: hoặc implement
+      flag vào envelope x_scrape, hoặc đánh dấu AC bị superseded bởi Epic 38 (CloudEvents
+      + idempotencyKey thay thế) trong spec 20.2 để sprint-status 'done' không còn
+      drift."
+    owner: "bmad-pm (decision) + bmad-sm (spec/status reconciliation)"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-38-retro-2026-09-21.md"
+  - id: "epic-39-retro-item-55-plumb-governor-platformdrift-vào-canary"
+    epic: 39
+    action: "Plumb governor platformDrift vào `canary heal` mặc định: khi không truyền
+      --platform/--target, chỉ heal targets đang drift (đọc getStatus().platformDrift)
+      thay vì toàn bộ config targets — tránh launch browser probe hàng loạt lên các
+      trang chưa drift; hoặc thêm --all flag yêu cầu xác nhận rõ ràng khi heal toàn
+      config."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-39-retro-2026-09-21.md"
+  - id: "epic-39-retro-item-56-thêm-dirty-worktree-guard-vào-createdraf"
+    epic: 39
+    action: "Thêm dirty-worktree guard vào #createDraftPr: chạy `git status --porcelain`
+      trước `git checkout -b`, abort với hướng dẫn dùng --output nếu working tree
+      không sạch — tránh cuốn uncommitted changes vào heal branch."
+    owner: "dev"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-39-retro-2026-09-21.md"
+  - id: "epic-39-retro-item-57-giải-quyết-mâu-thuẫn-expectedshape-cập-n"
+    epic: 39
+    action: "Giải quyết mâu thuẫn expectedShape: cập nhật spec-39-1-2 §4 thành 'mandatory'
+      (giữ nguyên implementation, an toàn hơn) HOẶC implement fallback element-exists
+      per spec. Chọn 1, không để hai tài liệu nói khác nhau."
+    owner: "pm"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-39-retro-2026-09-21.md"

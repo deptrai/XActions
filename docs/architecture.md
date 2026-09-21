@@ -183,6 +183,36 @@ SelectorCanary (drift detection, successRate < 0.8 for 2 runs → alert)
 - Multi-consumer quota gate (AD-20) protecting shared resources from AI agent runaway loops.
 - Exposes structured resources (`xactions://platforms`, `xactions://actions`, `xactions://system/status`).
 
+### 2.8. Agentic Decision Plane — Jev (`src/agents/jevBrain.js`, Epic 42)
+
+The agentic subsystems (`src/agents/`, `src/algorithmBuilder.js`, `src/personaEngine.js`, `xspace-agents`, `python/xeepy/ai/`) currently make every judgment through generative LLMs (`LLMBrain`, `callLLM`) or bare heuristics (`Math.random()`, magic-number thresholds like `score>60`). This conflates two distinct concerns:
+
+- **Generation** (prose: replies, tweets, threads) — stays on generative LLMs.
+- **Decision** (judgment: relevant? act? safe? spam?) — moved to a dedicated typed-decision plane powered by **TypeSafe Jev**, a *System One* model that returns `{choice|score|noul, probabilities, confidence}` instead of generated text.
+
+```
+ tweet / DM / notif / follower / transcript  (text-only state)
+        |
+        v
+  JevBrain.systemOne({ state, questions })
+        |   { choice|score|noul, probabilities, confidence }
+        v
+  Confidence Gate   (per-action, user-tunable thresholds)
+        |   conf >= hi -> act | mid -> queue review | lo -> skip
+        v
+  needs prose? --yes--> LLMBrain (mid/smart) --> JevBrain safety Noul --> execute
+        |no
+        v
+     execute / log
+```
+
+- **Boundary rule:** Jev evaluates *text state only* (no media/avatar/rate-limit signal) and answers *judgment questions* — it never generates prose and never sits in deterministic critical-path logic (see §5 invariant 4).
+- **Volume-reducer effect:** gating on calibrated confidence cuts low-value actions, yielding fewer bot-like patterns and lower X flag exposure (the dominant failure mode is behavioral/tempo flagging, not content quality).
+- **Primitives used:** `Choice` -> action router (ignore/like/bookmark/reply/quote/follow); `Score` -> `scoreRelevance`, spam/quality scoring, `xspace DecisionEngine`; `Noul` -> `checkPersonaConsistency`, pre-write safety gate, `replyWorthy`. One `systemOne` call can mix all three against one `state`; questions evaluate in parallel at near-constant latency.
+- **Verified (40-item corpus, `scripts/jev-verify/`):** relevance 85%, spam 98%, vi 92% / mixed 100% / en 79%; ~$0.024/1000 tweets, ~300ms/call. `action`(Choice) proved more reliable than `relevance`(Score) — the router leads, score assists.
+- **Fallback:** `LLMBrain` remains the fallback decision path when `TYPESAFE_API_KEY` is unset or Jev errors — the plane degrades, it never hard-fails.
+- **Cost model:** ~$42/B input tokens; `DistributedTokenBucket` can meter `jev:*` keys alongside the proxy budget (AD-42) if spend governance is needed.
+
 ---
 
 ## 3. Technology Stack Matrix
@@ -196,7 +226,8 @@ SelectorCanary (drift detection, successRate < 0.8 for 2 runs → alert)
 | **Database** | PostgreSQL + Prisma ORM | Durable storage for accounts, sessions, jobs, posts |
 | **Job Queue & Cache** | Redis + Bull MQ + Redis Streams | Distributed token buckets, pub/sub, message queuing |
 | **Realtime** | Socket.IO | Web dashboard real-time metrics and event streaming |
-| **AI Integration** | OpenRouter API / Anthropic / OpenAI | Persona generation, voice analysis, tweet rewriting |
+| **AI Integration** | OpenRouter API / Anthropic / OpenAI | Persona generation, voice analysis, tweet rewriting (prose) |
+| **Decision Engine** | TypeSafe **Jev** (`/v1/systemone`) | Typed decisions + calibrated confidence: relevance, action routing, spam, safety (Epic 42) |
 | **Audio/Voice Agents**| `@deepgram/sdk`, ElevenLabs, Groq | Real-time X Spaces AI voice agents (`xspace-agents`) |
 | **Testing** | Vitest 4.x | Fast unit, integration, and concurrency testing |
 
@@ -300,6 +331,9 @@ XActions/
    - Every write action must support `dryRun: true`, producing synthetic identifiers and realistic previews without touching live network state or mutating external databases.
 4. **No LLM in Critical Path Logic**:
    - Thread splitting, character truncation, and rate calculation must be 100% deterministic algorithms (regex/tokens), never dependent on external AI latency or non-determinism.
+   - **Jev corollary:** decision questions (relevance/action/safety) may consult the Jev plane, but the *execution* of a chosen action and all rate/timing math remain deterministic. Jev is advisory to the control flow, never a blocking dependency of it.
+6. **Jev Plane Isolation (AD-48)**:
+   - All Jev calls route through `src/agents/jevBrain.js`. No module calls `api.typesafe.ai` directly. On `TYPESAFE_API_KEY` absence or error, the plane degrades to `LLMBrain` judgment — never hard-fails. Confidence thresholds are configurable per action, never hardcoded.
 5. **No Secret Leaks**:
    - Webhook secrets, session cookies (`c_user`, `auth_token`), and passwords must be strictly redacted in API outputs and logging (`redactSecret()`).
 
@@ -376,4 +410,5 @@ Following our full audit of the repository, the following technical debt items a
 - **AD-44 (GitOps Selector Healing — No Runtime Injection):** Selector drift healing follows a strict GitOps pipeline: `SelectorCanary` detects drift → `AutoSelectorFallback.investigate()` generates ranked candidates → `SelectorSandbox` validates candidates against `expectedShape` → `CanaryHealer` produces a `unified-diff` for `canary-targets.json` → GitHub Draft PR is created for human review. Runtime hot-patching of selectors into Redis or in-memory config is strictly rejected. The `xactions canary heal` CLI orchestrates this flow manually; auto-heal on detection is prohibited.
 - **AD-45 (In-Memory Identity Resolution — Epic 41, rescopes Option D):** `x_social_find_profiles` may compute `identityClusters[]` in-memory via `EntityResolver` (Jaro-Winkler similarity + additive confidence scoring over 4 signals: exact-username +40, name-similarity>0.85 +30, avatar-match +30, cross-link-in-bio +20, merged by union-find at threshold ≥40). This refines the earlier "no entity resolution" reading of AD-40: the prohibition is on **persistence** (`PersonEntity`/`GoldenContact` tables, stored PII), not on stateless per-request clustering. Zero-auth identity registries (`github` → username, `gravatar` → email) are registered in `PROFILE_ACTION_MAP`; GitHub's 60 req/h (5000 with `GITHUB_TOKEN`) budget is enforced via `DistributedTokenBucket`. Out of scope (Mr.Holmes domain): dorking, breach/leak checks, BFS recursive profiling, Maigret-style mass scans.
 - **AD-46 (Avatar Perceptual Hashing — Story 41.3, Epic 41):** `EntityResolver`'s `avatar_match` signal is upgraded from URL-string-equality to **perceptual hashing** (`src/osint/phash.js`, pure JS, zero-dep): dHash/aHash over decoded RGBA + Hamming distance on a 64-bit hash, threshold ≤ 10. This closes the CDN-rotation gap where the same avatar served from `fbcdn.net` vs `cdninstagram.com` vs `avatars.githubusercontent.com` produces different URLs. URL-exact match remains the fast-path; pHash fetch+decode only runs on URL miss, is async, and respects Option D — no hash or PII is persisted (in-memory per-request).
+- **AD-48 (Agentic Decision Plane — Jev, Epic 42):** Typed-decision model `jev-latest` is introduced as a dedicated plane for *judgment* (relevance, action routing, spam/safety), distinct from generative *content* LLMs. Contract: `POST /v1/systemone { state: string|object|array, questions: {id: Choice|Score|Noul} }` -> `{choice|score|noul, probabilities, confidence}`. Constraints: text-only state; English-primary (verified strong on vi/mixed corpus); Noul carries no `confidence` field. Routing: `jevBrain.js` sole gateway; confidence-gated action; `LLMBrain` fallback. Verified corpus: `scripts/jev-verify/`.
 - **AD-47 (GraphQL Replay Engine — Story 13.12, Epic 13, conditional):** When activated, captured Facebook `doc_id` + tokens (`fb_dtsg`, `lsd`, `__dyn`, `__csr`) are replayed via the HTTP client with a replay cache (`redis`/`sqlite`) and a DOM/hydration fallback on doc_id rotation. Gated on ≥80% doc_id stability over 30 days of production-like traffic.

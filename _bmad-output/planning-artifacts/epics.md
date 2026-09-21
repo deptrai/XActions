@@ -2056,16 +2056,48 @@ Nowing cần **Health Score (0-100)** và **Tier (A/B/C)** cho mỗi scraper đ�
 
 ## Stories
 
-| Story | Title | Phase | Estimate | File |
-|-------|-------|-------|----------|------|
-| 34.1 | Benchmark Telemetry Schema & Storage | MVP | 1 sprint | [stories/34-1-benchmark-telemetry-schema-storage.md](../implementation-artifacts/stories/34-1-benchmark-telemetry-schema-storage.md) |
-| 34.2 | Production Telemetry Hooks in AbstractCrawler | MVP | 1 sprint | [stories/34-2-production-telemetry-hooks.md](../implementation-artifacts/stories/34-2-production-telemetry-hooks.md) |
-| 34.3 | Platform-Specific Validators & False-200 Detection | MVP | 1 sprint | [stories/34-3-platform-validators-false-200.md](../implementation-artifacts/stories/34-3-platform-validators-false-200.md) |
-| 34.4 | Benchmark Scoring Engine | MVP | 1 sprint | [stories/34-4-benchmark-scoring-engine.md](../implementation-artifacts/stories/34-4-benchmark-scoring-engine.md) |
-| 34.5 | Operator Scorecard CLI & Dashboard | MVP | 1 sprint | [stories/34-5-operator-scorecard-cli-dashboard.md](../implementation-artifacts/stories/34-5-operator-scorecard-cli-dashboard.md) |
-| 34.6 | Nowing Integration Health Flag & Stream Events | MVP | 0.5 sprint | [stories/34-6-nowing-integration-health-flag.md](../implementation-artifacts/stories/34-6-nowing-integration-health-flag.md) |
-| 34.7 | Synthetic Canary Probe Scheduler | Hardening | 0.5 sprint | [stories/34-7-synthetic-canary-probe-scheduler.md](../implementation-artifacts/stories/34-7-synthetic-canary-probe-scheduler.md) |
-| 34.8 | Active Alerting & Re-qualification Workflow | Hardening | 0.5 sprint | [stories/34-8-active-alerting-requalification-workflow.md](../implementation-artifacts/stories/34-8-active-alerting-requalification-workflow.md) |
+## Stories
+
+### Story 34.1: Benchmark Telemetry Schema & Storage
+
+- Phase: MVP | Estimate: 1 sprint
+- File: stories/34-1-benchmark-telemetry-schema-storage.md
+
+### Story 34.2: Production Telemetry Hooks
+
+- Phase: MVP | Estimate: 1 sprint
+- File: stories/34-2-production-telemetry-hooks.md
+
+### Story 34.3: Platform Validators False-200
+
+- Phase: MVP | Estimate: 1 sprint
+- File: stories/34-3-platform-validators-false-200.md
+
+### Story 34.4: Benchmark Scoring Engine
+
+- Phase: MVP | Estimate: 1 sprint
+- File: stories/34-4-benchmark-scoring-engine.md
+
+### Story 34.5: Operator Scorecard CLI & Dashboard
+
+- Phase: MVP | Estimate: 1 sprint
+- File: stories/34-5-operator-scorecard-cli-dashboard.md
+
+### Story 34.6: Nowing Integration Health Flag
+
+- Phase: MVP | Estimate: 0.5 sprint
+- File: stories/34-6-nowing-integration-health-flag.md
+
+### Story 34.7: Synthetic Canary Probe Scheduler
+
+- Phase: Hardening | Estimate: 0.5 sprint
+- File: stories/34-7-synthetic-canary-probe-scheduler.md
+
+### Story 34.8: Active Alerting Requalification Workflow
+
+- Phase: Hardening | Estimate: 0.5 sprint
+- File: stories/34-8-active-alerting-requalification-workflow.md
+
 
 **Tổng:** 8 stories, ~5 sprints
 
@@ -2338,3 +2370,60 @@ Live verification của `x_social_find_profiles` (Epic 36) với query thực t�
 ### Story 41.1: github-gravatar-adapters
 ### Story 41.2: entity-resolver-identity-clusters
 ### Story 41.3: avatar-perceptual-hashing-entity-resolver
+
+---
+
+## Epic 42: Agentic Decision Plane — Jev Typed-Decision Integration
+
+## Business Context
+Mọi quyết định "có nên like/reply/follow không" trong XActions hiện đi qua generative LLM (`LLMBrain`, `callLLM`) hoặc heuristic thô (`Math.random()`, ngưỡng cứng `score>60/>80`). Điều này gây 3 vấn đề: (1) **tốn chi phí** — trả tiền token sinh text chỉ để `parseInt` vứt đi; (2) **không tin cậy** — `JSON.parse`/`regex` parse rác, `catch → return default`; (3) **không tự chủ được** — không có confidence calibrated để biết "khi nào không chắc" → escalate, buộc phải giám sát. Epic này đưa **TypeSafe Jev** (System One model) vào làm **Decision Plane** riêng (xem `docs/architecture.md` §2.8, AD-48): Jev trả typed verdict `{choice|score|noul, probabilities, confidence}`, LLM chỉ giữ vai trò sinh prose. Verified trên corpus 40 tweet (`scripts/jev-verify/`): relevance 85%, spam 98%, vi 92%/mixed 100%/en 79%, ~$0.024/1000 tweet.
+
+## Scope
+**Trong scope:**
+- `src/agents/jevBrain.js` — module gateway duy nhất tới `POST https://api.typesafe.ai/v1/systemone` (REST `fetch`, reuse retry/rate-limit shell của `LLMBrain`; né `@typesafe-ai/sdk` dep). API: `decide(state, questions)` → typed answers + confidence.
+- **Confidence gate** — per-action, user-tunable thresholds (không hardcode): `conf ≥ hi → act · mid → queue-review · lo → skip`.
+- **LLM fallback** — khi `TYPESAFE_API_KEY` vắng hoặc Jev lỗi → degrade sang `LLMBrain` judgment, không hard-fail (invariant §5.6).
+- Adopt vào `thoughtLeaderAgent` (action router thay `>60/>80/random`), `checkPersonaConsistency` (Noul), safety `Noul` trước mỗi write, `xspace-agents DecisionEngine` (Choice), `xeepy` batch (spam/targeting Score/Choice).
+- Verify harness `scripts/jev-verify/` chạy được như CI regression trên corpus.
+
+**Ngoài scope (rejected):**
+- Jev sinh prose/reply/post (Jev không generate text — đó là `LLMBrain`).
+- Jev đọc media/avatar/rate-limit (state text-only; không chữa trực tiếp X-flag vì hành vi).
+- Thay `llmBrain` hoàn toàn — Jev là decision plane *song song*, không phải provider thay thế.
+- Hardcode threshold — mọi ngưỡng phải config được (persona/env/config).
+
+## Stories
+### Story 42.1: jevBrain-core-decision-plane — `src/agents/jevBrain.js` (REST client `systemOne`, primitives Choice/Score/Noul, confidence gate per-action, `LLMBrain` fallback)
+  - AC: sole gateway — mọi Jev call qua `jevBrain`; không module nào gọi `api.typesafe.ai` trực tiếp.
+  - AC: degrade-trigger rõ — `TYPESAFE_API_KEY` vắng | HTTP 5xx | timeout >5s | HTTP 429 → fallback `LLMBrain` judgment (không hard-fail).
+  - AC: cost governance — meter `jev:*` qua `DistributedTokenBucket` + `JEV_DAILY_BUDGET_USD` ceiling (mirror AD-42 proxy budget); `BUDGET_CEILING_REACHED` → degrade, không throw.
+  - AC: confidence threshold per-action load từ config/env — không hardcode.
+### Story 42.2: agentic-adoption — cắm `jevBrain` vào `thoughtLeaderAgent` action router + `algorithmBuilder`/`personaEngine` decisions + `checkPersonaConsistency` + safety `Noul` trước write + `xspace DecisionEngine` (Choice) + `xeepy` spam/targeting batch
+  - AC: `xspace DecisionEngine` — Jev chạy **non-blocking**, song song với rule-engine; nếu Jev >500ms hoặc lỗi → dùng keyword/turn rule hiện có (voice loop không được khựng).
+  - AC: `thoughtLeaderAgent` — thay `score>60/>80`/`Math.random()<0.4` bằng `jevBrain` Choice + per-action confidence; mỗi action có threshold riêng.
+  - AC: safety `Noul` chạy trước MỌI write (reply/post/DM) — `safeToSend < threshold` → skip + log.
+### Story 42.3: jev-verify-regression-guard — nâng `scripts/jev-verify/` thành CI regression (corpus ≥50, accuracy floor vi≥85%/spam≥95%, drift alert khi accuracy tụt dưới ngưỡng)
+
+---
+
+## Epic 43: Jev Decision Surface — Semantic Conditions & Write-Path Gate
+
+## Business Context
+Epic 42 đặt nền `jevBrain` (Decision Plane). Epic 43 mở rộng bề mặt Jev sang 4 điểm quyết định *trước khi hành động* còn đang dùng rule/keyword/lexicon thô — vì chúng cùng một mục tiêu: **quyết định bằng semantics, giảm action ngu, giảm X-flag (volume reducer)** và tăng chất lượng engage. Tất cả đi qua `jevBrain` (invariant §5.6 — không module nào gọi `api.typesafe.ai` trực tiếp), threshold confidence per-action config được, `LLMBrain` fallback.
+
+## Scope
+**Trong scope:**
+- **`workflows/conditions.js`**: thêm condition type `jev` — `evaluateCondition` chấp nhận `{ jev: { question, state, type: 'noul'|'choice'|'score', threshold } }` gọi `jevBrain.decide`, cho workflow branch trên *semantics* thay vì chỉ field-value. Giữ deterministic conditions cũ nguyên vẹn (invariant §4).
+- **DM / notification triage**: `api/routes/ai/messages.js`, `notifications.js`, `src/advancedDM.js` — `Choice` intent (spam/lead/support/friend/ignore) + `Noul` toxic; route reply/ignore/escalate theo confidence *(depends on 42.1)*.
+- **Moderation / toxicity**: `api/routes/ai/moderation.js`, `xspace examples/plugins/moderation.ts:isBlocked`, `xeepy sentiment_analyzer._calculate_toxicity` — thay keyword/lexicon bằng `Noul`/`Score` có confidence.
+- **Content pre-flight**: `src/ai/contentOptimizer.js:predictPerformance`, `api/routes/ai/optimizer.js`, `viral.js` — `Score` (virality/clarity/on-brand) + `Noul` (safe-to-post) trước khi tốn write slot.
+
+**Ngoài scope (rejected):**
+- Deterministic gates: `benchmark/scoring-engine.js` knock-out gates, `auto-selector-fallback` ranking, `EntityResolver.scorePair`, `rankTopTweets`, `selectBestNetwork`, `alerts._checkSentimentThreshold`, scheduler, `antiDetection` timing — rule/numeric, cấm AI trong critical path (§4).
+- A2A routing (`orchestrator`/`skillRegistry`), CRM/sentiment tagging, `xspace detectSentiment` — Tier 2, để backlog khi có nhu cầu thật.
+- Jev sinh prose, đọc media/avatar, hay chống X-flag trực tiếp — như Epic 42.
+
+## Stories
+### Story 43.1: jev-workflow-conditions — condition type `jev` trong `src/workflows/conditions.js` + `engine.js`, branch on `jevBrain.decide`, giữ deterministic conditions *(depends on 42.1)*
+### Story 43.2: jev-write-path-gate — `Noul`/`Score`/`Choice` trước mọi write: content-preflight (`contentOptimizer`/`optimizer`/`viral`) + moderation (`moderation.js`, `xspace isBlocked`, `xeepy _calculate_toxicity`) *(depends on 42.1)*
+### Story 43.3: jev-inbox-triage — DM/notification `Choice` intent + `Noul` toxic trong `messages.js`/`notifications.js`/`advancedDM.js`, route reply/ignore/escalate theo confidence
