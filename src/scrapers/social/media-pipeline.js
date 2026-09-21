@@ -56,6 +56,9 @@ export function detectPlatformFromUrl(url) {
   if (lower.includes('facebook.com') || lower.includes('fb.watch')) return 'facebook';
   if (lower.includes('tiktok.com')) return 'tiktok';
   if (lower.includes('mastodon') || lower.includes('mstdn') || lower.includes('fosstodon')) return 'mastodon';
+  // Any /<@user>/<numeric-id> permalink on a non-listed host is almost certainly
+  // an ActivityPub/Mastodon-family post (covers instances like mountains.social).
+  if (/\/@[^/]+\/\d+/.test(lower)) return 'mastodon';
   return 'twitter';
 }
 
@@ -401,7 +404,9 @@ export class UniversalMediaPipeline {
       try {
         const { scrape } = await import('../index.js');
         const scraped = await scrape(platform, action, { url: postUrl, postUrl, postId: postUrl, tweetId: postUrl });
-        payload = scraped?.post || scraped?.rootTweet || scraped?.posts?.[0] || scraped || {};
+        // Prefer the raw node (carries `embed`/`media_attachments`) over the
+        // normalized PostItem — the extractor reads platform-native media fields.
+        payload = scraped?.raw || scraped?.post || scraped?.rootTweet || scraped?.posts?.[0] || scraped || {};
       } catch (err) {
         // Re-throw as XACT_4001 with the underlying reason preserved — never
         // silently fall back to an empty payload (was `catch {}`).

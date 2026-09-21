@@ -89,10 +89,10 @@ export default {
     let username = options.username || options.handle || options.actor || options.target;
     let instance = options.instance || options.baseUrl || options.service;
 
-    // Only resolve a Mastodon URL for actions that expect an account target.
-    if (options.url && ['profile', 'followers', 'following', 'posts'].includes(mappedAction)) {
+    // Extract instance from URL for both account targets and post permalinks.
+    if (options.url && ['profile', 'followers', 'following', 'posts', 'post_detail'].includes(mappedAction)) {
       const resolved = resolveMastodonTarget(options.url, instance || undefined);
-      if (!username) {
+      if (!username && mappedAction !== 'post_detail') {
         username = resolved.username;
       }
       if (!instance) {

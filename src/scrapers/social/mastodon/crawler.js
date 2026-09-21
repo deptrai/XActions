@@ -472,7 +472,8 @@ export class MastodonCrawler extends AbstractCrawler {
     if (this.store && validPosts.length > 0) {
       await this.store.storeBatch(validPosts).catch(() => {});
     }
-    return { post, posts };
+    // Expose raw status so media extraction can read media_attachments directly.
+    return { post, posts, raw: status || null };
   }
 
   /**

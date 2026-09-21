@@ -1959,6 +1959,7 @@ export async function x_download_media(args = {}) {
     return {
       success: false,
       error: 'postUrl or post object is required for x_download_media',
+      code: 'XACT_4001',
       media: [],
       count: 0,
     };

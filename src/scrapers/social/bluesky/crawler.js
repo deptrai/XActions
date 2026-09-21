@@ -599,7 +599,9 @@ export class BlueskyCrawler extends AbstractCrawler {
       ? thread.replies.map((r) => normalizeBlueskyPost(r?.post || r)).filter(Boolean)
       : [];
     const posts = [post, ...replies].filter(Boolean);
-    return { post, posts };
+    // Expose the raw thread post so media extraction can read rich `embed`
+    // (images/video/record) — the normalized PostItem only carries thumbnails.
+    return { post, posts, raw: thread?.post || null };
   }
 
   /**
