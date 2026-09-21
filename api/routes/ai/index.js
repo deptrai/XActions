@@ -58,6 +58,7 @@ import webhooksRoutes from './webhooks.js';
 import cleanupRoutes from './cleanup.js';
 import bookmarksRoutes from './bookmarks.js';
 import mediaRoutes from './media.js';
+import jevRoutes from './jev.js';
 
 const router = express.Router();
 
@@ -558,6 +559,7 @@ router.use('/discovery', discoveryRoutes);
 router.use('/premium', premiumRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/creator', creatorRoutes);
+router.use('/jev', jevRoutes);
 router.use('/timeline', timelineRoutes);
 router.use('/topics', topicsRoutes);
 router.use('/articles', articlesRoutes);
