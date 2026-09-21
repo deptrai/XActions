@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: 09-21-2026 15:40
+last_updated: 09-21-2026 17:35
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -663,7 +663,7 @@ action_items:
       mặc định; Puppeteer crawler client override true. Sửa JSDoc @param. Sau đó engineUsed
       cho MaSoThue/Batdongsan/Chotot báo 'http' đúng."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-37-retro-2026-09-21.md"
   - id: "epic-37-retro-item-50-bổ-sung-test-engine-metadata-test-js-dùn"
     epic: 37
@@ -671,7 +671,7 @@ action_items:
       THẬT không gán tay requiresBrowser (vd MaSoThueClient) assert engineUsed==='http'
       — khóa contract chống tái phát."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-37-retro-2026-09-21.md"
   - id: "epic-37-retro-item-51-sửa-engineused-guard-fail-safe-nếu-clien"
     epic: 37
@@ -679,7 +679,7 @@ action_items:
       → 'http', ngược lại 'browser', thay vì so sánh flag có thể undefined — phòng
       thủ khi field chưa thêm."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-37-retro-2026-09-21.md"
   - id: "epic-38-retro-item-52-migrate-persistposts-và-các-persist-meth"
     epic: 38

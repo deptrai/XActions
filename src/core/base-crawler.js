@@ -15,6 +15,7 @@ import { TelemetryContext } from './telemetry-context.js';
 import { globalChallengeSignatureDetector } from './challenge-signature-detector.js';
 import { globalSessionHealthOrchestrator } from './session-health-orchestrator.js';
 import { globalSchemaDriftGuard } from './schema-drift-guard.js';
+import { AbstractApiClient } from './base-client.js';
 import { toIsoDate, isEnvTruthy, defaultRedisStreamPublisher, computeIdempotencyKey } from '../utils/redis-stream-publisher.js';
 
 /** @typedef {import('./types.js').CrawlerCommand} CrawlerCommand */
@@ -782,8 +783,20 @@ export class AbstractCrawler {
       if (result && typeof result === 'object' && !Array.isArray(result)) {
         const baseClient = /** @type {AbstractApiClient} */ (this.client);
         const resultObj = /** @type {Record<string, unknown>} */ (result);
+        // Story 37.1 fix: classify by the declared requiresBrowser flag first
+        // (browser signers override it to true on their AbstractApiClient subclass),
+        // falling back to instanceof — AbstractApiClient is HTTP-first (requiresBrowser
+        // defaults false), so an instance without an explicit true is 'http'. The old
+        // flag comparison (`requiresBrowser === false`) mislabeled HTTP clients when
+        // the field was undefined, and a bare instanceof would mislabel browser
+        // signers that extend AbstractApiClient.
+        const declaredBrowser = baseClient != null && typeof baseClient === 'object' && baseClient.requiresBrowser === true;
+        const isHttpEngine = !declaredBrowser && (
+          baseClient instanceof AbstractApiClient ||
+          (baseClient != null && typeof baseClient === 'object' && baseClient.requiresBrowser === false)
+        );
         resultObj._metadata = {
-          engineUsed: baseClient?.requiresBrowser === false ? 'http' : 'browser',
+          engineUsed: isHttpEngine ? 'http' : 'browser',
           durationMs: Date.now() - startTime,
           platform: this.name,
           action: command.action,

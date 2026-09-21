@@ -126,6 +126,16 @@ export class AbstractApiClient {
   /** @type {boolean} */
   requiresAuth = true;
 
+  /**
+   * HTTP-first by default: AbstractApiClient subclasses are lightweight direct
+   * HTTP clients. Puppeteer/CDP-backed browser signers override this to `true`
+   * (Story 37.1 fix — `engineUsed` telemetry reads this field; without a
+   * declared default the check `requiresBrowser === false` saw `undefined`
+   * and mislabeled HTTP-first platforms as 'browser').
+   * @type {boolean}
+   */
+  requiresBrowser = false;
+
   /** @type {'undici' | 'got'} */
   client = 'undici';
 
@@ -204,6 +214,7 @@ export class AbstractApiClient {
    * @param {number} [options.standbyBackoffMs]
    * @param {number} [options.timeout]
    * @param {boolean} [options.requiresProxy]
+   * @param {boolean} [options.requiresBrowser] - True for Puppeteer/CDP-backed browser signers; HTTP-first clients leave the default false.
    * @param {import('./telemetry-context.js').TelemetryContext} [options.telemetryContext]
    * @param {boolean} [options.isCanary]
    * @param {import('./session-health-orchestrator.js').SessionHealthOrchestrator} [options.healthOrchestrator]
@@ -244,6 +255,7 @@ export class AbstractApiClient {
     if (options.standbyBackoffMs !== undefined) this.standbyBackoffMs = options.standbyBackoffMs;
     this.timeout = options.timeout ?? 30000;
     this.requiresProxy = options.requiresProxy ?? false;
+    if (options.requiresBrowser !== undefined) this.requiresBrowser = options.requiresBrowser;
   }
 
   /**
