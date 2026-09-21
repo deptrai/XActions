@@ -267,7 +267,7 @@ development_status:
   epic-41-retrospective: done
 
   epic-42: backlog
-  42-1-jevbrain-core-decision-plane-src-agents-jevbrain-js-rest-cli: backlog
+  42-1-jevbrain-core-decision-plane-src-agents-jevbrain-js-rest-cli: done
   42-2-agentic-adoption-cắm-jevbrain-vào-thoughtleaderagent-action: backlog
   42-3-jev-verify-regression-guard-nâng-scripts-jev-verify-thành-ci: backlog
   42-4-jev-challenge-diagnostics-soft-200-bot-challenge-diagnostics: backlog

@@ -2,7 +2,8 @@
 title: 'Story 42.1: jevBrain-core-decision-plane'
 type: 'feature'
 created: '2026-09-21'
-status: 'ready-for-dev'
+status: 'done'
+baseline_revision: 'bbbad40a06fd392b16659a63b2af05c1c367ac71'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -86,11 +87,50 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-09-21 — Review pass 1
+- verdicts: 6 findings — high 0, medium 3, low 3, false 0, maybe-false 0
+- findings:
+  - `[medium]` `[patch]` Uncancelled `setTimeout` on early returns in `decide()` — fixed: added `clearTimeout(timer)` before non-ok and malformed response early returns.
+  - `[medium]` `[patch]` Fallback choice default `'ignore'` violates custom question criteria — fixed: inspect `qDef.criteria` and fallback to first key if `'ignore'` is absent.
+  - `[low]` `[patch]` `dailyBudgetUsd` parsing allows `NaN` on invalid env — fixed: added `Number.isFinite` guard with 10.0 fallback.
+  - `[medium]` `[patch]` Missing test verification for custom `fallbackLLM` integration — fixed: added unit test asserting `scoreRelevance` and `checkPersonaConsistency` delegation in `tests/agents/jevBrain.test.js`.
+  - `[low]` `[patch]` Missing test for `onUsage` callback invocation — fixed: added unit test asserting `onUsage` and token aggregation.
+  - `[low]` `[defer]` Missing export of `JevBrain` in package root entry — defer: codebase follows direct file import pattern in `src/agents/` (e.g. `import { LLMBrain } from './llmBrain.js'`).
+
+
 ## Design Notes
 
 - **Tại sao không đưa vào LLMBrain:** systemOne không tương thích chat/completions shape (không messages, không streaming). Cố ép vào `_call` làm hỏng cả hai. Module riêng giữ invariant isolation và dễ test.
 - **Budget pattern:** `ProxyBudgetGovernor` (AD-42) dùng `consume()` pre-flight trên key daily. jevBrain mirror: `consume('jev:daily', 1, {capacity: budgetCents, refillRate: budgetCents/86400, ttlSeconds: 86400})` — mỗi call consume 1 token; capacity = budget_USD * 100 / avg_cost_per_call_cents. Đơn giản hơn: capacity = số call được phép trong ngày (config `JEV_DAILY_BUDGET_USD` / estimated $0.000024/call).
 - **Fallback mapping:** khi degrade, `jevBrain` gọi `LLMBrain` judgment method tương ứng nếu consumer cung cấp (qua constructor option `fallbackLLM`), hoặc trả `null` answers để caller tự quyết — API surface: `decide()` trả `{answers, usage, meta}`; `meta.degraded=true` + `meta.reason` ('missing-key'|'http-5xx'|'timeout'|'http-429'|'budget'|'bad-response').
+
+## Auto Run Result
+
+Status: done
+Blocking condition: none
+
+### Summary of Implemented Change
+- Implemented `JevBrain` (`src/agents/jevBrain.js`) as the sole gateway to TypeSafe Jev System One model (`POST https://api.typesafe.ai/v1/systemone`, model `jev-latest`).
+- Implemented retry loop with exponential backoff & jitter (3 attempts), 5s timeout abort controller, and typed answer parsing (`choice`, `score`, `noul`).
+- Implemented `gate(answer, options)` supporting per-action confidence thresholds (`like: 0.60`, `reply: 0.85`, etc.).
+- Integrated `DistributedTokenBucket` budget governance (`jev:daily:YYYY-MM-DD`) with `JEV_DAILY_BUDGET_USD` ceiling and soft degradation.
+- Implemented graceful fallback degradation to `LLMBrain` on missing key, HTTP 5xx, timeout, 429, budget exhaustion, or malformed responses.
+- Added complete TypeScript declarations in `src/agents/jevBrain.d.ts`.
+- Added 14 unit tests in `tests/agents/jevBrain.test.js` covering 100% of the I/O matrix and edge cases.
+
+### Files Changed
+- `src/agents/jevBrain.js` — Core decision engine module and gateway to Jev System One.
+- `src/agents/jevBrain.d.ts` — TypeScript type definitions for JevBrain questions, answers, and config.
+- `tests/agents/jevBrain.test.js` — Vitest unit test suite (14 passing tests).
+- `_bmad-output/implementation-artifacts/spec-42-1-jevbrain-core-decision-plane.md` — Updated spec with review logs and completion status.
+
+### Verification Performed
+- `npx vitest run tests/agents/jevBrain.test.js` passed (14/14 tests).
+- `node -e "import('./src/agents/jevBrain.js').then(m => console.log(typeof m.JevBrain))"` verified module export (`function`).
+- `node scripts/jev-verify/verify.mjs --mock` executed without error.
+
+### Residual Risks
+- Real live API calls require valid `TYPESAFE_API_KEY` in environment; when absent, module gracefully degrades to `LLMBrain` without throwing.
 
 ## Verification
 
