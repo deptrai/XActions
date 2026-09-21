@@ -33,6 +33,11 @@ function getBrain() {
         ...(Number.isFinite(parseFloat(process.env.JEV_THRESHOLD_PAGESTATUS))
           ? { pageStatus: parseFloat(process.env.JEV_THRESHOLD_PAGESTATUS) }
           : {}),
+        // Story 42.5 — samePerson must likewise be ABSENT when unset so the
+        // JevBrain 0.85 default survives (pattern G5).
+        ...(Number.isFinite(parseFloat(process.env.JEV_THRESHOLD_SAMEPERSON))
+          ? { samePerson: parseFloat(process.env.JEV_THRESHOLD_SAMEPERSON) }
+          : {}),
       },
     });
   }

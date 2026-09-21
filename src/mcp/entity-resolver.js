@@ -15,8 +15,11 @@
  * Scoring signals (additive, capped at 100 → confidence = score/100):
  *   username_exact   +40  identical username across platforms
  *   name_similar     +30  Jaro-Winkler(displayName) > 0.85
- *   avatar_match     +30  identical avatar URL
+ *   avatar_match     +30  identical avatar URL (or pHash match via avatarHashMap)
  *   crosslink_bio    +20  a bio/links references the other profile
+ *   bio_semantic     +35  Jev semantic second opinion: the two bios describe
+ *                         the same person (Story 42.5 — only via a prefetched
+ *                         bioScoreMap; never computed inside this module)
  *
  * Two profiles merge when their pairwise score >= MERGE_THRESHOLD (40).
  *
@@ -156,13 +159,47 @@ function crossLinks(a, b) {
 }
 
 /**
+ * Stable identity key for one profile in bio-score map lookups.
+ * Prefers the normalized `id` (`${platform}:${externalId}`) emitted by
+ * normalizeToProfileItems; falls back to `platform:username|name|profileUrl`
+ * when callers hand in ad-hoc objects without an id.
+ * @param {Record<string, any>} p
+ * @returns {string}
+ */
+function profilePairId(p) {
+  const id = String(p?.id || '').trim();
+  if (id) return id;
+  const platform = String(p?.platform || '').trim();
+  const key = String(p?.username || p?.name || p?.profileUrl || '').trim();
+  return `${platform}:${key}`;
+}
+
+/**
+ * Deterministic key for an unordered profile pair — identical regardless of
+ * argument order, so the async bio prefetch (`prefetchBioScores`) and the sync
+ * `scorePair` lookup agree on map keys without sharing index state.
+ * @param {Record<string, any>} a
+ * @param {Record<string, any>} b
+ * @returns {string} `${idA}||${idB}` with the two ids sorted lexicographically
+ */
+export function bioPairKey(a, b) {
+  const idA = profilePairId(a);
+  const idB = profilePairId(b);
+  return idA <= idB ? `${idA}||${idB}` : `${idB}||${idA}`;
+}
+
+/**
  * Score a pair of profiles; returns total score + which signals fired.
  * @param {Record<string, any>} a
  * @param {Record<string, any>} b
  * @param {Map<string, bigint>} [avatarHashMap] — pre-fetched avatar pHash map (url → hash)
+ * @param {boolean} [phashEnabled] — resolved pHash kill-switch (default: env)
+ * @param {number} [phashThreshold] — resolved Hamming threshold (default: env)
+ * @param {Map<string, {score: number, confidence: number}>} [bioScoreMap] — pre-fetched
+ *        Jev bio scores keyed by bioPairKey (Story 42.5); only qualifying pairs present
  * @returns {{ score: number, signals: string[] }}
  */
-export function scorePair(a, b, avatarHashMap, phashEnabled = isAvatarPHashEnabled(), phashThreshold = getAvatarPHashThreshold()) {
+export function scorePair(a, b, avatarHashMap, phashEnabled = isAvatarPHashEnabled(), phashThreshold = getAvatarPHashThreshold(), bioScoreMap) {
   let score = 0;
   const signals = [];
 
@@ -207,6 +244,15 @@ export function scorePair(a, b, avatarHashMap, phashEnabled = isAvatarPHashEnabl
     signals.push('crosslink_bio');
   }
 
+  // Story 42.5 — Jev semantic bio second opinion. bioScoreMap is produced by
+  // the async `prefetchBioScores` pre-pass and only contains pairs Jev judged
+  // samePerson (score >= 2, confidence >= threshold). +35 alone stays below
+  // MERGE_THRESHOLD — it can only tip a pair already carrying a free signal.
+  if (bioScoreMap && typeof bioScoreMap.has === 'function' && bioScoreMap.has(bioPairKey(a, b))) {
+    score += 35;
+    signals.push('bio_semantic');
+  }
+
   return { score: Math.min(score, MAX_SCORE), signals };
 }
 
@@ -241,9 +287,11 @@ function pickPrimary(members) {
  * @param {string} [query] — original lookup query (reserved; boosts nothing yet
  *                          but kept for future query-anchored scoring).
  * @param {Map<string, bigint>} [avatarHashMap] — pre-fetched avatar pHash map (url → hash)
+ * @param {Map<string, {score: number, confidence: number}>} [bioScoreMap] — pre-fetched
+ *        Jev bio scores keyed by bioPairKey (Story 42.5); only qualifying pairs present
  * @returns {Array<{ clusterId: string, confidence: number, profiles: Array, matchedSignals: string[], primaryProfile: any }>}
  */
-export function resolveIdentities(profiles, query, avatarHashMap) {
+export function resolveIdentities(profiles, query, avatarHashMap, bioScoreMap) {
   // Story 41.3 — evaluate pHash config once per call, not per pair (env reads in the O(n^2) loop).
   const phashEnabled = isAvatarPHashEnabled();
   const phashThreshold = phashEnabled ? getAvatarPHashThreshold() : 0;
@@ -271,7 +319,7 @@ export function resolveIdentities(profiles, query, avatarHashMap) {
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       // Same-platform duplicates still allowed to merge, but carry less meaning.
-      const { score, signals } = scorePair(list[i], list[j], avatarHashMap, phashEnabled, phashThreshold);
+      const { score, signals } = scorePair(list[i], list[j], avatarHashMap, phashEnabled, phashThreshold, bioScoreMap);
       pairSignals.push([i, j, score, signals]);
       if (score >= MERGE_THRESHOLD) {
         union(i, j);
@@ -372,4 +420,4 @@ export async function prefetchAvatarHashes(profiles, options = {}) {
   return map;
 }
 
-export default { jaroWinkler, scorePair, resolveIdentities, prefetchAvatarHashes, MERGE_THRESHOLD };
+export default { jaroWinkler, scorePair, resolveIdentities, prefetchAvatarHashes, bioPairKey, MERGE_THRESHOLD };

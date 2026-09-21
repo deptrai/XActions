@@ -20,6 +20,7 @@ import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envel
 import { normalizeVnPhone } from '../utils/vn-phone.js';
 import { globalAdaptiveRateGovernor } from '../core/adaptive-governor.js';
 import { resolveIdentities, prefetchAvatarHashes } from './entity-resolver.js';
+import { prefetchBioScores } from '../osint/jev-bio-matcher.js';
 
 // ---------------------------------------------------------------------------
 // Platform → action map for person lookup
@@ -652,7 +653,12 @@ export async function executeSocialFindProfiles(args) {
   // and `platformStatus[]` are unchanged — `identityClusters` is additive.
   // Story 41.3 — fetch avatar perceptual hashes for cross-CDN matching
   const avatarHashMap = await prefetchAvatarHashes(profiles, { timeoutMs: callerTimeout ?? undefined });
-  const identityClusters = resolveIdentities(profiles, query, avatarHashMap);
+  // Story 42.5 — Jev semantic bio second opinion. Sequential AFTER the avatar
+  // prefetch (never Promise.all): candidate gating inside prefetchBioScores
+  // needs avatarHashMap so its cheap scorePair estimate matches what
+  // resolveIdentities computes — pairs already merging on free signals skip Jev.
+  const bioScoreMap = await prefetchBioScores(profiles, { avatarHashMap });
+  const identityClusters = resolveIdentities(profiles, query, avatarHashMap, bioScoreMap);
 
   return {
     success: true,

@@ -11,6 +11,7 @@ import {
   scorePair,
   resolveIdentities,
   prefetchAvatarHashes,
+  bioPairKey,
   MERGE_THRESHOLD,
 } from '../../src/mcp/entity-resolver.js';
 import { computeDHash } from '../../src/osint/phash.js';
@@ -278,6 +279,72 @@ describe('Story 41.3 — avatar pHash matching', () => {
   it('prefetchAvatarHashes never throws on non-array input', async () => {
     const map = await prefetchAvatarHashes(null);
     assert.equal(map.size, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Story 42.5 — bio_semantic signal via injected bioScoreMap (pure, no Jev)
+// ---------------------------------------------------------------------------
+
+describe('Story 42.5 — bio_semantic via bioScoreMap', () => {
+  const bioMapFor = (a, b, v = { score: 3, confidence: 0.9 }) => new Map([[bioPairKey(a, b), v]]);
+
+  it('bioPairKey is order-independent and based on profile id', () => {
+    const a = prof('github', { username: 'u1' });
+    const b = prof('medium', { username: 'u2' });
+    assert.equal(bioPairKey(a, b), bioPairKey(b, a));
+    assert.equal(bioPairKey(a, b), 'github:u1||medium:u2');
+  });
+
+  it('bioPairKey falls back to platform:username|name|profileUrl when id is missing', () => {
+    const a = { platform: 'github', username: 'nich_dev' };
+    const b = { platform: 'medium', name: 'Nicholas' };
+    const c = { platform: 'reddit', profileUrl: 'https://reddit.com/u/x' };
+    assert.equal(bioPairKey(a, b), 'github:nich_dev||medium:Nicholas');
+    assert.equal(bioPairKey(b, a), 'github:nich_dev||medium:Nicholas');
+    assert.equal(bioPairKey(a, c), 'github:nich_dev||reddit:https://reddit.com/u/x');
+  });
+
+  it('scorePair adds +35 bio_semantic on a bioScoreMap hit', () => {
+    const a = prof('github', { username: 'u1', name: 'X' });
+    const b = prof('medium', { username: 'u2', name: 'Y' });
+    const { score, signals } = scorePair(a, b, undefined, true, 10, bioMapFor(a, b));
+    assert.ok(signals.includes('bio_semantic'));
+    assert.equal(score, 35);
+  });
+
+  it('scorePair ignores pairs absent from the bioScoreMap', () => {
+    const a = prof('github', { username: 'u1', name: 'X' });
+    const b = prof('medium', { username: 'u2', name: 'Y' });
+    const other = prof('reddit', { username: 'u3' });
+    const { signals } = scorePair(a, b, undefined, true, 10, bioMapFor(a, other)); // key mismatch
+    assert.ok(!signals.includes('bio_semantic'));
+  });
+
+  it('resolveIdentities merges when bio_semantic tips a near-merge pair (30+35=65)', () => {
+    const a = prof('github', { username: 'nich_dev', name: 'Nicholas' });
+    const b = prof('medium', { username: 'xbt', name: 'Nicholas' });
+    const clusters = resolveIdentities([a, b], 'q', undefined, bioMapFor(a, b));
+    assert.equal(clusters.length, 1);
+    assert.ok(clusters[0].matchedSignals.includes('bio_semantic'));
+    assert.ok(clusters[0].matchedSignals.includes('name_similar'));
+  });
+
+  it('bio_semantic alone does NOT merge (+35 < MERGE_THRESHOLD)', () => {
+    const a = prof('github', { username: 'nich_dev', name: 'Nicholas Ray' });
+    const b = prof('medium', { username: 'xbt', name: 'Zelda Quill' });
+    const clusters = resolveIdentities([a, b], 'q', undefined, bioMapFor(a, b));
+    assert.equal(clusters.length, 2);
+  });
+
+  it('legacy callers without a bioScoreMap are unchanged', () => {
+    const a = prof('github', { username: 'nich_dev', name: 'Nicholas' });
+    const b = prof('medium', { username: 'xbt', name: 'Nicholas' });
+    const { signals } = scorePair(a, b);
+    assert.ok(!signals.includes('bio_semantic'));
+    // name_similar alone (30) still can't merge — identical to pre-story output.
+    const clusters = resolveIdentities([a, b]);
+    assert.equal(clusters.length, 2);
   });
 });
 

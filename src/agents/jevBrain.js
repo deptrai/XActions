@@ -77,6 +77,7 @@ export class JevBrain {
       relevance: 0.70,
       safeToSend: 0.80,
       pageStatus: 0.80,
+      samePerson: 0.85,
       ...(config.confidenceThresholds || {}),
     };
 

@@ -40,6 +40,10 @@ export default defineConfig({
       // validator-flagged 2xx / 0-record mocks never reach the paid Jev API.
       // Tests that exercise the hook inject a fake brain / enable it explicitly.
       JEV_CHALLENGE_DIAG: '0',
+      // Story 42.5 — same guard for the OSINT bio matcher: candidate bio pairs
+      // in tests must never reach the paid Jev API by accident. Tests exercise
+      // it via an injected fake brain + explicit JEV_OSINT_BIO_MATCH=1.
+      JEV_OSINT_BIO_MATCH: '0',
     },
     sequence: {
       shuffle: true,
