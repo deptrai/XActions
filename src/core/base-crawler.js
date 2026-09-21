@@ -5,7 +5,7 @@
  * @license MIT
  */
 
-import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
+import { PlatformError, BotChallengeError, ErrorTypes, SuggestedActions } from './error-envelope.js';
 import { globalActionRegistry } from './action-registry.js';
 import { isValidCategory, CATEGORY_VALUES } from './types.js';
 import { launchBrowserWithCdp } from './cdp-launcher.js';
@@ -16,6 +16,7 @@ import { globalChallengeSignatureDetector } from './challenge-signature-detector
 import { globalSessionHealthOrchestrator } from './session-health-orchestrator.js';
 import { globalSchemaDriftGuard } from './schema-drift-guard.js';
 import { AbstractApiClient } from './base-client.js';
+import { globalJevChallengeDiagnoser } from './jev-challenge-diagnoser.js';
 import { toIsoDate, isEnvTruthy, defaultRedisStreamPublisher, computeIdempotencyKey } from '../utils/redis-stream-publisher.js';
 
 /** @typedef {import('./types.js').CrawlerCommand} CrawlerCommand */
@@ -609,6 +610,12 @@ export class AbstractCrawler {
    */
   async start(command) {
     this._emittedItemIds = new Set();
+    // Story 42.4 — drop snippet/diagnosis evidence left over from a previous
+    // run; only this run's own responses may feed the Jev 0-records hook.
+    if (this.client) {
+      this.client.lastResponseSnippet = null;
+      this.client._lastJevDiag = null;
+    }
     this._currentDryRun = Boolean(command?.args?.dryRun || command?.session?.dryRun);
     this._currentContext = {
       ...(command?.session?.context || {}),
@@ -801,6 +808,69 @@ export class AbstractCrawler {
           platform: this.name,
           action: command.action,
         };
+      }
+
+      // Story 42.4 — Jev second opinion on empty results. A scrape that
+      // legitimately returns 0 records flows through untouched; only when the
+      // wrapped HTTP client stashed a suspicious last-response snippet do we
+      // ask Jev whether the empty result was actually a soft-block page.
+      // (`extractItemCount` semantics: null / empty array / count:0 → 0;
+      // single-object results count 1 and never trigger.) Dry-run scrapes are
+      // excluded — they must never hibernate accounts.
+      if (this.extractItemCount(result) === 0 && this.client && !this._currentDryRun) {
+        const jevClient = this.client;
+        // Mirror base-client: 'guest'/'default' are sentinels, not real accounts.
+        const cid = accountId === 'guest' || accountId === 'default' ? null : accountId;
+        let jevDiag = null;
+        if (jevClient.lastResponseSnippet && jevClient._lastJevDiag?.snippet === jevClient.lastResponseSnippet) {
+          // Client-level hook already diagnosed this exact evidence — reuse
+          // it instead of paying for a second decide() call (G2 dedupe).
+          jevDiag = jevClient._lastJevDiag.diag;
+        } else if (jevClient.lastResponseSnippet) {
+          try {
+            jevDiag = await globalJevChallengeDiagnoser.diagnose({
+              snippet: jevClient.lastResponseSnippet,
+              platform: this.name,
+              accountId: cid,
+            });
+          } catch {
+            jevDiag = null;
+          }
+        } else {
+          console.log(`[${this.name}] Jev 0-records check skipped — no response snippet evidence`);
+        }
+
+        if (jevDiag?.escalate) {
+          // ~20min — mirrors AdaptiveRateGovernor.recordBotChallenge default.
+          const hibernationMs = 20 * 60 * 1000;
+          if (cid && this.accountPool && typeof this.accountPool.markUnavailable === 'function') {
+            try { this.accountPool.markUnavailable(cid, 'bot_challenge', hibernationMs, this.name); } catch {}
+          }
+          if (cid && this.governor && typeof this.governor.recordBotChallenge === 'function') {
+            try { this.governor.recordBotChallenge(cid, this.name, hibernationMs); } catch {}
+          }
+          if (cid && this.healthOrchestrator && typeof this.healthOrchestrator.recordBotChallenge === 'function') {
+            try { this.healthOrchestrator.recordBotChallenge(this.name || 'default', cid); } catch {}
+          }
+          // Drop the punished evidence before throwing (mirrors base-client).
+          jevClient.lastResponseSnippet = null;
+          jevClient._lastJevDiag = null;
+          throw new BotChallengeError({
+            code: 'XACT_4030',
+            message: `Bot challenge diagnosed by Jev on upstream platform (${jevDiag.verdict || 'unknown'})`,
+            statusCode: 403,
+            suggestedAction: cid ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
+            accountId: cid,
+            platform: this.name,
+            details: {
+              challengeType: jevDiag.verdict,
+              challengeSignature: 'jev_semantic',
+              confidence: jevDiag.confidence,
+              suggestedHibernationMs: hibernationMs,
+              trigger: 'zero_records',
+            },
+          });
+        }
       }
 
       return result;

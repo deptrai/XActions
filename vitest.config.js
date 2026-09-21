@@ -36,6 +36,10 @@ export default defineConfig({
     env: {
       DATABASE_URL: testDatabaseUrl,
       DATABASE_URL_TEST: testDatabaseUrl,
+      // Story 42.4 — default the Jev challenge-diagnosis hook OFF in tests so
+      // validator-flagged 2xx / 0-record mocks never reach the paid Jev API.
+      // Tests that exercise the hook inject a fake brain / enable it explicitly.
+      JEV_CHALLENGE_DIAG: '0',
     },
     sequence: {
       shuffle: true,

@@ -28,6 +28,11 @@ function getBrain() {
         like: process.env.JEV_THRESHOLD_LIKE ? parseFloat(process.env.JEV_THRESHOLD_LIKE) : undefined,
         reply: process.env.JEV_THRESHOLD_REPLY ? parseFloat(process.env.JEV_THRESHOLD_REPLY) : undefined,
         safeToSend: process.env.JEV_THRESHOLD_SAFE ? parseFloat(process.env.JEV_THRESHOLD_SAFE) : undefined,
+        // Story 42.4 — pageStatus must be ABSENT (not undefined/NaN) when the
+        // env is unset or non-numeric, so the JevBrain 0.80 default survives.
+        ...(Number.isFinite(parseFloat(process.env.JEV_THRESHOLD_PAGESTATUS))
+          ? { pageStatus: parseFloat(process.env.JEV_THRESHOLD_PAGESTATUS) }
+          : {}),
       },
     });
   }

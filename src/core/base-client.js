@@ -22,6 +22,7 @@ import { PureCryptoSignerRegistry } from './signer-pool.js';
 import { globalSessionHealthOrchestrator } from './session-health-orchestrator.js';
 import { globalProxyBudgetGovernor } from './proxy-budget-governor.js';
 import { globalChallengeSignatureDetector } from './challenge-signature-detector.js';
+import { globalJevChallengeDiagnoser, extractSnippet } from './jev-challenge-diagnoser.js';
 
 /**
  * Normalize the `pureSigners` option into a `PureCryptoSignerRegistry`.
@@ -150,6 +151,23 @@ export class AbstractApiClient {
 
   /** @type {import('./platform-validator.js').AbstractPlatformResponseValidator | null} */
   responseValidator = null;
+
+  /**
+   * Last 2xx response body as bounded plain text (≤500 chars) — stashed per
+   * request so the Jev second-opinion hooks (suspicious-2xx in request() and
+   * the 0-records check in AbstractCrawler.start()) have evidence to judge.
+   * Best-effort attribution: overwritten on every successful response.
+   * @type {string | null}
+   */
+  lastResponseSnippet = null;
+
+  /**
+   * Dedupe cache for the Jev second opinion — when the client-level hook
+   * diagnoses a snippet without escalating, the crawler-level 0-records hook
+   * reuses this result on identical evidence instead of a second decide call.
+   * @type {{ snippet: string, diag: object } | null}
+   */
+  _lastJevDiag = null;
 
   /** @type {Record<string, string>} */
   cookies = {};
@@ -814,6 +832,13 @@ export class AbstractApiClient {
 
     while (accountRotationCount <= this.maxAccountRotations) {
       for (let attempt = 0; attempt < this.maxProxyRetries; attempt++) {
+        // Story 42.4 — stale-evidence guard: every attempt starts clean so a
+        // snippet/diagnosis from a previous attempt can never be attributed
+        // to this attempt's response (or mistaken for evidence by the
+        // crawler-level 0-records hook).
+        this.lastResponseSnippet = null;
+        this._lastJevDiag = null;
+
         const shouldUseProxy = !opts.disableProxy && (this.requiresProxy || opts.requiresResidential || (this._hasExplicitProxy && !this._requiresProxyExplicit));
 
         // Check if pool is completely quarantined before attempting proxy request
@@ -1026,6 +1051,27 @@ export class AbstractApiClient {
 
         // Success condition (2xx / 3xx)
         if (status >= 200 && status < 400) {
+          // Story 42.4 — stash a bounded text snippet of the last 2xx body so
+          // the Jev second-opinion hooks (the suspicious-2xx check below and
+          // the 0-records check in AbstractCrawler.start()) have evidence.
+          // Only response.data is evidence — NEVER the response envelope:
+          // headers/set-cookie must not travel to api.typesafe.ai. A Buffer
+          // response.body is an acceptable fallback for transports that don't
+          // populate .data. Skipped entirely for raw callers and when the
+          // diagnoser is disabled.
+          this.lastResponseSnippet = null;
+          if (!isRaw && globalJevChallengeDiagnoser.enabled) {
+            try {
+              const evidence =
+                response?.data ||
+                (typeof Buffer !== 'undefined' && Buffer.isBuffer(response?.body) ? response.body : null);
+              const snippet = extractSnippet(evidence);
+              this.lastResponseSnippet = snippet || null;
+            } catch {
+              this.lastResponseSnippet = null;
+            }
+          }
+
           // Story 27.3 — False-200 bot challenge check (runs before isRaw, and even when responseValidator is null)
           let challengeResult = lastChallengeResult;
           if (!challengeResult) {
@@ -1055,6 +1101,11 @@ export class AbstractApiClient {
                 try { this.healthOrchestrator.recordBotChallenge(this.platform || 'default', concreteAccountId); } catch {}
               }
             }
+            // Story 42.4 — drop the evidence before throwing: a handler that
+            // swallows this error must not let the crawler 0-records hook
+            // re-diagnose an already-punished response.
+            this.lastResponseSnippet = null;
+            this._lastJevDiag = null;
             throw new BotChallengeError({
               code: 'XACT_4030',
               message: `Bot challenge detected on upstream platform (${challengeType})`,
@@ -1070,6 +1121,110 @@ export class AbstractApiClient {
                 response: response?.data || response,
               },
             });
+          }
+
+          // Story 42.4 — Jev semantic second opinion. Both the static signature
+          // detector and validator.isBotChallenge missed, but the response may
+          // still be a soft-block — recompute the validator false-200/checkpoint
+          // flags (same calls as the telemetry closure above, which is out of
+          // scope here). Jev is consulted ONLY on this rare suspicious branch,
+          // never on the hot path; it can only escalate, never suppress checks.
+          //
+          // Each predicate gets its own try: a throwing validateResponse must
+          // merge onto already-proven flags, never veto them (G3). Dedicated
+          // downstream paths keep ownership — validator.isRateLimit belongs to
+          // the RateLimitError path and an authed login wall belongs to the
+          // XACT_4010 AuthSessionExpiredError path; Jev must not preempt (G4).
+          let isSuspicious200 = false;
+          let dedicatedPathOwns = false;
+          {
+            const validator = this.responseValidator;
+            if (validator) {
+              let isFalse200 = false;
+              try {
+                if (typeof validator.isFalse200 === 'function') {
+                  isFalse200 = Boolean(validator.isFalse200(response));
+                }
+              } catch { /* predicate failure never vetoes other flags */ }
+              let isLoginWall = false;
+              try {
+                if (typeof validator.isLoginWall === 'function') {
+                  isLoginWall = Boolean(validator.isLoginWall(response));
+                }
+              } catch { /* predicate failure never vetoes other flags */ }
+              let isCheckpoint = isLoginWall;
+              try {
+                if (typeof validator.validateResponse === 'function') {
+                  const diag = validator.validateResponse(response);
+                  if (!isFalse200) isFalse200 = Boolean(diag?.isFalse200);
+                  if (!isCheckpoint) isCheckpoint = Boolean(diag?.isCheckpoint);
+                }
+              } catch { /* throwing validateResponse never vetoes proven flags */ }
+              let isRateLimited = false;
+              try {
+                if (typeof validator.isRateLimit === 'function') {
+                  isRateLimited = Boolean(validator.isRateLimit(response));
+                }
+              } catch { /* predicate failure never vetoes other flags */ }
+              isSuspicious200 = isFalse200 || isCheckpoint;
+              dedicatedPathOwns = isRateLimited || (isLoginWall && effectiveRequiresAuth);
+            }
+          }
+
+          if (isSuspicious200 && !dedicatedPathOwns) {
+            let jevDiag = null;
+            try {
+              jevDiag = await globalJevChallengeDiagnoser.diagnose({
+                snippet: this.lastResponseSnippet,
+                platform: this.platform,
+                accountId: concreteAccountId,
+              });
+            } catch {
+              jevDiag = null;
+            }
+
+            if (jevDiag?.escalate) {
+              // ~20min — mirrors AdaptiveRateGovernor.recordBotChallenge default.
+              const hibernationMs = 20 * 60 * 1000;
+              // A challenge page arriving through a proxy implicates the proxy
+              // too — same quarantine the 403 path applies (~line 997).
+              if (proxy) this.quarantineProxy(proxy, hibernationMs);
+              if (concreteAccountId && this.accountPool) {
+                try { this.accountPool.markUnavailable(concreteAccountId, 'bot_challenge', hibernationMs, this.platform); } catch {}
+                if (this.governor && typeof this.governor.recordBotChallenge === 'function') {
+                  try { this.governor.recordBotChallenge(concreteAccountId, this.platform, hibernationMs); } catch {}
+                }
+                if (this.healthOrchestrator && typeof this.healthOrchestrator.recordBotChallenge === 'function') {
+                  try { this.healthOrchestrator.recordBotChallenge(this.platform || 'default', concreteAccountId); } catch {}
+                }
+              }
+              // Drop the evidence before throwing — a handler that swallows
+              // this error must not let the crawler hook re-diagnose it.
+              this.lastResponseSnippet = null;
+              this._lastJevDiag = null;
+              throw new BotChallengeError({
+                code: 'XACT_4030',
+                message: `Bot challenge diagnosed by Jev on upstream platform (${jevDiag.verdict || 'unknown'})`,
+                statusCode: 403,
+                suggestedAction: concreteAccountId ? SuggestedActions.ROTATE_ACCOUNT : SuggestedActions.ROTATE_PROXY,
+                accountId: concreteAccountId,
+                platform: this.platform,
+                details: {
+                  challengeType: jevDiag.verdict,
+                  challengeSignature: 'jev_semantic',
+                  confidence: jevDiag.confidence,
+                  suggestedHibernationMs: hibernationMs,
+                  response: response?.data || response,
+                },
+              });
+            }
+
+            // Dedupe (G2): remember a non-escalating diagnosis so the
+            // crawler-level 0-records hook reuses it on identical evidence
+            // instead of paying for a second decide() call.
+            this._lastJevDiag = jevDiag && this.lastResponseSnippet
+              ? { snippet: this.lastResponseSnippet, diag: jevDiag }
+              : null;
           }
 
           if (isRaw) {

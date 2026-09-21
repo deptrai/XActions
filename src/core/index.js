@@ -37,6 +37,13 @@ export { PreSignedTokenRing, SignerWorkerPagePool, PureCryptoSignerRegistry } fr
 export { FingerprintManager, globalFingerprintManager } from './fingerprint-manager.js';
 export { SessionHealthOrchestrator, globalSessionHealthOrchestrator } from './session-health-orchestrator.js';
 export { ChallengeSignatureDetector, globalChallengeSignatureDetector } from './challenge-signature-detector.js';
+export {
+  JevChallengeDiagnoser,
+  globalJevChallengeDiagnoser,
+  extractSnippet,
+  isJevChallengeDiagEnabled,
+  resolvePageStatusThreshold,
+} from './jev-challenge-diagnoser.js';
 export { TlsProfileProvider, globalTlsProfileProvider, browserFamilyFromUA } from './tls-profile-provider.js';
 export {
   CATEGORIES,

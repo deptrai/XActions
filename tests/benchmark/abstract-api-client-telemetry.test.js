@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AbstractApiClient } from '../../src/core/base-client.js';
 import { TelemetryContext } from '../../src/core/telemetry-context.js';
 import { PlatformError, ErrorTypes } from '../../src/core/error-envelope.js';
+import { globalJevChallengeDiagnoser } from '../../src/core/jev-challenge-diagnoser.js';
 
 class TestClient extends AbstractApiClient {}
 
@@ -9,8 +10,14 @@ describe('Story 34.2: AbstractApiClient Telemetry & Transport Hooks Unit Tests',
   let client;
   let mockGovernor;
   let mockProxyPool;
+  let savedJevEnabled;
 
   beforeEach(() => {
+    // Story 42.4 — these tests assert telemetry flags only; disable the Jev
+    // second-opinion hook so validator-flagged 2xx mocks never reach the API.
+    savedJevEnabled = globalJevChallengeDiagnoser.enabled;
+    globalJevChallengeDiagnoser.enabled = false;
+
     mockGovernor = {
       canAccountRequest: vi.fn().mockReturnValue(true),
       canConsumerRequest: vi.fn().mockReturnValue(true),
@@ -35,6 +42,10 @@ describe('Story 34.2: AbstractApiClient Telemetry & Transport Hooks Unit Tests',
       maxProxyRetries: 2,
       backoffBaseMs: 10,
     });
+  });
+
+  afterEach(() => {
+    globalJevChallengeDiagnoser.enabled = savedJevEnabled;
   });
 
   it('records successful request attempt metrics in telemetry context (AC 5)', async () => {

@@ -195,6 +195,11 @@
   location: src/utils/vn-phone.js
   severity: low
 
+- source_spec: `_bmad-output/implementation-artifacts/spec-42-4-jev-challenge-diagnostics.md`
+  summary: Browser-path Jev challenge second-opinion — `detectChallengeOnPage`/`detectFromHtml` là dead seam (0 callers); wire cần page access trong per-platform crawler handlers (facebook pagePosts...), không có uniform hook ở spine.
+  evidence: `grep detectChallengeOnPage` chỉ trả definition tại base-crawler.js:1007; `this.page`/`session.page` không tồn tại trong AbstractCrawler — page chỉ tồn tại trong handler internals của từng browser crawler.
+
+
 ### Resolved (2026-09-18 — deferred items addressed)
 
 - RESOLVED: Half-open circuit now has single-probe semantics — `probing` flag lets exactly one caller through after `CIRCUIT_COOLDOWN_MS`; concurrent callers still see `circuit_open` until the probe settles.
