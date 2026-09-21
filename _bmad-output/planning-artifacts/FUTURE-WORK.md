@@ -1,7 +1,7 @@
 ---
 title: "Future Work & Deferred Scope"
 created: 2026-08-21
-updated: 2026-08-21
+updated: 2026-09-21
 status: approved
 ---
 
@@ -114,6 +114,22 @@ Tài liệu này tập hợp các yêu cầu, ý tưởng, và tính năng bị 
 **Điều kiện mở lại:**
 1. Epic 33.2 stable trong production ≥ 2 tuần.
 2. YouTube API quota optimization hoàn tất (10k units/day limit).
+
+---
+
+## Jev Tier-2 Candidates — Deferred (Pending Demand Signal)
+
+**Trạng thái:** 🟡 **Deferred.** Các điểm cắm Jev có giá trị nhưng chưa đủ điều kiện promote thành story — chỉ mở lại khi demand signal dưới đây đúng. Jev decision plane (`jevBrain`) được đặt nền ở Epic 42; các mục này tái dùng nó, không tạo gateway mới.
+
+**Nguồn:** `_bmad-output/forge/jev-typesafe-integration/forged-idea.md`, `docs/architecture.md` §2.8 / AD-48.
+
+| Mục | Vị trí | Vì sao defer | Điều kiện mở lại |
+|---|---|---|---|
+| **A2A intent routing** | `src/a2a/orchestrator.js`, `skillRegistry.js` | Chỉ đáng khi ≥3 agent/skill cần disambiguation; hiện dispatch đã deterministic qua `agentCard`/`skillRegistry`. | Khi có ≥3 agent/skill route mập mờ mà rule không phân được → promote thành story (`Choice` intent + confidence). |
+| **CRM / sentiment tagging** | `src/analytics/followerCRM.js`, `reputation.js`, `sentiment.js` | Lexicon/stopword hiện đủ cho tagging; Jev chỉ thắng khi text mập mờ (sarcasm/ngữ cảnh). | Khi lexicon tagging sai >~15% trên sample thật → `Choice`/`Score` semantic tagging. |
+| **xspace `detectSentiment`** | `xspace-agents/.../intelligence/sentiment.ts` | Voice loop cần <1s; call Jev ~300ms+network/turn = rủi ro khựng. Lexicon hiện đủ. | Khi mis-detected sentiment gây bad-response trên Spaces (đo được) → Jev non-blocking song song, fallback lexicon. |
+
+**Nguyên tắc chung:** Jev chỉ đáng nơi cần *judgment ngữ nghĩa mập mờ* — không phải nơi rule/lexicon/numeric đã đúng (xem Epic 42/43 out-of-scope). Mọi call qua `jevBrain`, confidence per-action config, `LLMBrain` fallback.
 
 ---
 
