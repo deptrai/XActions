@@ -49,8 +49,11 @@ describe('Story 10.6: Admin Retention API — Authentication & Authorization (AC
       process.env.JWT_SECRET = TEST_SECRET;
     }
     await cleanupTestDatabase();
-    adminUser = await seedUser({ isAdmin: true, username: 'retention_admin' });
-    regularUser = await seedUser({ isAdmin: false, username: 'retention_regular' });
+    // Unique usernames — a leftover row from a previous crashed run would
+    // otherwise trip the P2002 unique constraint on User.username.
+    const run = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    adminUser = await seedUser({ isAdmin: true, username: `retention_admin_${run}` });
+    regularUser = await seedUser({ isAdmin: false, username: `retention_regular_${run}` });
   });
 
   afterAll(async () => {
