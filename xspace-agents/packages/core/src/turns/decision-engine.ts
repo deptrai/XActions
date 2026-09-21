@@ -18,6 +18,8 @@ export interface DecisionEngineConfig {
   maxConsecutiveResponses?: number
   /** Minimum ms between responses (default: 10000) */
   minResponseGapMs?: number
+  /** Optional async Jev decider raced with a 500ms timeout in decideWithJev() */
+  jevDecider?: (input: DecisionInput) => Promise<ResponseDecision | null>
 }
 
 export class DecisionEngine {
@@ -29,6 +31,7 @@ export class DecisionEngine {
 
   private consecutiveResponses = 0
   private lastResponseTime = 0
+  private readonly jevDecider: ((input: DecisionInput) => Promise<ResponseDecision | null>) | null
 
   constructor(config: DecisionEngineConfig) {
     this.agentName = config.agentName
@@ -36,6 +39,7 @@ export class DecisionEngine {
     this.topicKeywords = (config.topicKeywords ?? []).map((k) => k.toLowerCase())
     this.maxConsecutive = config.maxConsecutiveResponses ?? 3
     this.minGapMs = config.minResponseGapMs ?? 10000
+    this.jevDecider = config.jevDecider ?? null
   }
 
   decide(input: DecisionInput): ResponseDecision {
@@ -89,6 +93,21 @@ export class DecisionEngine {
 
     // Default: listen
     return { action: 'listen', reason: 'not relevant or addressed' }
+  }
+
+  /**
+   * Decide with an optional Jev typed-decision short-circuit.
+   * Non-blocking: races the injected jevDecider against a 500ms timeout —
+   * if the decider wins, its decision is used; otherwise the rule engine decides.
+   * Never throws; voice loop never stalls on Jev latency or failure.
+   */
+  async decideWithJev(input: DecisionInput): Promise<ResponseDecision> {
+    if (!this.jevDecider) return this.decide(input)
+    const jevPromise = this.jevDecider(input).catch(() => null)
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 500))
+    const jevResult = await Promise.race([jevPromise, timeout])
+    if (jevResult) return jevResult
+    return this.decide(input)
   }
 
   private analyzeSignals(input: DecisionInput): ConversationSignals {

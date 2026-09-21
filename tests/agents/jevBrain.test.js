@@ -88,7 +88,10 @@ describe('JevBrain', () => {
 
   describe('Missing API Key Degradation', () => {
     it('should degrade to fallback without making a fetch call if key is missing', async () => {
+      const prevKey = process.env.TYPESAFE_API_KEY;
+      delete process.env.TYPESAFE_API_KEY;
       const noKeyBrain = new JevBrain({ apiKey: '' });
+      process.env.TYPESAFE_API_KEY = prevKey;
       const res = await noKeyBrain.decide('some tweet', {
         action: { type: 'choice', instructions: 'action' },
       });

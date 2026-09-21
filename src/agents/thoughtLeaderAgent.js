@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import { BrowserDriver } from './browserDriver.js';
 import { LLMBrain } from './llmBrain.js';
+import { JevBrain } from './jevBrain.js';
 import { Scheduler } from './scheduler.js';
 import { AgentDatabase } from './database.js';
 import { Persona } from './persona.js';
@@ -53,6 +54,12 @@ class ThoughtLeaderAgent {
       provider: config.llm?.provider || 'openrouter',
       apiKey: config.llm?.apiKey || process.env.OPENROUTER_API_KEY || '',
       models: config.llm?.models,
+    });
+
+    // Jev typed-decision plane (Epic 42, Story 42.2) — judgment + confidence gating
+    this.jev = new JevBrain({
+      fallbackLLM: this.llm,
+      confidenceThresholds: config.jev?.confidenceThresholds,
     });
 
     this.scheduler = new Scheduler({
@@ -251,31 +258,92 @@ class ThoughtLeaderAgent {
       if (tweet.isAd) continue;
       if (this.db.isDuplicate('like', tweet.id) || this.db.isDuplicate('comment', tweet.id)) continue;
 
-      const score = await this.llm.scoreRelevance(tweet.text, keywords);
+      const decision = await this.jev.decide(
+        { tweet: tweet.text, author: tweet.author, nicheKeywords: keywords },
+        {
+          action: {
+            type: 'choice',
+            instructions: 'Best automated action for an account in this niche?',
+            criteria: {
+              ignore: 'Do nothing — low value or off-topic',
+              like: 'Like tweet only',
+              bookmark: 'Save for later',
+              reply: 'Write a value-adding reply',
+              quote: 'Quote with commentary',
+            },
+          },
+          isSpam: { type: 'noul', instructions: 'This post is spam, bait, airdrop-farming, or low-effort promotion' },
+          replyWorthy: { type: 'noul', instructions: 'A genuine, value-adding reply is likely to be well received here' },
+        },
+      );
 
-      if (score > 60 && this._canDo('like')) {
-        await this.browser.likeTweet(tweet.id);
-        this.db.logAction('like', tweet.id, { score, query });
-        engaged++;
-        await sleep(rand(1000, 3000));
-      }
+      if (decision.meta.degraded) {
+        // Fallback: legacy score heuristic — behavior unchanged for no-key deployments
+        const score = await this.llm.scoreRelevance(tweet.text, keywords);
 
-      if (score > 80 && this._canDo('comment') && Math.random() < 0.4) {
-        try {
-          const reply = await this.llm.generateReply(
-            { text: tweet.text, author: tweet.author },
-            this.persona.toJSON(),
-          );
-          const validation = this.persona.validateContent(reply);
-          if (validation.valid) {
-            await this.browser.replyToTweet(tweet.id, reply);
-            this.db.logAction('comment', tweet.id, { reply, score, query });
-            engaged++;
-          }
-        } catch (err) {
-          console.log(`⚠️ Reply generation failed: ${err.message}`);
+        if (score > 60 && this._canDo('like')) {
+          await this.browser.likeTweet(tweet.id);
+          this.db.logAction('like', tweet.id, { score, query, source: 'jev-degraded' });
+          engaged++;
+          await sleep(rand(1000, 3000));
         }
-        await sleep(rand(2000, 5000));
+
+        if (score > 80 && this._canDo('comment') && Math.random() < 0.4) {
+          try {
+            const reply = await this.llm.generateReply(
+              { text: tweet.text, author: tweet.author },
+              this.persona.toJSON(),
+            );
+            const validation = this.persona.validateContent(reply);
+            if (validation.valid) {
+              await this.browser.replyToTweet(tweet.id, reply);
+              this.db.logAction('comment', tweet.id, { reply, score, query });
+              engaged++;
+            }
+          } catch (err) {
+            console.log(`⚠️ Reply generation failed: ${err.message}`);
+          }
+          await sleep(rand(2000, 5000));
+        }
+      } else {
+        // Jev typed-decision path — volume reducer with calibrated confidence
+        const answer = decision.answers.action || {};
+        const isSpam = decision.answers.isSpam?.noul ?? 0;
+
+        if (isSpam >= 0.6) continue;
+        if (
+          this.jev.gate(answer, { action: 'like' }) === 'act' &&
+          this._canDo('like') &&
+          ['like', 'reply', 'quote', 'bookmark'].includes(answer.choice)
+        ) {
+          await this.browser.likeTweet(tweet.id);
+          this.db.logAction('like', tweet.id, { choice: answer.choice, confidence: answer.confidence, query });
+          engaged++;
+          await sleep(rand(1000, 3000));
+        }
+
+        if (
+          answer.choice === 'reply' &&
+          this.jev.gate(answer, { action: 'reply' }) === 'act' &&
+          (decision.answers.replyWorthy?.noul ?? 0) >= 0.6 &&
+          this._canDo('comment')
+        ) {
+          try {
+            const reply = await this.llm.generateReply(
+              { text: tweet.text, author: tweet.author },
+              this.persona.toJSON(),
+            );
+            const validation = this.persona.validateContent(reply);
+            if (validation.valid) {
+              await this.browser.replyToTweet(tweet.id, reply);
+              this.db.logAction('comment', tweet.id, { reply, choice: answer.choice, confidence: answer.confidence, query });
+              engaged++;
+            }
+          } catch (err) {
+            console.log(`⚠️ Reply generation failed: ${err.message}`);
+          }
+          await sleep(rand(2000, 5000));
+        }
       }
 
       // Simulate reading time between tweets
@@ -305,19 +373,57 @@ class ThoughtLeaderAgent {
       for (const tweet of tweets.slice(0, 5)) {
         if (tweet.isAd || this.db.isDuplicate('like', tweet.id)) continue;
 
-        const score = await this.llm.scoreRelevance(tweet.text, keywords);
+        const decision = await this.jev.decide(
+          { tweet: tweet.text, author: tweet.author, nicheKeywords: keywords },
+          {
+            action: {
+              type: 'choice',
+              instructions: 'Best automated action for an account in this niche?',
+              criteria: {
+                ignore: 'Do nothing — low value or off-topic',
+                like: 'Like tweet only',
+                bookmark: 'Save for later',
+                reply: 'Write a value-adding reply',
+                quote: 'Quote with commentary',
+              },
+            },
+            isSpam: { type: 'noul', instructions: 'This post is spam, bait, airdrop-farming, or low-effort promotion' },
+          },
+        );
 
-        if (score > 50 && this._canDo('like')) {
+        if (decision.meta.degraded) {
+          const score = await this.llm.scoreRelevance(tweet.text, keywords);
+          if (score > 50 && this._canDo('like')) {
+            await this.browser.likeTweet(tweet.id);
+            this.db.logAction('like', tweet.id, { score, source: 'home-feed-jev-degraded' });
+            engaged++;
+            await sleep(rand(800, 2000));
+          }
+          if (score > 85 && Math.random() < 0.3) {
+            await this.browser.bookmarkTweet(tweet.id);
+            this.db.logAction('bookmark', tweet.id, { score });
+            await sleep(rand(500, 1500));
+          }
+          continue;
+        }
+
+        const action = decision.answers.action || {};
+        if ((decision.answers.isSpam?.noul ?? 0) >= 0.6) continue;
+
+        if (
+          this.jev.gate(action, { action: 'like' }) === 'act' &&
+          this._canDo('like') &&
+          ['like', 'reply', 'quote', 'bookmark'].includes(action.choice)
+        ) {
           await this.browser.likeTweet(tweet.id);
-          this.db.logAction('like', tweet.id, { score, source: 'home-feed' });
+          this.db.logAction('like', tweet.id, { choice: action.choice, confidence: action.confidence, source: 'home-feed' });
           engaged++;
           await sleep(rand(800, 2000));
         }
 
-        // Occasionally bookmark high-quality content
-        if (score > 85 && Math.random() < 0.3) {
+        if (this.jev.gate(action, { action: 'bookmark' }) === 'act' && action.choice === 'bookmark') {
           await this.browser.bookmarkTweet(tweet.id);
-          this.db.logAction('bookmark', tweet.id, { score });
+          this.db.logAction('bookmark', tweet.id, { choice: action.choice, confidence: action.confidence });
           await sleep(rand(500, 1500));
         }
       }
@@ -439,6 +545,22 @@ class ThoughtLeaderAgent {
       const consistency = await this.llm.checkPersonaConsistency(textToValidate, this.persona.toJSON());
       if (!consistency.consistent) {
         console.log(`⚠️ Persona mismatch: ${consistency.issues.join(', ')}`);
+        return;
+      }
+
+      // Jev safety gate — Noul check before ANY public write (Story 42.2)
+      const safety = await this.jev.decide(
+        { content: textToValidate, persona: this.persona.name },
+        {
+          safeToSend: {
+            type: 'noul',
+            instructions: 'This content is safe to post publicly on X — no harmful claims, no impersonation, no engagement bait',
+          },
+        },
+      );
+      const safeNoul = safety.answers?.safeToSend?.noul ?? 1;
+      if (!safety.meta.degraded && safeNoul < this.jev.confidenceThresholds.safeToSend) {
+        console.log(`⚠️ Safety gate blocked post (safeToSend=${safeNoul.toFixed(2)})`);
         return;
       }
 

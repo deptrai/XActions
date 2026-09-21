@@ -39,6 +39,8 @@ import {
   loginWithCookie,
 } from './scrapers/index.js';
 
+import { JevBrain } from './agents/jevBrain.js';
+
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -284,6 +286,55 @@ async function generatePost(persona, context = {}) {
   return content
     .replace(/^["']|["']$/g, '')
     .trim();
+}
+
+// ============================================================================
+// Jev Quality Filter (Epic 42 — Story 42.2)
+// ============================================================================
+
+/** @type {import('./agents/jevBrain.js').JevBrain|null} */
+let _jevBrain = null;
+
+/**
+ * Lazy JevBrain singleton for engagement filtering.
+ * @returns {import('./agents/jevBrain.js').JevBrain}
+ */
+function getJevBrain() {
+  if (!_jevBrain) {
+    _jevBrain = new JevBrain({});
+  }
+  return _jevBrain;
+}
+
+/**
+ * Jev quality filter — returns true if the tweet is worth engaging.
+ * Degraded mode (no API key) always returns true — behavior unchanged.
+ * @param {string} text
+ * @param {string[]} keywords
+ * @returns {Promise<boolean>}
+ */
+async function jevFilter(text, keywords) {
+  if (!text) return true;
+  try {
+    const brain = getJevBrain();
+    const decision = await brain.decide(
+      { tweet: text, nicheKeywords: keywords },
+      {
+        relevance: {
+          type: 'score',
+          instructions: 'How relevant is this post to the niche topics?',
+          criteria: ['irrelevant or off-topic', 'marginal / tangential', 'clearly relevant', 'core topic'],
+        },
+        isSpam: { type: 'noul', instructions: 'This post is spam, bait, airdrop-farming, or low-effort promotion' },
+      },
+    );
+    if (decision.meta.degraded) return true;
+    const rel = decision.answers.relevance || {};
+    const spam = decision.answers.isSpam?.noul ?? 0;
+    return (rel.confidence ?? 0) >= 0.7 && spam < 0.6;
+  } catch {
+    return true; // never block engagement on filter failure
+  }
 }
 
 // ============================================================================
@@ -756,6 +807,18 @@ async function runSession(page, persona, plan) {
             collectedTweets = await extractVisibleTweets(page);
           }
 
+          // Jev quality filter before like (volume reducer — Story 42.2)
+          const likeCandidate = collectedTweets[tweetCursor];
+          if (likeCandidate?.text) {
+            const jevKeywords = persona.niche?.topics || persona.niche?.searchTerms || [];
+            const passes = await jevFilter(likeCandidate.text, jevKeywords);
+            if (!passes) {
+              log('🚫', `Jev filter skipped low-quality tweet: "${likeCandidate.text.slice(0, 50)}..."`);
+              tweetCursor++;
+              break;
+            }
+          }
+
           // Like a tweet on the current page
           const liked = await likeTweet(page);
           if (liked) {
@@ -801,9 +864,18 @@ async function runSession(page, persona, plan) {
 
           // Pick a tweet with decent engagement to comment on
           const goodTweets = collectedTweets.filter(t => t.likes > 5 && !t.isLiked);
-          const target = goodTweets.length > 0
+          let target = goodTweets.length > 0
             ? goodTweets[Math.floor(Math.random() * Math.min(goodTweets.length, 5))]
             : collectedTweets[0];
+
+          if (target?.text) {
+            const jevKeywords = persona.niche?.topics || persona.niche?.searchTerms || [];
+            const passes = await jevFilter(target.text, jevKeywords);
+            if (!passes) {
+              log('🚫', `Jev filter skipped low-quality comment target: "${target.text.slice(0, 50)}..."`);
+              target = null;
+            }
+          }
 
           if (target) {
             // Navigate back to search or home to find the tweet
@@ -1039,6 +1111,7 @@ async function runSingleSession(options = {}) {
 export {
   startAlgorithmBuilder,
   runSingleSession,
+  jevFilter,
 
   // Individual actions (for use in other scripts)
   doSearch,

@@ -616,3 +616,61 @@ describe('AdaptiveSilenceDetector + ResponsePacer integration', () => {
     expect(pacer.getPace()).toBe('slow')
   })
 })
+
+// =============================================================================
+// DecisionEngine.decideWithJev (Story 42.2 — non-blocking Jev race)
+// =============================================================================
+
+describe('DecisionEngine.decideWithJev', () => {
+  function makeJevInput(overrides: Partial<DecisionInput> = {}): DecisionInput {
+    return {
+      transcription: 'Hello everyone',
+      speaker: null,
+      sentiment: 'neutral',
+      topic: '',
+      activeSpeakers: 1,
+      averageGapMs: 1500,
+      recentMessages: [],
+      ...overrides,
+    }
+  }
+
+  function makeEngine(config: Partial<import('../turns/decision-engine').DecisionEngineConfig> = {}) {
+    return new DecisionEngine({ agentName: 'Test', ...config })
+  }
+
+  it('returns the jevDecider result when it resolves fast', async () => {
+    const engine = makeEngine({
+      jevDecider: async () => ({ action: 'respond', priority: 9, reason: 'jev fast path' }),
+    })
+    const decision = await engine.decideWithJev(makeJevInput({ transcription: 'hello' }))
+    expect(decision).toEqual({ action: 'respond', priority: 9, reason: 'jev fast path' })
+  })
+
+  it('falls back to rule engine when jevDecider is slow (>500ms)', async () => {
+    const engine = makeEngine({
+      jevDecider: () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ action: 'respond', priority: 9, reason: 'too late' }), 800),
+        ),
+    })
+    const decision = await engine.decideWithJev(makeJevInput({ transcription: 'just chatting' }))
+    expect(decision).toEqual({ action: 'listen', reason: 'not relevant or addressed' })
+  })
+
+  it('falls back to rule engine when jevDecider rejects', async () => {
+    const engine = makeEngine({
+      jevDecider: async () => {
+        throw new Error('jev down')
+      },
+    })
+    const decision = await engine.decideWithJev(makeJevInput({ transcription: 'anything' }))
+    expect(decision.action).toBe('listen')
+  })
+
+  it('passes through to sync decide when no jevDecider configured', async () => {
+    const engine = makeEngine()
+    const decision = await engine.decideWithJev(makeJevInput({ transcription: 'hi' }))
+    expect(decision.action).toBe('listen')
+  })
+})
