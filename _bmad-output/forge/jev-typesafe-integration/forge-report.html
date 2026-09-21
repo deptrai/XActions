@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge Report — Jev × XActions</title>
+<style>
+  :root{--ink:#1a1a2e;--paper:#f4f1ea;--accent:#8b3a3a;--gold:#b8860b;--line:#d8d2c4;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Georgia,'Times New Roman',serif;background:var(--paper);color:var(--ink);line-height:1.6;padding:40px 20px;}
+  .sheet{max-width:860px;margin:0 auto;background:#fbf9f4;border:1px solid var(--line);box-shadow:0 4px 30px rgba(0,0,0,.12);padding:56px 60px;position:relative;}
+  .sheet::before{content:"";position:absolute;inset:10px;border:1px solid var(--line);pointer-events:none}
+  h1{font-size:1.9rem;letter-spacing:.02em;border-bottom:2px solid var(--ink);padding-bottom:14px}
+  .sub{color:#666;font-style:italic;margin-top:6px;font-size:.95rem}
+  h2{font-size:1.05rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:32px 0 10px;border-left:4px solid var(--accent);padding-left:10px}
+  ul{margin:8px 0 8px 22px}
+  li{margin-bottom:7px}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.86rem}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:#efe9db;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
+  code{background:#efe9db;padding:1px 5px;border-radius:3px;font-size:.85em}
+  .seal-wrap{display:flex;justify-content:center;margin:40px 0 10px}
+  .credit{margin-top:34px;border-top:1px dashed var(--line);padding-top:16px;font-size:.88rem}
+  .credit .who{display:inline-block;background:#efe9db;border:1px solid var(--line);border-radius:20px;padding:4px 14px;margin:3px;font-size:.82rem}
+  .ok{color:#2d6a4f;font-weight:bold}.warn{color:#b8860b;font-weight:bold}.bad{color:#8b3a3a;font-weight:bold}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div style="text-align:center;margin-bottom:8px">
+    <svg width="130" height="130" viewBox="0 0 130 130">
+      <defs><path id="cir" d="M65,65 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"/></defs>
+      <circle cx="65" cy="65" r="60" fill="none" stroke="#8b3a3a" stroke-width="2.5"/>
+      <circle cx="65" cy="65" r="52" fill="none" stroke="#8b3a3a" stroke-width="1" stroke-dasharray="3 3"/>
+      <circle cx="65" cy="65" r="60" fill="#8b3a3a" opacity=".05"/>
+      <text font-family="Georgia" font-size="12.5" fill="#8b3a3a" letter-spacing="2.5" font-weight="bold">
+        <textPath href="#cir" startOffset="2%">IDEA FORGED · XACTIONS · 2026 ·</textPath>
+      </text>
+      <text x="65" y="72" text-anchor="middle" font-family="Georgia" font-size="17" fill="#8b3a3a" font-weight="bold" letter-spacing="1">HARDENED</text>
+      <text x="65" y="90" text-anchor="middle" font-family="Georgia" font-size="8.5" fill="#8b3a3a">JEV × XACTIONS</text>
+    </svg>
+  </div>
+
+  <h1>Forge Report</h1>
+  <p class="sub">Tích hợp Jev (TypeSafe AI System One) vào XActions — pressure-tested, hardened.</p>
+
+  <h2>Kết quả</h2>
+  <p>Ý tưởng <strong class="ok">HARDENED</strong> sau khi verify API surface thật của Jev và đọc code XActions. Điểm then chốt: Jev <em>không phải</em> chat-LLM — nó là decision engine trả typed verdict + calibrated confidence. Vì vậy kiến trúc đúng là <strong>Jev làm não quyết định, LLM làm miệng viết</strong> — không phải provider drop-in.</p>
+
+  <h2>Quyết định đã khóa</h2>
+  <ul>
+    <li><code>src/agents/jevBrain.js</code> — module riêng, REST <code>fetch</code> tới <code>systemOne</code>, né <code>@typesafe-ai/sdk</code>, reuse retry/rate-limit shell của <code>LLMBrain</code>.</li>
+    <li>Confidence gate <strong>per-action, user-tunable</strong> — thay magic number <code>score&gt;60/&gt;80/random&lt;0.4</code>.</li>
+    <li>Jev chỉ làm <em>judgment</em>; mọi prose vẫn qua <code>LLMBrain</code> (mid/smart tier).</li>
+    <li>Cơ chế chạm pain X-flag: <strong>volume reducer</strong> — ít action ngu = ít bot-like.</li>
+  </ul>
+
+  <h2>Mapping use case → primitive</h2>
+  <table>
+    <tr><th>Chỗ trong XActions</th><th>Primitive</th><th>Mục tiêu phục vụ</th></tr>
+    <tr><td><code>scoreRelevance</code></td><td>Score</td><td>chi phí</td></tr>
+    <tr><td>action router (like/reply/follow)</td><td>Choice + confidence</td><td>chất lượng + giảm flag</td></tr>
+    <tr><td><code>checkPersonaConsistency</code></td><td>Noul + Score</td><td>chất lượng</td></tr>
+    <tr><td><code>xspace DecisionEngine</code></td><td>Choice</td><td>chất lượng</td></tr>
+    <tr><td><code>xeepy</code> spam/targeting (batch)</td><td>Score/Choice</td><td>speed + chi phí</td></tr>
+    <tr><td>safety gate trước write</td><td>Noul</td><td>chất lượng + an toàn</td></tr>
+  </table>
+
+  <h2>Đã bác</h2>
+  <ul>
+    <li>Drop-in Jev làm LLM provider thứ 4 — <span class="bad">sai API shape</span>.</li>
+    <li>Jev chữa X-flag trực tiếp — <span class="bad">nó judge text, không đọc rate-limit</span>.</li>
+    <li>Dùng Jev sinh reply/post — <span class="bad">nó không sinh prose</span>.</li>
+    <li>"Speed" làm lý do chính — <span class="warn">realtime loop bị X rate-limit đè; speed chỉ đếm ở batch</span>.</li>
+  </ul>
+
+  <h2>Vết nứt còn sót (verify trước khi build)</h2>
+  <ul>
+    <li><span class="warn">Text-only + English-primary</span> — tweet Việt/slang/media accuracy thấp; test corpus thật.</li>
+    <li><span class="warn">Noul không có confidence</span> — yes/no phải tự threshold.</li>
+    <li><span class="warn">"Zero hallucination / 445×" là claim marketing</span> — benchmark trên data thật.</li>
+    <li><span class="warn">Vendor early-access, paid</span> — giữ LLM fallback path.</li>
+  </ul>
+
+  <div class="credit">
+    <strong>Pressure-test bởi:</strong>
+    <span class="who">⚡ Victor — Disruptive Innovation Oracle (installed)</span>
+    <span class="who">🏗️ Winston — System Architect (installed)</span>
+    <span class="who">🧑‍🌾 "Anh farm account" — outside voice (generated)</span>
+    <br><span style="font-size:.8rem;color:#777">Forge orchestrated by Claude · BMad Forge Idea</span>
+  </div>
+
+</div>
+</body>
+</html>
