@@ -122,6 +122,10 @@ export class JevBrain {
       return this._fallbackDecision(state, questions, 'budget');
     }
 
+    if (!questions || typeof questions !== 'object' || typeof questions[Symbol.iterator] === 'function' || Array.isArray(questions)) {
+      return this._fallbackDecision(state, {}, 'bad-request');
+    }
+
     const model = options.model || this.model;
     const timeoutMs = options.timeoutMs || this.timeoutMs;
     const body = {
@@ -177,7 +181,7 @@ export class JevBrain {
 
         const inputTokens = data.usage?.input_tokens || 0;
         const outputTokens = data.usage?.output_tokens || 0;
-        this._recordUsage(inputTokens, outputTokens);
+        this._recordUsage(inputTokens, outputTokens, model);
 
         return {
           answers: data.answers,
@@ -224,7 +228,7 @@ export class JevBrain {
     const conf = answer.confidence !== undefined ? answer.confidence : answer.noul;
     if (typeof conf !== 'number' || isNaN(conf)) return 'skip';
 
-    const hi = options.hi ?? (options.action ? this.confidenceThresholds[options.action] : 0.85);
+    const hi = options.hi ?? (options.action ? (this.confidenceThresholds[options.action] ?? 0.85) : 0.85);
     const mid = options.mid ?? (hi * 0.6);
 
     if (conf >= hi) return 'act';
@@ -252,7 +256,7 @@ export class JevBrain {
     try {
       const res = await globalDistributedTokenBucket.consume(key, 1, {
         capacity,
-        refillRate: capacity / 86400,
+        refillRate: 0,
         ttlSeconds: 86400,
       });
       return res.allowed;
@@ -274,6 +278,7 @@ export class JevBrain {
     // If consumer injected an LLMBrain instance and questions include relevance/consistency
     if (this.fallbackLLM) {
       for (const [qId, qDef] of Object.entries(questions)) {
+        if (!qDef || typeof qDef !== 'object') continue;
         try {
           if (qId === 'relevance' && typeof this.fallbackLLM.scoreRelevance === 'function') {
             const tweetText = typeof state === 'string' ? state : state?.tweet || JSON.stringify(state);
@@ -304,6 +309,7 @@ export class JevBrain {
 
     // Default neutral answer structure for any unanswered questions
     for (const [qId, qDef] of Object.entries(questions)) {
+      if (!qDef || typeof qDef !== 'object') continue;
       if (!answers[qId]) {
         if (qDef.type === 'choice') {
           let defaultChoice = 'ignore';
@@ -333,7 +339,7 @@ export class JevBrain {
 
   // ─── Usage Tracking ───────────────────────────────────────────
 
-  _recordUsage(inputTokens, outputTokens) {
+  _recordUsage(inputTokens, outputTokens, modelUsed = this.model) {
     const today = new Date().toISOString().split('T')[0];
     if (today !== this._usageDate) {
       this._usageToday = { calls: 0, inputTokens: 0, outputTokens: 0 };
@@ -344,7 +350,7 @@ export class JevBrain {
     this._usageToday.outputTokens += outputTokens;
 
     if (this.onUsage) {
-      try { this.onUsage(this.model, inputTokens, outputTokens); } catch { /* noop */ }
+      try { this.onUsage(modelUsed, inputTokens, outputTokens); } catch { /* noop */ }
     }
   }
 

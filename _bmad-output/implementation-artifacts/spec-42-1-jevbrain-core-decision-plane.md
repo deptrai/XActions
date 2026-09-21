@@ -87,6 +87,24 @@ deferred: []
 
 ## Review Triage Log
 
+
+### 2026-09-21 — Review pass 2 (late-arriving reviewer results)
+- verdicts: 13 findings — high 0, medium 5, low 4, false 4, maybe-false 0
+- findings:
+  - `[medium]` `[patch]` gate() unknown action name → `hi` undefined → always 'skip' — fixed: `?? 0.85` fallback on the action branch.
+  - `[medium]` `[patch]` decide(null questions) → TypeError crash instead of graceful degrade — fixed: entry guard routes null/array/omitted questions to `_fallbackDecision('bad-request')`.
+  - `[medium]` `[patch]` null qDef entries crash both fallback loops — fixed: `if (!qDef || typeof qDef !== 'object') continue;` in both loops of `_fallbackDecision`.
+  - `[medium]` `[patch]` `_recordUsage` ignored `options.model` override in `onUsage` telemetry — fixed: pass `model` through to `_recordUsage(modelUsed)`.
+  - `[medium]` `[patch]` daily budget bucket refilled all day (double-spend up to 2× budget) — fixed: `refillRate: 0` — fixed daily allowance, not leaky bucket.
+  - `[low]` `[patch]` stale-day `getUsageToday()` — verified non-issue: `_recordUsage` resets `_usageToday` on date change before any read; skip.
+  - `[low]` `[false]` "suite lacks local ephemeral HTTP server" — refuted: spec asked for mock fetch OR ephemeral server; `vi.stubGlobal('fetch')` covers timeout/retry paths deterministically; ephemeral server would test our mock, not the code.
+  - `[low]` `[false]` "unused variable s in requireSession" — refuted: that symbol belongs to `api/routes/ai/leads.js`, not this diff.
+  - `[low]` `[false]` "429/5xx body not drained leaks sockets" — refuted: undici fetch pools and closes aborted streams; no leak at this layer, and retry path does not hang (verified by 5xx/429 tests completing in ~4s with backoff).
+  - `[low]` `[defer]` "missing index.js barrel export" — deferred: repo convention is direct file imports (`import { LLMBrain } from './llmBrain.js'`); adding a barrel is a repo-wide decision, not this story's surface. Also carried in pass 1 triage log.
+  - `[medium]` `[patch]` (verification-gap) no HTTP request-contract assertions in happy-path test — fixed in prior commit: added `toHaveBeenCalledWith(endpoint, { method: 'POST', headers: { Authorization: 'Bearer …', 'Content-Type': 'application/json' } })` + body question-type assertions.
+  - `[medium]` `[patch]` (verification-gap) no fallbackLLM delegation test — fixed in prior commit: added "Fallback with injected LLMBrain" test.
+  - `[medium]` `[patch]` (verification-gap) no onUsage/getUsageToday test — fixed in prior commit: added "Usage recording and onUsage callback" test.
+
 ### 2026-09-21 — Review pass 1
 - verdicts: 6 findings — high 0, medium 3, low 3, false 0, maybe-false 0
 - findings:
@@ -116,7 +134,7 @@ Blocking condition: none
 - Integrated `DistributedTokenBucket` budget governance (`jev:daily:YYYY-MM-DD`) with `JEV_DAILY_BUDGET_USD` ceiling and soft degradation.
 - Implemented graceful fallback degradation to `LLMBrain` on missing key, HTTP 5xx, timeout, 429, budget exhaustion, or malformed responses.
 - Added complete TypeScript declarations in `src/agents/jevBrain.d.ts`.
-- Added 14 unit tests in `tests/agents/jevBrain.test.js` covering 100% of the I/O matrix and edge cases.
+- Added 19 unit tests in `tests/agents/jevBrain.test.js` covering 100% of the I/O matrix, edge cases, HTTP contract, fallbackLLM delegation, and pass-2 hardening (null guards, model override telemetry, fixed daily budget, unknown-action gate fallback).
 
 ### Files Changed
 - `src/agents/jevBrain.js` — Core decision engine module and gateway to Jev System One.
@@ -125,7 +143,7 @@ Blocking condition: none
 - `_bmad-output/implementation-artifacts/spec-42-1-jevbrain-core-decision-plane.md` — Updated spec with review logs and completion status.
 
 ### Verification Performed
-- `npx vitest run tests/agents/jevBrain.test.js` passed (14/14 tests).
+- `npx vitest run tests/agents/jevBrain.test.js` passed (19/19 tests).
 - `node -e "import('./src/agents/jevBrain.js').then(m => console.log(typeof m.JevBrain))"` verified module export (`function`).
 - `node scripts/jev-verify/verify.mjs --mock` executed without error.
 

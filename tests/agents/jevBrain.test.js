@@ -256,6 +256,54 @@ describe('JevBrain', () => {
     });
   });
 
+  describe('Edge-case hardening (review pass 2)', () => {
+    it('gate() falls back to 0.85 for unknown action names instead of undefined', () => {
+      expect(brain.gate({ confidence: 0.90 }, { action: 'unknown_action' })).toBe('act');
+      expect(brain.gate({ confidence: 0.10 }, { action: 'unknown_action' })).toBe('skip');
+    });
+
+    it('decide() with null/omitted questions degrades without throwing', async () => {
+      const res1 = await brain.decide('state', null);
+      expect(res1.meta.degraded).toBe(true);
+      expect(res1.meta.reason).toBe('bad-request');
+
+      const res2 = await brain.decide('state', undefined);
+      expect(res2.meta.degraded).toBe(true);
+      expect(res2.answers).toEqual({});
+    });
+
+    it('decide() with array questions degrades without throwing', async () => {
+      const res = await brain.decide('state', ['not', 'an', 'object']);
+      expect(res.meta.degraded).toBe(true);
+      expect(res.meta.reason).toBe('bad-request');
+    });
+
+    it('fallback answers skip null question definitions', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ unexpected: 'format' }),
+        text: async () => '{"unexpected":"format"}',
+      });
+
+      const res = await brain.decide('test', { ok: null });
+      expect(res.meta.degraded).toBe(true);
+      expect(res.meta.reason).toBe('bad-response');
+      expect(res.answers).toEqual({});
+    });
+
+    it('onUsage records model override from options.model', async () => {
+      const onUsageSpy = vi.fn();
+      brain.onUsage = onUsageSpy;
+
+      mockFetch.mockResolvedValueOnce(mockJevSuccess({ ok: { type: 'noul', noul: 1.0 } }));
+
+      await brain.decide('state', { ok: { type: 'noul', instructions: 'test' } }, { model: 'jev-pinned-1.0' });
+
+      expect(onUsageSpy).toHaveBeenCalledWith('jev-pinned-1.0', expect.any(Number), expect.any(Number));
+    });
+  });
+
   describe('Confidence Gate Helper', () => {
     it('should evaluate act, review, and skip based on custom thresholds', () => {
       expect(brain.gate({ confidence: 0.90 }, { hi: 0.85, mid: 0.60 })).toBe('act');
