@@ -272,7 +272,7 @@ class ThoughtLeaderAgent {
               quote: 'Quote with commentary',
             },
           },
-          isSpam: { type: 'noul', instructions: 'This post is spam, bait, airdrop-farming, or low-effort promotion' },
+          isSpam: { type: 'noul', instructions: 'This post is spam, bait, scam, or airdrop-farming — not mere self-promotion' },
           replyWorthy: { type: 'noul', instructions: 'A genuine, value-adding reply is likely to be well received here' },
         },
       );
@@ -387,7 +387,7 @@ class ThoughtLeaderAgent {
                 quote: 'Quote with commentary',
               },
             },
-            isSpam: { type: 'noul', instructions: 'This post is spam, bait, airdrop-farming, or low-effort promotion' },
+            isSpam: { type: 'noul', instructions: 'This post is spam, bait, scam, or airdrop-farming — not mere self-promotion' },
           },
         );
 

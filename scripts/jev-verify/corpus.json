@@ -1,5 +1,5 @@
 {
-  "_note": "Corpus mở rộng ~40 tweet — Việt/English/mixed/slang/link/mention/hashtag/ngắn/sarcasm/edge-case. Ground truth do người gán.",
+  "_note": "Corpus 52 tweet — Việt/English/mixed/slang/link/mention/hashtag/ngắn/sarcasm/edge-case + self-promo legit (truth.spam=0) pin crack isSpam 'not mere self-promotion'. Ground truth do người gán.",
   "niche": "ai-tools-vietnam",
   "nicheKeywords": ["ai", "llm", "automation", "devtools", "x actions", "claude", "gpt", "build", "ship", "agent"],
   "items": [
@@ -44,7 +44,20 @@
     {"id":"t36","lang":"en","text":"what's the one automation tool you actually pay for and would panic without? asking for a friend building in the space","author":"engaging_q","truth":{"relevant":1,"spam":0,"replyWorthy":1}},
     {"id":"t37","lang":"en","text":"follow for follow? i follow back instantly! 🔁🔁🔁","author":"f4f","truth":{"relevant":0,"spam":1,"replyWorthy":0}},
     {"id":"t38","lang":"vi","text":"đọc paper mới về calibrated confidence cho decision model, hay vl, đúng cái mình cần cho bot","author":"paper_vn","truth":{"relevant":1,"spam":0,"replyWorthy":1}},
-    {"id":"t39","lang":"en","text":"","author":"empty","truth":{"relevant":0,"spam":0,"replyWorthy":0}},
-    {"id":"t40","lang":"en","text":"lol","author":"lol_only","truth":{"relevant":0,"spam":0,"replyWorthy":0}}
+    {"id":"t39","lang":"en","text":".","author":"empty","truth":{"relevant":0,"spam":0,"replyWorthy":0}},
+    {"id":"t40","lang":"en","text":"lol","author":"lol_only","truth":{"relevant":0,"spam":0,"replyWorthy":0}},
+
+    {"id":"t41","lang":"en","text":"I built a thing: auto-labels your X bookmarks with GPT so you can actually find them later. free + open source, link below 👇","author":"self_promo_dev","truth":{"relevant":1,"spam":0,"replyWorthy":1}},
+    {"id":"t42","lang":"vi","text":"tool mình viết cuối tuần: auto sort bookmark trên X bằng LLM, ai cần thì lấy xài free nhé, repo github ở dưới","author":"self_promo_vn","truth":{"relevant":1,"spam":0,"replyWorthy":1}},
+    {"id":"t43","lang":"en","text":"shameless plug: my newsletter on building AI agents just hit 1k subs. this week's issue: why your agent needs a decision layer, not another prompt","author":"newsletter_dev","truth":{"relevant":1,"spam":0,"replyWorthy":1}},
+    {"id":"t44","lang":"mixed","text":"khoe tí: con bot auto-reply của mình vừa hit 10k replies mà chưa bị flag lần nào. blog post về cách build ở bio 📝","author":"proud_builder","truth":{"relevant":1,"spam":0,"replyWorthy":1}},
+    {"id":"t45","lang":"en","text":"#follow4follow #f4f #gaintrick #followtrain #gainwithmchina 🔁🔁🔁","author":"hashtag_bait","truth":{"relevant":0,"spam":1,"replyWorthy":0}},
+    {"id":"t46","lang":"en","text":"unpopular opinion after a year building agents: the model was never the bottleneck. the bottleneck is deciding what deserves a decision at all. most teams ship a prompt, call it an agent, then wonder why it likes every tweet and replies to bait. the fix isn't a bigger model — it's a cheaper, calmer decision layer that knows when to do nothing.","author":"longform_dev","truth":{"relevant":1,"spam":0,"replyWorthy":1}},
+    {"id":"t47","lang":"en","text":"@xactions hey the bookmark export keeps timing out on accounts with >10k saved — known issue or should I file a bug?","author":"support_ask","truth":{"relevant":1,"spam":0,"replyWorthy":1}},
+    {"id":"t48","lang":"vi","text":"🧵 thread: 7 nguyên tắc build bot X mà không bị flag — từ rate limit tới cách viết reply nghe như người thật (1/9)","author":"thread_author_vn","truth":{"relevant":1,"spam":0,"replyWorthy":1}},
+    {"id":"t49","lang":"en","text":"just hit 1000 stars on github 🎉🥳🙌✨🚀 thanks to everyone who tried the tool and filed issues — you made it way better 💜💜","author":"grateful_dev","truth":{"relevant":1,"spam":0,"replyWorthy":1}},
+    {"id":"t50","lang":"vi","text":"ai muốn tăng follow nhanh ib mình, 1k follow = 50k, bao uy tín bao sống, có bill test ngay","author":"follow_seller_vn","truth":{"relevant":0,"spam":1,"replyWorthy":0}},
+    {"id":"t51","lang":"en","text":"sometimes i wonder if the model knows it's grading itself. recursive evaluation loops are gonna get weird fast","author":"meta_thinker","truth":{"relevant":1,"spam":0,"replyWorthy":1}},
+    {"id":"t52","lang":"vi","text":"đọc xong thread kia tự nhiên muốn quit job đi build agent, ai rảnh review giùm cái plan mình với, nghiêm túc đó","author":"plan_review_vn","truth":{"relevant":1,"spam":0,"replyWorthy":1}}
   ]
 }

@@ -1,0 +1,8 @@
+{
+  "_note": "Baseline metrics cho drift-warning trong verify.mjs --ci. Flat keys: relevance/spam → overall, vi/mixed/en → byLang. Re-baselined sau first verified --ci run trên corpus 52 items + isSpam instruction mới ('not mere self-promotion') — 52/52 evaluated, 0 errors. by nichxbt",
+  "relevance": 0.8461538461538461,
+  "spam": 1.0,
+  "vi": 0.9411764705882353,
+  "mixed": 1.0,
+  "en": 0.7741935483870968
+}

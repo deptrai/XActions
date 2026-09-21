@@ -32,6 +32,17 @@ describe('algorithmBuilder.jevFilter', () => {
     expect(result).toBe(true);
   });
 
+  it('sends the shared isSpam literal in the Jev request (parity contract)', async () => {
+    mockFetch.mockResolvedValueOnce(mockJevSuccess({
+      relevance: { type: 'score', score: 3, confidence: 0.9 },
+      isSpam: { type: 'noul', noul: 0.1 },
+    }));
+    await jevFilter('relevant AI automation tweet', ['AI']);
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.questions.isSpam.instructions)
+      .toBe('This post is spam, bait, scam, or airdrop-farming — not mere self-promotion');
+  });
+
   it('returns false when Jev flags spam', async () => {
     mockFetch.mockResolvedValueOnce(mockJevSuccess({
       relevance: { type: 'score', score: 3, confidence: 0.9 },

@@ -1,0 +1,7 @@
+{
+  "_note": "CI gate floors cho verify.mjs --ci. byLang chỉ floor 'vi' — en hiện 79% margin quá mỏng (flaky). driftWarnDelta: warn khi baseline - current >= delta. maxItemErrorRate: errors/corpus.items > rate → run invalid, không tính floors trên sample thiếu. by nichxbt",
+  "overall": { "relevance": 0.75, "spam": 0.95 },
+  "byLang": { "vi": 0.85 },
+  "driftWarnDelta": 0.05,
+  "maxItemErrorRate": 0.2
+}

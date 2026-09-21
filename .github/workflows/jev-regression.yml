@@ -1,0 +1,76 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# XActions — Jev Regression Guard
+# Runs the jev-verify corpus against the live Jev API on relevant changes
+# (path-filtered), weekly cron, and manual dispatch. Enforces accuracy floors
+# (vi≥85%, spam≥95%, relevance≥75%) + baseline drift warnings via --ci mode.
+# Skips cleanly (::warning::, green) when TYPESAFE_API_KEY is absent (fork PRs).
+# Harness is zero-dependency — no npm ci needed.
+# by nichxbt
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: Jev Regression Guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/jev-verify/**'
+      - 'src/agents/jevBrain.js'
+      - 'src/agents/thoughtLeaderAgent.js'
+      - 'src/algorithmBuilder.js'
+      - 'tests/scripts/**'
+      - '.github/workflows/jev-regression.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/jev-verify/**'
+      - 'src/agents/jevBrain.js'
+      - 'src/agents/thoughtLeaderAgent.js'
+      - 'src/algorithmBuilder.js'
+      - 'tests/scripts/**'
+      - '.github/workflows/jev-regression.yml'
+  schedule:
+    # Monday 03:00 UTC — schedule triggers run on the default branch only.
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: jev-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Jev accuracy floors
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate corpus + gate config (offline)
+        run: node scripts/jev-verify/verify.mjs --validate
+
+      - name: Run jev-verify (CI gate)
+        run: |
+          if [ -z "$TYPESAFE_API_KEY" ]; then
+            echo "::warning::skipped — no TYPESAFE_API_KEY (fork PR or missing secret)"
+            exit 0
+          fi
+          node scripts/jev-verify/verify.mjs --ci --out jev-results.json
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jev-results
+          path: jev-results.json
+          if-no-files-found: warn
+          retention-days: 14

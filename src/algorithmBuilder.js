@@ -325,7 +325,7 @@ async function jevFilter(text, keywords) {
           instructions: 'How relevant is this post to the niche topics?',
           criteria: ['irrelevant or off-topic', 'marginal / tangential', 'clearly relevant', 'core topic'],
         },
-        isSpam: { type: 'noul', instructions: 'This post is spam, bait, airdrop-farming, or low-effort promotion' },
+        isSpam: { type: 'noul', instructions: 'This post is spam, bait, scam, or airdrop-farming — not mere self-promotion' },
       },
     );
     if (decision.meta.degraded) return true;

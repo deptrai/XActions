@@ -16,6 +16,9 @@ const MINIMAL_CONFIG = {
   dbPath: '/tmp/test-tl-agent-jev.db',
 };
 
+const SHARED_SPAM_INSTRUCTION =
+  'This post is spam, bait, scam, or airdrop-farming — not mere self-promotion';
+
 function makeJevAnswer(actionChoice, actionConf, isSpamNoul, replyWorthyNoul = 0.8) {
   return {
     answers: {
@@ -105,6 +108,13 @@ describe('ThoughtLeaderAgent Jev adoption (Story 42.2)', () => {
       expect(agent.browser.replyToTweet).not.toHaveBeenCalled();
     });
 
+    it('sends the shared isSpam literal to Jev (parity contract)', async () => {
+      agent.jev.decide = vi.fn().mockResolvedValue(makeJevAnswer('ignore', 0.9, 0.1));
+      await agent._searchAndEngage('ai');
+      const questions = agent.jev.decide.mock.calls[0][1];
+      expect(questions.isSpam.instructions).toBe(SHARED_SPAM_INSTRUCTION);
+    });
+
     it('falls back to legacy score heuristic when Jev degraded', async () => {
       agent.jev.decide = vi.fn().mockResolvedValue({
         answers: {},
@@ -138,6 +148,14 @@ describe('ThoughtLeaderAgent Jev adoption (Story 42.2)', () => {
       await agent._browseHomeFeed();
       expect(agent.browser.likeTweet).toHaveBeenCalled(); // like/bookmark both allow like
       expect(agent.browser.bookmarkTweet).toHaveBeenCalled();
+    });
+
+    it('sends the shared isSpam literal to Jev (parity contract)', async () => {
+      agent.browser.extractTweets.mockResolvedValue([{ id: 't1', text: 'feed tweet', author: 'a1', isAd: false }]);
+      agent.jev.decide = vi.fn().mockResolvedValue(makeJevAnswer('ignore', 0.9, 0.1));
+      await agent._browseHomeFeed();
+      const questions = agent.jev.decide.mock.calls[0][1];
+      expect(questions.isSpam.instructions).toBe(SHARED_SPAM_INSTRUCTION);
     });
 
     it('degraded mode falls back to legacy score heuristics', async () => {
