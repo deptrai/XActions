@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: 09-21-2026 16:15
+last_updated: 09-21-2026 15:40
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -270,6 +270,12 @@ development_status:
   42-1-jevbrain-core-decision-plane-src-agents-jevbrain-js-rest-cli: backlog
   42-2-agentic-adoption-cắm-jevbrain-vào-thoughtleaderagent-action: backlog
   42-3-jev-verify-regression-guard-nâng-scripts-jev-verify-thành-ci: backlog
+  42-4-jev-challenge-diagnostics-soft-200-bot-challenge-diagnostics: backlog
+  42-5-jev-osint-bio-matcher-semantic-bio-matching-for-entityresolv: backlog
+  42-6-jev-trend-brand-safety-trending-topic-semantic-monitor-brand: backlog
+  42-7-jev-lead-icp-scoring-high-throughput-batch-lead-qualificatio: backlog
+  42-8-jev-cognitive-unfollow-relationship-preservation-audience-pr: backlog
+  42-9-jev-variant-judge-jev-as-a-judge-post-variant-selector-cring: backlog
   epic-42-retrospective: optional
 
   epic-43: backlog

@@ -2385,6 +2385,13 @@ Mọi quyết định "có nên like/reply/follow không" trong XActions hiện 
 - **LLM fallback** — khi `TYPESAFE_API_KEY` vắng hoặc Jev lỗi → degrade sang `LLMBrain` judgment, không hard-fail (invariant §5.6).
 - Adopt vào `thoughtLeaderAgent` (action router thay `>60/>80/random`), `checkPersonaConsistency` (Noul), safety `Noul` trước mỗi write, `xspace-agents DecisionEngine` (Choice), `xeepy` batch (spam/targeting Score/Choice).
 - Verify harness `scripts/jev-verify/` chạy được như CI regression trên corpus.
+- **Bề mặt mở rộng (Expanded Decision Surfaces):**
+  1. Chẩn đoán Bot Challenge & Soft-200 đa nền tảng (`src/core/error-envelope.js`, `crawler-governor.js`).
+  2. So khớp Bio ngữ nghĩa trong OSINT Entity Resolution (`src/mcp/osint-find-profiles.js`, `EntityResolver`).
+  3. Phân loại Niche & Brand Safety Gate cho Trending Monitor (`src/trendingTopicMonitor.js`).
+  4. Đánh giá Khách hàng Tiềm năng (B2B Lead Qualification & ICP Scoring) tốc độ cao (`api/routes/ai/leads.js`).
+  5. Dọn dẹp Follower nhận thức (Cognitive Unfollow & giữ quan hệ VIP) (`src/unfollowback.js`).
+  6. Trọng tài biến thể nội dung (Jev-as-a-Judge cho Tweet Generator & Cringe Filter) (`src/ai/tweetGenerator.js`).
 
 **Ngoài scope (rejected):**
 - Jev sinh prose/reply/post (Jev không generate text — đó là `LLMBrain`).
@@ -2403,6 +2410,29 @@ Mọi quyết định "có nên like/reply/follow không" trong XActions hiện 
   - AC: `thoughtLeaderAgent` — thay `score>60/>80`/`Math.random()<0.4` bằng `jevBrain` Choice + per-action confidence; mỗi action có threshold riêng.
   - AC: safety `Noul` chạy trước MỌI write (reply/post/DM) — `safeToSend < threshold` → skip + log.
 ### Story 42.3: jev-verify-regression-guard — nâng `scripts/jev-verify/` thành CI regression (corpus ≥50, accuracy floor vi≥85%/spam≥95%, drift alert khi accuracy tụt dưới ngưỡng)
+### Story 42.4: jev-challenge-diagnostics — Soft-200 & Bot Challenge Diagnostics
+  - AC: Khi scraper nhận HTTP 200 nhưng trích xuất được 0 records hoặc body nghi ngờ checkpoint/soft-block, trích xuất 500 ký tự text và gọi `jevBrain.decide(snippet, { pageStatus: Choice(...) })`.
+  - AC: Nếu `pageStatus.choice` là `bot_challenge` hoặc `login_wall` với `confidence >= 0.8` → ném `BotChallengeError` (XACT_5030) và kích hoạt `AdaptiveRateGovernor.hibernateAccount()`.
+  - AC: Giảm thiểu sự phụ thuộc vào các chuỗi regex HTML tĩnh dễ gãy trên 26 nền tảng.
+### Story 42.5: jev-osint-bio-matcher — Semantic Bio Matching for EntityResolver (Epic 41 / Option D)
+  - AC: Trong `EntityResolver.scorePair()`, khi so khớp 2 profile khác platform có bio text mà URL/exact username không match, gọi `jevBrain.decide({ bio1, bio2 }, { samePerson: Score(...) })`.
+  - AC: Nếu `samePerson.score >= 2` và `confidence >= 0.85` → cộng +35 điểm match vào pairwise score, giúp merge cluster những người có bio khác câu chữ nhưng cùng thực thể.
+  - AC: Tuân thủ nghiêm ngặt Option D (AD-45): tính toán in-memory per-request, tuyệt đối không lưu bio/cluster vào cơ sở dữ liệu.
+### Story 42.6: jev-trend-brand-safety — Trending Topic Semantic Monitor & Brand Safety Gate
+  - AC: Thay thế từ điển `NICHE_KEYWORDS` tĩnh bằng Jev `Choice` phân loại vertical (`tech_ai`, `crypto_web3`, `politics`, v.v.).
+  - AC: Kiểm tra Brand Safety bằng `Noul("Is this trend related to tragic events, scams, or controversy?")` trước khi đề xuất comment.
+  - AC: Đánh giá cơ hội tương tác bằng `Score("thought-leader comment opportunity", ["avoid", "neutral", "good_hook", "must_post"])`.
+### Story 42.7: jev-lead-icp-scoring — High-Throughput Batch Lead Qualification
+  - AC: Cung cấp endpoint batch qualification xử lý danh sách user profile (bio + recent tweets) qua Jev.
+  - AC: Trả về `buyerIntent` (Choice: `not_a_lead`, `problem_aware`, `solution_seeking`, `decision_maker`) và `leadScore` (Score: 0-3 ICP fit).
+  - AC: Đạt throughput xử lý batch lớn với chi phí tối ưu (~$0.024 / 1.000 users).
+### Story 42.8: jev-cognitive-unfollow — Relationship Preservation & Audience Pruning
+  - AC: Trước khi unfollow một account không follow lại, gọi Jev `Choice` đánh giá mối quan hệ (`unfollow_dead`, `unfollow_spam`, `keep_high_value_influencer`, `keep_active_peer`).
+  - AC: Tự động giữ lại các account VIP/influencer trong ngành ngay cả khi họ không follow-back, ngăn chặn việc bot unfollow nhầm đối tác quan trọng.
+  - AC: Tự động loại bỏ các account đổi hướng sang spam/airdrop/nsfw.
+### Story 42.9: jev-variant-judge — Jev-as-a-Judge Post Variant Selector & Cringe Filter
+  - AC: Khi sinh bài viết, cho LLM sinh 3 biến thể (variants), sau đó ném cả 3 vào Jev `Choice` để chọn biến thể tự nhiên nhất, ít sặc mùi AI corporate hype nhất.
+  - AC: Kèm `Noul` kiểm tra "cringe factor" (chứa sáo ngữ AI như 'game-changer', 'buckle up', 'delve') — nếu `cringeFactor > 0.3` thì reject hoặc yêu cầu re-roll.
 
 ---
 
