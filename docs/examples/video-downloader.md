@@ -17,7 +17,7 @@ Download any video from X/Twitter posts directly to your device.
 // Go to: x.com/user/status/123456 (any tweet with a video)
 // IMPORTANT: Click PLAY on the video first!
 // Open Console (Ctrl+Shift+J) and paste the script from:
-// src/scrapers/videoDownloader.js
+// Canonical implementation: src/scrapers/social/twitter/crawler.js action download_video (videoDownloader.js archived in Epic 24)
 ```
 
 ## ⚙️ Configuration

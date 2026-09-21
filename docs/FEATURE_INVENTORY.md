@@ -199,7 +199,7 @@ XActions delivers features through **5 delivery modes**:
 |---|------|-------------|---------------|------------|
 | 2 | `src/scrapers/bookmarkExporter.js` (194 lines) | Export bookmarks to JSON/CSV | `x.com/i/bookmarks` | `MAX_BOOKMARKS`, `FORMAT` (json/csv/both); extracts text, engagement, images, links |
 | 3 | `src/scrapers/threadUnroller.js` (171 lines) | Save a thread as text, markdown, or JSON | Any tweet in a thread | `FORMAT` (text/markdown/json), `INCLUDE_MEDIA`, `INCLUDE_STATS`; filters to thread author |
-| 4 | `src/scrapers/videoDownloader.js` (361 lines) | Download videos from tweets | Tweet with video | Methods: React state/props extraction, page data scanning for `video.twimg.com` URLs; shows quality options, auto-downloads highest |
+| 4 | `src/scrapers/social/twitter/crawler.js` action `download_video` (videoDownloader.js archived in Epic 24) | Download videos from tweets | Tweet with video | Methods: React state/props extraction, page data scanning for `video.twimg.com` URLs; shows quality options, auto-downloads highest |
 | 5 | `src/scrapers/viralTweets.js` (175 lines) | Find top-performing tweets by engagement thresholds | Search or profile | `MIN_LIKES` (100), `MIN_RETWEETS` (10), `SORT_BY` (likes/retweets/replies/views); exports results |
 
 ---

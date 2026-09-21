@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: 09-21-2026 17:35
+last_updated: 09-21-2026 18:40
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -381,7 +381,7 @@ action_items:
       / 'xactions export bookmarks <username>' + tool MCP map tới export_bookmarks
       + unroll_thread crawler actions (thay vì chỉ actions list)."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-24-retro-2026-09-21.md"
   - id: "epic-24-retro-item-14-refactor-mcp-x_download_video-local-tool"
     epic: 24
@@ -389,7 +389,7 @@ action_items:
       (server.js:532) delegate sang TwitterCrawler.download_video/export_bookmarks,
       xoá bản regex-scrape trùng."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-24-retro-2026-09-21.md"
   - id: "epic-24-retro-item-15-cập-nhật-readme-md-344-docs-stale-featur"
     epic: 24
@@ -397,14 +397,14 @@ action_items:
       thread-unroller.md:18, video-downloader.md:20, scraper-adapters.md:406-408,
       architecture.md:242) trỏ vị trí mới/archive theo AC 24.4."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-24-retro-2026-09-21.md"
   - id: "epic-24-retro-item-16-dọn-dead-fallback-names-crawlee-selenium"
     epic: 24
     action: "Dọn dead fallback names 'crawlee'/'selenium'/'cheerio' khỏi candidates
       list adapters/index.js:114."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-24-retro-2026-09-21.md"
   - id: "epic-26-retro-item-17-sửa-semantic-drift-src-client-index-js-s"
     epic: 26
@@ -414,14 +414,14 @@ action_items:
       map 'list_members' trả members thay list timeline — làm rõ unsupported hoặc
       implement. Thêm test chặn regression cả 2."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-26-retro-2026-09-21.md"
   - id: "epic-26-retro-item-18-push-tag-rollback-lên-origin-git-push-or"
     epic: 26
     action: "Push tag rollback lên origin: git push origin pre-decommission-2026-09-12
       — checklist §6 yêu cầu 'đã tạo và push', hiện chỉ local."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-26-retro-2026-09-21.md"
   - id: "epic-26-retro-item-19-tạo-story-artifact-story-26-2-stories-26"
     epic: 26
@@ -429,14 +429,14 @@ action_items:
       hoặc ghi nhận chính thức sprint-status 26.2 chạy không-có-story-file, kèm record
       accepted-deviation shadow-run 7 ngày → functional parity fallback."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-26-retro-2026-09-21.md"
   - id: "epic-26-retro-item-20-sửa-git-author-config-git-config-user-na"
     epic: 26
     action: "Sửa git author config: git config user.name nirholas (hiện 'user.email')
       để commit tương lai đúng attribution CLAUDE.md."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-26-retro-2026-09-21.md"
   - id: "epic-28-retro-item-21-đồng-bộ-epics-md-stories-28-1-28-2-ac-te"
     epic: 28
@@ -560,7 +560,7 @@ action_items:
       để khôi phục panic sau restart/đa instance; xử lý wildcard '{platform}:*' trong
       isHibernating (prefix match) hoặc bỏ wildcard entry."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-32-retro-2026-09-21.md"
   - id: "epic-32-retro-item-37-quyết-rõ-32-2-32-1-bổ-sung-delegation-ac"
     epic: 32
@@ -575,7 +575,7 @@ action_items:
       hoặc redis-server local) 2+ process/concurrent eval xác nhận Lua atomic; giữ
       mock cho fallback."
     owner: "dev"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-32-retro-2026-09-21.md"
   - id: "epic-33-retro-item-39-thêm-youtube_api_key-và-zalo_oa_access_t"
     epic: 33

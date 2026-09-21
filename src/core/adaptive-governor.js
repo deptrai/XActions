@@ -122,6 +122,36 @@ export class AdaptiveRateGovernor {
       priority: 2,
     });
     this.#consumerQuotas.set('internal', { consumerId: 'internal', rpmLimit: Infinity, burstLimit: 1000, priority: 99 });
+
+    // Story 32 fix: restore durable panic state from Redis on startup so a
+    // panic stop survives process restarts / is visible across instances.
+    // Fire-and-forget — constructor stays sync; failures degrade to in-memory.
+    this.#restorePanicsFromRedis();
+  }
+
+  /**
+   * Read back xact:panic:* keys written by panicStop() (possibly by another
+   * process before a restart) and re-arm in-memory panic state. Wildcard keys
+   * (`xact:panic:all`) restore the whole-platform stop; per-platform keys
+   * restore just that platform.
+   * @returns {Promise<void>}
+   */
+  async #restorePanicsFromRedis() {
+    if (!this.#redis || typeof this.#redis.keys !== 'function') return;
+    try {
+      const keys = await this.#redis.keys('xact:panic:*');
+      const list = Array.isArray(keys) ? keys : [];
+      for (const fullKey of list) {
+        const platform = String(fullKey).replace('xact:panic:', '');
+        if (!platform) continue;
+        this.#panicStoppedPlatforms.add(platform);
+      }
+      if (list.length > 0) {
+        console.warn(`[AdaptiveRateGovernor] Restored ${list.length} panic state(s) from Redis: ${list.map((k) => String(k).replace('xact:panic:', '')).join(', ')}`);
+      }
+    } catch (err) {
+      console.warn('[AdaptiveRateGovernor] panic restore scan failed:', err?.message || err);
+    }
   }
 
   /**
@@ -562,7 +592,12 @@ export class AdaptiveRateGovernor {
     const key = this.#resolveAccountId(accountId, platform);
     const now = Date.now();
     this.#hibernatingAccounts = this.#hibernatingAccounts.filter((h) => h.until > now);
-    return this.#hibernatingAccounts.some((h) => h.accountId === key);
+    // Story 32 fix: a wildcard hibernation entry (`platform:*`, written by
+    // panicStop) must match any concrete account on that platform — an exact
+    // equality check alone let accounts slip through after a panic stop.
+    return this.#hibernatingAccounts.some(
+      (h) => h.accountId === key || (h.accountId.endsWith(':*') && key.startsWith(h.accountId.slice(0, -1)))
+    );
   }
 
   /**
@@ -590,6 +625,35 @@ export class AdaptiveRateGovernor {
       }
     }
 
+    return false;
+  }
+
+  /**
+   * Durable panic-state check (Story 32 fix): consults Redis `xact:panic:*`
+   * so a panic stop issued by another instance (or before a restart) is
+   * honored. Falls back to the in-memory set when Redis is unavailable.
+   * @param {string} platform
+   * @returns {Promise<boolean>}
+   */
+  async isPanicStoppedAsync(platform) {
+    const target = String(platform || '').toLowerCase();
+    if (this.#panicStoppedPlatforms.has(target) || this.#panicStoppedPlatforms.has('all')) {
+      return true;
+    }
+    if (this.#redis && typeof this.#redis.get === 'function') {
+      try {
+        const val = await this.#redis.get(`xact:panic:${target}`);
+        if (val !== null && val !== undefined) {
+          return true;
+        }
+        const allKey = await this.#redis.get('xact:panic:all');
+        if (allKey !== null && allKey !== undefined) {
+          return true;
+        }
+      } catch (err) {
+        console.warn('[AdaptiveRateGovernor] isPanicStoppedAsync Redis read failed:', err?.message || err);
+      }
+    }
     return false;
   }
 

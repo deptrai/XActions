@@ -341,7 +341,7 @@ Use `src/detectUnfollowers.js` - it saves a snapshot of your followers and compa
 <details>
 <summary><strong>How do I download Twitter/X videos?</strong></summary>
 
-Use `src/scrapers/videoDownloader.js` - extracts MP4 URLs from any tweet.
+Use `scrape('twitter', 'download_video', { url })` or MCP tool `x_download_video` - delegates to the canonical TwitterCrawler (Epic 24: legacy videoDownloader.js archived).
 </details>
 
 <details>

@@ -637,57 +637,11 @@ export async function x_retweet({ url, tweetUrl }) {
 export async function x_download_video({ tweetUrl, url }) {
   const targetUrl = tweetUrl || url;
   if (!targetUrl) throw new Error('tweetUrl or url is required for x_download_video');
-  const { page: pg } = await ensureBrowser();
-  await pg.goto(targetUrl, { waitUntil: 'networkidle2' });
-  await randomDelay();
-
-  const videoUrls = await pg.evaluate(() => {
-    const videos = [];
-    const html = document.documentElement.innerHTML;
-    const patterns = [
-      /https:\/\/video\.twimg\.com\/[^"'\s]+\.mp4[^"'\s]*/g,
-      /https:\/\/[^"'\s]*\/amplify_video[^"'\s]*\.mp4[^"'\s]*/g,
-      /https:\/\/[^"'\s]*\/ext_tw_video[^"'\s]*\.mp4[^"'\s]*/g,
-    ];
-
-    patterns.forEach((pattern) => {
-      (html.match(pattern) || []).forEach((url) => {
-        let clean = url
-          .replace(/\\u002F/g, '/')
-          .replace(/\\/g, '')
-          .split('"')[0]
-          .split("'")[0];
-        if (clean.includes('.mp4')) {
-          const quality = clean.match(/\/(\d+x\d+)\//)?.[1] || 'unknown';
-          videos.push({ url: clean, quality });
-        }
-      });
-    });
-
-    const seen = new Set();
-    return videos.filter((v) => {
-      const key = v.url.split('?')[0];
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  });
-
-  if (!videoUrls.length) {
-    return { success: false, message: 'No video found in tweet' };
-  }
-
-  videoUrls.sort((a, b) => {
-    const res = (q) => parseInt(q.match(/(\d+)x(\d+)/)?.[2] || '0');
-    return res(b.quality) - res(a.quality);
-  });
-
-  return {
-    success: true,
-    videos: videoUrls,
-    bestQuality: videoUrls[0],
-    message: `Found ${videoUrls.length} video(s)`,
-  };
+  // Story 24.2 fix: delegate to the canonical TwitterCrawler download_video
+  // action (single implementation — was a duplicate regex-scrape here).
+  const { scrape } = await import('../scrapers/index.js');
+  const res = await scrape('twitter', 'download_video', { url: targetUrl });
+  return res;
 }
 
 // ============================================================================
@@ -892,9 +846,12 @@ export async function x_bookmark({ url, tweetUrl }) {
   return { success: false, message: 'Could not bookmark tweet' };
 }
 
-export async function x_get_bookmarks({ limit = 100 }) {
-  const { page: pg } = await ensureBrowser();
-  return scrapeBookmarks(pg, { limit });
+export async function x_get_bookmarks({ limit = 100, format } = {}) {
+  // Story 24.2 fix: delegate to the canonical TwitterCrawler export_bookmarks
+  // action (single implementation — was a duplicate Puppeteer scrape here).
+  const { scrape } = await import('../scrapers/index.js');
+  const res = await scrape('twitter', 'export_bookmarks', { limit, format: format || 'json' });
+  return { success: true, ...res };
 }
 
 export async function x_clear_bookmarks() {

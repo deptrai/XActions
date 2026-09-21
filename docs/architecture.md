@@ -270,7 +270,7 @@ XActions/
 │   ├── scrapers/                       # Unified Scraper Spine
 │   │   ├── index.js                    # scrape() universal dispatcher + DESCRIPTORS
 │   │   ├── adapters/                   # Puppeteer / Playwright / Cheerio adapters
-│   │   ├── videoDownloader.js          # Media downloader delegate
+│   │   └── (videoDownloader.js archived → Epic 24; use crawler action download_video)
 │   │   ├── social/                     # Social network scrapers & syndication
 │   │   │   ├── dispatcher.js           # UniversalActionDispatcher (parallel writes)
 │   │   │   ├── content-transformer.js  # Thread splitter, media adapter, limits

@@ -121,15 +121,13 @@ describe('Story 32.2 — DistributedTokenBucket & Header Parsing', () => {
       const bucket = new DistributedTokenBucket({ redis: mockRedis });
       const res = await bucket.consume('redis-consumer', 1, { capacity: 5, refillRate: 1 });
 
+      // node-redis v4+ options-object invocation:
       expect(mockRedis.eval).toHaveBeenCalledWith(
         TOKEN_BUCKET_LUA,
-        1,
-        'xact:tokenbucket:redis-consumer',
-        1,
-        5,
-        1,
-        expect.any(Number),
-        3600
+        expect.objectContaining({
+          keys: ['xact:tokenbucket:redis-consumer'],
+          arguments: ['1', '5', '1', expect.any(String), '3600'],
+        })
       );
       expect(res.allowed).toBe(true);
       expect(res.remaining).toBe(4);
@@ -164,6 +162,52 @@ describe('Story 32.2 — DistributedTokenBucket & Header Parsing', () => {
 
       expect(allowedCount).toBe(capacity);
       expect(rejectedCount).toBe(30);
+    });
+
+    it('atomic Lua contention against REAL Redis: 60 concurrent consumes over a 25-token bucket never oversubscribes', async () => {
+      // Story 32 fix (retro item 38): the in-memory concurrency test above cannot
+      // prove the Lua script is atomic across processes. This test connects to a
+      // real Redis (REDIS_URL / localhost:6379) and hammers consume() concurrently —
+      // the Lua script must serialize the check-and-decrement so exactly `capacity`
+      // requests are allowed. Skips when no Redis is reachable.
+      let redis;
+      try {
+        const { createClient } = await import('redis');
+        const url = process.env.REDIS_URL || 'redis://localhost:6379';
+        redis = createClient({ url });
+        redis.on('error', () => {});
+        await redis.connect();
+        await redis.ping();
+      } catch {
+        console.warn('[test] real Redis not reachable — skipping Lua contention test');
+        return; // graceful skip without vitest skip API noise
+      }
+
+      try {
+        const bucket = new DistributedTokenBucket({ redis });
+        const key = `contention-real-${process.pid}`;
+        await redis.del(`xact:tokenbucket:${key}`);
+        const capacity = 25;
+
+        // 60 concurrent consumers racing for 25 tokens through the Lua path
+        const results = await Promise.all(
+          Array.from({ length: 60 }, () =>
+            bucket.consume(key, 1, { capacity, refillRate: 0.01, ttlSeconds: 60 })
+          )
+        );
+        const allowed = results.filter((r) => r.allowed).length;
+        const rejected = results.filter((r) => !r.allowed).length;
+
+        expect(allowed).toBe(25);
+        expect(rejected).toBe(35);
+        expect(allowed + rejected).toBe(60);
+
+        // Bucket state must reflect exactly the consumed tokens
+        const raw = await redis.hGetAll(`xact:tokenbucket:${key}`);
+        expect(Number(raw.tokens)).toBeLessThan(1);
+      } finally {
+        await redis.quit().catch(() => {});
+      }
     });
   });
 

@@ -66,4 +66,52 @@ describe('Story 32.1 — AdaptiveRateGovernor: Panic Stop & Quota Priority Alloc
       expect(governor.setConsumerPriority('', 1)).toBe(false);
     });
   });
+
+  describe('Durable panic state (Story 32 fix)', () => {
+    it('restores panic state from Redis keys on construction', async () => {
+      // Simulate a panic written by a previous process
+      const fakeRedis = {
+        keys: async (pattern) => (pattern === 'xact:panic:*' ? ['xact:panic:twitter', 'xact:panic:mastodon'] : []),
+        get: async () => null,
+        set: async () => 'OK',
+        del: async () => 1,
+      };
+      const g = new AdaptiveRateGovernor({ redis: fakeRedis });
+      // #restorePanicsFromRedis is fire-and-forget — wait a tick for it to land
+      await new Promise((r) => setTimeout(r, 20));
+      const status = g.getStatus();
+      expect(status.panicStoppedPlatforms).toContain('twitter');
+      expect(status.panicStoppedPlatforms).toContain('mastodon');
+      expect(status.throttleLevel).toBe('critical');
+    });
+
+    it('isPanicStoppedAsync reads the durable Redis panic key for cross-instance panics', async () => {
+      const store = new Map();
+      const fakeRedis = {
+        keys: async () => [],
+        get: async (k) => store.get(k) ?? null,
+        set: async (k, v) => { store.set(k, v); return 'OK'; },
+        del: async (k) => { store.delete(k); return 1; },
+      };
+      const g = new AdaptiveRateGovernor({ redis: fakeRedis });
+      // In-memory says no panic…
+      expect(g.getStatus().panicStoppedPlatforms).toHaveLength(0);
+      // …but another instance wrote a durable panic for 'twitter'
+      await fakeRedis.set('xact:panic:twitter', 'emergency');
+      expect(await g.isPanicStoppedAsync('twitter')).toBe(true);
+      expect(await g.isPanicStoppedAsync('bluesky')).toBe(false);
+      // A global panic applies to every platform
+      await fakeRedis.set('xact:panic:all', 'global');
+      expect(await g.isPanicStoppedAsync('anything')).toBe(true);
+    });
+
+    it('wildcard hibernation (platform:*) matches concrete accounts after panicStop', () => {
+      governor.panicStop('twitter', { durationMs: 10000 });
+      // panicStop hibernates 'twitter:*' — a concrete account must match it.
+      expect(governor.isHibernating('twitter:acc123')).toBe(true);
+      expect(governor.isHibernating('twitter:acc999', 'twitter')).toBe(true);
+      // Other platforms unaffected
+      expect(governor.isHibernating('bluesky:acc1')).toBe(false);
+    });
+  });
 });

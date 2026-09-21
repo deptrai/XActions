@@ -45,14 +45,14 @@ end
 
 if tokens >= requested then
   tokens = tokens - requested
-  redis.call('HMSET', key, 'tokens', tokens, 'last_updated', last_updated)
-  redis.call('EXPIRE', key, ttl)
+  redis.call('HMSET', key, 'tokens', tostring(tokens), 'last_updated', tostring(last_updated))
+  redis.call('EXPIRE', key, tostring(ttl))
   return { 1, math.floor(tokens), 0 }
 else
   local missing = requested - tokens
   local wait_ms = math.ceil((missing / refill_rate) * 1000)
-  redis.call('HMSET', key, 'tokens', tokens, 'last_updated', last_updated)
-  redis.call('EXPIRE', key, ttl)
+  redis.call('HMSET', key, 'tokens', tostring(tokens), 'last_updated', tostring(last_updated))
+  redis.call('EXPIRE', key, tostring(ttl))
   return { 0, math.floor(tokens), wait_ms }
 end
 `;
@@ -236,16 +236,32 @@ export class DistributedTokenBucket {
     if (this.#redisClient && typeof this.#redisClient.eval === 'function') {
       try {
         const redisKey = `xact:tokenbucket:${key}`;
-        const res = await this.#redisClient.eval(
-          TOKEN_BUCKET_LUA,
-          1,
-          redisKey,
-          requested,
-          capacity,
-          refillRate,
-          now,
-          ttlSeconds
-        );
+        // node-redis v4+ expects `eval(script, { keys: [...], arguments: [...] })`
+        // while ioredis / older clients expect `eval(script, numKeys, key, ...args)`.
+        // Probe via argument count: node-redis accepts 2 args with { keys, arguments }.
+        const strArgs = [
+          String(requested),
+          String(capacity),
+          String(refillRate),
+          String(now),
+          String(ttlSeconds),
+        ];
+        let res;
+        try {
+          // Try node-redis v4 format first (the project's default client)
+          res = await this.#redisClient.eval(TOKEN_BUCKET_LUA, {
+            keys: [redisKey],
+            arguments: strArgs,
+          });
+        } catch (v4Err) {
+          // Fall back to ioredis positional format if the client rejects the options object
+          res = await this.#redisClient.eval(
+            TOKEN_BUCKET_LUA,
+            1,
+            redisKey,
+            ...strArgs
+          );
+        }
 
         if (Array.isArray(res)) {
           return {

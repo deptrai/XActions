@@ -102,10 +102,11 @@ export class Scraper {
    * @param {number} [count]
    */
   async *getLikedTweets(username, count = 100) {
-    /** @type {any} */
-    const res = await dispatchScrape('twitter', 'likes', { username, limit: count, ...this.options });
-    const items = res.posts || res.items || [];
-    for (const item of items) yield item;
+    // Story 26.2 fix: legacy getLikedTweets returned tweets a user liked. The hybrid
+    // TwitterCrawler only exposes 'likes' (likers of a tweet, requires tweetId).
+    throw new Error(
+      `❌ Scraper.getLikedTweets("${username}"): fetching user likes timeline is not supported in the hybrid crawler. Use scrape('twitter', 'search', { query: 'from:${username}' }) or scrape('twitter', 'likes', { tweetId }) to fetch likers of a specific tweet.`
+    );
   }
 
   /** @param {string} username */
@@ -222,10 +223,11 @@ export class Scraper {
    * @param {number} [count]
    */
   async *getListTweets(listId, count = 100) {
-    /** @type {any} */
-    const res = await dispatchScrape('twitter', 'list_members', { listId, limit: count, ...this.options });
-    const items = res.members || res.items || res.posts || [];
-    for (const item of items) yield item;
+    // Story 26.2 fix: legacy getListTweets returned tweets in a list. The hybrid
+    // crawler maps listId to 'list_members' which returns member accounts, not posts.
+    throw new Error(
+      `❌ Scraper.getListTweets("${listId}"): fetching list timeline is not supported in the hybrid crawler. Use scrape('twitter', 'list_members', { listId }) to fetch member accounts.`
+    );
   }
 
   /**

@@ -111,7 +111,9 @@ export async function getAdapter(name) {
  * @returns {Promise<BaseAdapter>} First available adapter
  */
 export async function getAvailableAdapter(preferred) {
-  const candidates = [preferred, defaultAdapterName, 'puppeteer', 'playwright', 'crawlee', 'got-jsdom', 'selenium', 'cheerio'].filter(Boolean);
+  // Story 24.4 fix: only live adapter names — crawlee/selenium/cheerio were
+  // archived in the Epic 24 decommission and would just fail getAdapter().
+  const candidates = [preferred, defaultAdapterName, 'puppeteer', 'playwright', 'got-jsdom'].filter(Boolean);
   const tried = new Set();
 
   for (const name of candidates) {
