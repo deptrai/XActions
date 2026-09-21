@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-20T07:26:35.207Z",
+  "generated": "2026-09-21T12:36:46.063Z",
   "platforms": {
     "twitter": {
       "category": "social",
@@ -907,6 +907,26 @@
           "requiresAuth": false
         },
         {
+          "action": "post_detail",
+          "description": "Fetch a single Bluesky post (+ optional replies) by at:// URI or bsky.app URL via getPostThread",
+          "requiredArgs": [],
+          "optionalArgs": [
+            "uri",
+            "url",
+            "postUrl",
+            "postId",
+            "depth",
+            "parentHeight",
+            "identifier",
+            "password"
+          ],
+          "example": {
+            "postUrl": "https://bsky.app/profile/alice.bsky.social/post/3abc"
+          },
+          "outputType": "{ post: PostItem, posts: PostItem[] }",
+          "requiresAuth": false
+        },
+        {
           "action": "post",
           "description": "Publish a new post to Bluesky",
           "requiredArgs": [
@@ -1124,6 +1144,25 @@
             "limit": 20
           },
           "outputType": "PostItem[]",
+          "requiresAuth": false
+        },
+        {
+          "action": "post_detail",
+          "description": "Fetch a single Mastodon status by numeric ID or public post URL via GET /api/v1/statuses/:id",
+          "requiredArgs": [],
+          "optionalArgs": [
+            "statusId",
+            "id",
+            "url",
+            "postUrl",
+            "postId",
+            "instance",
+            "accessToken"
+          ],
+          "example": {
+            "postUrl": "https://mastodon.social/@Gargron/1234567890"
+          },
+          "outputType": "{ post: PostItem, posts: PostItem[] }",
           "requiresAuth": false
         },
         {
@@ -1393,6 +1432,19 @@
           ],
           "example": {},
           "outputType": "{ comments: CommentItem[], pageInfo?: any }",
+          "requiresAuth": false
+        },
+        {
+          "action": "post_detail",
+          "description": "Fetch a single Facebook post (content + attachments/media) by URL or numeric postId via hybrid GraphQL + browser fallback",
+          "requiredArgs": [],
+          "optionalArgs": [
+            "url",
+            "postUrl",
+            "postId"
+          ],
+          "example": {},
+          "outputType": "{ post: PostItem | null, posts: PostItem[] }",
           "requiresAuth": false
         },
         {

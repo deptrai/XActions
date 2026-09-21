@@ -1,6 +1,6 @@
 # Canonical Action/Arg Matrix
 
-> Auto-generated 2026-09-20T07:26:35.210Z. Do not edit manually.
+> Auto-generated 2026-09-21T12:36:46.065Z. Do not edit manually.
 
 | Platform | Category | Action | Required Args | Optional Args | Example |
 |----------|----------|--------|---------------|---------------|---------|
@@ -53,6 +53,7 @@
 | bluesky | social | search | query | limit, cursor, sort, since, until, author, identifier, password | `{"query":"bluesky","limit":25}` |
 | bluesky | social | trending | — | limit, identifier, password | `{"limit":20}` |
 | bluesky | social | feed | feedUri | feed, uri, limit, cursor, identifier, password | `{"feedUri":"at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot"}` |
+| bluesky | social | post_detail | — | uri, url, postUrl, postId, depth, parentHeight, identifier, password | `{"postUrl":"https://bsky.app/profile/alice.bsky.social/post/3abc"}` |
 | bluesky | social | post | text | reply, dryRun, identifier, password | `{"text":"Hello Bluesky from XActions","dryRun":false}` |
 | bluesky | social | reply | text, parentUri, parentCid | rootUri, rootCid, dryRun, identifier, password | `{"text":"Great point!","parentUri":"at://did:plc:.../app.bsky.feed.post/...","parentCid":"bafyre..."}` |
 | bluesky | social | like | uri, cid | dryRun, identifier, password | `{"uri":"at://did:plc:.../app.bsky.feed.post/...","cid":"bafyre..."}` |
@@ -64,6 +65,7 @@
 | mastodon | social | followers | username | instance, limit, max_id, onProgress, accessToken | `{"username":"Gargron","limit":40}` |
 | mastodon | social | following | username | instance, limit, max_id, onProgress, accessToken | `{"username":"Gargron","limit":40}` |
 | mastodon | social | posts | username | instance, limit, max_id, since_id, exclude_replies, onProgress, accessToken | `{"username":"Gargron","limit":20}` |
+| mastodon | social | post_detail | — | statusId, id, url, postUrl, postId, instance, accessToken | `{"postUrl":"https://mastodon.social/@Gargron/1234567890"}` |
 | mastodon | social | get_user_feed | username | instance, limit, max_id, accessToken | `{"username":"Gargron","limit":20}` |
 | mastodon | social | search | query | instance, type, limit, max_id, accessToken | `{"query":"open source","limit":20}` |
 | mastodon | social | hashtag | hashtag | instance, limit, max_id, accessToken | `{"hashtag":"technology","limit":20}` |
@@ -79,6 +81,7 @@
 | facebook | social | page_posts | pageId | count, cursor | `{}` |
 | facebook | social | get_comments | postId | maxDepth, maxComments, after | `{}` |
 | facebook | social | post_comments | url | postId, maxDepth, maxComments, limit, includeReplies, after | `{}` |
+| facebook | social | post_detail | — | url, postUrl, postId | `{}` |
 | facebook | social | group_comments | url | postId, maxDepth, maxComments, limit, includeReplies, after | `{}` |
 | facebook | social | profile | — | username, url | `{"username":"zuck"}` |
 | facebook | social | followers | — | username, url, limit, cursor | `{"username":"zuck","limit":20}` |
