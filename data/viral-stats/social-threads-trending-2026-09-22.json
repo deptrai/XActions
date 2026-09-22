@@ -1,0 +1,73 @@
+{
+  "platform": "threads",
+  "category": "social",
+  "niche": "trending",
+  "sampleSize": 4,
+  "generatedAt": "2026-09-22T19:47:59.218Z",
+  "viralRateThreshold": 4527,
+  "hookTypeDistribution": {
+    "observation": {
+      "count": 1,
+      "avgEngagement": 4527,
+      "viralRate": 100
+    },
+    "story": {
+      "count": 1,
+      "avgEngagement": 1238,
+      "viralRate": 0
+    },
+    "question": {
+      "count": 2,
+      "avgEngagement": 601,
+      "viralRate": 0
+    }
+  },
+  "topPerformingPatterns": [
+    {
+      "attributes": {
+        "hookType": "observation",
+        "emotionalTrigger": "surprise",
+        "hasNumbers": false,
+        "curiosityGap": true
+      },
+      "avgEngagement": 4527,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "hookType": "story",
+        "emotionalTrigger": "joy",
+        "hasNumbers": true,
+        "curiosityGap": false
+      },
+      "avgEngagement": 1238,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "hookType": "question",
+        "emotionalTrigger": "anticipation",
+        "hasNumbers": false,
+        "curiosityGap": true
+      },
+      "avgEngagement": 859,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "hookType": "question",
+        "emotionalTrigger": "curiosity",
+        "hasNumbers": false,
+        "curiosityGap": true
+      },
+      "avgEngagement": 343,
+      "count": 1
+    }
+  ],
+  "attributeCorrelations": {
+    "hookType": 3104230.73,
+    "hasNumbers": 140980.03,
+    "emotionalTrigger": 2686782.69,
+    "curiosityGap": 140980.03
+  }
+}
