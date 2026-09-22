@@ -147,4 +147,26 @@ router.post('/muted-list', async (req, res) => {
   return queueOperation(res, generateOperationId(), 'mutedList', { session });
 });
 
+/**
+ * POST /api/ai/moderation/jev-check — Jev semantic toxicity check (Story 43.2).
+ * Sync endpoint (no queueOp) — evaluates content for toxicity + quality.
+ *
+ * Body: { text: string }
+ * Returns: { success, verdict: 'send'|'block'|'review', scores, toxic, degraded }
+ */
+router.post('/jev-check', async (req, res) => {
+  const text = /** @type {string | undefined} */ (req.body.text);
+  if (!text || typeof text !== 'string' || !text.trim()) {
+    return res.status(400).json({ success: false, error: 'INVALID_INPUT', message: 'text is required' });
+  }
+
+  try {
+    const { writeGate } = await import('../../../src/ai/jevWriteGate.js');
+    const result = await writeGate(text, {});
+    return res.json({ success: true, ...result });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'JEV_CHECK_FAILED', message: err instanceof Error ? err.message : String(err) });
+  }
+});
+
 export default router;

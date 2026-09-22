@@ -186,6 +186,16 @@ router.post('/predict', async (req, res) => {
     const totalScore = Math.min(Object.values(score).reduce((s, v) => s + v, 0), 1);
     const label = totalScore >= 0.3 ? 'high' : totalScore >= 0.15 ? 'medium' : 'low';
 
+    // Jev semantic write-path gate (Story 43.2) — virality/clarity/onBrand + toxic
+    let jevResult = null;
+    try {
+      const { writeGate } = await import('../../../src/ai/jevWriteGate.js');
+      const gate = await writeGate(text, {});
+      if (!gate.degraded) {
+        jevResult = gate;
+      }
+    } catch (_) { /* Jev gate optional — heuristic still applies */ }
+
     let baselineAccount = null;
     if (username) {
       try {
@@ -208,6 +218,7 @@ router.post('/predict', async (req, res) => {
         engagementScore: parseFloat(totalScore.toFixed(3)),
         engagementLabel: label,
         factors: score,
+        ...(jevResult ? { jev: jevResult } : {}),
       },
       baselineAccount,
       suggestions: [

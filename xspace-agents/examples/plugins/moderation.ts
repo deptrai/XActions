@@ -22,6 +22,9 @@ export interface ModerationOptions {
   filterInput?: boolean
   /** Replacement response when content is blocked (default: null = veto) */
   replacement?: string | null
+  /** Optional Jev toxicity checker — async semantic check (Story 43.2).
+   * When provided, isBlockedAsync uses it; isBlocked stays regex-only. */
+  jevChecker?: (text: string) => Promise<{ blocked: boolean; noul: number; degraded: boolean }>
 }
 
 export function createModerationPlugin(options: ModerationOptions = {}): Plugin {
@@ -33,6 +36,23 @@ export function createModerationPlugin(options: ModerationOptions = {}): Plugin 
 
   function isBlocked(text: string): boolean {
     return patterns.some((p) => p.test(text))
+  }
+
+  /**
+   * Async semantic toxicity check via injected jevChecker.
+   * Returns true if Jev flags the text as toxic (noul >= threshold).
+   * Falls back to regex isBlocked when jevChecker is not configured or degraded.
+   */
+  async function isBlockedAsync(text: string): Promise<boolean> {
+    if (isBlocked(text)) return true // regex catch first (fast)
+    if (!options.jevChecker) return false
+    try {
+      const result = await options.jevChecker(text)
+      if (result.degraded) return false // conservative — Jev down → don't block
+      return result.blocked
+    } catch {
+      return false // checker error → don't block
+    }
   }
 
   return {
