@@ -223,6 +223,31 @@ export function createBridge(options = {}) {
      * @param {string} text
      * @returns {{ tool: string, params: object }|null}
      */
+    /**
+     * Asynchronously parse natural language using fast-path regex,
+     * falling back to Jev semantic routing (Story 44.1).
+     *
+     * @param {string} text
+     * @param {object} [options={}]
+     * @returns {Promise<{ tool: string, params: object }|null>}
+     */
+    async parseNaturalLanguageAsync(text, options = {}) {
+      const fastMatch = bridge.parseNaturalLanguage(text);
+      if (fastMatch) return fastMatch;
+
+      try {
+        const { routeTaskIntent } = await import('./jevRouter.js');
+        const routed = await routeTaskIntent(text, options);
+        if (routed.skillId && !routed.disambiguationNeeded) {
+          const tool = routed.skillId.replace(/^xactions\./, '');
+          return { tool, params: {} };
+        }
+      } catch (_) {
+        // Fallback gracefully
+      }
+      return null;
+    },
+
     parseNaturalLanguage(text) {
       if (!text || typeof text !== 'string') return null;
       const cleaned = text.trim();

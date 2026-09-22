@@ -396,3 +396,24 @@ export function refreshSkills() {
   ensureInitialized();
   return _skills.size;
 }
+
+/**
+ * Semantically resolve a natural-language query to an A2A skill using Jev.
+ * (Story 44.1 - Jev Tier-2 A2A Routing)
+ *
+ * @param {string} query
+ * @param {object} [options={}]
+ * @returns {Promise<{ skill: object|null, confidence: number, disambiguationNeeded: boolean }>}
+ */
+export async function resolveSkillSemantically(query, options = {}) {
+  const { routeTaskIntent } = await import('./jevRouter.js');
+  const result = await routeTaskIntent(query, options);
+  const skill = result.skillId ? getSkillById(result.skillId) : null;
+  return {
+    skill,
+    confidence: result.confidence,
+    disambiguationNeeded: result.disambiguationNeeded,
+    candidates: result.candidates,
+    source: result.source,
+  };
+}
