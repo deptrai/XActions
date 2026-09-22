@@ -2,7 +2,7 @@
 title: 'Story 42.5 — jev-osint-bio-matcher: Semantic Bio Matching for EntityResolver'
 type: 'feature'
 created: '2026-09-22'
-status: 'in-review'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: 'c755decb79f8ecfd94958336a7ac1adfad54f5b3'
@@ -93,9 +93,39 @@ context: []
 
 ## Implementation Notes
 
+- **Session 1 (implementation subagent):** module `src/osint/jev-bio-matcher.js` (~210 lines) + `bioPairKey`/`bio_semantic` trong `entity-resolver.js` + wiring sequential `prefetchAvatarHashes → prefetchBioScores → resolveIdentities` trong `osint-find-profiles.js` + threshold `samePerson: 0.85` trong `jevBrain.js` + env passthrough `jev.js` + `.env.example` + `vitest.config` kill-switch + 2 test files. 50/50 targeted, 394/394 regression.
+- **Session 1 (review):** 3 layers → ~29 findings → triage **15 patch-groups, 0 intent-gap, 0 loopback** (log bên dưới). Tất cả patch đã apply trong session này; thêm fix test-isolation phát hiện khi chạy verify.
+- **Post-patch fixes bổ sung (verify-time):**
+  - `tests/api/jev-lead-icp.test.js`: `vi.resetModules()` trong `beforeEach` — `_brain` singleton trong `jev.js` bị poison khi test `degraded` (xóa `TYPESAFE_API_KEY`) chạy trước do `sequence.shuffle`; mỗi test giờ có router + brain riêng. Đây là isolation bug có sẵn, test `/status` mới chỉ đổi seed lộ ra.
+  - Wiring test `osint-find-profiles.test.js`: `vi.mock` toàn module `jev-bio-matcher` → canned `Map` → assert `bio_semantic` trong `matchedSignals` của merged cluster + assert `+35` đơn độc không merge (35 < 40).
+  - `tests/osint/jev-bio-matcher.test.js`: thêm deterministic bio-order assert (`bio1 <= bio2`), dropped-pair assert trong cap test (`pa_p1..p3` bị drop), `_sharedBrain` no-key path test (production call không truyền brain).
+- **Verify cuối:** 88/88 targeted (4 files) · 396/396 `tests/mcp/ + tests/osint/` dưới `JEV_OSINT_BIO_MATCH=0` · smoke `function` · `grep api.typesafe.ai src/osint/` → 0 hits.
+
 ## Spec Change Log
 
 ## Review Triage Log
+
+3 layers (blind B1-15, edge E1-12, verification-gap V1-2 + 2 other) — dedupe thành root-cause groups; tất cả **patch** (không intent_gap, không loopback):
+
+| # | Findings | Verdict | Root-cause fix |
+|---|----------|---------|----------------|
+| P1 | B1, E5 | medium | `prefetchBioScores` nhận `timeoutMs` (deadline bail giữa các batch); caller truyền `callerTimeout ?? undefined` như prefetchAvatarHashes |
+| P2 | B2 | medium | Xóa block mutate `confidenceThresholds.samePerson` (:230-238) — qualify dùng local `threshold`, `decide()`/`gate()` không đọc — dead code mutate shared singleton |
+| P3 | B3 | medium | Dedupe candidates theo `pairKey` trước rank/cap — duplicate `id` profiles không burn 2 paid calls + cap slots |
+| P4 | B4 | low | Xóa username_exact gate hand-rolled — `cheap >= MERGE_THRESHOLD` đã cover (+40 ≥ 40); tránh drift khỏi `norm()` |
+| P5 | B7, E7 | medium | `resolveMaxPairs`: `Number()` thay `parseInt` ('1e2'→100, '0.5'→0.5→floor 0 là ý đồ rõ) + clamp trần (≤500) — fat-finger env không mở flood paid calls |
+| P6 | B8, E6 | medium | `_sharedBrain` rebuild khi `apiKey` rỗng mà env `TYPESAFE_API_KEY` đã có — post-import key không bị freeze-degrade cả process |
+| P7 | E1, E2, V-other-1 | high | Never-throws boundary: try/catch `import('p-limit')`; guard `avatarHashMap?.get` function-check; try/catch quanh gating-loop `scorePair` (getter có thể throw) |
+| P8 | E3, V-other-2 | medium | Degenerate `pairKey` (`platform:` rỗng identity): `profilePairId` trả `''` khi thiếu mọi định danh → prefetch skip, `scorePair` check truthy key trước `has()` — +35 không leak cross-pair |
+| P9 | E4 | low | Platform compare normalize `trim().toLowerCase()` — 'GitHub'/'github' không lọt candidate gate |
+| P10 | B10, E8 | low | `phashEnabled` override parse đúng string 'false'/'0' — consistent với kill-switch polarity |
+| P11 | B9 | low | Per-pair degraded/skip logs → 1 summary line (đếm); pairKey chứa `platform:username` không spam 30 dòng PII vào log |
+| P12 | B12 | medium | Truncate bio ≤500 chars trước khi gửi decide — bio multi-KB không inflate token (mirror 42.4 snippet bound) |
+| P13 | E9, V2 | medium | Route `JEV_THRESHOLD_SAMEPERSON` clamp [0,1] trong spread — env '1.5' không poison gate |
+| P14 | B14, V1 | high | Tests: wiring test `osint-find-profiles.test.js` (vi.mock jev-bio-matcher → canned Map → assert `bio_semantic` trong `identityClusters`); `/status` assert `samePerson===0.85`; assert bio1/bio2 sorted-order; cap test assert pair bị drop đúng |
+| P15 | B15 | low | Spec Verification `...` placeholder → path thật `src/osint/jev-bio-matcher.js` |
+
+**Rejected:** B5 (shape `Map<pairKey,{score,conf}>` là spec-mandated — giữ values cho observability) · B6 (scorePair trust input contract — map chỉ do prefetch nội bộ tạo) · B11 (phash-override divergence — không caller nào override thật; resolveIdentities tự derive env consistent) · B13 (double O(n²) cheap compute — CPU-trivial, intentional; ghi Design Notes) · E10 (env flip mid-request — unreachable) · B15a (sprint-status done sớm — tracking-only, workflow sync cuối).
 
 ## Design Notes
 
@@ -110,7 +140,7 @@ context: []
 **Commands:**
 - `npx vitest run tests/osint/jev-bio-matcher.test.js tests/mcp/entity-resolver.test.js` — expected: all pass, cover matrix rows.
 - `JEV_OSINT_BIO_MATCH=0 npx vitest run tests/mcp/ tests/osint/` — expected: all pass, no regression.
-- `node -e "import('.../jev-bio-matcher.js').then(m => console.log(typeof m.prefetchBioScores))"` — expected: `function`, no throw without `TYPESAFE_API_KEY`.
+- `node -e "import('./src/osint/jev-bio-matcher.js').then(m => console.log(typeof m.prefetchBioScores))"` — expected: `function`, no throw without `TYPESAFE_API_KEY`.
 
 **Manual checks:**
 - `grep -rn 'api.typesafe.ai' src/osint/` → 0 hits (gateway qua JevBrain only).

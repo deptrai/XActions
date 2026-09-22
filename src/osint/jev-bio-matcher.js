@@ -15,10 +15,10 @@
  * nothing is persisted — the Map is GC'd with the response.
  *
  * Candidate gating (a paid decide call is earned, never default):
- *   - different `platform`
- *   - both `bio` fields >= 20 trimmed chars
- *   - `username_exact` miss (identical usernames already merge for free)
- *   - cheap `scorePair` score < MERGE_THRESHOLD (already-merged pairs skip Jev)
+ *   - different `platform` (case-insensitive)
+ *   - both `bio` fields >= 20 trimmed chars (truncated to 500 before sending)
+ *   - cheap `scorePair` score < MERGE_THRESHOLD — already-merged pairs skip Jev,
+ *     which also covers username_exact (+40 >= 40)
  * Candidates are ranked by that same cheap score descending — pairs at 30–39
  * are one signal short of merging, exactly where a second opinion pays off —
  * tie-broken by `pairKey` so the cap is deterministic. At most
@@ -30,7 +30,7 @@
  * Env:
  *   JEV_OSINT_BIO_MATCH      — kill-switch, default ON; only 0|false|off|no disables.
  *   JEV_THRESHOLD_SAMEPERSON — confidence threshold for the samePerson gate (default 0.85, clamped [0,1]).
- *   JEV_OSINT_BIO_MAX_PAIRS  — max candidate pairs scored per run (default 30; <=0 disables).
+ *   JEV_OSINT_BIO_MAX_PAIRS  — max candidate pairs scored per run (default 30; <=0 disables; clamped <=500).
  *
  * @author nich (@nichxbt)
  * @license Apache-2.0
@@ -41,9 +41,11 @@ import { bioPairKey, scorePair, MERGE_THRESHOLD } from '../mcp/entity-resolver.j
 import { getAvatarPHashThreshold, isAvatarPHashEnabled } from './phash.js';
 
 const BIO_MIN_CHARS = 20;
+const BIO_MAX_CHARS = 500; // bound paid-call payload — multi-KB bios can't inflate tokens
 const SAME_PERSON_MIN_SCORE = 2;
 const DEFAULT_SAMEPERSON_THRESHOLD = 0.85;
 const DEFAULT_MAX_PAIRS = 30;
+const MAX_PAIRS_CEILING = 500; // hard cap — a fat-fingered env can't open a paid-call flood
 const BIO_MATCH_CONCURRENCY = 8;
 const DECIDE_TIMEOUT_MS = 5000; // mirrors JevBrain's own default — bounded per paid call
 
@@ -112,9 +114,10 @@ export function resolveSamePersonThreshold(val = process.env.JEV_THRESHOLD_SAMEP
  */
 export function resolveMaxPairs(val = process.env.JEV_OSINT_BIO_MAX_PAIRS) {
   if (val === undefined || val === null || val === '') return DEFAULT_MAX_PAIRS;
-  const parsed = typeof val === 'number' ? val : parseInt(String(val), 10);
+  // Number() not parseInt: '1e2' → 100, '0.5' → 0 (disables) — both honored as written.
+  const parsed = typeof val === 'number' ? val : Number(String(val));
   if (!Number.isFinite(parsed)) return DEFAULT_MAX_PAIRS;
-  return Math.floor(parsed);
+  return Math.min(Math.floor(parsed), MAX_PAIRS_CEILING);
 }
 
 /** @type {any} — lazily-constructed JevBrain shared across calls (null until first use) */
@@ -129,7 +132,9 @@ let _sharedBrain = null;
  */
 function resolveBrain(injected) {
   if (injected) return injected;
-  if (!_sharedBrain) {
+  // Rebuild when the first-use brain captured an empty key but one exists now —
+  // a post-import/dotenv key must not leave the feature degraded for life.
+  if (!_sharedBrain || (!_sharedBrain.apiKey && process.env.TYPESAFE_API_KEY)) {
     _sharedBrain = new JevBrain({
       confidenceThresholds: { samePerson: resolveSamePersonThreshold() },
     });
@@ -157,11 +162,16 @@ function resolveBrain(injected) {
  *        cheap score (default: isAvatarPHashEnabled())
  * @param {number} [options.phashThreshold] — resolved Hamming threshold for the
  *        cheap score (default: getAvatarPHashThreshold())
+ * @param {number} [options.timeoutMs] — caller's overall budget; the pre-pass
+ *        stops scheduling new decide calls once the deadline passes
  * @returns {Promise<Map<string, {score: number, confidence: number}>>}
  */
 export async function prefetchBioScores(profiles, options = {}) {
   const map = new Map();
   const opts = options && typeof options === 'object' ? options : {};
+  const deadline = Number.isFinite(opts.timeoutMs) && opts.timeoutMs > 0
+    ? Date.now() + opts.timeoutMs
+    : null;
 
   // Kill-switch + spend cap resolve lazily per call — post-import `.env` loads
   // and runtime env flips are honored (same contract as the diagnoser).
@@ -170,8 +180,12 @@ export async function prefetchBioScores(profiles, options = {}) {
   if (maxPairs <= 0) return map;
   const threshold = resolveSamePersonThreshold();
 
-  const phashEnabled = opts.phashEnabled !== undefined ? Boolean(opts.phashEnabled) : isAvatarPHashEnabled();
+  const phashEnabled = opts.phashEnabled !== undefined
+    ? isJevOsintBioMatchEnabled(opts.phashEnabled) // same disable-list coercion for non-boolean input
+    : isAvatarPHashEnabled();
   const phashThreshold = Number.isFinite(opts.phashThreshold) ? opts.phashThreshold : getAvatarPHashThreshold();
+  // Non-Map avatarHashMap would make scorePair throw on .get — degrade to none.
+  const avatarHashMap = opts.avatarHashMap && typeof opts.avatarHashMap.get === 'function' ? opts.avatarHashMap : undefined;
 
   const list = Array.isArray(profiles) ? profiles.filter((p) => p && typeof p === 'object') : [];
   if (list.length < 2) return map;
@@ -184,33 +198,48 @@ export async function prefetchBioScores(profiles, options = {}) {
       const a = list[i];
       const b = list[j];
       // (a) cross-platform only — same-platform pairs carry no entity signal.
-      if (a.platform === b.platform) continue;
+      const platA = String(a.platform || '').trim().toLowerCase();
+      const platB = String(b.platform || '').trim().toLowerCase();
+      if (!platA || !platB || platA === platB) continue;
       // (b) both bios present and substantive (>= 20 trimmed chars).
-      const bioA = String(a.bio || '').trim();
-      const bioB = String(b.bio || '').trim();
+      const bioA = String(a.bio || '').trim().slice(0, BIO_MAX_CHARS);
+      const bioB = String(b.bio || '').trim().slice(0, BIO_MAX_CHARS);
       if (bioA.length < BIO_MIN_CHARS || bioB.length < BIO_MIN_CHARS) continue;
-      // (c) username_exact miss — identical usernames merge for free.
-      const aUser = String(a.username || '').trim().toLowerCase();
-      const bUser = String(b.username || '').trim().toLowerCase();
-      if (aUser && bUser && aUser === bUser) continue;
-      // (d) cheap scorePair below MERGE_THRESHOLD — pairs the free signals
-      // already merge never reach Jev (avatarHashMap included so the estimate
-      // matches what resolveIdentities will compute).
-      const cheap = scorePair(a, b, opts.avatarHashMap, phashEnabled, phashThreshold).score;
-      if (cheap >= MERGE_THRESHOLD) continue;
-      candidates.push({ bioA, bioB, cheap, key: bioPairKey(a, b) });
+      try {
+        // (c) cheap scorePair below MERGE_THRESHOLD — pairs the free signals
+        // already merge never reach Jev; this also covers username_exact
+        // (+40 >= 40). avatarHashMap included so the estimate matches what
+        // resolveIdentities will compute.
+        const cheap = scorePair(a, b, avatarHashMap, phashEnabled, phashThreshold).score;
+        if (cheap >= MERGE_THRESHOLD) continue;
+        const key = bioPairKey(a, b);
+        if (!key) continue; // degenerate identity — no stable key, no map entry
+        candidates.push({ bioA, bioB, cheap, key });
+      } catch {
+        // Throwing getter / malformed profile on an ad-hoc object — skip pair.
+        continue;
+      }
     }
   }
   if (candidates.length === 0) return map;
 
+  // Dedupe by pairKey — duplicate profiles (same normalized id) must not burn
+  // duplicate paid calls or cap slots. Keep the highest cheap score.
+  const deduped = new Map();
+  for (const c of candidates) {
+    const prev = deduped.get(c.key);
+    if (!prev || c.cheap > prev.cheap) deduped.set(c.key, c);
+  }
+  const uniqueCandidates = [...deduped.values()];
+
   // Rank by cheap score descending — near-merge pairs (30–39) are the most
   // valuable second opinions. Tie-break on pairKey keeps the cap deterministic.
-  candidates.sort((x, y) => (y.cheap - x.cheap) || (x.key < y.key ? -1 : x.key > y.key ? 1 : 0));
-  const capped = candidates.slice(0, maxPairs);
-  if (candidates.length > capped.length) {
+  uniqueCandidates.sort((x, y) => (y.cheap - x.cheap) || (x.key < y.key ? -1 : x.key > y.key ? 1 : 0));
+  const capped = uniqueCandidates.slice(0, maxPairs);
+  if (uniqueCandidates.length > capped.length) {
     console.log(
-      `[JevBioMatcher] ${candidates.length} candidate bio pairs exceed JEV_OSINT_BIO_MAX_PAIRS=${maxPairs} — ` +
-        `scoring top ${capped.length}, skipping ${candidates.length - capped.length}`,
+      `[JevBioMatcher] ${uniqueCandidates.length} candidate bio pairs exceed JEV_OSINT_BIO_MAX_PAIRS=${maxPairs} — ` +
+        `scoring top ${capped.length}, skipping ${uniqueCandidates.length - capped.length}`,
     );
   }
 
@@ -224,25 +253,25 @@ export async function prefetchBioScores(profiles, options = {}) {
     return map;
   }
 
-  // Keep a lazy-built (non-injected) brain's samePerson threshold current per
-  // call so post-import env changes are honored; an injected brain keeps its
-  // own configuration (same contract as JevChallengeDiagnoser).
+  let pLimit;
   try {
-    if (
-      !opts.brain &&
-      brain.confidenceThresholds &&
-      typeof brain.confidenceThresholds === 'object'
-    ) {
-      brain.confidenceThresholds.samePerson = threshold;
-    }
-  } catch { /* best-effort refresh only */ }
-
-  const { default: pLimit } = await import('p-limit');
+    ({ default: pLimit } = await import('p-limit'));
+  } catch {
+    // Module resolution failure must not take down the whole response.
+    console.warn('[JevBioMatcher] p-limit unavailable — skipping bio second opinion');
+    return map;
+  }
   const limit = pLimit(BIO_MATCH_CONCURRENCY);
 
+  const stats = { qualified: 0, unqualified: 0, degraded: 0, errors: 0, timedOut: 0 };
   await Promise.allSettled(
     capped.map((cand) =>
       limit(async () => {
+        // Caller deadline — stop scheduling new paid calls once it passes.
+        if (deadline && Date.now() > deadline) {
+          stats.timedOut++;
+          return;
+        }
         // Deterministic bio order so identical pairs send identical payloads.
         const [bio1, bio2] = cand.bioA <= cand.bioB ? [cand.bioA, cand.bioB] : [cand.bioB, cand.bioA];
         try {
@@ -253,9 +282,7 @@ export async function prefetchBioScores(profiles, options = {}) {
           );
           // Degraded plane (missing key / API error / budget) → no signal.
           if (!result || result.meta?.degraded) {
-            console.log(
-              `[JevBioMatcher] pair ${cand.key} — Jev degraded (${result?.meta?.reason || 'no-result'}), skipped`,
-            );
+            stats.degraded++;
             return;
           }
           const answer = result.answers?.samePerson;
@@ -263,16 +290,27 @@ export async function prefetchBioScores(profiles, options = {}) {
           const confidence = typeof answer?.confidence === 'number' ? answer.confidence : 0;
           if (score >= SAME_PERSON_MIN_SCORE && confidence >= threshold) {
             map.set(cand.key, { score, confidence });
+            stats.qualified++;
+          } else {
+            stats.unqualified++;
           }
         } catch (err) {
           // decide() is designed not to throw — belt & suspenders anyway.
+          // No pair key in the message — it embeds platform:username (PII-lite).
+          stats.errors++;
           console.warn(
-            `[JevBioMatcher] decide() threw for pair ${cand.key} — skipping: ${err instanceof Error ? err.message : String(err)}`,
+            `[JevBioMatcher] decide() threw — pair skipped: ${err instanceof Error ? err.message : String(err)}`,
           );
         }
       }),
     ),
   );
+  if (stats.degraded || stats.errors || stats.timedOut) {
+    console.log(
+      `[JevBioMatcher] ${capped.length} pairs scored — qualified=${stats.qualified} ` +
+        `unqualified=${stats.unqualified} degraded=${stats.degraded} errors=${stats.errors} timedOut=${stats.timedOut}`,
+    );
+  }
 
   return map;
 }

@@ -657,7 +657,7 @@ export async function executeSocialFindProfiles(args) {
   // prefetch (never Promise.all): candidate gating inside prefetchBioScores
   // needs avatarHashMap so its cheap scorePair estimate matches what
   // resolveIdentities computes — pairs already merging on free signals skip Jev.
-  const bioScoreMap = await prefetchBioScores(profiles, { avatarHashMap });
+  const bioScoreMap = await prefetchBioScores(profiles, { avatarHashMap, timeoutMs: callerTimeout ?? undefined });
   const identityClusters = resolveIdentities(profiles, query, avatarHashMap, bioScoreMap);
 
   return {

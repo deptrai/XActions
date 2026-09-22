@@ -171,7 +171,9 @@ function profilePairId(p) {
   if (id) return id;
   const platform = String(p?.platform || '').trim();
   const key = String(p?.username || p?.name || p?.profileUrl || '').trim();
-  return `${platform}:${key}`;
+  // No usable identity → '' — callers skip degenerate keys so unrelated
+  // empty-identity profiles never share one map entry.
+  return key ? `${platform}:${key}` : '';
 }
 
 /**
@@ -185,6 +187,7 @@ function profilePairId(p) {
 export function bioPairKey(a, b) {
   const idA = profilePairId(a);
   const idB = profilePairId(b);
+  if (!idA || !idB) return ''; // degenerate identity — no stable pair key
   return idA <= idB ? `${idA}||${idB}` : `${idB}||${idA}`;
 }
 
@@ -248,7 +251,8 @@ export function scorePair(a, b, avatarHashMap, phashEnabled = isAvatarPHashEnabl
   // the async `prefetchBioScores` pre-pass and only contains pairs Jev judged
   // samePerson (score >= 2, confidence >= threshold). +35 alone stays below
   // MERGE_THRESHOLD — it can only tip a pair already carrying a free signal.
-  if (bioScoreMap && typeof bioScoreMap.has === 'function' && bioScoreMap.has(bioPairKey(a, b))) {
+  const bioKey = bioScoreMap ? bioPairKey(a, b) : '';
+  if (bioKey && bioScoreMap && typeof bioScoreMap.has === 'function' && bioScoreMap.has(bioKey)) {
     score += 35;
     signals.push('bio_semantic');
   }

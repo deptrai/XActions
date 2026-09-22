@@ -217,6 +217,9 @@ describe('prefetchBioScores — qualify gates', () => {
     const { state, questions } = callLog[0];
     expect(Object.keys(state).sort()).toEqual(['bio1', 'bio2']);
     expect(state.bio1 + state.bio2).toContain('XActions');
+    // Deterministic payload: bio1/bio2 sent in sorted order regardless of
+    // which profile was `a` vs `b` in the pair.
+    expect(state.bio1 <= state.bio2).toBe(true);
     expect(questions.samePerson.type).toBe('score');
     expect(questions.samePerson.criteria).toHaveLength(4);
   });
@@ -328,6 +331,12 @@ describe('prefetchBioScores — cap & ranking', () => {
       return (b1.includes('MARKER') && b2.includes('Bio pa n')) || (b2.includes('MARKER') && b1.includes('Bio pa n'));
     });
     expect(markerCalls).toHaveLength(5);
+    // Dropped-pair assertion: the 40 cheap-0 pairs tie-break by pairKey asc —
+    // the 15 lexicographically-largest are dropped, and those are exactly the
+    // pa_p1..pa_p3 pairs ('pa:pa_p*' keys sort after every 'pa:pa_n*' key).
+    const droppedCalls = callLog.filter((c) =>
+      /Bio pa p[123]/.test(String(c.state.bio1) + String(c.state.bio2)));
+    expect(droppedCalls).toHaveLength(0);
     console.log.mockRestore();
   });
 
@@ -370,6 +379,18 @@ describe('prefetchBioScores — kill-switch & degrade safety', () => {
     const brain = new JevBrain({ apiKey: '' }); // real decide → missing-key degrade, no fetch
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const map = await prefetchBioScores([a, b], { brain });
+    expect(map.size).toBe(0);
+    log.mockRestore();
+  });
+
+  it('NO_API_KEY via _sharedBrain: no brain option → lazy JevBrain degrades, never throws', async () => {
+    // The production call site passes no brain — this exercises the lazy
+    // singleton path (resolveBrain(null) → new JevBrain with empty key →
+    // real decide() degrades to llmbrain source → pair skipped).
+    const [a, b] = candidatePair();
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const map = await prefetchBioScores([a, b]);
+    expect(map).toBeInstanceOf(Map);
     expect(map.size).toBe(0);
     log.mockRestore();
   });

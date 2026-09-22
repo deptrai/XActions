@@ -7,7 +7,7 @@
  * descriptor is injected into the live DESCRIPTORS registry.
  */
 
-import { describe, it, beforeEach } from 'vitest';
+import { describe, it, beforeEach, vi } from 'vitest';
 import assert from 'node:assert/strict';
 import { TOOLS, executeTool, executeSocialFindProfilesTool } from '../../src/mcp/server.js';
 import { DESCRIPTORS } from '../../src/scrapers/index.js';
@@ -20,6 +20,29 @@ import {
   classifyPlatformError,
   PLATFORM_TIMEOUTS_MS,
 } from '../../src/mcp/osint-find-profiles.js';
+import { prefetchBioScores } from '../../src/osint/jev-bio-matcher.js';
+
+// Story 42.5 — the ONLY production wiring of the bio matcher is the call site
+// inside executeSocialFindProfiles; mock the module so the wiring itself is
+// under test (a deleted/mis-wired call must fail a test, not pass silently).
+// The mock qualifies a pair only when both profiles carry the marker bios.
+vi.mock('../../src/osint/jev-bio-matcher.js', async () => {
+  const { bioPairKey } = await vi.importActual('../../src/mcp/entity-resolver.js');
+  return {
+    prefetchBioScores: vi.fn(async (profiles) => {
+      const map = new Map();
+      const list = Array.isArray(profiles) ? profiles : [];
+      for (let i = 0; i < list.length; i++) {
+        for (let j = i + 1; j < list.length; j++) {
+          if (list[i].bio === 'WIRING_A' && list[j].bio === 'WIRING_B') {
+            map.set(bioPairKey(list[i], list[j]), { score: 3, confidence: 0.9 });
+          }
+        }
+      }
+      return map;
+    }),
+  };
+});
 import { globalAdaptiveRateGovernor } from '../../src/core/adaptive-governor.js';
 import { normalizeVnPhone, isVnPhone, parseVnPhone } from '../../src/utils/vn-phone.js';
 
@@ -346,6 +369,50 @@ describe('fan-out dispatch', () => {
       // re-opens on failure, so additional concurrent callers stay circuit_open
       // rather than each launching a fresh scrape.
       assert.ok(concurrent.every((r) => r.status === 'fulfilled'));
+    } finally { restore(); }
+  });
+
+  it('Story 42.5 — wires prefetchBioScores → bioScoreMap → bio_semantic surfaces in identityClusters', async () => {
+    // Two cross-platform profiles that the free signals cannot merge (different
+    // usernames, different names, no shared avatar/links) — only the Jev map
+    // can produce bio_semantic.
+    inject('twitter', makeDescriptor({
+      profiles: [{ username: 'nich_dev', name: 'Nicholas Ray', bio: 'WIRING_A', profileUrl: 'https://x.com/nich_dev' }],
+    }));
+    inject('threads', makeDescriptor({
+      profiles: [{ username: 'xbt_w', name: 'Zelda Quill', bio: 'WIRING_B', profileUrl: 'https://threads.net/xbt_w' }],
+    }));
+    try {
+      const res = await executeSocialFindProfilesTool({
+        query: 'nicholas', queryType: 'username', platforms: ['twitter', 'threads'],
+      });
+      assert.equal(res.success, true);
+      // The pre-pass was invoked with the avatarHashMap option (sequential
+      // wiring after prefetchAvatarHashes).
+      assert.ok(vi.mocked(prefetchBioScores).mock.calls.length >= 1, 'prefetchBioScores not called');
+      const callArgs = vi.mocked(prefetchBioScores).mock.calls[0][1];
+      assert.ok(callArgs.avatarHashMap instanceof Map, 'avatarHashMap option missing');
+      // bio_semantic +35 alone < MERGE_THRESHOLD (names differ → no companion
+      // signal) — the pair must stay split even though the map qualified it.
+      assert.ok(res.identityClusters.every((c) => c.profiles.length === 1), 'unexpected merge');
+    } finally { restore(); }
+
+    // Merging case — same setup but names match (name_similar +30, bio +35 = 65).
+    inject('twitter', makeDescriptor({
+      profiles: [{ username: 'nich_dev', name: 'Nicholas', bio: 'WIRING_A', profileUrl: 'https://x.com/nich_dev' }],
+    }));
+    inject('threads', makeDescriptor({
+      profiles: [{ username: 'xbt_w', name: 'Nicholas', bio: 'WIRING_B', profileUrl: 'https://threads.net/xbt_w' }],
+    }));
+    try {
+      const res = await executeSocialFindProfilesTool({
+        query: 'nicholas', queryType: 'username', platforms: ['twitter', 'threads'],
+      });
+      assert.equal(res.success, true);
+      const merged = res.identityClusters.find((c) => c.profiles.length === 2);
+      assert.ok(merged, 'expected a merged 2-profile cluster');
+      assert.ok(merged.matchedSignals.includes('bio_semantic'), 'bio_semantic missing from matchedSignals');
+      assert.ok(merged.matchedSignals.includes('name_similar'));
     } finally { restore(); }
   });
 

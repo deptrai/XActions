@@ -25,19 +25,33 @@ function getBrain() {
       timeoutMs: process.env.JEV_TIMEOUT_MS ? parseInt(process.env.JEV_TIMEOUT_MS, 10) : undefined,
       dailyBudgetUsd: process.env.JEV_DAILY_BUDGET_USD ? parseFloat(process.env.JEV_DAILY_BUDGET_USD) : undefined,
       confidenceThresholds: {
-        like: process.env.JEV_THRESHOLD_LIKE ? parseFloat(process.env.JEV_THRESHOLD_LIKE) : undefined,
-        reply: process.env.JEV_THRESHOLD_REPLY ? parseFloat(process.env.JEV_THRESHOLD_REPLY) : undefined,
-        safeToSend: process.env.JEV_THRESHOLD_SAFE ? parseFloat(process.env.JEV_THRESHOLD_SAFE) : undefined,
+        // Keys must be ABSENT (not undefined) when the env is unset or
+        // non-numeric — an explicit undefined key overrides the JevBrain
+        // default in the spread below, silently raising e.g. like 0.60 → 0.85.
+        ...(() => {
+          const v = parseFloat(process.env.JEV_THRESHOLD_LIKE);
+          return Number.isFinite(v) ? { like: Math.min(1, Math.max(0, v)) } : {};
+        })(),
+        ...(() => {
+          const v = parseFloat(process.env.JEV_THRESHOLD_REPLY);
+          return Number.isFinite(v) ? { reply: Math.min(1, Math.max(0, v)) } : {};
+        })(),
+        ...(() => {
+          const v = parseFloat(process.env.JEV_THRESHOLD_SAFE);
+          return Number.isFinite(v) ? { safeToSend: Math.min(1, Math.max(0, v)) } : {};
+        })(),
         // Story 42.4 — pageStatus must be ABSENT (not undefined/NaN) when the
         // env is unset or non-numeric, so the JevBrain 0.80 default survives.
         ...(Number.isFinite(parseFloat(process.env.JEV_THRESHOLD_PAGESTATUS))
           ? { pageStatus: parseFloat(process.env.JEV_THRESHOLD_PAGESTATUS) }
           : {}),
         // Story 42.5 — samePerson must likewise be ABSENT when unset so the
-        // JevBrain 0.85 default survives (pattern G5).
-        ...(Number.isFinite(parseFloat(process.env.JEV_THRESHOLD_SAMEPERSON))
-          ? { samePerson: parseFloat(process.env.JEV_THRESHOLD_SAMEPERSON) }
-          : {}),
+        // JevBrain 0.85 default survives (pattern G5); clamped [0,1] so an
+        // out-of-range env can't disable or force-open the gate.
+        ...(() => {
+          const v = parseFloat(process.env.JEV_THRESHOLD_SAMEPERSON);
+          return Number.isFinite(v) ? { samePerson: Math.min(1, Math.max(0, v)) } : {};
+        })(),
       },
     });
   }

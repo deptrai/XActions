@@ -29,6 +29,11 @@ function mockJevSuccess(answers) {
 describe('POST /api/ai/jev/lead-icp', () => {
   beforeEach(() => {
     mockFetch.mockReset();
+    // jev.js holds a module-level `_brain` singleton — a test that deletes
+    // TYPESAFE_API_KEY before getBrain() first runs poisons every later test
+    // in the file (decide() degrades → `all:[]`). Reset the module registry so
+    // each test builds a fresh router + fresh brain under the current env.
+    vi.resetModules();
   });
 
   it('returns qualified leads with buyerIntent + leadScore', async () => {
@@ -88,6 +93,16 @@ describe('POST /api/ai/jev/lead-icp', () => {
       .post('/api/ai/jev/lead-icp')
       .send({});
     expect(res.status).toBe(400);
+  });
+
+  it('GET /status exposes samePerson=0.85 default (conditional spread does not poison)', async () => {
+    // Story 42.5 — guards the G5 regression class: an unconditional spread of
+    // parseFloat(JEV_THRESHOLD_SAMEPERSON) would put NaN over the 0.85 default.
+    const app = await buildApp();
+    const request = (await import('supertest')).default;
+    const res = await request(app).get('/api/ai/jev/status');
+    expect(res.status).toBe(200);
+    expect(res.body.confidenceThresholds.samePerson).toBe(0.85);
   });
 
   it('handles degraded Jev — returns empty qualified with stats.degraded', async () => {
