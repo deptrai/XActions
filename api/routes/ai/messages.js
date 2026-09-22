@@ -191,4 +191,26 @@ router.post('/export', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/ai/messages/triage — Jev DM inbox triage (Story 43.3).
+ * Sync endpoint — classifies DM conversations by intent, toxicity, priority.
+ *
+ * Body: { conversations: [{name, lastMessage, time, unread}] }
+ * Returns: { success, triaged: [{..., intent, toxic, priority, action}], stats }
+ */
+router.post('/triage', async (req, res) => {
+  const conversations = /** @type {Array<Record<string, unknown>> | undefined} */ (req.body.conversations);
+  if (!conversations || !Array.isArray(conversations) || conversations.length === 0) {
+    return res.status(400).json({ success: false, error: 'INVALID_INPUT', message: 'Provide "conversations" — a non-empty array of {name, lastMessage, time, unread}.' });
+  }
+
+  try {
+    const { triageInbox } = await import('../../../src/inbox/jevInboxTriage.js');
+    const { triaged, stats } = await triageInbox(conversations, {});
+    return successResponse(res, { triaged, stats });
+  } catch (err) {
+    return errorResponse(res, 500, 'JEV_TRIAGE_FAILED', err instanceof Error ? err.message : String(err));
+  }
+});
+
 export default router;
