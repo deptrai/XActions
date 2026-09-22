@@ -2457,3 +2457,38 @@ Epic 42 đặt nền `jevBrain` (Decision Plane). Epic 43 mở rộng bề mặt
 ### Story 43.1: jev-workflow-conditions — condition type `jev` trong `src/workflows/conditions.js` + `engine.js`, branch on `jevBrain.decide`, giữ deterministic conditions *(depends on 42.1)*
 ### Story 43.2: jev-write-path-gate — `Noul`/`Score`/`Choice` trước mọi write: content-preflight (`contentOptimizer`/`optimizer`/`viral`) + moderation (`moderation.js`, `xspace isBlocked`, `xeepy _calculate_toxicity`) *(depends on 42.1)*
 ### Story 43.3: jev-inbox-triage — DM/notification `Choice` intent + `Noul` toxic trong `messages.js`/`notifications.js`/`advancedDM.js`, route reply/ignore/escalate theo confidence
+
+
+---
+
+## Epic 44: Jev Tier-2 — Semantic Agent Routing, CRM Tagging & Voice Sentiment
+
+## Business Context
+Sau khi hoàn thành Epic 42 (Decision Plane) và Epic 43 (Decision Surface), Epic 44 kích hoạt 3 tính năng Tier-2 từ `FUTURE-WORK.md`: A2A multi-agent routing khi có truy vấn/task mập mờ, CRM follower sentiment tagging vượt qua giới hạn của lexicon truyền thống (bắt được sarcasm, lóng web3, và ngữ cảnh tiếng Việt/Anh), và real-time sentiment detection trong XSpace voice rooms với cơ chế non-blocking (<500ms race) giúp voice agent điều chỉnh phong thái giao tiếp tự nhiên mà không làm trễ pipeline giọng nói.
+
+## Scope
+**Trong scope:**
+- **A2A intent routing**: `src/a2a/orchestrator.js`, `src/a2a/skillRegistry.js` — thêm semantic intent routing qua Jev `Choice` khi task/query trùng khớp hoặc mập mờ giữa nhiều agent/skill capabilities.
+- **CRM / sentiment tagging**: `src/analytics/followerCRM.js`, `src/analytics/reputation.js`, `src/analytics/sentiment.js`, `api/routes/ai/sentiment.js` — semantic tagging thay lexicon/regex: `Choice` sentiment (`enthusiastic`, `positive`, `neutral`, `skeptical`, `hostile`) + `Score` (influence/intent 0-3), xử lý sarcasm và context phức tạp.
+- **xspace `detectSentiment`**: `xspace-agents/packages/core/src/intelligence/sentiment.ts` — Jev sentiment evaluation chạy non-blocking song song lexicon (`Promise.race` với timeout 500ms), giúp voice agent nhận biết cảm xúc người nói để đổi tông giọng (eager/reserved/sympathetic).
+
+**Ngoài scope:**
+- Thay đổi cấu trúc core protocol A2A (A2A JSON-RPC spec giữ nguyên).
+- Block voice loop bằng synchronous Jev call (bắt buộc Promise.race với timeout 500ms).
+- Jev sinh text hoặc prose (chỉ trả Choice/Score/Noul).
+
+## Stories
+### Story 44.1: jev-a2a-routing — A2A Intent Disambiguation & Semantic Skill Routing
+  - AC: Khi query hoặc task description mập mờ giữa ≥2 skills/agents, `A2AOrchestrator` / `skillRegistry` gọi Jev `Choice` để phân loại intent và chọn target skill/agent phù hợp nhất.
+  - AC: Có confidence gate: nếu `confidence < 0.7`, trả về yêu cầu làm rõ (disambiguation) thay vì route bừa bãi.
+  - AC: Degraded fallback: khi Jev degraded hoặc thiếu key, fallback về exact string/regex match hiện có của `skillRegistry`.
+
+### Story 44.2: jev-crm-sentiment — CRM Semantic Sentiment & Follower Tagging
+  - AC: Thay thế từ điển sentiment/keyword tĩnh trong CRM bằng Jev `Choice` (sentiment: `enthusiastic`, `positive`, `neutral`, `skeptical`, `hostile`) + `Score` (reputation impact 0-3).
+  - AC: Nhận diện chính xác sarcasm, lóng crypto/web3, và ngữ cảnh tiếng Việt/Anh mập mờ mà lexicon bỏ sót.
+  - AC: Batch tagging endpoint hoặc helper trong `followerCRM.js` xử lý danh sách tương tác/follower với chi phí tối ưu qua `JevBrain`.
+
+### Story 44.3: jev-xspace-sentiment — XSpace Real-Time Non-Blocking Sentiment Detection
+  - AC: Tích hợp `jevBrain` vào luồng phân tích sentiment của XSpace agent; chạy song song (`Promise.race` với timeout 500ms) với rule-based/lexicon hiện có.
+  - AC: Trả về phân loại cảm xúc (`positive`, `excited`, `neutral`, `skeptical`, `frustrated`) kèm confidence score.
+  - AC: Nếu Jev timeout >500ms hoặc lỗi mạng, fallback về lexicon sentiment ngay lập tức mà không làm trễ voice pipeline.

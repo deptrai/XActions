@@ -117,9 +117,9 @@ Tài liệu này tập hợp các yêu cầu, ý tưởng, và tính năng bị 
 
 ---
 
-## Jev Tier-2 Candidates — Deferred (Pending Demand Signal)
+## Jev Tier-2 Candidates — ✅ Promoted to Epic 44 (2026-09-22)
 
-**Trạng thái:** 🟡 **Deferred.** Các điểm cắm Jev có giá trị nhưng chưa đủ điều kiện promote thành story — chỉ mở lại khi demand signal dưới đây đúng. Jev decision plane (`jevBrain`) được đặt nền ở Epic 42; các mục này tái dùng nó, không tạo gateway mới.
+**Trạng thái:** 🟢 **Reactivated → Epic 44.** Đã được promote thành các stories 44.1 (A2A Intent Routing), 44.2 (CRM Sentiment Tagging), và 44.3 (XSpace Voice Sentiment).
 
 **Nguồn:** `_bmad-output/forge/jev-typesafe-integration/forged-idea.md`, `docs/architecture.md` §2.8 / AD-48.
 

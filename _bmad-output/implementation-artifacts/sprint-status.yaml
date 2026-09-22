@@ -283,6 +283,12 @@ development_status:
   43-2-jev-write-path-gate-noul-score-choice-trước-mọi-write-conten: done
   43-3-jev-inbox-triage-dm-notification-choice-intent-noul-toxic-tr: done
   epic-43-retrospective: optional
+
+  epic-44: in-progress
+  44-1-jev-a2a-routing-a2a-intent-disambiguation-semantic-skill: backlog
+  44-2-jev-crm-sentiment-crm-semantic-sentiment-follower-tagging: backlog
+  44-3-jev-xspace-sentiment-xspace-real-time-non-blocking-sentimen: backlog
+  epic-44-retrospective: optional
 action_items:
   - id: "epic-39-rescope-gitops-healing-only"
     epic: 39
