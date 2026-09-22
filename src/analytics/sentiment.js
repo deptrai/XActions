@@ -312,6 +312,19 @@ export async function analyzeSentiment(text, options = {}) {
 
   const mode = options.mode || 'rules';
 
+  if (mode === 'jev') {
+    const { analyzeJevSentiment } = await import('./jevSentiment.js');
+    const jevRes = await analyzeJevSentiment(text, options);
+    // Normalize to standard analyzeSentiment output format while preserving details
+    return {
+      score: jevRes.score,
+      label: jevRes.label === 'enthusiastic' ? 'positive' : (jevRes.label === 'hostile' || jevRes.label === 'skeptical') ? 'negative' : jevRes.label,
+      confidence: jevRes.confidence,
+      keywords: [],
+      details: jevRes,
+    };
+  }
+
   if (mode === 'llm') {
     return await analyzeLLM(text, options);
   }

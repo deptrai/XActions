@@ -531,3 +531,52 @@ export const BUILT_IN_RULES = [
 ];
 
 // by nichxbt
+
+/**
+ * Tag a CRM contact with semantic sentiment and reputation impact using Jev.
+ * (Story 44.2 - Jev CRM Sentiment Tagging)
+ *
+ * @param {string} username
+ * @param {string} bioOrText
+ * @param {object} [options={}]
+ * @returns {Promise<{ username: string, tagsAdded: string[], sentiment: object }>}
+ */
+export async function tagContactWithJev(username, bioOrText, options = {}) {
+  const { analyzeJevSentiment } = await import('./jevSentiment.js');
+  const user = username.toLowerCase().replace('@', '');
+  const sentiment = await analyzeJevSentiment(bioOrText, options);
+
+  const tagsAdded = [];
+
+  // Semantic tag mapping
+  if (sentiment.label === 'enthusiastic') {
+    tagContact(user, 'advocate');
+    tagsAdded.push('advocate');
+  } else if (sentiment.label === 'positive') {
+    tagContact(user, 'supporter');
+    tagsAdded.push('supporter');
+  } else if (sentiment.label === 'skeptical') {
+    tagContact(user, 'skeptic');
+    tagsAdded.push('skeptic');
+  } else if (sentiment.label === 'hostile') {
+    tagContact(user, 'critic');
+    tagsAdded.push('critic');
+  }
+
+  if (sentiment.isSarcasm) {
+    tagContact(user, 'sarcastic');
+    tagsAdded.push('sarcastic');
+  }
+
+  // If high reputation impact, tag as influential/high-priority
+  if (sentiment.reputationImpact >= 2) {
+    tagContact(user, 'high_impact');
+    tagsAdded.push('high_impact');
+  }
+
+  return {
+    username: user,
+    tagsAdded,
+    sentiment,
+  };
+}

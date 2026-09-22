@@ -115,10 +115,23 @@ router.post('/analyze', async (req, res) => {
       return res.status(400).json({ error: 'NO_TEXT', message: 'text or texts array must contain a non-empty string' });
     }
     const startTime = Date.now();
-    const analyzed = items.map(t => {
-      const score = scoreSentiment(t);
-      return { text: t, score: parseFloat(score.toFixed(3)), label: labelScore(score) };
-    });
+    let analyzed;
+    if (mode === 'jev') {
+      const { analyzeJevBatch } = await import('../../src/analytics/jevSentiment.js');
+      const batchRes = await analyzeJevBatch(items);
+      analyzed = batchRes.map(b => ({
+        text: b.text,
+        score: parseFloat(b.score.toFixed(3)),
+        label: b.label,
+        isSarcasm: b.isSarcasm,
+        reputationImpact: b.reputationImpact,
+      }));
+    } else {
+      analyzed = items.map(t => {
+        const score = scoreSentiment(t);
+        return { text: t, score: parseFloat(score.toFixed(3)), label: labelScore(score) };
+      });
+    }
 
     const avgScore = analyzed.length ? analyzed.reduce((s, a) => s + a.score, 0) / analyzed.length : 0;
 
