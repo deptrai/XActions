@@ -1,0 +1,69 @@
+{
+  "platform": "twitter",
+  "category": "social",
+  "niche": "web3",
+  "sampleSize": 4,
+  "generatedAt": "2026-09-22T18:49:21.419Z",
+  "viralRateThreshold": 10000,
+  "hookTypeDistribution": {
+    "assertion": {
+      "count": 2,
+      "avgEngagement": 6000,
+      "viralRate": 50
+    },
+    "question": {
+      "count": 1,
+      "avgEngagement": 200,
+      "viralRate": 0
+    },
+    "listicle": {
+      "count": 1,
+      "avgEngagement": 100,
+      "viralRate": 0
+    }
+  },
+  "topPerformingPatterns": [
+    {
+      "attributes": {
+        "hookType": "assertion",
+        "hasNumbers": true,
+        "emotionalTrigger": "surprise"
+      },
+      "avgEngagement": 10000,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "hookType": "assertion",
+        "hasNumbers": true,
+        "emotionalTrigger": "greed"
+      },
+      "avgEngagement": 2000,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "hookType": "question",
+        "hasNumbers": false,
+        "emotionalTrigger": "none"
+      },
+      "avgEngagement": 200,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "hookType": "listicle",
+        "hasNumbers": false,
+        "emotionalTrigger": "none"
+      },
+      "avgEngagement": 100,
+      "count": 1
+    }
+  ],
+  "attributeCorrelations": {
+    "hookType": 8557291.67,
+    "hasNumbers": 8555625,
+    "emotionalTrigger": 19222291.67,
+    "curiosityGap": 0
+  }
+}

@@ -2492,3 +2492,343 @@ Sau khi hoàn thành Epic 42 (Decision Plane) và Epic 43 (Decision Surface), Ep
   - AC: Tích hợp `jevBrain` vào luồng phân tích sentiment của XSpace agent; chạy song song (`Promise.race` với timeout 500ms) với rule-based/lexicon hiện có.
   - AC: Trả về phân loại cảm xúc (`positive`, `excited`, `neutral`, `skeptical`, `frustrated`) kèm confidence score.
   - AC: Nếu Jev timeout >500ms hoặc lỗi mạng, fallback về lexicon sentiment ngay lập tức mà không làm trễ voice pipeline.
+
+
+---
+
+## Epic 45: jev-corpus-miner — Universal Viral DNA Mining & Content Intelligence
+
+Epic 45 mở ra khả năng "reverse-engineer" viral DNA ở quy mô lớn trên **mọi nền tảng**: scrape corpus posts từ niche → Jev batch classification với platform-specific questions → aggregate thành viral stats → feed vào content generation pipeline → backtest validate. Biến XActions từ "automation tool" thành "cross-platform content intelligence platform" với data-backed viral patterns.
+
+**Nguồn:** Phân tích từ FB article về Jev corpus mining (100k tweets / 20.4s / $0.67 / 14 questions per tweet).
+
+## Scope
+
+**Trong scope:**
+- **Universal Viral Corpus Miner**: `src/analytics/jevViralMiner.js` — scrape N posts từ niche trên **18 platforms** (dùng existing scrapers), Jev batch classification với platform-specific question sets.
+- **Viral Stats Store**: `src/analytics/viralStatsStore.js` — aggregate Jev answers + engagement metrics → `data/viral-stats/{category}-{platform}-{niche}.json` với schema chuẩn.
+- **Content Intelligence Feed**: `src/ai/tweetGenerator.js`, `src/ai/jevVariantJudge.js`, `src/filters/jevFilter.js` — inject viral stats vào prompt để LLM viết content theo proven patterns per platform.
+- **Backtest Engine**: `src/analytics/jevBacktest.js` — compare predicted-viral vs actual performance trên own posts per platform.
+- **Viral Dashboard UI**: `dashboard/viral-miner.html` — web interface để run mining, view stats, backtest results.
+
+**Ngoài scope:**
+- Thay đổi core scraper architecture (Epic 34 đã stable).
+- Jev sinh text/prose (chỉ classification).
+- Real-time streaming viral detection (batch mode only, không phải live).
+- Video/image content analysis (chỉ text metadata + engagement).
+
+## Platform Registry
+
+### Social Platforms (11)
+
+| Platform | Scraper Class | Search Method | Content Type | Key DNA Questions |
+|----------|---------------|---------------|--------------|-------------------|
+| twitter | `TwitterCrawler` | `search()` | tweets | hookType, hasNumbers, evidenceType, curiosityGap, emotionalTrigger, formatType, hasCTA, urgencyLevel, specificityLevel, controversiality |
+| threads | `ThreadsCrawler` | `search()` | posts | Same as Twitter + threadDepth, metaReference |
+| facebook | `FacebookCrawler` | `search()` | posts | emotionalTrigger (family/community/outrage), shareability, groupRelevance, nostalgiaFactor |
+| tiktok | `TikTokCrawler` | `search()` | videos | visualHookType (textOverlay/faceReveal/transition), trendingSound, hashtagStrategy, pacingSpeed, callToActionType |
+| youtube | `YouTubeVNCrawler` | `search()` | videos | titleHookType, thumbnailTextMatch, curiosityGap, keywordDensity, lengthOptimization |
+| reddit | `RedditCrawler` | `search()` | posts | authenticityLevel, communityFit, controversyLevel, nicheJargon, storyDepth, askType (advice/opinion/discussion) |
+| instagram | `InstagramCrawler` | `search()` | posts | visualAesthetic, hashtagDensity, influencerSignal, lifestyleCategory |
+| bluesky | `BlueskyCrawler` | `search()` | posts | Same as Twitter (early adopter culture) |
+| mastodon | `MastodonCrawler` | `search()` | posts | communityFit, technicalDepth, antiCommercial, nicheJargon |
+| medium | `MediumCrawler` | `search()` | articles | headlineHook, readability, thoughtLeadership, dataSupport, narrativeStructure |
+| zalo | `ZaloCrawler` | `search()` | posts | localRelevance, communityTrust, personalConnection, vietnameseContext |
+
+### Recruitment Platforms (3)
+
+| Platform | Scraper Class | Search Method | Content Type | Key DNA Questions |
+|----------|---------------|---------------|--------------|-------------------|
+| linkedin | `LinkedInCrawler` | `searchJobs()` | jobs | hookType (professional), credibilityType (data/caseStudy/authority/personalStory), industryRelevance, careerLevel, buzzwordDensity |
+| topcv | `TopCvCrawler` | `searchJobs()` | jobs | salaryTransparency, companyReputation, urgencyLevel, skillMatch, locationAppeal |
+| vietnamworks | `VietnamWorksCrawler` | `searchJobs()` | jobs | salaryCompetitiveness, companyBrand, benefitsClarity, careerGrowth, workLifeBalance |
+
+### Real Estate Platforms (2)
+
+| Platform | Scraper Class | Search Method | Content Type | Key DNA Questions |
+|----------|---------------|---------------|--------------|-------------------|
+| chotot | `ChototCrawler` | `searchListings()` | listings | priceCompetitiveness, urgencyType (hotDeal/motivated/regular), locationDesirability, photoQuality, descriptionCompleteness |
+| batdongsan | `BatdongsanCrawler` | `searchListings()` | listings | pricePerM2, legalStatus, projectReputation, investmentPotential, urgencyLevel |
+
+### E-Commerce Platforms (2)
+
+| Platform | Scraper Class | Search Method | Content Type | Key DNA Questions |
+|----------|---------------|---------------|--------------|-------------------|
+| shopee | `ShopeeCrawler` | `searchProducts()` | products | priceHook, urgencyType (flashSale/limitedStock), socialProofLevel, discountDepth, keywordOptimization, sellerReputation |
+| tiktok-shop | `TikTokShopCrawler` | `searchProducts()` | products | viralPotential, influencerEndorsement, priceCompetitiveness, trendAlignment, urgencyLevel |
+
+## Stories
+
+### Story 45.1: jev-viral-miner — Universal Corpus Scraping & Jev Batch Classification
+
+As a growth hacker / content strategist / market analyst,
+I want to scrape a large corpus of posts from my niche on any supported platform and classify each post's viral DNA attributes via Jev,
+So that I can discover which content patterns actually drive virality per platform instead of guessing.
+
+**Acceptance Criteria:**
+
+**Given** I have configured XActions scrapers and a niche keyword (e.g., "web3", "saas", "fitness", "apartment-hanoi")
+**When** I run `xactions viral-mine --platform {platform} --niche {niche} --count {count}`
+**Then** the system detects platform category and uses appropriate scraper:
+  - Social: `twitter`, `threads`, `facebook`, `tiktok`, `youtube`, `reddit`, `instagram`, `bluesky`, `mastodon`, `medium`, `zalo`
+  - Recruitment: `linkedin`, `topcv`, `vietnamworks`
+  - Real Estate: `chotot`, `batdongsan`
+  - E-Commerce: `shopee`, `tiktok-shop`
+**And** calls the platform's search method (see Platform Registry table)
+**And** scrapes up to {count} posts matching the niche
+**And** for each post, calls Jev with platform-specific question set (10-14 questions from Platform Registry)
+**And** joins Jev answers with engagement metrics (likes, shares, views, comments, applies, saves, price) into `PostViralProfile[]`
+**And** processes with concurrency control (default 10 concurrent Jev calls)
+**And** logs progress every 100 posts processed
+**And** tracks estimated cost per batch using formula: `posts × 14 questions × $0.00000048/question`, warns if projected cost > $0.10 per 10k posts
+**And** saves raw output to `data/viral-corpus/{category}-{platform}-{niche}-{timestamp}.json`
+
+**Given** Jev API is unavailable or degraded
+**When** the batch classification runs
+**Then** the system falls back to heuristic scoring (engagement rate, completeness, keyword density) and marks records as `jevDegraded: true`
+
+**Given** the scrape returns fewer posts than requested
+**When** processing completes
+**Then** the system reports actual count scraped and processes all available posts
+
+**Given** platform is not supported or scraper unavailable
+**When** mining is attempted
+**Then** the system returns error: "Platform '{platform}' not supported. Available: {list}"
+
+---
+
+### Story 45.2: jev-viral-stats — Stats Aggregation & Storage
+
+As a data analyst,
+I want the raw viral profiles aggregated into actionable statistics per platform,
+So that I can query "which hook type performs best on LinkedIn for SaaS niche" or "what price range works best for Chợ Tốt listings" without re-processing raw data.
+
+**Acceptance Criteria:**
+
+**Given** a `PostViralProfile[]` corpus has been generated (from Story 45.1)
+**When** I run the stats aggregation (auto-triggered after mining OR via `xactions viral-stats --platform {platform} --niche {niche}`)
+**Then** the system computes `ViralStats`:
+  - platform: string (18 supported platforms)
+  - category: string (social|recruitment|realestate|ecom)
+  - niche: string
+  - sampleSize: number
+  - generatedAt: ISO timestamp
+  - hookTypeDistribution: { [hookType]: { count, avgEngagement, viralRate } }
+  - viralRateThreshold: number (top 10% engagement)
+  - topPerformingPatterns: Array<{ attributes: {}, avgEngagement, count }>
+  - attributeCorrelations: { [attribute]: correlationScore }
+  - platformSpecificMetrics: { [platformAttr]: { distribution, avgEngagement } }
+  - categoryInsights: cross-platform comparison within same category
+**And** validates output against Zod schema `ViralStatsSchema`
+**And** persists to `data/viral-stats/{category}-{platform}-{niche}-{date}.json`
+**And** maintains a `data/viral-stats/latest-{platform}-{niche}.json` symlink for easy access
+
+**Given** the corpus file is missing or corrupted
+**When** stats aggregation runs
+**Then** the system throws descriptive error and exits gracefully
+
+**Given** multiple mining runs exist for the same platform+niche
+**When** stats are generated
+**Then** the system uses the most recent corpus file by default
+
+---
+
+### Story 45.3: jev-content-intel — Feed Stats vào Content Generation
+
+As a content creator using XActions,
+I want content generation to leverage viral DNA stats from my niche on the target platform,
+So that generated content follows proven viral patterns rather than generic templates.
+
+**Acceptance Criteria:**
+
+**Given** `viralStats` exists for platform+niche and `USE_VIRAL_INTEL=true`
+**When** `tweetGenerator.generate({ platform: "linkedin", niche: "saas", topic: "AI agents" })` is called
+**Then** the system loads latest `viral-stats-recruitment-linkedin-saas.json`
+**And** injects into prompt context: "Viral DNA insights for LinkedIn/SaaS: data-driven hooks (3.1% viral), personalStory (1.8%), buzzword-heavy (0.4%). Top pattern: {attributes}. Optimize for these patterns."
+**And** LLM generates content informed by platform-specific viral stats
+
+**Given** `jevVariantJudge` evaluates multiple content variants
+**When** `viralStats` is provided for the target platform
+**Then** variants matching top-performing patterns get +0.2 score boost in evaluation
+
+**Given** `jevFilter` processes live timeline/feed on any platform
+**When** `viralStats` is available for that platform
+**Then** posts matching high-viral-rate patterns are ranked higher in reply/engage priority queue
+
+**Given** `USE_VIRAL_INTEL=false` or no viral stats exist for platform+niche
+**When** any content generation runs
+**Then** the system falls back to default behavior without viral intel injection
+
+---
+
+### Story 45.4: jev-backtest — Validate Predictions vs Actual Performance
+
+As a data-driven growth operator,
+I want to validate whether viral DNA predictions actually correlate with real engagement per platform,
+So that I can trust (or calibrate) the viral stats before relying on them for content strategy.
+
+**Acceptance Criteria:**
+
+**Given** viral stats exist and I have posted content in the target platform+niche
+**When** I run `xactions backtest --platform {platform} --niche {niche} --days {days}`
+**Then** the system fetches my posts from the last {days} days via platform-appropriate scraper
+**And** for each post, extracts viral DNA attributes (via cached Jev results or re-classification)
+**And** compares predicted viral potential (from stats match) vs actual engagement
+**And** calculates metrics:
+  - precision: of posts predicted "high viral", what % actually hit top quartile engagement
+  - recall: of actual top-performing posts, what % were predicted "high viral"
+  - accuracyByHookType: { [hookType]: { predicted, actual, accuracy } }
+  - platformBreakdown: { [platform]: { precision, recall, sampleSize } }
+  - categoryBreakdown: { [category]: { precision, recall } }
+**And** outputs report to `data/backtest-reports/{platform}-{niche}-{date}.json`
+**And** prints summary: "Backtest complete: 73% precision, 45% recall. Assertion hooks: 89% accurate on Twitter."
+
+**Given** insufficient own posts for backtest (<10 in period)
+**When** backtest runs
+**Then** the system warns and suggests extending `--days` or mining competitor posts for calibration
+
+---
+
+### Story 45.5: jev-viral-dashboard — Web UI for Universal Viral DNA Mining
+
+As a non-technical growth operator,
+I want a web dashboard to run viral mining across all platforms, view stats, and see backtest results,
+So that I don't need to use CLI commands.
+
+**Acceptance Criteria:**
+
+**Given** Epic 45 backend stories (45.1-45.4) are complete
+**When** I navigate to `/dashboard/viral-miner.html`
+**Then** I see a "Viral DNA Miner" page with:
+  - Category selector: Social | Recruitment | Real Estate | E-Commerce
+  - Platform selector: dropdown filtered by category (11 social + 3 recruitment + 2 realestate + 2 ecom)
+  - Niche input: text field with autocomplete suggestions per category
+  - Count slider: 100-10000
+  - "Run Mining" button
+  - Progress indicator: posts processed (X/N), Jev calls made, estimated cost ($X.XX), elapsed time
+  - Results table: viral stats by hook type (count, avgEngagement, viralRate%), top performing patterns
+  - Platform comparison view: side-by-side stats across platforms for same niche
+  - Category insights: which category has highest viral potential for niche
+  - Export button: download `viral-stats-{platform}-{niche}.json`
+
+**Given** viral mining is running
+**When** I view the progress section
+**Then** I see real-time updates via polling (every 5s)
+**And** a "Cancel" button to abort the mining job
+
+**Given** mining is complete
+**When** results load
+**Then** I see a bar chart of `hookTypeDistribution` (hook types on X-axis, viralRate% on Y-axis)
+**And** a "Top Patterns" list showing top 5 attribute combinations with avgEngagement
+**And** a "Run Backtest" button
+**And** a "Compare Platforms" tab showing cross-platform stats
+
+**Given** backtest results exist
+**When** I click "View Backtest Report"
+**Then** I see precision/recall metrics, accuracy by hook type, platform breakdown, and recommendation text
+
+**Given** no viral stats exist for the selected platform+niche
+**When** I load the page
+**Then** I see a "No data yet" state with CTA to run first mining job
+
+---
+
+## API Endpoints (for Dashboard + External Access)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/viral/mine` | Trigger mining job `{ platform, niche, count }` |
+| GET | `/api/viral/mine/:jobId` | Get mining job status/progress |
+| DELETE | `/api/viral/mine/:jobId` | Cancel running job |
+| GET | `/api/viral/stats/:platform/:niche` | Get latest viral stats |
+| GET | `/api/viral/stats` | List all available stats |
+| POST | `/api/viral/backtest` | Run backtest `{ platform, niche, days }` |
+| GET | `/api/viral/backtest/:reportId` | Get backtest report |
+| GET | `/api/viral/corpus/:platform/:niche` | Download raw corpus |
+| GET | `/api/viral/platforms` | List supported platforms + categories |
+
+---
+
+## FR Coverage Map
+
+FR-97: Story 45.1 - Universal Viral Corpus Miner (Jev batch classification, 18 platforms)
+FR-98: Story 45.2 - Viral Stats Store (aggregation + persistence per platform)
+FR-99: Story 45.3 - Content Intelligence Feed (prompt enrichment per platform)
+FR-100: Story 45.4 - Backtest Engine (validation loop per platform)
+FR-101: Story 45.3 - Live Feed Prioritizer (jevFilter ranking per platform)
+FR-102: Story 45.5 - Viral Dashboard UI (web interface for mining/stats/backtest, 18 platforms)
+
+## NFRs Addressed
+
+- **NFR-Jev-Cost**: Budget cap enforced in Story 45.1 (cost tracking + warn threshold per platform).
+- **NFR-Jev-Latency**: Batch mode async, no real-time constraint; target ≤60s per 10k items.
+- **NFR-Jev-Degraded**: JevBrain degraded → fallback to heuristic engagement scoring.
+- **NFR-Data-Persist**: File-based JSON storage in `data/viral-stats/`.
+- **NFR-Platform-Scale**: Support 18 platforms via existing scrapers (Epic 34).
+
+
+## Implementation Notes
+
+### New Modules Created
+
+| File | Purpose | Status |
+|------|---------|--------|
+| `src/analytics/jevViralMiner.js` | Corpus scraping + Jev batch classification | ✅ Created |
+| `src/analytics/viralStatsStore.js` | Stats aggregation + persistence | ✅ Created |
+| `src/analytics/platformQuestions.js` | Platform-specific Jev questions (18 platforms) | ✅ Created |
+| `src/analytics/jevBacktest.js` | Backtest validation engine | ✅ Created |
+| `src/filters/jevFilter.js` | Live feed prioritizer | ✅ Created |
+| `api/routes/viral.js` | API endpoints (9 routes) | ✅ Created |
+| `src/agents/jevBrain.js` | Added `batchDecide()` method | ✅ Updated |
+
+### Still Needed
+
+| File | Purpose | Story |
+|------|---------|-------|
+| `dashboard/viral-miner.html` | Web UI | 45.5 |
+| `dashboard/js/viral-miner.js` | Frontend logic | 45.5 |
+| `src/cli/index.js` | Add `viral-mine`, `viral-stats`, `backtest` commands | 45.1-45.4 |
+| `src/ai/tweetGenerator.js` | Integrate viral stats injection | 45.3 |
+| `src/ai/jevVariantJudge.js` | Add viral score boost | 45.3 |
+
+### Architecture Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| `batchDecide()` in JevBrain | Reusable for other epics, keeps concurrency logic centralized |
+| File-based storage | Consistent with XActions persistence pattern, no DB dependency |
+| Polling for dashboard | Simpler than WebSocket, sufficient for batch operations |
+| Platform questions as config | Easy to update per platform without code changes |
+| Niche normalization | Prevents file path collisions, consistent naming |
+
+## Dependencies
+## Resolved Gaps (Dev Review)
+
+| Gap | Resolution |
+|-----|------------|
+| LinkedIn scraper | ✅ Found: `src/scrapers/recruitment/linkedin/crawler.js` (LinkedInCrawler class) |
+| jevFilter.js | ✅ Created: `src/filters/jevFilter.js` — live feed prioritizer |
+| CLI registration | ⏳ Pending: Add `viral-mine`, `viral-stats`, `backtest` commands to `src/cli/index.js` |
+| API routes | ✅ Created: `api/routes/viral.js` — all endpoints defined |
+| Platform questions schema | ✅ Created: `src/analytics/platformQuestions.js` — 18 platforms defined |
+| Cost estimation | ✅ Formula: `posts × 14 × $0.00000048` = ~$0.067 per 10k posts |
+| Dashboard real-time | ✅ Decision: Use polling (5s interval), not WebSocket |
+
+## File Map
+
+| File | Purpose | Status |
+|------|---------|--------|
+| `src/analytics/jevViralMiner.js` | Corpus scraping + Jev batch classification | 📝 Story 45.1 |
+| `src/analytics/viralStatsStore.js` | Stats aggregation + persistence | 📝 Story 45.2 |
+| `src/analytics/platformQuestions.js` | Platform-specific Jev questions | ✅ Created |
+| `src/analytics/jevBacktest.js` | Backtest validation engine | 📝 Story 45.4 |
+| `src/filters/jevFilter.js` | Live feed prioritizer | ✅ Created |
+| `api/routes/viral.js` | API endpoints | ✅ Created |
+| `dashboard/viral-miner.html` | Web UI | 📝 Story 45.5 |
+| `dashboard/js/viral-miner.js` | Frontend logic | 📝 Story 45.5 |
+
+
+
+- **Requires:** Epic 34 (scrapers stable), Epic 42 (JevBrain gateway), existing `tweetGenerator`, `jevVariantJudge`.
+- **New modules needed:** `src/filters/jevFilter.js` (create), `src/analytics/jevViralMiner.js`, `src/analytics/viralStatsStore.js`, `src/analytics/jevBacktest.js`, `api/routes/viral.js`.
+- **Enables:** Future Epic 46+ (auto-post với viral DNA optimization), Epic 47+ (competitor viral pattern analysis), Epic 48+ (cross-platform content adaptation).

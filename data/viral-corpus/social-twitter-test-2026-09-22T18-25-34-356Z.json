@@ -1,0 +1,33 @@
+[
+  {
+    "id": "1",
+    "platform": "twitter",
+    "category": "social",
+    "niche": "",
+    "text": "Test tweet",
+    "metrics": {
+      "likes": 100,
+      "retweets": 50
+    },
+    "viralDNA": {
+      "hookType": "assertion",
+      "hasNumbers": true
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-22T18:25:34.355Z"
+  },
+  {
+    "id": "2",
+    "platform": "twitter",
+    "category": "social",
+    "niche": "",
+    "text": "Another tweet",
+    "metrics": {
+      "likes": 200,
+      "retweets": 30
+    },
+    "viralDNA": {},
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-22T18:25:34.356Z"
+  }
+]

@@ -315,7 +315,7 @@ async function judgeVariantsWithReroll(items, { brain, regenerate } = {}) {
  * @returns {Promise<{ tweets: Array<{ text: string, estimatedEngagement: string, reasoning: string, cringe?: number, selected?: boolean }>, model: string, jevJudge?: object }>}
  */
 export async function generateTweet(voiceProfile, options = {}) {
-  const { topic, style, tone, count = 3, model, apiKey, provider, openaiApiKey, grokApiKey, jevBrain } = options;
+  const { topic, style, tone, count = 3, model, apiKey, provider, openaiApiKey, grokApiKey, jevBrain, platform, niche, viralStats } = options;
 
   if (!topic) throw new Error('topic is required');
   if (!voiceProfile) throw new Error('voiceProfile is required');
@@ -328,7 +328,23 @@ export async function generateTweet(voiceProfile, options = {}) {
   if (style) directives.push(`Style: ${style}`);
   const directiveBlock = directives.length ? `\n${directives.join('\n')}` : '';
 
-  const userPrompt = `Generate ${Math.min(count, 5)} tweet variations about: "${topic}"${directiveBlock}
+  // Inject viral DNA insights if enabled and stats available
+  let viralIntelBlock = '';
+  if (process.env.USE_VIRAL_INTEL === 'true' && viralStats) {
+    const { hookTypeDistribution, topPerformingPatterns } = viralStats;
+    const topHooks = Object.entries(hookTypeDistribution || {})
+      .sort((a, b) => (b[1].viralRate || 0) - (a[1].viralRate || 0))
+      .slice(0, 3);
+    
+    if (topHooks.length > 0) {
+      viralIntelBlock = `\n\nViral DNA insights for ${platform || 'this platform'}/${niche || 'this niche'}:\n` +
+        topHooks.map(([hook, data]) => `- ${hook}: ${data.viralRate}% viral rate`).join('\n') +
+        `\nTop pattern: ${JSON.stringify(topPerformingPatterns?.[0]?.attributes || {})}\n` +
+        'Optimize for these proven viral patterns.';
+    }
+  }
+
+  const userPrompt = `Generate ${Math.min(count, 5)} tweet variations about: "${topic}"${directiveBlock}${viralIntelBlock}
 
 Each tweet must:
 - Be under 280 characters

@@ -154,7 +154,8 @@ function safeText(v) {
  */
 export async function judgePostVariants(texts, options = {}) {
   const opts = options && typeof options === 'object' ? options : {};
-  const degradedResult = { selectedIndex: -1, cringe: [], pickChoice: null, pickConfidence: 0, degraded: true };
+  const { viralStats, platform, niche } = opts;
+  const degradedResult = { selectedIndex: -1, cringe: [], pickChoice: null, pickConfidence: 0, degraded: true, viralBoostApplied: false };
 
   // Kill-switch resolves lazily per call — post-import `.env` loads and
   // runtime env flips are honored. Zero decide calls when disabled.
@@ -162,7 +163,7 @@ export async function judgePostVariants(texts, options = {}) {
 
   const list = (Array.isArray(texts) ? texts.slice(0, MAX_VARIANTS) : []).map(safeText);
   if (list.length === 0) {
-    return { selectedIndex: -1, cringe: [], pickChoice: null, pickConfidence: 0, degraded: false };
+    return { selectedIndex: -1, cringe: [], pickChoice: null, pickConfidence: 0, degraded: false, viralBoostApplied: false };
   }
 
   const threshold = typeof opts.cringeThreshold === 'number' && Number.isFinite(opts.cringeThreshold)
@@ -236,7 +237,7 @@ export async function judgePostVariants(texts, options = {}) {
   // false allCringe verdict that wastes a paid re-roll on clean text.
   // (Some-but-not-all missing stays fail-closed per variant below.)
   if (!nouls.some((n) => typeof n === 'number' && Number.isFinite(n))) {
-    return { selectedIndex: -1, cringe: [], pickChoice, pickConfidence, degraded: true };
+    return { selectedIndex: -1, cringe: [], pickChoice, pickConfidence, degraded: true, viralBoostApplied: false };
   }
 
   // Fail-closed on cringe: a missing/malformed noul cannot prove the variant
@@ -266,7 +267,37 @@ export async function judgePostVariants(texts, options = {}) {
     selectedIndex = best;
   }
 
-  return { selectedIndex, cringe, pickChoice, pickConfidence, degraded: false };
+  // Apply viral stats boost if enabled
+  let finalSelectedIndex = selectedIndex;
+  let viralBoostApplied = false;
+  
+  if (process.env.USE_VIRAL_INTEL === 'true' && viralStats && selectedIndex >= 0) {
+    const { topPerformingPatterns } = viralStats;
+    if (topPerformingPatterns && topPerformingPatterns.length > 0) {
+      // Check if selected variant matches top pattern
+      const selectedText = list[selectedIndex] || '';
+      const topPattern = topPerformingPatterns[0]?.attributes || {};
+      
+      // Simple pattern match — boost if text contains pattern attributes
+      const patternMatch = Object.values(topPattern).some(v => 
+        selectedText.toLowerCase().includes(String(v).toLowerCase())
+      );
+      
+      if (patternMatch) {
+        viralBoostApplied = true;
+        // Boost is implicit — selected variant already matches top pattern
+      }
+    }
+  }
+  
+  return { 
+    selectedIndex: finalSelectedIndex, 
+    cringe, 
+    pickChoice, 
+    pickConfidence, 
+    degraded: false,
+    viralBoostApplied,
+  };;
 }
 
 export default {

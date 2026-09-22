@@ -96,6 +96,7 @@ import { startTweetScheduler } from './services/tweetScheduler.js';
 import { startRetentionScheduler, requestRetentionShutdown, getIsProcessing } from './services/retentionScheduler.js';
 import platformRoutes from './routes/platform.js';
 import benchmarkRoutes from './routes/benchmark.js';
+import viralRoutes from './routes/viral.js';
 import { defaultCanaryRunner } from './services/benchmark/canary-runner.js';
 import { defaultTelemetryConsumer } from './services/benchmark/telemetry-consumer.js';
 import { globalSelectorCanary } from '../src/services/selector-canary.js';
@@ -390,6 +391,7 @@ function mountPluginRoutes() {
 }
 app.use('/api/automations', automationsRoutes);
 app.use('/api/streams', streamRoutes);
+  app.use('/api/viral', viralRoutes);
 
 // Story 14.3 — Public stream metrics endpoint (alerts fire in the background)
 app.get('/metrics/stream', async (_req, res) => {

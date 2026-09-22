@@ -363,4 +363,55 @@ export class JevBrain {
   getUsageToday() {
     return { ...this._usageToday };
   }
+
+  /**
+   * Batch decide with concurrency control
+   * @param {Array<{state: Object, questions: Object}>} requests - Array of {state, questions}
+   * @param {Object} options - { concurrency = 10, onProgress, timeoutMs }
+   * @returns {Promise<Array<{answers: Object, usage: Object, meta: Object}>>}
+   */
+  async batchDecide(requests, options = {}) {
+    const { concurrency = 10, onProgress, timeoutMs = 30000 } = options;
+    const results = [];
+    const queue = [...requests.entries()];
+    const inFlight = new Set();
+    let completed = 0;
+
+    const processItem = async ([index, { state, questions }]) => {
+      try {
+        const result = await Promise.race([
+          this.decide(state, questions),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Jev timeout')), timeoutMs)
+          ),
+        ]);
+        results[index] = result;
+      } catch (err) {
+        results[index] = {
+          answers: null,
+          usage: { degraded: true },
+          meta: { error: err.message, degraded: true },
+        };
+      }
+      completed++;
+      if (onProgress) {
+        onProgress({ completed, total: requests.length, index });
+      }
+    };
+
+    while (queue.length > 0 || inFlight.size > 0) {
+      while (inFlight.size < concurrency && queue.length > 0) {
+        const item = queue.shift();
+        const promise = processItem(item);
+        inFlight.add(promise);
+        promise.finally(() => inFlight.delete(promise));
+      }
+      if (inFlight.size > 0) {
+        await Promise.race(inFlight);
+      }
+    }
+
+    return results;
+  }
+
 }

@@ -1,0 +1,42 @@
+{
+  "reportId": "backtest-1790102961854",
+  "platform": "twitter",
+  "niche": "web3",
+  "days": 7,
+  "sampleSize": 12,
+  "metrics": {
+    "precision": 1,
+    "recall": 1,
+    "truePositives": 7,
+    "falsePositives": 0,
+    "falseNegatives": 0,
+    "viralThreshold": 0.7
+  },
+  "accuracyByHookType": {
+    "assertion": {
+      "predicted": 7,
+      "actual": 7,
+      "accuracy": 1
+    },
+    "question": {
+      "predicted": 0,
+      "actual": 0,
+      "accuracy": 0
+    },
+    "listicle": {
+      "predicted": 0,
+      "actual": 0,
+      "accuracy": 0
+    }
+  },
+  "platformBreakdown": {
+    "twitter": {
+      "precision": 1,
+      "recall": 1,
+      "sampleSize": 12
+    }
+  },
+  "summary": "Backtest complete: 100% precision, 100% recall. assertion hooks: 100% accurate.",
+  "generatedAt": "2026-09-22T18:49:21.855Z",
+  "status": "completed"
+}
