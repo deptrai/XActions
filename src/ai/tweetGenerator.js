@@ -13,6 +13,7 @@
  */
 
 import { buildVoicePrompt } from './voiceAnalyzer.js';
+import { judgePostVariants, isJevVariantJudgeEnabled, resolveVariantJudgeMaxReroll } from './jevVariantJudge.js';
 
 // ============================================================================
 // Configuration
@@ -164,6 +165,138 @@ function parseJSON(content) {
   throw new Error('Failed to parse JSON from LLM response');
 }
 
+/**
+ * Normalize a parsed LLM variant payload into the bounded array shape the
+ * generators return (non-array → single-element wrap, capped at 5).
+ */
+function toVariantArray(parsed) {
+  return Array.isArray(parsed) ? parsed.slice(0, 5) : [parsed];
+}
+
+/**
+ * Sum numeric usage fields across LLM calls (re-rolls spend real tokens — the
+ * reported usage must not silently drop the discarded attempt's cost).
+ */
+function addUsage(a, b) {
+  const sum = a && typeof a === 'object' ? { ...a } : {};
+  if (b && typeof b === 'object') {
+    for (const [k, v] of Object.entries(b)) {
+      sum[k] = typeof v === 'number' && typeof sum[k] === 'number' ? sum[k] + v : v;
+    }
+  }
+  return sum;
+}
+
+/**
+ * Steering appended to the user message on re-roll only — resampling the
+ * identical distribution that just failed the cringe gate wastes the retry.
+ */
+const REROLL_STEERING =
+  '\n\nIMPORTANT: previous variants were rejected as AI-sounding. Avoid AI-tells, ' +
+  'corporate hype, stacked emojis, hashtag spam, and engagement bait — write like a real human.';
+
+/**
+ * Re-roll call args: same messages with the anti-cringe steering appended to
+ * the user turn, and a slight temperature bump (+0.05, capped at 1).
+ */
+function buildRerollCall(messages, llmOptions) {
+  const steered = messages.map((m) =>
+    m && m.role === 'user' ? { ...m, content: m.content + REROLL_STEERING } : m,
+  );
+  const temperature = Math.min((llmOptions.temperature ?? 0.8) + 0.05, 1);
+  return [steered, { ...llmOptions, temperature }];
+}
+
+/**
+ * Story 42.9 — Jev-as-a-Judge post-variant selector + cringe filter.
+ *
+ * Runs judgePostVariants over the normalized variant array; when every
+ * variant fails the cringe gate (selectedIndex === -1) the LLM is re-rolled
+ * at most JEV_VARIANT_JUDGE_MAX_REROLL times (default 1, ceiling 3) and
+ * re-judged. Never throws — kill-switch, empty input, missing regenerate,
+ * degraded plane, and thrown errors all resolve to either a null jevJudge
+ * (byte-identical pre-story result) or `{degraded: true}` with variants
+ * untouched.
+ *
+ * @param {Array<any>} items - normalized variant array (objects with .text)
+ * @param {object} [options]
+ * @param {any} [options.brain] - injected JevBrain (tests fake at this IO boundary)
+ * @param {() => Promise<Array<any>>} [options.regenerate] - re-call the LLM + normalize
+ * @returns {Promise<{items: Array<any>, jevJudge: object|null}>}
+ */
+async function judgeVariantsWithReroll(items, { brain, regenerate } = {}) {
+  if (!isJevVariantJudgeEnabled() || !Array.isArray(items) || items.length === 0 || typeof regenerate !== 'function') {
+    return { items, jevJudge: null };
+  }
+
+  const textsOf = (list) => list.map((v) => {
+    const raw = v && typeof v === 'object' ? v.text : v;
+    try {
+      return String(raw ?? '');
+    } catch {
+      return '';
+    }
+  });
+  const maxReroll = resolveVariantJudgeMaxReroll();
+
+  let current = items;
+  let rerolls = 0;
+  let verdict;
+  try {
+    verdict = await judgePostVariants(textsOf(current), { brain });
+  } catch {
+    return { items: current, jevJudge: { degraded: true } };
+  }
+
+  // All-cringe (or none_good with no clean fallback) → bounded LLM re-roll.
+  while (verdict && verdict.selectedIndex === -1 && !verdict.degraded && rerolls < maxReroll) {
+    rerolls++;
+    let regenerated;
+    try {
+      regenerated = await regenerate();
+    } catch {
+      break; // re-roll LLM failed — keep current variants, still report allCringe
+    }
+    if (!Array.isArray(regenerated) || regenerated.length === 0) {
+      break; // unusable re-roll — don't pay a decide call to re-judge the identical set
+    }
+    current = regenerated;
+    try {
+      verdict = await judgePostVariants(textsOf(current), { brain });
+    } catch {
+      return { items: current, jevJudge: { degraded: true } };
+    }
+  }
+
+  if (!verdict || verdict.degraded) {
+    return { items: current, jevJudge: { degraded: true } };
+  }
+
+  // Object items get per-item annotation; primitives pass through untouched —
+  // element types stay identical to the pre-story shape (a bare-string array
+  // must not become objects). jevJudge.cringe always carries the aligned
+  // scores so primitive variants stay observable too.
+  const annotated = current.map((item, i) => {
+    if (item && typeof item === 'object') {
+      const next = { ...item };
+      next.cringe = verdict.cringe[i];
+      next.selected = i === verdict.selectedIndex;
+      return next;
+    }
+    return item;
+  });
+
+  const jevJudge = {
+    selectedIndex: verdict.selectedIndex,
+    confidence: verdict.pickConfidence,
+    pick: verdict.pickChoice,
+    cringe: verdict.cringe,
+  };
+  if (verdict.selectedIndex === -1) jevJudge.allCringe = true;
+  if (rerolls > 0) jevJudge.rerolls = rerolls;
+  return { items: annotated, jevJudge };
+}
+
 // ============================================================================
 // Tweet Generation Functions
 // ============================================================================
@@ -178,10 +311,11 @@ function parseJSON(content) {
  * @param {number} [options.count=3] - Number of variations to generate (1-5)
  * @param {string} [options.model] - OpenRouter model override
  * @param {string} [options.apiKey] - OpenRouter API key override
- * @returns {Promise<{ tweets: Array<{ text: string, estimatedEngagement: string, reasoning: string }>, model: string }>}
+ * @param {any} [options.jevBrain] - Injected JevBrain for the variant judge (tests)
+ * @returns {Promise<{ tweets: Array<{ text: string, estimatedEngagement: string, reasoning: string, cringe?: number, selected?: boolean }>, model: string, jevJudge?: object }>}
  */
 export async function generateTweet(voiceProfile, options = {}) {
-  const { topic, style, tone, count = 3, model, apiKey, provider, openaiApiKey, grokApiKey } = options;
+  const { topic, style, tone, count = 3, model, apiKey, provider, openaiApiKey, grokApiKey, jevBrain } = options;
 
   if (!topic) throw new Error('topic is required');
   if (!voiceProfile) throw new Error('voiceProfile is required');
@@ -210,20 +344,38 @@ Respond with ONLY a JSON array:
   }
 ]`;
 
-  const result = await callLLM([
+  const messages = [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: userPrompt },
-  ], { model, apiKey, provider, openaiApiKey, grokApiKey, temperature: 0.85 });
+  ];
+  const llmOptions = { model, apiKey, provider, openaiApiKey, grokApiKey, temperature: 0.85 };
 
-  const tweets = parseJSON(result.content);
+  let result = await callLLM(messages, llmOptions);
+  let tweets = toVariantArray(parseJSON(result.content));
+  let totalUsage = result.usage;
 
-  return {
-    tweets: Array.isArray(tweets) ? tweets.slice(0, 5) : [tweets],
+  // Story 42.9 — Jev-as-a-Judge: pick the most natural variant, gate cringe,
+  // bounded re-roll when every variant is cringe. Inert when JEV_VARIANT_JUDGE=0.
+  const judged = await judgeVariantsWithReroll(tweets, {
+    brain: jevBrain,
+    regenerate: async () => {
+      const r = await callLLM(...buildRerollCall(messages, llmOptions));
+      totalUsage = addUsage(totalUsage, r.usage); // tokens are spent even if the payload is discarded
+      const arr = toVariantArray(parseJSON(r.content));
+      result = r; // commit response meta only after the payload normalizes
+      return arr;
+    },
+  });
+
+  const out = {
+    tweets: judged.items,
     tone: tone || null,
     model: result.model,
     provider: result.provider,
-    usage: result.usage,
+    usage: totalUsage,
   };
+  if (judged.jevJudge) out.jevJudge = judged.jevJudge;
+  return out;
 }
 
 /**
@@ -363,10 +515,11 @@ Respond with ONLY a JSON array:
  * @param {number} [options.count=3] - Number of variations
  * @param {string} [options.model] - OpenRouter model override
  * @param {string} [options.apiKey] - OpenRouter API key override
- * @returns {Promise<{ original: string, rewrites: Array<{ text: string, improvement: string }>, model: string }>}
+ * @param {any} [options.jevBrain] - Injected JevBrain for the variant judge (tests)
+ * @returns {Promise<{ original: string, rewrites: Array<{ text: string, improvement: string, cringe?: number, selected?: boolean }>, model: string, jevJudge?: object }>}
  */
 export async function rewriteTweet(voiceProfile, originalText, options = {}) {
-  const { goal = 'more_engaging', count = 3, model, apiKey, provider, openaiApiKey, grokApiKey } = options;
+  const { goal = 'more_engaging', count = 3, model, apiKey, provider, openaiApiKey, grokApiKey, jevBrain } = options;
 
   if (!originalText) throw new Error('originalText is required');
 
@@ -400,21 +553,39 @@ Respond with ONLY a JSON array:
   }
 ]`;
 
-  const result = await callLLM([
+  const messages = [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: userPrompt },
-  ], { model, apiKey, provider, openaiApiKey, grokApiKey, temperature: 0.85 });
+  ];
+  const llmOptions = { model, apiKey, provider, openaiApiKey, grokApiKey, temperature: 0.85 };
 
-  const rewrites = parseJSON(result.content);
+  let result = await callLLM(messages, llmOptions);
+  let rewrites = toVariantArray(parseJSON(result.content));
+  let totalUsage = result.usage;
 
-  return {
+  // Story 42.9 — Jev-as-a-Judge: pick the most natural rewrite, gate cringe,
+  // bounded re-roll when every variant is cringe. Inert when JEV_VARIANT_JUDGE=0.
+  const judged = await judgeVariantsWithReroll(rewrites, {
+    brain: jevBrain,
+    regenerate: async () => {
+      const r = await callLLM(...buildRerollCall(messages, llmOptions));
+      totalUsage = addUsage(totalUsage, r.usage); // tokens are spent even if the payload is discarded
+      const arr = toVariantArray(parseJSON(r.content));
+      result = r; // commit response meta only after the payload normalizes
+      return arr;
+    },
+  });
+
+  const out = {
     original: originalText,
     goal,
-    rewrites: Array.isArray(rewrites) ? rewrites.slice(0, 5) : [rewrites],
+    rewrites: judged.items,
     model: result.model,
     provider: result.provider,
-    usage: result.usage,
+    usage: totalUsage,
   };
+  if (judged.jevJudge) out.jevJudge = judged.jevJudge;
+  return out;
 }
 
 /**
@@ -495,10 +666,11 @@ Respond with ONLY a JSON array:
  * @param {number} [options.count=3] - Number of reply variations
  * @param {string} [options.model] - OpenRouter model override
  * @param {string} [options.apiKey] - OpenRouter API key override
- * @returns {Promise<{ originalTweet: string, replies: Array<{ text: string, tone: string, reasoning: string }>, model: string }>}
+ * @param {any} [options.jevBrain] - Injected JevBrain for the variant judge (tests)
+ * @returns {Promise<{ originalTweet: string, replies: Array<{ text: string, tone: string, reasoning: string, cringe?: number, selected?: boolean }>, model: string, jevJudge?: object }>}
  */
 export async function generateReply(voiceProfile, originalTweet, options = {}) {
-  const { tone, count = 3, model, apiKey, provider, openaiApiKey, grokApiKey } = options;
+  const { tone, count = 3, model, apiKey, provider, openaiApiKey, grokApiKey, jevBrain } = options;
 
   if (!originalTweet) throw new Error('originalTweet is required');
 
@@ -526,20 +698,38 @@ Respond with ONLY a JSON array:
   }
 ]`;
 
-  const result = await callLLM([
+  const messages = [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: userPrompt },
-  ], { model, apiKey, provider, openaiApiKey, grokApiKey, temperature: 0.85 });
+  ];
+  const llmOptions = { model, apiKey, provider, openaiApiKey, grokApiKey, temperature: 0.85 };
 
-  const replies = parseJSON(result.content);
+  let result = await callLLM(messages, llmOptions);
+  let replies = toVariantArray(parseJSON(result.content));
+  let totalUsage = result.usage;
 
-  return {
+  // Story 42.9 — Jev-as-a-Judge: pick the most natural reply, gate cringe,
+  // bounded re-roll when every variant is cringe. Inert when JEV_VARIANT_JUDGE=0.
+  const judged = await judgeVariantsWithReroll(replies, {
+    brain: jevBrain,
+    regenerate: async () => {
+      const r = await callLLM(...buildRerollCall(messages, llmOptions));
+      totalUsage = addUsage(totalUsage, r.usage); // tokens are spent even if the payload is discarded
+      const arr = toVariantArray(parseJSON(r.content));
+      result = r; // commit response meta only after the payload normalizes
+      return arr;
+    },
+  });
+
+  const out = {
     originalTweet,
-    replies: Array.isArray(replies) ? replies.slice(0, 5) : [replies],
+    replies: judged.items,
     model: result.model,
     provider: result.provider,
-    usage: result.usage,
+    usage: totalUsage,
   };
+  if (judged.jevJudge) out.jevJudge = judged.jevJudge;
+  return out;
 }
 
 // ============================================================================

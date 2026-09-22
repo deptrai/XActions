@@ -49,6 +49,16 @@ export default defineConfig({
       // Tests exercise it via an injected fake brain / fetch stub + explicit
       // JEV_COGNITIVE_UNFOLLOW=1.
       JEV_COGNITIVE_UNFOLLOW: '0',
+      // Story 42.9 — same guard for the post-variant judge: generated
+      // tweets/replies in tests must never reach the paid Jev API by
+      // accident. Tests exercise it via an injected fake brain + explicit
+      // JEV_VARIANT_JUDGE=1.
+      JEV_VARIANT_JUDGE: '0',
+      // Pin the judge knobs too — the dotenv-loads above pull the dev's real
+      // .env, so ambient values would otherwise flip verdicts in tests that
+      // exercise the judge via injected brains.
+      JEV_THRESHOLD_CRINGE: '0.3',
+      JEV_VARIANT_JUDGE_MAX_REROLL: '1',
     },
     sequence: {
       shuffle: true,

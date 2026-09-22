@@ -216,3 +216,20 @@
   evidence: Route payload shape predates Story 42.8; jobQueue dispatch expects `operationId`+`userId`+`authMethod`. The diff does not touch the queue contract; fix belongs to the AI-actions queue wiring audit.
   severity: medium
   status: RESOLVED (2026-09-22) — payload now sends `operationId` + `authMethod:'session'` (session-cookie API → browser executor; `Operation.userId` FK is required and this route has no DB user, so the API path was never viable here). Route accepts `username`; browser executor derives the logged-in handle from `AppTabBar_Profile_Link` when absent and now honors `excludeUsernames`/`excludeVerified`/`delayMs` (previously dead config). Residual: `/api/ai/action/status/:id` still 404s for cookie-API jobs — `getJob` requires a `prisma.operation` row that can't exist without a userId; systemic AI-API gap affecting every actions.js route, not just unfollow.
+
+## Deferred from: code review of spec-42-9-jev-variant-judge (2026-09-22)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-42-9-jev-variant-judge.md`
+  summary: `resolveBrain` rebuild chỉ trigger trên `apiKey` — `TYPESAFE_API_ENDPOINT`/model env đổi post-import không rebuild `_sharedBrain`.
+  evidence: Convention mirror y hệt `jevUnfollowGuard.js:185-194`; sửa riêng `jevVariantJudge.js` làm diverge — fix phải xuyên cả hai guard modules.
+  severity: low
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-42-9-jev-variant-judge.md`
+  summary: Re-roll `callLLM` không timeout → tới (1+maxReroll) unbounded LLM calls per generation.
+  evidence: `callLLM` không chấp nhận timeout/abort ở bất cứ đâu — pre-existing contract, initial call cùng exposure. Fix cần thêm AbortSignal plumbing vào `callLLM`.
+  severity: low
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-42-9-jev-variant-judge.md`
+  summary: `src/cli/commands/ai.js:136` interpolate tweet objects trực tiếp (`${t}`) → in `[object Object]` cho mỗi generated tweet trong `ai generate`.
+  evidence: Pre-existing — tweets luôn là objects trước cả Story 42.9; không liên quan diff. Fix: render `t.text`.
+  severity: low

@@ -23,3 +23,6 @@ export {
 
 // Content Optimizer (09-J)
 export { suggestHashtags, optimizeTweet, predictPerformance, generateVariations, analyzeVoice as analyzeContentVoice } from './contentOptimizer.js';
+
+// Jev-as-a-Judge variant selector + cringe filter (Story 42.9)
+export { judgePostVariants, isJevVariantJudgeEnabled, resolveCringeThreshold, resolveVariantJudgeMaxReroll } from './jevVariantJudge.js';
