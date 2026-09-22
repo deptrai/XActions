@@ -5,7 +5,8 @@
 // Intelligence – Barrel exports
 // =============================================================================
 
-export { detectSentiment } from './sentiment'
+export { detectSentiment, detectSentimentAsync }
+export type { JevSentimentOptions, SentimentAnalysisResult } from './sentiment'
 export { SpeakerIdentifier } from './speaker-id'
 export type { SpeakerProfile } from './speaker-id'
 export { TopicTracker } from './topic-tracker'

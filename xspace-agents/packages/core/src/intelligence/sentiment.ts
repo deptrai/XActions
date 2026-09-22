@@ -47,3 +47,72 @@ export function detectSentiment(text: string): Sentiment {
 
   return 'neutral'
 }
+
+export interface JevSentimentOptions {
+  /** Optional custom Jev or AI classifier function */
+  jevClassifier?: (text: string) => Promise<{ sentiment: Sentiment; confidence: number } | null>
+  /** Timeout in ms before racing falls back to regex (default: 400ms) */
+  timeoutMs?: number
+  /** Confidence threshold for accepting Jev classification (default: 0.65) */
+  confidenceThreshold?: number
+}
+
+export interface SentimentAnalysisResult {
+  sentiment: Sentiment
+  confidence: number
+  source: 'jev' | 'rules'
+}
+
+/**
+ * Dual-Speed Non-Blocking Sentiment Detection (Story 44.3).
+ *
+ * Runs a fast-path regex check while racing an injected Jev classifier
+ * against a 400ms timeout window.
+ * If Jev succeeds within budget with confidence >= threshold, its result is returned.
+ * If Jev times out, throws, or yields low confidence, instantly falls back to
+ * synchronous pattern-based detection.
+ *
+ * Voice pipeline audio loop NEVER blocks or crashes.
+ */
+export async function detectSentimentAsync(
+  text: string,
+  options: JevSentimentOptions = {}
+): Promise<SentimentAnalysisResult> {
+  const defaultSentiment = detectSentiment(text)
+
+  if (!options.jevClassifier || !text || typeof text !== 'string' || !text.trim()) {
+    return {
+      sentiment: defaultSentiment,
+      confidence: 1.0,
+      source: 'rules',
+    }
+  }
+
+  const timeoutMs = options.timeoutMs ?? 400
+  const threshold = options.confidenceThreshold ?? 0.65
+
+  try {
+    const jevPromise = options.jevClassifier(text).catch(() => null)
+    const timeoutPromise = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), timeoutMs)
+    )
+
+    const jevResult = await Promise.race([jevPromise, timeoutPromise])
+
+    if (jevResult && jevResult.confidence >= threshold) {
+      return {
+        sentiment: jevResult.sentiment,
+        confidence: jevResult.confidence,
+        source: 'jev',
+      }
+    }
+  } catch {
+    // Fail-safe: ignore errors and return synchronous baseline
+  }
+
+  return {
+    sentiment: defaultSentiment,
+    confidence: 0.8,
+    source: 'rules',
+  }
+}

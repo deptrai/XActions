@@ -2,7 +2,7 @@
 // Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent) [§87]
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { detectSentiment } from '../intelligence/sentiment'
+import { detectSentiment, detectSentimentAsync } from '../intelligence/sentiment'
 import { SpeakerIdentifier } from '../intelligence/speaker-id'
 import { TopicTracker } from '../intelligence/topic-tracker'
 import { ContextManager } from '../intelligence/context-manager'
@@ -543,5 +543,58 @@ describe('ConversationStore', () => {
 
     const loaded = await store.load('https://x.com/some/other/path')
     expect(loaded).not.toBeNull()
+  })
+})
+
+// =============================================================================
+// Dual-Speed Sentiment Detection via Jev (Story 44.3)
+// =============================================================================
+
+describe('detectSentimentAsync (Story 44.3)', () => {
+  it('falls back to synchronous rules when no jevClassifier is provided', async () => {
+    const res = await detectSentimentAsync('That is great work')
+    expect(res.sentiment).toBe('positive')
+    expect(res.source).toBe('rules')
+  })
+
+  it('uses fast Jev classification when it finishes within the 400ms budget', async () => {
+    const res = await detectSentimentAsync('I am loving this conversation', {
+      jevClassifier: async () => ({ sentiment: 'excited', confidence: 0.94 }),
+    })
+    expect(res.sentiment).toBe('excited')
+    expect(res.confidence).toBe(0.94)
+    expect(res.source).toBe('jev')
+  })
+
+  it('falls back to rules when Jev is slower than the timeoutMs budget', async () => {
+    const res = await detectSentimentAsync('I am sick of this delay', {
+      timeoutMs: 100, // Short timeout for testing
+      jevClassifier: async () => {
+        await new Promise((r) => setTimeout(r, 300))
+        return { sentiment: 'excited', confidence: 0.99 }
+      },
+    })
+    // Jev took 300ms > 100ms timeout -> regex catches "sick of this" -> frustrated
+    expect(res.sentiment).toBe('frustrated')
+    expect(res.source).toBe('rules')
+  })
+
+  it('falls back to rules when Jev throws or rejects', async () => {
+    const res = await detectSentimentAsync('This is terrible', {
+      jevClassifier: async () => {
+        throw new Error('Jev API network timeout')
+      },
+    })
+    expect(res.sentiment).toBe('negative')
+    expect(res.source).toBe('rules')
+  })
+
+  it('falls back to rules when Jev returns confidence below threshold', async () => {
+    const res = await detectSentimentAsync('Maybe we should consider this', {
+      confidenceThreshold: 0.80,
+      jevClassifier: async () => ({ sentiment: 'positive', confidence: 0.60 }),
+    })
+    expect(res.sentiment).toBe('neutral') // rules verdict
+    expect(res.source).toBe('rules')
   })
 })
