@@ -3,6 +3,12 @@ import prisma from '../lib/prisma.js';
 import { resolveUserId } from '../middleware/auth.js';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
+import {
+  evaluateUnfollowTargets,
+  isJevCognitiveUnfollowEnabled,
+  isConfidentUnfollowVerdict,
+  resolveUnfollowMaxEvals,
+} from '../../src/automation/jevUnfollowGuard.js';
 // Payment routes archived - XActions is now 100% free and open-source
 // All credit checks have been removed - unlimited operations for all users
 // Store active sessions
@@ -299,7 +305,51 @@ function handleAgentConnection(io, socket) {
     }
   });
 
+  // Story 42.8 — the injected agent cannot reach JevBrain from page context;
+  // it ships candidate state here and only the handles Jev cleared for
+  // unfollow come back. The qualify rule stays server-side (single source).
+  socket.on('jev:evaluate', async (data) => {
+    const session = activeSessions.get(sessionId);
+    if (!session) return;
+    const requestId = data && typeof data === 'object' && typeof data.requestId === 'string'
+      ? data.requestId
+      : '';
+    try {
+      const payload = await evaluateAgentUnfollowBatch(
+        data && typeof data === 'object' ? data.candidates : undefined,
+      );
+      socket.emit('jev:verdicts', { requestId, ...payload });
+    } catch {
+      // Fail-safe — never hand back an allowlist on evaluation failure.
+      socket.emit('jev:verdicts', { requestId, enabled: true, allowed: [] });
+    }
+  });
+
   socket.emit('connected', { sessionId, message: 'Agent connected to XActions' });
+}
+
+/**
+ * Story 42.8 — evaluate a batch of page-scraped non-follower candidates on
+ * behalf of the injected agent. Returns `{ enabled, allowed }` where
+ * `allowed` is the subset of usernames Jev cleared for unfollow
+ * (confident unfollow_* verdicts only; keep/low-conf/degraded are kept).
+ * Kill-switch off → `enabled: false` so the agent restores legacy behavior.
+ *
+ * @param {unknown} candidates - raw payload from the agent (filtered here)
+ * @returns {Promise<{enabled: boolean, allowed: string[]}>}
+ */
+export async function evaluateAgentUnfollowBatch(candidates) {
+  if (!isJevCognitiveUnfollowEnabled()) return { enabled: false, allowed: [] };
+  const list = (Array.isArray(candidates) ? candidates : [])
+    .filter((u) => u && typeof u === 'object')
+    .slice(0, 100);
+  const res = await evaluateUnfollowTargets(list, {
+    maxEvals: Math.min(100, resolveUnfollowMaxEvals()),
+  });
+  const allowed = list
+    .map((u) => String(u.username || ''))
+    .filter((name) => name !== '' && isConfidentUnfollowVerdict(res.verdicts.get(name)));
+  return { enabled: true, allowed };
 }
 
 // ===== DASHBOARD (user's control panel) =====
@@ -500,6 +550,9 @@ function generateAgentScript(sessionId) {
         handlers[event] = handlers[event] || [];
         handlers[event].push(handler);
       },
+      off(event, handler) {
+        handlers[event] = (handlers[event] || []).filter(function(h) { return h !== handler; });
+      },
       emit(event, data) {
         const send = () => ws.send('42' + JSON.stringify([event, data || {}]));
         if (ws.readyState === WebSocket.OPEN) send();
@@ -601,72 +654,146 @@ function generateAgentScript(sessionId) {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     const max = config.maxUnfollows || 100;
     let unfollowed = 0;
-    
+
+    // Story 42.8 — Jev guard via server round-trip: the page ships candidate
+    // state on 'jev:evaluate' and only handles the server marked 'allowed'
+    // may be unfollowed. enabled=false (kill-switch) → legacy unfollow-all.
+    const jevVerdicts = new Map(); // handle -> true (cleared) | false (kept)
+    const evaluated = new Set();
+    let jevEnabled = true;
+    let jevSeq = 0;
+
+    function jevEvaluate(candidates) {
+      return new Promise(function(resolve) {
+        const requestId = 'jev-' + (++jevSeq);
+        let done = false;
+        const timer = setTimeout(function() { finish({ timeout: true }); }, 20000);
+        function onVerdicts(payload) {
+          if (payload && payload.requestId === requestId) finish(payload);
+        }
+        function finish(payload) {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          socket.off('jev:verdicts', onVerdicts);
+          resolve(payload);
+        }
+        socket.on('jev:verdicts', onVerdicts);
+        socket.emit('jev:evaluate', { requestId: requestId, candidates: candidates });
+      });
+    }
+
     socket.emit('progress', { status: 'starting', message: 'Finding non-followers...' });
-    
+
     // Navigate to following page
     const username = document.querySelector('[data-testid="UserName"]')?.textContent?.match(/@(\\w+)/)?.[1];
     if (!username) {
       socket.emit('error', { message: 'Could not detect your username. Make sure you are on x.com' });
       return;
     }
-    
+
     window.location.href = 'https://x.com/' + username + '/following';
     await sleep(2000);
-    
+
+    let stalledSweeps = 0;
     while (unfollowed < max && !window.XACTIONS_STOP) {
       const cells = document.querySelectorAll('[data-testid="UserCell"]');
+
+      // Evaluate this sweep's un-seen non-follower candidates once per pass.
+      if (jevEnabled) {
+        const batch = [];
+        for (const cell of cells) {
+          if (cell.querySelector('[data-testid="userFollowIndicator"]')) continue;
+          if (!cell.querySelector('[data-testid$="-unfollow"]')) continue;
+          const link = cell.querySelector('a[href^="/"]');
+          const handle = (link && link.href ? link.href.split('/').pop() : '') || '';
+          if (!handle || evaluated.has(handle)) continue;
+          batch.push({
+            handle: handle,
+            name: cell.querySelector('[dir="ltr"] > span')?.textContent || '',
+            bio: cell.querySelector('[data-testid="UserDescription"]')?.textContent || '',
+            verified: !!cell.querySelector('svg[aria-label*="Verified"]'),
+          });
+        }
+        if (batch.length) {
+          socket.emit('progress', { status: 'running', message: 'Jev evaluating ' + batch.length + ' candidates...' });
+          const res = await jevEvaluate(batch.map(function(b) {
+            return { username: b.handle, name: b.name, bio: b.bio, verified: b.verified };
+          }));
+          if (res.enabled === false) {
+            jevEnabled = false; // kill-switch — restore legacy behavior
+          } else {
+            // allowed-only contract; timeout/error/degraded → keep everything.
+            const allowed = new Set(Array.isArray(res.allowed) ? res.allowed : []);
+            batch.forEach(function(b) {
+              evaluated.add(b.handle);
+              jevVerdicts.set(b.handle, allowed.has(b.handle));
+            });
+          }
+        }
+      }
+
       let found = false;
-      
+
       for (const cell of cells) {
         if (window.XACTIONS_STOP) break;
-        
+
         // Check if they don't follow back (no "Follows you" badge)
         const followsYou = cell.querySelector('[data-testid="userFollowIndicator"]');
         if (followsYou) continue; // Skip - they follow back
-        
+
         // Find unfollow button
         const btn = cell.querySelector('[data-testid$="-unfollow"]');
         if (!btn) continue;
-        
+
         const handle = cell.querySelector('a[href^="/"]')?.href?.split('/').pop() || 'unknown';
-        
+
+        // Jev gate — only server-cleared handles may be unfollowed.
+        if (jevEnabled && jevVerdicts.get(handle) !== true) continue;
+
         btn.click();
         await sleep(500);
-        
+
         // Confirm unfollow
         const confirm = document.querySelector('[data-testid="confirmationSheetConfirm"]');
         if (confirm) {
           confirm.click();
           await sleep(300);
         }
-        
+
         unfollowed++;
         found = true;
-        
+
         socket.emit('action', { type: 'unfollow', handle, count: unfollowed });
-        socket.emit('progress', { 
+        socket.emit('progress', {
           status: 'running',
-          current: unfollowed, 
+          current: unfollowed,
           max,
           percent: Math.round((unfollowed / max) * 100),
           message: 'Unfollowed @' + handle
         });
-        
+
         await sleep(1500 + Math.random() * 1000);
         break;
       }
-      
+
       if (!found) {
-        // Scroll to load more
+        // Nothing unfollowable this sweep — scroll for more; bail when the
+        // list stops yielding new candidates (all kept / exhausted).
+        stalledSweeps++;
+        if (stalledSweeps >= 8) break;
         window.scrollBy(0, 500);
         await sleep(1000);
+      } else {
+        stalledSweeps = 0;
       }
     }
-    
-    socket.emit('complete', { 
+
+    const keptByJev = Array.from(jevVerdicts.values()).filter(function(v) { return v === false; }).length;
+    socket.emit('complete', {
       operation: 'unfollowNonFollowers',
       unfollowed,
+      keptByJev: keptByJev,
       stopped: window.XACTIONS_STOP
     });
   }

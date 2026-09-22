@@ -1,6 +1,12 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../../lib/prisma.js';
 import { getTwitterClient } from '../../routes/twitter.js';
+import {
+  evaluateUnfollowTargets,
+  isJevCognitiveUnfollowEnabled,
+  isConfidentUnfollowVerdict,
+  resolveUnfollowMaxEvals,
+} from '../../../src/automation/jevUnfollowGuard.js';
 
 /**
  * @typedef {object} UnfollowNonFollowersConfig
@@ -45,7 +51,9 @@ async function processUnfollowNonFollowers({ operationId, userId, config }) {
     const followingResponse = await client.get(`/users/${myTwitterId}/following`, {
       params: {
         max_results: 1000,
-        'user.fields': 'username'
+        // Story 42.8 — Jev guard needs bio/verified/follower count to classify;
+        // username-only would starve the verdict to a low-confidence keep.
+        'user.fields': 'username,name,description,verified,public_metrics'
       }
     });
     const followingData = /** @type {TwitterApiEnvelope} */ (followingResponse.data);
@@ -54,10 +62,24 @@ async function processUnfollowNonFollowers({ operationId, userId, config }) {
 
     /** @type {TwitterApiUser[]} */
     const nonFollowers = [];
+    /** @type {string[]} — accounts the Jev guard kept (keep_* / low-conf / degraded / beyond-budget) */
+    const keptByJev = [];
+    /** @type {Array<{username: string, choice: string | null, confidence: number}>} — per-user Jev verdicts (preview parity with the browser path) */
+    const jevVerdicts = [];
     let unfollowedCount = 0;
+    let jevDegraded = 0;
+    // Story 42.8 — paid-call budget for the fused loop: at most
+    // JEV_UNFOLLOW_MAX_EVALS decide calls per run (default 300). Candidates
+    // beyond the budget are KEPT (deferred), never unfollowed unevaluated.
+    const jevActive = isJevCognitiveUnfollowEnabled();
+    const jevBudget = jevActive ? Math.max(0, resolveUnfollowMaxEvals()) : 0;
+    let jevEvaluated = 0;
 
     for (const followedUser of following) {
-      if (unfollowedCount >= maxUnfollows) break;
+      // Cap both unfollows performed AND candidates scanned — Jev-kept
+      // accounts no longer advance unfollowedCount, so without the second
+      // bound the loop would scan the whole following list.
+      if (unfollowedCount >= maxUnfollows || nonFollowers.length >= maxUnfollows) break;
 
       try {
         const followersResponse = await client.get(`/users/${followedUser.id}/followers`, {
@@ -76,7 +98,43 @@ async function processUnfollowNonFollowers({ operationId, userId, config }) {
         if (!followsBack) {
           nonFollowers.push(followedUser);
 
-          if (!dryRun) {
+          // Story 42.8 — inline Jev guard inside the fused loop, right before
+          // the delete. Fail-safe: only a confident `unfollow_*` verdict
+          // permits the unfollow; keep_*/low-conf/degraded all keep — and
+          // candidates beyond the eval budget are kept too (deferred).
+          let jevKeep = false;
+          if (jevActive) {
+            if (jevEvaluated < jevBudget) {
+              jevEvaluated++;
+              try {
+                const { verdicts, degraded } = await evaluateUnfollowTargets([{
+                  username: followedUser.username,
+                  name: followedUser.name,
+                  bio: followedUser.description,
+                  verified: followedUser.verified,
+                  followersCount: followedUser.public_metrics?.followers_count,
+                }]);
+                jevDegraded += degraded;
+                const verdict = verdicts.get(String(followedUser.username || ''));
+                jevKeep = !isConfidentUnfollowVerdict(verdict);
+                jevVerdicts.push({
+                  username: String(followedUser.username || ''),
+                  choice: verdict?.choice ?? null,
+                  confidence: verdict?.confidence ?? 0,
+                });
+              } catch {
+                // Guard never throws by design — a total failure keeps the account.
+                jevDegraded++;
+                jevKeep = true;
+              }
+            } else {
+              // Eval budget exhausted — keep (defer), never unfollow unevaluated.
+              jevKeep = true;
+            }
+            if (jevKeep && followedUser.username) keptByJev.push(followedUser.username);
+          }
+
+          if (!dryRun && !jevKeep) {
             await client.delete(`/users/${myTwitterId}/following/${followedUser.id}`);
             unfollowedCount++;
 
@@ -95,6 +153,9 @@ async function processUnfollowNonFollowers({ operationId, userId, config }) {
       unfollowedCount: dryRun ? 0 : unfollowedCount,
       nonFollowersFound: nonFollowers.length,
       nonFollowers: nonFollowers.map(/** @param {TwitterApiUser} u */ (u) => u.username),
+      keptByJev,
+      jevDegraded,
+      verdicts: jevVerdicts,
       dryRun
     };
   } catch (error) {

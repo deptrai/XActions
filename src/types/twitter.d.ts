@@ -16,6 +16,8 @@ interface TwitterApiUser {
   id: string;
   username?: string;
   name?: string;
+  description?: string;
+  verified?: boolean;
   public_metrics?: {
     followers_count?: number;
   };

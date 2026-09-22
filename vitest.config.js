@@ -44,6 +44,11 @@ export default defineConfig({
       // in tests must never reach the paid Jev API by accident. Tests exercise
       // it via an injected fake brain + explicit JEV_OSINT_BIO_MATCH=1.
       JEV_OSINT_BIO_MATCH: '0',
+      // Story 42.8 — same guard for the cognitive unfollow pass: unfollow
+      // candidates in tests must never reach the paid Jev API by accident.
+      // Tests exercise it via an injected fake brain / fetch stub + explicit
+      // JEV_COGNITIVE_UNFOLLOW=1.
+      JEV_COGNITIVE_UNFOLLOW: '0',
     },
     sequence: {
       shuffle: true,

@@ -78,6 +78,7 @@ export class JevBrain {
       safeToSend: 0.80,
       pageStatus: 0.80,
       samePerson: 0.85,
+      unfollow: 0.70,
       ...(config.confidenceThresholds || {}),
     };
 

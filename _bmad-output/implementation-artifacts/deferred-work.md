@@ -202,3 +202,17 @@
 - RESOLVED: Half-open circuit now has single-probe semantics — `probing` flag lets exactly one caller through after `CIRCUIT_COOLDOWN_MS`; concurrent callers still see `circuit_open` until the probe settles.
 - RESOLVED: `_failureCounts` now keyed by `platform:accountId` — one account's failure no longer trips the circuit for other accounts on that platform; `evictCircuits` caps the map at 200 entries.
 - RESOLVED: `MASKED_PHONE_RE` now tested on the raw input before `.` is stripped — `090...` is flagged `phoneMasked:true`; `VN_PHONE_RE` broadened to `5[25689]` so 052/055 prefixes normalize.
+
+## Deferred from: code review of spec-42-8-jev-cognitive-unfollow (2026-09-22)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-42-8-jev-cognitive-unfollow.md`
+  summary: `api/realtime/socketHandler.js` `unfollowNonFollowersOp` is a third unfollow executor (page-injected context) that Story 42.8 does not cover — it cannot reach `JevBrain` from page context and uses a different seam.
+  evidence: Socket path unfollows via in-page script without the `jevUnfollowGuard` pre-pass/inline gate. Browser + OAuth API executors are guarded; this sibling surface remains unguarded by design until a dedicated story wires a server-side pre-pass for it.
+  severity: medium
+  status: RESOLVED (2026-09-22) — server-side verdict bridge: agent emits `jev:evaluate` `{requestId, candidates}` per sweep → `evaluateAgentUnfollowBatch()` (exported helper) runs `evaluateUnfollowTargets` server-side and returns only `allowed` handles (qualify rule stays server-side); `enabled:false` on kill-switch restores legacy unfollow-all. Page side: per-sweep batch collect (UserCell handle/name/bio/verified), `evaluated`/`jevVerdicts` caches, 20s request timeout → keep-all, stall guard (8 empty sweeps), `keptByJev` in complete payload. Bridge gained `off()`.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-42-8-jev-cognitive-unfollow.md`
+  summary: `api/routes/ai/actions.js` queues `unfollowNonFollowers` jobs without `userId`/`authMethod` (sends `id` instead of `operationId`), so the queued job resolves `prisma` to undefined — pre-existing dispatch mismatch.
+  evidence: Route payload shape predates Story 42.8; jobQueue dispatch expects `operationId`+`userId`+`authMethod`. The diff does not touch the queue contract; fix belongs to the AI-actions queue wiring audit.
+  severity: medium
+  status: RESOLVED (2026-09-22) — payload now sends `operationId` + `authMethod:'session'` (session-cookie API → browser executor; `Operation.userId` FK is required and this route has no DB user, so the API path was never viable here). Route accepts `username`; browser executor derives the logged-in handle from `AppTabBar_Profile_Link` when absent and now honors `excludeUsernames`/`excludeVerified`/`delayMs` (previously dead config). Residual: `/api/ai/action/status/:id` still 404s for cookie-API jobs — `getJob` requires a `prisma.operation` row that can't exist without a userId; systemic AI-API gap affecting every actions.js route, not just unfollow.

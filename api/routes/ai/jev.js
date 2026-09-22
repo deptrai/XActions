@@ -52,6 +52,13 @@ function getBrain() {
           const v = parseFloat(process.env.JEV_THRESHOLD_SAMEPERSON);
           return Number.isFinite(v) ? { samePerson: Math.min(1, Math.max(0, v)) } : {};
         })(),
+        // Story 42.8 — unfollow must be ABSENT (not undefined/NaN) when the
+        // env is unset or non-numeric, so the JevBrain 0.70 default survives;
+        // clamped [0,1] (same conditional-spread pattern as above).
+        ...(() => {
+          const v = parseFloat(process.env.JEV_THRESHOLD_UNFOLLOW || '');
+          return Number.isFinite(v) ? { unfollow: Math.min(1, Math.max(0, v)) } : {};
+        })(),
       },
     });
   }

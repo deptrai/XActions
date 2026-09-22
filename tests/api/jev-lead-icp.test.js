@@ -103,6 +103,12 @@ describe('POST /api/ai/jev/lead-icp', () => {
     const res = await request(app).get('/api/ai/jev/status');
     expect(res.status).toBe(200);
     expect(res.body.confidenceThresholds.samePerson).toBe(0.85);
+    // Story 42.8 — unfollow threshold default + neighbors survive the
+    // conditional-spread block (a NaN spread would poison them all).
+    expect(res.body.confidenceThresholds.unfollow).toBe(0.7);
+    expect(res.body.confidenceThresholds.like).toBe(0.6);
+    expect(res.body.confidenceThresholds.reply).toBe(0.85);
+    expect(res.body.confidenceThresholds.safeToSend).toBe(0.8);
   });
 
   it('handles degraded Jev — returns empty qualified with stats.degraded', async () => {

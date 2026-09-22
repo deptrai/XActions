@@ -126,6 +126,7 @@ router.post('/unfollow-non-followers', async (req, res) => {
   const excludeUsernames = /** @type {string[] | undefined} */ (req.body.excludeUsernames) ?? [];
   const excludeVerified = /** @type {boolean | undefined} */ (req.body.excludeVerified) ?? false;
   const delayMs = /** @type {string | number | undefined} */ (req.body.delayMs) ?? 2000;
+  const username = /** @type {string | undefined} */ (req.body.username);
   
   // Validate inputs
   const effectiveMax = Math.min(Math.max(parseInt(String(maxUnfollows), 10) || 100, 1), 500);
@@ -136,13 +137,17 @@ router.post('/unfollow-non-followers', async (req, res) => {
   try {
     const operationId = generateOperationId();
     
-    // Queue the job
+    // Queue the job — session-cookie API, so route to the browser executor
+    // (authMethod:'session'); there is no DB user here, and the browser path
+    // only needs config.sessionCookie (+ config.username when known).
     const { queueJob } = /** @type {Record<string, (...args: unknown[]) => unknown>} */ (/** @type {unknown} */ (await import('../../services/jobQueue.js')));
     await queueJob({
-      id: operationId,
+      operationId,
       type: 'unfollowNonFollowers',
+      authMethod: 'session',
       config: {
         maxUnfollows: effectiveMax,
+        username: username ? String(username).replace(/^@/, '') : undefined,
         dryRun: !!dryRun,
         excludeUsernames: excludeList,
         excludeVerified: !!excludeVerified,
