@@ -678,6 +678,12 @@ app.get('/schedule', (req, res) => {
 });
 
 // Benchmark & Scraper Reliability Scorecard route (Epic 34 / Story 34.5)
+for (const p of ['/viral-miner', '/dashboard/viral-miner.html']) {
+  app.get(p, (/** @type {import('express').Request} */ _req, /** @type {import('express').Response} */ res) => {
+    res.sendFile(path.join(__dirname, '../dashboard/viral-miner.html'));
+  });
+}
+
 for (const p of ['/benchmark', '/benchmarks']) {
   app.get(p, (/** @type {import('express').Request} */ _req, /** @type {import('express').Response} */ res) => {
     res.sendFile(path.join(__dirname, '../dashboard/benchmark.html'));

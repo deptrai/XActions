@@ -93,7 +93,12 @@ async function checkForExistingStats() {
     const res = await fetch(`${API_BASE}/stats`);
     const data = await res.json();
     if (data.stats && data.stats.length > 0) {
-      emptyState.style.display = 'none';
+      const latest = data.stats[0];
+      categorySelect.value = latest.category || 'social';
+      updatePlatformOptions();
+      platformSelect.value = latest.platform;
+      nicheInput.value = latest.niche;
+      await loadResults(latest.platform, latest.niche);
     }
   } catch (err) {
     console.log('No existing stats');
@@ -199,9 +204,10 @@ async function cancelMining() {
 }
 
 // Load results
-async function loadResults() {
-  const platform = platformSelect.value;
-  const niche = nicheInput.value.trim();
+async function loadResults(p, n) {
+  const platform = p || platformSelect.value;
+  const niche = (n || nicheInput.value).trim();
+  if (!platform || !niche) return;
   
   try {
     const res = await fetch(`${API_BASE}/stats/${platform}/${niche}`);
@@ -210,6 +216,7 @@ async function loadResults() {
     if (data.success && data.stats) {
       displayResults(data.stats);
       resultsSection.classList.add('active');
+      emptyState.style.display = 'none';
     }
   } catch (err) {
     console.error('Failed to load results:', err);
@@ -283,4 +290,8 @@ async function runBacktest() {
 }
 
 // Initialize on load
-document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}

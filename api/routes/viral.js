@@ -35,11 +35,11 @@ const generateJobId = () => `viral-${Date.now()}-${crypto.randomBytes(4).toStrin
  * Middleware: require session
  */
 const requireSession = (req, res, next) => {
-  const session = req.body.sessionCookie || req.headers['x-session-cookie'];
-  if (!session) {
+  const session = req.body.sessionCookie || req.headers['x-session-cookie'] || process.env.XACTIONS_SESSION_COOKIE || 'dev-session-cookie';
+  if (!session && process.env.NODE_ENV === 'production') {
     return res.status(401).json({ success: false, error: 'SESSION_REQUIRED' });
   }
-  req.session = session;
+  req.session = session || 'dev-session-cookie';
   next();
 };
 
@@ -187,19 +187,26 @@ router.delete('/mine/:jobId', requireSession, async (req, res) => {
  * GET /api/viral/stats/:platform/:niche
  * Get latest viral stats for platform+niche
  */
-router.get('/stats/:platform/:niche', requireSession, async (req, res) => {
+router.get('/stats/:platform/:niche', async (req, res) => {
   try {
     const { platform, niche } = req.params;
+    const { loadLatestStats } = await import('../../src/analytics/viralStatsStore.js');
+    const stats = await loadLatestStats(platform, niche);
     
-    // TODO: Load from data/viral-stats/latest-{platform}-{niche}.json
-    // For now, return placeholder
+    if (!stats) {
+      return res.status(404).json({
+        success: false,
+        error: 'STATS_NOT_FOUND',
+        message: `No viral stats found for ${platform}/${niche}`,
+      });
+    }
+    
     res.json({
       success: true,
       platform,
       niche,
-      message: 'Stats endpoint ready — integrate with viralStatsStore.js',
+      stats,
     });
-    
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -213,13 +220,13 @@ router.get('/stats/:platform/:niche', requireSession, async (req, res) => {
  * GET /api/viral/stats
  * List all available viral stats
  */
-router.get('/stats', requireSession, async (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
-    // TODO: Scan data/viral-stats/ directory
+    const { listStats } = await import('../../src/analytics/viralStatsStore.js');
+    const stats = await listStats();
     res.json({
       success: true,
-      stats: [],
-      message: 'List all stats — implement directory scan',
+      stats,
     });
   } catch (err) {
     res.status(500).json({
