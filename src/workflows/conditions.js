@@ -11,7 +11,111 @@
  */
 
 // ============================================================================
+// Jev Typed Decision Condition (Epic 43 — Story 43.1)
+// ============================================================================
+
+import { JevBrain } from '../agents/jevBrain.js';
+
+/** @type {import('../agents/jevBrain.js').JevBrain|null} */
+let _jevBrain = null;
+
+/**
+ * Lazy JevBrain singleton for workflow conditions.
+ * @returns {import('../agents/jevBrain.js').JevBrain}
+ */
+function getJevBrain() {
+  if (!_jevBrain) {
+    _jevBrain = new JevBrain({});
+  }
+  return _jevBrain;
+}
+
+/**
+ * Evaluate a Jev semantic condition.
+ *
+ * Config shape:
+ *   { jev: { question: string, state: unknown, type: 'noul'|'choice'|'score',
+ *            threshold?: number, choices?: string[] } }
+ *
+ * - noul   → answer.noul >= threshold (default 0.5)
+ * - choice → answer.choice ∈ choices (default: any non-'ignore' choice)
+ * - score  → answer.score >= threshold (default 2)
+ *
+ * Degraded → { passed: false } (conservative — no signal, no act).
+ *
+ * @param {Record<string, unknown>} jevConfig — the `jev` field value.
+ * @param {import('../types/xactions.js').WorkflowContext} context
+ * @returns {Promise<import('../types/xactions.js').ConditionEvaluation>}
+ */
+async function evaluateJevCondition(jevConfig, context) {
+  const question = jevConfig.question;
+  const type = jevConfig.type || 'noul';
+  const threshold = jevConfig.threshold;
+  const choices = jevConfig.choices;
+
+  if (!question) {
+    return { passed: false, details: 'jev condition: missing "question"' };
+  }
+
+  // Resolve state — string path → resolved value; object/array → as-is
+  let state = jevConfig.state;
+  if (typeof state === 'string' && context && typeof context === 'object') {
+    const resolved = resolveValue(state, context);
+    if (resolved !== undefined) state = resolved;
+  }
+  if (state === undefined || state === null) {
+    state = context;
+  }
+
+  const brain = getJevBrain();
+  const questions = {};
+  const questionDef = { type, instructions: question };
+  if (type === 'choice' && choices && Array.isArray(choices)) {
+    questionDef.criteria = Object.fromEntries(choices.map(c => [c, c]));
+  } else if (type === 'choice') {
+    questionDef.criteria = { yes: 'Yes / proceed', no: 'No / skip', ignore: 'Not applicable' };
+  } else if (type === 'score') {
+    questionDef.criteria = ['none', 'low', 'medium', 'high'];
+  }
+  questions.answer = questionDef;
+
+  const decision = await brain.decide(state, questions);
+
+  if (decision.meta.degraded) {
+    return { passed: false, details: `jev degraded: ${decision.meta.reason}` };
+  }
+
+  const answer = decision.answers.answer || {};
+
+  if (type === 'noul') {
+    const noul = answer.noul ?? 0;
+    const t = threshold ?? 0.5;
+    return { passed: noul >= t, details: `jev noul ${noul.toFixed(2)} ${noul >= t ? '>=' : '<'} ${t}` };
+  }
+
+  if (type === 'choice') {
+    const choice = answer.choice ?? 'ignore';
+    if (choices && Array.isArray(choices)) {
+      const hit = choices.includes(choice);
+      return { passed: hit, details: `jev choice "${choice}" ${hit ? '∈' : '∉'} [${choices.join(',')}]` };
+    }
+    const hit = choice !== 'ignore' && choice !== 'no';
+    return { passed: hit, details: `jev choice "${choice}" → ${hit ? 'act' : 'skip'}` };
+  }
+
+  if (type === 'score') {
+    const score = answer.score ?? 0;
+    const t = threshold ?? 2;
+    return { passed: score >= t, details: `jev score ${score} ${score >= t ? '>=' : '<'} ${t}` };
+  }
+
+  return { passed: false, details: `jev condition: unknown type "${type}"` };
+}
+
+// ============================================================================
 // Built-in Condition Evaluators
+// ============================================================================
+
 // ============================================================================
 
 /**
@@ -215,6 +319,24 @@ function evaluateExpression(expression, context) {
     passed,
     details: `${parsed.left}(${JSON.stringify(leftVal)}) ${parsed.operator} ${parsed.right ?? ''}`,
   };
+}
+
+/**
+ * Async condition evaluator — handles `jev` semantic conditions and delegates
+ * everything else to the synchronous `evaluateCondition`.
+ *
+ * Use this in async contexts (workflow engine) where Jev API calls are allowed.
+ * The synchronous `evaluateCondition` remains for backward compatibility.
+ *
+ * @param {string | Record<string, unknown>} condition
+ * @param {import('../types/xactions.js').WorkflowContext} context
+ * @returns {Promise<import('../types/xactions.js').ConditionEvaluation>}
+ */
+export async function evaluateConditionAsync(condition, context) {
+  if (typeof condition === 'object' && condition !== null && condition.jev) {
+    return await evaluateJevCondition(/** @type {Record<string, unknown>} */ (condition.jev), context);
+  }
+  return evaluateCondition(condition, context);
 }
 
 /**

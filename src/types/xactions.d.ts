@@ -466,6 +466,14 @@ export interface WorkflowCondition {
   left?: string;
   operator?: string;
   right?: unknown;
+  /** Jev semantic condition — evaluated via evaluateConditionAsync (Story 43.1). */
+  jev?: {
+    question: string;
+    state?: unknown;
+    type?: 'noul' | 'choice' | 'score';
+    threshold?: number;
+    choices?: string[];
+  };
 }
 
 /** Result returned by a condition evaluation. */

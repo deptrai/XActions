@@ -12,7 +12,7 @@
 
 import crypto from 'crypto';
 import { executeAction, closeBrowser } from './actions.js';
-import { evaluateCondition } from './conditions.js';
+import { evaluateCondition, evaluateConditionAsync } from './conditions.js';
 import { getStore } from './store.js';
 
 /**
@@ -103,7 +103,7 @@ export async function runWorkflow(workflow, options = {}) {
       try {
         if (step.condition) {
           // --- Condition Step ---
-          const evaluation = /** @type {ConditionEvaluation} */ (evaluateCondition(step.condition, context));
+          const evaluation = /** @type {ConditionEvaluation} */ (await evaluateConditionAsync(step.condition, context));
           stepLog.result = evaluation;
           stepLog.status = 'completed';
 
