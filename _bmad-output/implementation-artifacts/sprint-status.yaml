@@ -260,13 +260,13 @@ development_status:
   40-1-cost-aware-proxy-escalation-in-proxy-pool: done
   epic-40-retrospective: done
 
-  epic-41: in-progress
+  epic-41: done
   41-1-github-gravatar-adapters: done
   41-2-entity-resolver-identity-clusters: done
   41-3-avatar-perceptual-hashing-entity-resolver: done
   epic-41-retrospective: done
 
-  epic-42: in-progress
+  epic-42: done
   42-1-jevbrain-core-decision-plane-src-agents-jevbrain-js-rest-cli: done
   42-2-agentic-adoption-cắm-jevbrain-vào-thoughtleaderagent-action: done
   42-3-jev-verify-regression-guard-nâng-scripts-jev-verify-thành-ci: done
@@ -278,7 +278,7 @@ development_status:
   42-9-jev-variant-judge-jev-as-a-judge-post-variant-selector-cring: done
   epic-42-retrospective: optional
 
-  epic-43: backlog
+  epic-43: done
   43-1-jev-workflow-conditions-condition-type-jev-trong-src-workflo: done
   43-2-jev-write-path-gate-noul-score-choice-trước-mọi-write-conten: done
   43-3-jev-inbox-triage-dm-notification-choice-intent-noul-toxic-tr: done
