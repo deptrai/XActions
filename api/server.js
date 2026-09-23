@@ -111,6 +111,7 @@ import {
 } from './middleware/envelope.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
 import { generateSpec as generateOpenAPISpec, generateWellKnown as generateX402WellKnown } from './openapi.js';
+import swaggerUi from 'swagger-ui-express';
 
 const app = express();
 const httpServer = createServer(app);
@@ -157,6 +158,13 @@ app.use(compression({
     return compression.filter(req, res);
   }
 }));
+
+// Story 46.1 — discovery preflight must answer with open CORS (`*`) before the
+// app-wide origin-allowlist cors() intercepts OPTIONS: x402scan and agents crawl
+// /openapi.json and /.well-known/x402 from arbitrary origins.
+const openCors = { origin: '*', methods: ['GET', 'OPTIONS'] };
+app.options('/openapi.json', cors(openCors));
+app.options('/.well-known/x402', cors(openCors));
 
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
@@ -297,16 +305,42 @@ app.get('/llms-full.txt', (req, res) => {
 });
 
 // x402 discovery endpoints — public, allow any origin so x402scan and agents can crawl
-const openCors = { origin: '*', methods: ['GET', 'OPTIONS'] };
-app.options('/openapi.json', cors(openCors));
 app.get('/openapi.json', cors(openCors), (req, res) => {
   res.type('application/json').json(generateOpenAPISpec());
 });
 
-app.options('/.well-known/x402', cors(openCors));
 app.get('/.well-known/x402', cors(openCors), (req, res) => {
   res.type('application/json').json(generateX402WellKnown());
 });
+
+// Story 46.1 — self-hosted Swagger UI (Helmet CSP blocks CDN; swagger-ui-express
+// bundles assets from node_modules). Mounted BEFORE /docs/:slug handlers and
+// AFTER /openapi.json so the spec endpoint resolves first. The spec from
+// generateSpec() is the single source of truth — this layer only renders it.
+// Try-It-Out baseline: GET-only (supportedSubmitMethods); per-operation
+// granularity via the x-tryitout:false vendor extension plugin below.
+const openApiSpec = generateOpenAPISpec();
+// swagger-ui plugin: per-operation Try-It-Out gate — ops marked `x-tryitout: false`
+// (x402-paid endpoints, real-account mutations) never execute from the docs UI.
+const gateTryItOut = (oriSelector, system) => (path, method) => {
+  const op = system.getSystem().specSelectors.spec().getIn(['paths', path, method]);
+  if (op?.get('x-tryitout') === false) return false;
+  return oriSelector(path, method);
+};
+const swaggerOptions = {
+  supportedSubmitMethods: ['get'],
+  tryItOutEnabled: true,
+  plugins: [{
+    statePlugins: {
+      spec: {
+        wrapSelectors: {
+          allowTryItOutFor: gateTryItOut,
+        },
+      },
+    },
+  }],
+};
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, { swaggerOptions }));
 
 // AI API endpoints
 app.get('/api/ai/health', x402HealthCheck);

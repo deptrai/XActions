@@ -12,6 +12,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { generateSpec } from '../../../api/openapi.js';
+import request from 'supertest';
+import app from '../../../api/server.js';
 import { buildGeneratedDocument } from '../../../api/schemas/index.js';
 
 const spec = generateSpec();
@@ -176,5 +178,53 @@ describe('Story 46.2 — OpenAPI composition', () => {
     expect(mine?.security).toEqual(
       expect.arrayContaining([expect.objectContaining({ sessionCookie: expect.any(Array) })])
     );
+  });
+
+  it('GET /openapi.json → 200, openapi 3.1.0, CORS *, servers, x-x402', async () => {
+    const res = await request(app).get('/openapi.json');
+    expect(res.status).toBe(200);
+    expect(res.headers['access-control-allow-origin']).toBe('*');
+    expect(res.body.openapi).toBe('3.1.0');
+    expect(Array.isArray(res.body.servers)).toBe(true);
+    const serverUrls = res.body.servers.map((s) => s.url);
+    expect(serverUrls.some((u) => u.includes('localhost'))).toBe(true);
+    expect(serverUrls.some((u) => u.startsWith('https://'))).toBe(true);
+    expect(res.body['x-x402']).toBeTruthy();
+    const schemes = res.body.components?.securitySchemes || {};
+    expect(schemes.x402Payment).toBeTruthy();
+    const ops = [...iterOperations(res.body)];
+    expect(ops.length).toBeGreaterThan(100);
+    expect(ops.some(({ op }) => op['x-payment-info'])).toBe(true);
+    expect(ops.some(({ op }) => op['x-bazaar'])).toBe(true);
+  });
+
+  it('OPTIONS /openapi.json preflight → 200 with CORS GET/OPTIONS methods', async () => {
+    const res = await request(app).options('/openapi.json');
+    expect([200, 204]).toContain(res.status);
+    expect(res.headers['access-control-allow-origin']).toBe('*');
+    expect(res.headers['access-control-allow-methods']).toContain('GET');
+    expect(res.headers['access-control-allow-methods']).toContain('OPTIONS');
+  });
+
+  it('GET /.well-known/x402 → 200 with version:1 and resources array', async () => {
+    const res = await request(app).get('/.well-known/x402');
+    expect(res.status).toBe(200);
+    expect(res.body.version).toBe(1);
+    expect(Array.isArray(res.body.resources)).toBe(true);
+    expect(res.body.resources.length).toBeGreaterThan(0);
+  });
+
+  it('GET /api-docs → 200 HTML, self-hosted swagger-ui bundle, no CDN refs', async () => {
+    const res = await request(app).get('/api-docs/');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    expect(res.text).toContain('swagger-ui');
+    expect(res.text).not.toMatch(/https:\/\/cdn\./);
+  });
+
+  it('GET /api-docs redirects to /api-docs/ (Swagger UI mount)', async () => {
+    const res = await request(app).get('/api-docs');
+    expect(res.status).toBe(301);
+    expect(res.headers.location).toBe('/api-docs/');
   });
 });

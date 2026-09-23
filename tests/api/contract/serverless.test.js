@@ -26,4 +26,20 @@ describe('Story 46.2 — serverless surface', () => {
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBeTruthy();
   });
+
+  it('GET /openapi.json → 200, openapi 3.1.0, serverless subset note in description', async () => {
+    const res = await request(app).get('/openapi.json');
+    expect(res.status).toBe(200);
+    expect(res.body.openapi).toBe('3.1.0');
+    expect(res.body.info?.description).toContain('503');
+    expect(res.body.info?.description).toContain('subset');
+  });
+
+  it('GET /api-docs → 200 self-hosted Swagger UI HTML', async () => {
+    const res = await request(app).get('/api-docs/');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    expect(res.text).toContain('swagger-ui');
+    expect(res.text).not.toMatch(/https:\/\/cdn\./);
+  });
 });

@@ -118,6 +118,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^9.1.0",
     "@jsquash/webp": "^1.5.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@prisma/client": "^5.7.1",
@@ -165,9 +166,9 @@
     "socket.io": "^4.7.5",
     "socks-proxy-agent": "^8.0.5",
     "stripe": "^14.10.0",
+    "swagger-ui-express": "^5.0.1",
     "undici": "^7.29.0",
-    "zod": "^4.6.5",
-    "@asteasolutions/zod-to-openapi": "^9.1.0"
+    "zod": "^4.6.5"
   },
   "optionalDependencies": {
     "@atproto/api": "^0.13.35",
