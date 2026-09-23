@@ -69,8 +69,16 @@ export class ThreadsPlatformResponseValidator extends AbstractPlatformResponseVa
     }
 
     const body = this.#getBody(response);
-    if (body && (body.includes('/checkpoint/') || body.includes('security check') || body.includes('challenge') || body.includes('login_wall'))) {
-      return body.toLowerCase();
+    if (body) {
+      const hasData = body.includes('searchResults') || body.includes('mediaData') || body.includes('thread_items') || body.includes('containing_thread') || body.includes('"edges"');
+      if (!hasData && (body.includes('/checkpoint/') || body.includes('security check') || body.includes('login_wall'))) {
+        return body.toLowerCase();
+      }
+      // 'challenge' alone is too broad — matches script tags on normal pages.
+      // Only flag when the page is actually a challenge wall (no data + challenge form/redirect).
+      if (!hasData && body.includes('challenge') && (body.includes('arkose') || body.includes('challenge-platform') || body.includes('Challenge') || body.includes('challenge_required'))) {
+        return body.toLowerCase();
+      }
     }
 
     return '';

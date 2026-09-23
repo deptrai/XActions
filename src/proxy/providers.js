@@ -236,6 +236,8 @@ export function parseProxyUrl(urlString) {
 
   if (username !== undefined) result.username = username;
   if (password !== undefined) result.password = password;
+  
+
 
   return result;
 }
@@ -351,7 +353,7 @@ export function getProxyAgent(proxy, options = {}) {
   const client = options?.client || 'undici';
   const proxyUrl = formatProxyUrl(normalized);
 
-  if (client === 'got') {
+  if (client === 'got' || client === 'curl') {
     return proxyUrl;
   }
 

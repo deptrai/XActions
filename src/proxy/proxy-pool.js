@@ -723,6 +723,7 @@ export const globalProxyPool = new ProxyIpPool();
   const envUrls = [
     process.env.PROXY_URL,
     process.env.PROXY_URLS,
+    process.env.XACTIONS_PROXIES,
     process.env.XEEPY_PROXY_URL,
     process.env.FACEBOOK_PROXY && process.env.FACEBOOK_PROXY_AUTH_USERNAME && process.env.FACEBOOK_PROXY_AUTH_PASSWORD
       ? `${process.env.FACEBOOK_PROXY.replace(/^https?:\/\//, `http://${encodeURIComponent(process.env.FACEBOOK_PROXY_AUTH_USERNAME)}:${encodeURIComponent(process.env.FACEBOOK_PROXY_AUTH_PASSWORD)}@`)}`
@@ -736,8 +737,25 @@ export const globalProxyPool = new ProxyIpPool();
       if (!seen.has(url)) {
         seen.add(url);
         try {
-          globalProxyPool.add(url);
-        } catch {}
+          // Parse URL to extract credentials
+          const parsed = new URL(url);
+          const proxyObj = {
+            scheme: parsed.protocol.replace(':', ''),
+            host: parsed.hostname,
+            port: parseInt(parsed.port || '80'),
+            username: parsed.username ? decodeURIComponent(parsed.username) : undefined,
+            password: parsed.password ? decodeURIComponent(parsed.password) : undefined,
+            // Mark as residential if it's a socksnode proxy or contains residential keywords
+            tier: 'residential',
+            residential: true,
+          };
+          globalProxyPool.add(proxyObj);
+        } catch (e) {
+          // Fallback to simple URL parsing
+          try {
+            globalProxyPool.add(url);
+          } catch {}
+        }
       }
     }
   }

@@ -56,12 +56,15 @@ const RATE_LIMIT_CODES = new Set([368]);
 /** @type {RegExp[]} */
 const LSD_REGEXES = [
   /name="lsd"\s+value="([^"]+)"/,
+  /\["LSD",\[\],\{"token":"([^"]+)"\}/,
   /\[\s*"LSD"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*(?:,\s*[^[\]]+)?\]/,
   /"LSD"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*(?:,\s*[^[\]]+)?\]/,
 ];
 
 /** @type {RegExp[]} */
 const DTSG_REGEXES = [
+  /\["DTSGInitialData",\[\],\{"token":"([^"]+)"\}/,
+  /\["DTSGInitialData",\[\],\{\},\d+\]/,
   /\[\s*"DTSGInitialData"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*(?:,\s*[^[\]]+)?\]/,
   /"DTSGInitialData"\s*,\s*\[\s*\]\s*,\s*\{\s*"token"\s*:\s*"([^"]+)"\s*\}\s*(?:,\s*[^[\]]+)?\]/,
   /d\.token\s*=\s*"([^"]+)"/,
@@ -83,6 +86,7 @@ const SPIN_T_REGEXES = [
 const HSI_REGEXES = [
   /"__hsi"\s*:\s*"([^"]+)"/,
   /window\.__hsi\s*=\s*"([^"]+)"/,
+  /"hsi":"([^"]+)"/,
 ];
 
 /** @type {RegExp[]} */
@@ -90,6 +94,7 @@ const USER_ID_REGEXES = [
   /window\.__user_id\s*=\s*"([^"]+)"/,
   /window\.__userId\s*=\s*"([^"]+)"/,
   /"user_id"\s*:\s*"([^"]+)"/,
+  /"user_id":(\d+)/,
 ];
 
 export const DEFAULT_THREADS_APP_ID = '238260118697367';
@@ -108,7 +113,7 @@ export class ThreadsClient extends AbstractApiClient {
   requiresAuth = true;
 
   /** @type {string} */
-  baseUrl = 'https://www.threads.net';
+  baseUrl = 'https://www.threads.com';
 
   /** @type {string} */
   igAppId = DEFAULT_THREADS_APP_ID;
@@ -152,7 +157,7 @@ export class ThreadsClient extends AbstractApiClient {
    * @param {import('../../../core/platform-validator.js').AbstractPlatformResponseValidator} [deps.responseValidator]
    */
   constructor(deps = {}) {
-    const baseUrl = (deps.baseUrl || 'https://www.threads.net').replace(/\/+$/, '');
+    const baseUrl = (deps.baseUrl || 'https://www.threads.com').replace(/\/+$/, '');
 
     /** @type {Record<string, any>} */
     const superOptions = {

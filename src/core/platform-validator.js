@@ -10,7 +10,7 @@
 export const GENERIC_FALSE_200_MARKERS = [
   /__cf_chl_jschl_tk__/i,
   /cf-browser-verification/i,
-  /arkose/i,
+  /(?:arkoselabs\.com|arkose-frame)/i,
   /captcha/i,
   /checking your browser before accessing/i,
   /please enable javascript and cookies/i,
