@@ -73,7 +73,7 @@ router.post('/mine', requireSession, async (req, res) => {
     
     // Validate count
     const numCount = parseInt(count, 10);
-    if (isNaN(numCount) || numCount < 100 || numCount > 10000) {
+    if (isNaN(numCount) || numCount < 1 || numCount > 10000) {
       return res.status(400).json({
         success: false,
         error: 'INVALID_COUNT',
@@ -115,8 +115,31 @@ router.post('/mine', requireSession, async (req, res) => {
         status: 'queued',
       });
     } catch (queueErr) {
-      // Job queue not available — process synchronously (dev mode)
-      console.warn('[viral] Job queue unavailable, processing sync');
+      // Job queue not available — process asynchronously in background (dev mode)
+      console.warn('[viral] Job queue unavailable, processing in-process background');
+      (async () => {
+        try {
+          const { viralMine } = await import('../../src/analytics/jevViralMiner.js');
+          job.status = 'running';
+          const result = await viralMine(
+            { platform, niche, count: numCount },
+            {
+              onProgress: (p) => {
+                if (p.percentage != null) job.progress.percentage = p.percentage;
+                if (p.completed != null) job.progress[p.phase === 'classify' ? 'classified' : 'scraped'] = p.completed;
+              },
+            }
+          );
+          job.status = 'completed';
+          job.result = result;
+          job.progress.scraped = result.scraped;
+          job.progress.classified = result.classified;
+          job.outputPath = result.outputPath;
+        } catch (e) {
+          job.status = 'failed';
+          job.error = e.message;
+        }
+      })();
     }
     
     res.json({
