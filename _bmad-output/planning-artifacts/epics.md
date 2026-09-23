@@ -2832,3 +2832,147 @@ FR-102: Story 45.5 - Viral Dashboard UI (web interface for mining/stats/backtest
 - **Requires:** Epic 34 (scrapers stable), Epic 42 (JevBrain gateway), existing `tweetGenerator`, `jevVariantJudge`.
 - **New modules needed:** `src/filters/jevFilter.js` (create), `src/analytics/jevViralMiner.js`, `src/analytics/viralStatsStore.js`, `src/analytics/jevBacktest.js`, `api/routes/viral.js`.
 - **Enables:** Future Epic 46+ (auto-post với viral DNA optimization), Epic 47+ (competitor viral pattern analysis), Epic 48+ (cross-platform content adaptation).
+
+---
+
+# Epic 46: Chuẩn Hóa Bộ Hợp Đồng API & Tài Liệu Tương Tác OpenAPI 3.1 / Swagger
+
+**Goal:** Chuẩn hóa toàn bộ 52 API routes của Backend Express sang định dạng OpenAPI 3.1, cung cấp giao diện Swagger UI tương tác tại `/docs/api` và script tự động sinh TypeScript API Client SDK (`@xactions/api-client`) để Frontend Next.js gọi API typesafe 100%.
+
+**Requirements Covered:** FR-E46-1, FR-E46-2, FR-E46-3, FR-E46-4, NFR-E46-1, NFR-E46-2.
+
+---
+
+### Story 46.1: Tích hợp Swagger UI & Endpoint Xuất Bản OpenAPI 3.1 JSON
+
+As a **Frontend Developer / AI Agent Integrator**,  
+I want **truy cập giao diện Swagger UI tại `/docs/api` và endpoint `/openapi.json`**,  
+So that **tôi có thể xem danh mục toàn bộ API của XActions, thử nghiệm request trực tiếp trên trình duyệt và tự động nạp spec vào các công cụ phát triển**.
+
+**Acceptance Criteria:**
+
+**Given** Express backend đang chạy  
+**When** người dùng gửi `GET /openapi.json`  
+**Then** server trả về `200 OK` với header `content-type: application/json` và root object tuân thủ chuẩn `openapi: 3.1.0`.  
+**And** Swagger UI tại `/docs/api` render đầy đủ danh mục nhóm API và hỗ trợ chức năng "Try it out" thực thi thật.
+
+---
+
+### Story 46.2: Khai Báo Zod Schemas & Quy Chuẩn Response Envelopes cho 52 Routes
+
+As a **Backend Developer**,  
+I want **định nghĩa Zod Request/Response Schemas cho toàn bộ 52 API routes**,  
+So that **dữ liệu đầu vào/đầu ra được kiểm thực chặt chẽ, loại bỏ hoàn toàn lỗi runtime và đồng bộ tự động với OpenAPI spec**.
+
+**Acceptance Criteria:**
+
+**Given** các routes chính (`/api/viral/*`, `/api/crm/*`, `/api/optimizer/*`, `/api/a2a/*`, `/api/license/*`, `/api/workflows/*`)  
+**When** request được gửi lên  
+**Then** middleware tự động validate Request Body và Query parameters qua Zod Schema tương ứng, trả về `400 Bad Request` nếu không hợp lệ.  
+**And** cấu trúc phản hồi thành công và lỗi luôn tuân thủ chuẩn Error / Success Envelopes thống nhất.  
+**And** các endpoint cần xác thực được khai báo đầy đủ `securitySchemes` (BearerAuth hoặc SessionCookie).
+
+---
+
+### Story 46.3: CLI Generator Tự Động Sinh TypeScript API Client (`@xactions/api-client`)
+
+As a **Frontend Developer**,  
+I want **chạy lệnh `npm run generate:api-client` để tự động sinh file client TypeScript từ OpenAPI spec**,  
+So that **tôi có thể gọi API trong Next.js với code gợi ý (IntelliSense) và kiểm tra lỗi kiểu dữ liệu tại thời điểm biên dịch (Compile-time Type Safety)**.
+
+**Acceptance Criteria:**
+
+**Given** file `package.json` có script `"generate:api-client"`  
+**When** lập trình viên chạy `npm run generate:api-client`  
+**Then** công cụ đọc `/openapi.json` và sinh ra module TypeScript tại `packages/api-client/` (hoặc `apps/web/src/lib/api/`).  
+**And** xuất bản đầy đủ các Types mô hình dữ liệu (`ViralStats`, `PostItem`, `CRMContact`, `OptimizeTweetRequest`).  
+**And** cung cấp hàm fetch client wrapper hỗ trợ gọi API tiện lợi và typesafe 100%.
+
+---
+
+# Epic 47: Ứng Dụng Web Hiện Đại Next.js & Bảng Điều Khiển Trí Tuệ Hợp Nhất
+
+**Goal:** Xây dựng ứng dụng web Next.js 15 (App Router, Tailwind CSS, Shadcn/UI) hiện đại, gom toàn bộ 51 file HTML rời rạc thành một Single Page Application đẳng cấp, trực quan hóa Follower CRM, Viral DNA Analytics Canvas, AI Tweet Optimizer Playground và Universal Data Explorer.
+
+**Requirements Covered:** FR-E47-1, FR-E47-2, FR-E47-3, FR-E47-4, FR-E47-5, FR-E47-6, FR-E47-7, NFR-E47-1, NFR-E47-2, NFR-E47-3.
+
+---
+
+### Story 47.1: Khởi Tạo Dự Án Next.js 15 App Router & Universal Layout
+
+As a **Người dùng XActions**,  
+I want **truy cập giao diện web Next.js mượt mà với Sidebar điều hướng thông minh, Dark/Light Mode và thanh trạng thái kết nối Backend**,  
+So that **tôi có thể điều hướng giữa các công cụ nhanh chóng mà trang không bị tải lại từ đầu**.
+
+**Acceptance Criteria:**
+
+**Given** thư mục `apps/web/` được cấu hình với Next.js 15, TypeScript, Tailwind CSS, Shadcn/UI, Lucide Icons  
+**When** chạy `npm run dev` trong frontend  
+**Then** ứng dụng khởi động thành công tại `http://localhost:3000` với thời gian tải trang < 1.0 giây.  
+**And** Sidebar có thể thu gọn (Collapsible), hiển thị đầy đủ các phân hệ chức năng.  
+**And** thanh Header hỗ trợ chuyển đổi Dark/Light mode và huy hiệu trạng thái kết nối Backend (`http://localhost:3001`).
+
+---
+
+### Story 47.2: Màn Hình Viral DNA Miner Dashboard & Biểu Đồ Trực Quan (`/viral-miner`)
+
+As a **Growth Hacker / Marketer**,  
+I want **sử dụng màn hình Viral DNA Miner được xây dựng bằng React Components**,  
+So that **tôi có thể cào bài viết, theo dõi thanh tiến trình realtime và xem biểu đồ phân bố Hook Type, Top Patterns sắc nét**.
+
+**Acceptance Criteria:**
+
+**Given** người dùng chọn Category, Platform (18 nền tảng), nhập Niche và điều chỉnh Post Count  
+**When** bấm nút **Run Mining**  
+**Then** giao diện gọi `api.viral.mine()` và hiển thị thẻ tiến trình thời gian thực (`Scraped`, `Classified`, `Est. Cost`, `Elapsed`).  
+**And** tab Overview hiển thị biểu đồ Recharts BarChart tỷ lệ phần trăm của từng Hook Type có tooltip chi tiết.  
+**And** tab Top Patterns và Compare Platforms hiển thị ma trận đối chiếu trực quan đa nền tảng.
+
+---
+
+### Story 47.3: Màn Hình Follower CRM & Quản Trị Khách Hàng Tiềm Năng (`/crm`)
+
+As a **Kinh doanh / Chuyên viên phát triển cộng đồng**,  
+I want **quản lý danh bạ người theo dõi trong bảng tương tác TanStack Table, lọc theo phân khúc và gán tag**,  
+So that **tôi có thể phân loại khách hàng VIP và chăm sóc tệp người theo dõi có giá trị cao nhất**.
+
+**Acceptance Criteria:**
+
+**Given** trang `/crm`  
+**When** nạp dữ liệu từ `/api/crm/search`  
+**Then** bảng TanStack Table hiển thị danh sách Contact với Avatar, Username, Bio, Số followers, Điểm Lead Score và Tags.  
+**And** người dùng có thể gán tag mới và cập nhật tức thì trên giao diện qua API `POST /api/crm/tag`.  
+**And** bộ lọc phân khúc tự động lọc danh sách theo nhóm đối tượng định trước.
+
+---
+
+### Story 47.4: Màn Hình AI Content Optimizer Playground (`/optimizer`)
+
+As a **Nhà sáng tạo nội dung**,  
+I want **một không gian soạn thảo thông minh có nút phân tích và tối ưu hóa bằng AI**,  
+So that **bài viết của tôi được AI chấm điểm, gợi ý hashtags và viết lại hấp dẫn hơn trước khi đăng**.
+
+**Acceptance Criteria:**
+
+**Given** ô nhập nội dung bài viết tại `/optimizer`  
+**When** nhập văn bản và bấm **Predict Score**  
+**Then** hệ thống gọi `POST /api/optimizer/predict` và hiển thị đồng hồ đo điểm Viral Potential Score kèm gợi ý cải thiện.  
+**And** khi chọn mục tiêu và bấm **Rewrite with AI**, hệ thống gọi `POST /api/optimizer/optimize` và hiển thị bài viết được viết lại dạng side-by-side kèm nút Copy 1-click.  
+**And** nút **Generate Hashtags** tự động sinh và hiển thị 5 hashtags phù hợp nhất.
+
+---
+
+### Story 47.5: Màn Hình Cổng Tra Cứu Dữ Liệu Đa Ngành Universal Data Explorer (`/explorer`)
+
+As a **Data Analyst / Chuyên viên nghiên cứu thị trường**,  
+I want **tìm kiếm và trích xuất dữ liệu đa ngành từ 25 crawlers (Việc làm, BĐS, Mã số thuế, Mạng xã hội)**,  
+So that **tôi có thể xem trước dữ liệu dạng bảng và xuất file CSV phục vụ công việc nghiên cứu**.
+
+**Acceptance Criteria:**
+
+**Given** giao diện `/explorer`  
+**When** người dùng chọn ngành (`Việc làm: VietnamWorks/TopCV`, `Bất động sản: Chợ Tốt`, `Doanh nghiệp: MaSoThue`, `Social: Reddit/Threads`)  
+**Then** các ô nhập liệu thích ứng linh hoạt theo ngữ cảnh tìm kiếm.  
+**And** bảng kết quả hiển thị chi tiết tiêu đề, giá/lương, công ty/tác giả, ngày đăng và đường dẫn gốc.  
+**And** nút **Export CSV** cho phép tải xuống file dữ liệu chuẩn UTF-8 chỉ với 1 cú click.
+

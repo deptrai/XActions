@@ -297,3 +297,37 @@ development_status:
   45-4-jev-backtest-validate-predictions-vs-actual-performance: done
   45-5-jev-viral-dashboard-web-ui-for-universal-viral-dna-mining: done
 
+
+# Epic 46: OpenAPI 3.1 & Swagger Documentation
+epic-46:
+  status: backlog
+  stories:
+    - id: 46.1
+      name: Swagger UI & OpenAPI 3.1 JSON Endpoint
+      status: backlog
+    - id: 46.2
+      name: Zod Schemas & Uniform Response Envelopes
+      status: backlog
+    - id: 46.3
+      name: CLI Generator for TypeScript API Client
+      status: backlog
+
+# Epic 47: Next.js Modern Frontend Application
+epic-47:
+  status: backlog
+  stories:
+    - id: 47.1
+      name: Next.js 15 App Router Scaffold & Universal Layout
+      status: backlog
+    - id: 47.2
+      name: Viral DNA Miner Dashboard & Charts Screen
+      status: backlog
+    - id: 47.3
+      name: Follower CRM & Contact Intelligence Screen
+      status: backlog
+    - id: 47.4
+      name: AI Content Optimizer Playground Screen
+      status: backlog
+    - id: 47.5
+      name: Universal Data Explorer & Export Screen
+      status: backlog
