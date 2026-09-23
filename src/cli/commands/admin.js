@@ -703,7 +703,12 @@ export function registerAdminCommand(program) {
             return;
           }
 
-          const result = body.data || body;
+          // Remote API returns the v2 envelope: data is the row array and
+          // pagination metadata lives on `page`; formatCheckpointList expects
+          // the legacy {checkpoints,total} shape.
+          const result = Array.isArray(body.data)
+            ? { checkpoints: body.data, total: body.page?.total ?? body.data.length }
+            : body.data || body;
           formatCheckpointList(result);
           console.log();
         } catch (err) {

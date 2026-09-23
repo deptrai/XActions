@@ -317,14 +317,17 @@ Content-Type: application/json
 Content-Type: application/json
 
 {
-  &quot;email&quot;: &quot;user@example.com&quot;,
+  &quot;identifier&quot;: &quot;myusername&quot;,
   &quot;password&quot;: &quot;secure_password&quot;
 }
 </code></pre>
-<p><strong>Response:</strong></p>
+<p><strong>Response</strong> (all endpoints return the canonical <code>{success, data}</code>/<code>{success, error}</code> envelope):</p>
 <pre><code class="language-json">{
-  &quot;token&quot;: &quot;eyJ...&quot;,
-  &quot;user&quot;: { &quot;id&quot;: 1, &quot;email&quot;: &quot;user@example.com&quot;, &quot;username&quot;: &quot;myusername&quot; }
+  &quot;success&quot;: true,
+  &quot;data&quot;: {
+    &quot;token&quot;: &quot;eyJ...&quot;,
+    &quot;user&quot;: { &quot;id&quot;: &quot;1&quot;, &quot;username&quot;: &quot;myusername&quot;, &quot;email&quot;: &quot;user@example.com&quot; }
+  }
 }
 </code></pre>
 <h3 id="refresh-token">Refresh Token</h3>

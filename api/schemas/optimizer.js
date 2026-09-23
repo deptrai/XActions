@@ -32,9 +32,18 @@ export const VariationsBody = z.object({
 
 // ── Response payloads ────────────────────────────────────────────────────────
 
-export const OptimizeResponse = z.looseObject({});
-export const HashtagsResponse = z.looseObject({});
-export const PredictResponse = z.looseObject({});
+export const OptimizeResponse = z.looseObject({
+  optimized: z.string().optional(),
+  original: z.string().optional(),
+  changes: z.array(z.unknown()).optional(),
+});
+export const HashtagsResponse = z.looseObject({
+  hashtags: z.array(z.unknown()).optional(),
+});
+export const PredictResponse = z.looseObject({
+  score: z.number().optional(),
+  prediction: z.unknown().optional(),
+});
 export const VariationsResponse = z.looseObject({
   variations: z.array(z.unknown()),
 });

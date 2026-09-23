@@ -12,6 +12,7 @@ import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 import { sessionCookieShim } from '../../../api/middleware/session-cookie-shim.js';
+import { miningJobs } from '../../../api/routes/viral.js';
 import app from '../../../api/server.js';
 
 function runShim(req) {
@@ -61,14 +62,19 @@ describe('Story 46.2 — sessionCookieShim (unit)', () => {
 });
 
 describe('Story 46.2 — shim on the real app (viral pilot)', () => {
+  // The session credential is stripped from API responses (publicJob) — assert
+  // precedence on the stored job via the exported registry map instead.
+  const storedSession = (res) => miningJobs.get(res.body.data.jobId)?.session;
+
   it('POST /api/viral/mine accepts sessionCookie in body (legacy transport)', async () => {
     const res = await request(app)
       .post('/api/viral/mine')
       .send({ platform: 'threads', niche: 'ai', count: 5, sessionCookie: 'legacy-body-cookie' });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+    expect('session' in res.body.data.job).toBe(false);
     // Dual-read precedence preserved: requireSession still prefers the body value.
-    expect(res.body.data.job.session).toBe('legacy-body-cookie');
+    expect(storedSession(res)).toBe('legacy-body-cookie');
   });
 
   it('POST /api/viral/mine accepts x-session-cookie header (canonical transport)', async () => {
@@ -78,7 +84,7 @@ describe('Story 46.2 — shim on the real app (viral pilot)', () => {
       .send({ platform: 'threads', niche: 'ai', count: 5 });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.job.session).toBe('header-cookie-abc');
+    expect(storedSession(res)).toBe('header-cookie-abc');
   });
 
   it('body sessionCookie wins over header (viral body precedence retained)', async () => {
@@ -87,6 +93,6 @@ describe('Story 46.2 — shim on the real app (viral pilot)', () => {
       .set('x-session-cookie', 'header-cookie-abc')
       .send({ platform: 'threads', niche: 'ai', count: 5, sessionCookie: 'body-wins' });
     expect(res.status).toBe(200);
-    expect(res.body.data.job.session).toBe('body-wins');
+    expect(storedSession(res)).toBe('body-wins');
   });
 });

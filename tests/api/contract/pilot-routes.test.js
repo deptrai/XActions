@@ -10,6 +10,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import app from '../../../api/server.js';
+import { prisma } from '../../store/test-prisma-client.js';
 import {
   seedTestUser,
   cleanupTestUser,
@@ -106,6 +107,17 @@ describe('pilot: /api/viral', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.job).toBeTruthy();
+    // The stored job carries the caller's session credential — never emit it.
+    expect('session' in res.body.data.job).toBe(false);
+  });
+
+  it('POST /mine with out-of-range count → 400 VALIDATION_FAILED', async () => {
+    for (const count of [10001, 'abc']) {
+      const res = await request(app)
+        .post('/api/viral/mine')
+        .send({ platform: 'threads', niche: 'ai', count });
+      expectValidationIssues(res);
+    }
   });
 
   it('GET /mine/:jobId unknown job → 404 envelope', async () => {
@@ -185,6 +197,45 @@ describe('pilot: /api/checkpoints', () => {
       .get('/api/checkpoints?limit=abc')
       .set('Authorization', `Bearer ${makeTestToken(admin.id, admin.username)}`);
     expectValidationIssues(res);
+  });
+
+  it('GET /?cursor=<garbage> → 400 VALIDATION_FAILED (opaque cursor)', async () => {
+    const res = await request(app)
+      .get('/api/checkpoints?cursor=%%%not-base64%%%')
+      .set('Authorization', `Bearer ${makeTestToken(admin.id, admin.username)}`);
+    expectErrorEnvelope(res, 400, 'VALIDATION_FAILED');
+  });
+
+  it('GET /?limit=1 → follows page.cursor to the next page', async () => {
+    const auth = { Authorization: `Bearer ${makeTestToken(admin.id, admin.username)}` };
+    const keySuffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    await prisma.crawlCheckpoint.create({
+      data: { platform: 'twitter', targetType: 'profile', targetKey: `contract_cursor_a_${keySuffix}`, status: 'running', errorCount: 0 },
+    });
+    await prisma.crawlCheckpoint.create({
+      data: { platform: 'twitter', targetType: 'profile', targetKey: `contract_cursor_b_${keySuffix}`, status: 'running', errorCount: 0 },
+    });
+
+    const page1 = await request(app).get('/api/checkpoints?limit=1&sortBy=createdAt&order=asc').set(auth);
+    expect(page1.status).toBe(200);
+    expect(page1.body.data).toHaveLength(1);
+    expect(typeof page1.body.page.total).toBe('number');
+    if (page1.body.page.total > 1) {
+      expect(page1.body.page.cursor).toBeTruthy();
+      const page2 = await request(app)
+        .get(`/api/checkpoints?limit=1&sortBy=createdAt&order=asc&cursor=${encodeURIComponent(page1.body.page.cursor)}`)
+        .set(auth);
+      expect(page2.status).toBe(200);
+      expect(page2.body.data).toHaveLength(1);
+      expect(page2.body.data[0].id).not.toBe(page1.body.data[0].id);
+    }
+  });
+
+  it('GET /?offset=1e20 → 400 VALIDATION_FAILED (offset bounded)', async () => {
+    const res = await request(app)
+      .get('/api/checkpoints?offset=1e20')
+      .set('Authorization', `Bearer ${makeTestToken(admin.id, admin.username)}`);
+    expectErrorEnvelope(res, 400, 'VALIDATION_FAILED');
   });
 
   it('GET /:id unknown → 404 envelope', async () => {

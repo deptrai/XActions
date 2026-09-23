@@ -66,6 +66,18 @@ export const ViralJob = z.looseObject({
   niche: z.string(),
   status: z.string(),
   createdAt: isoDateTime,
+  progress: z
+    .looseObject({
+      scraped: z.number().int().optional(),
+      classified: z.number().int().optional(),
+      total: z.number().int().optional(),
+      percentage: z.number().optional(),
+    })
+    .optional(),
+  cost: z.looseObject({ estimated: z.number().optional(), currency: z.string().optional() }).optional(),
+  result: z.unknown().optional(),
+  outputPath: z.string().optional(),
+  error: z.string().optional(),
 });
 
 export const ViralMineResponse = z.looseObject({
@@ -192,7 +204,7 @@ registerPath({
 registerPath({
   method: 'get',
   path: '/api/viral/corpus/{platform}/{niche}',
-  summary: 'Download raw corpus metadata for platform+niche',
+  summary: 'Get corpus metadata for platform+niche (JSON envelope; file streaming not yet implemented)',
   tags: ['Viral'],
   schemas: { params: ViralStatsParams, headers: ViralSessionHeaders, response: ViralCorpusResponse },
   security: SESSION_SECURITY,

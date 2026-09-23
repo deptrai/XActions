@@ -949,7 +949,9 @@ export function generateSpec() {
       version: '2.0.0',
       description:
         'X/Twitter automation API for AI agents. Pay-per-request via x402 protocol (USDC on Base). ' +
-        'Scrape profiles, automate actions, monitor followers, download media, and generate content.',
+        'Scrape profiles, automate actions, monitor followers, download media, and generate content. ' +
+        'Deployment note: on the serverless (Vercel) surface only a subset of mounts is served — ' +
+        'unavailable paths return 503 there; the full set runs on the primary Node/Express deployment.',
       'x-guidance': `XActions is a pay-per-request X/Twitter automation API designed for AI agents.
 
 How to use this API:
@@ -4259,44 +4261,12 @@ Free alternatives: Browser scripts, CLI, and Node.js library at https://xactions
 // ════════════════════════════════════════════════════════════════════════════
 
 /**
- * Ref re-point map — legacy literal envelope components → canonical names
- * registered by api/schemas/common.js (ApiError / ApiSuccess).
+ * Strip the `sessionCookie` request-body property when it is the legacy
+ * transport alias (canonical transport is the x-session-cookie header — AD-6).
+ * It is NOT stripped when the field is real payload (e.g. save-session) —
+ * detected by the op NOT declaring the `sessionCookie` security scheme.
  */
-const CANONICAL_REF_REPOINTS = {
-  '#/components/schemas/Error': '#/components/schemas/ApiError',
-  '#/components/schemas/SuccessResponse': '#/components/schemas/ApiSuccess',
-};
-
-/**
- * Recursively rewrite `$ref` values throughout the spec (covers response
- * schemas, parameters, requestBody, and extension payloads like x-bazaar).
- * @param {unknown} node
- */
-function repointRefs(node) {
-  if (Array.isArray(node)) {
-    for (const item of node) repointRefs(item);
-    return;
-  }
-  if (node && typeof node === 'object') {
-    for (const [key, value] of Object.entries(node)) {
-      if (key === '$ref' && typeof value === 'string' && CANONICAL_REF_REPOINTS[value]) {
-        node[key] = CANONICAL_REF_REPOINTS[value];
-      } else {
-        repointRefs(value);
-      }
-    }
-  }
-}
-
-/**
- * Normalization pass over one literal operation:
- * - strip the legacy `sessionCookie` request-body property (canonical
- *   transport is the x-session-cookie header — AD-6)
- * - backfill a deterministic `operationId` when missing
- */
-function normalizeOperation(op, method, path) {
-  if (!op || typeof op !== 'object') return;
-
+function stripSessionCookieBodyProp(op) {
   const schema = op.requestBody?.content?.['application/json']?.schema;
   if (schema && typeof schema === 'object' && schema.properties?.sessionCookie) {
     delete schema.properties.sessionCookie;
@@ -4305,9 +4275,29 @@ function normalizeOperation(op, method, path) {
       if (schema.required.length === 0) delete schema.required;
     }
   }
+}
 
-  if (!op.operationId) {
-    op.operationId = deriveOperationId(method, path);
+function declaresSessionCookieSecurity(op) {
+  return Array.isArray(op?.security) && op.security.some((s) => s && 'sessionCookie' in s);
+}
+
+/**
+ * Normalization pass over one operation:
+ * - strip the legacy `sessionCookie` transport alias from request bodies
+ *   (literal ops: always — they dual-read; generated ops: only when the op
+ *   declares the `sessionCookie` security scheme)
+ * - backfill a deterministic `operationId` when missing
+ */
+function normalizeOperation(op, method, path, { literal = false } = {}) {
+  if (!op || typeof op !== 'object') return;
+  if (literal || declaresSessionCookieSecurity(op)) stripSessionCookieBodyProp(op);
+  if (!op.operationId) op.operationId = deriveOperationId(method, path);
+}
+
+function normalizePathItem(path, pathItem, opts) {
+  for (const [method, op] of Object.entries(pathItem ?? {})) {
+    if (method === 'parameters' || method.startsWith('x-')) continue;
+    normalizeOperation(op, method, path, opts);
   }
 }
 
@@ -4316,7 +4306,12 @@ function normalizeOperation(op, method, path) {
  * Throws on a method+path collision between registry and literal ops.
  */
 function mergeAndNormalizePaths(specPaths, generatedPaths) {
+  for (const [path, pathItem] of Object.entries(specPaths)) {
+    normalizePathItem(path, pathItem, { literal: true });
+  }
+
   for (const [path, pathItem] of Object.entries(generatedPaths ?? {})) {
+    normalizePathItem(path, pathItem, { literal: false });
     if (!specPaths[path]) {
       specPaths[path] = pathItem;
       continue;
@@ -4328,26 +4323,20 @@ function mergeAndNormalizePaths(specPaths, generatedPaths) {
       specPaths[path][method] = op;
     }
   }
-
-  for (const [path, pathItem] of Object.entries(specPaths)) {
-    for (const [method, op] of Object.entries(pathItem)) {
-      if (method === 'parameters' || method.startsWith('x-')) continue;
-      normalizeOperation(op, method, path);
-    }
-  }
 }
 
 /**
  * Compose the unified spec: literal /api/ai artifact + registry pilot paths,
  * canonical components, and the normalization pass.
+ *
+ * Legacy literal `Error`/`SuccessResponse` components are kept verbatim —
+ * the literal /api/ai routes still emit those shapes at runtime, so their
+ * `$ref`s must keep describing reality (NFR-22). Generated pilot ops
+ * reference the canonical `ApiError`/`ApiSuccess` components instead.
  * @param {Record<string, any>} literalSpec
  */
 function composeSpec(literalSpec) {
   const spec = literalSpec;
-
-  // Canonical envelope components own these names; the legacy literal ones retire.
-  delete spec.components.schemas.Error;
-  delete spec.components.schemas.SuccessResponse;
 
   const generated = buildGeneratedDocument();
   const generatedSchemas = generated?.components?.schemas ?? {};
@@ -4355,7 +4344,6 @@ function composeSpec(literalSpec) {
 
   mergeAndNormalizePaths(spec.paths, generated.paths);
 
-  repointRefs(spec);
   return spec;
 }
 

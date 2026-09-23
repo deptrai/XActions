@@ -125,8 +125,12 @@ export function errorMiddleware(err, req, res, next) {
   }
 
   if (err instanceof ApiError) {
+    const status =
+      Number.isInteger(err.statusCode) && err.statusCode >= 400 && err.statusCode < 600
+        ? err.statusCode
+        : 500;
     return sendErrorEnvelope(res, {
-      status: err.statusCode,
+      status,
       code: err.code,
       message: err.message,
       details: err.details,

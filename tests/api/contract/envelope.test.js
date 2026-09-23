@@ -39,6 +39,16 @@ describe('Story 46.2 — canonical error envelope (app-level)', () => {
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('INVALID_JSON');
   });
+
+  it('body over the 10kb parser limit → 413 PAYLOAD_TOO_LARGE envelope', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .set('Content-Type', 'application/json')
+      .send({ username: 'u', password: 'p'.repeat(12), blob: 'x'.repeat(12 * 1024) });
+    expect(res.status).toBe(413);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('PAYLOAD_TOO_LARGE');
+  });
 });
 
 describe('Story 46.2 — envelope helpers (unit)', () => {
@@ -156,5 +166,32 @@ describe('Story 46.2 — envelope helpers (unit)', () => {
       success: false,
       error: { code: 'NOT_FOUND', message: 'Route not found: GET /api/nope' },
     });
+  });
+});
+
+describe('Story 46.2 — live middleware wiring on the real app', () => {
+  it('requireAIAgent on a non-/api/ai path → 403 FORBIDDEN envelope', async () => {
+    // On the real /api/ai mount the x402 gate (402) and isAI's path shortcut
+    // both precede requireAIAgent — exercise the migrated emit on a mini-app.
+    const { aiDetectorMiddleware, requireAIAgent } = await import(
+      '../../../api/middleware/ai-detector.js'
+    );
+    const mini = express();
+    mini.use(envelopeMiddleware);
+    mini.post('/agent-only', aiDetectorMiddleware, requireAIAgent, (_req, res) =>
+      res.sendData({ ok: true })
+    );
+    mini.use(notFoundHandler);
+    mini.use(errorMiddleware);
+    const res = await request(mini)
+      .post('/agent-only')
+      .set('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36')
+      .set('Accept', 'text/html,application/xhtml+xml')
+      .set('Accept-Language', 'en-US,en;q=0.9')
+      .set('Accept-Encoding', 'gzip, deflate');
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+    expect(res.body.error.details?.humanAlternative).toBeTruthy();
   });
 });

@@ -59,6 +59,13 @@ const requireSession = (req, _res, next) => {
   next();
 };
 
+// The stored job carries the caller's session credential for the worker — never emit it.
+const publicJob = (job) => {
+  if (!job || typeof job !== 'object') return job;
+  const { session: _session, ...rest } = job;
+  return rest;
+};
+
 // Sessioned chain: shim (transport normalization) → authenticate → validate.
 const sessioned = (schemas) => [sessionCookieShim, requireSession, validate(schemas)];
 
@@ -146,7 +153,7 @@ router.post('/mine', ...sessioned({ body: ViralMineBody, headers: ViralSessionHe
   res.sendData({
     jobId,
     status: 'queued',
-    job,
+    job: publicJob(job),
   });
 }));
 
@@ -162,7 +169,7 @@ router.get('/mine/:jobId', ...sessioned({ params: ViralJobIdParams, headers: Vir
     throw new ApiError('JOB_NOT_FOUND', 404, `Job ${jobId} not found`);
   }
 
-  res.sendData({ job });
+  res.sendData({ job: publicJob(job) });
 }));
 
 /**
@@ -184,7 +191,7 @@ router.delete('/mine/:jobId', ...sessioned({ params: ViralJobIdParams, headers: 
   job.status = 'cancelled';
   job.cancelledAt = new Date().toISOString();
 
-  res.sendData({ job });
+  res.sendData({ job: publicJob(job) });
 }));
 
 /**
@@ -319,3 +326,4 @@ router.get('/platforms', (req, res) => {
 });
 
 export default router;
+export { miningJobs };

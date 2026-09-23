@@ -46,7 +46,10 @@ function decodeOffsetCursor(cursor) {
   try {
     const decoded = Buffer.from(String(cursor), 'base64url').toString('utf8');
     const match = /^off:(\d+)$/.exec(decoded);
-    if (match) return Number(match[1]);
+    if (match) {
+      const n = Number(match[1]);
+      if (Number.isSafeInteger(n) && n <= 2147483647) return n;
+    }
   } catch { /* fall through to error */ }
   throw new ApiError('VALIDATION_FAILED', 400, 'Invalid pagination cursor');
 }
@@ -176,7 +179,8 @@ router.get('/', requireCheckpointManage, validate({ query: CheckpointListQuery }
   });
 
   const nextOffset = result.offset + result.checkpoints.length;
-  const nextCursor = nextOffset < result.total ? encodeOffsetCursor(nextOffset) : null;
+  const nextCursor =
+    result.checkpoints.length > 0 && nextOffset < result.total ? encodeOffsetCursor(nextOffset) : null;
 
   res.sendPage(result.checkpoints, {
     cursor: nextCursor,

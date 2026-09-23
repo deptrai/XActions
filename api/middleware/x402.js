@@ -380,7 +380,7 @@ export async function x402Middleware(req, res, next) {
       console.warn(`⚠️  x402 not available, allowing ${req.path} without payment`);
       return next();
     }
-    return next(new ApiError('INTERNAL', 503, 'Payment system unavailable'));
+    return next(new ApiError('PAYMENT_UNAVAILABLE', 503, 'Payment system unavailable'));
   }
 
   // Delegate to the official @x402/express middleware

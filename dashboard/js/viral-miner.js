@@ -130,7 +130,7 @@ async function startMining() {
     const data = await res.json();
     
     if (!data.success) {
-      throw new Error(data.error?.message || 'Mining failed to start');
+      throw new Error(data.error?.message || data.error || 'Mining failed to start');
     }
 
     currentJobId = data.data?.jobId;
@@ -159,7 +159,7 @@ function pollJobStatus() {
       const data = await res.json();
       
       if (!data.success) {
-        throw new Error(data.error?.message);
+        throw new Error(data.error?.message || data.error || 'Job status check failed');
       }
 
       const job = data.data?.job;

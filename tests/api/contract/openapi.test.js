@@ -117,7 +117,7 @@ describe('Story 46.2 — OpenAPI composition', () => {
     const generatedPaths = new Set(Object.keys(buildGeneratedDocument().paths || {}));
     const offenders = [];
     for (const { path, method, op } of iterOperations(spec)) {
-      if (generatedPaths.has(path)) continue; // pilot bodies intentionally declare it
+      if (generatedPaths.has(path)) continue; // generated ops handled by the next test
       const bodySchema = op.requestBody?.content?.['application/json']?.schema;
       if (!bodySchema) continue;
       const props = bodySchema.properties || {};
@@ -127,6 +127,38 @@ describe('Story 46.2 — OpenAPI composition', () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  it('generated sessioned ops hide the legacy body transport; save-session keeps it as payload', () => {
+    const resolve = (s) =>
+      s?.$ref ? spec.components?.schemas?.[s.$ref.split('/').pop()] : s;
+    const bodyProps = (op) => {
+      const s = resolve(op?.requestBody?.content?.['application/json']?.schema);
+      return { props: s?.properties || {}, required: s?.required || [] };
+    };
+
+    // sessioned op (declares sessionCookie security) → body prop stripped (AD-6)
+    const mine = bodyProps(spec.paths['/api/viral/mine']?.post);
+    expect('sessionCookie' in mine.props).toBe(false);
+    expect(mine.required).not.toContain('sessionCookie');
+
+    // save-session (bearerAuth) → sessionCookie is real payload, must survive
+    const save = bodyProps(spec.paths['/api/session/save-session']?.post);
+    expect('sessionCookie' in save.props || save.required.includes('sessionCookie')).toBe(true);
+  });
+
+  it('keeps legacy Error/SuccessResponse components for literal /api/ai ops', () => {
+    // Literal ops emit legacy shapes at runtime — the spec must keep describing
+    // them honestly instead of claiming the canonical envelope (NFR-22).
+    const schemas = spec.components?.schemas || {};
+    expect(schemas.Error).toBeTruthy();
+    expect(schemas.SuccessResponse).toBeTruthy();
+    const aiErrorRef =
+      spec.paths['/api/ai/scrape/profile']?.post?.responses?.['500']?.content?.['application/json']
+        ?.schema?.$ref;
+    if (aiErrorRef) {
+      expect(aiErrorRef).toBe('#/components/schemas/Error');
+    }
   });
 
   it('pilot sessioned operations advertise the sessionCookie security scheme', () => {

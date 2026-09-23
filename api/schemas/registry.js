@@ -36,6 +36,8 @@ export function deriveOperationId(method, path) {
   return `${String(method).toLowerCase()}_${sanitized}`;
 }
 
+const emittedOperationIds = new Set();
+
 const API_ERROR_REF = { $ref: '#/components/schemas/ApiError' };
 
 function apiErrorResponse(description) {
@@ -134,10 +136,16 @@ export function registerPath({
     responses[String(code)] = apiErrorResponse(ERROR_DESCRIPTIONS[code] ?? 'Error');
   }
 
+  const opId = operationId ?? deriveOperationId(method, path);
+  if (emittedOperationIds.has(opId)) {
+    throw new Error(`Duplicate operationId "${opId}" for ${method.toUpperCase()} ${path}`);
+  }
+  emittedOperationIds.add(opId);
+
   registry.registerPath({
     method,
     path,
-    operationId: operationId ?? deriveOperationId(method, path),
+    operationId: opId,
     ...(summary ? { summary } : {}),
     ...(description ? { description } : {}),
     ...(tags.length ? { tags } : {}),

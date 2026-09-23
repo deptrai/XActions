@@ -2,10 +2,10 @@
 title: 'Story 46.2 — Zod Schemas & Uniform Response Envelopes (Foundation + Pilot)'
 type: 'feature'
 created: '2026-09-24'
-status: 'in-progress'
+status: 'in-review'
 baseline_commit: '666e5bfc09a9e079e5ccc90c56f5e4a3fca323a3'
 route: 'dispatch'
-review_loop_iteration: 0
+review_loop_iteration: 1
 context:
   - _bmad-output/implementation-artifacts/epic-46-context.md
   - _bmad-output/planning-artifacts/architecture/xactions-api-contract-epic46/ARCHITECTURE-SPINE.md
@@ -89,21 +89,21 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `package.json` — `zod@4.6.5` deps, `@asteasolutions/zod-to-openapi@9.1.0`+`@redocly/cli@2.54.2` devDeps, script `lint:openapi`; audit/fix `viralStatsStore.js` cho zod4
-- [ ] `api/schemas/common.js` — canonical components (`ApiSuccess`, `ApiError`, `PaginatedResponse`, `PaymentRequired`), primitives (ISO date, cursor, id)
-- [ ] `api/schemas/registry.js` — `OpenAPIRegistry` wrapper `registerPath({method,path,operationId?,schemas,security,xTryItOut,xPaymentInfo,xBazaar})` + deterministic operationId fallback
-- [ ] `api/middleware/envelope.js` — `ApiError` class, `res.sendData`/`res.sendPage`, error middleware + 404 emit envelope; PlatformError→details verbatim; middleware extras→details
-- [ ] `api/middleware/validate.js` — `validate({body?,query?,params?,headers?})` → `next(ApiError('VALIDATION_FAILED',400,...))`
-- [ ] `api/middleware/session-cookie-shim.js` — fill header chỉ khi vắng, giữ body
-- [ ] `api/schemas/{viral,crm,optimizer,checkpoints,session,auth}.js` + `api/schemas/index.js` barrel (openapi.js import barrel; routes import schema objects)
-- [ ] `api/routes/{viral,crm,optimizer,checkpoints,session-auth,auth}.js` — wire shim+validate, `sendData`/`next(err)`, migrate express-validator
-- [ ] `api/openapi.js` — builder: literal /api/ai section + normalization pass (strip body sessionCookie, backfill operationId, re-point envelope refs) + registry merge (throw on method+path collision); `servers` localhost+prod; `info.version` 2.0.0; add `a2aApiKey` scheme
-- [ ] `api/middleware/{auth,x402,ai-detector}.js` — error emits → `next(ApiError)` giữ extras
-- [ ] `api/server.js` — mount envelope mw trước parsers (helper availability), limiter `handler`→envelope, error+404 handlers rewrite
-- [ ] `api/serverless.js` — envelope error mw + 404 + authLimiter handler
-- [ ] `tests/api/contract/` — error-path contract test ≥1 endpoint mỗi pilot group (400/401/404 deterministic) + success-schema validation cho checkpoints/auth (prisma test DB) + shim precedence tests + zod-migration tests
-- [ ] Update legacy-shape assertions: `tests/e2e/{viral-miner,api-auth,api-operations}`, `tests/api/checkpoints-routes`
-- [ ] CI config — `lint:openapi` + contract tests gate
+- [x] `package.json` — `zod@4.6.5` deps, `@asteasolutions/zod-to-openapi@9.1.0`+`@redocly/cli@2.54.2` devDeps, script `lint:openapi`; audit/fix `viralStatsStore.js` cho zod4
+- [x] `api/schemas/common.js` — canonical components (`ApiSuccess`, `ApiError`, `PaginatedResponse`, `PaymentRequired`), primitives (ISO date, cursor, id)
+- [x] `api/schemas/registry.js` — `OpenAPIRegistry` wrapper `registerPath({method,path,operationId?,schemas,security,xTryItOut,xPaymentInfo,xBazaar})` + deterministic operationId fallback
+- [x] `api/middleware/envelope.js` — `ApiError` class, `res.sendData`/`res.sendPage`, error middleware + 404 emit envelope; PlatformError→details verbatim; middleware extras→details
+- [x] `api/middleware/validate.js` — `validate({body?,query?,params?,headers?})` → `next(ApiError('VALIDATION_FAILED',400,...))`
+- [x] `api/middleware/session-cookie-shim.js` — fill header chỉ khi vắng, giữ body
+- [x] `api/schemas/{viral,crm,optimizer,checkpoints,session,auth}.js` + `api/schemas/index.js` barrel (openapi.js import barrel; routes import schema objects)
+- [x] `api/routes/{viral,crm,optimizer,checkpoints,session-auth,auth}.js` — wire shim+validate, `sendData`/`next(err)`, migrate express-validator
+- [x] `api/openapi.js` — builder: literal /api/ai section + normalization pass (strip body sessionCookie, backfill operationId, re-point envelope refs) + registry merge (throw on method+path collision); `servers` localhost+prod; `info.version` 2.0.0; add `a2aApiKey` scheme
+- [x] `api/middleware/{auth,x402,ai-detector}.js` — error emits → `next(ApiError)` giữ extras
+- [x] `api/server.js` — mount envelope mw trước parsers (helper availability), limiter `handler`→envelope, error+404 handlers rewrite
+- [x] `api/serverless.js` — envelope error mw + 404 + authLimiter handler
+- [x] `tests/api/contract/` — error-path contract test ≥1 endpoint mỗi pilot group (400/401/404 deterministic) + success-schema validation cho checkpoints/auth (prisma test DB) + shim precedence tests + zod-migration tests
+- [x] Update legacy-shape assertions: `tests/e2e/{viral-miner,api-auth,api-operations}`, `tests/api/checkpoints-routes`
+- [x] CI config — `lint:openapi` + contract tests gate
 
 **Acceptance Criteria:**
 - Given pilot route có schema, when request gửi lên, then body/query/params/declared headers được Zod validate theo `authenticate → validate → handler`; input sai → `400` `VALIDATION_FAILED` envelope.
@@ -114,9 +114,47 @@ context:
 
 ## Implementation Notes
 
+- Implemented by subagent dispatch (swe-high); verified independently against diff `666e5bfc..03363bd5` (49 files, +3053/−779).
+- Envelope emits **directly** in `errorMiddleware`/`notFoundHandler` (never via `res.sendData`) so parser failures before `envelopeMiddleware` still serialize canonically; `envelopeMiddleware` itself mounts before body parsers.
+- `composeSpec()` in `api/openapi.js`: literal `/api/ai` section is input artifact → normalization pass (literal ops: strip `sessionCookie` body props + backfill `operationId`; generated ops: strip `sessionCookie` body prop only when op declares `sessionCookie` security — transport alias vs payload) → merge registry paths with method+path collision throw. Legacy `Error`/`SuccessResponse` components kept verbatim (literal ops emit those shapes at runtime — NFR-22 honesty). `generateSpec()`/`generateWellKnown()` signatures unchanged.
+- Pilot `sessioned` chain = `sessionCookieShim → requireSession → validate → asyncHandler`; shim copy-only-when-absent, body field kept (dual-read precedence preserved).
+- Checkpoints pagination: `?offset`/`?limit` request kept; response `data:T[]` + `page.cursor` = opaque base64url `off:<n>` token; per-router error middleware removed (global `errorMiddleware` owns PlatformError).
+- `express-validator` removed from `session-auth.js` + `auth.js`; `save-session` has no shim (payload field).
+- Dashboard consumers (`login.html`, `index.html`, `admin.html`, `js/viral-miner.js`) updated to read envelope with legacy fallbacks — prevents `[object Object]` regressions ahead of Epic 47.
+- CI: `lint:openapi` step added to `.github/workflows/ci.yml`.
+- Deviations noted: 8 pre-existing/environmental test failures in untouched files (proxy creds `.env`, TopCV live-network, Jev drift) — not caused by this diff; no committed `api/openapi.json` artifact yet (deferred — 46.3 may want it committed; `lint:openapi` regenerates on demand).
+- Matrix audit: added `413 PAYLOAD_TOO_LARGE` app-level test post-implementation (was the only uncovered row).
+
 ## Spec Change Log
 
+- **Loop 1 (review):** frozen merge-model bullet said "re-point `Error`/`SuccessResponse` refs sang canonical" — review caught that literal `/api/ai` ops emit legacy shapes at runtime, so repointing made the spec lie (NFR-22 violated by spec itself). Resolution: keep legacy components + no repoint; generated ops alone reference `ApiError`/`ApiSuccess`. One-reading interpretation of the honesty invariant; recorded here because the frozen text was followed by intent, not letter.
+- **Loop 1:** `sessionCookie` body-prop strip scoped — literal ops always (transport alias); generated ops only when `security` declares `sessionCookie` scheme. `save-session` (bearerAuth) keeps the field as required payload.
+- **Loop 1:** new upper bounds are contract tightening worth noting — `viral days ≤365`, `hashtags count ≤50`, `variations count ≤20`, `order` enum (previously unbounded/unvalidated; old callers sending e.g. `days=400` now get `400 VALIDATION_FAILED`).
+
 ## Review Triage Log
+
+3 layers (blind-hunter, edge-case-hunter, verification-gap) — 30+ findings triaged:
+
+**Patched (code/test fixes applied in loop 1):**
+- `@asteasolutions/zod-to-openapi` was devDependency but runtime-imported → moved to `dependencies` (prod `npm ci --omit=dev` would crash).
+- `normalizeOperation` stripped `sessionCookie` from generated `save-session` payload → conditional strip by declared security scheme.
+- `Error`/`SuccessResponse` repoint deleted → legacy components kept (see Change Log).
+- `express-validator` orphaned dep removed; `pnpm-lock.yaml` staleness deferred (pre-existing, needs pnpm).
+- `CheckpointListQuery`: `limit` → `.min(1).max(500)`, `offset` `.max(2^31-1)`, `sortBy` enum; `decodeOffsetCursor` safe-integer bound; `nextCursor` only when rows returned.
+- `ApiError` statusCode clamped to [400,599] in `errorMiddleware`.
+- x402 503 code `INTERNAL` → `PAYMENT_UNAVAILABLE`.
+- `brandingMiddleware` skips non-HTML Content-Type (pre-existing `</body>`-in-JSON corruption window).
+- `registerPath` throws on duplicate operationId.
+- Register `email` preprocess: falsy→absent + normalizeEmail parity (gmail dots/subaddress, googlemail→gmail, outlook/yahoo/icloud subaddress strip).
+- `ViralJob`/`AuthUser`/crm/optimizer response schemas model real fields; corpus op summary honest about placeholder.
+- `publicJob()` strips `session` credential from all job responses (response-side leak closed; in-memory storage deferred as pre-existing).
+- Consumers fixed: `src/cli/commands/admin.js` checkpoints list shape, `dashboard/js/viral-miner.js` error fallback, `dashboard/docs/guides/rest-api.html` auth contract.
+- `info.description` documents serverless partial-mount note.
+- Tests added: cursor round-trip + garbage/oversized cursor → 400, `count` bounds → 400, live `authLimiter` 429 (isolated file), serverless 404/401 smoke, `requireAIAgent` 403 envelope (mini-app — real `/api/ai` mount is unreachable behind x402 402 + `isAI` path shortcut), job `session` non-leak, generated-vs-literal sessionCookie strip matrix, legacy components retained.
+
+**Deferred (pre-existing, logged in `deferred-work.md`):** dev-fallback makes `requireSession` 401 unreachable; in-memory job session storage; plugin routes mounted after global 404; discovery CORS divergence across serverless/worker; worker preflight missing new canonical headers; `viral-miner.js` sends no session transport; stale `pnpm-lock.yaml`.
+
+**False:** `ViralSessionHeaders` optional is correct — a required header schema would 400 legacy body-transport clients at the validate layer (dual transport ⇒ neither is individually required; the `sessionCookie` security scheme advertises the requirement).
 
 ## Design Notes
 

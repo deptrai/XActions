@@ -21,10 +21,12 @@ export const CheckpointListQuery = z.object({
   targetType: z.string().optional(),
   targetKey: z.string().optional(),
   status: z.string().optional(),
-  limit: z.coerce.number().int().nonnegative().optional(),
-  offset: z.coerce.number().int().nonnegative().optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+  offset: z.coerce.number().int().nonnegative().max(2147483647).optional(),
   cursor: opaqueCursor.optional(),
-  sortBy: z.string().optional(),
+  sortBy: z
+    .enum(['updatedAt', 'createdAt', 'lastCrawledAt', 'nextScheduledAt', 'platform', 'targetType', 'status'])
+    .optional(),
   order: z.enum(['asc', 'desc']).optional(),
 });
 

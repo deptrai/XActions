@@ -25,7 +25,11 @@ export const CrmSearchQuery = z.object({
 
 // ── Response payloads ────────────────────────────────────────────────────────
 
-export const CrmSyncResponse = z.looseObject({});
+export const CrmSyncResponse = z.looseObject({
+  synced: z.number().int().optional(),
+  followers: z.number().int().optional(),
+  following: z.number().int().optional(),
+});
 export const CrmTagResponse = z.looseObject({
   status: z.string(),
   username: z.string(),
@@ -38,7 +42,9 @@ export const CrmSegmentResponse = z.looseObject({
   segment: z.string(),
   members: z.array(z.unknown()),
 });
-export const CrmScoreResponse = z.looseObject({});
+export const CrmScoreResponse = z.looseObject({
+  scored: z.number().int().optional(),
+});
 
 // ── Operation registrations ──────────────────────────────────────────────────
 

@@ -11,6 +11,27 @@ import { registerPath } from './registry.js';
 
 // ── Request bodies ───────────────────────────────────────────────────────────
 
+// Parity with the retired express-validator `.normalizeEmail()` chain
+// (default options): lowercase + gmail dot/subaddress strip + googlemail→gmail
+// + subaddress strip for outlook/hotmail/live, yahoo.*, icloud/me/mac.
+function normalizeEmail(value) {
+  const at = value.lastIndexOf('@');
+  if (at <= 0) return value.toLowerCase();
+  let local = value.slice(0, at).toLowerCase();
+  let domain = value.slice(at + 1).toLowerCase();
+  if (domain === 'googlemail.com') domain = 'gmail.com';
+  if (domain === 'gmail.com') {
+    local = local.split('+')[0].replace(/\./g, '');
+  } else if (
+    domain === 'outlook.com' || domain === 'hotmail.com' || domain === 'live.com' ||
+    domain.startsWith('yahoo.') ||
+    domain === 'icloud.com' || domain === 'me.com' || domain === 'mac.com'
+  ) {
+    local = local.split('+')[0];
+  }
+  return `${local}@${domain}`;
+}
+
 export const RegisterBody = z.object({
   username: z
     .string()
@@ -19,7 +40,8 @@ export const RegisterBody = z.object({
     .regex(/^[a-zA-Z0-9_]+$/, 'Username may only contain letters, numbers and underscores'),
   password: z.string().min(8),
   email: z.preprocess(
-    (v) => (typeof v === 'string' ? (v.length === 0 ? undefined : v.toLowerCase()) : v),
+    // falsy → absent (matches the old checkFalsy optional); truthy non-string → invalid
+    (v) => (v ? (typeof v === 'string' ? normalizeEmail(v) : v) : undefined),
     z.email().optional()
   ),
 });
@@ -39,6 +61,9 @@ export const AuthUser = z.looseObject({
   id: z.string(),
   username: z.string(),
   email: z.string().nullable().optional(),
+  credits: z.number().optional(),
+  subscription: z.unknown().nullable().optional(),
+  twitterConnected: z.boolean().optional(),
 });
 
 export const AuthTokenResponse = z.looseObject({
