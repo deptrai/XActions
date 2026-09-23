@@ -1095,7 +1095,7 @@ export class AbstractApiClient {
             typeof this.responseValidator?.isBotChallenge === 'function' &&
             Boolean(this.responseValidator.isBotChallenge(response));
 
-          if ((challengeResult && challengeResult.detected) || isValidatorChallenge) {
+          if (!skipResponseValidation && ((challengeResult && challengeResult.detected) || isValidatorChallenge)) {
             const hibernationMs = challengeResult?.suggestedHibernationMs || this.rateLimitHibernationMs;
             const challengeType = challengeResult?.type || 'unknown';
             const challengeSig = challengeResult?.signature || 'validator_fallback';

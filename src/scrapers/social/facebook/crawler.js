@@ -281,7 +281,9 @@ export class FacebookCrawler extends AbstractCrawler {
   constructor(deps = {}) {
     const { client: explicitClient, friendlyNames, ...clientDeps } = deps;
     const client = /** @type {FacebookClient & import('../../../core/base-crawler.js').ClientLike} */ (
-      explicitClient || new FacebookClient({ ...clientDeps, friendlyNames })
+      typeof explicitClient === 'string'
+        ? new FacebookClient({ client: explicitClient, ...clientDeps, friendlyNames })
+        : (explicitClient || new FacebookClient({ ...clientDeps, friendlyNames }))
     );
     super({
       client,

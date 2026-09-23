@@ -76,9 +76,15 @@ export async function createBrowser(options = {}) {
     ...puppeteerOptions
   } = options;
 
+  const defaultChromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+  const executablePath = puppeteerOptions.executablePath ||
+                         process.env.PUPPETEER_EXECUTABLE_PATH ||
+                         defaultChromePath;
+
   return puppeteer.launch({
     headless: headless === 'shell' ? 'shell' : headless !== false ? true : false,
     browser: browser === 'firefox' ? 'firefox' : 'chrome',
+    executablePath,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',

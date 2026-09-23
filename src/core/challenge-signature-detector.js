@@ -154,9 +154,10 @@ const BUILTIN_SIGNATURES = [
     appliesTo: 'both',
     platform: 'facebook',
     patterns: [
-      { kind: 'regex', value: 'facebook\\.com/checkpoint|/checkpoint/', weight: 1.0 },
-      { kind: 'substr', value: 'checkpoint', weight: 0.6 },
+      { kind: 'regex', value: 'facebook\\.com/checkpoint/\\?next|/checkpoint/start/', weight: 1.0 },
       { kind: 'substr', value: 'Your account has been temporarily locked', weight: 1.0 },
+      { kind: 'substr', value: 'Please Confirm Your Identity', weight: 0.9 },
+      { kind: 'substr', value: 'checkpoint', weight: 0.2 },
     ],
   },
   {
