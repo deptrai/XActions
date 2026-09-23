@@ -24,6 +24,11 @@ When a release lands that claims to fix hydration / networkidle:
 4. If green → open a **change request** to enable `obscura-for-auth` as *opt-in* (never default). Human approve required.
 5. Keep Chrome default regardless.
 
-## Current verdict (2026-09-13, Obscura 0.2.2)
+## Current verdict (2026-09-23, Obscura v0.2.3 audit)
 
-Public scraping: ✅ viable. Post-auth: ❌ blocked on #531. `networkidle2`: ❌ use `networkidle0`.
+- **Release status:** Obscura v0.2.3 was published on 2026-09-20 (bringing V8 150.4, Deno 0.412, and CDP bearer token authentication).
+- **Blocking issues status:** All 6 key blocking issues remain **OPEN** upstream:
+  - [#531](https://github.com/h4ckf0r0day/obscura/issues/531) (SPA hydration module-eval timeout): **OPEN** (still blocks post-auth `data-testid` mounting).
+  - [#643](https://github.com/h4ckf0r0day/obscura/issues/643) (fetch interception subresource blocking): **OPEN** (still causes `networkidle2` hang).
+  - [#886](https://github.com/h4ckf0r0day/obscura/issues/886), [#683](https://github.com/h4ckf0r0day/obscura/issues/683), [#817](https://github.com/h4ckf0r0day/obscura/issues/817), [#866](https://github.com/h4ckf0r0day/obscura/issues/866): all **OPEN**.
+- **Action verdict:** Public scraping remains viable via `networkidle0`. Post-auth `obscura-for-auth` remains **BLOCKED**. Do NOT promote Obscura to handle authenticated sessions or replace Chrome as default. Keep Chrome / Chromium as the primary engine for authenticated workflows.
