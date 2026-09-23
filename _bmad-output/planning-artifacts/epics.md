@@ -2837,56 +2837,131 @@ FR-102: Story 45.5 - Viral Dashboard UI (web interface for mining/stats/backtest
 
 # Epic 46: Chuẩn Hóa Bộ Hợp Đồng API & Tài Liệu Tương Tác OpenAPI 3.1 / Swagger
 
-**Goal:** Chuẩn hóa toàn bộ 52 API routes của Backend Express sang định dạng OpenAPI 3.1, cung cấp giao diện Swagger UI tương tác tại `/docs/api` và script tự động sinh TypeScript API Client SDK (`@xactions/api-client`) để Frontend Next.js gọi API typesafe 100%.
+**Goal:** Chuẩn hóa toàn bộ API routes của backend Express (scope định nghĩa tại Route Inventory — Phụ lục A) sang OpenAPI 3.1 được generate từ Zod schemas, cung cấp Swagger UI self-hosted tại `/api-docs` và script sinh TypeScript API client (`@xactions/api-client`) để frontend Next.js (Epic 47) gọi API type-safe.
 
-**Requirements Covered:** FR-E46-1, FR-E46-2, FR-E46-3, FR-E46-4, NFR-E46-1, NFR-E46-2.
+**Requirements Covered:** FR-116, FR-117, FR-118, FR-119, NFR-22, NFR-23 (prd.md §7.1/§7.2).
+
+**Phạm vi & Phụ thuộc (Dependencies / Non-goals):**
+
+- **Spec source of truth:** OpenAPI document được generate từ Zod schemas qua `@asteasolutions/zod-to-openapi`. `api/openapi.js` hiện hữu (4.6k dòng, phục vụ `/api/ai/*`) được refactor thành builder dùng chung — **không** duy trì spec thủ công song song.
+- **Bảo toàn contract x402 (bắt buộc):** spec mới phải giữ nguyên `x-payment-info`, `x-bazaar`, `securitySchemes.x402Payment` và `GET /.well-known/x402` — đây là discovery contract của x402scan, phá vỡ = paid AI endpoints mất pricing/discovery.
+- **Exclusions (không áp dụng validation/envelope):** `POST /webhooks/*` (raw Buffer body cho Stripe signature), các endpoint streaming/binary/SSE/redirect (`/api/video/download`, `/metrics/stream`), và `/api/plugins/*` (mount runtime qua `mountPluginRoutes` — plugin tự đăng ký schema nếu muốn vào spec). Envelope chỉ áp dụng cho JSON endpoints.
+- **Deployment:** spec/UI đầy đủ chỉ bắt buộc trên `api/server.js`. `api/serverless.js` (Vercel) serve spec cùng document nhưng `info.description` phải ghi rõ một số paths trả 503 trên serverless.
+- **Epic 47** consume `@xactions/api-client`. Epic này chỉ deliver client package; migrate fetch calls cũ trong dashboard/frontend thuộc Epic 47.
+- **Build order:** `46.2 → 46.1 → 46.3` — spec cần Zod schemas (46.2) trước khi `paths` coverage của 46.1 verify được; client gen (46.3) chạy trên artifact ổn định cuối cùng.
+- **Envelope chuẩn (định nghĩa tại đây, dùng xuyên epic):** success `{ success: true, data: T }`; error `{ success: false, error: { code: string, message: string, type?: string, details?: unknown } }`. Pagination dùng `PaginatedResponse<T> = { success: true, data: T[], page: { cursor: string | null, limit: number, total?: number } }`.
 
 ---
 
 ### Story 46.1: Tích hợp Swagger UI & Endpoint Xuất Bản OpenAPI 3.1 JSON
 
 As a **Frontend Developer / AI Agent Integrator**,  
-I want **truy cập giao diện Swagger UI tại `/docs/api` và endpoint `/openapi.json`**,  
-So that **tôi có thể xem danh mục toàn bộ API của XActions, thử nghiệm request trực tiếp trên trình duyệt và tự động nạp spec vào các công cụ phát triển**.
+I want **truy cập Swagger UI self-hosted tại `/api-docs` và endpoint `/openapi.json`**,  
+So that **tôi xem được danh mục toàn bộ API theo Route Inventory, thử request an toàn trên trình duyệt và nạp spec vào các công cụ phát triển**.
 
 **Acceptance Criteria:**
 
-**Given** Express backend đang chạy  
+**Given** backend Express đang chạy  
 **When** người dùng gửi `GET /openapi.json`  
-**Then** server trả về `200 OK` với header `content-type: application/json` và root object tuân thủ chuẩn `openapi: 3.1.0`.  
-**And** Swagger UI tại `/docs/api` render đầy đủ danh mục nhóm API và hỗ trợ chức năng "Try it out" thực thi thật.
+**Then** server trả `200 OK` với `content-type: application/json`, root object khai báo `openapi: 3.1.0`, giữ nguyên `x-payment-info`/`x-bazaar` extensions và CORS `origin: '*'` như hiện tại.  
+**And** `paths` liệt kê đủ operations của từng nhóm thuộc scope trong Phụ lục A; mỗi operation có `operationId` duy nhất (bắt buộc cho codegen).  
+**And** Swagger UI serve self-hosted qua `swagger-ui-express` (không CDN — Helmet CSP hiện tại chặn) tại `/api-docs`, mount trước các handler `/docs/:slug`; `GET /api-docs` trả Swagger UI HTML, không phải `dashboard/docs/*.html`.  
+**And** UI khai báo `servers` (localhost + production) và hỗ trợ `authorize()` cho `bearerAuth` (JWT). Các endpoint mutation trên tài khoản thật (tweet/unfollow/DM/auto-*) và endpoint x402 trả 402 được đánh dấu không executable (vd `x-tryitout: false` hoặc `supportedSubmitMethods` tương đương) — Try-it-out chỉ thực thi request thật trên read-only endpoints.
 
 ---
 
-### Story 46.2: Khai Báo Zod Schemas & Quy Chuẩn Response Envelopes cho 52 Routes
+### Story 46.2: Khai Báo Zod Schemas & Quy Chuẩn Response Envelopes
 
 As a **Backend Developer**,  
-I want **định nghĩa Zod Request/Response Schemas cho toàn bộ 52 API routes**,  
-So that **dữ liệu đầu vào/đầu ra được kiểm thực chặt chẽ, loại bỏ hoàn toàn lỗi runtime và đồng bộ tự động với OpenAPI spec**.
+I want **định nghĩa Zod schemas cho request/response của mọi route thuộc scope trong Route Inventory**,  
+So that **input được validate chặt trước handler, response theo một envelope thống nhất, và OpenAPI spec tự động đồng bộ từ cùng một source of truth — giảm thiểu lỗi runtime do malformed I/O**.
 
 **Acceptance Criteria:**
 
-**Given** các routes chính (`/api/viral/*`, `/api/crm/*`, `/api/optimizer/*`, `/api/a2a/*`, `/api/license/*`, `/api/workflows/*`)  
+**Given** các route thuộc scope trong Route Inventory (Phụ lục A)  
 **When** request được gửi lên  
-**Then** middleware tự động validate Request Body và Query parameters qua Zod Schema tương ứng, trả về `400 Bad Request` nếu không hợp lệ.  
-**And** cấu trúc phản hồi thành công và lỗi luôn tuân thủ chuẩn Error / Success Envelopes thống nhất.  
-**And** các endpoint cần xác thực được khai báo đầy đủ `securitySchemes` (BearerAuth hoặc SessionCookie).
+**Then** middleware validate `body`, `query`, `path params` và các header đã khai báo (`x-session-cookie`, `x-payment`) qua Zod schema tương ứng, theo thứ tự `authenticate → validate → handler`; input không hợp lệ trả `400` theo error envelope chuẩn.  
+**And** mọi JSON endpoint trả success/error theo envelope đã định nghĩa ở Epic header — bao gồm lỗi sinh từ middleware (rate-limit `429`, `404` route-not-found, body-parser `413`/`415`, global error handler).  
+**And** mỗi operation khai báo `securitySchemes` tương ứng với thực tế route đó: `bearerAuth` (JWT), `sessionCookie` (apiKey — header `x-session-cookie` hoặc body field `sessionCookie`, ghi rõ cơ chế trong spec), `x402Payment`, hoặc optional-auth (`{}` union cho endpoint trả khác nhau giữa anon/authed).  
+**And** CI chạy spec lint (redocly hoặc spectral) + contract test tối thiểu 1 endpoint mỗi nhóm, fail khi response thật lệch schema.
 
 ---
 
-### Story 46.3: CLI Generator Tự Động Sinh TypeScript API Client (`@xactions/api-client`)
+### Story 46.3: Generator Sinh TypeScript API Client (`@xactions/api-client`)
 
 As a **Frontend Developer**,  
-I want **chạy lệnh `npm run generate:api-client` để tự động sinh file client TypeScript từ OpenAPI spec**,  
-So that **tôi có thể gọi API trong Next.js với code gợi ý (IntelliSense) và kiểm tra lỗi kiểu dữ liệu tại thời điểm biên dịch (Compile-time Type Safety)**.
+I want **chạy `npm run generate:api-client` ở `package.json` gốc để sinh client TypeScript từ spec**,  
+So that **tôi gọi API trong Next.js (Epic 47) với gợi ý code (IntelliSense) và kiểm tra kiểu tại compile-time**.
 
 **Acceptance Criteria:**
 
-**Given** file `package.json` có script `"generate:api-client"`  
-**When** lập trình viên chạy `npm run generate:api-client`  
-**Then** công cụ đọc `/openapi.json` và sinh ra module TypeScript tại `packages/api-client/` (hoặc `apps/web/src/lib/api/`).  
-**And** xuất bản đầy đủ các Types mô hình dữ liệu (`ViralStats`, `PostItem`, `CRMContact`, `OptimizeTweetRequest`).  
-**And** cung cấp hàm fetch client wrapper hỗ trợ gọi API tiện lợi và typesafe 100%.
+**Given** `package.json` gốc có script `"generate:api-client"` và `workspaces` đã khai báo `packages/*`  
+**When** chạy `npm run generate:api-client`  
+**Then** tool đọc spec từ artifact đã commit (`openapi.json` được sinh bởi script build) hoặc import spec builder trực tiếp — **không** fetch HTTP từ server đang chạy; fail loudly nếu spec thiếu/không parse được.  
+**And** output vào `packages/api-client/` (path duy nhất, import được dưới tên `@xactions/api-client`), types sinh qua `openapi-typescript` + fetch wrapper mỏng viết tay.  
+**And** export một type per schema trong spec (e.g., `ViralStats`, `PostItem`, `CRMContact`, `OptimizeTweetRequest`) cộng `PaginatedResponse<T>`; generated types được namespace/dedupe để không đụng các component `Error`/`SuccessResponse`/`PaymentRequired` hiện có.  
+**And** fetch wrapper inject auth (Bearer token hoặc `x-session-cookie`) và trả typed error union (`400 | 401 | 402 | 429 | 500`) thay vì `any` — consumer không phải tự xử lý auth/error lại.
+
+---
+
+### Phụ lục A — Route Inventory (source of truth cho scope Epic 46)
+
+Mount table trích từ `api/server.js`. ✅ = Zod validate + envelope + spec. ⚠️ = in spec, ngoại lệ ghi trong Notes. ❌ = ngoài scope.
+
+| Mount | Route file | Scope | Notes |
+|---|---|---|---|
+| `/api/viral` | `routes/viral.js` | ✅ | Mutations → Try-it-out off |
+| `/api/crm` | `routes/crm.js` | ✅ | |
+| `/api/optimizer` | `routes/optimizer.js` | ✅ | |
+| `/api/a2a` | `routes/a2a.js` | ✅ | |
+| `/api/license` | `routes/license.js` | ✅ | |
+| `/api/workflows` | `routes/workflows.js` | ✅ | |
+| `/api/ai` | `routes/ai.js` + `routes/ai/*` | ⚠️ | x402-paid; đã có spec — merge, giữ extensions; Try-it-out off (402) |
+| `/api/agent` | `routes/agent.js` | ⚠️ | Paid automation mutations — Try-it-out off |
+| `/api/posting` | `routes/posting.js` | ⚠️ | Mutations trên tài khoản thật — Try-it-out off |
+| `/api/messages` | `routes/messages.js` | ⚠️ | DM mutations — Try-it-out off |
+| `/api/analytics` | `routes/analytics.js` + `routes/history.js` | ⚠️ | Hai router share một mount — dedupe paths, operationId duy nhất |
+| `/api/governor` | `routes/governor.js` | ⚠️ | Dual-mount với `/governor`; chỉ document path `/api/governor` |
+| `/api/video` | `routes/video.js` | ⚠️ | `download` stream `video/mp4` — exempt envelope cho endpoint đó |
+| `/api/session` | `routes/session-auth.js` | ⚠️ | Hiện dùng express-validator — migrate hoặc coexist, ghi rõ trong spec |
+| `/api/scripts` | `routes/scripts.js` | ✅ | |
+| `/api/billing` | `routes/billing.js` | ✅ | |
+| `/api/auth` | `routes/auth.js` | ✅ | |
+| `/api/user` | `routes/user.js` | ✅ | |
+| `/api/operations` | `routes/operations.js` | ✅ | |
+| `/api/twitter` | `routes/twitter.js` | ✅ | |
+| `/api/facebook/accounts` | `routes/facebookAccounts.js` | ✅ | |
+| `/api/facebook` | `routes/facebook.js` | ✅ | |
+| `/api/platform` | `routes/platform.js` | ✅ | |
+| `/api/admin/webhooks` | `routes/webhook-admin.js` | ✅ | Admin auth |
+| `/api/admin` | `routes/admin.js` | ✅ | Admin auth |
+| `/api/profile` | `routes/profile.js` | ✅ | |
+| `/api/engagement` | `routes/engagement.js` | ✅ | |
+| `/api/discovery` | `routes/discovery.js` | ✅ | |
+| `/api/bookmarks` | `routes/bookmarks.js` | ✅ | |
+| `/api/creator` | `routes/creator.js` | ✅ | |
+| `/api/spaces` | `routes/spaces.js` | ✅ | |
+| `/api/settings` | `routes/settings.js` | ✅ | |
+| `/api/portability` | `routes/portability.js` | ✅ | |
+| `/api/graph` | `routes/graph.js` | ✅ | |
+| `/api/unfollowers` | `routes/unfollowers.js` | ✅ | |
+| `/api/thread` | `routes/thread.js` | ✅ | |
+| `/api/schedule` | `routes/schedule.js` | ✅ | |
+| `/api/tweet-schedule` | `routes/tweetSchedule.js` | ✅ | |
+| `/api/datasets` | `routes/datasets.js` | ✅ | |
+| `/api/checkpoints` | `routes/checkpoints.js` | ✅ | |
+| `/api/schemas` | `routes/schemas.js` | ✅ | |
+| `/api/proxies` | `routes/proxies.js` | ✅ | |
+| `/api/proxy/budget` | `routes/proxy-budget.js` | ✅ | |
+| `/api/osint` | `routes/osint.js` | ✅ | |
+| `/api/notifications` | `routes/notifications.js` | ✅ | |
+| `/api/teams` | `routes/teams.js` | ✅ | |
+| `/api/benchmark` | `routes/benchmark.js` | ✅ | |
+| `/api/automations` | `routes/automations.js` | ✅ | |
+| `/api/streams` | `routes/streams.js` | ✅ | REST control plane; stream data đi qua socket.io |
+| `/webhooks` | `routes/webhooks.js` | ❌ | Stripe raw Buffer body — exclusion |
+| `/metrics/stream` | inline (`server.js`) | ❌ | SSE — exclusion |
+| `/api/plugins/*` | `mountPluginRoutes()` runtime | ❌ | Không có static schema; plugin tự đăng ký nếu muốn vào spec |
 
 ---
 
@@ -2894,7 +2969,7 @@ So that **tôi có thể gọi API trong Next.js với code gợi ý (IntelliSen
 
 **Goal:** Xây dựng ứng dụng web Next.js 15 (App Router, Tailwind CSS, Shadcn/UI) hiện đại, gom toàn bộ 51 file HTML rời rạc thành một Single Page Application đẳng cấp, trực quan hóa Follower CRM, Viral DNA Analytics Canvas, AI Tweet Optimizer Playground và Universal Data Explorer.
 
-**Requirements Covered:** FR-E47-1, FR-E47-2, FR-E47-3, FR-E47-4, FR-E47-5, FR-E47-6, FR-E47-7, NFR-E47-1, NFR-E47-2, NFR-E47-3.
+**Requirements Covered:** FR-120, FR-121, FR-122, FR-123, FR-124, FR-125, FR-126, NFR-24, NFR-25, NFR-26 (prd.md §7.1/§7.2).
 
 ---
 

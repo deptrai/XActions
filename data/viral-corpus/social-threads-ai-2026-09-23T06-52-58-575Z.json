@@ -1,0 +1,692 @@
+[
+  {
+    "id": "threads:3973013887632911141",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "In the Time100 AI, in the \"thinker\" category.\n\nhttps://time.com/collection/time100-ai/2026/yann-lecun/",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.92,
+        "probabilities": {
+          "fear": 0,
+          "joy": 0,
+          "surprise": 0.01,
+          "anger": 0,
+          "none": 0.93,
+          "anticipation": 0.02,
+          "trust": 0.04,
+          "greed": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.58
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.34
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.03,
+        "confidence": 0.97,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.98,
+          "1": 0.02,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 2.58,
+        "confidence": 0.58,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.01,
+          "1": 0.04,
+          "2": 0.3,
+          "3": 0.65
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.19,
+        "confidence": 0.81,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.83,
+          "1": 0.15,
+          "2": 0.02,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.54,
+        "probabilities": {
+          "assertion": 0.6,
+          "listicle": 0.01,
+          "howto": 0,
+          "contrarian": 0,
+          "question": 0,
+          "meta": 0.26,
+          "other": 0.13,
+          "story": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "authority",
+        "confidence": 0.76,
+        "probabilities": {
+          "data": 0,
+          "anecdote": 0,
+          "authority": 0.81,
+          "none": 0.19,
+          "personalExperience": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.03,
+        "confidence": 0.97,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.98,
+          "1": 0.02,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.36
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.07
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T06:52:58.575Z"
+  },
+  {
+    "id": "threads:3960599896721858826",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "I'm very supportive of the message of @zuck's piece on the positive impact of AI.\nIt's a welcome breath of fresh air among the ambient apocalyptic discourse.\nI'm also glad that Meta is open-sourcing version of the Muse system.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "joy",
+        "confidence": 0.87,
+        "probabilities": {
+          "anger": 0,
+          "fear": 0,
+          "trust": 0.08,
+          "joy": 0.88,
+          "greed": 0,
+          "anticipation": 0.03,
+          "surprise": 0,
+          "none": 0.01
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.48
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.92,
+        "confidence": 0.76,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0,
+          "1": 0.15,
+          "2": 0.77,
+          "3": 0.08
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.69,
+        "confidence": 0.6,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.35,
+          "1": 0.61,
+          "2": 0.04,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.95,
+        "probabilities": {
+          "assertion": 0.96,
+          "question": 0,
+          "howto": 0,
+          "other": 0,
+          "contrarian": 0.02,
+          "story": 0,
+          "listicle": 0,
+          "meta": 0.02
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.34,
+        "probabilities": {
+          "authority": 0.46,
+          "personalExperience": 0.06,
+          "anecdote": 0.01,
+          "data": 0,
+          "none": 0.47
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.67,
+        "confidence": 0.55,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.39,
+          "1": 0.56,
+          "2": 0.05,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.94
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T06:52:58.575Z"
+  },
+  {
+    "id": "threads:3986850419704593974",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Today we're introducing Meta One, a new subscription with more features and more AI across Instagram, WhatsApp, Facebook, and Meta AI. To be clear, the core experience in our apps stays free. Subscriptions let us build things we otherwise couldn't, like features that are too specialized or too costly to bring to everyone, and get them to the people who want them most. Let me know what you think.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "anticipation",
+        "confidence": 0.5,
+        "probabilities": {
+          "anticipation": 0.5599999999999999,
+          "fear": 0.01,
+          "joy": 0,
+          "none": 0.14,
+          "greed": 0.01,
+          "surprise": 0.03,
+          "anger": 0.02,
+          "trust": 0.23
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.81
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.42,
+        "confidence": 0.58,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.59,
+          "1": 0.39,
+          "2": 0.02,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.58,
+        "confidence": 0.54,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.02,
+          "1": 0.4,
+          "2": 0.56,
+          "3": 0.02
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 1.16,
+        "confidence": 0.68,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.08,
+          "1": 0.69,
+          "2": 0.23,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.8,
+        "probabilities": {
+          "question": 0.04,
+          "meta": 0.07,
+          "howto": 0,
+          "story": 0,
+          "contrarian": 0,
+          "other": 0.06,
+          "listicle": 0,
+          "assertion": 0.83
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.57,
+        "probabilities": {
+          "authority": 0.34,
+          "data": 0,
+          "none": 0.66,
+          "anecdote": 0,
+          "personalExperience": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.65,
+        "confidence": 0.35,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.52,
+          "1": 0.32,
+          "2": 0.16,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.99
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.78
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T06:52:58.575Z"
+  },
+  {
+    "id": "threads:3937557373968119426",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Excited about this launch. I've been really impressed with how quickly the MSL team has been able to improve their first model in such a short amount of time.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "joy",
+        "confidence": 0.46,
+        "probabilities": {
+          "anticipation": 0.46,
+          "greed": 0,
+          "surprise": 0,
+          "fear": 0,
+          "trust": 0.01,
+          "joy": 0.53,
+          "none": 0,
+          "anger": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.48
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.04
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.03,
+        "confidence": 0.97,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.97,
+          "1": 0.03,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.35,
+        "confidence": 0.6,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.02,
+          "1": 0.61,
+          "2": 0.37,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.97,
+        "probabilities": {
+          "other": 0.02,
+          "story": 0,
+          "assertion": 0.98,
+          "contrarian": 0,
+          "howto": 0,
+          "question": 0,
+          "listicle": 0,
+          "meta": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "personalExperience",
+        "confidence": 0.96,
+        "probabilities": {
+          "personalExperience": 0.97,
+          "none": 0.01,
+          "authority": 0,
+          "anecdote": 0.02,
+          "data": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.12,
+        "confidence": 0.88,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.89,
+          "1": 0.1,
+          "2": 0.01,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.42
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T06:52:58.575Z"
+  },
+  {
+    "id": "threads:3936183193158697945",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Today, we’re launching over 30 new effects in Stories powered by Muse Image, Meta’s first image model. You can transform the lighting in your photos with things like Disposable or Night Flash, use personalized effects like Instagram Charms or Instagram Receipt, or even create your own effect by typing in a prompt. That last part is what I'm most curious to see people experiment with. Check them out and let me know what you think.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "anticipation",
+        "confidence": 0.98,
+        "probabilities": {
+          "surprise": 0.01,
+          "anger": 0,
+          "joy": 0,
+          "fear": 0,
+          "none": 0,
+          "anticipation": 0.99,
+          "greed": 0,
+          "trust": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.8
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.96
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.3,
+        "confidence": 0.7,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.71,
+          "1": 0.29,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 2.45,
+        "confidence": 0.53,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0,
+          "1": 0.01,
+          "2": 0.53,
+          "3": 0.46
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.02,
+        "confidence": 0.98,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.98,
+          "1": 0.02,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "listicle",
+        "confidence": 0.37,
+        "probabilities": {
+          "other": 0.05,
+          "question": 0.01,
+          "assertion": 0.43,
+          "story": 0.01,
+          "contrarian": 0,
+          "howto": 0.01,
+          "meta": 0.05,
+          "listicle": 0.44
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "authority",
+        "confidence": 0.15,
+        "probabilities": {
+          "data": 0.13,
+          "anecdote": 0.01,
+          "authority": 0.32,
+          "none": 0.24,
+          "personalExperience": 0.3
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.69,
+        "confidence": 0.31,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.46,
+          "1": 0.4,
+          "2": 0.14,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.99
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.9
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T06:52:58.575Z"
+  }
+]

@@ -1,0 +1,3452 @@
+[
+  {
+    "id": "threads:3991243342016009629",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Spotlight: sean_charmatz draws little faces on everyday things and somehow they end up having entire emotional lives. It’s simple, funny, and makes you look at the world a little differently. Give him a follow.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "joy",
+        "confidence": 1,
+        "probabilities": {
+          "none": 0,
+          "fear": 0,
+          "trust": 0,
+          "surprise": 0,
+          "anger": 0,
+          "joy": 1,
+          "anticipation": 0,
+          "greed": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.77
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.02,
+        "confidence": 0.98,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.98,
+          "1": 0.02,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.8,
+        "confidence": 0.69,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.01,
+          "1": 0.24,
+          "2": 0.7,
+          "3": 0.05
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.84,
+        "probabilities": {
+          "question": 0,
+          "meta": 0.01,
+          "assertion": 0.86,
+          "howto": 0,
+          "contrarian": 0,
+          "story": 0.07,
+          "listicle": 0,
+          "other": 0.06
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.63,
+        "probabilities": {
+          "none": 0.71,
+          "data": 0,
+          "personalExperience": 0.05,
+          "authority": 0,
+          "anecdote": 0.24
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.18,
+        "confidence": 0.82,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.83,
+          "1": 0.16,
+          "2": 0.01,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.52
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.96
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3989126243224121035",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "surprise": 0,
+          "anticipation": 0,
+          "none": 1,
+          "fear": 0,
+          "trust": 0,
+          "anger": 0,
+          "joy": 0,
+          "greed": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.08
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "other": 0.99,
+          "listicle": 0,
+          "howto": 0,
+          "assertion": 0,
+          "contrarian": 0,
+          "meta": 0.01,
+          "question": 0,
+          "story": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "data": 0,
+          "personalExperience": 0,
+          "authority": 0,
+          "anecdote": 0,
+          "none": 1
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.42
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3986850419704593974",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Today we're introducing Meta One, a new subscription with more features and more AI across Instagram, WhatsApp, Facebook, and Meta AI. To be clear, the core experience in our apps stays free. Subscriptions let us build things we otherwise couldn't, like features that are too specialized or too costly to bring to everyone, and get them to the people who want them most. Let me know what you think.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "anticipation",
+        "confidence": 0.51,
+        "probabilities": {
+          "anger": 0.01,
+          "greed": 0.01,
+          "anticipation": 0.5599999999999999,
+          "none": 0.17,
+          "surprise": 0.03,
+          "trust": 0.21,
+          "joy": 0,
+          "fear": 0.01
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.8
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.45,
+        "confidence": 0.55,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.57,
+          "1": 0.42,
+          "2": 0.01,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.54,
+        "confidence": 0.51,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.02,
+          "1": 0.43,
+          "2": 0.53,
+          "3": 0.02
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 1.15,
+        "confidence": 0.7,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.08,
+          "1": 0.7,
+          "2": 0.22,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.8,
+        "probabilities": {
+          "assertion": 0.83,
+          "story": 0,
+          "listicle": 0,
+          "question": 0.05,
+          "howto": 0,
+          "meta": 0.06,
+          "contrarian": 0,
+          "other": 0.06
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.58,
+        "probabilities": {
+          "personalExperience": 0,
+          "authority": 0.33,
+          "none": 0.67,
+          "data": 0,
+          "anecdote": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.64,
+        "confidence": 0.36,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.54,
+          "1": 0.29,
+          "2": 0.17,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.99
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.77
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3968846412599444855",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "#photodump from this summer now that we’re back in California and the boys are back in school",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "joy",
+        "confidence": 0.76,
+        "probabilities": {
+          "greed": 0,
+          "joy": 0.79,
+          "none": 0.2,
+          "trust": 0,
+          "anger": 0,
+          "surprise": 0,
+          "fear": 0,
+          "anticipation": 0.01
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.57
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.19,
+        "confidence": 0.63,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.09,
+          "1": 0.64,
+          "2": 0.27,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.51,
+        "probabilities": {
+          "contrarian": 0,
+          "meta": 0.23,
+          "assertion": 0.04,
+          "question": 0,
+          "other": 0.57,
+          "listicle": 0,
+          "story": 0.16,
+          "howto": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "personalExperience",
+        "confidence": 0.86,
+        "probabilities": {
+          "personalExperience": 0.89,
+          "anecdote": 0,
+          "authority": 0,
+          "data": 0,
+          "none": 0.11
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.09,
+        "confidence": 0.91,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.67
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.05
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3963783602493141167",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "fear": 0,
+          "greed": 0,
+          "joy": 0,
+          "anticipation": 0,
+          "trust": 0,
+          "anger": 0,
+          "none": 1,
+          "surprise": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "story": 0,
+          "howto": 0,
+          "assertion": 0,
+          "listicle": 0,
+          "other": 0.99,
+          "contrarian": 0,
+          "meta": 0.01,
+          "question": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "authority": 0,
+          "none": 1,
+          "data": 0,
+          "personalExperience": 0,
+          "anecdote": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.4
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3962887631160101435",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Thought I’d share this on Threads to and see what the hot takes might be. We updated the Instagram wordmark today, which is more than a decade old and felt dated. We feel the refresh is sharper and more modern, but references the original and has the simplicity and craft that's always made it Instagram.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "anticipation",
+        "confidence": 0.52,
+        "probabilities": {
+          "trust": 0.1,
+          "none": 0.22,
+          "surprise": 0.05,
+          "greed": 0,
+          "anger": 0,
+          "joy": 0.05,
+          "fear": 0,
+          "anticipation": 0.58
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.62
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.2
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.15,
+        "confidence": 0.85,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 2.02,
+        "confidence": 0.73,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0,
+          "1": 0.12,
+          "2": 0.73,
+          "3": 0.15
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.69,
+        "confidence": 0.62,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.35,
+          "1": 0.61,
+          "2": 0.04,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.58,
+        "probabilities": {
+          "question": 0,
+          "contrarian": 0,
+          "assertion": 0.64,
+          "listicle": 0,
+          "story": 0.14,
+          "howto": 0,
+          "meta": 0.2,
+          "other": 0.02
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "personalExperience",
+        "confidence": 0.19,
+        "probabilities": {
+          "data": 0,
+          "anecdote": 0.06,
+          "none": 0.27,
+          "personalExperience": 0.35,
+          "authority": 0.32
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.68,
+        "confidence": 0.5,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.41,
+          "1": 0.51,
+          "2": 0.08,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.99
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.27
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3941113021354514673",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "We’re expanding translations to more languages on Instagram – added Japanese, Korean, French, German, and Italian. You can also now translate both your voice and any on-screen captions in the same reel together, which should make things a lot easier. We’re also rolling out more languages for translations on Facebook, including Bahasa, Indonesian, Arabic, French, Vietnamese, and Thai. More to come soon.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "anticipation",
+        "confidence": 0.59,
+        "probabilities": {
+          "none": 0.28,
+          "fear": 0,
+          "trust": 0.01,
+          "surprise": 0,
+          "anger": 0,
+          "joy": 0.07,
+          "anticipation": 0.64,
+          "greed": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.44
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.23
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.14,
+        "confidence": 0.86,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.86,
+          "1": 0.14,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 2.51,
+        "confidence": 0.51,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0,
+          "1": 0.01,
+          "2": 0.48,
+          "3": 0.51
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "listicle",
+        "confidence": 0.6,
+        "probabilities": {
+          "question": 0,
+          "meta": 0.02,
+          "assertion": 0.29,
+          "howto": 0,
+          "contrarian": 0,
+          "story": 0,
+          "listicle": 0.65,
+          "other": 0.04
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.48,
+        "probabilities": {
+          "none": 0.59,
+          "data": 0.05,
+          "authority": 0.36,
+          "personalExperience": 0,
+          "anecdote": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.65,
+        "confidence": 0.35,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.47,
+          "1": 0.41,
+          "2": 0.12,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.99
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.06
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3937557373968119426",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Excited about this launch. I've been really impressed with how quickly the MSL team has been able to improve their first model in such a short amount of time.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "joy",
+        "confidence": 0.44,
+        "probabilities": {
+          "fear": 0,
+          "anger": 0,
+          "joy": 0.51,
+          "trust": 0.01,
+          "greed": 0,
+          "anticipation": 0.48,
+          "surprise": 0,
+          "none": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.48
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.04
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.04,
+        "confidence": 0.96,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.97,
+          "1": 0.03,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.37,
+        "confidence": 0.59,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.02,
+          "1": 0.6,
+          "2": 0.38,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.98,
+        "probabilities": {
+          "assertion": 0.99,
+          "question": 0,
+          "howto": 0,
+          "other": 0.01,
+          "contrarian": 0,
+          "story": 0,
+          "meta": 0,
+          "listicle": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "personalExperience",
+        "confidence": 0.95,
+        "probabilities": {
+          "authority": 0,
+          "personalExperience": 0.96,
+          "anecdote": 0.03,
+          "data": 0,
+          "none": 0.01
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.12,
+        "confidence": 0.88,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.88,
+          "1": 0.11,
+          "2": 0.01,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.41
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3936183193158697945",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Today, we’re launching over 30 new effects in Stories powered by Muse Image, Meta’s first image model. You can transform the lighting in your photos with things like Disposable or Night Flash, use personalized effects like Instagram Charms or Instagram Receipt, or even create your own effect by typing in a prompt. That last part is what I'm most curious to see people experiment with. Check them out and let me know what you think.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "anticipation",
+        "confidence": 0.98,
+        "probabilities": {
+          "greed": 0,
+          "trust": 0,
+          "fear": 0,
+          "anticipation": 0.99,
+          "surprise": 0.01,
+          "joy": 0,
+          "none": 0,
+          "anger": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.81
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.95
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.3,
+        "confidence": 0.7,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.72,
+          "1": 0.28,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 2.53,
+        "confidence": 0.53,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0,
+          "1": 0.01,
+          "2": 0.46,
+          "3": 0.53
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.03,
+        "confidence": 0.97,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.97,
+          "1": 0.03,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.37,
+        "probabilities": {
+          "assertion": 0.43,
+          "listicle": 0.41,
+          "other": 0.07,
+          "question": 0.01,
+          "howto": 0.02,
+          "meta": 0.05,
+          "story": 0.01,
+          "contrarian": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "authority",
+        "confidence": 0.18,
+        "probabilities": {
+          "none": 0.27,
+          "personalExperience": 0.22,
+          "authority": 0.35,
+          "data": 0.15,
+          "anecdote": 0.01
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.67,
+        "confidence": 0.33,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.48,
+          "1": 0.38,
+          "2": 0.14,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.99
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.91
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3935286376397190668",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Three years flew by. Big thanks to the team and everyone here who has been building this community with us from day one. 🎂",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "joy",
+        "confidence": 0.99,
+        "probabilities": {
+          "greed": 0,
+          "none": 0,
+          "surprise": 0,
+          "anticipation": 0,
+          "anger": 0,
+          "fear": 0,
+          "joy": 1,
+          "trust": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.25
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.88
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0.54,
+        "confidence": 0.5,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.48,
+          "1": 0.5,
+          "2": 0.02,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "story",
+        "confidence": 0.36,
+        "probabilities": {
+          "story": 0.44,
+          "meta": 0.06,
+          "contrarian": 0,
+          "listicle": 0,
+          "other": 0.4,
+          "howto": 0,
+          "assertion": 0.1,
+          "question": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "personalExperience",
+        "confidence": 0.71,
+        "probabilities": {
+          "data": 0,
+          "none": 0.18,
+          "personalExperience": 0.77,
+          "anecdote": 0.05,
+          "authority": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.05,
+        "confidence": 0.95,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.41
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.06
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3925258114057363671",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "We're expanding Instagram for TV to Samsung TVs in the US and testing a few new things: phone-to-TV casting, Stories on TV, and a home for horizontal videos. Eventually we may want to explore support for long-form, episodic content and Live too.\n\nOne thing we've noticed with Instagram for TV is it's often a shared experience. Friends watch together, swapping recommendations in real time. We'll keep improving to make this easier. If you've tried it out, let me know what else you'd like to see.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "anticipation",
+        "confidence": 0.97,
+        "probabilities": {
+          "fear": 0,
+          "greed": 0,
+          "joy": 0,
+          "anticipation": 0.98,
+          "trust": 0,
+          "anger": 0,
+          "none": 0.02,
+          "surprise": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.72
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.06
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.18,
+        "confidence": 0.82,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.82,
+          "1": 0.18,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 2.29,
+        "confidence": 0.68,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0,
+          "1": 0.01,
+          "2": 0.68,
+          "3": 0.31
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.55,
+        "probabilities": {
+          "story": 0.01,
+          "assertion": 0.61,
+          "howto": 0,
+          "listicle": 0.19,
+          "other": 0.03,
+          "contrarian": 0,
+          "meta": 0.07,
+          "question": 0.09
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "anecdote",
+        "confidence": 0.41,
+        "probabilities": {
+          "authority": 0.07,
+          "none": 0.1,
+          "anecdote": 0.52,
+          "personalExperience": 0.31,
+          "data": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 1.13,
+        "confidence": 0.42,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.22,
+          "1": 0.43,
+          "2": 0.35,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.99
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.79
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3922373477151058647",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "#photodump from a recent weekend with the family up in Sonoma\n\nWe drag the kids out for a hike in the morning when we’re up in the hills.\n\nSnake! I think it’s a gopher snake, which are apparently not a threat to people but quite the startle.\n\nSome quality swing times\n\nMore hazards, teaching the kids to spot poison oak…\n\nLove this place",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "joy",
+        "confidence": 0.97,
+        "probabilities": {
+          "anger": 0,
+          "surprise": 0.02,
+          "trust": 0,
+          "greed": 0,
+          "fear": 0,
+          "none": 0,
+          "joy": 0.98,
+          "anticipation": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.31
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.07,
+        "confidence": 0.93,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.93,
+          "1": 0.07,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 2.08,
+        "confidence": 0.82,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0,
+          "1": 0.05,
+          "2": 0.82,
+          "3": 0.13
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "story",
+        "confidence": 0.82,
+        "probabilities": {
+          "assertion": 0,
+          "listicle": 0.03,
+          "question": 0,
+          "other": 0.12,
+          "contrarian": 0,
+          "howto": 0,
+          "meta": 0,
+          "story": 0.85
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "personalExperience",
+        "confidence": 0.98,
+        "probabilities": {
+          "anecdote": 0.01,
+          "none": 0,
+          "personalExperience": 0.99,
+          "data": 0,
+          "authority": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.53,
+        "confidence": 0.47,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.51,
+          "1": 0.45,
+          "2": 0.04,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.44
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.04
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3920825506831821673",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "There’s no universal best time to post. If you really want to optimize, check your insights to see when your followers are actually online.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.77,
+        "probabilities": {
+          "anger": 0,
+          "greed": 0,
+          "trust": 0.19,
+          "none": 0.8,
+          "surprise": 0.01,
+          "fear": 0,
+          "anticipation": 0,
+          "joy": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.36
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.11,
+        "confidence": 0.89,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0.86,
+        "confidence": 0.67,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.24,
+          "1": 0.67,
+          "2": 0.09,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.61,
+        "probabilities": {
+          "other": 0,
+          "meta": 0.02,
+          "question": 0,
+          "story": 0,
+          "listicle": 0,
+          "contrarian": 0.24,
+          "assertion": 0.66,
+          "howto": 0.08
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.93,
+        "probabilities": {
+          "anecdote": 0,
+          "personalExperience": 0,
+          "authority": 0.01,
+          "none": 0.95,
+          "data": 0.04
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.43,
+        "confidence": 0.57,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.62,
+          "1": 0.33,
+          "2": 0.05,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.39
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.45
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3920800034161787994",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "When we launched Threads, we wanted to see if we could build a space for people to share their perspectives and have conversations about what’s happening around the world in real-time. To see this community grow to half a billion monthly actives is deeply humbling. A massive thank you to everyone who comes here to share their ideas and hot takes. And a huge shoutout to the Threads team for shipping updates week after week to make this app better.🧵📈",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "joy",
+        "confidence": 0.91,
+        "probabilities": {
+          "joy": 0.92,
+          "anticipation": 0,
+          "anger": 0,
+          "none": 0.01,
+          "greed": 0,
+          "surprise": 0,
+          "fear": 0,
+          "trust": 0.07
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.26
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.98
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.02,
+        "confidence": 0.98,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.98,
+          "1": 0.02,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.56,
+        "confidence": 0.52,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.02,
+          "1": 0.41,
+          "2": 0.55,
+          "3": 0.02
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "meta",
+        "confidence": 0.33,
+        "probabilities": {
+          "howto": 0,
+          "contrarian": 0,
+          "meta": 0.41,
+          "question": 0,
+          "listicle": 0,
+          "assertion": 0.18,
+          "other": 0.03,
+          "story": 0.38
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "data",
+        "confidence": 0.98,
+        "probabilities": {
+          "authority": 0,
+          "personalExperience": 0.01,
+          "data": 0.99,
+          "none": 0,
+          "anecdote": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.61,
+        "confidence": 0.39,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.47,
+          "1": 0.46,
+          "2": 0.07,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.31
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.06
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3916526238689884023",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Today we're bringing Your Algorithm to the main feed — you can now see the topics we think you're interested in, and change them, across all the major parts of Instagram. Some thoughts on agency, algorithms, and where this is all going:",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "anticipation",
+        "confidence": 0.47,
+        "probabilities": {
+          "anticipation": 0.53,
+          "fear": 0,
+          "joy": 0.01,
+          "none": 0.35,
+          "greed": 0,
+          "anger": 0,
+          "surprise": 0.05,
+          "trust": 0.06
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.79
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.32,
+        "confidence": 0.68,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.69,
+          "1": 0.3,
+          "2": 0.01,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.72,
+        "confidence": 0.62,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.02,
+          "1": 0.28,
+          "2": 0.65,
+          "3": 0.05
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.71,
+        "confidence": 0.59,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.35,
+          "1": 0.59,
+          "2": 0.06,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "meta",
+        "confidence": 0.37,
+        "probabilities": {
+          "question": 0,
+          "meta": 0.46,
+          "howto": 0,
+          "story": 0.02,
+          "contrarian": 0,
+          "other": 0.08,
+          "listicle": 0,
+          "assertion": 0.44
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.63,
+        "probabilities": {
+          "authority": 0.29,
+          "data": 0,
+          "none": 0.71,
+          "anecdote": 0,
+          "personalExperience": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.81,
+        "confidence": 0.42,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.38,
+          "1": 0.44,
+          "2": 0.17,
+          "3": 0.01
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.99
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.19
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3915087359163095113",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Spotlight: mrwardstyle is a teacher with genuinely great style who finds creative ways to showcase his daily fits. Give him a follow.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "joy",
+        "confidence": 0.7,
+        "probabilities": {
+          "fear": 0,
+          "anger": 0,
+          "none": 0.15,
+          "trust": 0.07,
+          "anticipation": 0.05,
+          "greed": 0,
+          "surprise": 0,
+          "joy": 0.73
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.5
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.05,
+        "confidence": 0.95,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.95,
+          "1": 0.05,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.38,
+        "confidence": 0.51,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.05,
+          "1": 0.54,
+          "2": 0.39,
+          "3": 0.02
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.97,
+        "probabilities": {
+          "other": 0.02,
+          "contrarian": 0,
+          "story": 0,
+          "assertion": 0.98,
+          "meta": 0,
+          "listicle": 0,
+          "howto": 0,
+          "question": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.69,
+        "probabilities": {
+          "anecdote": 0.16,
+          "data": 0,
+          "personalExperience": 0.05,
+          "authority": 0.03,
+          "none": 0.76
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.03,
+        "confidence": 0.97,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.98,
+          "1": 0.02,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.57
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.96
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3907102092363893630",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Two identical reels can get very different reach depending on timing, competition, and context. The same reel can be more or less relevant depending on the moment, which affects how people engage with it, which then affects reach. It can feel random, but it’s really a byproduct of how people interact with content.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.75,
+        "probabilities": {
+          "surprise": 0.09,
+          "none": 0.79,
+          "trust": 0.11,
+          "anticipation": 0.01,
+          "greed": 0,
+          "anger": 0,
+          "fear": 0,
+          "joy": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.51
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.03,
+        "confidence": 0.97,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.98,
+          "1": 0.02,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0.61,
+        "confidence": 0.52,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.44,
+          "1": 0.52,
+          "2": 0.04,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.03,
+        "confidence": 0.97,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.97,
+          "1": 0.03,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.71,
+        "probabilities": {
+          "contrarian": 0.03,
+          "meta": 0.21,
+          "other": 0,
+          "howto": 0,
+          "listicle": 0,
+          "assertion": 0.76,
+          "question": 0,
+          "story": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.96,
+        "probabilities": {
+          "personalExperience": 0.02,
+          "none": 0.97,
+          "authority": 0,
+          "anecdote": 0.01,
+          "data": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 1.36,
+        "confidence": 0.52,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.06,
+          "1": 0.52,
+          "2": 0.42,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.48
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3905613922896634475",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "A few tips on how to read your insights, particularly engagement rates and connected versus unconnected reach.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.91,
+        "probabilities": {
+          "trust": 0.06,
+          "fear": 0,
+          "joy": 0,
+          "anger": 0,
+          "surprise": 0,
+          "greed": 0,
+          "anticipation": 0.02,
+          "none": 0.92
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.64
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.16,
+        "confidence": 0.84,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.84,
+          "1": 0.16,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.09,
+        "confidence": 0.5,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.2,
+          "1": 0.52,
+          "2": 0.26,
+          "3": 0.02
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "howto",
+        "confidence": 0.99,
+        "probabilities": {
+          "contrarian": 0,
+          "story": 0,
+          "assertion": 0,
+          "howto": 0.99,
+          "question": 0,
+          "listicle": 0.01,
+          "other": 0,
+          "meta": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.9,
+        "probabilities": {
+          "authority": 0,
+          "data": 0,
+          "anecdote": 0,
+          "none": 0.93,
+          "personalExperience": 0.07
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.78,
+        "confidence": 0.52,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.35,
+          "1": 0.53,
+          "2": 0.12,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.45
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.14
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3899878212016642861",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Spotlight: @artbutmakeitsports. LJ is a New York-based creator whose content cleverly blends memes, sports and important art pieces. Give him a follow.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "joy",
+        "confidence": 0.46,
+        "probabilities": {
+          "greed": 0,
+          "joy": 0.52,
+          "surprise": 0.01,
+          "anger": 0,
+          "fear": 0,
+          "none": 0.38,
+          "trust": 0.03,
+          "anticipation": 0.06
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.62
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.08,
+        "confidence": 0.92,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.92,
+        "confidence": 0.74,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0,
+          "1": 0.16,
+          "2": 0.75,
+          "3": 0.09
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.67,
+        "probabilities": {
+          "assertion": 0.71,
+          "story": 0,
+          "listicle": 0,
+          "meta": 0.02,
+          "other": 0.27,
+          "question": 0,
+          "howto": 0,
+          "contrarian": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.86,
+        "probabilities": {
+          "authority": 0.03,
+          "personalExperience": 0.02,
+          "none": 0.89,
+          "anecdote": 0.06,
+          "data": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.05,
+        "confidence": 0.95,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.95,
+          "1": 0.04,
+          "2": 0.01,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.65
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.96
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3897828658278100523",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Does DMing people back help with reach?",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.65,
+        "probabilities": {
+          "joy": 0,
+          "none": 0.7,
+          "fear": 0,
+          "trust": 0,
+          "greed": 0.03,
+          "anger": 0,
+          "surprise": 0,
+          "anticipation": 0.27
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.53
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.11,
+        "confidence": 0.89,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.89,
+          "1": 0.11,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.62,
+        "confidence": 0.51,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.06,
+          "1": 0.32,
+          "2": 0.57,
+          "3": 0.05
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.03,
+        "confidence": 0.97,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.97,
+          "1": 0.03,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "question",
+        "confidence": 1,
+        "probabilities": {
+          "howto": 0,
+          "assertion": 0,
+          "meta": 0,
+          "listicle": 0,
+          "question": 1,
+          "story": 0,
+          "contrarian": 0,
+          "other": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "authority": 0,
+          "data": 0,
+          "personalExperience": 0,
+          "none": 1,
+          "anecdote": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.19,
+        "confidence": 0.81,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.83,
+          "1": 0.16,
+          "2": 0.01,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.48
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.17
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3895574795814763307",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Rapid fire questions",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.65,
+        "probabilities": {
+          "fear": 0,
+          "trust": 0,
+          "surprise": 0.01,
+          "greed": 0,
+          "none": 0.69,
+          "anticipation": 0.29,
+          "anger": 0,
+          "joy": 0.01
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.54
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.06
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.08,
+        "confidence": 0.92,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.9400000000000001,
+          "1": 0.06,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0.28,
+        "confidence": 0.72,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.78,
+          "1": 0.18,
+          "2": 0.03,
+          "3": 0.01
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.04,
+        "confidence": 0.96,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.98,
+          "1": 0.02,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "question",
+        "confidence": 0.84,
+        "probabilities": {
+          "story": 0,
+          "howto": 0,
+          "meta": 0.06,
+          "question": 0.86,
+          "listicle": 0.01,
+          "contrarian": 0,
+          "assertion": 0.01,
+          "other": 0.06
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.99,
+        "probabilities": {
+          "data": 0,
+          "authority": 0,
+          "none": 0.99,
+          "anecdote": 0,
+          "personalExperience": 0.01
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.17,
+        "confidence": 0.83,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.86,
+          "1": 0.11,
+          "2": 0.03,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.6
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.28
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3884714006192212044",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Spotlight: @noizebro uses a mix of engineering and art to create pieces that reimagine public spaces. It’s smart, visually stunning work - give him a follow.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "joy",
+        "confidence": 0.82,
+        "probabilities": {
+          "surprise": 0.01,
+          "none": 0.06,
+          "trust": 0.04,
+          "anticipation": 0.05,
+          "greed": 0,
+          "anger": 0,
+          "fear": 0,
+          "joy": 0.84
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.73
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.04,
+        "confidence": 0.96,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.96,
+          "1": 0.04,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 1.34,
+        "confidence": 0.6,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.03,
+          "1": 0.61,
+          "2": 0.36,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.97,
+        "probabilities": {
+          "contrarian": 0,
+          "meta": 0,
+          "other": 0.02,
+          "listicle": 0,
+          "howto": 0,
+          "assertion": 0.98,
+          "question": 0,
+          "story": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.75,
+        "probabilities": {
+          "personalExperience": 0.1,
+          "none": 0.8,
+          "authority": 0.02,
+          "anecdote": 0.08,
+          "data": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.05,
+        "confidence": 0.95,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.95,
+          "1": 0.04,
+          "2": 0.01,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.63
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.94
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3881040158318135950",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "I'm very excited to see where Brett takes edits next.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "anticipation",
+        "confidence": 0.95,
+        "probabilities": {
+          "greed": 0,
+          "none": 0,
+          "surprise": 0,
+          "anticipation": 0.96,
+          "anger": 0,
+          "fear": 0,
+          "joy": 0.04,
+          "trust": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.63
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0.92,
+        "confidence": 0.67,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.2,
+          "1": 0.68,
+          "2": 0.12,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.94,
+        "probabilities": {
+          "story": 0,
+          "meta": 0.02,
+          "contrarian": 0,
+          "listicle": 0,
+          "other": 0.03,
+          "assertion": 0.95,
+          "howto": 0,
+          "question": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 0.76,
+        "probabilities": {
+          "data": 0,
+          "none": 0.8,
+          "personalExperience": 0.19,
+          "anecdote": 0.01,
+          "authority": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.02,
+        "confidence": 0.98,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.55
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.04
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3870878987627326573",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "Congrats to the Superintelligence Labs team for launching Muse Spark today, our foundation model that offers a faster and smarter Meta AI for our products. The new model is grounded in content people connect over on our apps. I’m excited for what’s to come with even larger models already in development. \n\nThe model is live at meta.ai and in the Meta AI app and will be available across all of our apps and Ray-Ban Meta glasses soon.\n\nhttps://ai.meta.com/blog/scaling-how-we-build-test-advanced-ai/",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "anticipation",
+        "confidence": 0.72,
+        "probabilities": {
+          "trust": 0,
+          "fear": 0,
+          "joy": 0.24,
+          "anger": 0,
+          "surprise": 0,
+          "greed": 0,
+          "anticipation": 0.76,
+          "none": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.69
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.06
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.25,
+        "confidence": 0.75,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.75,
+          "1": 0.24,
+          "2": 0.01,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 2.04,
+        "confidence": 0.79,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0,
+          "1": 0.08,
+          "2": 0.8,
+          "3": 0.12
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.16,
+        "confidence": 0.84,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.85,
+          "1": 0.15,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "assertion",
+        "confidence": 0.86,
+        "probabilities": {
+          "contrarian": 0,
+          "story": 0.01,
+          "assertion": 0.87,
+          "howto": 0,
+          "question": 0,
+          "listicle": 0,
+          "other": 0.07,
+          "meta": 0.05
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "authority",
+        "confidence": 0.58,
+        "probabilities": {
+          "authority": 0.67,
+          "data": 0,
+          "anecdote": 0,
+          "personalExperience": 0.02,
+          "none": 0.31
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.59,
+        "confidence": 0.41,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.55,
+          "1": 0.33,
+          "2": 0.12,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.97
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.16
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  },
+  {
+    "id": "threads:3870782797464655319",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "First time I posted this it came through blank… apologies: A few features of Instagram that you might not know about, but might appreciate.",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "surprise",
+        "confidence": 0.69,
+        "probabilities": {
+          "trust": 0.01,
+          "greed": 0,
+          "joy": 0.01,
+          "fear": 0,
+          "anticipation": 0.13,
+          "surprise": 0.74,
+          "anger": 0,
+          "none": 0.11
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.85
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.04
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.02,
+        "confidence": 0.98,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.98,
+          "1": 0.02,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0.31,
+        "confidence": 0.69,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.7,
+          "1": 0.28,
+          "2": 0.02,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "listicle",
+        "confidence": 0.83,
+        "probabilities": {
+          "story": 0,
+          "listicle": 0.86,
+          "contrarian": 0,
+          "question": 0,
+          "meta": 0.12,
+          "howto": 0,
+          "assertion": 0.02,
+          "other": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "personalExperience",
+        "confidence": 0.21,
+        "probabilities": {
+          "data": 0,
+          "authority": 0,
+          "anecdote": 0.33,
+          "none": 0.3,
+          "personalExperience": 0.37
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0.13,
+        "confidence": 0.87,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 0.89,
+          "1": 0.1,
+          "2": 0.01,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.99
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.08
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:54:57.266Z"
+  }
+]

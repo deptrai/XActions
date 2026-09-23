@@ -210,14 +210,30 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-113 (Advanced Canvas/WebGL/Audio Fingerprint Spoofing — conditional):** Inject noise động vào `HTMLCanvasElement.toDataURL`/`getImageData`, WebGL buffer readback, `AudioContext`/`AnalyserNode` cho bot-challenge targets. (Story 27.5 — gated)
 * **FR-114 (Zalo Personal Messaging — conditional, research-gated):** Cào Zalo cá nhân (tin nhắn, nhóm, friend list) qua reverse-engineered private API sau research spike 2 tuần. (Story 33.3 — gated)
 * **FR-115 (YouTube VN Advanced Data — conditional):** Live stream chat, Shorts deep analytics, channel subscriber history qua InnerTube/extended API. (Story 33.4 — gated)
+* **FR-116 (OpenAPI 3.1 Spec Generation & Publication):** Hệ thống phải generate OpenAPI 3.1 document từ Zod schemas (single source of truth), serve qua `GET /openapi.json` (CORS `*`) và Swagger UI self-hosted tại `/api-docs`; spec bảo toàn x402 extensions (`x-payment-info`, `x-bazaar`, `x-x402`) và `/.well-known/x402`. (Epic 46 — Stories 46.1, 46.2)
+* **FR-117 (Uniform Request Validation):** Mọi route thuộc Route Inventory (epics.md Phụ lục A) phải validate `body`, `query`, `path params` và declared headers qua Zod schema, theo pipeline `authenticate → validate → handler`, trả `400` theo error envelope chuẩn. (Epic 46 — Story 46.2)
+* **FR-118 (Uniform Response Envelope):** Mọi JSON endpoint trong scope trả `{ success: true, data: T }` / `{ success: false, error: { code, message, type?, details? } }` + `PaginatedResponse<T>`; domain errors (PlatformError/AD-14) map verbatim qua `error.details`. (Epic 46 — Story 46.2)
+* **FR-119 (Generated TypeScript API Client):** Script `npm run generate:api-client` sinh `@xactions/api-client` tại `packages/api-client/` từ committed `api/openapi.json` — types qua `openapi-typescript` + thin fetch wrapper với typed error union. (Epic 46 — Story 46.3)
+* **FR-120 (Next.js App Shell & Universal Layout):** Ứng dụng web Next.js 15 (App Router, TypeScript, Tailwind, Shadcn/UI, Lucide) với collapsible sidebar, Dark/Light mode, backend connection badge. (Epic 47 — Story 47.1)
+* **FR-121 (Viral DNA Miner Dashboard):** Màn hình `/viral-miner` với realtime progress cards và Recharts visualization cho hook-type distribution/patterns. (Epic 47 — Story 47.2)
+* **FR-122 (Follower CRM Screen):** Màn hình `/crm` với TanStack Table, lead score, segment filters, tag management. (Epic 47 — Story 47.3)
+* **FR-123 (AI Content Optimizer Playground):** Màn hình `/optimizer` với predict score, AI rewrite side-by-side, hashtag generation. (Epic 47 — Story 47.4)
+* **FR-124 (Universal Data Explorer & Export):** Màn hình `/explorer` tra cứu đa ngành (jobs/BĐS/MST/social) với bảng preview và CSV export UTF-8. (Epic 47 — Story 47.5)
+* **FR-125 (Legacy HTML Consolidation):** Gom toàn bộ 51 file HTML rời rạc của dashboard cũ vào SPA Next.js — không còn trang standalone sót lại sau Epic 47. (Epic 47 — epic goal)
+* **FR-126 (Type-Safe API Consumption):** Web app gọi backend exclusively qua `@xactions/api-client` (Epic 46 output) — không fetch thủ công, mọi call compile-time type-checked. (Epic 47 — cross-cutting)
 
-### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17 ➔ NFR-21)
+### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17 ➔ NFR-26)
 
 * **NFR-17 (Operational Observability):** Hệ thống phải expose real-time metrics qua `GET /governor/status`, `GET /metrics/stream`, dashboard SSE/polling mỗi 5–30s, và alert khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`.
 * **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
 * **NFR-19 (Vietnam Geo-Consistent Proxy & Locale):** Tất cả request đến VN platforms (Zalo, VN e-commerce, VN government sites) phải sử dụng VN residential proxy hoặc VN-located server IP; timezone `Asia/Ho_Chi_Minh` và locale `vi-VN` phải consistent với proxy region. Áp dụng từ Epic 21 trở đi.
 * **NFR-20 (Zero Mocks & Fast Test Execution):** Cấm mock/stub cho network calls trong integration tests; kiểm thử HTTP-first/TLS handshake qua Local Ephemeral Server (`127.0.0.1:0`). Bắt buộc hỗ trợ `XACTIONS_TEST_FAST_DELAYS=1` đưa độ trễ về 0ms; unit test không được vượt quá 1.5 giây.
 * **NFR-21 (Option D Privacy & PII Protection):** XActions không duy trì bất kỳ cơ chế lưu trữ lâu dài thông tin định danh cá nhân tổng hợp (Golden Record). Dữ liệu hồ sơ chỉ luân chuyển tạm thời qua response/stream phục vụ consumer.
+* **NFR-22 (Contract Honesty — Spec↔Runtime Parity):** OpenAPI spec luôn khớp runtime: `operationId` duy nhất mọi operation, CI spec lint (`@redocly/cli`) + contract test ≥1 endpoint mỗi route group + regenerate-diff check — fail khi drift. (Epic 46)
+* **NFR-23 (Contract Non-Breaking):** Chuẩn hóa API không phá vỡ consumer hiện hữu: x402 extensions/discovery contract, `x-session-cookie` transport (legacy body field được normalize, không remove), domain error fields (AD-14) và operator surfaces (`/api/governor`, `/api/checkpoints`, `/metrics/stream`) giữ nguyên semantics. (Epic 46)
+* **NFR-24 (Web Performance):** Ứng dụng web Next.js tải trang < 1.0 giây trên kết nối local/dev. (Epic 47)
+* **NFR-25 (Design System Consistency):** Mọi màn hình dùng chung Tailwind + Shadcn/UI + Lucide tokens, hỗ trợ Dark/Light mode nhất quán — không tự ý dùng component ngoài design system. (Epic 47)
+* **NFR-26 (UX Feedback & Connectivity Visibility):** Long-running jobs hiển thị realtime progress (không silent stall); trạng thái kết nối backend luôn visible qua header badge. (Epic 47)
 
 ### 7.3. Lộ trình phân kỳ cập nhật
 
@@ -267,6 +283,8 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 | Story 41.3 (Avatar pHash — Epic 41) | FR-109 |
 | Story 35.5 (IG Session Verify — Epic 35) | FR-110 |
 | Story 13.11 (Marketplace Filters — Epic 13) | FR-111 |
+| Epic 46 (API Contract & OpenAPI) | FR-116, FR-117, FR-118, FR-119, NFR-22, NFR-23 |
+| Epic 47 (Next.js Web App) | FR-120, FR-121, FR-122, FR-123, FR-124, FR-125, FR-126, NFR-24, NFR-25, NFR-26 |
 | Story 13.12 (GraphQL Replay — Epic 13, gated) | FR-112 |
 | Story 27.5 (Fingerprint Spoofing — Epic 27, gated) | FR-113 |
 | Story 33.3 (Zalo Personal — Epic 33, gated) | FR-114 |

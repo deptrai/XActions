@@ -1,0 +1,3452 @@
+[
+  {
+    "id": "threads:3991243342016009629",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "greed": 0,
+          "trust": 0,
+          "anger": 0,
+          "fear": 0,
+          "anticipation": 0,
+          "joy": 0,
+          "surprise": 0,
+          "none": 1
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "listicle": 0,
+          "assertion": 0,
+          "story": 0,
+          "other": 0.99,
+          "contrarian": 0,
+          "howto": 0,
+          "question": 0,
+          "meta": 0.01
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "anecdote": 0,
+          "authority": 0,
+          "none": 1,
+          "data": 0,
+          "personalExperience": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.43
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3989126243224121035",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "greed": 0,
+          "anger": 0,
+          "trust": 0,
+          "surprise": 0,
+          "fear": 0,
+          "joy": 0,
+          "anticipation": 0,
+          "none": 1
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.08
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "howto": 0,
+          "contrarian": 0,
+          "question": 0,
+          "assertion": 0,
+          "other": 0.99,
+          "listicle": 0,
+          "meta": 0.01,
+          "story": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "data": 0,
+          "authority": 0,
+          "personalExperience": 0,
+          "none": 1,
+          "anecdote": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.43
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3986850419704593974",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "surprise": 0,
+          "anticipation": 0,
+          "none": 1,
+          "fear": 0,
+          "trust": 0,
+          "anger": 0,
+          "joy": 0,
+          "greed": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "other": 0.99,
+          "listicle": 0,
+          "howto": 0,
+          "assertion": 0,
+          "contrarian": 0,
+          "meta": 0.01,
+          "question": 0,
+          "story": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "personalExperience": 0,
+          "data": 0,
+          "authority": 0,
+          "anecdote": 0,
+          "none": 1
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.4
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3968846412599444855",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "fear": 0,
+          "anger": 0,
+          "none": 1,
+          "trust": 0,
+          "anticipation": 0,
+          "greed": 0,
+          "surprise": 0,
+          "joy": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.08
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "other": 0.99,
+          "contrarian": 0,
+          "assertion": 0,
+          "story": 0,
+          "meta": 0.01,
+          "listicle": 0,
+          "howto": 0,
+          "question": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "anecdote": 0,
+          "data": 0,
+          "personalExperience": 0,
+          "authority": 0,
+          "none": 1
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.46
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3963783602493141167",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "trust": 0,
+          "surprise": 0,
+          "greed": 0,
+          "none": 1,
+          "fear": 0,
+          "anger": 0,
+          "anticipation": 0,
+          "joy": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "howto": 0,
+          "contrarian": 0,
+          "meta": 0.01,
+          "listicle": 0,
+          "question": 0,
+          "story": 0,
+          "other": 0.99,
+          "assertion": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "none": 1,
+          "data": 0,
+          "authority": 0,
+          "anecdote": 0,
+          "personalExperience": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.44
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3962887631160101435",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "joy": 0,
+          "none": 1,
+          "fear": 0,
+          "trust": 0,
+          "greed": 0,
+          "anger": 0,
+          "surprise": 0,
+          "anticipation": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.08
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "howto": 0,
+          "assertion": 0,
+          "meta": 0.01,
+          "listicle": 0,
+          "story": 0,
+          "question": 0,
+          "contrarian": 0,
+          "other": 0.99
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "authority": 0,
+          "data": 0,
+          "personalExperience": 0,
+          "none": 1,
+          "anecdote": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.45
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3941113021354514673",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "anger": 0,
+          "none": 1,
+          "trust": 0,
+          "greed": 0,
+          "surprise": 0,
+          "fear": 0,
+          "anticipation": 0,
+          "joy": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "other": 0.99,
+          "meta": 0.01,
+          "question": 0,
+          "listicle": 0,
+          "story": 0,
+          "contrarian": 0,
+          "assertion": 0,
+          "howto": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "anecdote": 0,
+          "personalExperience": 0,
+          "authority": 0,
+          "none": 1,
+          "data": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.42
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3937557373968119426",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "none": 1,
+          "fear": 0,
+          "trust": 0,
+          "surprise": 0,
+          "anger": 0,
+          "joy": 0,
+          "anticipation": 0,
+          "greed": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.08
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "assertion": 0,
+          "meta": 0.01,
+          "howto": 0,
+          "question": 0,
+          "contrarian": 0,
+          "story": 0,
+          "listicle": 0,
+          "other": 0.99
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "none": 1,
+          "data": 0,
+          "authority": 0,
+          "personalExperience": 0,
+          "anecdote": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.39
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3936183193158697945",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "greed": 0,
+          "anger": 0,
+          "trust": 0,
+          "surprise": 0,
+          "fear": 0,
+          "joy": 0,
+          "anticipation": 0,
+          "none": 1
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "howto": 0,
+          "contrarian": 0,
+          "question": 0,
+          "assertion": 0,
+          "listicle": 0,
+          "meta": 0.01,
+          "other": 0.99,
+          "story": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "data": 0,
+          "personalExperience": 0,
+          "authority": 0,
+          "none": 1,
+          "anecdote": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.43
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3935286376397190668",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "fear": 0,
+          "anticipation": 0,
+          "surprise": 0,
+          "greed": 0,
+          "joy": 0,
+          "trust": 0,
+          "none": 1,
+          "anger": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.08
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "assertion": 0,
+          "howto": 0,
+          "contrarian": 0,
+          "question": 0,
+          "meta": 0.01,
+          "other": 0.99,
+          "story": 0,
+          "listicle": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "anecdote": 0,
+          "authority": 0,
+          "data": 0,
+          "none": 1,
+          "personalExperience": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.42
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3925258114057363671",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "surprise": 0,
+          "anticipation": 0,
+          "none": 1,
+          "fear": 0,
+          "trust": 0,
+          "anger": 0,
+          "joy": 0,
+          "greed": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "other": 0.99,
+          "listicle": 0,
+          "howto": 0,
+          "assertion": 0,
+          "contrarian": 0,
+          "meta": 0.01,
+          "question": 0,
+          "story": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "personalExperience": 0,
+          "authority": 0,
+          "data": 0,
+          "anecdote": 0,
+          "none": 1
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.42
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3922373477151058647",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "surprise": 0,
+          "joy": 0,
+          "anger": 0,
+          "fear": 0,
+          "none": 1,
+          "anticipation": 0,
+          "greed": 0,
+          "trust": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.08
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "other": 0.99,
+          "assertion": 0,
+          "question": 0,
+          "story": 0,
+          "contrarian": 0,
+          "howto": 0,
+          "meta": 0.01,
+          "listicle": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "none": 1,
+          "data": 0,
+          "authority": 0,
+          "anecdote": 0,
+          "personalExperience": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.46
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3920825506831821673",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "fear": 0,
+          "anticipation": 0,
+          "surprise": 0,
+          "greed": 0,
+          "joy": 0,
+          "trust": 0,
+          "none": 1,
+          "anger": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.98,
+        "probabilities": {
+          "assertion": 0,
+          "howto": 0,
+          "meta": 0.01,
+          "question": 0,
+          "other": 0.99,
+          "contrarian": 0,
+          "story": 0,
+          "listicle": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "data": 0,
+          "authority": 0,
+          "anecdote": 0,
+          "none": 1,
+          "personalExperience": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.42
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3920800034161787994",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "greed": 0,
+          "trust": 0,
+          "anger": 0,
+          "none": 1,
+          "anticipation": 0,
+          "fear": 0,
+          "surprise": 0,
+          "joy": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "meta": 0.01,
+          "contrarian": 0,
+          "assertion": 0,
+          "howto": 0,
+          "listicle": 0,
+          "other": 0.99,
+          "question": 0,
+          "story": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "none": 1,
+          "personalExperience": 0,
+          "data": 0,
+          "anecdote": 0,
+          "authority": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.44
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3916526238689884023",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "trust": 0,
+          "greed": 0,
+          "fear": 0,
+          "anticipation": 0,
+          "surprise": 0,
+          "joy": 0,
+          "none": 1,
+          "anger": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.08
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "assertion": 0,
+          "listicle": 0,
+          "other": 0.99,
+          "question": 0,
+          "howto": 0,
+          "meta": 0.01,
+          "story": 0,
+          "contrarian": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "none": 1,
+          "personalExperience": 0,
+          "authority": 0,
+          "data": 0,
+          "anecdote": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.45
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3915087359163095113",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "anticipation": 0,
+          "fear": 0,
+          "joy": 0,
+          "anger": 0,
+          "surprise": 0,
+          "trust": 0,
+          "greed": 0,
+          "none": 1
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.08
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "other": 0.99,
+          "assertion": 0,
+          "meta": 0.01,
+          "question": 0,
+          "listicle": 0,
+          "contrarian": 0,
+          "howto": 0,
+          "story": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "anecdote": 0,
+          "personalExperience": 0,
+          "none": 1,
+          "data": 0,
+          "authority": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.45
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3907102092363893630",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "joy": 0,
+          "trust": 0,
+          "anger": 0,
+          "none": 1,
+          "greed": 0,
+          "surprise": 0,
+          "fear": 0,
+          "anticipation": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "assertion": 0,
+          "meta": 0.01,
+          "story": 0,
+          "listicle": 0,
+          "question": 0,
+          "other": 0.99,
+          "contrarian": 0,
+          "howto": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "authority": 0,
+          "none": 1,
+          "data": 0,
+          "personalExperience": 0,
+          "anecdote": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.42
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3905613922896634475",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "anticipation": 0,
+          "greed": 0,
+          "surprise": 0,
+          "fear": 0,
+          "none": 1,
+          "joy": 0,
+          "trust": 0,
+          "anger": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.98,
+        "probabilities": {
+          "other": 0.99,
+          "story": 0,
+          "assertion": 0,
+          "contrarian": 0,
+          "howto": 0,
+          "question": 0,
+          "meta": 0.01,
+          "listicle": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "personalExperience": 0,
+          "none": 1,
+          "data": 0,
+          "authority": 0,
+          "anecdote": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.41
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3899878212016642861",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "surprise": 0,
+          "greed": 0,
+          "anticipation": 0,
+          "fear": 0,
+          "anger": 0,
+          "joy": 0,
+          "trust": 0,
+          "none": 1
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "contrarian": 0,
+          "question": 0,
+          "assertion": 0,
+          "story": 0,
+          "meta": 0.01,
+          "listicle": 0,
+          "howto": 0,
+          "other": 0.99
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "anecdote": 0,
+          "authority": 0,
+          "personalExperience": 0,
+          "data": 0,
+          "none": 1
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.41
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3897828658278100523",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "trust": 0,
+          "surprise": 0,
+          "greed": 0,
+          "none": 1,
+          "fear": 0,
+          "anger": 0,
+          "anticipation": 0,
+          "joy": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "howto": 0,
+          "contrarian": 0,
+          "meta": 0.01,
+          "question": 0,
+          "listicle": 0,
+          "story": 0,
+          "other": 0.99,
+          "assertion": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "none": 1,
+          "data": 0,
+          "authority": 0,
+          "anecdote": 0,
+          "personalExperience": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.45
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3895574795814763307",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "joy": 0,
+          "surprise": 0,
+          "greed": 0,
+          "trust": 0,
+          "anticipation": 0,
+          "fear": 0,
+          "none": 1,
+          "anger": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "contrarian": 0,
+          "other": 0.99,
+          "assertion": 0,
+          "story": 0,
+          "howto": 0,
+          "meta": 0.01,
+          "listicle": 0,
+          "question": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "anecdote": 0,
+          "authority": 0,
+          "personalExperience": 0,
+          "data": 0,
+          "none": 1
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.47
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3884714006192212044",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "anticipation": 0,
+          "fear": 0,
+          "joy": 0,
+          "surprise": 0,
+          "anger": 0,
+          "trust": 0,
+          "greed": 0,
+          "none": 1
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.08
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "other": 0.99,
+          "assertion": 0,
+          "meta": 0.01,
+          "question": 0,
+          "listicle": 0,
+          "contrarian": 0,
+          "howto": 0,
+          "story": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "anecdote": 0,
+          "data": 0,
+          "none": 1,
+          "authority": 0,
+          "personalExperience": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.44
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3881040158318135950",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "greed": 0,
+          "joy": 0,
+          "surprise": 0,
+          "anger": 0,
+          "fear": 0,
+          "none": 1,
+          "trust": 0,
+          "anticipation": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "assertion": 0,
+          "story": 0,
+          "other": 0.99,
+          "meta": 0.01,
+          "listicle": 0,
+          "question": 0,
+          "howto": 0,
+          "contrarian": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "authority": 0,
+          "personalExperience": 0,
+          "none": 1,
+          "data": 0,
+          "anecdote": 0
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.44
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3870878987627326573",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "surprise": 0,
+          "greed": 0,
+          "fear": 0,
+          "anticipation": 0,
+          "anger": 0,
+          "joy": 0,
+          "trust": 0,
+          "none": 1
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.07
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.99,
+        "probabilities": {
+          "contrarian": 0,
+          "question": 0,
+          "story": 0,
+          "assertion": 0,
+          "meta": 0.01,
+          "listicle": 0,
+          "howto": 0,
+          "other": 0.99
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "anecdote": 0,
+          "personalExperience": 0,
+          "authority": 0,
+          "data": 0,
+          "none": 1
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.44
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  },
+  {
+    "id": "threads:3870782797464655319",
+    "platform": "threads",
+    "category": "social",
+    "niche": "",
+    "text": "",
+    "metrics": {},
+    "viralDNA": {
+      "emotionalTrigger": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "greed": 0,
+          "trust": 0,
+          "none": 1,
+          "surprise": 0,
+          "anticipation": 0,
+          "joy": 0,
+          "fear": 0,
+          "anger": 0
+        }
+      },
+      "curiosityGap": {
+        "type": "noul",
+        "noul": 0.08
+      },
+      "hasNumbers": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "urgencyLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "specificityLevel": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "controversiality": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "hookType": {
+        "type": "choice",
+        "choice": "other",
+        "confidence": 0.98,
+        "probabilities": {
+          "question": 0,
+          "assertion": 0,
+          "contrarian": 0,
+          "howto": 0,
+          "meta": 0.02,
+          "story": 0,
+          "other": 0.98,
+          "listicle": 0
+        }
+      },
+      "evidenceType": {
+        "type": "choice",
+        "choice": "none",
+        "confidence": 1,
+        "probabilities": {
+          "data": 0,
+          "anecdote": 0,
+          "authority": 0,
+          "personalExperience": 0,
+          "none": 1
+        }
+      },
+      "threadDepth": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "minimal / none",
+          "1": "low / mild",
+          "2": "moderate / clear",
+          "3": "high / extreme"
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "metaReference": {
+        "type": "noul",
+        "noul": 0.41
+      },
+      "hasCallToAction": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "jevDegraded": false,
+    "scrapedAt": "2026-09-23T05:49:08.842Z"
+  }
+]

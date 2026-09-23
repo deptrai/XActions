@@ -27,6 +27,7 @@ Tài liệu này liệt kê các tài liệu quy hoạch canonical và các tài
 | Phạm vi | Canonical | Deprecated / Reference |
 |---|---|---|
 | Universal Scraping Architecture (r3) | `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` | `archive/architecture-brownfield-2026-08-20.md` |
+| HTTP API Contract Layer (Epic 46→47) | `architecture/xactions-api-contract-epic46/ARCHITECTURE-SPINE.md` | — |
 | UX findings from architecture | `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` | — |
 | UX remediation plan | `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` | — |
 
