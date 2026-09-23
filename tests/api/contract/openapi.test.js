@@ -136,11 +136,21 @@ describe('Story 46.2 — OpenAPI composition', () => {
       const s = resolve(op?.requestBody?.content?.['application/json']?.schema);
       return { props: s?.properties || {}, required: s?.required || [] };
     };
+    const declaresSessionCookie = (op) =>
+      Array.isArray(op?.security) &&
+      op.security.some((s) => s !== null && typeof s === 'object' && 'sessionCookie' in s);
 
-    // sessioned op (declares sessionCookie security) → body prop stripped (AD-6)
-    const mine = bodyProps(spec.paths['/api/viral/mine']?.post);
-    expect('sessionCookie' in mine.props).toBe(false);
-    expect(mine.required).not.toContain('sessionCookie');
+    // EVERY op declaring the sessionCookie scheme must not advertise the
+    // legacy body transport in the published spec (AD-6) — not just /api/viral/mine.
+    const offenders = [];
+    for (const { path, method, op } of iterOperations(spec)) {
+      if (!declaresSessionCookie(op)) continue;
+      const { props, required } = bodyProps(op);
+      if ('sessionCookie' in props || required.includes('sessionCookie')) {
+        offenders.push(`${method.toUpperCase()} ${path}`);
+      }
+    }
+    expect(offenders).toEqual([]);
 
     // save-session (bearerAuth) → sessionCookie is real payload, must survive
     const save = bodyProps(spec.paths['/api/session/save-session']?.post);

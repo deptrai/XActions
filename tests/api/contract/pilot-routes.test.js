@@ -208,26 +208,37 @@ describe('pilot: /api/checkpoints', () => {
 
   it('GET /?limit=1 → follows page.cursor to the next page', async () => {
     const auth = { Authorization: `Bearer ${makeTestToken(admin.id, admin.username)}` };
-    const keySuffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    await prisma.crawlCheckpoint.create({
-      data: { platform: 'twitter', targetType: 'profile', targetKey: `contract_cursor_a_${keySuffix}`, status: 'running', errorCount: 0 },
-    });
-    await prisma.crawlCheckpoint.create({
-      data: { platform: 'twitter', targetType: 'profile', targetKey: `contract_cursor_b_${keySuffix}`, status: 'running', errorCount: 0 },
-    });
+    const keyPrefix = `contract_cursor_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const seeded = [];
+    try {
+      for (const suffix of ['a', 'b']) {
+        seeded.push(
+          await prisma.crawlCheckpoint.create({
+            data: { platform: 'twitter', targetType: 'profile', targetKey: `${keyPrefix}_${suffix}`, status: 'running', errorCount: 0 },
+          })
+        );
+      }
 
-    const page1 = await request(app).get('/api/checkpoints?limit=1&sortBy=createdAt&order=asc').set(auth);
-    expect(page1.status).toBe(200);
-    expect(page1.body.data).toHaveLength(1);
-    expect(typeof page1.body.page.total).toBe('number');
-    if (page1.body.page.total > 1) {
+      // targetKey filter scopes ordering to the fixture rows — immune to
+      // other rows in the shared test DB.
+      const q = `targetKey=${keyPrefix}&limit=1&sortBy=createdAt&order=asc`;
+      const page1 = await request(app).get(`/api/checkpoints?${q}`).set(auth);
+      expect(page1.status).toBe(200);
+      expect(page1.body.data).toHaveLength(1);
+      expect(page1.body.page.total).toBe(2);
       expect(page1.body.page.cursor).toBeTruthy();
+
       const page2 = await request(app)
-        .get(`/api/checkpoints?limit=1&sortBy=createdAt&order=asc&cursor=${encodeURIComponent(page1.body.page.cursor)}`)
+        .get(`/api/checkpoints?${q}&cursor=${encodeURIComponent(page1.body.page.cursor)}`)
         .set(auth);
       expect(page2.status).toBe(200);
       expect(page2.body.data).toHaveLength(1);
       expect(page2.body.data[0].id).not.toBe(page1.body.data[0].id);
+      expect(page2.body.page.cursor).toBeNull();
+    } finally {
+      for (const row of seeded) {
+        await prisma.crawlCheckpoint.delete({ where: { id: row.id } }).catch(() => {});
+      }
     }
   });
 

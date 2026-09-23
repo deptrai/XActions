@@ -110,13 +110,17 @@ const BODY_PARSER_ERRORS = {
  * - body-parser `entity.*` errors → INVALID_JSON / PAYLOAD_TOO_LARGE / etc.
  * - anything else → INTERNAL 500 (message scrubbed in production).
  */
+function safeHttpStatus(statusCode) {
+  return Number.isInteger(statusCode) && statusCode >= 400 && statusCode < 600 ? statusCode : 500;
+}
+
 export function errorMiddleware(err, req, res, next) {
   void req;
   if (res.headersSent) return next(err);
 
   if (err instanceof PlatformError) {
     return sendErrorEnvelope(res, {
-      status: err.statusCode ?? 500,
+      status: safeHttpStatus(err.statusCode ?? 500),
       code: err.code,
       type: err.type,
       message: err.message,
@@ -125,12 +129,8 @@ export function errorMiddleware(err, req, res, next) {
   }
 
   if (err instanceof ApiError) {
-    const status =
-      Number.isInteger(err.statusCode) && err.statusCode >= 400 && err.statusCode < 600
-        ? err.statusCode
-        : 500;
     return sendErrorEnvelope(res, {
-      status,
+      status: safeHttpStatus(err.statusCode),
       code: err.code,
       message: err.message,
       details: err.details,

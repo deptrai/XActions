@@ -23,8 +23,12 @@ function normalizeEmail(value) {
   if (domain === 'gmail.com') {
     local = local.split('+')[0].replace(/\./g, '');
   } else if (
-    domain === 'outlook.com' || domain === 'hotmail.com' || domain === 'live.com' ||
-    domain.startsWith('yahoo.') ||
+    // validator.js families: outlookdotcom (outlook.*, hotmail.*, live.*,
+    // msn.com, windowslive.com, passport.com), yahoo (yahoo.*, ymail.com,
+    // rocketmail.com), icloud (icloud.com, me.com, mac.com)
+    /^(outlook|hotmail|live)\./.test(domain) ||
+    domain === 'msn.com' || domain === 'windowslive.com' || domain === 'passport.com' ||
+    domain.startsWith('yahoo.') || domain === 'ymail.com' || domain === 'rocketmail.com' ||
     domain === 'icloud.com' || domain === 'me.com' || domain === 'mac.com'
   ) {
     local = local.split('+')[0];

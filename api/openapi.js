@@ -4266,8 +4266,11 @@ Free alternatives: Browser scripts, CLI, and Node.js library at https://xactions
  * It is NOT stripped when the field is real payload (e.g. save-session) —
  * detected by the op NOT declaring the `sessionCookie` security scheme.
  */
-function stripSessionCookieBodyProp(op) {
-  const schema = op.requestBody?.content?.['application/json']?.schema;
+function stripSessionCookieBodyProp(op, spec) {
+  let schema = op.requestBody?.content?.['application/json']?.schema;
+  if (schema?.$ref) {
+    schema = spec?.components?.schemas?.[schema.$ref.split('/').pop()];
+  }
   if (schema && typeof schema === 'object' && schema.properties?.sessionCookie) {
     delete schema.properties.sessionCookie;
     if (Array.isArray(schema.required)) {
@@ -4278,8 +4281,13 @@ function stripSessionCookieBodyProp(op) {
 }
 
 function declaresSessionCookieSecurity(op) {
-  return Array.isArray(op?.security) && op.security.some((s) => s && 'sessionCookie' in s);
+  return (
+    Array.isArray(op?.security) &&
+    op.security.some((s) => s !== null && typeof s === 'object' && 'sessionCookie' in s)
+  );
 }
+
+const HTTP_METHOD_KEYS = new Set(['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace']);
 
 /**
  * Normalization pass over one operation:
@@ -4288,16 +4296,16 @@ function declaresSessionCookieSecurity(op) {
  *   declares the `sessionCookie` security scheme)
  * - backfill a deterministic `operationId` when missing
  */
-function normalizeOperation(op, method, path, { literal = false } = {}) {
+function normalizeOperation(op, method, path, { literal = false, spec } = {}) {
   if (!op || typeof op !== 'object') return;
-  if (literal || declaresSessionCookieSecurity(op)) stripSessionCookieBodyProp(op);
+  if (literal || declaresSessionCookieSecurity(op)) stripSessionCookieBodyProp(op, spec);
   if (!op.operationId) op.operationId = deriveOperationId(method, path);
 }
 
 function normalizePathItem(path, pathItem, opts) {
-  for (const [method, op] of Object.entries(pathItem ?? {})) {
-    if (method === 'parameters' || method.startsWith('x-')) continue;
-    normalizeOperation(op, method, path, opts);
+  for (const method of Object.keys(pathItem ?? {})) {
+    if (!HTTP_METHOD_KEYS.has(method)) continue;
+    normalizeOperation(pathItem[method], method, path, opts);
   }
 }
 
@@ -4305,22 +4313,27 @@ function normalizePathItem(path, pathItem, opts) {
  * Merge registry-generated paths into the spec and normalize every operation.
  * Throws on a method+path collision between registry and literal ops.
  */
-function mergeAndNormalizePaths(specPaths, generatedPaths) {
+function mergeAndNormalizePaths(specPaths, generatedPaths, spec) {
   for (const [path, pathItem] of Object.entries(specPaths)) {
-    normalizePathItem(path, pathItem, { literal: true });
+    normalizePathItem(path, pathItem, { literal: true, spec });
   }
 
   for (const [path, pathItem] of Object.entries(generatedPaths ?? {})) {
-    normalizePathItem(path, pathItem, { literal: false });
+    normalizePathItem(path, pathItem, { literal: false, spec });
     if (!specPaths[path]) {
       specPaths[path] = pathItem;
       continue;
     }
-    for (const [method, op] of Object.entries(pathItem)) {
+    for (const method of Object.keys(pathItem)) {
+      if (!HTTP_METHOD_KEYS.has(method)) {
+        // PathItem-level keys (parameters, summary, x-*) merge without collision checks.
+        if (specPaths[path][method] === undefined) specPaths[path][method] = pathItem[method];
+        continue;
+      }
       if (specPaths[path][method]) {
         throw new Error(`OpenAPI merge collision: ${method.toUpperCase()} ${path} exists in both literal and registry sections`);
       }
-      specPaths[path][method] = op;
+      specPaths[path][method] = pathItem[method];
     }
   }
 }
@@ -4342,7 +4355,7 @@ function composeSpec(literalSpec) {
   const generatedSchemas = generated?.components?.schemas ?? {};
   spec.components.schemas = { ...spec.components.schemas, ...generatedSchemas };
 
-  mergeAndNormalizePaths(spec.paths, generated.paths);
+  mergeAndNormalizePaths(spec.paths, generated.paths, spec);
 
   return spec;
 }
