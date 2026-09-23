@@ -8,14 +8,12 @@
 import { AbstractPlatformResponseValidator } from '../../../core/platform-validator.js';
 
 const CHALLENGE_MARKERS = [
-  'just a moment',
-  'cloudflare',
-  'checking your browser',
+  'just a moment...',
+  'checking your browser before accessing',
   'verify you are human',
-  'captcha',
-  'challenge',
-  'access denied',
-  'attention required',
+  'attention required! | cloudflare',
+  'cf-browser-verification',
+  'access denied | pasgo',
 ];
 
 const PLATFORM_STRUCTURAL_MARKERS = {
@@ -90,6 +88,10 @@ export class FnbPlatformResponseValidator extends AbstractPlatformResponseValida
     if (status === 403) return true;
 
     const text = this.#getText(response);
+    // If text has significant length and clear F&B markers, it is a valid data payload
+    const hasData = text.length > 5000 && (text.includes('nhà hàng') || text.includes('quán ăn') || text.includes('schema.org'));
+    if (hasData) return false;
+
     return CHALLENGE_MARKERS.some((marker) => text.includes(marker));
   }
 

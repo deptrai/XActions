@@ -34,6 +34,7 @@ describe('Threads — Unauthenticated Guest Scraper E2E', () => {
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P0')}] ThreadsCrawler crawls public user timeline without login credentials`, async () => {
+
     const crawler = new ThreadsCrawler({
       requiresProxy: false,
     });
@@ -47,7 +48,7 @@ describe('Threads — Unauthenticated Guest Scraper E2E', () => {
     expect(first.platform).toBe('threads');
     expect(first.id).toMatch(/^threads:\d+/);
     expect(first.category).toBe('social');
-  });
+  }, 60000);
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] executes timeline crawl via unified scrape() dispatcher`, async () => {
     const res = await scrape('threads', 'user_feed', {
@@ -60,7 +61,7 @@ describe('Threads — Unauthenticated Guest Scraper E2E', () => {
     expect(Array.isArray(res.posts)).toBe(true);
     expect(res.posts.length).toBeGreaterThan(0);
     expect(res.posts[0].platform).toBe('threads');
-  });
+  }, 60000);
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] throws XACT_4001 when username is missing`, async () => {
     const crawler = new ThreadsCrawler({ requiresProxy: false });

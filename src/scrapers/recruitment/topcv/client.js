@@ -62,17 +62,35 @@ export class TopCvClient extends AbstractApiClient {
       ...(options.headers || {}),
     };
 
-    /** @type {any} */
-    const response = await this.request('GET', url, {
-      headers,
-      requiresAuth: false,
-      requiresProxy: this.requiresProxy,
-      ...options,
-    });
+    try {
+      /** @type {any} */
+      const response = await this.request('GET', url, {
+        headers,
+        requiresAuth: false,
+        requiresProxy: this.requiresProxy,
+        ...options,
+      });
 
-    if (typeof response === 'string') return response;
-    if (typeof response?.data === 'string') return response.data;
-    if (typeof response?.body === 'string') return response.body;
-    return String(response?.data || response?.body || '');
+      if (typeof response === 'string') return response;
+      if (typeof response?.data === 'string') return response.data;
+      if (typeof response?.body === 'string') return response.body;
+      return String(response?.data || response?.body || '');
+    } catch (err) {
+      // Automatic Cloudflare fallback via Stealth Browser
+      try {
+        const { createBrowser } = await import('../../browser.js');
+        const browser = await createBrowser({ headless: true });
+        try {
+          const page = await browser.newPage();
+          await page.setUserAgent(headers['User-Agent']);
+          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          return await page.content();
+        } finally {
+          await browser.close().catch(() => {});
+        }
+      } catch (browserErr) {
+        throw err;
+      }
+    }
   }
 }
