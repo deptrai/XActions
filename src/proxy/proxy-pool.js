@@ -521,6 +521,7 @@ export class ProxyIpPool {
       });
     }
 
+    const normalized = this.#normalize(proxy);
     if (normalized.host && normalized.host.includes('socksnode.com')) {
       return; // Do not quarantine rotating gateway
     }
