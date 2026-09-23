@@ -1,0 +1,1343 @@
+{
+  "platform": "threads",
+  "category": "social",
+  "niche": "ai",
+  "sampleSize": 10,
+  "generatedAt": "2026-09-23T07:34:05.733Z",
+  "viralRateThreshold": 0,
+  "hookTypeDistribution": {
+    "assertion": {
+      "count": 10,
+      "avgEngagement": 0,
+      "viralRate": 100
+    }
+  },
+  "topPerformingPatterns": [
+    {
+      "attributes": {
+        "emotionalTrigger": {
+          "type": "choice",
+          "choice": "anticipation",
+          "confidence": 0.61,
+          "probabilities": {
+            "greed": 0,
+            "none": 0.05,
+            "surprise": 0.02,
+            "anticipation": 0.67,
+            "anger": 0,
+            "fear": 0,
+            "joy": 0.04,
+            "trust": 0.22
+          }
+        },
+        "curiosityGap": {
+          "type": "noul",
+          "noul": 0.67
+        },
+        "hasNumbers": {
+          "type": "noul",
+          "noul": 0.05
+        },
+        "urgencyLevel": {
+          "type": "score",
+          "score": 0.8,
+          "confidence": 0.59,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.31,
+            "1": 0.58,
+            "2": 0.11,
+            "3": 0
+          }
+        },
+        "specificityLevel": {
+          "type": "score",
+          "score": 1.98,
+          "confidence": 0.76,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0,
+            "1": 0.12,
+            "2": 0.77,
+            "3": 0.11
+          }
+        },
+        "controversiality": {
+          "type": "score",
+          "score": 0.27,
+          "confidence": 0.73,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.75,
+            "1": 0.23,
+            "2": 0.02,
+            "3": 0
+          }
+        },
+        "hookType": {
+          "type": "choice",
+          "choice": "assertion",
+          "confidence": 0.94,
+          "probabilities": {
+            "story": 0,
+            "meta": 0,
+            "contrarian": 0,
+            "listicle": 0.01,
+            "other": 0.04,
+            "assertion": 0.95,
+            "howto": 0,
+            "question": 0
+          }
+        },
+        "evidenceType": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.6,
+          "probabilities": {
+            "data": 0,
+            "personalExperience": 0,
+            "none": 0.68,
+            "authority": 0.32,
+            "anecdote": 0
+          }
+        },
+        "threadDepth": {
+          "type": "score",
+          "score": 0.1,
+          "confidence": 0.9,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.92,
+            "1": 0.06,
+            "2": 0.02,
+            "3": 0
+          }
+        },
+        "metaReference": {
+          "type": "noul",
+          "noul": 0.9
+        },
+        "hasCallToAction": {
+          "type": "noul",
+          "noul": 0.95
+        }
+      },
+      "avgEngagement": 0,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "emotionalTrigger": {
+          "type": "choice",
+          "choice": "trust",
+          "confidence": 0.91,
+          "probabilities": {
+            "greed": 0,
+            "joy": 0,
+            "surprise": 0,
+            "anger": 0,
+            "fear": 0.01,
+            "none": 0.04,
+            "trust": 0.93,
+            "anticipation": 0.02
+          }
+        },
+        "curiosityGap": {
+          "type": "noul",
+          "noul": 0.49
+        },
+        "hasNumbers": {
+          "type": "noul",
+          "noul": 0.04
+        },
+        "urgencyLevel": {
+          "type": "score",
+          "score": 0.77,
+          "confidence": 0.62,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.31,
+            "1": 0.62,
+            "2": 0.07,
+            "3": 0
+          }
+        },
+        "specificityLevel": {
+          "type": "score",
+          "score": 0.76,
+          "confidence": 0.65,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.29,
+            "1": 0.66,
+            "2": 0.05,
+            "3": 0
+          }
+        },
+        "controversiality": {
+          "type": "score",
+          "score": 0.38,
+          "confidence": 0.62,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.64,
+            "1": 0.35,
+            "2": 0.01,
+            "3": 0
+          }
+        },
+        "hookType": {
+          "type": "choice",
+          "choice": "assertion",
+          "confidence": 0.48,
+          "probabilities": {
+            "other": 0.01,
+            "story": 0.02,
+            "listicle": 0,
+            "meta": 0.42,
+            "assertion": 0.54,
+            "question": 0,
+            "howto": 0.01,
+            "contrarian": 0
+          }
+        },
+        "evidenceType": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.29,
+          "probabilities": {
+            "authority": 0.33,
+            "personalExperience": 0.2,
+            "none": 0.44,
+            "anecdote": 0.03,
+            "data": 0
+          }
+        },
+        "threadDepth": {
+          "type": "score",
+          "score": 0.46,
+          "confidence": 0.54,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.63,
+            "1": 0.29,
+            "2": 0.08,
+            "3": 0
+          }
+        },
+        "metaReference": {
+          "type": "noul",
+          "noul": 0.92
+        },
+        "hasCallToAction": {
+          "type": "noul",
+          "noul": 0.15
+        }
+      },
+      "avgEngagement": 0,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "emotionalTrigger": {
+          "type": "choice",
+          "choice": "trust",
+          "confidence": 0.79,
+          "probabilities": {
+            "trust": 0.82,
+            "anger": 0,
+            "surprise": 0,
+            "greed": 0,
+            "none": 0.09,
+            "joy": 0,
+            "fear": 0.05,
+            "anticipation": 0.04
+          }
+        },
+        "curiosityGap": {
+          "type": "noul",
+          "noul": 0.34
+        },
+        "hasNumbers": {
+          "type": "noul",
+          "noul": 0.02
+        },
+        "urgencyLevel": {
+          "type": "score",
+          "score": 1.03,
+          "confidence": 0.57,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.2,
+            "1": 0.57,
+            "2": 0.23,
+            "3": 0
+          }
+        },
+        "specificityLevel": {
+          "type": "score",
+          "score": 1.02,
+          "confidence": 0.72,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.13,
+            "1": 0.72,
+            "2": 0.15,
+            "3": 0
+          }
+        },
+        "controversiality": {
+          "type": "score",
+          "score": 0.81,
+          "confidence": 0.68,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.25,
+            "1": 0.6900000000000001,
+            "2": 0.06,
+            "3": 0
+          }
+        },
+        "hookType": {
+          "type": "choice",
+          "choice": "assertion",
+          "confidence": 0.99,
+          "probabilities": {
+            "question": 0,
+            "assertion": 0.99,
+            "contrarian": 0.01,
+            "listicle": 0,
+            "story": 0,
+            "howto": 0,
+            "other": 0,
+            "meta": 0
+          }
+        },
+        "evidenceType": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.99,
+          "probabilities": {
+            "data": 0,
+            "anecdote": 0,
+            "none": 0.99,
+            "personalExperience": 0.01,
+            "authority": 0
+          }
+        },
+        "threadDepth": {
+          "type": "score",
+          "score": 1.22,
+          "confidence": 0.54,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.12,
+            "1": 0.55,
+            "2": 0.33,
+            "3": 0
+          }
+        },
+        "metaReference": {
+          "type": "noul",
+          "noul": 0.3
+        },
+        "hasCallToAction": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      },
+      "avgEngagement": 0,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "emotionalTrigger": {
+          "type": "choice",
+          "choice": "trust",
+          "confidence": 0.9,
+          "probabilities": {
+            "trust": 0.92,
+            "surprise": 0,
+            "greed": 0,
+            "none": 0,
+            "anger": 0,
+            "fear": 0.07,
+            "anticipation": 0,
+            "joy": 0.01
+          }
+        },
+        "curiosityGap": {
+          "type": "noul",
+          "noul": 0.5
+        },
+        "hasNumbers": {
+          "type": "noul",
+          "noul": 0.08
+        },
+        "urgencyLevel": {
+          "type": "score",
+          "score": 0.89,
+          "confidence": 0.64,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.23,
+            "1": 0.65,
+            "2": 0.12,
+            "3": 0
+          }
+        },
+        "specificityLevel": {
+          "type": "score",
+          "score": 1.88,
+          "confidence": 0.77,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0,
+            "1": 0.17,
+            "2": 0.78,
+            "3": 0.05
+          }
+        },
+        "controversiality": {
+          "type": "score",
+          "score": 0.71,
+          "confidence": 0.63,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.33,
+            "1": 0.63,
+            "2": 0.04,
+            "3": 0
+          }
+        },
+        "hookType": {
+          "type": "choice",
+          "choice": "assertion",
+          "confidence": 0.81,
+          "probabilities": {
+            "howto": 0,
+            "contrarian": 0.02,
+            "meta": 0.06,
+            "question": 0,
+            "listicle": 0,
+            "story": 0.09,
+            "other": 0,
+            "assertion": 0.83
+          }
+        },
+        "evidenceType": {
+          "type": "choice",
+          "choice": "anecdote",
+          "confidence": 0.64,
+          "probabilities": {
+            "none": 0.02,
+            "anecdote": 0.71,
+            "authority": 0.06,
+            "data": 0,
+            "personalExperience": 0.21
+          }
+        },
+        "threadDepth": {
+          "type": "score",
+          "score": 0.86,
+          "confidence": 0.47,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.33,
+            "1": 0.49,
+            "2": 0.18,
+            "3": 0
+          }
+        },
+        "metaReference": {
+          "type": "noul",
+          "noul": 0.91
+        },
+        "hasCallToAction": {
+          "type": "noul",
+          "noul": 0.05
+        }
+      },
+      "avgEngagement": 0,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "emotionalTrigger": {
+          "type": "choice",
+          "choice": "anticipation",
+          "confidence": 0.53,
+          "probabilities": {
+            "joy": 0.04,
+            "none": 0.01,
+            "fear": 0,
+            "trust": 0.14,
+            "greed": 0.19,
+            "anger": 0,
+            "surprise": 0.02,
+            "anticipation": 0.6
+          }
+        },
+        "curiosityGap": {
+          "type": "noul",
+          "noul": 0.82
+        },
+        "hasNumbers": {
+          "type": "noul",
+          "noul": 0.98
+        },
+        "urgencyLevel": {
+          "type": "score",
+          "score": 0.18,
+          "confidence": 0.82,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.82,
+            "1": 0.17,
+            "2": 0.01,
+            "3": 0
+          }
+        },
+        "specificityLevel": {
+          "type": "score",
+          "score": 1.77,
+          "confidence": 0.7,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.01,
+            "1": 0.25,
+            "2": 0.7,
+            "3": 0.04
+          }
+        },
+        "controversiality": {
+          "type": "score",
+          "score": 0.38,
+          "confidence": 0.62,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.65,
+            "1": 0.33,
+            "2": 0.02,
+            "3": 0
+          }
+        },
+        "hookType": {
+          "type": "choice",
+          "choice": "assertion",
+          "confidence": 0.94,
+          "probabilities": {
+            "howto": 0,
+            "assertion": 0.95,
+            "meta": 0,
+            "listicle": 0,
+            "story": 0,
+            "question": 0,
+            "contrarian": 0,
+            "other": 0.05
+          }
+        },
+        "evidenceType": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.71,
+          "probabilities": {
+            "authority": 0.01,
+            "data": 0.22,
+            "personalExperience": 0,
+            "none": 0.77,
+            "anecdote": 0
+          }
+        },
+        "threadDepth": {
+          "type": "score",
+          "score": 0.52,
+          "confidence": 0.48,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.6,
+            "1": 0.29,
+            "2": 0.11,
+            "3": 0
+          }
+        },
+        "metaReference": {
+          "type": "noul",
+          "noul": 0.49
+        },
+        "hasCallToAction": {
+          "type": "noul",
+          "noul": 0.12
+        }
+      },
+      "avgEngagement": 0,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "emotionalTrigger": {
+          "type": "choice",
+          "choice": "anticipation",
+          "confidence": 0.64,
+          "probabilities": {
+            "trust": 0.03,
+            "anticipation": 0.6799999999999999,
+            "joy": 0.03,
+            "fear": 0,
+            "greed": 0,
+            "surprise": 0.14,
+            "anger": 0,
+            "none": 0.12
+          }
+        },
+        "curiosityGap": {
+          "type": "noul",
+          "noul": 0.77
+        },
+        "hasNumbers": {
+          "type": "noul",
+          "noul": 0.09
+        },
+        "urgencyLevel": {
+          "type": "score",
+          "score": 0.55,
+          "confidence": 0.45,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.51,
+            "1": 0.42,
+            "2": 0.07,
+            "3": 0
+          }
+        },
+        "specificityLevel": {
+          "type": "score",
+          "score": 2.51,
+          "confidence": 0.51,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0,
+            "1": 0.01,
+            "2": 0.47,
+            "3": 0.52
+          }
+        },
+        "controversiality": {
+          "type": "score",
+          "score": 0.01,
+          "confidence": 0.99,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        },
+        "hookType": {
+          "type": "choice",
+          "choice": "assertion",
+          "confidence": 0.99,
+          "probabilities": {
+            "story": 0,
+            "listicle": 0,
+            "contrarian": 0,
+            "question": 0,
+            "meta": 0,
+            "howto": 0,
+            "other": 0,
+            "assertion": 1
+          }
+        },
+        "evidenceType": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.46,
+          "probabilities": {
+            "authority": 0.42,
+            "personalExperience": 0,
+            "anecdote": 0,
+            "none": 0.57,
+            "data": 0.01
+          }
+        },
+        "threadDepth": {
+          "type": "score",
+          "score": 0.19,
+          "confidence": 0.81,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.85,
+            "1": 0.11,
+            "2": 0.04,
+            "3": 0
+          }
+        },
+        "metaReference": {
+          "type": "noul",
+          "noul": 0.17
+        },
+        "hasCallToAction": {
+          "type": "noul",
+          "noul": 0.07
+        }
+      },
+      "avgEngagement": 0,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "emotionalTrigger": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.85,
+          "probabilities": {
+            "greed": 0,
+            "trust": 0.07,
+            "anger": 0,
+            "fear": 0,
+            "surprise": 0.03,
+            "anticipation": 0.03,
+            "none": 0.87,
+            "joy": 0
+          }
+        },
+        "curiosityGap": {
+          "type": "noul",
+          "noul": 0.75
+        },
+        "hasNumbers": {
+          "type": "noul",
+          "noul": 0.04
+        },
+        "urgencyLevel": {
+          "type": "score",
+          "score": 0.04,
+          "confidence": 0.96,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.97,
+            "1": 0.03,
+            "2": 0,
+            "3": 0
+          }
+        },
+        "specificityLevel": {
+          "type": "score",
+          "score": 1.72,
+          "confidence": 0.66,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.01,
+            "1": 0.28,
+            "2": 0.67,
+            "3": 0.03
+          }
+        },
+        "controversiality": {
+          "type": "score",
+          "score": 0.03,
+          "confidence": 0.97,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.98,
+            "1": 0.02,
+            "2": 0,
+            "3": 0
+          }
+        },
+        "hookType": {
+          "type": "choice",
+          "choice": "assertion",
+          "confidence": 0.99,
+          "probabilities": {
+            "meta": 0,
+            "contrarian": 0,
+            "assertion": 1,
+            "howto": 0,
+            "listicle": 0,
+            "other": 0,
+            "question": 0,
+            "story": 0
+          }
+        },
+        "evidenceType": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.98,
+          "probabilities": {
+            "none": 0.99,
+            "personalExperience": 0,
+            "data": 0.01,
+            "anecdote": 0,
+            "authority": 0
+          }
+        },
+        "threadDepth": {
+          "type": "score",
+          "score": 0.78,
+          "confidence": 0.22,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.43,
+            "1": 0.38,
+            "2": 0.19,
+            "3": 0
+          }
+        },
+        "metaReference": {
+          "type": "noul",
+          "noul": 0.47
+        },
+        "hasCallToAction": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      },
+      "avgEngagement": 0,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "emotionalTrigger": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.4,
+          "probabilities": {
+            "fear": 0,
+            "greed": 0,
+            "anger": 0,
+            "anticipation": 0.25,
+            "trust": 0.2,
+            "joy": 0.01,
+            "none": 0.48,
+            "surprise": 0.06
+          }
+        },
+        "curiosityGap": {
+          "type": "noul",
+          "noul": 0.69
+        },
+        "hasNumbers": {
+          "type": "noul",
+          "noul": 0.31
+        },
+        "urgencyLevel": {
+          "type": "score",
+          "score": 0.38,
+          "confidence": 0.62,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.63,
+            "1": 0.35,
+            "2": 0.02,
+            "3": 0
+          }
+        },
+        "specificityLevel": {
+          "type": "score",
+          "score": 2.81,
+          "confidence": 0.81,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0,
+            "1": 0,
+            "2": 0.18,
+            "3": 0.8200000000000001
+          }
+        },
+        "controversiality": {
+          "type": "score",
+          "score": 0.15,
+          "confidence": 0.85,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.86,
+            "1": 0.14,
+            "2": 0,
+            "3": 0
+          }
+        },
+        "hookType": {
+          "type": "choice",
+          "choice": "assertion",
+          "confidence": 0.96,
+          "probabilities": {
+            "howto": 0,
+            "contrarian": 0,
+            "story": 0,
+            "question": 0,
+            "assertion": 0.97,
+            "meta": 0.02,
+            "other": 0.01,
+            "listicle": 0
+          }
+        },
+        "evidenceType": {
+          "type": "choice",
+          "choice": "authority",
+          "confidence": 0.66,
+          "probabilities": {
+            "data": 0.01,
+            "none": 0.23,
+            "personalExperience": 0.01,
+            "authority": 0.72,
+            "anecdote": 0.03
+          }
+        },
+        "threadDepth": {
+          "type": "score",
+          "score": 0.08,
+          "confidence": 0.92,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.93,
+            "1": 0.05,
+            "2": 0.01,
+            "3": 0
+          }
+        },
+        "metaReference": {
+          "type": "noul",
+          "noul": 0.96
+        },
+        "hasCallToAction": {
+          "type": "noul",
+          "noul": 0.14
+        }
+      },
+      "avgEngagement": 0,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "emotionalTrigger": {
+          "type": "choice",
+          "choice": "anticipation",
+          "confidence": 0.86,
+          "probabilities": {
+            "greed": 0,
+            "trust": 0.01,
+            "none": 0.08,
+            "surprise": 0.01,
+            "anticipation": 0.88,
+            "fear": 0,
+            "joy": 0.02,
+            "anger": 0
+          }
+        },
+        "curiosityGap": {
+          "type": "noul",
+          "noul": 0.65
+        },
+        "hasNumbers": {
+          "type": "noul",
+          "noul": 0.08
+        },
+        "urgencyLevel": {
+          "type": "score",
+          "score": 0.65,
+          "confidence": 0.54,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.41,
+            "1": 0.54,
+            "2": 0.05,
+            "3": 0
+          }
+        },
+        "specificityLevel": {
+          "type": "score",
+          "score": 2.27,
+          "confidence": 0.62,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0,
+            "1": 0.05,
+            "2": 0.63,
+            "3": 0.32
+          }
+        },
+        "controversiality": {
+          "type": "score",
+          "score": 0.04,
+          "confidence": 0.96,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.96,
+            "1": 0.04,
+            "2": 0,
+            "3": 0
+          }
+        },
+        "hookType": {
+          "type": "choice",
+          "choice": "assertion",
+          "confidence": 0.53,
+          "probabilities": {
+            "assertion": 0.59,
+            "question": 0,
+            "story": 0,
+            "howto": 0.38,
+            "meta": 0.01,
+            "contrarian": 0,
+            "other": 0.02,
+            "listicle": 0
+          }
+        },
+        "evidenceType": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.66,
+          "probabilities": {
+            "anecdote": 0,
+            "data": 0,
+            "authority": 0.27,
+            "none": 0.73,
+            "personalExperience": 0
+          }
+        },
+        "threadDepth": {
+          "type": "score",
+          "score": 0.07,
+          "confidence": 0.93,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.94,
+            "1": 0.05,
+            "2": 0.01,
+            "3": 0
+          }
+        },
+        "metaReference": {
+          "type": "noul",
+          "noul": 0.9
+        },
+        "hasCallToAction": {
+          "type": "noul",
+          "noul": 0.93
+        }
+      },
+      "avgEngagement": 0,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "emotionalTrigger": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.88,
+          "probabilities": {
+            "none": 0.9,
+            "anticipation": 0.05,
+            "greed": 0,
+            "fear": 0,
+            "anger": 0,
+            "joy": 0,
+            "surprise": 0,
+            "trust": 0.05
+          }
+        },
+        "curiosityGap": {
+          "type": "noul",
+          "noul": 0.63
+        },
+        "hasNumbers": {
+          "type": "noul",
+          "noul": 0.03
+        },
+        "urgencyLevel": {
+          "type": "score",
+          "score": 0.03,
+          "confidence": 0.97,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.97,
+            "1": 0.03,
+            "2": 0,
+            "3": 0
+          }
+        },
+        "specificityLevel": {
+          "type": "score",
+          "score": 1.23,
+          "confidence": 0.63,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.07,
+            "1": 0.64,
+            "2": 0.29,
+            "3": 0
+          }
+        },
+        "controversiality": {
+          "type": "score",
+          "score": 0,
+          "confidence": 1,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 1,
+            "1": 0,
+            "2": 0,
+            "3": 0
+          }
+        },
+        "hookType": {
+          "type": "choice",
+          "choice": "assertion",
+          "confidence": 0.91,
+          "probabilities": {
+            "question": 0,
+            "other": 0,
+            "contrarian": 0,
+            "meta": 0.02,
+            "howto": 0.05,
+            "story": 0,
+            "assertion": 0.93,
+            "listicle": 0
+          }
+        },
+        "evidenceType": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 1,
+          "probabilities": {
+            "personalExperience": 0,
+            "data": 0,
+            "none": 1,
+            "anecdote": 0,
+            "authority": 0
+          }
+        },
+        "threadDepth": {
+          "type": "score",
+          "score": 0.32,
+          "confidence": 0.68,
+          "legend": {
+            "0": "minimal / none",
+            "1": "low / mild",
+            "2": "moderate / clear",
+            "3": "high / extreme"
+          },
+          "probabilities": {
+            "0": 0.77,
+            "1": 0.16,
+            "2": 0.07,
+            "3": 0
+          }
+        },
+        "metaReference": {
+          "type": "noul",
+          "noul": 0.42
+        },
+        "hasCallToAction": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      },
+      "avgEngagement": 0,
+      "count": 1
+    }
+  ],
+  "attributeCorrelations": {
+    "hookType": 0,
+    "hasNumbers": 0,
+    "emotionalTrigger": 0,
+    "curiosityGap": 0
+  }
+}

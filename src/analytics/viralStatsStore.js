@@ -93,14 +93,17 @@ function calculateViralThreshold(profiles) {
  * @param {string} niche
  * @returns {ViralStats}
  */
-export function aggregateStats(profiles, platform, niche) {
+export function aggregateStats(profiles, platformArg, nicheArg) {
+  const platform = typeof platformArg === 'object' && platformArg ? platformArg.platform : platformArg;
+  const niche = typeof platformArg === 'object' && platformArg ? platformArg.niche : nicheArg;
   const category = getPlatformCategory(platform);
   const viralThreshold = calculateViralThreshold(profiles);
   
-  // Group by hookType
+  // Group by hookType (unwrap choice if object)
   const hookGroups = {};
   for (const profile of profiles) {
-    const hookType = profile.viralDNA?.hookType || 'unknown';
+    const rawHook = profile.viralDNA?.hookType;
+    const hookType = typeof rawHook === 'object' && rawHook?.choice ? rawHook.choice : (rawHook || 'unknown');
     if (!hookGroups[hookType]) {
       hookGroups[hookType] = [];
     }
@@ -193,11 +196,13 @@ export function aggregateStats(profiles, platform, niche) {
  * @param {string} niche
  * @returns {Promise<string>} Output file path
  */
-export async function saveStats(stats, platform, niche) {
+export async function saveStats(stats, platformArg, nicheArg) {
   // Validate schema
   const validated = ViralStatsSchema.parse(stats);
   
-  const category = getPlatformCategory(platform);
+  const platform = platformArg || stats.platform;
+  const niche = nicheArg || stats.niche;
+  const category = stats.category || getPlatformCategory(platform);
   const normalizedNiche = normalizeNiche(niche);
   const date = new Date().toISOString().split('T')[0];
   

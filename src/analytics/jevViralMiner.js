@@ -349,6 +349,17 @@ export async function viralMine(params, options = {}) {
   
   // Save corpus
   const outputPath = await saveCorpus(profiles, platform, niche);
+
+  // Aggregate and save stats
+  let stats = null;
+  let statsPath = null;
+  try {
+    const { aggregateStats, saveStats } = await import('./viralStatsStore.js');
+    stats = aggregateStats(profiles, platform, niche);
+    statsPath = await saveStats(stats, platform, niche);
+  } catch (err) {
+    console.warn(`[viralMine] Stats aggregation failed: ${err.message}`);
+  }
   
   const durationMs = Date.now() - startTime;
   const cost = estimateCost(posts.length);
@@ -361,6 +372,8 @@ export async function viralMine(params, options = {}) {
     scraped: posts.length,
     classified: profiles.length,
     profiles,
+    stats,
+    statsPath,
     cost,
     outputPath,
     durationMs,
