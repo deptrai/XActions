@@ -119,7 +119,10 @@ async function getScraper(platform) {
     if (!ScraperClass) {
       throw new Error(`Class ${config.class} not found in ${config.module}`);
     }
-    return new ScraperClass();
+    const scraperOptions = platform === 'threads' 
+      ? { client: 'curl', requiresProxy: true, requiresResidential: true } 
+      : {};
+    return new ScraperClass(scraperOptions);
   } catch (err) {
     throw new Error(`Failed to load scraper for ${platform}: ${err.message}`);
   }
@@ -145,6 +148,39 @@ async function scrapePosts(platform, niche, count, options = {}) {
   }
   
   try {
+    // Platform-specific dispatch with smart fallback
+    if (platform === 'threads') {
+      const cleanTarget = niche.replace(/^@/, '').trim();
+      // If niche looks like a username or search docId is missing/fails, fetch user feed
+      if (niche.startsWith('@')) {
+        const feed = await scraper.getUserFeed({ username: cleanTarget, count });
+        return feed?.posts || [];
+      }
+      try {
+        const results = await scraper.search({ query: niche, limit: count });
+        const posts = Array.isArray(results) ? results : results?.items || results?.posts || [];
+        if (posts.length > 0) return posts;
+      } catch (err) {
+        console.warn(`[Threads] search fallback triggered: ${err.message}`);
+      }
+      // Niche creator fallback map for public guest scraping
+      const NICHE_CREATORS = {
+        tech: ['mosseri', 'zuck'],
+        technology: ['mosseri', 'zuck'],
+        fashion: ['chaubui_'],
+        lifestyle: ['chaubui_'],
+      };
+      const creators = NICHE_CREATORS[cleanTarget.toLowerCase()] || ['mosseri'];
+      const collected = [];
+      for (const creator of creators) {
+        try {
+          const feed = await scraper.getUserFeed({ username: creator, count: Math.ceil(count / creators.length) });
+          if (feed?.posts?.length) collected.push(...feed.posts);
+        } catch {}
+      }
+      return collected;
+    }
+
     // Call platform-specific search method
     const results = await scraper[config.method]({
       query: niche,
@@ -178,7 +214,7 @@ async function classifyPosts(posts, platform, options = {}) {
   // Prepare batch requests
   const requests = posts.map((post, index) => ({
     state: {
-      text: post.text || post.title || post.description || '',
+      text: post.content || post.text || post.title || post.description || '',
       platform,
       category,
       metrics: post.metrics || {},
@@ -207,7 +243,7 @@ async function classifyPosts(posts, platform, options = {}) {
     platform,
     category,
     niche: post.niche || '',
-    text: post.text || post.title || post.description || '',
+    text: post.content || post.text || post.title || post.description || '',
     metrics: post.metrics || {},
     viralDNA: results[index]?.answers || {},
     jevDegraded: results[index]?.meta?.degraded || false,

@@ -401,6 +401,10 @@ export class AbstractApiClient {
    */
   quarantineProxy(proxy, durationMs) {
     if (!proxy) return;
+    // Rotating proxy gateways (e.g. SocksNode) rotate IP per connection.
+    // Quarantining the gateway on a single transient node failure exhausts the pool.
+    const host = typeof proxy === 'string' ? proxy : (proxy.host || proxy.hostname || '');
+    if (host.includes('socksnode.com')) return;
     const provider = this.proxyProvider || this.proxyPool;
     if (provider && typeof provider.quarantine === 'function') {
       try {
@@ -424,6 +428,10 @@ export class AbstractApiClient {
    * @returns {Promise<Function>}
    */
   async #getDefaultHttpClient() {
+    if (this.client === 'curl') {
+      const { createCurlTransport } = await import('./curl-transport.js');
+      return createCurlTransport(this.platform);
+    }
     if (this.client === 'got') {
       const { gotScraping } = await import('got-scraping');
       return async (/** @type {Record<string, any>} */ reqOpts) => {

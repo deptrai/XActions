@@ -521,6 +521,9 @@ export class ProxyIpPool {
       });
     }
 
+    if (normalized.host && normalized.host.includes('socksnode.com')) {
+      return; // Do not quarantine rotating gateway
+    }
     this.#quarantined.set(key, Date.now() + durationMs);
 
     // Remove any sticky bindings using this proxy.

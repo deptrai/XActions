@@ -77,7 +77,9 @@ export class ThreadsCrawler extends AbstractCrawler {
   constructor(deps = {}) {
     const { client: explicitClient, ...clientDeps } = deps;
     const client = /** @type {ThreadsClient & import('../../../core/base-crawler.js').ClientLike} */ (
-      explicitClient || new ThreadsClient(clientDeps)
+      typeof explicitClient === 'string'
+        ? new ThreadsClient({ client: explicitClient, ...clientDeps })
+        : (explicitClient || new ThreadsClient(clientDeps))
     );
     super({
       client,

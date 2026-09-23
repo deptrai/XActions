@@ -131,10 +131,30 @@ export class JevBrain {
 
     const model = options.model || this.model;
     const timeoutMs = options.timeoutMs || this.timeoutMs;
+    
+    // Normalize questions schema for TypeSafe Jev API
+    const normalizedQuestions = {};
+    for (const [k, q] of Object.entries(questions)) {
+      if (!q || typeof q !== 'object') continue;
+      const clone = { ...q };
+      if (clone.type === 'choice') {
+        if (!clone.criteria && Array.isArray(clone.options)) {
+          clone.criteria = Object.fromEntries(clone.options.map((opt) => [opt, opt]));
+        } else if (Array.isArray(clone.criteria)) {
+          clone.criteria = Object.fromEntries(clone.criteria.map((opt) => [opt, opt]));
+        }
+      } else if (clone.type === 'score') {
+        if (!clone.criteria || !Array.isArray(clone.criteria) || clone.criteria.length === 0) {
+          clone.criteria = ['minimal / none', 'low / mild', 'moderate / clear', 'high / extreme'];
+        }
+      }
+      normalizedQuestions[k] = clone;
+    }
+
     const body = {
       state,
       model,
-      questions,
+      questions: normalizedQuestions,
     };
 
     let lastError = null;
