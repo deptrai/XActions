@@ -1277,7 +1277,7 @@ export class AbstractApiClient {
               });
             }
 
-            if (typeof this.responseValidator.isLoginWall === 'function' && this.responseValidator.isLoginWall(response)) {
+            if (!skipResponseValidation && typeof this.responseValidator.isLoginWall === 'function' && this.responseValidator.isLoginWall(response)) {
               if (effectiveRequiresAuth) {
                 throw new AuthSessionExpiredError({
                   code: 'XACT_4010',
