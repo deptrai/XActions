@@ -165,8 +165,11 @@ async function scrapePosts(platform, niche, count, options = {}) {
       }
       // Niche creator fallback map for public guest scraping
       const NICHE_CREATORS = {
-        tech: ['mosseri', 'zuck'],
-        technology: ['mosseri', 'zuck'],
+        ai: ['zuck', 'yannlecun', 'mosseri'],
+        'artificial-intelligence': ['zuck', 'yannlecun', 'mosseri'],
+        'ai-tech': ['zuck', 'yannlecun', 'mosseri'],
+        tech: ['zuck', 'mosseri'],
+        technology: ['zuck', 'mosseri'],
         fashion: ['chaubui_'],
         lifestyle: ['chaubui_'],
       };
@@ -174,11 +177,21 @@ async function scrapePosts(platform, niche, count, options = {}) {
       const collected = [];
       for (const creator of creators) {
         try {
-          const feed = await scraper.getUserFeed({ username: creator, count: Math.ceil(count / creators.length) });
+          const feed = await scraper.getUserFeed({ username: creator, count: Math.max(10, count) });
           if (feed?.posts?.length) collected.push(...feed.posts);
         } catch {}
       }
-      return collected;
+      // If niche is AI, prioritize posts discussing AI/models/agents/intelligence
+      const isAiNiche = /\b(ai|artificial intelligence|machine learning|llm|model|agent)\b/i.test(cleanTarget);
+      if (isAiNiche && collected.length > 0) {
+        const aiKeywords = /\b(ai|meta ai|llama|agent|agents|model|models|intelligence|compute|algorithm|robot|learning|tech|app)\b/i;
+        collected.sort((a, b) => {
+          const aMatch = aiKeywords.test(a.content || a.text || '') ? 1 : 0;
+          const bMatch = aiKeywords.test(b.content || b.text || '') ? 1 : 0;
+          return bMatch - aMatch;
+        });
+      }
+      return collected.slice(0, count);
     }
 
     // Call platform-specific search method
