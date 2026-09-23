@@ -2,7 +2,7 @@
 title: 'Story 46.2 — Zod Schemas & Uniform Response Envelopes (Foundation + Pilot)'
 type: 'feature'
 created: '2026-09-24'
-status: 'in-review'
+status: 'done'
 baseline_commit: '666e5bfc09a9e079e5ccc90c56f5e4a3fca323a3'
 route: 'dispatch'
 review_loop_iteration: 1
@@ -155,6 +155,8 @@ context:
 **Deferred (pre-existing, logged in `deferred-work.md`):** dev-fallback makes `requireSession` 401 unreachable; in-memory job session storage; plugin routes mounted after global 404; discovery CORS divergence across serverless/worker; worker preflight missing new canonical headers; `viral-miner.js` sends no session transport; stale `pnpm-lock.yaml`.
 
 **False:** `ViralSessionHeaders` optional is correct — a required header schema would 400 legacy body-transport clients at the validate layer (dual transport ⇒ neither is individually required; the `sessionCookie` security scheme advertises the requirement).
+
+**Loop-1 delta re-review (commit `76f88f33`):** 8 low findings, all patched — shared `safeHttpStatus` for PlatformError branch, normalizeEmail covers full validator.js domain families, `$ref` resolution in `stripSessionCookieBodyProp`, merge loop filters non-method keys (no phantom operationId on pathItem-level keys), `typeof` guard on security entries, cursor test scoped to seeded `targetKey` prefix with cleanup, `viral-miner` error fallback only stringifies strings. Remaining note: `emittedOperationIds` throw-at-load is the intended guard; a future lazy re-registration caller would need a reset hook.
 
 ## Design Notes
 

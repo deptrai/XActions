@@ -307,9 +307,15 @@ epic-46:
       status: backlog
     - id: 46.2
       name: Zod Schemas & Uniform Response Envelopes
-      status: backlog
+      status: done
     - id: 46.3
       name: CLI Generator for TypeScript API Client
+      status: backlog
+    - id: 46.4
+      name: Contract Rollout — Social & User-Facing Mounts
+      status: backlog
+    - id: 46.5
+      name: Contract Rollout — Data, Ops & Admin Mounts
       status: backlog
 
 # Epic 47: Next.js Modern Frontend Application
