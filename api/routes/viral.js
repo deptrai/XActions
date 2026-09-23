@@ -279,6 +279,20 @@ router.post('/backtest', requireSession, async (req, res) => {
     };
     
     backtestReports.set(reportId, report);
+
+    // Run backtest in background
+    (async () => {
+      try {
+        const { runBacktest } = await import('../../src/analytics/jevBacktest.js');
+        report.status = 'running';
+        const result = await runBacktest({ platform, niche, days }, { session: req.session });
+        report.status = 'completed';
+        report.result = result;
+      } catch (e) {
+        report.status = 'failed';
+        report.error = e.message;
+      }
+    })();
     
     res.json({
       success: true,

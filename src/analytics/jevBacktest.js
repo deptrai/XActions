@@ -43,11 +43,27 @@ async function fetchOwnPosts(platform, days, options = {}) {
     return mockPosts;
   }
   
+  // Check for local corpus files first to backtest offline
+  try {
+    const dir = 'data/viral-corpus';
+    const files = await fs.readdir(dir).catch(() => []);
+    const matches = files.filter(f => f.includes(`-${platform}-`)).sort().reverse();
+    for (const match of matches) {
+      try {
+        const content = await fs.readFile(path.join(dir, match), 'utf8');
+        const posts = JSON.parse(content);
+        if (Array.isArray(posts) && posts.length >= 10) {
+          return posts;
+        }
+      } catch {}
+    }
+  } catch {}
+
   // Platform-specific fetch logic
   const scraperMap = {
     twitter: { module: '../scrapers/social/twitter/crawler.js', class: 'TwitterCrawler', method: 'profile' },
+    threads: { module: '../scrapers/social/threads/crawler.js', class: 'ThreadsCrawler', method: 'getUserFeed' },
     linkedin: { module: '../scrapers/recruitment/linkedin/crawler.js', class: 'LinkedInCrawler', method: 'leadProfile' },
-    // ... other platforms
   };
   
   const config = scraperMap[platform];
@@ -58,13 +74,16 @@ async function fetchOwnPosts(platform, days, options = {}) {
   try {
     const module = await import(config.module);
     const ScraperClass = module[config.class];
-    const scraper = new ScraperClass();
+    const scraper = new ScraperClass(platform === 'threads' ? { client: 'curl', requiresProxy: true, requiresResidential: true } : {});
     
     if (typeof scraper.init === 'function') {
       await scraper.init(session);
     }
     
-    const posts = await scraper[config.method]({ days });
+    const args = platform === 'threads'
+      ? { username: options.username || 'mosseri', count: 20 }
+      : { days };
+    const posts = await scraper[config.method](args);
     
     if (typeof scraper.cleanup === 'function') {
       await scraper.cleanup();
@@ -108,7 +127,8 @@ function calculateMetrics(predictions, actuals) {
 function groupByHookType(posts) {
   const groups = {};
   for (const post of posts) {
-    const hookType = post.viralDNA?.hookType || 'unknown';
+    const rawHook = post.viralDNA?.hookType;
+    const hookType = typeof rawHook === 'object' && rawHook?.choice ? rawHook.choice : (rawHook || 'unknown');
     if (!groups[hookType]) {
       groups[hookType] = { predicted: 0, actual: 0, posts: [] };
     }

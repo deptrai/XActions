@@ -45,8 +45,8 @@ export function calculateViralScore(post, viralStats) {
   let score = 50; // Base score
   
   // Hook type bonus
-  const hookType = viralDNA.hookType;
-  if (hookType && hookTypeDistribution[hookType]) {
+  const hookType = typeof viralDNA.hookType === 'object' ? viralDNA.hookType?.choice : viralDNA.hookType;
+  if (hookType && hookTypeDistribution && hookTypeDistribution[hookType]) {
     const viralRate = hookTypeDistribution[hookType].viralRate || 0;
     score += viralRate * 10; // Up to +30 for high viral rate
   }
