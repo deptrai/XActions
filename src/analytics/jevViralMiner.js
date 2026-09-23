@@ -151,10 +151,18 @@ async function scrapePosts(platform, niche, count, options = {}) {
     // Platform-specific dispatch with smart fallback
     if (platform === 'threads') {
       const cleanTarget = niche.replace(/^@/, '').trim();
-      // If niche looks like a username or search docId is missing/fails, fetch user feed
+      // If niche looks like a username or search docId is missing/fails, fetch user feed with resilient retries
       if (niche.startsWith('@')) {
-        const feed = await scraper.getUserFeed({ username: cleanTarget, count });
-        return feed?.posts || [];
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            const feed = await scraper.getUserFeed({ username: cleanTarget, count });
+            if (feed?.posts?.length) return feed.posts;
+          } catch (err) {
+            if (attempt === 3) throw err;
+            await new Promise(r => setTimeout(r, 2000 * attempt));
+          }
+        }
+        return [];
       }
       try {
         const results = await scraper.search({ query: niche, limit: count });
