@@ -103,6 +103,12 @@ import { globalSelectorCanary } from '../src/services/selector-canary.js';
 import { defaultHealthTierCache } from '../src/benchmark/health-tier-cache.js';
 import { defaultWebhookDispatcher } from '../src/streaming/outbound-webhook-dispatcher.js';
 import aiDetectorMiddleware from './middleware/ai-detector.js';
+import {
+  envelopeMiddleware,
+  errorMiddleware,
+  notFoundHandler,
+  rateLimitedHandler,
+} from './middleware/envelope.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
 import { generateSpec as generateOpenAPISpec, generateWellKnown as generateX402WellKnown } from './openapi.js';
 
@@ -159,10 +165,16 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
+// Story 46.2 — install canonical envelope helpers (res.sendData/res.sendPage)
+// before body parsers so handlers can use them even when a parser errors.
+app.use(envelopeMiddleware);
+
+// Rate limiting — every limiter emits the canonical RATE_LIMITED envelope
+// through the error middleware (Story 46.2).
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development' ? 10000 : 500, // Higher ceiling for local dev/testing/admin polling
+  handler: rateLimitedHandler,
   skip: (/** @type {import('express').Request} */ req) => req.path.startsWith('/admin') || req.path.startsWith('/governor')
 });
 app.use('/api/', limiter);
@@ -171,7 +183,8 @@ app.use('/api/', limiter);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Only 10 login/register attempts per 15 min
-  message: { error: 'Too many attempts, please try again later' }
+  message: { error: 'Too many attempts, please try again later' },
+  handler: rateLimitedHandler
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
@@ -182,7 +195,8 @@ app.use('/api/twitter/login', authLimiter);
 const agentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: { error: 'Too many agent control requests, please try again later' }
+  message: { error: 'Too many agent control requests, please try again later' },
+  handler: rateLimitedHandler
 });
 app.use('/api/agent/start', agentLimiter);
 app.use('/api/agent/stop', agentLimiter);
@@ -191,7 +205,8 @@ app.use('/api/agent/stop', agentLimiter);
 const heavyLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: { error: 'Too many requests for this resource, please try again later' }
+  message: { error: 'Too many requests for this resource, please try again later' },
+  handler: rateLimitedHandler
 });
 app.use('/api/graph', heavyLimiter);
 app.use('/api/crm', heavyLimiter);
@@ -200,7 +215,8 @@ app.use('/api/crm', heavyLimiter);
 const operationsLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 120,
-  message: { error: 'Too many operations requests, please try again later' }
+  message: { error: 'Too many operations requests, please try again later' },
+  handler: rateLimitedHandler
 });
 app.use('/api/operations', operationsLimiter);
 
@@ -209,14 +225,16 @@ app.use('/api/operations', operationsLimiter);
 const fbAutomateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 60,
-  message: { error: 'Too many Facebook automation requests, please try again later' }
+  message: { error: 'Too many Facebook automation requests, please try again later' },
+  handler: rateLimitedHandler
 });
 app.use('/api/facebook/automate', fbAutomateLimiter);
 
 const analyticsLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
-  message: { error: 'Too many analytics requests, please try again later' }
+  message: { error: 'Too many analytics requests, please try again later' },
+  handler: rateLimitedHandler
 });
 app.use('/api/analytics', analyticsLimiter);
 
@@ -691,28 +709,11 @@ for (const p of ['/benchmark', '/benchmarks']) {
   });
 }
 
-// Error handling middleware — never expose stack traces or internal details in production
-app.use((/** @type {unknown} */ err, /** @type {import('express').Request} */ req, /** @type {import('express').Response} */ res, /** @type {import('express').NextFunction} */ next) => {
-  const e = /** @type {Error & Record<string, unknown>} */ (err);
-  console.error('❌ Unhandled error:', e.message);
-  if (process.env.NODE_ENV !== 'production') {
-    console.error(e.stack);
-  }
-  const status = Number(e.status) || 500;
-  res.status(status).json({
-    error: {
-      message: status >= 500 && process.env.NODE_ENV === 'production'
-        ? 'Internal server error'
-        : e.message || 'Internal server error',
-      status
-    }
-  });
-});
-
-// 404 handler
-app.use(/** @type {import('express').RequestHandler} */ ((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-}));
+// Story 46.2 — canonical 404 + error envelopes.
+// notFoundHandler emits { success:false, error:{code:'NOT_FOUND'} } for unmatched
+// routes; errorMiddleware serializes PlatformError/ApiError/parser errors.
+app.use(notFoundHandler);
+app.use(errorMiddleware);
 
 // Use httpServer instead of app.listen for Socket.io support
 if (process.env.NODE_ENV !== 'test') {

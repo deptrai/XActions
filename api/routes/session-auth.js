@@ -5,8 +5,10 @@ import prisma from '../lib/prisma.js';
  */
 import express from 'express';
 import crypto from 'crypto';
-import { body, validationResult } from 'express-validator';
 import { authenticate } from '../middleware/auth.js';
+import { validate } from '../middleware/validate.js';
+import { ApiError, asyncHandler } from '../middleware/envelope.js';
+import { SaveSessionBody } from '../schemas/session.js';
 import browserAutomation from '../services/browserAutomation.js';
 
 const router = express.Router();
@@ -57,25 +59,17 @@ function decrypt(encryptedData) {
   }
 }
 
-// Save session cookie for browser automation
+// Save session cookie for browser automation.
+// NOTE: `sessionCookie` is the PAYLOAD here — the sessionCookieShim is
+// intentionally not mounted on this route (Story 46.2).
 router.post('/save-session',
   authenticate,
-  [
-    body('sessionCookie').notEmpty().withMessage('Session cookie is required'),
-    body('username').optional().isString()
-  ],
-  async (req, res) => {
+  validate({ body: SaveSessionBody }),
+  asyncHandler(async (req, res) => {
   const reqUser = /** @type {User} */ (req.user);
 
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
-      const body = /** @type {Record<string, unknown>} */ (req.body);
-      const sessionCookie = /** @type {string} */ (body.sessionCookie);
-      const username = /** @type {string | undefined} */ (body.username);
+      const { sessionCookie, username } = req.body;
 
       // Test the session cookie by attempting to authenticate
       const page = await browserAutomation.createPage(sessionCookie);
@@ -83,9 +77,7 @@ router.post('/save-session',
       await page.close();
 
       if (!isAuthenticated) {
-        return res.status(401).json({ 
-          error: 'Invalid session cookie - authentication failed' 
-        });
+        throw new ApiError('UNAUTHORIZED', 401, 'Invalid session cookie - authentication failed');
       }
 
       // Save encrypted session cookie to user record
@@ -99,21 +91,22 @@ router.post('/save-session',
         }
       });
 
-      res.json({ 
+      res.sendData({
         message: 'Session saved successfully',
         authMethod: 'session'
       });
     } catch (error) {
+      if (error instanceof ApiError) throw error;
       console.error('❌ Save session error:', (error instanceof Error ? error.message : String(error)));
-      res.status(500).json({ error: 'Failed to save session' });
+      throw new ApiError('INTERNAL', 500, 'Failed to save session');
     }
-  }
+  })
 );
 
 // Remove session cookie (switch back to OAuth)
 router.delete('/remove-session',
   authenticate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
   const reqUser = /** @type {User} */ (req.user);
 
     try {
@@ -125,18 +118,18 @@ router.delete('/remove-session',
         }
       });
 
-      res.json({ message: 'Session removed successfully' });
+      res.sendData({ message: 'Session removed successfully' });
     } catch (error) {
       console.error('❌ Remove session error:', (error instanceof Error ? error.message : String(error)));
-      res.status(500).json({ error: 'Failed to remove session' });
+      throw new ApiError('INTERNAL', 500, 'Failed to remove session');
     }
-  }
+  })
 );
 
 // Get current auth method
 router.get('/auth-method',
   authenticate,
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
   const reqUser = /** @type {User} */ (req.user);
 
     try {
@@ -151,23 +144,24 @@ router.get('/auth-method',
       });
 
       if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+        throw new ApiError('NOT_FOUND', 404, 'User not found');
       }
 
       const hasOAuth = !!user.twitterAccessToken;
       const hasSession = !!user.sessionCookie;
 
-      res.json({
+      res.sendData({
         authMethod: user.authMethod,
         hasOAuth,
         hasSession,
         username: user.twitterUsername
       });
     } catch (error) {
+      if (error instanceof ApiError) throw error;
       console.error('❌ Get auth method error:', (error instanceof Error ? error.message : String(error)));
-      res.status(500).json({ error: 'Failed to get auth method' });
+      throw new ApiError('INTERNAL', 500, 'Failed to get auth method');
     }
-  }
+  })
 );
 
 // Helper function to get decrypted session cookie (for use in other services)

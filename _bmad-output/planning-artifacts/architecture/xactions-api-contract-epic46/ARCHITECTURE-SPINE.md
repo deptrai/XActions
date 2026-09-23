@@ -77,7 +77,7 @@ Dependency direction (đây là rule, không chỉ là hình): `routes → schem
 
 - **Binds:** spec `components.securitySchemes`, Swagger `authorize()`, generated client auth injection, auth middleware
 - **Prevents:** spec quảng bá auth transport mà route không đọc; generated client inject header trong khi schema đòi body field
-- **Rule:** Bốn schemes: `bearerAuth` (JWT, header `Authorization`); `sessionCookie` (apiKey **header `x-session-cookie`** — transport canonical duy nhất; spec không bao giờ khai báo body transport vì OpenAPI apiKey không express được); `x402Payment` (apiKey header `X-PAYMENT`); optional-auth = security `[{}, {scheme}]` union — invalid credentials trên optional-auth route resolve thành anonymous context, không bao giờ 401 (theo `auth.js:109-111` hiện tại). Per-route security mapping nằm trong spec. **Normalize shim scope:** auth middleware chỉ normalize `req.body.sessionCookie` → header-equivalent trên các route khai báo scheme `sessionCookie` (copy rồi delete khỏi body trước khi validate); trên route nơi `sessionCookie` là **payload data** (vd `POST /api/session/save-session` — JWT-authed), nó là body field trong schema và shim không chạm tới.
+- **Rule:** Năm schemes: `bearerAuth` (JWT, header `Authorization`); `sessionCookie` (apiKey **header `x-session-cookie`** — transport canonical duy nhất; spec không bao giờ khai báo body transport vì OpenAPI apiKey không express được); `x402Payment` (apiKey header `X-PAYMENT`); `a2aApiKey` (apiKey header `X-Agent-API-Key` — cho routes `requireCheckpointManage` chấp nhận agent key / A2A bearer / admin JWT); optional-auth = security `[{}, {scheme}]` union — invalid credentials trên optional-auth route resolve thành anonymous context, không bao giờ 401 (theo `auth.js:109-111` hiện tại). Per-route security mapping nằm trong spec. **Normalize shim scope:** shim mount per-route trên các route khai báo scheme `sessionCookie`; nó copy `req.body.sessionCookie` → `req.headers['x-session-cookie']` **chỉ khi header vắng** và **không delete** body field — body precedence hiện hữu (handlers đọc `req.body.sessionCookie` trước, vd `viral.js:38`) phải giữ nguyên để không phá ~40 dual-read call-sites trong `api/routes/ai/*`. Trên route nơi `sessionCookie` là **payload data** (vd `POST /api/session/save-session`), nó là body field trong schema và shim không chạm tới.
 
 ### AD-7 — Docs Delivery & x402 Contract Preservation
 
@@ -106,7 +106,7 @@ Dependency direction (đây là rule, không chỉ là hình): `routes → schem
 | `error.type` | Domain `type` verbatim (vocab do domain sở hữu, không re-enum trong spec); optional trên non-domain errors |
 | Dates/ids trong schema | ISO 8601 strings; pagination cursor = opaque string |
 | Spec artifact | `api/openapi.json` committed, regenerate bằng `build:openapi` — không hand-edit |
-| Session transport | `x-session-cookie` header canonical; `req.body.sessionCookie` legacy được normalize bởi middleware |
+| Session transport | `x-session-cookie` header canonical; `req.body.sessionCookie` legacy được normalize bởi per-route shim (copy, không delete; body wins khi cả hai có) |
 
 ## Stack
 

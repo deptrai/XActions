@@ -29,6 +29,7 @@ import {
   ensureConfigValidated,
   isX402Configured
 } from '../config/x402-config.js';
+import { ApiError } from './envelope.js';
 import { recordPayment } from '../services/payment-stats.js';
 import {
   notifyPaymentSettled,
@@ -354,7 +355,7 @@ export async function x402Middleware(req, res, next) {
     if (process.env.NODE_ENV !== 'production') {
       return next();
     }
-    return res.status(500).json({ error: 'Payment system not configured' });
+    return next(new ApiError('INTERNAL', 500, 'Payment system not configured'));
   }
 
   // Lazy-initialize middleware
@@ -379,7 +380,7 @@ export async function x402Middleware(req, res, next) {
       console.warn(`⚠️  x402 not available, allowing ${req.path} without payment`);
       return next();
     }
-    return res.status(503).json({ error: 'Payment system unavailable' });
+    return next(new ApiError('INTERNAL', 503, 'Payment system unavailable'));
   }
 
   // Delegate to the official @x402/express middleware

@@ -49,8 +49,9 @@ describe('Backend — Core API Services & Modules E2E', () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('optimized');
-    expect(res.body).toHaveProperty('predictedLift');
+    expect(res.body).toHaveProperty('success', true);
+    expect(res.body.data).toHaveProperty('optimized');
+    expect(res.body.data).toHaveProperty('predictedLift');
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] POST /api/optimizer/optimize rejects missing text with 400`, async () => {
@@ -71,7 +72,8 @@ describe('Backend — Core API Services & Modules E2E', () => {
       });
 
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body.hashtags || res.body)).toBe(true);
+    expect(res.body).toHaveProperty('success', true);
+    expect(Array.isArray(res.body.data?.hashtags || res.body.data)).toBe(true);
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] POST /api/optimizer/predict scores tweet viral potential`, async () => {
@@ -82,7 +84,8 @@ describe('Backend — Core API Services & Modules E2E', () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('score');
+    expect(res.body).toHaveProperty('success', true);
+    expect(res.body.data).toHaveProperty('score');
   });
 
   // ─── 2. Workflows ────────────────────────────────────────────────────────

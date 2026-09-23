@@ -97,7 +97,9 @@ describe('E2E: /api/checkpoints (Story 10.4)', () => {
       .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(Array.isArray(res.body.data.checkpoints)).toBe(true);
+    // Story 46.2 — canonical pagination envelope: data = array, page = {cursor,limit,total}
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.page).toMatchObject({ limit: expect.any(Number) });
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] GET /api/checkpoints with A2A API key → 200`, async () => {
@@ -183,9 +185,9 @@ describe('E2E: /api/checkpoints (Story 10.4)', () => {
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.data.checkpoints).toHaveLength(1);
-    expect(res.body.data.checkpoints[0].platform).toBe('twitter');
-    expect(res.body.data.checkpoints[0].status).toBe('running');
-    expect(res.body.data.total).toBe(1);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].platform).toBe('twitter');
+    expect(res.body.data[0].status).toBe('running');
+    expect(res.body.page.total).toBe(1);
   });
 });

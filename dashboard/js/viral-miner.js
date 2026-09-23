@@ -95,8 +95,9 @@ async function checkForExistingStats() {
   try {
     const res = await fetch(`${API_BASE}/stats`);
     const data = await res.json();
-    if (data.stats && data.stats.length > 0) {
-      const latest = data.stats[0];
+    const stats = data.data?.stats;
+    if (stats && stats.length > 0) {
+      const latest = stats[0];
       categorySelect.value = latest.category || 'social';
       updatePlatformOptions();
       platformSelect.value = latest.platform;
@@ -129,10 +130,10 @@ async function startMining() {
     const data = await res.json();
     
     if (!data.success) {
-      throw new Error(data.message || 'Mining failed to start');
+      throw new Error(data.error?.message || 'Mining failed to start');
     }
-    
-    currentJobId = data.jobId;
+
+    currentJobId = data.data?.jobId;
     startTime = Date.now();
     
     // Show progress section
@@ -158,10 +159,10 @@ function pollJobStatus() {
       const data = await res.json();
       
       if (!data.success) {
-        throw new Error(data.message);
+        throw new Error(data.error?.message);
       }
-      
-      const job = data.job;
+
+      const job = data.data?.job;
       updateProgress(job);
       
       if (job.status === 'completed') {
@@ -216,8 +217,8 @@ async function loadResults(p, n) {
     const res = await fetch(`${API_BASE}/stats/${platform}/${niche}`);
     const data = await res.json();
     
-    if (data.success && data.stats) {
-      displayResults(data.stats);
+    if (data.success && data.data?.stats) {
+      displayResults(data.data.stats);
       resultsSection.classList.add('active');
       emptyState.style.display = 'none';
     }
@@ -268,23 +269,24 @@ async function runBacktest() {
     
     const data = await res.json();
     
+    const report = data.data?.report;
     if (data.success) {
       backtestResults.innerHTML = `
         <div class="metrics-grid">
           <div class="metric-card">
-            <div class="metric-value good">${(data.report?.metrics?.precision * 100 || 0).toFixed(0)}%</div>
+            <div class="metric-value good">${(report?.metrics?.precision * 100 || 0).toFixed(0)}%</div>
             <div class="metric-label">Precision</div>
           </div>
           <div class="metric-card">
-            <div class="metric-value medium">${(data.report?.metrics?.recall * 100 || 0).toFixed(0)}%</div>
+            <div class="metric-value medium">${(report?.metrics?.recall * 100 || 0).toFixed(0)}%</div>
             <div class="metric-label">Recall</div>
           </div>
           <div class="metric-card">
-            <div class="metric-value">${data.report?.sampleSize || 0}</div>
+            <div class="metric-value">${report?.sampleSize || 0}</div>
             <div class="metric-label">Sample Size</div>
           </div>
         </div>
-        <p>${data.report?.summary || 'Backtest complete'}</p>
+        <p>${report?.summary || 'Backtest complete'}</p>
       `;
     }
   } catch (err) {
@@ -301,7 +303,7 @@ async function loadPlatformComparison() {
   try {
     const res = await fetch(`${API_BASE}/stats`);
     const data = await res.json();
-    const statsList = data.stats || [];
+    const statsList = data.data?.stats || [];
 
     if (statsList.length < 2) {
       container.innerHTML = `
@@ -317,8 +319,8 @@ async function loadPlatformComparison() {
       try {
         const itemRes = await fetch(`${API_BASE}/stats/${item.platform}/${item.niche}`);
         const itemData = await itemRes.json();
-        if (itemData.success && itemData.stats) {
-          loadedDatasets.push(itemData.stats);
+        if (itemData.success && itemData.data?.stats) {
+          loadedDatasets.push(itemData.data.stats);
         }
       } catch {}
     }

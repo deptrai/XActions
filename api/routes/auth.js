@@ -4,24 +4,29 @@ import express from 'express';
 import { resolveUserId } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { body, validationResult } from 'express-validator';
+import { validate } from '../middleware/validate.js';
+import { ApiError, asyncHandler } from '../middleware/envelope.js';
+import { RegisterBody, LoginBody, RefreshBody } from '../schemas/auth.js';
 
 const router = express.Router();
+
+/** Dev-only details bag for 500s — mirrors the previous register/login hint. */
+function devErrorDetails(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return {
+    detail: message,
+    hint: message.includes('connect') || message.includes('ECONNREFUSED')
+      ? 'PostgreSQL is not running. Start it with: docker compose up -d postgres'
+      : undefined,
+  };
+}
+
 // Register new user (email optional)
 router.post('/register',
-  /** @type {import('express').RequestHandler[]} */ ([
-    body('password').isLength({ min: 8 }),
-    body('username').isLength({ min: 3, max: 30 }).matches(/^[a-zA-Z0-9_]+$/),
-    body('email').optional({ checkFalsy: true }).isEmail().normalizeEmail()
-  ]),
-  async (req, res) => {
+  validate({ body: RegisterBody }),
+  asyncHandler(async (req, res) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
-      const { password, username, email } = /** @type {{ password: string; username: string; email?: string }} */ (req.body);
+      const { password, username, email } = req.body;
 
       // Check if username exists
       const existingUser = await prisma.user.findFirst({
@@ -35,10 +40,10 @@ router.post('/register',
 
       if (existingUser) {
         if (existingUser.username === username) {
-          return res.status(400).json({ error: 'Username already taken' });
+          throw new ApiError('USERNAME_TAKEN', 400, 'Username already taken');
         }
         if (email && existingUser.email === email) {
-          return res.status(400).json({ error: 'Email already registered' });
+          throw new ApiError('EMAIL_TAKEN', 400, 'Email already registered');
         }
       }
 
@@ -72,7 +77,7 @@ router.post('/register',
         { expiresIn: '7d' }
       );
 
-      res.status(201).json({
+      res.sendData({
         token,
         user: {
           id: user.id,
@@ -81,38 +86,26 @@ router.post('/register',
           credits: user.credits,
           subscription: user.subscription
         }
-      });
+      }, 201);
     } catch (error) {
+      if (error instanceof ApiError) throw error;
       console.error('❌ Registration error:', (error instanceof Error ? error.message : String(error)));
-      // Surface real error in development for debugging
-      if (process.env.NODE_ENV !== 'production') {
-        return res.status(500).json({
-          error: 'Registration failed',
-          details: (error instanceof Error ? error.message : String(error)),
-          hint: (error instanceof Error ? error.message : String(error)).includes('connect') || (error instanceof Error ? error.message : String(error)).includes('ECONNREFUSED')
-            ? 'PostgreSQL is not running. Start it with: docker compose up -d postgres'
-            : undefined
-        });
-      }
-      res.status(500).json({ error: 'Registration failed' });
+      throw new ApiError(
+        'INTERNAL',
+        500,
+        'Registration failed',
+        process.env.NODE_ENV !== 'production' ? devErrorDetails(error) : undefined
+      );
     }
-  }
+  })
 );
 
 // Login (accepts username OR email)
 router.post('/login',
-  /** @type {import('express').RequestHandler[]} */ ([
-    body('identifier').notEmpty().withMessage('Username or email required'),
-    body('password').notEmpty()
-  ]),
-  async (req, res) => {
+  validate({ body: LoginBody }),
+  asyncHandler(async (req, res) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
-      const { identifier, password } = /** @type {{ identifier: string; password: string }} */ (req.body);
+      const { identifier, password } = req.body;
 
       // Find user by email OR username
       const user = await prisma.user.findFirst({
@@ -126,21 +119,18 @@ router.post('/login',
       });
 
       if (!user) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+        throw new ApiError('UNAUTHORIZED', 401, 'Invalid credentials');
       }
 
       // Check if user has a password (guest users don't)
       if (!user.password) {
-        return res.status(401).json({ 
-          error: 'This account was created as a guest. Please set a password first.',
-          needsPassword: true
-        });
+        throw new ApiError('UNAUTHORIZED', 401, 'This account was created as a guest. Please set a password first.', { needsPassword: true });
       }
 
       // Verify password
       const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+        throw new ApiError('UNAUTHORIZED', 401, 'Invalid credentials');
       }
 
       // Generate JWT
@@ -150,7 +140,7 @@ router.post('/login',
         { expiresIn: '7d' }
       );
 
-      res.json({
+      res.sendData({
         token,
         user: {
           id: user.id,
@@ -162,73 +152,70 @@ router.post('/login',
         }
       });
     } catch (error) {
+      if (error instanceof ApiError) throw error;
       console.error('❌ Login error:', (error instanceof Error ? error.message : String(error)));
-      if (process.env.NODE_ENV !== 'production') {
-        return res.status(500).json({
-          error: 'Login failed',
-          details: (error instanceof Error ? error.message : String(error)),
-          hint: (error instanceof Error ? error.message : String(error)).includes('connect') || (error instanceof Error ? error.message : String(error)).includes('ECONNREFUSED')
-            ? 'PostgreSQL is not running. Start it with: docker compose up -d postgres'
-            : undefined
-        });
-      }
-      res.status(500).json({ error: 'Login failed' });
+      throw new ApiError(
+        'INTERNAL',
+        500,
+        'Login failed',
+        process.env.NODE_ENV !== 'production' ? devErrorDetails(error) : undefined
+      );
     }
-  }
+  })
 );
 
 // Refresh token — only allow refresh within 24 hours of expiration
-router.post('/refresh', async (req, res) => {
-  try {
-    const { token } = /** @type {{ token: string }} */ (req.body);
-
-    if (!token) {
-      return res.status(401).json({ error: 'Token required' });
-    }
-
-    // Verify signature first, then validate the refresh window and payload.
-    // ignoreExpiration allows recently-expired tokens to be refreshed.
-    let decoded;
+router.post('/refresh',
+  validate({ body: RefreshBody }),
+  asyncHandler(async (req, res) => {
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || '', { ignoreExpiration: true });
-    } catch (verifyError) {
-      return res.status(401).json({ error: 'Invalid token' });
+      const { token } = req.body;
+
+      // Verify signature first, then validate the refresh window and payload.
+      // ignoreExpiration allows recently-expired tokens to be refreshed.
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET || '', { ignoreExpiration: true });
+      } catch (verifyError) {
+        throw new ApiError('UNAUTHORIZED', 401, 'Invalid token');
+      }
+
+      if (!decoded || typeof decoded.exp !== 'number') {
+        throw new ApiError('UNAUTHORIZED', 401, 'Invalid token');
+      }
+
+      const userId = resolveUserId(decoded);
+      if (!userId) {
+        throw new ApiError('UNAUTHORIZED', 401, 'Invalid token');
+      }
+
+      // Only allow refresh if token expired within the last 24 hours
+      const now = Math.floor(Date.now() / 1000);
+      const maxRefreshWindow = 24 * 60 * 60; // 24 hours
+      if (decoded.exp < now - maxRefreshWindow) {
+        throw new ApiError('UNAUTHORIZED', 401, 'Token too old to refresh — please log in again');
+      }
+
+      // Verify user still exists
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        throw new ApiError('UNAUTHORIZED', 401, 'User not found');
+      }
+
+      // Generate new token
+      const newToken = jwt.sign(
+        { userId: user.id, username: user.username },
+        process.env.JWT_SECRET || '',
+        { expiresIn: '7d' }
+      );
+
+      res.sendData({ token: newToken });
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      console.error('❌ Refresh token error:', error);
+      throw new ApiError('INTERNAL', 500, 'Authentication error');
     }
-
-    if (!decoded || typeof decoded.exp !== 'number') {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    const userId = resolveUserId(decoded);
-    if (!userId) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    // Only allow refresh if token expired within the last 24 hours
-    const now = Math.floor(Date.now() / 1000);
-    const maxRefreshWindow = 24 * 60 * 60; // 24 hours
-    if (decoded.exp < now - maxRefreshWindow) {
-      return res.status(401).json({ error: 'Token too old to refresh — please log in again' });
-    }
-
-    // Verify user still exists
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-
-    // Generate new token
-    const newToken = jwt.sign(
-      { userId: user.id, username: user.username },
-      process.env.JWT_SECRET || '',
-      { expiresIn: '7d' }
-    );
-
-    res.json({ token: newToken });
-  } catch (error) {
-    console.error('❌ Refresh token error:', error);
-    res.status(500).json({ error: 'Authentication error' });
-  }
-});
+  })
+);
 
 export default router;

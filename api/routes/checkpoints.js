@@ -2,6 +2,9 @@
 /**
  * CrawlCheckpoint Operational HTTP Endpoints.
  * Story 10.4 — Express router for listing, showing, resuming, pausing, and retrying checkpoints.
+ * Story 46.2 — canonical envelopes: list returns `data:T[]` + `page:{cursor,limit,total}`;
+ * auth emits flow through `next(ApiError)`; domain `PlatformError`s are serialized
+ * by the global error middleware (details = toEnvelope() verbatim).
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -10,6 +13,8 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma.js';
 import { resolveUserId } from '../middleware/auth.js';
+import { ApiError, asyncHandler } from '../middleware/envelope.js';
+import { validate } from '../middleware/validate.js';
 import {
   validateApiKey,
   validateToken,
@@ -22,9 +27,29 @@ import {
   pauseCheckpoint,
   retryCheckpoint,
 } from '../../src/store/checkpoint-manager.js';
-import { PlatformError, ErrorTypes, SuggestedActions } from '../../src/core/error-envelope.js';
+import { CheckpointListQuery, CheckpointIdParams } from '../schemas/checkpoints.js';
 
 const router = Router();
+
+// ── Opaque offset cursor (v2 pagination contract) ────────────────────────────
+
+/** @param {number} offset */
+export function encodeOffsetCursor(offset) {
+  return Buffer.from(`off:${offset}`, 'utf8').toString('base64url');
+}
+
+/**
+ * @param {string} cursor
+ * @returns {number}
+ */
+function decodeOffsetCursor(cursor) {
+  try {
+    const decoded = Buffer.from(String(cursor), 'base64url').toString('utf8');
+    const match = /^off:(\d+)$/.exec(decoded);
+    if (match) return Number(match[1]);
+  } catch { /* fall through to error */ }
+  throw new ApiError('VALIDATION_FAILED', 400, 'Invalid pagination cursor');
+}
 
 /**
  * Dual-Channel Authentication & Authorization Middleware for Checkpoint Management.
@@ -97,13 +122,11 @@ export async function requireCheckpointManage(req, res, next) {
     }
 
     if (!authenticated) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          code: 'XACT_4001',
-          message: 'Authentication required. Provide a valid JWT Bearer token or A2A API Key.',
-        },
-      });
+      return next(new ApiError(
+        'XACT_4001',
+        401,
+        'Authentication required. Provide a valid JWT Bearer token or A2A API Key.'
+      ));
     }
 
     // Authorization check
@@ -111,13 +134,11 @@ export async function requireCheckpointManage(req, res, next) {
     const isAgentPermitted = req.agent && checkPermission(/** @type {{ permissions: string[] }} */ (req.agent), 'checkpoint:manage');
 
     if (!isUserAdmin && !isAgentPermitted) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          code: 'XACT_4003',
-          message: 'checkpoint:manage permission or admin role required.',
-        },
-      });
+      return next(new ApiError(
+        'XACT_4003',
+        403,
+        'checkpoint:manage permission or admin role required.'
+      ));
     }
 
     next();
@@ -133,150 +154,74 @@ export async function requireCheckpointManage(req, res, next) {
 /**
  * GET /api/checkpoints
  * List checkpoints with pagination and filters.
+ * Request keeps `offset` (compat) and also accepts an opaque `cursor`;
+ * the response is the canonical pagination envelope.
  */
-/**
- * @param {string | number | undefined} value
- * @param {number} defaultValue
- * @param {string} fieldName
- * @returns {number}
- */
-function parsePaginationNumber(value, defaultValue, fieldName) {
-  if (value === undefined || value === null || value === '') {
-    return defaultValue;
-  }
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0 || !Number.isInteger(parsed)) {
-    throw new PlatformError({
-      type: ErrorTypes.INVALID_ARGS,
-      code: 'XACT_4001',
-      message: `${fieldName} must be a non-negative integer`,
-      statusCode: 400,
-      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-    });
-  }
-  return parsed;
-}
+router.get('/', requireCheckpointManage, validate({ query: CheckpointListQuery }), asyncHandler(async (req, res) => {
+  const { platform, targetType, targetKey, status, limit, offset, cursor, sortBy, order } = req.query;
 
-/**
- * GET /api/checkpoints
- * List checkpoints with pagination and filters.
- */
-router.get('/', requireCheckpointManage, async (req, res, next) => {
-  try {
-    const { platform, targetType, targetKey, status, limit, offset, sortBy, order } = req.query;
+  // Opaque cursor wins over a raw offset when present.
+  const effectiveOffset = cursor ? decodeOffsetCursor(cursor) : (offset ?? 0);
 
-    const result = await listCheckpoints({
-      platform,
-      targetType,
-      targetKey,
-      status,
-      limit: parsePaginationNumber(limit, 50, 'limit'),
-      offset: parsePaginationNumber(offset, 0, 'offset'),
-      sortBy,
-      order,
-      prisma,
-    });
+  const result = await listCheckpoints({
+    platform,
+    targetType,
+    targetKey,
+    status,
+    limit: limit ?? 50,
+    offset: effectiveOffset,
+    sortBy,
+    order,
+    prisma,
+  });
 
-    res.json({
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+  const nextOffset = result.offset + result.checkpoints.length;
+  const nextCursor = nextOffset < result.total ? encodeOffsetCursor(nextOffset) : null;
+
+  res.sendPage(result.checkpoints, {
+    cursor: nextCursor,
+    limit: result.limit,
+    total: result.total,
+  });
+}));
 
 /**
  * GET /api/checkpoints/:id
  * Get single checkpoint by ID.
  */
-router.get('/:id', requireCheckpointManage, async (req, res, next) => {
-  try {
-    const checkpoint = await getCheckpoint(req.params.id, { prisma });
-    res.json({
-      success: true,
-      data: { checkpoint },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+router.get('/:id', requireCheckpointManage, validate({ params: CheckpointIdParams }), asyncHandler(async (req, res) => {
+  const checkpoint = await getCheckpoint(req.params.id, { prisma });
+  res.sendData({ checkpoint });
+}));
 
 /**
  * POST /api/checkpoints/:id/resume
  * Resume a paused, failed, or stalled checkpoint.
  */
-router.post('/:id/resume', requireCheckpointManage, async (req, res, next) => {
-  try {
-    const checkpoint = await resumeCheckpoint(req.params.id, { prisma });
-    res.json({
-      success: true,
-      data: { checkpoint },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+router.post('/:id/resume', requireCheckpointManage, validate({ params: CheckpointIdParams }), asyncHandler(async (req, res) => {
+  const checkpoint = await resumeCheckpoint(req.params.id, { prisma });
+  res.sendData({ checkpoint });
+}));
 
 /**
  * POST /api/checkpoints/:id/pause
  * Pause a running or stalled checkpoint.
  */
-router.post('/:id/pause', requireCheckpointManage, async (req, res, next) => {
-  try {
-    const checkpoint = await pauseCheckpoint(req.params.id, { prisma });
-    res.json({
-      success: true,
-      data: { checkpoint },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+router.post('/:id/pause', requireCheckpointManage, validate({ params: CheckpointIdParams }), asyncHandler(async (req, res) => {
+  const checkpoint = await pauseCheckpoint(req.params.id, { prisma });
+  res.sendData({ checkpoint });
+}));
 
 /**
  * POST /api/checkpoints/:id/retry
  * Retry a failed or stalled checkpoint.
  */
-router.post('/:id/retry', requireCheckpointManage, async (req, res, next) => {
-  try {
-    const checkpoint = await retryCheckpoint(req.params.id, { prisma });
-    res.json({
-      success: true,
-      data: { checkpoint },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+router.post('/:id/retry', requireCheckpointManage, validate({ params: CheckpointIdParams }), asyncHandler(async (req, res) => {
+  const checkpoint = await retryCheckpoint(req.params.id, { prisma });
+  res.sendData({ checkpoint });
+}));
 
-// Error handling middleware for PlatformErrors
-router.use((
-  /** @type {unknown} */ err,
-  /** @type {import('express').Request} */ _req,
-  /** @type {import('express').Response} */ res,
-  /** @type {import('express').NextFunction} */ _next
-) => {
-  if (err instanceof PlatformError) {
-    return res.status(err.statusCode || 400).json({
-      success: false,
-      error: {
-        type: err.type,
-        code: err.code,
-        message: err.message,
-        suggestedAction: err.suggestedAction,
-      },
-    });
-  }
-
-  const errObj = /** @type {Record<string, unknown>} */ (err);
-  const statusCode = Number(errObj.status || errObj.statusCode || 500);
-  res.status(statusCode).json({
-    success: false,
-    error: {
-      message: err instanceof Error ? err.message : 'Internal server error',
-    },
-  });
-});
+// Per-router error middleware removed in Story 46.2 — the global
+// errorMiddleware owns PlatformError serialization (details = toEnvelope()).
 
 export default router;

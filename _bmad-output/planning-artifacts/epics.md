@@ -2878,12 +2878,15 @@ So that **input được validate chặt trước handler, response theo một e
 
 **Acceptance Criteria:**
 
-**Given** các route thuộc scope trong Route Inventory (Phụ lục A)  
-**When** request được gửi lên  
+**Given** contract layer foundation (`api/schemas/**`, `api/middleware/{validate,envelope}.js`, session-cookie shim, registry→spec builder) và pilot mounts `/api/viral`, `/api/crm`, `/api/optimizer`, `/api/checkpoints`, `/api/session`, `/api/auth`  
+**When** request được gửi lên các pilot routes  
 **Then** middleware validate `body`, `query`, `path params` và các header đã khai báo (`x-session-cookie`, `x-payment`) qua Zod schema tương ứng, theo thứ tự `authenticate → validate → handler`; input không hợp lệ trả `400` theo error envelope chuẩn.  
-**And** mọi JSON endpoint trả success/error theo envelope đã định nghĩa ở Epic header — bao gồm lỗi sinh từ middleware (rate-limit `429`, `404` route-not-found, body-parser `413`/`415`, global error handler).  
-**And** mỗi operation khai báo `securitySchemes` tương ứng với thực tế route đó: `bearerAuth` (JWT), `sessionCookie` (apiKey — header `x-session-cookie` hoặc body field `sessionCookie`, ghi rõ cơ chế trong spec), `x402Payment`, hoặc optional-auth (`{}` union cho endpoint trả khác nhau giữa anon/authed).  
-**And** CI chạy spec lint (redocly hoặc spectral) + contract test tối thiểu 1 endpoint mỗi nhóm, fail khi response thật lệch schema.
+**And** mọi JSON endpoint trong pilot scope trả success/error theo envelope đã định nghĩa ở Epic header — bao gồm lỗi sinh từ middleware (rate-limit `429`, `404` route-not-found, body-parser `413`/`415`, global error handler).  
+**And** mỗi operation khai báo `securitySchemes` tương ứng với thực tế route đó: `bearerAuth` (JWT), `sessionCookie` (apiKey — header `x-session-cookie` canonical, legacy `body.sessionCookie` normalize qua shim), `x402Payment`, hoặc optional-auth (`{}` union cho endpoint trả khác nhau giữa anon/authed).  
+**And** CI chạy spec lint (redocly hoặc spectral) + contract test tối thiểu 1 endpoint mỗi nhóm trong scope, fail khi response thật lệch schema.  
+**And** `express-validator` ở `routes/session-auth.js` và `routes/auth.js` được migrate sang Zod — không còn hai validation system song song.
+
+*Scope note: story này giao foundation + pilot mounts. Rollout các mounts còn lại trong Route Inventory thuộc Stories 46.4–46.5 (chia batch để PR review được).*
 
 ---
 
@@ -2901,6 +2904,38 @@ So that **tôi gọi API trong Next.js (Epic 47) với gợi ý code (IntelliSen
 **And** output vào `packages/api-client/` (path duy nhất, import được dưới tên `@xactions/api-client`), types sinh qua `openapi-typescript` + fetch wrapper mỏng viết tay.  
 **And** export một type per schema trong spec (e.g., `ViralStats`, `PostItem`, `CRMContact`, `OptimizeTweetRequest`) cộng `PaginatedResponse<T>`; generated types được namespace/dedupe để không đụng các component `Error`/`SuccessResponse`/`PaymentRequired` hiện có.  
 **And** fetch wrapper inject auth (Bearer token hoặc `x-session-cookie`) và trả typed error union (`400 | 401 | 402 | 429 | 500`) thay vì `any` — consumer không phải tự xử lý auth/error lại.
+
+---
+
+### Story 46.4: Rollout Zod & Envelope — Batch Social/User-Facing
+
+As a **Backend Developer**,  
+I want **áp dụng contract layer (schemas + validate + envelope) cho các mount social và user-facing còn lại**,  
+So that **toàn bộ surface người dùng tương tác trực tiếp tuân thủ contract thống nhất**.
+
+**Acceptance Criteria:**
+
+**Given** contract foundation từ Story 46.2 đã merged  
+**When** áp dụng cho các mount: `/api/twitter`, `/api/facebook`, `/api/facebook/accounts`, `/api/platform`, `/api/posting`, `/api/messages`, `/api/engagement`, `/api/thread`, `/api/spaces`, `/api/unfollowers`, `/api/graph`, `/api/profile`, `/api/settings`, `/api/user`, `/api/creator`, `/api/discovery`, `/api/bookmarks`  
+**Then** mọi route trong các mount này có Zod request schema + response schema đăng ký vào registry, validate theo `authenticate → validate → handler`, và trả canonical envelope.  
+**And** mutations trên tài khoản thật (`posting`, `messages`, `engagement`...) được đánh `x-tryitout: false` trong spec.  
+**And** nếu diff của batch vượt ngưỡng review được, batch được chia nhỏ thêm theo mount-group — mỗi PR giữ nguyên invariant envelope/validation.
+
+---
+
+### Story 46.5: Rollout Zod & Envelope — Batch Data/Ops/Admin
+
+As a **Backend Developer**,  
+I want **áp dụng contract layer cho các mount data, operations và admin còn lại**,  
+So that **Route Inventory được coverage hoàn chỉnh và Epic 46 đạt AC tổng thể**.
+
+**Acceptance Criteria:**
+
+**Given** Stories 46.2 và 46.4 đã merged  
+**When** áp dụng cho các mount: `/api/a2a`, `/api/license`, `/api/workflows`, `/api/scripts`, `/api/billing`, `/api/operations`, `/api/admin`, `/api/admin/webhooks`, `/api/datasets`, `/api/schemas`, `/api/proxies`, `/api/proxy/budget`, `/api/osint`, `/api/schedule`, `/api/tweet-schedule`, `/api/notifications`, `/api/teams`, `/api/benchmark`, `/api/automations`, `/api/streams`, `/api/analytics`, `/api/governor`, `/api/video`, `/api/agent`  
+**Then** mọi route trong các mount này có Zod schemas + canonical envelope + spec registration, theo cùng convention của 46.2.  
+**And** các ngoại lệ Phụ lục A được tôn trọng: `/api/analytics` dedupe paths giữa hai router + operationId duy nhất; `/api/governor` chỉ document mount `/api/governor`; `/api/video/download` exempt envelope (stream `video/mp4`); `/api/agent` mutations `x-tryitout: false`.  
+**And** sau story này, Route Inventory đạt coverage hoàn chỉnh — mọi ✅/⚠️ mount đều có spec entry từ registry hoặc section tĩnh đã merge.
 
 ---
 

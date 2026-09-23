@@ -108,7 +108,10 @@ describe('Story 10.4: Checkpoints HTTP API — Authentication & Authorization (A
       .set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(Array.isArray(res.body.data.checkpoints)).toBe(true);
+    // Story 46.2 — canonical pagination envelope: data is the array, page holds cursor/limit/total
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.page).toMatchObject({ limit: expect.any(Number) });
+    expect('cursor' in res.body.page).toBe(true);
   });
 
   it('GET /api/checkpoints returns 200 with an A2A API key that has checkpoint:manage', async () => {
@@ -117,7 +120,7 @@ describe('Story 10.4: Checkpoints HTTP API — Authentication & Authorization (A
       .set('X-Agent-API-Key', a2aApiKey);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(Array.isArray(res.body.data.checkpoints)).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
   });
 
   it('GET /api/checkpoints returns 200 with an A2A Bearer token that has checkpoint:manage', async () => {
@@ -126,7 +129,7 @@ describe('Story 10.4: Checkpoints HTTP API — Authentication & Authorization (A
       .set('Authorization', `Bearer ${a2aToken}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(Array.isArray(res.body.data.checkpoints)).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
   });
 });
 
@@ -166,9 +169,9 @@ describe('Story 10.4: Checkpoints HTTP API — CRUD & Lifecycle Endpoints (AC1-A
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.data.checkpoints).toHaveLength(1);
-    expect(res.body.data.checkpoints[0].platform).toBe('twitter');
-    expect(res.body.data.total).toBe(1);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].platform).toBe('twitter');
+    expect(res.body.page.total).toBe(1);
   });
 
   it('GET /api/checkpoints/:id returns 404 for an unknown id', async () => {

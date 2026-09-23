@@ -59,6 +59,19 @@ function mockRes() {
   };
 }
 
+/**
+ * Capture the argument passed to next() — Story 46.2 changed authMiddleware to
+ * emit canonical ApiError objects through next() instead of res.status().json().
+ */
+function captureNext() {
+  const state = { called: false, error: undefined };
+  const next = (err) => {
+    state.called = true;
+    state.error = err;
+  };
+  return { state, next };
+}
+
 function makeReq(token) {
   return { headers: { authorization: token ? `Bearer ${token}` : undefined } };
 }
@@ -119,13 +132,15 @@ describe('Story 8.3: JWT Key Standardization (authMiddleware)', () => {
   it('returns 401 when token has neither userId nor id nor sub (AC4)', async () => {
     const token = jwt.sign({ username: 'missing_id_user' }, TEST_SECRET, { expiresIn: '1h' });
     const req = makeReq(token);
-    let nextCalled = false;
     const res = mockRes();
-    const next = () => { nextCalled = true; };
+    const { state, next } = captureNext();
 
     await authMiddleware(req, res, next);
-    expect(nextCalled).toBe(false);
-    expect(res.statusCode).toBe(401);
+    // Story 46.2 — the middleware forwards an ApiError; statusCode rides on the error.
+    expect(state.called).toBe(true);
+    expect(state.error?.isApiError).toBe(true);
+    expect(state.error?.statusCode).toBe(401);
+    expect(state.error?.code).toBe('UNAUTHORIZED');
   });
 
   it('returns 401 (not 500) for non-string userId identifiers', async () => {
@@ -142,10 +157,11 @@ describe('Story 8.3: JWT Key Standardization (authMiddleware)', () => {
       const token = jwt.sign(payload, TEST_SECRET, { expiresIn: '1h' });
       const req = makeReq(token);
       const res = mockRes();
-      const next = () => {};
+      const { state, next } = captureNext();
 
       await authMiddleware(req, res, next);
-      expect(res.statusCode).toBe(401);
+      expect(state.error?.isApiError).toBe(true);
+      expect(state.error?.statusCode).toBe(401);
     }
   });
 });

@@ -566,10 +566,11 @@
         const data = await res.json();
 
         if (res.ok) {
-          localStorage.setItem('authToken', data.token);
+          // Story 46.2 — canonical success envelope: { success:true, data:{token,...} }
+          localStorage.setItem('authToken', data.data?.token ?? data.token);
           window.location.href = '/dashboard';
         } else {
-          const msg = data.hint || data.details || data.error || 'Login failed';
+          const msg = data.error?.message || data.hint || data.details || data.error || 'Login failed';
           showError(msg);
           btn.disabled = false;
           btn.textContent = 'Sign in';
@@ -602,10 +603,11 @@
         const data = await res.json();
 
         if (res.ok) {
-          localStorage.setItem('authToken', data.token);
+          // Story 46.2 — canonical success envelope: { success:true, data:{token,...} }
+          localStorage.setItem('authToken', data.data?.token ?? data.token);
           window.location.href = '/dashboard';
         } else {
-          const msg = data.hint || data.details || data.error || 'Registration failed';
+          const msg = data.error?.message || data.hint || data.details || data.error || 'Registration failed';
           showError(msg, true);
           btn.disabled = false;
           btn.textContent = 'Create account';

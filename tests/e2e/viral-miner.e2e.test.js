@@ -28,31 +28,32 @@ describe('Epic 45 — Viral DNA Miner E2E Pipeline', () => {
     const res = await request(app).get('/api/viral/platforms');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.total).toBe(18);
-    expect(res.body.platforms).toHaveProperty('social');
-    expect(res.body.platforms).toHaveProperty('recruitment');
-    expect(res.body.platforms).toHaveProperty('realestate');
-    expect(res.body.platforms).toHaveProperty('ecom');
-    expect(res.body.platforms.social).toContain('threads');
-    expect(res.body.platforms.social).toContain('twitter');
+    // Story 46.2 — canonical envelope: payload lives under data
+    expect(res.body.data.total).toBe(18);
+    expect(res.body.data.platforms).toHaveProperty('social');
+    expect(res.body.data.platforms).toHaveProperty('recruitment');
+    expect(res.body.data.platforms).toHaveProperty('realestate');
+    expect(res.body.data.platforms).toHaveProperty('ecom');
+    expect(res.body.data.platforms.social).toContain('threads');
+    expect(res.body.data.platforms.social).toContain('twitter');
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P0')}] GET /api/viral/stats lists all persisted viral stats catalogs`, async () => {
     const res = await request(app).get('/api/viral/stats');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(Array.isArray(res.body.stats)).toBe(true);
+    expect(Array.isArray(res.body.data.stats)).toBe(true);
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P0')}] GET /api/viral/stats/threads/ai returns Hook Type distribution and top patterns`, async () => {
     const res = await request(app).get('/api/viral/stats/threads/ai');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.platform).toBe('threads');
-    expect(res.body.niche).toBe('ai');
-    expect(res.body.stats).toBeDefined();
-    expect(res.body.stats.hookTypeDistribution).toBeDefined();
-    expect(Array.isArray(res.body.stats.topPerformingPatterns)).toBe(true);
+    expect(res.body.data.platform).toBe('threads');
+    expect(res.body.data.niche).toBe('ai');
+    expect(res.body.data.stats).toBeDefined();
+    expect(res.body.data.stats.hookTypeDistribution).toBeDefined();
+    expect(Array.isArray(res.body.data.stats.topPerformingPatterns)).toBe(true);
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] POST /api/viral/mine creates a new mining job and returns queued status`, async () => {
@@ -66,12 +67,12 @@ describe('Epic 45 — Viral DNA Miner E2E Pipeline', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.jobId).toMatch(/^viral-\d+-[a-f0-9]+/);
-    expect(res.body.status).toBe('queued');
-    expect(res.body.job.platform).toBe('threads');
-    expect(res.body.job.niche).toBe('ai');
+    expect(res.body.data.jobId).toMatch(/^viral-\d+-[a-f0-9]+/);
+    expect(res.body.data.status).toBe('queued');
+    expect(res.body.data.job.platform).toBe('threads');
+    expect(res.body.data.job.niche).toBe('ai');
 
-    createdJobId = res.body.jobId;
+    createdJobId = res.body.data.jobId;
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] GET /api/viral/mine/:jobId returns job details and progress`, async () => {
@@ -80,9 +81,9 @@ describe('Epic 45 — Viral DNA Miner E2E Pipeline', () => {
     const res = await request(app).get(`/api/viral/mine/${createdJobId}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.job.id).toBe(createdJobId);
-    expect(['queued', 'running', 'completed']).toContain(res.body.job.status);
-    expect(res.body.job.progress).toBeDefined();
+    expect(res.body.data.job.id).toBe(createdJobId);
+    expect(['queued', 'running', 'completed']).toContain(res.body.data.job.status);
+    expect(res.body.data.job.progress).toBeDefined();
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] POST /api/viral/backtest triggers prediction backtesting against actual performance`, async () => {
@@ -96,11 +97,11 @@ describe('Epic 45 — Viral DNA Miner E2E Pipeline', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.reportId).toBeDefined();
-    expect(res.body.report.platform).toBe('threads');
-    expect(res.body.report.niche).toBe('ai');
+    expect(res.body.data.reportId).toBeDefined();
+    expect(res.body.data.report.platform).toBe('threads');
+    expect(res.body.data.report.niche).toBe('ai');
 
-    createdReportId = res.body.reportId;
+    createdReportId = res.body.data.reportId;
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] GET /api/viral/backtest/:reportId returns report status`, async () => {
@@ -109,16 +110,16 @@ describe('Epic 45 — Viral DNA Miner E2E Pipeline', () => {
     const res = await request(app).get(`/api/viral/backtest/${createdReportId}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.report.id).toBe(createdReportId);
-    expect(['queued', 'running', 'completed']).toContain(res.body.report.status);
+    expect(res.body.data.report.id).toBe(createdReportId);
+    expect(['queued', 'running', 'completed']).toContain(res.body.data.report.status);
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/viral/corpus/:platform/:niche returns raw corpus metadata`, async () => {
     const res = await request(app).get('/api/viral/corpus/threads/ai');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.platform).toBe('threads');
-    expect(res.body.niche).toBe('ai');
+    expect(res.body.data.platform).toBe('threads');
+    expect(res.body.data.niche).toBe('ai');
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/viral/mine rejects unsupported platforms with 400`, async () => {
@@ -132,6 +133,6 @@ describe('Epic 45 — Viral DNA Miner E2E Pipeline', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
-    expect(res.body.error).toBe('INVALID_PLATFORM');
+    expect(res.body.error.code).toBe('INVALID_PLATFORM');
   });
 });

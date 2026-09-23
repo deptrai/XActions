@@ -13,6 +13,8 @@
  * 4. Path-based (/api/ai/* always treated as AI)
  */
 
+import { ApiError } from './envelope.js';
+
 // Known AI agent User-Agent patterns
 const AI_USER_AGENTS = [
   // LLM providers
@@ -233,11 +235,10 @@ export function aiDetectorMiddleware(req, res, next) {
  */
 export function requireAIAgent(req, res, next) {
   if (!req.isAI) {
-    return res.status(403).json({
-      error: 'AI Agent Required',
-      message: 'This endpoint is for AI agents only. Humans should use free browser scripts.',
+    return next(new ApiError('FORBIDDEN', 403, 'This endpoint is for AI agents only. Humans should use free browser scripts.', {
+      reason: 'AI Agent Required',
       humanAlternative: 'https://xactions.app/run.html',
-    });
+    }));
   }
   next();
 }
@@ -250,12 +251,11 @@ export function requireAIAgent(req, res, next) {
  */
 export function requireHuman(req, res, next) {
   if (req.isAI) {
-    return res.status(403).json({
-      error: 'Human Access Only',
-      message: 'This endpoint is for human users. AI agents should use the paid API.',
+    return next(new ApiError('FORBIDDEN', 403, 'This endpoint is for human users. AI agents should use the paid API.', {
+      reason: 'Human Access Only',
       aiEndpoint: '/api/ai/',
       docs: 'https://xactions.app/docs/ai-api',
-    });
+    }));
   }
   next();
 }

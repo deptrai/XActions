@@ -64,6 +64,7 @@
     "db:seed": "node prisma/seed.js",
     "db:studio": "prisma studio",
     "test": "vitest run",
+    "lint:openapi": "node scripts/lint-openapi.mjs",
     "test:watch": "vitest",
     "test:x402": "vitest run tests/x402.test.js",
     "test:x402:integration": "vitest run --config vitest.x402.config.mjs",
@@ -165,7 +166,8 @@
     "socket.io": "^4.7.5",
     "socks-proxy-agent": "^8.0.5",
     "stripe": "^14.10.0",
-    "undici": "^7.29.0"
+    "undici": "^7.29.0",
+    "zod": "^4.6.5"
   },
   "optionalDependencies": {
     "@atproto/api": "^0.13.35",
@@ -176,7 +178,9 @@
     "xspace-agent": "^0.1.0"
   },
   "devDependencies": {
+    "@asteasolutions/zod-to-openapi": "^9.1.0",
     "@playwright/test": "^1.62.1",
+    "@redocly/cli": "^2.54.2",
     "@stryker-mutator/core": "^9.6.1",
     "@stryker-mutator/vitest-runner": "^9.6.1",
     "@types/express": "^5.0.0",

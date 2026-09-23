@@ -1751,7 +1751,9 @@
         const authRes = await fetch(`${API_URL}/session/auth-method`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
-        const authData = await authRes.json();
+        const authDataRaw = await authRes.json();
+        // Story 46.2 — canonical envelope: { success:true, data:{...} }
+        const authData = authDataRaw.data ?? authDataRaw;
 
         // Update Twitter status
         if (authData.hasOAuth || authData.hasSession) {
@@ -1881,7 +1883,7 @@
           showToast('Session saved successfully!', 'success');
           location.reload();
         } else {
-          alert(`❌ Error: ${data.error}`);
+          alert(`❌ Error: ${data.error?.message || data.error || 'Failed to save session'}`);
         }
       } catch (error) {
         showToast('Failed to save session cookie', 'error');

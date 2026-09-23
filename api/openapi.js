@@ -19,6 +19,7 @@ import {
   getAcceptedTokens,
   isX402Configured,
 } from './config/x402-config.js';
+import { buildGeneratedDocument, deriveOperationId } from './schemas/index.js';
 
 /**
  * Build the x-payment-info extension for an operation.
@@ -941,11 +942,11 @@ export function generateSpec() {
   const networks = getAcceptedNetworks(true);
   const tokens = getAcceptedTokens(true);
 
-  return {
+  const literalSpec = {
     openapi: '3.1.0',
     info: {
       title: 'XActions AI API',
-      version: '1.0.0',
+      version: '2.0.0',
       description:
         'X/Twitter automation API for AI agents. Pay-per-request via x402 protocol (USDC on Base). ' +
         'Scrape profiles, automate actions, monitor followers, download media, and generate content.',
@@ -1000,6 +1001,7 @@ Free alternatives: Browser scripts, CLI, and Node.js library at https://xactions
     },
 
     servers: [
+      { url: 'http://localhost:3001', description: 'Local development' },
       { url: 'https://xactions.app', description: 'Production' },
     ],
 
@@ -1033,8 +1035,26 @@ Free alternatives: Browser scripts, CLI, and Node.js library at https://xactions
         sessionCookie: {
           type: 'apiKey',
           in: 'header',
-          name: 'X-Session-Cookie',
+          name: 'x-session-cookie',
           description: 'X/Twitter auth_token cookie for browser automation',
+        },
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'User JWT — Authorization: Bearer <token>',
+        },
+        a2aApiKey: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'X-Agent-API-Key',
+          description: 'A2A agent API key (checkpoint:manage etc.)',
+        },
+        apiKey: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'X-API-Key',
+          description: 'Alternate A2A API key header',
         },
       },
       schemas: {
@@ -4226,6 +4246,117 @@ Free alternatives: Browser scripts, CLI, and Node.js library at https://xactions
       { name: 'Media', description: 'Media library, upload, analytics, captions, batch download' },
     ],
   };
+
+  return composeSpec(literalSpec);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Story 46.2 — unified spec composition
+//
+// The literal `/api/ai` section above is an INPUT ARTIFACT. `composeSpec`
+// runs the normalization pass over it and merges the Zod-registry-generated
+// pilot operations on top.
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Ref re-point map — legacy literal envelope components → canonical names
+ * registered by api/schemas/common.js (ApiError / ApiSuccess).
+ */
+const CANONICAL_REF_REPOINTS = {
+  '#/components/schemas/Error': '#/components/schemas/ApiError',
+  '#/components/schemas/SuccessResponse': '#/components/schemas/ApiSuccess',
+};
+
+/**
+ * Recursively rewrite `$ref` values throughout the spec (covers response
+ * schemas, parameters, requestBody, and extension payloads like x-bazaar).
+ * @param {unknown} node
+ */
+function repointRefs(node) {
+  if (Array.isArray(node)) {
+    for (const item of node) repointRefs(item);
+    return;
+  }
+  if (node && typeof node === 'object') {
+    for (const [key, value] of Object.entries(node)) {
+      if (key === '$ref' && typeof value === 'string' && CANONICAL_REF_REPOINTS[value]) {
+        node[key] = CANONICAL_REF_REPOINTS[value];
+      } else {
+        repointRefs(value);
+      }
+    }
+  }
+}
+
+/**
+ * Normalization pass over one literal operation:
+ * - strip the legacy `sessionCookie` request-body property (canonical
+ *   transport is the x-session-cookie header — AD-6)
+ * - backfill a deterministic `operationId` when missing
+ */
+function normalizeOperation(op, method, path) {
+  if (!op || typeof op !== 'object') return;
+
+  const schema = op.requestBody?.content?.['application/json']?.schema;
+  if (schema && typeof schema === 'object' && schema.properties?.sessionCookie) {
+    delete schema.properties.sessionCookie;
+    if (Array.isArray(schema.required)) {
+      schema.required = schema.required.filter((k) => k !== 'sessionCookie');
+      if (schema.required.length === 0) delete schema.required;
+    }
+  }
+
+  if (!op.operationId) {
+    op.operationId = deriveOperationId(method, path);
+  }
+}
+
+/**
+ * Merge registry-generated paths into the spec and normalize every operation.
+ * Throws on a method+path collision between registry and literal ops.
+ */
+function mergeAndNormalizePaths(specPaths, generatedPaths) {
+  for (const [path, pathItem] of Object.entries(generatedPaths ?? {})) {
+    if (!specPaths[path]) {
+      specPaths[path] = pathItem;
+      continue;
+    }
+    for (const [method, op] of Object.entries(pathItem)) {
+      if (specPaths[path][method]) {
+        throw new Error(`OpenAPI merge collision: ${method.toUpperCase()} ${path} exists in both literal and registry sections`);
+      }
+      specPaths[path][method] = op;
+    }
+  }
+
+  for (const [path, pathItem] of Object.entries(specPaths)) {
+    for (const [method, op] of Object.entries(pathItem)) {
+      if (method === 'parameters' || method.startsWith('x-')) continue;
+      normalizeOperation(op, method, path);
+    }
+  }
+}
+
+/**
+ * Compose the unified spec: literal /api/ai artifact + registry pilot paths,
+ * canonical components, and the normalization pass.
+ * @param {Record<string, any>} literalSpec
+ */
+function composeSpec(literalSpec) {
+  const spec = literalSpec;
+
+  // Canonical envelope components own these names; the legacy literal ones retire.
+  delete spec.components.schemas.Error;
+  delete spec.components.schemas.SuccessResponse;
+
+  const generated = buildGeneratedDocument();
+  const generatedSchemas = generated?.components?.schemas ?? {};
+  spec.components.schemas = { ...spec.components.schemas, ...generatedSchemas };
+
+  mergeAndNormalizePaths(spec.paths, generated.paths);
+
+  repointRefs(spec);
+  return spec;
 }
 
 /**

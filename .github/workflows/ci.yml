@@ -78,6 +78,9 @@ jobs:
         run: npx prisma db push --skip-generate
         if: failure()
 
+      - name: Lint OpenAPI spec (Story 46.2)
+        run: npm run lint:openapi
+
       - name: Run tests
         run: npm test
 

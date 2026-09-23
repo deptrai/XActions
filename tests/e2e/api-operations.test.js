@@ -49,7 +49,8 @@ describe('Operations endpoints', () => {
       .get('/api/operations')
       .set('Authorization', 'Token sometoken');
     expect(res.status).toBe(401);
-    expect(res.body.error).toMatch(/token/i);
+    // Story 46.2 — canonical error envelope: error is an object with code/message
+    expect(res.body.error.message).toMatch(/token/i);
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/operations/status/:id without auth → 401`, async () => {
@@ -112,9 +113,11 @@ describe('Operations endpoints', () => {
 
   // ─── Response shape contract (error responses) ────────────────────────────
 
-  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] 401 error response is JSON with error field`, async () => {
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] 401 error response is JSON with canonical error field`, async () => {
     const res = await request(app).get('/api/operations');
     expect(res.headers['content-type']).toMatch(/json/);
-    expect(typeof res.body.error).toBe('string');
+    // Story 46.2 — canonical error envelope: { success:false, error:{code,message} }
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatchObject({ code: 'UNAUTHORIZED', message: expect.any(String) });
   });
 });

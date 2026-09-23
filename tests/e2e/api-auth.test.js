@@ -32,8 +32,10 @@ describe('Auth endpoints', () => {
     async (id, desc, body, expectedPaths) => {
       const res = await request(app).post('/api/auth/register').send(body);
       expect(res.status).toBe(400);
-      expect(res.body.errors).toBeInstanceOf(Array);
-      const paths = res.body.errors.map((e) => e.path);
+      // Story 46.2 — canonical VALIDATION_FAILED envelope; Zod issues live in error.details.issues
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('VALIDATION_FAILED');
+      const paths = (res.body.error.details?.issues ?? []).map((e) => e.path);
       for (const path of expectedPaths) {
         expect(paths).toContain(path);
       }
@@ -46,14 +48,15 @@ describe('Auth endpoints', () => {
       password: 'validpassword123',
     });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/already taken/i);
+    expect(res.body.error.message).toMatch(/already taken/i);
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/auth/login with empty body → 400`, async () => {
     const res = await request(app).post('/api/auth/login').send({});
     expect(res.status).toBe(400);
-    expect(res.body.errors).toBeInstanceOf(Array);
-    const paths = res.body.errors.map((e) => e.path);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('VALIDATION_FAILED');
+    const paths = (res.body.error.details?.issues ?? []).map((e) => e.path);
     expect(paths).toContain('identifier');
     expect(paths).toContain('password');
   });
@@ -64,7 +67,7 @@ describe('Auth endpoints', () => {
       password: 'wrongpassword123',
     });
     expect(res.status).toBe(401);
-    expect(res.body.error).toMatch(/invalid credentials/i);
+    expect(res.body.error.message).toMatch(/invalid credentials/i);
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] POST /api/auth/login with valid credentials → 200`, async () => {
@@ -73,17 +76,25 @@ describe('Auth endpoints', () => {
       password: testUser.password,
     });
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('token');
-    expect(res.body.user.username).toBe(testUser.username);
+    // Story 46.2 — canonical success envelope: { success:true, data:{token,user} }
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('token');
+    expect(res.body.data.user.username).toBe(testUser.username);
   });
 
-  it.each([
-    [nextTestId(TEST_SCOPE, 'E2E', 'P0'), 'no token', {}],
-    [nextTestId(TEST_SCOPE, 'E2E', 'P0'), 'malformed token', { token: 'not.a.jwt' }],
-  ])(`[%s] POST /api/auth/refresh with %s → 401`, async (id, desc, body) => {
-    const res = await request(app).post('/api/auth/refresh').send(body);
+  // Story 46.2 — missing token fails Zod validation (400 VALIDATION_FAILED);
+  // a structurally-present but malformed token fails jwt.verify (401).
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P0')}] POST /api/auth/refresh with no token → 400`, async () => {
+    const res = await request(app).post('/api/auth/refresh').send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_FAILED');
+  });
+
+  it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P0')}] POST /api/auth/refresh with malformed token → 401`, async () => {
+    const res = await request(app).post('/api/auth/refresh').send({ token: 'not.a.jwt' });
     expect(res.status).toBe(401);
     expect(res.body).toHaveProperty('error');
+    expect(res.body.error.code).toBe('UNAUTHORIZED');
   });
 
   // Protected endpoint auth guards (not auth-rate-limited)
@@ -112,7 +123,7 @@ describe('Auth endpoints', () => {
       .get('/api/operations')
       .set('Authorization', 'Basic dXNlcjpwYXNz');
     expect(res.status).toBe(401);
-    expect(res.body.error).toMatch(/token/i);
+    expect(res.body.error.message).toMatch(/token/i);
   });
 
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P1')}] Protected endpoint accepts token signed with { id } payload (Story 8.3)`, async () => {

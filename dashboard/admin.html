@@ -1564,7 +1564,7 @@
       if (filters.targetKey) params.set('targetKey', filters.targetKey);
       if (sort.field) {
         params.set('sortBy', sort.field);
-        params.set('sortOrder', sort.order);
+        params.set('order', sort.order);
       }
       return params.toString();
     }
@@ -1605,10 +1605,15 @@
           throw new Error(data.error?.message || 'Failed to load checkpoints');
         }
 
-        const result = data.data || {};
-        checkpointsState.pagination.total = result.total || 0;
-        renderCheckpoints(result.checkpoints || []);
-        renderCheckpointFilters(result.checkpoints || []);
+        // Story 46.2 — canonical pagination envelope:
+        //   { success:true, data: Checkpoint[], page:{cursor,limit,total} }
+        // Legacy fallback kept for pre-46.2 deployments: data.checkpoints/data.total.
+        const items = Array.isArray(data.data)
+          ? data.data
+          : (data.data?.checkpoints || []);
+        checkpointsState.pagination.total = data.page?.total ?? data.data?.total ?? 0;
+        renderCheckpoints(items);
+        renderCheckpointFilters(items);
         updateCheckpointPagination();
         checkpointsState.initialised = true;
       } catch (err) {

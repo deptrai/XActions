@@ -2,6 +2,7 @@
 import prisma from '../lib/prisma.js';
 import jwt from 'jsonwebtoken';
 import { tierMeetsRequirement, getTier, isWithinLimit } from '../config/subscription-tiers.js';
+import { ApiError } from './envelope.js';
 
 /**
  * Resolve a user identifier from a decoded JWT payload.
@@ -31,7 +32,7 @@ const authMiddleware = async (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'No token provided' });
+      return next(new ApiError('UNAUTHORIZED', 401, 'No token provided'));
     }
 
     const token = authHeader.substring(7);
@@ -41,12 +42,12 @@ const authMiddleware = async (req, res, next) => {
     }
     const decoded = jwt.verify(token, secret);
     if (typeof decoded !== 'object' || decoded === null) {
-      return res.status(401).json({ error: 'Invalid token' });
+      return next(new ApiError('UNAUTHORIZED', 401, 'Invalid token'));
     }
 
     const userId = resolveUserId(/** @type {Record<string, unknown>} */ (decoded));
     if (!userId) {
-      return res.status(401).json({ error: 'Invalid token' });
+      return next(new ApiError('UNAUTHORIZED', 401, 'Invalid token'));
     }
 
     // Get user from database
@@ -55,18 +56,19 @@ const authMiddleware = async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(401).json({ error: 'User not found' });
+      return next(new ApiError('UNAUTHORIZED', 401, 'User not found'));
     }
 
     // Attach user to request - all users have full access
     req.user = /** @type {Record<string, unknown>} */ (user);
     next();
   } catch (error) {
+    if (error instanceof ApiError) return next(error);
     if (error instanceof Error && (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError')) {
-      return res.status(401).json({ error: error.name === 'JsonWebTokenError' ? 'Invalid token' : 'Token expired' });
+      return next(new ApiError('UNAUTHORIZED', 401, error.name === 'JsonWebTokenError' ? 'Invalid token' : 'Token expired'));
     }
     console.error('❌ Auth middleware error:', error);
-    return res.status(500).json({ error: 'Authentication error' });
+    return next(new ApiError('INTERNAL', 500, 'Authentication error'));
   }
 };
 
@@ -149,16 +151,16 @@ const requireSubscription = (requiredTier = 'free') => {
       }
 
       if (!tierMeetsRequirement(/** @type {string} */ (req.userTier), requiredTier)) {
-        return res.status(403).json({
-          error: 'Upgrade required',
+        return next(new ApiError('FORBIDDEN', 403, 'Upgrade required', {
           requiredTier,
           currentTier: req.userTier,
           upgradeUrl: '/api/billing/plans',
-        });
+        }));
       }
 
       next();
     } catch (error) {
+      if (error instanceof ApiError) return next(error);
       console.error('❌ Subscription check error:', error instanceof Error ? error.message : error);
       // Fail open — don't block users if DB is down
       next();
@@ -205,17 +207,17 @@ const checkUsageLimit = (limitKey) => {
       });
 
       if (!isWithinLimit(limit, todayCount)) {
-        return res.status(429).json({
-          error: 'Daily limit reached',
+        return next(new ApiError('RATE_LIMITED', 429, 'Daily limit reached', {
           limit,
           used: todayCount,
           currentTier: userTier,
           upgradeUrl: '/api/billing/plans',
-        });
+        }));
       }
 
       next();
     } catch (error) {
+      if (error instanceof ApiError) return next(error);
       console.error('❌ Usage limit check error:', error instanceof Error ? error.message : error);
       next();
     }
@@ -230,11 +232,11 @@ const checkUsageLimit = (limitKey) => {
  */
 const requireAdmin = (req, res, next) => {
   if (!req.user) {
-    return res.status(401).json({ error: 'Authentication required' });
+    return next(new ApiError('UNAUTHORIZED', 401, 'Authentication required'));
   }
 
   if (!Boolean(req.user.isAdmin)) {
-    return res.status(403).json({ error: 'Admin access required' });
+    return next(new ApiError('FORBIDDEN', 403, 'Admin access required'));
   }
 
   next();

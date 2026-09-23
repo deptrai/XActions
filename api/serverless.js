@@ -14,6 +14,12 @@ import userRoutes from './routes/user.js';
 import twitterRoutes from './routes/twitter.js';
 import videoRoutes from './routes/video.js';
 import unfollowersRoutes from './routes/unfollowers.js';
+import {
+  envelopeMiddleware,
+  errorMiddleware,
+  notFoundHandler,
+  rateLimitedHandler,
+} from './middleware/envelope.js';
 import { generateSpec, generateWellKnown } from './openapi.js';
 import {
   PAY_TO_ADDRESS,
@@ -35,11 +41,15 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
+// Story 46.2 — canonical envelope helpers before body parsers.
+app.use(envelopeMiddleware);
+
+// Rate limiting — canonical RATE_LIMITED envelope via the error middleware.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: { error: 'Too many attempts, please try again later' }
+  message: { error: 'Too many attempts, please try again later' },
+  handler: rateLimitedHandler
 });
 
 // Body parsing
@@ -186,9 +196,9 @@ app.use('/api/video', videoRoutes);
 // Unfollower tracking routes (stats, changes, chart, schedule — scan requires Railway)
 app.use('/api/unfollowers', unfollowersRoutes);
 
-// 404 for unmatched API routes
-app.use('/api', /** @type {import('express').RequestHandler} */ ((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-}));
+// Story 46.2 — canonical 404 for unmatched API routes + error middleware
+// (PlatformError / ApiError / body-parser errors all serialize canonically).
+app.use('/api', notFoundHandler);
+app.use(errorMiddleware);
 
 export default app;

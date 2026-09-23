@@ -12,6 +12,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
+import { errorMiddleware } from '../api/middleware/envelope.js';
 
 // Suppress unhandled rejections from @x402/express SDK route config error
 // (SDK throws TypeError during validateRouteConfiguration but it's non-fatal
@@ -101,6 +102,11 @@ function createRealApp() {
   app.get('/api/operations/status/:id', (req, res) => {
     res.json({ success: true, status: 'completed' });
   });
+
+  // Story 46.2 — production server mounts the canonical error middleware;
+  // mirror it so next(ApiError) emits the canonical envelope instead of
+  // Express's default HTML error page.
+  app.use(errorMiddleware);
 
   return app;
 }
@@ -2464,7 +2470,7 @@ describe('x402Middleware — degradation paths (P0 kill)', () => {
     const app = createRealApp();
     const res = await request(app).post('/api/ai/scrape/profile').send({ username: 'test' });
     expect(res.status).toBe(503);
-    expect(res.body.error).toBe('Payment system unavailable');
+    expect(res.body.error?.message).toBe('Payment system unavailable');
   });
 
   it('should log warning and call next() in dev when _initFailed is true and _middleware is null', async () => {
@@ -2528,7 +2534,7 @@ describe('x402Middleware — degradation paths (P0 kill)', () => {
     const app = createRealApp();
     const res = await request(app).post('/api/scripts/run').send({ script: 'test' });
     expect(res.status).toBe(503);
-    expect(res.body.error).toBe('Payment system unavailable');
+    expect(res.body.error?.message).toBe('Payment system unavailable');
   });
 
   it('should pass through in dev with warning for script endpoints when middleware is null', async () => {
@@ -2576,7 +2582,7 @@ describe('x402Middleware — config not validated (P0 kill)', () => {
     const app = createRealApp();
     const res = await request(app).post('/api/ai/scrape/profile').send({ username: 'test' });
     expect(res.status).toBe(500);
-    expect(res.body.error).toBe('Payment system not configured');
+    expect(res.body.error?.message).toBe('Payment system not configured');
   });
 
   it('should pass through in dev when config is invalid (graceful degradation)', async () => {
@@ -2596,7 +2602,7 @@ describe('x402Middleware — config not validated (P0 kill)', () => {
     const app = createRealApp();
     const res = await request(app).post('/api/scripts/run').send({ script: 'test' });
     expect(res.status).toBe(500);
-    expect(res.body.error).toBe('Payment system not configured');
+    expect(res.body.error?.message).toBe('Payment system not configured');
   });
 });
 
