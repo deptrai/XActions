@@ -305,6 +305,7 @@ app.use(express.static(path.join(__dirname, '../public'), {
 }));
 
 // Serve dashboard static files with cache headers
+app.use('/dashboard', express.static(path.join(__dirname, '../dashboard')));
 app.use(express.static(path.join(__dirname, '../dashboard'), {
   maxAge: '1h',
   etag: true,          // Enable ETag for conditional requests
