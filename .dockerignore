@@ -1,0 +1,11 @@
+node_modules
+apps/web/node_modules
+apps/web/.next
+.git
+.github
+tests
+_bmad-output
+*.log
+.env
+.env.local
+.DS_Store
