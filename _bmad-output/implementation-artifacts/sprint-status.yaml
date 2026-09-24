@@ -330,7 +330,7 @@ epic-47:
       status: done
     - id: 47.3
       name: Follower CRM & Contact Intelligence Screen
-      status: backlog
+      status: done
     - id: 47.4
       name: AI Content Optimizer Playground Screen
       status: backlog
