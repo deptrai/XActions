@@ -459,9 +459,6 @@ app.get('/pricing', (req, res) => {
 app.get('/docs', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/docs/index.html'));
 });
-app.get('/graph', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/graph.html'));
-});
 // Documentation sub-pages — serves 167 auto-generated SEO pages
 const docsBasePath = path.resolve(__dirname, '../dashboard/docs');
 
@@ -516,13 +513,7 @@ app.get('/faq', (req, res) => {
 // Story 40.1 / AD-20: Mount unified Streamable-HTTP MCP endpoint alongside dashboard HTML
 setupMcpRoutes(app);
 
-app.get('/ai', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/ai.html'));
-});
 
-app.get('/ai-api', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/ai-api.html'));
-});
 
 app.get('/privacy', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/privacy.html'));
@@ -532,13 +523,7 @@ app.get('/terms', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/terms.html'));
 });
 
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/login.html'));
-});
 
-app.get('/run', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/run.html'));
-});
 
 app.get('/tutorials', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/tutorials.html'));
@@ -570,70 +555,28 @@ app.get('/scripts/:slug', (req, res) => {
   });
 });
 
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/admin.html'));
-});
 
-app.get('/analytics', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/analytics.html'));
-});
 
-app.get('/automations', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/automations.html'));
-});
 
-app.get('/agent', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/agent.html'));
-});
 
-app.get('/monitor', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/monitor.html'));
-});
 
-app.get('/scheduler', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/scheduler.html'));
-});
 
-app.get('/unfollowers', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/unfollowers.html'));
-});
 
-app.get('/workflows', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/workflows.html'));
-});
 
-app.get('/thread', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/thread.html'));
-});
 
 // SEO-friendly thread URL: /thread/1234567890
-app.get('/thread/:tweetId', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/thread.html'));
-});
 
-app.get('/video', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/video.html'));
-});
 
 app.get('/analytics-dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/analytics-dashboard.html'));
 });
 
-app.get('/calendar', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/calendar.html'));
-});
 
-app.get('/thread-composer', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/thread-composer.html'));
-});
 
 app.get('/team', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/team.html'));
 });
 
-app.get('/price-correlation', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/price-correlation.html'));
-});
 
 app.get('/pricing', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/pricing.html'));
@@ -655,25 +598,13 @@ app.get('/examples', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/examples.html'));
 });
 
-app.get('/extension', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/extension.html'));
-});
 
 app.get('/integrations', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/integrations.html'));
 });
 
-app.get('/playground', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/playground.html'));
-});
 
-app.get('/security', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/security.html'));
-});
 
-app.get('/status', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/status.html'));
-});
 
 app.get('/use-cases', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/use-cases.html'));
@@ -687,42 +618,14 @@ app.get('/changelog', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/changelog.html'));
 });
 
-app.get('/a2a', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/a2a.html'));
-});
 
-// Platform hub routes
-for (const p of ['/platform', '/platforms', '/platforms/:platform']) {
-  app.get(p, (/** @type {import('express').Request} */ _req, /** @type {import('express').Response} */ res) => {
-    res.sendFile(path.join(__dirname, '../dashboard/platform.html'));
-  });
-}
 
-app.get('/facebook', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/facebook.html'));
-});
 
-app.get('/tweet-schedule', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/tweet-schedule.html'));
-});
 
-// Dashboard header uses /schedule as an alias for tweet schedule
-app.get('/schedule', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/tweet-schedule.html'));
-});
 
-// Benchmark & Scraper Reliability Scorecard route (Epic 34 / Story 34.5)
-for (const p of ['/viral-miner', '/dashboard/viral-miner.html']) {
-  app.get(p, (/** @type {import('express').Request} */ _req, /** @type {import('express').Response} */ res) => {
-    res.sendFile(path.join(__dirname, '../dashboard/viral-miner.html'));
-  });
-}
 
-for (const p of ['/benchmark', '/benchmarks']) {
-  app.get(p, (/** @type {import('express').Request} */ _req, /** @type {import('express').Response} */ res) => {
-    res.sendFile(path.join(__dirname, '../dashboard/benchmark.html'));
-  });
-}
+
+
 
 // Story 46.2 — canonical 404 + error envelopes.
 // notFoundHandler emits { success:false, error:{code:'NOT_FOUND'} } for unmatched
