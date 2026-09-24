@@ -371,36 +371,36 @@ epic-48:
       status: done
     - id: 48.6
       name: Intelligence Screens (/osint, /graph, /analytics, /price-correlation)
-      status: backlog
+      status: done
     - id: 48.7
       name: Automation Screens (/workflows, /automations, /scheduler, /calendar, /a2a, /jev-test)
-      status: backlog
+      status: done
     - id: 48.8
       name: Content & Media Screens (/thread*, /video, /ai*, /playground)
-      status: backlog
+      status: done
     - id: 48.9
       name: Account & Misc Screens (/facebook, /unfollowers, /mcp, /extension, /platform, /agent, /security)
-      status: backlog
+      status: done
     - id: 48.10
       name: Decommission Gate — Legacy dashboard removal (FR-125 closure)
-      status: backlog
+      status: done
 
 # Epic 49: Platform Hardening Sweep
 epic-49:
-  status: backlog
+  status: done
   stories:
     - id: 49.1
       name: Quick Wins — Route Order, CORS, Lockfile, Session Hygiene
-      status: backlog
+      status: done
     - id: 49.2
       name: CommentTreeExtractor Concurrency Hardening (P1)
-      status: backlog
+      status: done
     - id: 49.3
       name: Redis-Backed Consumer Quota (Multi-Worker)
-      status: backlog
+      status: done
     - id: 49.4
       name: Webhook Delivery Worker (HOL Blocking)
-      status: backlog
+      status: done
     - id: 49.5
       name: Checkpoint Optimistic Locking + P2 Sweep
-      status: backlog
+      status: done

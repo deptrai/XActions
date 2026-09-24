@@ -194,13 +194,31 @@ export async function resumeCheckpoint(id, options = {}) {
       ? now
       : checkpoint.nextScheduledAt;
 
-  return prisma.crawlCheckpoint.update({
-    where: { id: checkpoint.id },
+  // Story 49.5: optimistic locking — update only if updatedAt hasn't changed
+  // since we read the checkpoint. If another process mutated it, updateMany
+  // returns count=0 and we throw 409 Conflict.
+  const result = await prisma.crawlCheckpoint.updateMany({
+    where: {
+      id: checkpoint.id,
+      updatedAt: checkpoint.updatedAt, // optimistic lock
+    },
     data: {
       status: 'running',
       nextScheduledAt,
     },
   });
+
+  if (result.count === 0) {
+    throw new PlatformError({
+      type: ErrorTypes.INVALID_ARGS,
+      code: 'XACT_4009',
+      message: 'Checkpoint was modified concurrently — retry the operation.',
+      statusCode: 409,
+      suggestedAction: SuggestedActions.WAIT,
+    });
+  }
+
+  return prisma.crawlCheckpoint.findUniqueOrThrow({ where: { id: checkpoint.id } });
 }
 
 /**
