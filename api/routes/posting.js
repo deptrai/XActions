@@ -1,3 +1,5 @@
+import { validate } from '../middleware/validate.js';
+import { TweetBody, ThreadBody } from '../schemas/social-posting.js';
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 import prisma from '../lib/prisma.js';
 /**
@@ -11,7 +13,7 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // Post a tweet
-router.post('/tweet', async (req, res) => {
+router.post('/tweet', validate({ body: TweetBody }), async (req, res) => {
   const reqUser = /** @type {User} */ (req.user);
 
   try {
@@ -51,7 +53,7 @@ router.post('/tweet', async (req, res) => {
 });
 
 // Post a thread
-router.post('/thread', async (req, res) => {
+router.post('/thread', validate({ body: ThreadBody }), async (req, res) => {
   const reqUser = /** @type {User} */ (req.user);
 
   try {

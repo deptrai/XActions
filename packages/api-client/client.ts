@@ -7842,6 +7842,52 @@ export class XActionsClient {
     return this.request<T>(url, init);
   }
 
+  /** List user bookmarks (GET /api/bookmarks) */
+  async getApiBookmarks<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/bookmarks';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Bookmark a tweet (POST /api/bookmarks/add) */
+  async postApiBookmarksAdd<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/bookmarks/add';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
   /** List checkpoints with filters and pagination (GET /api/checkpoints) */
   async getApiCheckpoints<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
     const headers: Record<string, string> = { ...opts.headers };
@@ -7969,6 +8015,27 @@ export class XActionsClient {
     return this.request<T>(url, init);
   }
 
+  /** Get creator monetization and analytics metrics (GET /api/creator/stats) */
+  async getApiCreatorStats<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/creator/stats';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
   /** Auto-score all CRM contacts (POST /api/crm/score) */
   async postApiCrmScore<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
     const headers: Record<string, string> = { ...opts.headers };
@@ -8086,6 +8153,244 @@ export class XActionsClient {
     return this.request<T>(url, init);
   }
 
+  /** Get trending topics and hashtags (GET /api/discovery/trending) */
+  async getApiDiscoveryTrending<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      // no auth scheme declared
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/discovery/trending';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Follow a user by handle (POST /api/engagement/follow) */
+  async postApiEngagementFollow<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/engagement/follow';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Like a target tweet (POST /api/engagement/like) */
+  async postApiEngagementLike<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/engagement/like';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Retweet a target tweet (POST /api/engagement/retweet) */
+  async postApiEngagementRetweet<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/engagement/retweet';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** List available Facebook automation accounts (GET /api/facebook/accounts) */
+  async getApiFacebookAccounts<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/facebook/accounts';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Register a new Facebook automation session cookie (POST /api/facebook/accounts) */
+  async postApiFacebookAccounts<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/facebook/accounts';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Post a comment on a Facebook post (POST /api/facebook/comment) */
+  async postApiFacebookComment<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/facebook/comment';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Scrape a public Facebook profile or page (POST /api/facebook/scrape/profile) */
+  async postApiFacebookScrapeProfile<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/facebook/scrape/profile';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Compute network graph centrality metrics (GET /api/graph/centrality) */
+  async getApiGraphCentrality<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/graph/centrality';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Send a direct message to a user (POST /api/messages/send) */
+  async postApiMessagesSend<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/messages/send';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
   /** Suggest hashtags for tweet text (POST /api/optimizer/hashtags) */
   async postApiOptimizerHashtags<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
     const headers: Record<string, string> = { ...opts.headers };
@@ -8167,6 +8472,148 @@ export class XActionsClient {
       // no auth scheme declared
     const init: RequestInit = { method: 'POST', headers };
     let url = this.baseUrl + '/api/optimizer/variations';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Get unified social platform scraping and crawler health (GET /api/platform/status) */
+  async getApiPlatformStatus<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      // no auth scheme declared
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/platform/status';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Post a tweet with an attached poll (POST /api/posting/poll) */
+  async postApiPostingPoll<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/posting/poll';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Post a multi-tweet thread (POST /api/posting/thread) */
+  async postApiPostingThread<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/posting/thread';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Post a new tweet (POST /api/posting/tweet) */
+  async postApiPostingTweet<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/posting/tweet';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Get account profile information (GET /api/profile) */
+  async getApiProfile<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/profile';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Update account profile metadata (POST /api/profile/update) */
+  async postApiProfileUpdate<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/profile/update';
     if (opts.params) {
       for (const [k, v] of Object.entries(opts.params)) {
         url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
@@ -8312,6 +8759,157 @@ export class XActionsClient {
     if (opts.body !== undefined) {
       headers['Content-Type'] = 'application/json';
       init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Get user application settings (GET /api/settings) */
+  async getApiSettings<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/settings';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Discover live Twitter Spaces (GET /api/spaces/active) */
+  async getApiSpacesActive<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/spaces/active';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Unroll and reconstruct a tweet thread (GET /api/thread/unroll/{tweetId}) */
+  async getApiThreadUnrollTweetid<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/thread/unroll/{tweetId}';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Get current authenticated Twitter user details (GET /api/twitter/user) */
+  async getApiTwitterUser<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/twitter/user';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Detect recent unfollowers (POST /api/unfollowers/detect) */
+  async postApiUnfollowersDetect<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/unfollowers/detect';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** List detected unfollowers (GET /api/unfollowers/list) */
+  async getApiUnfollowersList<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/unfollowers/list';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Get current platform user record (GET /api/user/me) */
+  async getApiUserMe<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/user/me';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
     }
     return this.request<T>(url, init);
   }

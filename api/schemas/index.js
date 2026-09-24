@@ -18,3 +18,10 @@ export * from './optimizer.js';
 export * from './checkpoints.js';
 export * from './session.js';
 export * from './auth.js';
+
+// Story 46.4 — Social & User-Facing Mounts
+export * from './social-posting.js';
+export * from './social-engagement.js';
+export * from './social-account.js';
+export * from './social-discovery.js';
+export * from './social-facebook.js';
