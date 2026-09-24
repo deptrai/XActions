@@ -77,7 +77,12 @@ export default function ViralMinerPage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.data?.platforms) {
-          setPlatforms(data.data.platforms);
+          if (Array.isArray(data.data.platforms)) {
+            setPlatforms(data.data.platforms);
+          } else if (typeof data.data.platforms === 'object') {
+            const flattened = Object.values(data.data.platforms).flat() as string[];
+            if (flattened.length > 0) setPlatforms(flattened);
+          }
         }
       })
       .catch(() => {});
