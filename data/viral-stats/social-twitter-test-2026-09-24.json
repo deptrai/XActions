@@ -1,0 +1,41 @@
+{
+  "platform": "twitter",
+  "category": "social",
+  "niche": "test",
+  "sampleSize": 2,
+  "generatedAt": "2026-09-24T13:39:06.067Z",
+  "viralRateThreshold": 200,
+  "hookTypeDistribution": {
+    "assertion": {
+      "count": 1,
+      "avgEngagement": 100,
+      "viralRate": 0
+    },
+    "unknown": {
+      "count": 1,
+      "avgEngagement": 200,
+      "viralRate": 100
+    }
+  },
+  "topPerformingPatterns": [
+    {
+      "attributes": {},
+      "avgEngagement": 200,
+      "count": 1
+    },
+    {
+      "attributes": {
+        "hookType": "assertion",
+        "hasNumbers": true
+      },
+      "avgEngagement": 100,
+      "count": 1
+    }
+  ],
+  "attributeCorrelations": {
+    "hookType": 2500,
+    "hasNumbers": 2500,
+    "emotionalTrigger": 0,
+    "curiosityGap": 0
+  }
+}
