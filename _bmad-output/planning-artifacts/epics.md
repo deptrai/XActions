@@ -1277,17 +1277,17 @@ So that **tất cả 23+ crawlers tự động emit thin events vào Redis Strea
 
 ---
 
-### Story 20.3: jev-trading-pumpfun-native-social-crawler
+### Story 20.5: pumpfun-native-social-crawler
 
-As a **Jev-Trading Quantitative Engineer**,  
+As a **Platform Consumer / Quantitative Analyst**,  
 I want **PumpFunCrawler cào dữ liệu social native (theses, comments, top holders, KOL activity, livestream status) từ pump.fun bằng HTTP/2 REST unauthenticated**,  
-So that **jev-trading có thể ingest tín hiệu social của Solana mint token theo thời gian thực với độ trễ thấp (<300ms) mà không cần headless browser**.
+So that **bất kỳ consumer nào (jev-trading, bot trading, analytics pipeline, MCP client) đều có thể ingest tín hiệu social của Solana mint token theo thời gian thực với độ trễ thấp (<300ms) mà không cần headless browser**.
 
 **Phạm vi & Vị trí:**
 - Thư mục: `src/scrapers/social/pumpfun/` (`index.js`, `client.js`, `crawler.js`, `comments.js`, `kolscan.js`, `livestream.js`, `velocity.js`, `normalizer.js`)
 - Endpoints: `https://frontend-api-v3.pump.fun/mint-positions/{mint}?sortBy=TOP&withThesis=true`, `/replies/{mint}`, `/coins/currently-live`
 - External Cache: `kolscan.io/coins/kolscan` (Redis TTL 10m + file seed fallback `config/kol-wallets-seed.json`)
-- Export: SDK contract `fetchMintSocial(mintAddress)` cho `jev-trading`
+- Interface Contract: `fetchMintSocial(mintAddress)` xuất SDK dùng chung cho mọi consumers
 
 **Acceptance Criteria:**
 
@@ -1298,30 +1298,42 @@ So that **jev-trading có thể ingest tín hiệu social của Solana mint toke
 * **And** tự động fallback sang `createCurlTransport('pumpfun')` (`src/core/curl-transport.js`) khi HTTP/2 client dính Cloudflare TLS fingerprint block (HTTP 403)
 * **And** đăng ký action `pumpfun:fetch_mint_social` vào `globalActionRegistry` (`src/core/action-registry.js`) theo chuẩn AD-11
 
-* **When** gọi `fetchMintSocial(mintAddress)`
-* **Then** query `GET https://frontend-api-v3.pump.fun/mint-positions/{mint}?sortBy=TOP&withThesis=true`
-* **And** trích xuất mảng `theses`: `Array<{ user: string, wallet: string, content: string, timestamp: number, holdings: number, pnlSol?: number, isKol: boolean }>`
+* **When** consumer gọi `fetchMintSocial(mintAddress)`
+* **Then** kiểm tra tính hợp lệ của Solana mint address bằng Base58 regex (`/^[1-9A-HJ-NP-Za-km-z]{32,44}$/`)
+* **And** nếu mint không hợp lệ, ném ngay `PlatformError(XACT_4002)` tại client mà không gửi request lên upstream hay tiêu hao token rate limit
+* **And** áp dụng cơ chế in-flight request deduplication: nếu nhiều consumer/thread cùng query 1 mint trong cửa sổ ≤3s, tái sử dụng chung 1 Promise in-flight
+
+* **When** thực thi truy vấn dữ liệu mint
+* **Then** thực hiện đồng thời song song (`Promise.allSettled`) 2 requests trên cùng 1 sticky proxy IP:
+  1. `GET /mint-positions/{mint}?sortBy=TOP&withThesis=true` (Theses & Top Holders)
+  2. `GET /replies/{mint}?offset=0&limit=50` (Comment Velocity)
+* **And** tổng thời gian round-trip mạng bị giới hạn trong 1 chu kỳ duy nhất, tối ưu latency <300ms
+
+* **When** trích xuất theses và top holders
+* **Then** trả về mảng `theses`: `Array<{ user: string, wallet: string, content: string, timestamp: number, holdings: number, pnlSol?: number, isKol: boolean }>`
 * **And** chuẩn hóa metadata thesis theo `SchemaDriftGuard` (`src/core/schema-drift-guard.js`)
 
-* **When** lấy mẫu 50 replies gần nhất từ `GET /replies/{mint}`
-* **Then** module `velocity.js` tính toán `commentVelocity: { last1m: number, last5m: number, sampleSize: number }` bằng thuật toán time-delta nội suy giữa reply mới nhất và cũ nhất trong mẫu
-* **And** không thực hiện lặp phân trang gây cạn kiệt rate-limit quota (giới hạn 1 request per check)
+* **When** tính toán `commentVelocity` từ mẫu 50 replies gần nhất
+* **Then** module `velocity.js` áp dụng thuật toán time-delta nội suy giữa reply mới nhất và cũ nhất: `last1m` (số comment/phút) và `last5m`
+* **And** không thực hiện lặp phân trang gây cạn kiệt rate-limit quota (giới hạn đúng 1 request cho mỗi lần check)
 
 * **When** quét danh sách ví KOLs đối soát với holders và commenters của mint
 * **Then** đối chiếu với cache 2 tầng từ `kolscan.io` (Redis TTL 10 phút + `config/kol-wallets-seed.json`)
 * **And** trả về `kolActivity: { isKolPresent: boolean, kolCount: number, matchedKols: Array<{ name?: string, wallet: string }> }`
 * **And** nếu `kolscan.io` unreachable, tự động dùng seed file tĩnh mà không làm gián đoạn luồng cào
 
-* **When** phát hiện trạng thái livestream của token
-* **Then** query REST `/coins/currently-live` và trả về `livestream: { isActive: boolean, viewers: number, roomId?: string }`
-* **And** Phase 1 không duy trì WebSocket streaming chat nhằm đảm bảo độ tin cậy và latency <300ms
+* **When** xác định trạng thái livestream của mint
+* **Then** module `livestream.js` sử dụng background poller định kỳ 30s quét `/coins/currently-live` cập nhật vào memory/Redis set
+* **And** `fetchMintSocial(mintAddress)` kiểm tra trạng thái live qua in-memory set với độ trễ 0ms (thay vì bắn request riêng cho mỗi mint)
+* **And** trả về `livestream: { isActive: boolean, viewers: number, roomId?: string }`
+* **And** Phase 1 không duy trì WebSocket streaming chat nhằm đảm bảo độ tin cậy và latency
 
 * **When** gặp lỗi từ phía pump.fun
 * **Then** mint không tồn tại trả về `PlatformError` code `XACT_4004`
 * **And** rate limit trả về `XACT_4029` + kích hoạt backoff
-* **And** khi nhận HTTP 200 nhưng body rỗng, kích hoạt `JevChallengeDiagnoser` (`src/core/jev-challenge-diagnoser.js`) để xác minh silent block/captcha trước khi trả dữ liệu rỗng về cho `jev-trading`
+* **And** khi nhận HTTP 200 nhưng body rỗng, kích hoạt `JevChallengeDiagnoser` (`src/core/jev-challenge-diagnoser.js`) để xác minh silent block/captcha trước khi trả dữ liệu rỗng về cho caller
 
-* **When** export SDK cho consumer `jev-trading`
+* **When** export module và hợp đồng
 * **Then** module export hàm `createPumpFunCrawler` và class `PumpFunCrawler` từ `src/scrapers/social/pumpfun/index.js`
 * **And** toàn bộ TypeScript declaration có mặt trong `types/index.d.ts`
 * **And** bộ tests `tests/scrapers/social/pumpfun/` đạt 100% pass với cả mock data và real Solana mint live probe
