@@ -310,7 +310,7 @@ epic-46:
       status: done
     - id: 46.3
       name: CLI Generator for TypeScript API Client
-      status: backlog
+      status: done
     - id: 46.4
       name: Contract Rollout — Social & User-Facing Mounts
       status: backlog
