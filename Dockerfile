@@ -23,9 +23,13 @@ COPY packages ./packages
 # Install root dependencies and generate Prisma client
 RUN npm ci --omit=dev && npx prisma generate
 
-# Copy web app and build it
+# Copy web app manifests and install
+COPY apps/web/package.json apps/web/package-lock.json* ./apps/web/
+RUN cd apps/web && npm ci
+
+# Copy web app source and build with memory limit
 COPY apps/web ./apps/web
-RUN cd apps/web && npm ci && NODE_ENV=production npm run build
+RUN cd apps/web && NODE_OPTIONS="--max-old-space-size=1024" npm run build
 
 # Copy remaining application source
 COPY . .
