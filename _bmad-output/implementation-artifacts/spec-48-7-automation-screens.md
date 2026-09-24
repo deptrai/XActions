@@ -2,7 +2,7 @@
 title: 'Story 48.7 — Automation Screens (/workflows, /automations, /scheduler, /calendar, /a2a, /jev-test)'
 type: 'feature'
 created: '2026-09-24'
-status: 'in-progress'
+status: 'done'
 review_loop_iteration: 0
 route: 'dispatch'
 context:
@@ -98,3 +98,17 @@ All via `api()` through BFF. `/a2a` uses SSE stream (EventSource to `/api/a2a/st
 ## Review Triage Log
 
 ## Auto Run Result
+
+## Auto Run Result
+
+**Status:** done
+**Summary:** Implemented 6 automation screens — `/workflows` (step builder with reorder/config), `/automations` (rule CRUD with toggle), `/scheduler` (cron job table), `/calendar` (month grid + day detail), `/a2a` (SSE EventSource message stream + agent list), `/jev-test` (scenario runner + log panel).
+
+**Files changed:**
+- `apps/web/app/{workflows,automations,scheduler,calendar,a2a,jev-test}/page.tsx` *(new)*
+- `apps/web/components/sidebar.tsx` — 6 nav items (added earlier)
+- `tests/web/{workflows,automations,scheduler,calendar,a2a,jev-test}.test.js` *(new)*
+
+**Verification:**
+- `npm run web:build` — 28 routes, zero errors
+- `npx vitest run tests/web/` — 25/25 new tests pass

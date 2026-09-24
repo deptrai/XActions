@@ -67,11 +67,12 @@ export default function JevTestPage() {
         'POST', '/api/jev/test',
         { body: { scenario: scenario.name, agent: scenario.agent, params: JSON.parse(form.params || '{}') } }
       );
+      const resData = res.ok && 'data' in res ? res.data : undefined;
       const result: TestResult = {
         ...pending,
-        status: res.ok && res.data?.pass ? 'pass' : 'fail',
-        duration: res.data?.duration || Math.random() * 3,
-        logs: res.data?.logs || ['Test completed'],
+        status: res.ok && resData?.pass ? 'pass' : 'fail',
+        duration: resData?.duration || Math.random() * 3,
+        logs: resData?.logs || ['Test completed'],
       };
       setResults((prev) => prev.map((r) => r.id === pending.id ? result : r));
       setSelected(result);
