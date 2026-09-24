@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Bot,
+  ShieldAlert,
 } from 'lucide-react';
 
 const navItems = [
@@ -22,6 +23,7 @@ const navItems = [
   { label: 'Content Optimizer', href: '/optimizer', icon: Sparkles },
   { label: 'Universal Explorer', href: '/explorer', icon: Database },
   { label: 'Agent Persona', href: '/agent', icon: Bot },
+  { label: 'System Admin', href: '/admin', icon: ShieldAlert, badge: 'Ops' },
   { label: 'Swagger API Docs', href: 'http://localhost:3001/api-docs/', icon: FileCode2, external: true },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];

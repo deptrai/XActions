@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Users, Sparkles, Database, ArrowUpRight, ShieldCheck, Zap } from 'lucide-react';
+import { Flame, Users, Sparkles, Database, ArrowUpRight, ShieldCheck, Zap, ShieldAlert } from 'lucide-react';
 
 export default function DashboardOverview() {
   const cards = [
@@ -34,6 +34,14 @@ export default function DashboardOverview() {
       color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/40',
       href: '/explorer',
       stats: '25 Crawlers Active',
+    },
+    {
+      title: 'System Admin Control Plane',
+      description: 'Manage crawler checkpoints, proxy pool quarantine, stream metrics, and x402 payment settlements.',
+      icon: ShieldAlert,
+      color: 'text-rose-500 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/40',
+      href: '/admin',
+      stats: 'Ops Control',
     },
   ];
 
