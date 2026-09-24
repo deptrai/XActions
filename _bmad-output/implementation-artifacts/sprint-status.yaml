@@ -362,7 +362,7 @@ epic-48:
       status: done
     - id: 48.3
       name: Ops & Realtime Screens (/monitor, /status, /run, /benchmark)
-      status: backlog
+      status: done
     - id: 48.4
       name: Admin Console Full Parity (/admin)
       status: backlog

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/navigation';
 import {
   LayoutDashboard,
   Flame,
@@ -14,6 +13,10 @@ import {
   ChevronRight,
   Bot,
   ShieldAlert,
+  Activity,
+  HeartPulse,
+  Terminal,
+  BarChart3,
 } from 'lucide-react';
 
 const navItems = [
@@ -24,6 +27,10 @@ const navItems = [
   { label: 'Universal Explorer', href: '/explorer', icon: Database },
   { label: 'Agent Persona', href: '/agent', icon: Bot },
   { label: 'System Admin', href: '/admin', icon: ShieldAlert, badge: 'Ops' },
+  { label: 'Monitor', href: '/monitor', icon: Activity, badge: 'Live' },
+  { label: 'Status', href: '/status', icon: HeartPulse },
+  { label: 'Run', href: '/run', icon: Terminal },
+  { label: 'Benchmark', href: '/benchmark', icon: BarChart3 },
   { label: 'Swagger API Docs', href: '/api-docs/', icon: FileCode2, external: true },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
