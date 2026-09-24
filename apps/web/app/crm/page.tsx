@@ -14,6 +14,7 @@ import {
   Mail,
   ExternalLink,
 } from 'lucide-react';
+import { api } from '@/lib/api';
 
 interface Contact {
   id: string;
@@ -95,12 +96,10 @@ export default function FollowerCrmPage() {
     );
     setNewTagInput((prev) => ({ ...prev, [contactId]: '' }));
 
-    // Try posting to backend API
+    // Post to backend via same-origin BFF
     try {
-      await fetch('http://localhost:3001/api/crm/tag', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contactId, tag }),
+      await api('POST', '/api/crm/tag', {
+        body: { contactId, tag },
       });
     } catch {}
   };

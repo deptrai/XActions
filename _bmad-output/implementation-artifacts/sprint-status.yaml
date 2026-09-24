@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: 09-22-2026 01:27
+last_updated: 09-24-2026
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -145,6 +145,18 @@ development_status:
   20-1-multi-consumer-service-contract-x-scrape-x-actions: done
   20-2-universal-stream-publish-hook-snake-case-thin-event: done
   epic-20-retrospective: done
+
+  epic-21: done
+  21-1-b2b-tender-company-registry-crawler-masothue-hosocongty: done
+  21-2-automotive-vehicles-market-crawler-oto-bonbanh-chototxe: done
+  21-3-hosocongty-muasamcong-crawler-cloudflare-spa-fallback: done
+  epic-21-retrospective: done
+
+  epic-22: done
+  22-1-fnb-merchant-restaurant-directory-crawler-pasgo-foody-riviu: done
+  22-2-healthcare-clinics-pharmacy-network-crawler-medpro-youmed: done
+  22-3-legal-trademark-intellectual-property-crawler: done
+  epic-22-retrospective: done
 
   epic-23: done
   23-1-bluesky-at-protocol-client: done
@@ -337,3 +349,58 @@ epic-47:
     - id: 47.5
       name: Universal Data Explorer & Export Screen
       status: done
+
+# Epic 48: Web API Foundation (BFF) & Frontend Consolidation Wave 2
+epic-48:
+  status: in-progress
+  stories:
+    - id: 48.1
+      name: Web API Foundation — BFF Proxy, Typed Client & Session Transport
+      status: done
+    - id: 48.2
+      name: Auth & Session UI (/login)
+      status: backlog
+    - id: 48.3
+      name: Ops & Realtime Screens (/monitor, /status, /run, /benchmark)
+      status: backlog
+    - id: 48.4
+      name: Admin Console Full Parity (/admin)
+      status: backlog
+    - id: 48.5
+      name: Fleet & Account Manager (/accounts, /proxies, /sessions)
+      status: backlog
+    - id: 48.6
+      name: Intelligence Screens (/osint, /graph, /analytics, /price-correlation)
+      status: backlog
+    - id: 48.7
+      name: Automation Screens (/workflows, /automations, /scheduler, /calendar, /a2a, /jev-test)
+      status: backlog
+    - id: 48.8
+      name: Content & Media Screens (/thread*, /video, /ai*, /playground)
+      status: backlog
+    - id: 48.9
+      name: Account & Misc Screens (/facebook, /unfollowers, /mcp, /extension, /platform, /agent, /security)
+      status: backlog
+    - id: 48.10
+      name: Decommission Gate — Legacy dashboard removal (FR-125 closure)
+      status: backlog
+
+# Epic 49: Platform Hardening Sweep
+epic-49:
+  status: backlog
+  stories:
+    - id: 49.1
+      name: Quick Wins — Route Order, CORS, Lockfile, Session Hygiene
+      status: backlog
+    - id: 49.2
+      name: CommentTreeExtractor Concurrency Hardening (P1)
+      status: backlog
+    - id: 49.3
+      name: Redis-Backed Consumer Quota (Multi-Worker)
+      status: backlog
+    - id: 49.4
+      name: Webhook Delivery Worker (HOL Blocking)
+      status: backlog
+    - id: 49.5
+      name: Checkpoint Optimistic Locking + P2 Sweep
+      status: backlog

@@ -3086,3 +3086,252 @@ So that **tôi có thể xem trước dữ liệu dạng bảng và xuất file 
 **And** bảng kết quả hiển thị chi tiết tiêu đề, giá/lương, công ty/tác giả, ngày đăng và đường dẫn gốc.  
 **And** nút **Export CSV** cho phép tải xuống file dữ liệu chuẩn UTF-8 chỉ với 1 cú click.
 
+
+---
+
+# Epic 48: Nền Tảng Web API (BFF) & Hoàn Tất Migration Frontend Next.js
+
+**Goal:** Biến `apps/web` thành ứng dụng deploy được thật sự: BFF same-origin proxy + httpOnly cookie session thay thế raw `fetch('http://localhost:3001')`, typed client consumption đúng FR-126, rồi migrate toàn bộ ~28 màn app còn lại từ `dashboard/*.html` — đóng FR-125 đúng nghĩa.
+
+**Requirements Covered:** FR-125 (completion), FR-126 (remediation), FR-127, FR-128, FR-129, FR-130, FR-131, FR-132, FR-133, FR-134, FR-135, NFR-27, NFR-28 (prd.md §7.1/§7.2).
+
+**Phạm vi & Phụ thuộc (Dependencies / Non-goals):**
+
+- **Architecture spine:** `architecture/xactions-web-foundation-epic48/ARCHITECTURE-SPINE.md` — 8 ADs (AD-1 BFF proxy, AD-2 cookie session, AD-3 realtime deferred, AD-4 hand-rolled components, AD-5 app-router only, AD-6 app-screens-only scope, AD-7 parallel-run, AD-8 test infra).
+- **Marketing/static pages excluded (AD-6):** ~20 file (index, about, blog, faq, pricing, terms, privacy, features, team, tutorials…) không phải app screens — giữ ở `dashboard/` hoặc tách static site sau.
+- **Backend `api/` không đổi trong 48.1–48.3** — ngoại lệ duy nhất: socket auth extension (AD-3) được phép sửa `api/realtime/socketHandler.js` trong story 48.4.
+- **Realtime auth gap đã biết (AD-3):** `io.use` chỉ đọc `socket.handshake.auth.token` (`socketHandler.js:88`) — quyết (a) parse cookie hoặc (b) socket-token endpoint khi làm màn realtime đầu tiên. Deferred: `deferred-work.md` 2026-09-24.
+- **Ordering:** 48.1 → 48.2 → waves 48.3–48.9 → gate 48.10. Screen waves có thể reorder/parallel sau khi 48.1+48.2 xong; 48.10 blocking cuối.
+- **Story 48.1 spec:** `implementation-artifacts/spec-48-1-web-api-foundation-bff.md` — `ready-for-dev` (đã qua review loop, 15 findings resolved).
+
+---
+
+### Story 48.1: Nền Tảng API — BFF Proxy, Typed Client & Session Transport
+
+As a **Developer**,  
+I want **BFF catch-all proxy + typed `lib/api.ts` + httpOnly session cookies**,  
+So that **mọi màn Next.js gọi API same-origin, không hardcode origin, credential không lộ ra browser, và contract Epic 46 được tiêu thụ đúng**.
+
+**Acceptance Criteria:**
+
+**Given** `apps/web` với `API_INTERNAL_URL` server-only  
+**When** một page gọi `apiFetch('/api/viral/platforms')`  
+**Then** request đi qua `app/api/[...path]/route.ts` → `lib/proxy.ts` raw-fetch tới backend, verbatim streaming (SSE/binary), inject `xa_bearer`→`Authorization`/`xa_session`→`x-session-cookie`, không reshape envelope.  
+**And** `app/session/route.ts` POST/GET/DELETE quản lý httpOnly cookies (`SameSite=Lax`, `Secure` prod), login exchange `{email,password}`→`xa_bearer`.  
+**And** 4 màn API-using (`viral-miner`, `optimizer`, `crm`, `admin`) + `backend-status.tsx` migrate hết raw fetch; `app/api-docs/[[...path]]` proxy Swagger same-origin; `pages/` shim xóa; `next build` xanh; vitest ephemeral-upstream + playwright e2e qua BFF thật.  
+*(Chi tiết đầy đủ: spec file — single source of truth cho story này.)*
+
+---
+
+### Story 48.2: Màn Hình Đăng Nhập & Session Connect (`/login`)
+
+As a **Operator**,  
+I want **màn login trong `apps/web` gọi `POST /session` và trạng thái phiên hiển thị ở header**,  
+So that **tôi authenticate một lần và mọi màn sau hoạt động với credentials thật — không còn dev-fallback che 401**.
+
+**Acceptance Criteria:**
+
+**Given** màn `/login` port từ `dashboard/login.html` (form email/password + X session cookie input)  
+**When** submit credentials  
+**Then** `POST /session` exchange thành httpOnly cookies; `GET /session` drive trạng thái "connected" ở `header.tsx`; `DELETE /session` làm logout.  
+**And** 401 từ BFF được hiển thị rõ (không silent fallback); unauthenticated pages redirect về `/login` khi endpoint yêu cầu auth.  
+**And** playwright spec: login → gọi 1 endpoint cần JWT (vd `/api/crm/tag` flow) → logout → 401 hiển thị đúng.
+
+---
+
+### Story 48.3: Nhóm Màn Ops & Realtime (`/monitor`, `/status`, `/run`, `/benchmark`)
+
+As a **Operator**,  
+I want **các màn giám sát tiến trình/scrape/benchmark migrate sang Next.js với realtime chuẩn**,  
+So that **tôi theo dõi job runs, canary checks và system status trực tiếp trong app mới**.
+
+**Acceptance Criteria:**
+
+**Given** `lib/realtime.ts` (socket.io-client, direct connect `NEXT_PUBLIC_SOCKET_URL`, AD-3)  
+**When** mở `/monitor`  
+**Then** progress bars + event feeds cập nhật realtime tương đương `dashboard/monitor.html` (socket.io CDN hiện tại); `/run` trigger + theo dõi command runner; `/status` hiển thị `/api/health`, socket status, hibernation status; `/benchmark` hiển thị kết quả benchmark suite (Epic 34).  
+**And** socket auth decision (AD-3 option a/b) được implement và ghi vào spine addendum; mỗi màn có playwright happy-path spec.
+
+---
+
+### Story 48.4: Màn Admin Console (`/admin` full parity)
+
+As a **Admin**,  
+I want **màn admin 3119-dòng (`dashboard/admin.html`) migrate với đầy đủ checkpoint controls + socket events**,  
+So that **tôi pause/resume/retry checkpoints và giám sát admin surfaces không cần dashboard cũ**.
+
+**Acceptance Criteria:**
+
+**Given** `/api/checkpoints*` + admin mounts đã có contract (Epic 46)  
+**When** mở `/admin`  
+**Then** toàn bộ sections của `admin.html` (checkpoint list, pause/resume/retry — đã migrate sơ trong 48.1 — + các panels còn lại) parity với legacy; socket.io admin channel hoạt động qua `lib/realtime.ts`.  
+**And** legacy `dashboard/admin.html` được đánh dấu superseded trong sidebar config sau verify.
+
+---
+
+### Story 48.5: Fleet & Account Manager (`/accounts`, `/proxies`, `/sessions`)
+
+As a **Operator quản nhiều tài khoản**,  
+I want **UI quản lý account pool, proxy pool và session state trong Next.js**,  
+So that **tôi thêm/xóa/kiểm tra sức khỏe accounts + proxies mà không phải gọi API thủ công**.
+
+**Acceptance Criteria:**
+
+**Given** `/api/proxies`, `/api/admin`, `/api/facebook/accounts` mounts + hibernation endpoints (Epic 11/27/34 đã done)  
+**When** mở `/accounts`  
+**Then** danh sách accounts + health/warmup status hiển thị; add/remove account flow hoạt động; `/proxies` quản lý proxy pool (add, health check, rotation stats); `/sessions` hiển thị session expiry/hibernation state per account.  
+**And** hấp thụ FUTURE-WORK deferred item "Multi-Account & Proxy Fleet Manager UI" — điều kiện reactivate (Epic 19 done + pool stable) đã thỏa.
+
+---
+
+### Story 48.6: Nhóm Màn Intelligence (`/osint`, `/graph`, `/analytics`, `/price-correlation`)
+
+As a **Analyst**,  
+I want **các màn OSINT/graph/analytics migrate**,  
+So that **tôi tra cứu identity clusters, quan hệ graph và analytics trong app mới**.
+
+**Acceptance Criteria:**
+
+**Given** `x_social_find_profiles`, identity clusters (Epic 36/41), `/api/analytics/*` mounts  
+**When** mở `/osint`  
+**Then** profile lookup + cluster visualization hoạt động; `/graph` render graph view; `/analytics` + `analytics-dashboard` + `price-correlation` port với charts tương đương; mỗi màn ≥1 playwright spec.
+
+---
+
+### Story 48.7: Nhóm Màn Automation (`/workflows`, `/automations`, `/scheduler`, `/calendar`, `/a2a`, `/jev-test`)
+
+As a **Operator**,  
+I want **workflow builder, automation rules, scheduler/calendar và A2A/Jev consoles trong Next.js**,  
+So that **tôi quản lý automation pipeline end-to-end trong app mới**.
+
+**Acceptance Criteria:**
+
+**Given** `dashboard/js/workflow-builder.js` (573d), `scheduler.js` (161d), `a2a.html` EventSource  
+**When** mở `/workflows`  
+**Then** builder UI parity; `/automations` rule CRUD; `/scheduler`+`/calendar` port; `/a2a` SSE stream qua BFF (verbatim streaming AD-1); `/jev-test` Jev console parity.
+
+---
+
+### Story 48.8: Nhóm Màn Content & Media (`/thread`, `/thread-composer`, `/tweet-schedule`, `/video`, `/ai`, `/ai-api`, `/playground`)
+
+As a **Content creator**,  
+I want **thread composer, video downloader UI, AI playground trong Next.js**,  
+So that **tôi soạn/tải/test nội dung không rời app mới**.
+
+**Acceptance Criteria:**
+
+**Given** x402 `paymentModal.js` + ai/ai-api mounts  
+**When** mở `/thread-composer`  
+**Then** composer + schedule parity; `/video` download flow qua BFF binary streaming; `/ai`/`/ai-api`/`/playground` port, x402 payment modal port cẩn thận (payment flow không đổi semantics).
+
+---
+
+### Story 48.9: Nhóm Màn Account & Misc (`/facebook`, `/unfollowers`, `/mcp`, `/extension`, `/platform`, `/agent`, `/security`)
+
+As a **User**,  
+I want **các màn còn lại migrate**,  
+So that **không còn màn app nào chỉ sống ở dashboard cũ**.
+
+**Acceptance Criteria:**
+
+**Given** các màn tương ứng trong `dashboard/`  
+**When** migrate  
+**Then** mỗi màn parity với legacy equivalent; `/security` hiển thị security/status surfaces; `/mcp` MCP inspector; `/extension` extension status; `/agent` agent surfaces; mỗi màn ≥1 playwright spec hoặc gộp smoke spec.
+
+---
+
+### Story 48.10: Decommission Gate — Đóng FR-125
+
+As a **Maintainer**,  
+I want **xóa phần app còn sót trong `dashboard/` sau khi parity đầy đủ**,  
+So that **không còn hai frontend song song và FR-125 đóng đúng nghĩa**.
+
+**Acceptance Criteria:**
+
+**Given** 48.3–48.9 đã verify parity  
+**When** gate chạy  
+**Then** `dashboard/*.html` app-screens + `dashboard/js/` tương ứng được xóa (marketing/static giữ lại theo AD-6); `api/server.js` static mounts cập nhật; sidebar/routes không còn link legacy; `grep -r "dashboard/"` trong `apps/web` = 0 refs.
+
+---
+
+# Epic 49: Platform Hardening Sweep
+
+**Goal:** Dọn sạch nợ kỹ thuật P1/P2 đã tích lũy trong `deferred-work.md` trước khi scale — tách quick-wins (không cần spec) khỏi design work thật (có spec riêng).
+
+**Requirements Covered:** FR-136, FR-137, FR-138, FR-139, FR-140 (prd.md §7.1).
+
+**Phạm vi & Phụ thuộc:**
+
+- **Source of truth:** `implementation-artifacts/deferred-work.md` (~10 P1/P2 open) + `planning-artifacts/FUTURE-WORK.md`.
+- **Split rule (Winston):** quick wins = story 49.1 gộp; các item cần quyết định kiến trúc (Redis quota, webhook worker) = stories riêng có spec — không "sweep" chung.
+- **Không phụ thuộc Epic 48** — có thể chạy song song như hygiene track; ưu tiên sau 48.1 để nền web ổn trước.
+
+---
+
+### Story 49.1: Quick Wins — Route Order, CORS, Lockfile, Session Hygiene
+
+As a **Maintainer**,  
+I want **dọn các deferred items cơ học trong một pass**,  
+So that **nợ nhỏ không tích lũy thành bug lớn**.
+
+**Acceptance Criteria:**
+
+**Given** deferred items: plugin routes mount sau 404 handler (`api/server.js` — hiện unreachable), CORS preflight allowlist worker (`worker/index.js:45-53`), `pnpm-lock.yaml` stale (cần pnpm 9.15.4), session credential nằm trong `miningJobs` map  
+**When** sweep chạy  
+**Then** mỗi item có fix + test chứng minh (plugin route reachable, CORS preflight đúng allowlist, lockfile regen sạch, credentials tách khỏi job map); mỗi fix reference deferred-work entry và entry được mark resolved.
+
+---
+
+### Story 49.2: CommentTreeExtractor Concurrency Hardening (P1, deferred 2 lần)
+
+As a **Maintainer**,  
+I want **fix race condition trong comment tree extraction** (đã defer qua 2 chu kỳ),  
+So that **concurrent extractions không corrupt state**.
+
+**Acceptance Criteria:**
+
+**Given** `deferred-work.md` P1 entry + reproduction case  
+**When** implement  
+**Then** spec ngắn mô tả race + fix (lock/queue/snapshot — chọn qua spec), test chứng minh concurrent runs đúng; deferred entry resolved.
+
+---
+
+### Story 49.3: Redis-Backed Consumer Quota (Multi-Worker)
+
+As a **Operator chạy multi-worker**,  
+I want **consumer quota store dùng chung qua Redis**,  
+So that **quota enforcement đúng khi scale >1 worker (hiện in-memory → sai semantics)**.
+
+**Acceptance Criteria:**
+
+**Given** spec riêng (Redis fixture, fallback single-worker in-memory)  
+**When** implement  
+**Then** quota counts share qua Redis khi `REDIS_URL` set; tests với Redis fixture thật (NFR-20); single-worker mode không đổi behavior.
+
+---
+
+### Story 49.4: Webhook Delivery Worker (HOL Blocking Fix)
+
+As a **Maintainer**,  
+I want **webhook delivery qua queue worker riêng**,  
+So that **một endpoint chậm không block deliveries sau nó (head-of-line blocking)**.
+
+**Acceptance Criteria:**
+
+**Given** spec riêng (queue + retry + dead-letter semantics)  
+**When** implement  
+**Then** per-endpoint delivery isolation, retry/backoff policy ghi trong spec, tests chứng minh slow endpoint không chặn fast endpoint.
+
+---
+
+### Story 49.5: Checkpoint Optimistic Locking + P2 Sweep
+
+As a **Maintainer**,  
+I want **optimistic locking cho checkpoint mutations + dọn P2 còn lại**,  
+So that **concurrent pause/resume không ghi đè và ledger sạch**.
+
+**Acceptance Criteria:**
+
+**Given** deferred-work P2 entries + checkpoint locking item  
+**When** implement  
+**Then** version check trên checkpoint mutations (409 trên conflict); P2 sweep list trong spec story; mỗi entry resolved hoặc explicit re-defer với lý do.

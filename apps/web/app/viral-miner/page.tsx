@@ -14,6 +14,7 @@ import {
   DollarSign,
   AlertCircle,
 } from 'lucide-react';
+import { api } from '@/lib/api';
 
 const DEFAULT_PLATFORMS = [
   'x', 'facebook', 'tiktok', 'threads', 'instagram', 'linkedin',
@@ -72,15 +73,14 @@ export default function ViralMinerPage() {
   } | null>(null);
 
   useEffect(() => {
-    // Try fetching available platforms from API
-    fetch('http://localhost:3001/api/viral/platforms')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.data?.platforms) {
-          if (Array.isArray(data.data.platforms)) {
-            setPlatforms(data.data.platforms);
-          } else if (typeof data.data.platforms === 'object') {
-            const flattened = Object.values(data.data.platforms).flat() as string[];
+    // Fetch available platforms from same-origin BFF
+    api<{ platforms: string[] | Record<string, string[]> }>('GET', '/api/viral/platforms')
+      .then((res) => {
+        if (res.ok && res.data?.platforms) {
+          if (Array.isArray(res.data.platforms)) {
+            setPlatforms(res.data.platforms);
+          } else if (typeof res.data.platforms === 'object') {
+            const flattened = Object.values(res.data.platforms).flat() as string[];
             if (flattened.length > 0) setPlatforms(flattened);
           }
         }

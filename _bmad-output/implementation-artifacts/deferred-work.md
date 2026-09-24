@@ -243,3 +243,9 @@
 - [ ] [Review][Defer] Worker preflight allowlist omits the new canonical headers (`x-session-cookie`, `x-agent-api-key`, `x-api-key`) — browser calls through the Worker proxy fail CORS preflight (pre-existing config; surfaced by Story 46.2 header transports). [worker/index.js:45-53]
 - [ ] [Review][Defer] `dashboard/js/viral-miner.js` sends no session transport (no `x-session-cookie` header, no body field) — the UI only works via the dev-fallback session above and queues jobs under `'dev-session-cookie'` (pre-existing). Provide real session transport or mark the endpoints honestly public. [dashboard/js/viral-miner.js:124-165]
 - [ ] [Review][Defer] `pnpm-lock.yaml` is stale since 2026-09-01 and predates this story's deps (no `zod@4` in dependencies, no `@asteasolutions`/`@redocly` in devDependencies) — `xspace-agents/Dockerfile` runs `pnpm install --frozen-lockfile` against it. Regenerate via `pnpm install --lockfile-only` or retire the lockfile; needs pnpm@9.15.4 (not installed in this workspace).
+
+## Deferred from: spec review of spec-48-1-web-api-foundation-bff (2026-09-24)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-48-1-web-api-foundation-bff.md`
+  summary: Realtime foundation (lib/realtime.ts + socket.io-client dep + dashboard socket auth pattern) deferred to first socket-needing screen story (S1).
+  evidence: `api/realtime/socketHandler.js:88` io.use chỉ đọc `socket.handshake.auth.token`; httpOnly cookie xa_bearer không reachable từ socket auth payload; sửa backend vi phạm spec boundary. Quyết định auth transport khi S1: extend io.use đọc cookie header (socket.handshake.headers.cookie) hoặc BFF token endpoint.

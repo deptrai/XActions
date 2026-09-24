@@ -35,9 +35,9 @@ describe('Story 47.4 — AI Content Optimizer Playground Screen', () => {
 
   it('page integrates with backend optimizer endpoints', () => {
     const src = readFileSync(pagePath, 'utf8');
-    expect(src).toContain('http://localhost:3001/api/optimizer/predict');
-    expect(src).toContain('http://localhost:3001/api/optimizer/optimize');
-    expect(src).toContain('http://localhost:3001/api/optimizer/hashtags');
+    expect(src).toContain('/api/optimizer/predict');
+    expect(src).toContain('/api/optimizer/optimize');
+    expect(src).toContain('/api/optimizer/hashtags');
   });
 
   it('page defines viral potential gauge and breakdown metrics', () => {

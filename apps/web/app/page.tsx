@@ -65,7 +65,7 @@ export default function DashboardOverview() {
         </div>
         <div className="flex items-center gap-3">
           <a
-            href="http://localhost:3001/api-docs/"
+            href="/api-docs/"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-white text-blue-700 hover:bg-blue-50 transition-colors shadow-sm"

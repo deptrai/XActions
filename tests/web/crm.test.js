@@ -42,6 +42,6 @@ describe('Story 47.3 — Follower CRM & Contact Intelligence Screen', () => {
   it('page supports adding tags and posts to /api/crm/tag', () => {
     const src = readFileSync(pagePath, 'utf8');
     expect(src).toContain('handleAddTag');
-    expect(src).toContain('http://localhost:3001/api/crm/tag');
+    expect(src).toContain('/api/crm/tag');
   });
 });

@@ -10,7 +10,14 @@ const testDatabaseUrl =
   process.env.DATABASE_URL ||
   'postgresql://postgres:postgres@localhost:5434/xactions_test?schema=public';
 
+import { resolve } from 'node:path';
+
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': resolve(import.meta.dirname, 'apps/web'),
+    },
+  },
   test: {
     globals: true,
     environment: 'node',

@@ -219,8 +219,22 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-122 (Follower CRM Screen):** Màn hình `/crm` với TanStack Table, lead score, segment filters, tag management. (Epic 47 — Story 47.3)
 * **FR-123 (AI Content Optimizer Playground):** Màn hình `/optimizer` với predict score, AI rewrite side-by-side, hashtag generation. (Epic 47 — Story 47.4)
 * **FR-124 (Universal Data Explorer & Export):** Màn hình `/explorer` tra cứu đa ngành (jobs/BĐS/MST/social) với bảng preview và CSV export UTF-8. (Epic 47 — Story 47.5)
-* **FR-125 (Legacy HTML Consolidation):** Gom toàn bộ 51 file HTML rời rạc của dashboard cũ vào SPA Next.js — không còn trang standalone sót lại sau Epic 47. (Epic 47 — epic goal)
-* **FR-126 (Type-Safe API Consumption):** Web app gọi backend exclusively qua `@xactions/api-client` (Epic 46 output) — không fetch thủ công, mọi call compile-time type-checked. (Epic 47 — cross-cutting)
+* **FR-125 (Legacy HTML Consolidation):** Gom toàn bộ file HTML rời rạc của dashboard cũ vào SPA Next.js — không còn trang app standalone sót lại. (Epic 47 — epic goal) *(Cập nhật 2026-09-24: Epic 47 mới deliver 6 routes; ~28 màn app còn lại hoàn tất trong Epic 48 — Stories 48.3–48.10. ~20 file marketing/static được loại khỏi scope theo AD-6.)*
+* **FR-126 (Type-Safe API Consumption):** Web app gọi backend qua typed client/`lib/api.ts` typed helper — không raw `fetch` với origin hardcode; mọi call compile-time type-checked. (Epic 47 — cross-cutting; remediated Epic 48 — Story 48.1) *(Cập nhật 2026-09-24: Epic 47 ship screens dùng `fetch('http://localhost:3001/...')` thô, `@xactions/api-client` chưa được import — Story 48.1 remediates bằng BFF + typed helper.)*
+* **FR-127 (Web API Foundation — BFF & Session Transport):** `apps/web` phải có BFF same-origin proxy (`/api/*`, `/api-docs/*`) forward verbatim tới `API_INTERNAL_URL` (method/query/body/streaming, header allowlist, cookie→auth injection); `/session` route quản lý httpOnly cookies `xa_bearer`/`xa_session` (`SameSite=Lax`, `Secure` prod) với login exchange; `lib/api.ts` typed helper (`import type` từ `@xactions/api-client`). (Epic 48 — Story 48.1)
+* **FR-128 (Auth & Session UI):** Màn `/login` port từ `dashboard/login.html`, drive `POST /session`; trạng thái phiên visible ở header; 401 hiển thị rõ, không dev-fallback che. (Epic 48 — Story 48.2)
+* **FR-129 (Ops & Realtime Screens):** `/monitor`, `/status`, `/run`, `/benchmark` với `lib/realtime.ts` socket.io-client direct-connect; socket auth quyết định theo AD-3 ghi addendum. (Epic 48 — Story 48.3)
+* **FR-130 (Admin Console & Fleet Manager):** `/admin` full parity (checkpoint pause/resume/retry + admin panels); `/accounts`, `/proxies`, `/sessions` — fleet management UI hấp thụ FUTURE-WORK deferred item. (Epic 48 — Stories 48.4, 48.5)
+* **FR-131 (Intelligence Screens):** `/osint` (profile lookup + identity clusters), `/graph`, `/analytics`, `/analytics-dashboard`, `/price-correlation`. (Epic 48 — Story 48.6)
+* **FR-132 (Automation Screens):** `/workflows` builder, `/automations`, `/scheduler`, `/calendar`, `/a2a` (SSE qua BFF), `/jev-test`. (Epic 48 — Story 48.7)
+* **FR-133 (Content & Media Screens):** `/thread`, `/thread-composer`, `/tweet-schedule`, `/video` (binary streaming qua BFF), `/ai`, `/ai-api`, `/playground` (x402 payment modal port giữ semantics). (Epic 48 — Story 48.8)
+* **FR-134 (Account & Misc Screens):** `/facebook`, `/unfollowers`, `/mcp`, `/extension`, `/platform`, `/agent`, `/security`. (Epic 48 — Story 48.9)
+* **FR-135 (Legacy Decommission Gate):** Sau parity verify: xóa app-screen HTML/JS trong `dashboard/`, cập nhật static mounts `api/server.js`; marketing/static pages giữ lại theo AD-6. (Epic 48 — Story 48.10)
+* **FR-136 (Hardening Quick Wins):** Plugin routes mount trước 404 handler; CORS preflight allowlist đúng cho worker; `pnpm-lock.yaml` regen sạch; session credentials tách khỏi `miningJobs` map. (Epic 49 — Story 49.1)
+* **FR-137 (Comment Tree Concurrency):** Fix race condition `CommentTreeExtractor` (P1, deferred 2 chu kỳ) — concurrent extractions không corrupt state. (Epic 49 — Story 49.2)
+* **FR-138 (Distributed Consumer Quota):** Quota enforcement đúng multi-worker qua Redis-backed store (`REDIS_URL`), single-worker in-memory không đổi. (Epic 49 — Story 49.3)
+* **FR-139 (Webhook Delivery Isolation):** Webhook delivery qua queue worker với per-endpoint isolation + retry/backoff — xóa head-of-line blocking. (Epic 49 — Story 49.4)
+* **FR-140 (Checkpoint Concurrency Safety):** Optimistic locking (version check, 409 conflict) trên checkpoint mutations. (Epic 49 — Story 49.5)
 
 ### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17 ➔ NFR-26)
 
@@ -232,8 +246,10 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **NFR-22 (Contract Honesty — Spec↔Runtime Parity):** OpenAPI spec luôn khớp runtime: `operationId` duy nhất mọi operation, CI spec lint (`@redocly/cli`) + contract test ≥1 endpoint mỗi route group + regenerate-diff check — fail khi drift. (Epic 46)
 * **NFR-23 (Contract Non-Breaking):** Chuẩn hóa API không phá vỡ consumer hiện hữu: x402 extensions/discovery contract, `x-session-cookie` transport (legacy body field được normalize, không remove), domain error fields (AD-14) và operator surfaces (`/api/governor`, `/api/checkpoints`, `/metrics/stream`) giữ nguyên semantics. (Epic 46)
 * **NFR-24 (Web Performance):** Ứng dụng web Next.js tải trang < 1.0 giây trên kết nối local/dev. (Epic 47)
-* **NFR-25 (Design System Consistency):** Mọi màn hình dùng chung Tailwind + Shadcn/UI + Lucide tokens, hỗ trợ Dark/Light mode nhất quán — không tự ý dùng component ngoài design system. (Epic 47)
+* **NFR-25 (Design System Consistency):** Mọi màn hình dùng chung Tailwind + Lucide tokens, hỗ trợ Dark/Light mode nhất quán — không tự ý dùng component ngoài design system. (Epic 47) *(Cập nhật 2026-09-24: Shadcn/UI chưa bao giờ được cài — `apps/web` thực tế hand-rolled `tailwind-merge`+`clsx`+`lucide-react`; Epic 48 AD-4 chốt hand-rolled, spec Epic 47 đã ghi sai.)*
 * **NFR-26 (UX Feedback & Connectivity Visibility):** Long-running jobs hiển thị realtime progress (không silent stall); trạng thái kết nối backend luôn visible qua header badge. (Epic 47)
+* **NFR-27 (Web Credential Transport Security):** Credentials (JWT, X session cookie) vận chuyển qua httpOnly `SameSite=Lax` cookies do BFF quản lý — không trong `localStorage` (pattern legacy `authToken`), không trong response body; `GET /session` chỉ trả boolean flags. (Epic 48 — AD-2)
+* **NFR-28 (Realtime Transport Convention):** socket.io-client direct-connect `NEXT_PUBLIC_SOCKET_URL` (không qua BFF); SSE đi qua BFF verbatim-streaming; mỗi màn realtime dùng `lib/realtime.ts` — không tự chọn transport. (Epic 48 — AD-3)
 
 ### 7.3. Lộ trình phân kỳ cập nhật
 
@@ -284,7 +300,9 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 | Story 35.5 (IG Session Verify — Epic 35) | FR-110 |
 | Story 13.11 (Marketplace Filters — Epic 13) | FR-111 |
 | Epic 46 (API Contract & OpenAPI) | FR-116, FR-117, FR-118, FR-119, NFR-22, NFR-23 |
-| Epic 47 (Next.js Web App) | FR-120, FR-121, FR-122, FR-123, FR-124, FR-125, FR-126, NFR-24, NFR-25, NFR-26 |
+| Epic 47 (Next.js Web App) | FR-120, FR-121, FR-122, FR-123, FR-124, FR-125 (partial → Epic 48), FR-126 (remediated Epic 48), NFR-24, NFR-25, NFR-26 |
+| Epic 48 (Web Foundation & Consolidation) | FR-125 (completion), FR-126 (remediation), FR-127, FR-128, FR-129, FR-130, FR-131, FR-132, FR-133, FR-134, FR-135, NFR-27, NFR-28 |
+| Epic 49 (Platform Hardening) | FR-136, FR-137, FR-138, FR-139, FR-140 |
 | Story 13.12 (GraphQL Replay — Epic 13, gated) | FR-112 |
 | Story 27.5 (Fingerprint Spoofing — Epic 27, gated) | FR-113 |
 | Story 33.3 (Zalo Personal — Epic 33, gated) | FR-114 |

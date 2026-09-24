@@ -58,7 +58,7 @@ describe('Story 47.1 — Next.js 15 App Router & Layout Scaffold', () => {
 
   it('BackendStatus component checks localhost:3001/api/health', () => {
     const statusSrc = readFileSync(resolve(webDir, 'components', 'backend-status.tsx'), 'utf8');
-    expect(statusSrc).toContain('http://localhost:3001/api/health');
+    expect(statusSrc).toContain('/api/health');
     expect(statusSrc).toContain('Backend Live');
     expect(statusSrc).toContain('Backend Offline');
   });

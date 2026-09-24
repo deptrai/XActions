@@ -18,6 +18,7 @@ import {
   Layers,
   Search,
 } from 'lucide-react';
+import { api } from '@/lib/api';
 
 interface Checkpoint {
   id: string;
@@ -61,12 +62,9 @@ export default function AdminPage() {
   const fetchLiveStatus = async () => {
     setIsRefreshing(true);
     try {
-      const res = await fetch('http://localhost:3001/api/checkpoints');
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data.data)) {
-          setCheckpoints(data.data);
-        }
+      const res = await api<Checkpoint[]>('GET', '/api/checkpoints');
+      if (res.ok && Array.isArray(res.data)) {
+        setCheckpoints(res.data);
       }
     } catch {}
     setTimeout(() => setIsRefreshing(false), 500);
@@ -85,9 +83,7 @@ export default function AdminPage() {
     );
 
     try {
-      await fetch(`http://localhost:3001/api/checkpoints/${id}/${action}`, {
-        method: 'POST',
-      });
+      await api('POST', `/api/checkpoints/${encodeURIComponent(id)}/${action}`);
     } catch {}
   };
 

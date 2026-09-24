@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Activity, CheckCircle2, XCircle } from 'lucide-react';
+import { api } from '@/lib/api';
 
 export function BackendStatus() {
   const [online, setOnline] = useState<boolean | null>(null);
@@ -12,13 +13,10 @@ export function BackendStatus() {
     const checkHealth = async () => {
       const start = performance.now();
       try {
-        const res = await fetch('http://localhost:3001/api/health', {
-          method: 'GET',
-          cache: 'no-store',
-        });
+        const result = await api('GET', '/api/health');
         const elapsed = Math.round(performance.now() - start);
         if (mounted) {
-          setOnline(res.ok);
+          setOnline(result.ok);
           setLatency(elapsed);
         }
       } catch {

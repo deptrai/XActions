@@ -64,11 +64,11 @@ Tài liệu này tập hợp các yêu cầu, ý tưởng, và tính năng bị 
 
 ---
 
-## Multi-Account Parallel Manager UI
+## Multi-Account Parallel Manager UI — ✅ Reactivated (2026-09-24 — Epic 48.5)
 
 **Mô tả:** Dashboard quản lý nhiều account, proxy assignment, hibernation queue.
 
-**Điều kiện mở lại:** Epic 19 operator dashboard hoàn thành, Epic 7 multi-account stable.
+**Điều kiện mở lại:** Epic 19 operator dashboard hoàn thành, Epic 7 multi-account stable. → **Đã thỏa.** Promoted vào **Epic 48 — Story 48.5** (`/accounts`, `/proxies`, `/sessions` — FR-130).
 
 ---
 

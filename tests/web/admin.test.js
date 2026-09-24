@@ -42,7 +42,7 @@ describe('Next.js Modern Admin Page', () => {
 
   it('page interacts with backend checkpoint endpoints', () => {
     const src = readFileSync(pagePath, 'utf8');
-    expect(src).toContain('http://localhost:3001/api/checkpoints');
+    expect(src).toContain('/api/checkpoints');
     expect(src).toContain('handleAction');
   });
 });

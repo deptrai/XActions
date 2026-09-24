@@ -28,6 +28,7 @@ Tài liệu này liệt kê các tài liệu quy hoạch canonical và các tài
 |---|---|---|
 | Universal Scraping Architecture (r3) | `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` | `archive/architecture-brownfield-2026-08-20.md` |
 | HTTP API Contract Layer (Epic 46→47) | `architecture/xactions-api-contract-epic46/ARCHITECTURE-SPINE.md` | — |
+| Web Foundation & Consolidation (Epic 48) | `architecture/xactions-web-foundation-epic48/ARCHITECTURE-SPINE.md` | — |
 | UX findings from architecture | `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` | — |
 | UX remediation plan | `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` | — |
 
@@ -36,7 +37,7 @@ Tài liệu này liệt kê các tài liệu quy hoạch canonical và các tài
 | Phạm vi | Canonical | Deprecated / Reference |
 |---|---|---|
 | Epics 1–9 (Facebook) | `archive/epics-1-9-legacy.md` | — |
-| Epics 10–20, 21–43 (Universal + VN + OSINT) | `epics.md` | — |
+| Epics 10–20, 21–49 (Universal + VN + OSINT + Web Consolidation + Hardening) | `epics.md` | — |
 
 ## UX
 

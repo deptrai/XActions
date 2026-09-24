@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Lightbulb,
 } from 'lucide-react';
+import { api } from '@/lib/api';
 
 export default function ContentOptimizerPage() {
   const [content, setContent] = useState(
@@ -46,16 +47,11 @@ export default function ContentOptimizerPage() {
   const handlePredict = async () => {
     setIsPredicting(true);
     try {
-      const res = await fetch('http://localhost:3001/api/optimizer/predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: content }),
+      const res = await api<{ score?: number }>('POST', '/api/optimizer/predict', {
+        body: { text: content },
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.data?.score) {
-          setPredictedScore(data.data.score);
-        }
+      if (res.ok && res.data?.score) {
+        setPredictedScore(res.data.score);
       } else {
         // Fallback simulation based on length and punctuation
         const calculated = Math.min(95, Math.max(50, 70 + Math.floor(content.length / 30)));
@@ -71,18 +67,13 @@ export default function ContentOptimizerPage() {
   const handleRewrite = async () => {
     setIsRewriting(true);
     try {
-      const res = await fetch('http://localhost:3001/api/optimizer/optimize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: content, goal: targetGoal }),
+      const res = await api<{ optimizedText?: string }>('POST', '/api/optimizer/optimize', {
+        body: { text: content, goal: targetGoal },
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.data?.optimizedText) {
-          setRewritten(data.data.optimizedText);
-          setIsRewriting(false);
-          return;
-        }
+      if (res.ok && res.data?.optimizedText) {
+        setRewritten(res.data.optimizedText);
+        setIsRewriting(false);
+        return;
       }
     } catch {}
 
@@ -107,17 +98,12 @@ export default function ContentOptimizerPage() {
 
   const handleGenerateHashtags = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/optimizer/hashtags', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: content }),
+      const res = await api<{ hashtags?: string[] }>('POST', '/api/optimizer/hashtags', {
+        body: { text: content },
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.data?.hashtags) {
-          setHashtags(data.data.hashtags);
-          return;
-        }
+      if (res.ok && res.data?.hashtags) {
+        setHashtags(res.data.hashtags);
+        return;
       }
     } catch {}
     setHashtags(['#ArtificialIntelligence', '#FounderTips', '#GenerativeAI', '#TechGrowth', '#BuildInPublic']);
