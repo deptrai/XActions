@@ -359,7 +359,7 @@ epic-48:
       status: done
     - id: 48.2
       name: Auth & Session UI (/login)
-      status: backlog
+      status: done
     - id: 48.3
       name: Ops & Realtime Screens (/monitor, /status, /run, /benchmark)
       status: backlog
