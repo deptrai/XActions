@@ -83,6 +83,7 @@ registerPath({
   tags: ['Checkpoints'],
   schemas: { params: CheckpointIdParams, response: CheckpointDetailResponse },
   security: CHECKPOINT_SECURITY,
+  xTryItOut: false,
   errors: [400, 401, 403, 404, 429, 500],
 });
 
@@ -93,6 +94,7 @@ registerPath({
   tags: ['Checkpoints'],
   schemas: { params: CheckpointIdParams, response: CheckpointDetailResponse },
   security: CHECKPOINT_SECURITY,
+  xTryItOut: false,
   errors: [400, 401, 403, 404, 429, 500],
 });
 
@@ -103,5 +105,6 @@ registerPath({
   tags: ['Checkpoints'],
   schemas: { params: CheckpointIdParams, response: CheckpointDetailResponse },
   security: CHECKPOINT_SECURITY,
+  xTryItOut: false,
   errors: [400, 401, 403, 404, 429, 500],
 });

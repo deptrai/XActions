@@ -21,7 +21,7 @@ import {
   rateLimitedHandler,
 } from './middleware/envelope.js';
 import { generateSpec, generateWellKnown } from './openapi.js';
-import swaggerUi from 'swagger-ui-express';
+import { mountSwaggerUi } from './openapi-swagger.js';
 import {
   PAY_TO_ADDRESS,
   FACILITATOR_URL,
@@ -73,20 +73,9 @@ app.get('/.well-known/x402', (req, res) => {
 
 // Story 46.1 — self-hosted Swagger UI (same document as the primary deployment;
 // info.description already notes that serverless serves a subset of mounts and
-// unavailable paths return 503). Try-It-Out: GET-only baseline + x-tryitout gate.
-const serverlessSpec = generateSpec();
-const gateTryItOut = (oriSelector, system) => (path, method) => {
-  const op = system.getSystem().specSelectors.spec().getIn(['paths', path, method]);
-  if (op?.get('x-tryitout') === false) return false;
-  return oriSelector(path, method);
-};
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(serverlessSpec, {
-  swaggerOptions: {
-    supportedSubmitMethods: ['get'],
-    tryItOutEnabled: true,
-    plugins: [{ statePlugins: { spec: { wrapSelectors: { allowTryItOutFor: gateTryItOut } } } }],
-  },
-}));
+// unavailable paths return 503). Spec is resolved lazily per request so a
+// throwing generateSpec() yields a 500 envelope rather than a cold-start crash.
+mountSwaggerUi(app, generateSpec);
 
 // USDC contract addresses per network
 const USDC_ADDRESSES = {

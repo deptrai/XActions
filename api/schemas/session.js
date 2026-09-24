@@ -48,6 +48,7 @@ registerPath({
   tags: ['Session'],
   schemas: { body: SaveSessionBody, response: SaveSessionResponse },
   security: BEARER,
+  xTryItOut: false,
   errors: [400, 401, 500],
 });
 
@@ -58,6 +59,7 @@ registerPath({
   tags: ['Session'],
   schemas: { response: RemoveSessionResponse },
   security: BEARER,
+  xTryItOut: false,
   errors: [401, 500],
 });
 

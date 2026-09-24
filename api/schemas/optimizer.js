@@ -59,6 +59,7 @@ registerPath({
   tags: ['Optimizer'],
   schemas: { body: OptimizeBody, response: OptimizeResponse },
   security: PUBLIC,
+  xTryItOut: false,
   errors: [400, 429, 500],
 });
 
@@ -69,6 +70,7 @@ registerPath({
   tags: ['Optimizer'],
   schemas: { body: HashtagsBody, response: HashtagsResponse },
   security: PUBLIC,
+  xTryItOut: false,
   errors: [400, 429, 500],
 });
 
@@ -79,6 +81,7 @@ registerPath({
   tags: ['Optimizer'],
   schemas: { body: PredictBody, response: PredictResponse },
   security: PUBLIC,
+  xTryItOut: false,
   errors: [400, 429, 500],
 });
 
@@ -89,5 +92,6 @@ registerPath({
   tags: ['Optimizer'],
   schemas: { body: VariationsBody, response: VariationsResponse },
   security: PUBLIC,
+  xTryItOut: false,
   errors: [400, 429, 500],
 });

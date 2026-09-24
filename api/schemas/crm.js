@@ -57,6 +57,7 @@ registerPath({
   tags: ['CRM'],
   schemas: { params: CrmUsernameParams, response: CrmSyncResponse },
   security: BEARER,
+  xTryItOut: false,
   errors: [400, 401, 429, 500],
 });
 
@@ -67,6 +68,7 @@ registerPath({
   tags: ['CRM'],
   schemas: { body: CrmTagBody, response: CrmTagResponse },
   security: BEARER,
+  xTryItOut: false,
   errors: [400, 401, 429, 500],
 });
 
@@ -97,5 +99,6 @@ registerPath({
   tags: ['CRM'],
   schemas: { response: CrmScoreResponse },
   security: BEARER,
+  xTryItOut: false,
   errors: [401, 429, 500],
 });

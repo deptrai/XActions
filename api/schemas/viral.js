@@ -138,6 +138,7 @@ registerPath({
   tags: ['Viral'],
   schemas: { body: ViralMineBody, headers: ViralSessionHeaders, response: ViralMineResponse },
   security: SESSION_SECURITY,
+  xTryItOut: false,
   errors: [400, 401, 429, 500],
 });
 
@@ -158,6 +159,7 @@ registerPath({
   tags: ['Viral'],
   schemas: { params: ViralJobIdParams, headers: ViralSessionHeaders, response: ViralJobResponse },
   security: SESSION_SECURITY,
+  xTryItOut: false,
   errors: [400, 401, 404, 429, 500],
 });
 
@@ -188,6 +190,7 @@ registerPath({
   tags: ['Viral'],
   schemas: { body: ViralBacktestBody, headers: ViralSessionHeaders, response: ViralBacktestResponse },
   security: SESSION_SECURITY,
+  xTryItOut: false,
   errors: [400, 401, 429, 500],
 });
 

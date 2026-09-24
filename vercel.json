@@ -64,6 +64,10 @@
       "dest": "/api/serverless.js"
     },
     {
+      "src": "/api-docs(.*)",
+      "dest": "/api/serverless.js"
+    },
+    {
       "src": "/\\.well-known/x402",
       "dest": "/api/serverless.js"
     },

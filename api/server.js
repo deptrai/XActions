@@ -111,7 +111,7 @@ import {
 } from './middleware/envelope.js';
 import { validateConfig as validateX402Config } from './config/x402-config.js';
 import { generateSpec as generateOpenAPISpec, generateWellKnown as generateX402WellKnown } from './openapi.js';
-import swaggerUi from 'swagger-ui-express';
+import { mountSwaggerUi } from './openapi-swagger.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -317,30 +317,10 @@ app.get('/.well-known/x402', cors(openCors), (req, res) => {
 // bundles assets from node_modules). Mounted BEFORE /docs/:slug handlers and
 // AFTER /openapi.json so the spec endpoint resolves first. The spec from
 // generateSpec() is the single source of truth — this layer only renders it.
-// Try-It-Out baseline: GET-only (supportedSubmitMethods); per-operation
-// granularity via the x-tryitout:false vendor extension plugin below.
-const openApiSpec = generateOpenAPISpec();
-// swagger-ui plugin: per-operation Try-It-Out gate — ops marked `x-tryitout: false`
-// (x402-paid endpoints, real-account mutations) never execute from the docs UI.
-const gateTryItOut = (oriSelector, system) => (path, method) => {
-  const op = system.getSystem().specSelectors.spec().getIn(['paths', path, method]);
-  if (op?.get('x-tryitout') === false) return false;
-  return oriSelector(path, method);
-};
-const swaggerOptions = {
-  supportedSubmitMethods: ['get'],
-  tryItOutEnabled: true,
-  plugins: [{
-    statePlugins: {
-      spec: {
-        wrapSelectors: {
-          allowTryItOutFor: gateTryItOut,
-        },
-      },
-    },
-  }],
-};
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, { swaggerOptions }));
+// Spec is resolved lazily per request so a throwing generator degrades to a
+// 500 envelope via errorMiddleware instead of crashing boot, and the UI stays
+// in lock-step with GET /openapi.json (which also regenerates per request).
+mountSwaggerUi(app, generateOpenAPISpec);
 
 // AI API endpoints
 app.get('/api/ai/health', x402HealthCheck);

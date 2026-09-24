@@ -227,4 +227,94 @@ describe('Story 46.2 — OpenAPI composition', () => {
     expect(res.status).toBe(301);
     expect(res.headers.location).toBe('/api-docs/');
   });
+
+  // ── Story 46.1 review-loop patches ─────────────────────────────────────
+
+  it('GET /openapi.json → all 5 securitySchemes declared over HTTP', async () => {
+    const res = await request(app).get('/openapi.json');
+    const schemes = res.body.components?.securitySchemes || {};
+    for (const name of ['x402Payment', 'sessionCookie', 'bearerAuth', 'a2aApiKey', 'apiKey']) {
+      expect(schemes[name], `missing securityScheme ${name} over HTTP`).toBeTruthy();
+    }
+    expect(Object.keys(schemes).length).toBe(5);
+  });
+
+  it('GET /openapi.json → every operation has unique operationId over HTTP', async () => {
+    const res = await request(app).get('/openapi.json');
+    const ids = new Map();
+    for (const { path, method, op } of iterOperations(res.body)) {
+      expect(op.operationId, `${method.toUpperCase()} ${path} missing operationId over HTTP`).toBeTruthy();
+      expect(ids.has(op.operationId), `duplicate operationId ${op.operationId} over HTTP`).toBe(false);
+      ids.set(op.operationId, `${method} ${path}`);
+    }
+    expect(ids.size).toBeGreaterThan(100);
+  });
+
+  it('GET /openapi.json → mutation ops carry x-tryitout:false (per-op gate)', async () => {
+    const res = await request(app).get('/openapi.json');
+    // Pilot mutations must carry x-tryitout:false so the swagger-ui
+    // allowTryItOutFor wrap selector disables Execute on them.
+    const mustBeMarked = [
+      ['post', '/api/viral/mine'],
+      ['delete', '/api/viral/mine/{jobId}'],
+      ['post', '/api/viral/backtest'],
+      ['post', '/api/crm/tag'],
+      ['post', '/api/crm/sync/{username}'],
+      ['post', '/api/crm/score'],
+      ['post', '/api/optimizer/optimize'],
+      ['post', '/api/optimizer/hashtags'],
+      ['post', '/api/optimizer/predict'],
+      ['post', '/api/optimizer/variations'],
+      ['post', '/api/checkpoints/{id}/resume'],
+      ['post', '/api/checkpoints/{id}/pause'],
+      ['post', '/api/checkpoints/{id}/retry'],
+      ['post', '/api/session/save-session'],
+      ['delete', '/api/session/remove-session'],
+      ['post', '/api/auth/register'],
+      ['post', '/api/auth/login'],
+      ['post', '/api/auth/refresh'],
+    ];
+    const missing = [];
+    for (const [method, path] of mustBeMarked) {
+      const op = res.body.paths?.[path]?.[method];
+      if (!op) {
+        missing.push(`${method.toUpperCase()} ${path} (missing op)`);
+        continue;
+      }
+      if (op['x-tryitout'] !== false) {
+        missing.push(`${method.toUpperCase()} ${path} (x-tryitout=${op['x-tryitout']})`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  it('GET /api-docs/swagger-ui-bundle.js → 200 static asset (Helmet CSP-safe)', async () => {
+    // Fetches the real JS bundle to confirm the asset path resolves under the
+    // Helmet CSP that would otherwise block it.
+    const res = await request(app).get('/api-docs/swagger-ui-bundle.js');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/javascript/);
+    expect(res.text.length).toBeGreaterThan(10000); // bundle is ~1.4MB
+  });
+
+  it('GET /api-docs/swagger-ui.css → 200 static asset', async () => {
+    const res = await request(app).get('/api-docs/swagger-ui.css');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/css/);
+  });
+
+  it('GET /api-docs/swagger-ui-init.js → 200 init script with supportedSubmitMethods=[get]', async () => {
+    const res = await request(app).get('/api-docs/swagger-ui-init.js');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/javascript/);
+    expect(res.text).toContain('supportedSubmitMethods');
+    expect(res.text).toContain('"get"');
+  });
+
+  it('OPTIONS /.well-known/x402 preflight → 2xx with CORS *', async () => {
+    const res = await request(app).options('/.well-known/x402');
+    expect([200, 204]).toContain(res.status);
+    expect(res.headers['access-control-allow-origin']).toBe('*');
+    expect(res.headers['access-control-allow-methods']).toContain('GET');
+  });
 });

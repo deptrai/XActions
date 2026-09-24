@@ -91,6 +91,7 @@ registerPath({
   schemas: { body: RegisterBody, response: AuthTokenResponse },
   statusCode: 201,
   security: PUBLIC,
+  xTryItOut: false,
   errors: [400, 429, 500],
 });
 
@@ -101,6 +102,7 @@ registerPath({
   tags: ['Auth'],
   schemas: { body: LoginBody, response: AuthTokenResponse },
   security: PUBLIC,
+  xTryItOut: false,
   errors: [400, 401, 429, 500],
 });
 
@@ -111,5 +113,6 @@ registerPath({
   tags: ['Auth'],
   schemas: { body: RefreshBody, response: RefreshResponse },
   security: PUBLIC,
+  xTryItOut: false,
   errors: [400, 401, 429, 500],
 });
