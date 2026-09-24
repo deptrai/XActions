@@ -300,7 +300,7 @@ development_status:
 
 # Epic 46: OpenAPI 3.1 & Swagger Documentation
 epic-46:
-  status: in-progress
+  status: done
   stories:
     - id: 46.1
       name: Swagger UI & OpenAPI 3.1 JSON Endpoint
@@ -316,7 +316,7 @@ epic-46:
       status: done
     - id: 46.5
       name: Contract Rollout — Data, Ops & Admin Mounts
-      status: backlog
+      status: done
 
 # Epic 47: Next.js Modern Frontend Application
 epic-47:
