@@ -627,6 +627,16 @@ app.get('/changelog', (req, res) => {
 
 
 
+// Story 49.1 — plugin routes must mount BEFORE notFoundHandler (they were unreachable).
+// Initialize plugins synchronously at startup; mountPluginRoutes() is called again
+// in the listen callback for plugins that register late (async init).
+try {
+  // Sync-mount any already-registered plugin routes before the 404 handler.
+  mountPluginRoutes();
+} catch (e) {
+  console.warn('⚠️ Plugin route mount failed:', e);
+}
+
 // Story 46.2 — canonical 404 + error envelopes.
 // notFoundHandler emits { success:false, error:{code:'NOT_FOUND'} } for unmatched
 // routes; errorMiddleware serializes PlatformError/ApiError/parser errors.

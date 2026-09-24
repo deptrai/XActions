@@ -38,6 +38,9 @@ const router = express.Router();
 
 // In-memory job store (production: use Redis or DB)
 const miningJobs = new Map();
+// Story 49.1: credentials stored separately from job objects — prevents accidental
+// serialization of session data into API responses, logs, or queue payloads.
+const jobCredentials = new Map();
 const backtestReports = new Map();
 
 /**
@@ -108,8 +111,14 @@ router.post('/mine', ...sessioned({ body: ViralMineBody, headers: ViralSessionHe
       currency: 'USD',
     },
     createdAt: new Date().toISOString(),
-    session: req.session,
+    // Story 49.1: session credential moved to separate map — not stored in shared job map.
+    // The job object is safe to serialize/log; credentials live in jobCredentials.
   };
+
+  // Store credential separately — never in the shared miningJobs map
+  if (req.session) {
+    jobCredentials.set(jobId, req.session);
+  }
 
   miningJobs.set(jobId, job);
 
@@ -326,4 +335,4 @@ router.get('/platforms', (req, res) => {
 });
 
 export default router;
-export { miningJobs };
+export { miningJobs, jobCredentials };

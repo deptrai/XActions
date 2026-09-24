@@ -48,7 +48,7 @@ function corsHeaders(request) {
   return {
     'access-control-allow-origin': allowed,
     'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-    'access-control-allow-headers': 'content-type, authorization, x-payment',
+    'access-control-allow-headers': 'content-type, authorization, x-payment, x-session-cookie, x-agent-api-key, x-api-key',
     'access-control-allow-credentials': 'true',
     vary: 'origin',
   };
