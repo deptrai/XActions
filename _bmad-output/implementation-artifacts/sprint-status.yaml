@@ -333,7 +333,7 @@ epic-47:
       status: done
     - id: 47.4
       name: AI Content Optimizer Playground Screen
-      status: backlog
+      status: done
     - id: 47.5
       name: Universal Data Explorer & Export Screen
       status: backlog
