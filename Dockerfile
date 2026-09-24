@@ -4,8 +4,8 @@
 # by nichxbt
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Stage 1: Backend Dependencies
-FROM node:20-slim AS deps
+# Stage 1: Build everything
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
@@ -15,30 +15,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy package manifests first for caching
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
+COPY packages ./packages
 
+# Install root dependencies and generate Prisma client
 RUN npm ci --omit=dev && npx prisma generate
 
-# Stage 2: Web App Build (Next.js 15)
-FROM node:20-slim AS web-builder
-
-WORKDIR /app
-
-# Copy packages needed by web
-COPY packages ./packages
+# Copy web app and build it
 COPY apps/web ./apps/web
-COPY package.json ./
+RUN cd apps/web && npm ci && NODE_ENV=production npm run build
 
-WORKDIR /app/apps/web
-RUN npm ci && npm run build
+# Copy remaining application source
+COPY . .
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Stage 3: Production runtime
+# Stage 2: Production runtime
 # ═══════════════════════════════════════════════════════════════════════════════
 FROM node:20-slim AS production
 
-# Install Chromium and required system dependencies for Puppeteer
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     fonts-liberation \
@@ -67,16 +63,8 @@ ENV NODE_ENV=production
 
 WORKDIR /app
 
-# Copy backend dependencies
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/prisma ./prisma
-
-# Copy application code
-COPY . .
-
-# Copy built Next.js web app
-COPY --from=web-builder /app/apps/web/node_modules ./apps/web/node_modules
-COPY --from=web-builder /app/apps/web/.next ./apps/web/.next
+# Copy built application from builder stage
+COPY --from=builder /app ./
 
 # Create non-root user
 RUN groupadd -r xactions && useradd -r -g xactions -G audio,video xactions \
@@ -89,7 +77,7 @@ USER xactions
 
 EXPOSE 3001 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
 
 CMD ["/bin/sh", "/app/start.sh"]
