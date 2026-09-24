@@ -25,3 +25,9 @@ export * from './social-engagement.js';
 export * from './social-account.js';
 export * from './social-discovery.js';
 export * from './social-facebook.js';
+
+// Story 46.5 — Data, Ops & Admin Mounts
+export * from './ops-admin.js';
+export * from './ops-engine.js';
+export * from './ops-infrastructure.js';
+export * from './ops-intelligence.js';

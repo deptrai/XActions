@@ -145,6 +145,145 @@ export class XActionsClient {
     };
   }
 
+  /** List available agent-to-agent protocol peers (GET /api/a2a/agents) */
+  async getApiA2aAgents<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.a2aApiKey) headers['X-Agent-API-Key'] = this.a2aApiKey;
+      if (this.apiKey) headers['X-API-Key'] = this.apiKey;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/a2a/agents';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Get global system and user statistics (GET /api/admin/stats) */
+  async getApiAdminStats<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/admin/stats';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** List registered outbound webhooks (GET /api/admin/webhooks) */
+  async getApiAdminWebhooks<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/admin/webhooks';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Create a new outbound webhook (POST /api/admin/webhooks) */
+  async postApiAdminWebhooks<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/admin/webhooks';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Start the autonomous thought leader growth agent (POST /api/agent/start) */
+  async postApiAgentStart<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/agent/start';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Stop the running growth agent instance (POST /api/agent/stop) */
+  async postApiAgentStop<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/agent/stop';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
   /** Appeal account suspension (POST /api/ai/account/appeal-suspension) */
   async postApiAiAccountAppealSuspension<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
     const headers: Record<string, string> = { ...opts.headers };
@@ -7767,6 +7906,27 @@ export class XActionsClient {
     return this.request<T>(url, init);
   }
 
+  /** Get account growth and engagement overview (GET /api/analytics/overview) */
+  async getApiAnalyticsOverview<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/analytics/overview';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
   /** Log in with username or email (POST /api/auth/login) */
   async postApiAuthLogin<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
     const headers: Record<string, string> = { ...opts.headers };
@@ -7838,6 +7998,48 @@ export class XActionsClient {
     if (opts.body !== undefined) {
       headers['Content-Type'] = 'application/json';
       init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Get scraping benchmark latency and accuracy metrics (GET /api/benchmark/summary) */
+  async getApiBenchmarkSummary<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      // no auth scheme declared
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/benchmark/summary';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Get public pricing plans (GET /api/billing/plans) */
+  async getApiBillingPlans<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      // no auth scheme declared
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/billing/plans';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
     }
     return this.request<T>(url, init);
   }
@@ -8153,6 +8355,27 @@ export class XActionsClient {
     return this.request<T>(url, init);
   }
 
+  /** List downloadable scraped social intelligence datasets (GET /api/datasets) */
+  async getApiDatasets<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/datasets';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
   /** Get trending topics and hashtags (GET /api/discovery/trending) */
   async getApiDiscoveryTrending<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
     const headers: Record<string, string> = { ...opts.headers };
@@ -8345,6 +8568,27 @@ export class XActionsClient {
     return this.request<T>(url, init);
   }
 
+  /** Get dynamic rate limiter and account governor metrics (GET /api/governor/status) */
+  async getApiGovernorStatus<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      // no auth scheme declared
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/governor/status';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
   /** Compute network graph centrality metrics (GET /api/graph/centrality) */
   async getApiGraphCentrality<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
     const headers: Record<string, string> = { ...opts.headers };
@@ -8362,6 +8606,31 @@ export class XActionsClient {
         const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
         url += (url.includes('?') ? '&' : '?') + q.toString();
       }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Verify an offline or enterprise license key (POST /api/license/verify) */
+  async postApiLicenseVerify<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      // no auth scheme declared
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/license/verify';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
     }
     return this.request<T>(url, init);
   }
@@ -8387,6 +8656,48 @@ export class XActionsClient {
     if (opts.body !== undefined) {
       headers['Content-Type'] = 'application/json';
       init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** List recent background automation operations (GET /api/operations) */
+  async getApiOperations<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/operations';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Get status and logs of a specific operation (GET /api/operations/{id}) */
+  async getApiOperationsId<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/operations/{id}';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
     }
     return this.request<T>(url, init);
   }
@@ -8487,6 +8798,27 @@ export class XActionsClient {
     if (opts.body !== undefined) {
       headers['Content-Type'] = 'application/json';
       init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Cross-platform reverse identity and handle search (GET /api/osint/lookup) */
+  async getApiOsintLookup<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/osint/lookup';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
     }
     return this.request<T>(url, init);
   }
@@ -8633,6 +8965,98 @@ export class XActionsClient {
     return this.request<T>(url, init);
   }
 
+  /** List available proxies in the dynamic pool (GET /api/proxies) */
+  async getApiProxies<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/proxies';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Add a new proxy node to the rotation pool (POST /api/proxies) */
+  async postApiProxies<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/proxies';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Schedule a tweet for future automated publishing (POST /api/schedule/tweet) */
+  async postApiScheduleTweet<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/schedule/tweet';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Inspect registered runtime contract validation schemas (GET /api/schemas/registry) */
+  async getApiSchemasRegistry<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      // no auth scheme declared
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/schemas/registry';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
   /** List all available browser scripts with prices (GET /api/scripts) */
   async getApiScripts<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
     const headers: Record<string, string> = { ...opts.headers };
@@ -8660,6 +9084,27 @@ export class XActionsClient {
       if (this.x402Payment) headers['X-PAYMENT'] = this.x402Payment;
     const init: RequestInit = { method: 'GET', headers };
     let url = this.baseUrl + '/api/scripts/automation/{name}';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** List available standalone browser automation scripts (GET /api/scripts/browser) */
+  async getApiScriptsBrowser<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      // no auth scheme declared
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/scripts/browser';
     if (opts.params) {
       for (const [k, v] of Object.entries(opts.params)) {
         url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
@@ -8805,6 +9250,52 @@ export class XActionsClient {
     return this.request<T>(url, init);
   }
 
+  /** List user collaborative automation teams (GET /api/teams) */
+  async getApiTeams<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/teams';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Create a new automation team (POST /api/teams) */
+  async postApiTeams<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/teams';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return this.request<T>(url, init);
+  }
+
   /** Unroll and reconstruct a tweet thread (GET /api/thread/unroll/{tweetId}) */
   async getApiThreadUnrollTweetid<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
     const headers: Record<string, string> = { ...opts.headers };
@@ -8899,6 +9390,27 @@ export class XActionsClient {
       if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
     const init: RequestInit = { method: 'GET', headers };
     let url = this.baseUrl + '/api/user/me';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Download high-resolution video stream (binary mp4 stream, envelope-exempt) (GET /api/video/download) */
+  async getApiVideoDownload<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      // no auth scheme declared
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/video/download';
     if (opts.params) {
       for (const [k, v] of Object.entries(opts.params)) {
         url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
@@ -9107,6 +9619,52 @@ export class XActionsClient {
         const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
         url += (url.includes('?') ? '&' : '?') + q.toString();
       }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** List executable automation workflows (GET /api/workflows) */
+  async getApiWorkflows<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.bearerToken) headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    const init: RequestInit = { method: 'GET', headers };
+    let url = this.baseUrl + '/api/workflows';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    return this.request<T>(url, init);
+  }
+
+  /** Trigger a workflow execution (POST /api/workflows/run) */
+  async postApiWorkflowsRun<T = unknown>(opts: { params?: Record<string, string | number | boolean>; query?: Record<string, string | number | boolean | undefined | null>; headers?: Record<string, string> } & { body?: unknown } = {}): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...opts.headers };
+      if (this.sessionCookie) headers['x-session-cookie'] = this.sessionCookie;
+    const init: RequestInit = { method: 'POST', headers };
+    let url = this.baseUrl + '/api/workflows/run';
+    if (opts.params) {
+      for (const [k, v] of Object.entries(opts.params)) {
+        url = url.replaceAll('{' + k + '}', encodeURIComponent(String(v)));
+      }
+    }
+    if (opts.query) {
+      const filtered = Object.entries(opts.query).filter(([_, v]) => v != null);
+      if (filtered.length > 0) {
+        const q = new URLSearchParams(filtered.map(([k, v]) => [k, String(v)]));
+        url += (url.includes('?') ? '&' : '?') + q.toString();
+      }
+    }
+    if (opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
     }
     return this.request<T>(url, init);
   }
