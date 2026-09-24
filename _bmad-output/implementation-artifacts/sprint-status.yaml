@@ -327,7 +327,7 @@ epic-47:
       status: done
     - id: 47.2
       name: Viral DNA Miner Dashboard & Charts Screen
-      status: backlog
+      status: done
     - id: 47.3
       name: Follower CRM & Contact Intelligence Screen
       status: backlog
