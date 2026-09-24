@@ -2,7 +2,7 @@
 title: 'Story 48.9 — Account & Misc Screens (/facebook, /unfollowers, /mcp, /extension, /platform, /agent, /security)'
 type: 'feature'
 created: '2026-09-24'
-status: 'in-progress'
+status: 'done'
 review_loop_iteration: 0
 route: 'dispatch'
 context:
@@ -98,3 +98,16 @@ All via `api()` through BFF.
 ## Review Triage Log
 
 ## Auto Run Result
+
+## Auto Run Result
+
+**Status:** done
+**Summary:** Implemented 7 account/misc screens — `/facebook` (connection status + 4 action cards), `/unfollowers` (list + mutual/verified filter + CSV export), `/mcp` (tool inspector + test calls), `/extension` (install guide + status), `/platform` (12 platform cards + feature badges), `/agent` (agent cards + start/pause/create), `/security` (security items + audit log).
+
+**Files changed:**
+- `apps/web/app/{facebook,unfollowers,mcp,extension,platform,agent,security}/page.tsx` *(new)*
+- `tests/web/{facebook,unfollowers,mcp,extension,platform,agent,security}.test.js` *(new)*
+
+**Verification:**
+- `npm run web:build` — 42 routes, zero errors
+- `npx vitest run tests/web/` — 29/29 new tests pass
