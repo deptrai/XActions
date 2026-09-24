@@ -144,7 +144,7 @@ development_status:
   epic-20: in-progress
   20-1-multi-consumer-service-contract-x-scrape-x-actions: done
   20-2-universal-stream-publish-hook-snake-case-thin-event: done
-  20-5-pumpfun-native-social-crawler: backlog
+  20-5-pumpfun-native-social-crawler: done
   epic-20-retrospective: optional
 
   epic-21: done

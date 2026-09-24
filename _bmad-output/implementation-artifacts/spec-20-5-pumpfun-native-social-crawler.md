@@ -2,10 +2,10 @@
 title: 'Story 20.5 — PumpFun Native Social Crawler'
 type: 'feature'
 created: '2026-09-25'
-status: 'in-review'
+status: 'done'
 review_loop_iteration: 0
 baseline_commit: 'a42033fad6308a279df34c54e31602d4dd200bee'
-followup_review_recommended: false
+followup_review_recommended: true
 context:
   - _bmad-output/implementation-artifacts/epic-20-context.md
 warnings: []
@@ -109,6 +109,14 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-09-25 — Review pass
+- verdicts: 3 findings — high 2, medium 1, low 0, false 0, maybe-false 0
+- findings:
+  - `[high]` `[patch]` kolscan seed path resolved to `src/config/` instead of repo root `config/` (`../../../` needed `../../../../`) — patched DEFAULT_SEED_PATH to use `../../../../config/kol-wallets-seed.json`, verified loads 1 wallet.
+  - `[high]` `[patch]` DistributedTokenBucket rate gate was not wired in PumpFunClient (spec required 40 req/min/IP) — patched `#consumeRateToken` into `#apiGet` before request using `globalDistributedTokenBucket` (capacity=40, refillRate=40/60).
+  - `[medium]` `[patch]` `src/mcp/server.js` `crawlerModuleMap` missing `'pumpfun'` — patched mapping in `executeScrapeTool`, ensuring `x_scrape` pre-validates `mintAddress` and surfaces `XACT_4002` with `missing[]` and `example`.
+
+
 ## Design Notes
 
 **Output shape `PumpFunMintSocialResult`:**
@@ -143,3 +151,47 @@ deferred: []
 - `vitest run tests/scrapers/social/pumpfun` — expected: 100% pass.
 - `node -e "import('./src/scrapers/social/actions-list.js').then(m=>m.executeActionListTool({platform:'pumpfun'}).then(r=>console.log(r)))"` — expected: pumpfun action listed.
 - `node src/core/index.js` — expected: parse OK.
+
+## Auto Run Result
+
+### Summary
+Implemented `PumpFunCrawler` and `PumpFunClient` as a native social crawler for pump.fun Solana mint tokens under Story 20.5 (Epic 20). Provides `fetch_mint_social` action extracting theses (from position callouts), comment velocity (interpolated from reply samples), top holders, KOL activity (two-tier cache: Redis TTL 10m + static seed fallback), and livestream status (0ms in-memory set via 30s background poller) over unauthenticated HTTP/2 REST (`frontend-api-v3.pump.fun`) with zero headless browser usage. Wires into `scrape()` dispatcher via descriptor and `x_actions_list` discovery.
+
+### Files Changed
+- `src/scrapers/social/pumpfun/client.js` — `PumpFunClient extends AbstractApiClient` with Base58 validation, in-flight dedup ≤3s, 40 req/min/IP DistributedTokenBucket gate, curl transport fallback on 403, and JevChallengeDiagnoser on 200-empty.
+- `src/scrapers/social/pumpfun/crawler.js` — `PumpFunCrawler extends AbstractCrawler` registering `fetch_mint_social`, orchestrating sticky proxy per mint + parallel `Promise.allSettled` calls.
+- `src/scrapers/social/pumpfun/velocity.js` — `computeCommentVelocity` time-delta interpolation `{last1m, last5m}` from ≤50 replies.
+- `src/scrapers/social/pumpfun/kolscan.js` — `KolscanResolver` two-tier cache (Redis TTL 10m → kolscan.io → `config/kol-wallets-seed.json` static seed).
+- `src/scrapers/social/pumpfun/livestream.js` — `LivestreamPoller` background 30s poller on `/coins/currently-live` providing 0ms `isLive(mint)`.
+- `src/scrapers/social/pumpfun/normalizer.js` — `normalizeThesis`, `normalizeHolder`, `namespacedPumpfunId` (`pumpfun:{mint}`).
+- `src/scrapers/social/pumpfun/comments.js` — `normalizePumpfunReply` helper.
+- `src/scrapers/social/pumpfun/descriptor.js` — scrape() descriptor (`aliases: ['pumpfun', 'pump', 'pump.fun']`, `actionMap`, `mapArgs`, factories).
+- `src/scrapers/social/pumpfun/index.js` — barrel exports.
+- `src/scrapers/index.js` — import `pumpfunDescriptor` and register in `DESCRIPTORS` map.
+- `src/scrapers/social/actions-list.js` — register `'pumpfun'` in `CANONICAL_PLATFORMS`, `PLATFORM_CATEGORIES`, and `crawlerLoaders`.
+- `src/mcp/server.js` — register `'pumpfun'` in `crawlerModuleMap` for `x_scrape` requiredArgs pre-validation.
+- `config/kol-wallets-seed.json` — static seed file for KOL matching.
+- `types/index.d.ts` — TypeScript declarations for `PumpFunCrawler`, `PumpFunClient`, `PumpFunMintSocialResult`, etc.
+- `tests/scrapers/social/pumpfun/pumpfun.test.js` — 13 unit tests covering I/O matrix (100% pass).
+
+### Review Findings Breakdown
+- Patches applied: 3
+  1. `[high]` Corrected kolscan seed path resolution (`../../../../config/kol-wallets-seed.json`).
+  2. `[high]` Wired `DistributedTokenBucket` 40 req/min/IP gate into client `#apiGet`.
+  3. `[medium]` Registered `pumpfun` in `src/mcp/server.js` `crawlerModuleMap`.
+- Items deferred: 0
+- Rejected findings: 0
+
+### Follow-up Review Recommendation
+`followup_review_recommended: true` — 2 high-severity findings were patched in the review pass (kolscan seed path + DistributedTokenBucket rate gate). While both were verified with unit tests and live execution, another review pass is recommended per the workflow rule.
+
+### Verification Performed
+- `vitest run tests/scrapers/social/pumpfun` — 13/13 passed (441ms).
+- `listActions()` runtime check — surfaces `fetch_mint_social` (snake_case).
+- `executeActionListTool({ platform: 'pumpfun' })` — surfaces pumpfun action, no `no_crawler` flag.
+- `scrape('pumpfun', 'fetch_mint_social', { mintAddress: ... })` — live probe against real Solana mint returned 50 theses, 50 top holders, velocity, livestream, and kolActivity.
+- Invalid mint Base58 check — throws `XACT_4002` before upstream request.
+- `node src/core/index.js` — passes with exit 0.
+
+### Residual Risks
+- `frontend-api-v3.pump.fun` comments/replies endpoint returns 404 on current live probe; code handles this gracefully by defaulting to empty replies and velocity `{0, 0}`. If pump.fun restores or exposes an official comments path, `getReplies()` can be updated without breaking callers.
