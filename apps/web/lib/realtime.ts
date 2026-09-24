@@ -74,7 +74,9 @@ export class RealtimeClient {
     this.pollingIntervalMs = options.pollingIntervalMs || 10000;
 
     if (options.autoConnect) {
-      this.connect();
+      // Fire-and-forget: swallow rejections so a failed socket/polling attempt
+      // doesn't surface as an unhandled promise rejection in the console.
+      void this.connect().catch(() => {});
     }
   }
 
@@ -195,10 +197,10 @@ export class RealtimeClient {
     }
 
     // Execute first poll immediately
-    this.pollHealth();
+    void this.pollHealth();
 
     this.pollingTimer = setInterval(() => {
-      this.pollHealth();
+      void this.pollHealth();
     }, this.pollingIntervalMs);
   }
 

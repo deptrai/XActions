@@ -333,6 +333,109 @@ const INITIAL_SESSIONS: LiveSessionItem[] = [
 ];
 
 // ==========================================
+// Normalizers — map backend payloads to UI shapes
+// ==========================================
+
+/**
+ * Normalize a backend /api/checkpoints record into the UI Checkpoint shape.
+ * Backend: {id, platform, targetType, targetKey, status, lastCursor, errorCount, lastCrawledAt, lastTimestamp, itemsScraped?}
+ * UI:      {id, crawler, target, status, itemsScraped, lastActive, cursor, errors, platform}
+ */
+function normalizeCheckpoint(c: unknown): Checkpoint {
+  const r = (c ?? {}) as Record<string, unknown>;
+  const statusMap: Record<string, Checkpoint['status']> = {
+    running: 'running',
+    active: 'running',
+    has_more: 'running',
+    paused: 'paused',
+    completed: 'completed',
+    done: 'completed',
+    failed: 'failed',
+    error: 'failed',
+    stalled: 'stalled',
+  };
+  const rawStatus = String(r.status ?? 'stalled').toLowerCase();
+  const targetType = r.targetType ? `${r.targetType}:` : '';
+  return {
+    id: String(r.id ?? ''),
+    crawler: `${String(r.platform ?? 'unknown')}-${String(r.targetType ?? 'crawl')}`,
+    target: String(r.targetKey ?? r.target ?? `${targetType}${r.id ?? ''}`),
+    status: statusMap[rawStatus] ?? 'stalled',
+    itemsScraped: Number(r.itemsScraped ?? r.itemsCount ?? r.count ?? 0) || 0,
+    lastActive: timeAgo(r.lastCrawledAt ?? r.lastTimestamp ?? r.updatedAt),
+    cursor: (r.lastCursor ?? r.cursor) ? String(r.lastCursor ?? r.cursor) : undefined,
+    errors: Number(r.errorCount ?? r.errors ?? 0) || 0,
+    platform: r.platform ? String(r.platform) : undefined,
+  };
+}
+
+/** Convert an ISO/epoch timestamp into a short "x ago" label. */
+function timeAgo(ts: unknown): string {
+  if (!ts) return '—';
+  const d = typeof ts === 'number' ? new Date(ts) : new Date(String(ts));
+  const ms = d.getTime();
+  if (Number.isNaN(ms)) return '—';
+  const diff = Date.now() - ms;
+  if (diff < 0) return 'just now';
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+/**
+ * Normalize a backend /api/admin/proxies record into the UI ProxyNode shape.
+ * Backend: {key, server, protocol, host, port, residential, status, pool, quarantinedUntil, latency?, successRate?}
+ * UI:      {id, ip, protocol, status, latency, successRate, tier, type}
+ * Guarantees a unique, non-empty `id` to keep React list keys stable.
+ */
+function normalizeProxy(p: unknown, index = 0): ProxyNode {
+  const r = (p ?? {}) as Record<string, unknown>;
+  const server = String(r.server ?? r.ip ?? r.key ?? `proxy-${index}`);
+  const id = String(r.id ?? r.key ?? server ?? `proxy-${index}`);
+  const statusMap: Record<string, ProxyNode['status']> = {
+    healthy: 'healthy',
+    quarantined: 'quarantined',
+    cooldown: 'cooldown',
+    unhealthy: 'unhealthy',
+    dead: 'unhealthy',
+  };
+  const rawStatus = String(r.status ?? (r.healthy === false ? 'unhealthy' : 'healthy')).toLowerCase();
+  return {
+    id,
+    ip: server,
+    protocol: String(r.protocol ?? 'http'),
+    status: statusMap[rawStatus] ?? 'healthy',
+    latency: Number(r.latency ?? r.latencyMs ?? 0) || 0,
+    successRate: Number(r.successRate ?? r.success_rate ?? 100) || 0,
+    tier: r.tier ? String(r.tier) : (r.residential ? 'Residential' : 'Datacenter'),
+    type: r.pool ? String(r.pool) : (r.type ? String(r.type) : undefined),
+  };
+}
+
+/**
+ * Normalize a backend stream-alert record into the UI StreamAlertItem shape.
+ * Backend activeAlerts items: {alert, threshold, value, severity?, timestamp, metrics}
+ * UI: {id, name, severity, value, threshold, timestamp}
+ */
+function normalizeStreamAlert(a: unknown, index = 0): StreamAlertItem {
+  const r = (a ?? {}) as Record<string, unknown>;
+  const rawName = String(r.name ?? r.alert ?? `alert-${index}`);
+  const severity = String(r.severity ?? 'WARNING').toUpperCase() === 'CRITICAL' ? 'CRITICAL' : 'WARNING';
+  return {
+    id: String(r.id ?? `${rawName}-${index}`),
+    name: rawName.replace(/_/g, ' '),
+    severity,
+    value: r.value !== undefined ? String(r.value) : '—',
+    threshold: r.threshold !== undefined ? String(r.threshold) : '—',
+    timestamp: r.timestamp ? timeAgo(r.timestamp) : '—',
+  };
+}
+
+// ==========================================
 // Main Component
 // ==========================================
 
@@ -423,36 +526,59 @@ export default function AdminConsolePage() {
     setIsRefreshing(true);
 
     try {
-      // 1. Checkpoints
-      const cpRes = await api<{ checkpoints?: Checkpoint[]; items?: Checkpoint[] }>('GET', '/api/checkpoints');
+      // 1. Checkpoints — backend returns {platform,targetType,targetKey,status,lastCursor,errorCount,lastCrawledAt}
+      // so normalize into the UI Checkpoint shape (target/crawler/itemsScraped/lastActive) before setting state.
+      const cpRes = await api<{ checkpoints?: unknown[]; items?: unknown[] }>('GET', '/api/checkpoints');
       if (cpRes.ok && cpRes.data) {
-        const list = cpRes.data.checkpoints || cpRes.data.items || (Array.isArray(cpRes.data) ? (cpRes.data as Checkpoint[]) : null);
-        if (list && Array.isArray(list) && list.length > 0) {
-          setCheckpoints(list);
+        const raw = cpRes.data.checkpoints || cpRes.data.items || (Array.isArray(cpRes.data) ? (cpRes.data as unknown[]) : null);
+        if (raw && Array.isArray(raw) && raw.length > 0) {
+          setCheckpoints(raw.map((c) => normalizeCheckpoint(c)));
         }
       } else if (cpRes.status === 401) {
         showToast('Authentication required for live checkpoints. Showing seed data.', 'info');
       }
 
-      // 2. Proxies
-      const pxRes = await api<{ proxies?: ProxyNode[]; items?: ProxyNode[] }>('GET', '/api/proxies');
+      // 2. Proxies (admin route — /api/proxies root is not exposed)
+      const pxRes = await api<{ proxies?: unknown[]; items?: unknown[] }>('GET', '/api/admin/proxies');
       if (pxRes.ok && pxRes.data) {
-        const list = pxRes.data.proxies || pxRes.data.items || (Array.isArray(pxRes.data) ? (pxRes.data as ProxyNode[]) : null);
+        const list = pxRes.data.proxies || pxRes.data.items || (Array.isArray(pxRes.data) ? (pxRes.data as unknown[]) : null);
         if (list && Array.isArray(list) && list.length > 0) {
-          setProxies(list);
+          setProxies(list.map((p, i) => normalizeProxy(p, i)));
         }
       }
 
-      // 3. Stream alerts
-      const altRes = await api<{ alerts?: StreamAlertItem[] }>('GET', '/api/streams/alerts');
+      // 3. Stream alerts (admin route — /api/admin/stream/alerts)
+      // Backend returns alerts = { activeAlerts: [...], totalAlertsTriggered, config } (object, not array).
+      const altRes = await api<{
+        alerts?: { activeAlerts?: unknown[]; totalAlertsTriggered?: number } | StreamAlertItem[];
+      }>('GET', '/api/admin/stream/alerts');
       if (altRes.ok && altRes.data?.alerts) {
-        setStreamAlerts(altRes.data.alerts);
+        const raw = altRes.data.alerts;
+        const items = Array.isArray(raw) ? raw : (raw.activeAlerts ?? []);
+        setStreamAlerts(items.map((a, i) => normalizeStreamAlert(a, i)));
       }
 
-      // 4. x402 Payments
-      const payRes = await api<PaymentLedgerState>('GET', '/api/x402/payments');
-      if (payRes.ok && payRes.data) {
-        setPayments(payRes.data);
+      // 4. x402 Payments (admin stats route — /api/admin/x402/stats)
+      const payRes = await api<{
+        stats?: {
+          totalPayments?: number;
+          totalRevenueUSD?: string;
+          byOperation?: Record<string, number>;
+          recentPayments?: Array<Record<string, unknown>>;
+        };
+      }>('GET', '/api/admin/x402/stats');
+      if (payRes.ok && payRes.data?.stats) {
+        const s = payRes.data.stats;
+        const byOperation: PaymentLedgerState['byOperation'] = {};
+        for (const [op, count] of Object.entries(s.byOperation ?? {})) {
+          byOperation[op] = { count: Number(count) || 0, totalUsdc: 0 };
+        }
+        setPayments((prev) => ({
+          ...prev,
+          totalPayments: s.totalPayments ?? prev.totalPayments,
+          totalRevenueUsdc: parseFloat(s.totalRevenueUSD ?? String(prev.totalRevenueUsdc)) || prev.totalRevenueUsdc,
+          byOperation: Object.keys(byOperation).length > 0 ? byOperation : prev.byOperation,
+        }));
       }
     } catch {
       // Graceful offline fallback
