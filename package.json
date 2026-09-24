@@ -117,7 +117,10 @@
     "site:sitemap": "node scripts/build-sitemap.js",
     "site:build": "npm run site:docs && npm run site:index && npm run site:scripts && npm run site:sitemap && bash deploy/cloudflare/build.sh",
     "site:deploy": "npm run site:build && npx wrangler pages deploy pages-out --project-name xactions",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "web:dev": "npm --prefix apps/web run dev",
+    "web:build": "npm --prefix apps/web run build",
+    "web:start": "npm --prefix apps/web run start"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^9.1.0",
