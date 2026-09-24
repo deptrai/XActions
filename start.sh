@@ -3,9 +3,6 @@
 # Run database migrations only if DATABASE_URL is available
 if [ -n "$DATABASE_URL" ]; then
   echo "🔄 Running database migrations..."
-  # Fresh DB: migrate deploy runs 0_init SQL and creates all tables.
-  # Existing DB (created with db push, no migration history): deploy fails on
-  # "relation already exists", so we mark the baseline as applied and redeploy.
   npx prisma migrate deploy || {
     echo "⚠️  Tables exist without migration history - marking baseline as applied..."
     npx prisma migrate resolve --applied "0_init" && npx prisma migrate deploy
@@ -17,4 +14,11 @@ else
   echo "⚠️ DATABASE_URL not set, skipping migrations"
 fi
 
+# Start Next.js App Router in background if built
+if [ -d "/app/apps/web/.next" ]; then
+  echo "🚀 Starting Next.js Web App on port 3000..."
+  (cd /app/apps/web && PORT=3000 npm run start) &
+fi
+
+# Start Express API server on port 3001 (foreground)
 exec node api/server.js

@@ -627,6 +627,57 @@ app.get('/changelog', (req, res) => {
 
 
 
+// Story 48.10 / Deployment — Forward all non-API web traffic to Next.js App Router (port 3000)
+// This enables xactions.medirus.online to serve the Next.js frontend through port 3001
+const WEB_APP_URL = process.env.WEB_APP_URL || 'http://127.0.0.1:3000';
+app.use(async (req, res, next) => {
+  // Skip API routes, socket.io, webhooks, well-known, static files
+  if (
+    req.path.startsWith('/api/') ||
+    req.path.startsWith('/socket.io/') ||
+    req.path.startsWith('/.well-known/') ||
+    req.path === '/openapi.json' ||
+    req.path === '/api'
+  ) {
+    return next();
+  }
+
+  // Only proxy if we are not handling a static marketing page from dashboard
+  // (marketing pages are handled by routes above, so if we reach here it's an app route)
+  try {
+    const targetUrl = `${WEB_APP_URL}${req.originalUrl}`;
+    const proxyHeaders = { ...req.headers };
+    // Set appropriate host for Next.js
+    proxyHeaders.host = 'localhost:3000';
+    delete proxyHeaders['content-length'];
+
+    const hasBody = !['GET', 'HEAD'].includes(req.method) && req.body;
+    const bodyData = hasBody ? JSON.stringify(req.body) : undefined;
+    if (hasBody) proxyHeaders['content-type'] = 'application/json';
+
+    const proxyRes = await fetch(targetUrl, {
+      method: req.method,
+      headers: proxyHeaders,
+      body: bodyData,
+      redirect: 'manual', // preserve 307 redirects from middleware
+    });
+
+    res.status(proxyRes.status);
+    proxyRes.headers.forEach((value, key) => {
+      const lower = key.toLowerCase();
+      if (!['transfer-encoding', 'content-encoding', 'connection'].includes(lower)) {
+        res.setHeader(key, value);
+      }
+    });
+
+    const buffer = Buffer.from(await proxyRes.arrayBuffer());
+    return res.send(buffer);
+  } catch (_err) {
+    // Next.js not running or unreachable — fall through to 404
+    next();
+  }
+});
+
 // Story 49.1 — plugin routes must mount BEFORE notFoundHandler (they were unreachable).
 // Initialize plugins synchronously at startup; mountPluginRoutes() is called again
 // in the listen callback for plugins that register late (async init).

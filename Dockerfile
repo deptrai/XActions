@@ -1,30 +1,40 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # XActions — Production Dockerfile
-# Multi-stage build: Node.js + Chromium for Puppeteer browser automation
+# Multi-stage build: Node.js + Chromium + Next.js App Router
 # by nichxbt
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Stage 1: Dependencies
+# Stage 1: Backend Dependencies
 FROM node:20-slim AS deps
 
 WORKDIR /app
 
-# Install build tools for native modules (better-sqlite3 needs Python + make + g++)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     make \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy package files
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
-# Install production dependencies only
 RUN npm ci --omit=dev && npx prisma generate
 
+# Stage 2: Web App Build (Next.js 15)
+FROM node:20-slim AS web-builder
+
+WORKDIR /app
+
+# Copy packages needed by web
+COPY packages ./packages
+COPY apps/web ./apps/web
+COPY package.json ./
+
+WORKDIR /app/apps/web
+RUN npm ci && npm run build
+
 # ═══════════════════════════════════════════════════════════════════════════════
-# Stage 2: Production runtime
+# Stage 3: Production runtime
 # ═══════════════════════════════════════════════════════════════════════════════
 FROM node:20-slim AS production
 
@@ -51,21 +61,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Puppeteer config — use system Chromium instead of downloading
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV NODE_ENV=production
 
 WORKDIR /app
 
-# Copy dependencies from stage 1
+# Copy backend dependencies
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/prisma ./prisma
 
 # Copy application code
 COPY . .
 
-# Create non-root user for security
+# Copy built Next.js web app
+COPY --from=web-builder /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=web-builder /app/apps/web/.next ./apps/web/.next
+
+# Create non-root user
 RUN groupadd -r xactions && useradd -r -g xactions -G audio,video xactions \
     && mkdir -p /home/xactions/Downloads \
     && chown -R xactions:xactions /home/xactions \
@@ -74,12 +87,9 @@ RUN groupadd -r xactions && useradd -r -g xactions -G audio,video xactions \
 
 USER xactions
 
-# Expose API port
-EXPOSE 3001
+EXPOSE 3001 3000
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
 
-# Run migrations then start the API server
 CMD ["/bin/sh", "/app/start.sh"]
