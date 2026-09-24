@@ -952,3 +952,100 @@ export declare function createFnbMerchantClient(options?: Record<string, unknown
 export declare function createFnbMerchantCrawler(client?: FnbMerchantClient | Record<string, unknown>, options?: Record<string, unknown>): FnbMerchantCrawler;
 
 
+
+// ── PumpFun ─────────────────────────────────────────────────────────────────
+
+/** A pump.fun position-derived thesis (callout). */
+export interface PumpFunThesis {
+  user: string | null;
+  wallet: string | null;
+  content: string;
+  timestamp: number | null;
+  holdings: number;
+  pnlSol?: number;
+  pnlUsd?: number;
+  pnlPercentage?: number;
+  likes?: number;
+  mediaUrl?: string | null;
+  isKol: boolean;
+  isVerified?: boolean;
+}
+
+/** A pump.fun top-holder record. */
+export interface PumpFunHolder {
+  wallet: string | null;
+  userName: string | null;
+  profileImage: string | null;
+  balance: number;
+  amountHeld: number;
+  pnlUsd?: number;
+  pnlPercentage?: number;
+  realizedPnlUsd?: number;
+  costBasisUsd?: number;
+  isVerified?: boolean;
+  accountKind?: string | null;
+  isKol?: boolean;
+}
+
+/** Comment velocity over the recent reply sample. */
+export interface PumpFunCommentVelocity {
+  last1m: number;
+  last5m: number;
+  sampleSize: number;
+}
+
+/** KOL activity matched against the wallet set. */
+export interface PumpFunKolActivity {
+  isKolPresent: boolean;
+  kolCount: number;
+  matchedKols: Array<{ name?: string; wallet: string }>;
+}
+
+/** Livestream status resolved from the in-memory poller set (0ms lookup). */
+export interface PumpFunLivestreamStatus {
+  isActive: boolean;
+  viewers: number;
+  roomId?: string;
+}
+
+/** Aggregate result of `fetch_mint_social`. */
+export interface PumpFunMintSocialResult {
+  mint: string;
+  id: string;
+  platform: string;
+  theses: PumpFunThesis[];
+  commentVelocity: PumpFunCommentVelocity;
+  kolActivity: PumpFunKolActivity;
+  livestream: PumpFunLivestreamStatus;
+  topHolders: PumpFunHolder[];
+  items?: PumpFunThesis[];
+}
+
+/** PumpFun HTTP client (unauthenticated HTTP/2 REST). */
+export declare class PumpFunClient {
+  name: string;
+  platform: string;
+  requiresAuth: boolean;
+  requiresResidential: boolean;
+  client: 'undici' | 'got' | 'curl';
+  baseUrl: string;
+  constructor(options?: Record<string, unknown>);
+  assertValidMint(mintAddress: unknown): string;
+  getMintPositions(mintAddress: string, options?: Record<string, unknown>): Promise<{ positions: unknown[]; totalCount: number; hasMore: boolean }>;
+  getReplies(mintAddress: string, options?: Record<string, unknown>): Promise<unknown[]>;
+  getCurrentlyLive(options?: Record<string, unknown>): Promise<unknown[]>;
+  dedup<T>(mint: string, fn: () => Promise<T>): Promise<T>;
+}
+
+/** PumpFun crawler — registers `fetch_mint_social`. */
+export declare class PumpFunCrawler {
+  client: PumpFunClient;
+  constructor(deps?: Record<string, unknown>);
+  start(command: { action: string; args?: Record<string, unknown>; session?: Record<string, unknown> }): Promise<unknown>;
+  fetchMintSocial(args: Record<string, unknown>, session?: Record<string, unknown>): Promise<PumpFunMintSocialResult>;
+  cleanup(): Promise<void>;
+  listActions(): Array<{ action: string; [key: string]: unknown }>;
+}
+
+export declare function createPumpFunClient(options?: Record<string, unknown>): PumpFunClient;
+export declare function createPumpFunCrawler(client?: PumpFunClient | Record<string, unknown>, options?: Record<string, unknown>): PumpFunCrawler;

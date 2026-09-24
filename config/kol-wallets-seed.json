@@ -1,0 +1,6 @@
+{
+  "_comment": "Static KOL wallet seed for pump.fun KOL matching (Story 20.5). Used as fallback when kolscan.io is unreachable. Values are Solana Base58 wallet addresses.",
+  "wallets": [
+    { "wallet": "D8A9jpcysZacshWJw4JUKWchQknMRP9XpwfVeNsaFedd", "name": "Erdem Bayram" }
+  ]
+}

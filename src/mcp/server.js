@@ -4103,6 +4103,7 @@ async function executeScrapeTool(args) {
       topcv: '../scrapers/recruitment/topcv/crawler.js',
       vietnamworks: '../scrapers/recruitment/vietnamworks/crawler.js',
       masothue: '../scrapers/procurement/masothue/crawler.js',
+      pumpfun: '../scrapers/social/pumpfun/crawler.js',
     };
     const crawlerPath = crawlerModuleMap[platformKey];
     if (crawlerPath) {

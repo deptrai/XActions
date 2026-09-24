@@ -1,0 +1,145 @@
+---
+title: 'Story 20.5 — PumpFun Native Social Crawler'
+type: 'feature'
+created: '2026-09-25'
+status: 'in-review'
+review_loop_iteration: 0
+baseline_commit: 'a42033fad6308a279df34c54e31602d4dd200bee'
+followup_review_recommended: false
+context:
+  - _bmad-output/implementation-artifacts/epic-20-context.md
+warnings: []
+deferred: []
+---
+
+<intent-contract>
+
+## Intent
+
+**Problem:** Chưa có crawler nào ingest tín hiệu social của pump.fun (theses, comment velocity, top holders, KOL activity, livestream status) — consumer trading (jev-trading, bot, analytics) không có nguồn dữ liệu social real-time cho Solana mint token mà không dùng headless browser.
+
+**Approach:** Thêm `PumpFunCrawler` kế thừa `AbstractCrawler` + `PumpFunClient` kế thừa `AbstractApiClient`, gọi `frontend-api-v3.pump.fun` unauthenticated HTTP/2 REST, đăng ký action `fetch_mint_social` và wire vào dispatcher + actions-list như mọi platform khác.
+
+## Boundaries & Constraints
+
+**Always:**
+- `PumpFunCrawler extends AbstractCrawler` (`src/core/base-crawler.js`); `PumpFunClient extends AbstractApiClient` (`src/core/base-client.js`); action snake_case `fetch_mint_social` đăng ký qua `registerAction()` → `globalActionRegistry`; category `'social'`, `requiresAuth: false`.
+- Validate Solana mint address bằng Base58 regex `/^[1-9A-HJ-NP-Za-km-z]{32,44}$/` tại client trước khi request — mint sai → `PlatformError(XACT_4002)` không gửi request, không tốn token.
+- In-flight request deduplication: nhiều caller query cùng 1 mint trong cửa sổ ≤3s → tái sử dụng 1 Promise in-flight.
+- Thực thi `Promise.allSettled` 2 requests trên cùng 1 sticky proxy IP: `GET /mint-positions/{mint}?sortBy=TOP&withThesis=true` + `GET /replies/{mint}?offset=0&limit=50`. Mục tiêu <300ms round-trip.
+- Sticky proxy theo mint address qua `ProxyIpPool.getStickyProxy()`; auto-quarantine khi HTTP 429; `DistributedTokenBucket` trần 40 req/phút/IP (Redis Lua, fallback in-memory).
+- HTTP 403 (Cloudflare TLS fingerprint block) → fallback `createCurlTransport('pumpfun')`; HTTP 200 body rỗng → `JevChallengeDiagnoser` xác minh silent block trước khi trả rỗng.
+- KOL matching đối chiếu cache 2 tầng `kolscan.io` (Redis TTL 10m) + file seed `config/kol-wallets-seed.json`; kolscan unreachable → dùng seed file, không gián đoạn luồng.
+- Livestream status qua background poller 30s quét `/coins/currently-live` vào in-memory set; `fetchMintSocial` check set với 0ms per-request latency.
+- `commentVelocity` tính từ mẫu ≤50 replies (1 request duy nhất, không pagination) → `{ last1m, last5m }`.
+- Error mapping: mint không tồn tại → `XACT_4004`; rate limit → `XACT_4029` + backoff.
+- Đăng ký đủ 4 chỗ: `descriptor.js` + `src/scrapers/index.js` DESCRIPTORS + `actions-list.js` (`CANONICAL_PLATFORMS` + `PLATFORM_CATEGORIES` + `crawlerLoaders`) + `types/index.d.ts`.
+
+**Never:**
+- Không dùng headless browser / Puppeteer / Playwright.
+- Không duy trì WebSocket streaming chat (Phase 1).
+- Không pagination replies vượt 1 request (tránh cạn rate-limit).
+- Không emit stream events khi `dryRun=true` (tuân thủ base hook Story 20.2).
+- Không bypass `scrape()` dispatcher bằng API surface riêng.
+
+## I/O & Edge-Case Matrix
+
+| Scenario | Input / State | Expected Output / Behavior | Error Handling |
+|----------|--------------|---------------------------|----------------|
+| HAPPY_PATH | `fetch_mint_social({ mintAddress: <valid Base58> })` | `{ theses[], commentVelocity:{last1m,last5m}, kolActivity, livestream }` normalized | No error expected |
+| INVALID_MINT | `mintAddress: 'bad!'` | throw trước khi request | `PlatformError(XACT_4002)` |
+| MINT_NOT_FOUND | mint hợp lệ nhưng pump.fun 404 | — | `PlatformError(XACT_4004)` |
+| RATE_LIMIT | upstream 429 | proxy quarantine + backoff | `XACT_4029` + retryAfterMs |
+| TLS_BLOCK | HTTP/2 bị Cloudflare 403 | fallback `createCurlTransport('pumpfun')` retry | retry qua curl |
+| EMPTY_200 | HTTP 200 body rỗng | `JevChallengeDiagnoser` xác minh trước khi trả rỗng | diagnoser gate |
+| KOLSCAN_DOWN | kolscan.io unreachable | dùng `config/kol-wallets-seed.json` | graceful fallback, no throw |
+| DEDUP | 3 caller cùng mint trong ≤3s | 1 upstream request, 3 caller nhận chung Promise | shared in-flight |
+| LIVESTREAM_OFF | mint không trong `/coins/currently-live` set | `livestream.isActive=false` | no extra request |
+
+</intent-contract>
+
+## Code Map
+
+- `src/core/base-crawler.js` — `AbstractCrawler`; `registerAction({action,handler,...descriptor})` (line ~447, snake_case enforced, tự đăng `globalActionRegistry`); `start(command)` dispatch + stream hook; `listActions()`.
+- `src/core/base-client.js` — `AbstractApiClient`; `request(method,url,options)` (line ~740); `client='curl'` → `#getDefaultHttpClient()` dùng `createCurlTransport` (line ~431); `RequestOptions` có `proxyPool`, `consumerId`, `pool`, `skipResponseValidation`, `raw`.
+- `src/core/curl-transport.js` — `createCurlTransport(platform)` trả async `(reqOpts)=>{status,headers,data}`; fallback khi 403.
+- `src/core/distributed-token-bucket.js` — `globalDistributedTokenBucket.consume(key, tokens, options)` (line ~222); `parseRateLimitHeaders(headers)` (line ~74).
+- `src/core/jev-challenge-diagnoser.js` — `globalJevChallengeDiagnoser.diagnose({snippet,platform,accountId})` (line ~223); `extractSnippet(body)` (line ~103).
+- `src/core/schema-drift-guard.js` — `globalSchemaDriftGuard` classify/normalize thesis metadata drift.
+- `src/core/action-registry.js` — `globalActionRegistry.registerPlatformActions(platform, descriptors)` — tự gọi bởi `registerAction`.
+- `src/proxy/proxy-pool.js` — `ProxyIpPool.getStickyProxy(accountId, requiresResidential, options)` (line ~437) — sticky key theo mint; `quarantine(proxy, durationMs)` (line ~496); `getProxy({pool})`.
+- `src/scrapers/index.js` — DESCRIPTORS map (line ~213); thêm `import pumpfunDescriptor` + đăng ký trong mảng for-loop.
+- `src/scrapers/social/actions-list.js` — `CANONICAL_PLATFORMS` + `PLATFORM_CATEGORIES` + `crawlerLoaders` — thêm `'pumpfun'` cả 3 chỗ.
+- `src/scrapers/social/reddit/` — **reference implementation** (client/crawler/descriptor/normalizer/index) gần nhất về pattern social-native unauthenticated REST.
+- `config/kol-wallets-seed.json` — **new** KOL wallet seed file (fallback khi kolscan.io down).
+- `types/index.d.ts` — thêm declaration cho `PumpFunCrawler`, `createPumpFunCrawler`, `PumpFunMintSocialResult`.
+
+## Tasks & Acceptance
+
+**Execution:**
+- `src/scrapers/social/pumpfun/client.js` — `PumpFunClient extends AbstractApiClient` (`name='pumpfun'`, `requiresAuth=false`, `client='undici'` default); `assertValidMint()` Base58 check → `XACT_4002`; `getMintPositions(mint)` + `getReplies(mint)` qua `request()`; 403 → `createCurlTransport('pumpfun')` fallback; 200-rỗng → `globalJevChallengeDiagnoser`; 429 → `XACT_4029`+backoff; 404 → `XACT_4004`.
+- `src/scrapers/social/pumpfun/crawler.js` — `PumpFunCrawler extends AbstractCrawler` (`name='pumpfun'`, `category='social'`); `registerAction('fetch_mint_social')`; handler `fetchMintSocial(mintAddress)` orchestrate: sticky proxy per mint → `Promise.allSettled` 2 calls → dedupe ≤3s → normalize → trả `PumpFunMintSocialResult`; `createPumpFunCrawler()` factory.
+- `src/scrapers/social/pumpfun/velocity.js` — `computeCommentVelocity(replies)` time-delta nội suy `{last1m,last5m}` từ ≤50 replies.
+- `src/scrapers/social/pumpfun/kolscan.js` — `matchKols(wallets)` cache 2 tầng: `fetch kolscan.io` (Redis TTL 10m) → fallback `config/kol-wallets-seed.json`; trả `{isKolPresent,kolCount,matchedKols[]}`.
+- `src/scrapers/social/pumpfun/livestream.js` — `LivestreamPoller` background interval 30s → `GET /coins/currently-live` → in-memory `Set`; `isLive(mint)` → `{isActive,viewers,roomId?}` 0ms.
+- `src/scrapers/social/pumpfun/comments.js` — normalize raw replies → `CommentItem[]`/thesis shapes (dùng cho velocity + theses extraction).
+- `src/scrapers/social/pumpfun/normalizer.js` — `normalizeThesis()`, `normalizeHolder()`, `namespacedPumpfunId()` → `pumpfun:${mint}`; chuẩn hóa thesis metadata qua `globalSchemaDriftGuard`.
+- `src/scrapers/social/pumpfun/descriptor.js` — `aliases:['pumpfun','pump']`, `actionMap` (`mint_social`/`social`→`fetch_mint_social`), `mapArgs` (mintAddress/mint/address→mintAddress), `createClient`, `createCrawler`.
+- `src/scrapers/social/pumpfun/index.js` — barrel export `PumpFunCrawler`, `createPumpFunCrawler`, `PumpFunClient`.
+- `src/scrapers/index.js` — import `pumpfunDescriptor` + thêm vào DESCRIPTORS for-loop array.
+- `src/scrapers/social/actions-list.js` — thêm `'pumpfun'` vào `CANONICAL_PLATFORMS`, `pumpfun:'social'` vào `PLATFORM_CATEGORIES`, thêm `crawlerLoaders` entry `import("./pumpfun/crawler.js").then(m=>new m.PumpFunCrawler())`.
+- `config/kol-wallets-seed.json` — seed file KOL wallets (Solana Base58 → name?).
+- `types/index.d.ts` — `PumpFunCrawler`, `PumpFunClient`, `createPumpFunCrawler`, `PumpFunMintSocialResult`, `Thesis`, `KolActivity`, `LivestreamStatus`, `CommentVelocity`.
+- `tests/scrapers/social/pumpfun/pumpfun.test.js` — unit tests I/O matrix: invalid mint → 4002 no-request; dedup ≤3s; velocity math; KOL seed fallback; livestream set check; 404→4004; 429→4029; mock + live probe.
+
+**Acceptance Criteria:**
+- Given `new PumpFunCrawler()`, when `listActions()`, then trả `fetch_mint_social` với `category='social'`, `requiresAuth=false`, `requiredArgs=['mintAddress']`.
+- Given mint sai Base58, when `fetchMintSocial`, then throw `XACT_4002` và `client.request` không được gọi.
+- Given mint hợp lệ, when `fetchMintSocial`, then `Promise.allSettled` gọi đúng 2 endpoint `/mint-positions/{mint}?sortBy=TOP&withThesis=true` + `/replies/{mint}?offset=0&limit=50` trên cùng sticky proxy.
+- Given 3 caller cùng 1 mint trong ≤3s, when fetch, then chỉ 1 upstream round-trip, cả 3 nhận cùng kết quả.
+- Given 50 replies mẫu, when tính velocity, then `{last1m,last5m}` đúng time-delta nội suy; không request pagination thứ 2.
+- Given kolscan.io down, when `matchKols`, then dùng `kol-wallets-seed.json`, trả `matchedKols` không throw.
+- Given livestream poller đã quét, when `fetchMintSocial`, then `livestream.isActive` đọc từ in-memory set (0ms), không request riêng.
+- Given HTTP 403, when request, then fallback `createCurlTransport('pumpfun')`; given 200-rỗng, then `JevChallengeDiagnoser` được gọi trước khi trả rỗng.
+- Given `scrape('pumpfun','fetch_mint_social',{mintAddress})`, when dispatch, then descriptor resolve đúng crawler và trả result qua unified envelope.
+- Given `executeActionListTool()`, when enumerate, then `pumpfun` xuất hiện với action `fetch_mint_social`, không `no_crawler` flag.
+- Given `vitest run tests/scrapers/social/pumpfun`, then 100% pass.
+
+## Spec Change Log
+
+## Review Triage Log
+
+## Design Notes
+
+**Output shape `PumpFunMintSocialResult`:**
+```javascript
+{
+  mint: string,                       // namespaced externalId pumpfun:{mint}
+  theses: Array<{ user, wallet, content, timestamp, holdings, pnlSol?, isKol }>,
+  commentVelocity: { last1m: number, last5m: number },
+  kolActivity: { isKolPresent, kolCount, matchedKols: [{name?, wallet}] },
+  livestream: { isActive, viewers, roomId? },
+  topHolders?: Array<{ wallet, balance, percent }>,
+}
+```
+
+**In-flight dedup:** `Map<mint, {promise, expiresAt}>` — entry TTL ≤3s; concurrent caller `await` cùng promise; xóa sau settle + TTL.
+
+**Livestream poller:** singleton per-process; `start()` trên crawler init; `stop()` trong `cleanup()`; failures backoff, không crash crawler. `/coins/currently-live` trả array coin objects — extract `mint` vào Set; `viewers`/`roomId` từ coin object khi có (field optional, có thể absent → undefined).
+
+**Live API probe (2026-09-25) — điều chỉnh quan trọng so với epics.md:**
+- `GET /mint-positions/{mint}?sortBy=TOP&withThesis=true` → 200 `{positions[],totalCount,hasMore}`. Position fields: `coinMint,userId,userName,profileImage,walletAddress,isVerified,accountKind,amountHeld,pnlUsd,pnlPercentage,realizedPnlUsd,costBasisUsd,...`. `pnlUsd`/`pnlPercentage` thay cho `pnlSol` trong spec gốc — map `pnlSol`←`pnlUsd` (hoặc expose cả hai, giữ `pnlUsd` canonical).
+- `GET /replies/{mint}` → **404 Cannot GET** trên `frontend-api-v3` (cùng `/comments`, `/coins/{mint}/comments`, `/coins/{mint}/replies`, `/threads`, `/feed`, `/chat` đều 404). Endpoint comments/replies theo mint KHÔNG tồn tại trên v3. Implementer: `getReplies()` PHẢI graceful-degrade — khi upstream trả 404 cho replies path, coi như `replies=[]` và `commentVelocity={last1m:0,last5m:0}` thay vì throw `XACT_4004` (4004 chỉ cho mint-positions 404 = mint không tồn tại). Nếu resolve được endpoint comments thật khác (probe `coins/{mint}` trước khi commit), dùng nó; nếu không, giữ graceful-empty và ghi chú trong code.
+- `GET /coins/currently-live` → 200 array `{mint,name,symbol,description,image_uri,bonding_curve,creator,...}`.
+- Host alternates (`frontend-api`, `frontend-api-v2`, `advanced-api`, `swap-api`) → 530/503/404 — KHÔNG dùng; chỉ `frontend-api-v3.pump.fun`.
+- Rate-limit thật: sau ~10 req nhanh → 429 `{statusCode:429,message:"Rate limit exceeded",retryAfterMs:98}` — xác nhận cần `DistributedTokenBucket` + backoff.
+
+**Theses data flow (quan trọng):** `theses` KHÔNG đến từ `/replies` — `withThesis=true` embed `callout` object trong mỗi position: `position.callout = {calloutId, calledOutAtMcap, multiple, thesis, mediaUrl, calloutTimestamp, likes, hasLiked, updates[]}`. Map `theses[]` từ positions có `callout.thesis` non-empty: `{user:userName, wallet:walletAddress, content:callout.thesis, timestamp:callout.calloutTimestamp, holdings:amountHeld, pnlSol←pnlUsd, isKol←matchKols(walletAddress)}`. `/replies` (nếu resolve được) chỉ dùng cho `commentVelocity`; nếu 404 → velocity `{last1m:0,last5m:0}` graceful.
+
+## Verification
+
+**Commands:**
+- `node -e "import('./src/scrapers/social/pumpfun/index.js').then(m=>console.log(new m.PumpFunCrawler().listActions()))"` — expected: in action `fetch_mint_social` snake_case.
+- `vitest run tests/scrapers/social/pumpfun` — expected: 100% pass.
+- `node -e "import('./src/scrapers/social/actions-list.js').then(m=>m.executeActionListTool({platform:'pumpfun'}).then(r=>console.log(r)))"` — expected: pumpfun action listed.
+- `node src/core/index.js` — expected: parse OK.

@@ -36,6 +36,7 @@ const CANONICAL_PLATFORMS = [
   'topcv',
   'vietnamworks',
   'masothue',
+  'pumpfun',
 ];
 
 /** @type {Record<string, string>} — derived from DESCRIPTORS aliases, not a manual map */
@@ -71,6 +72,7 @@ const PLATFORM_CATEGORIES = {
   fnb: 'fnb',
   healthcare: 'healthcare',
   ipvietnam: 'legal',
+  pumpfun: 'social',
 };
 
 /** @type {Record<string, string>} */
@@ -125,6 +127,7 @@ export async function executeActionListTool(options = {}) {
     () => import("../recruitment/topcv/crawler.js").then((m) => new m.TopCvCrawler()),
     () => import("../recruitment/vietnamworks/crawler.js").then((m) => new m.VietnamWorksCrawler()),
     () => import("../procurement/masothue/crawler.js").then((m) => new m.MaSoThueCrawler()),
+    () => import("./pumpfun/crawler.js").then((m) => new m.PumpFunCrawler()),
   ];
 
   const crawlers = [];

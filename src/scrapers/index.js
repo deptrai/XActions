@@ -95,6 +95,7 @@ import healthcareDescriptor from './healthcare/descriptor.js';
 import ipLegalDescriptor from './legal/ip-trademark/descriptor.js';
 import githubDescriptor from './identity/github/descriptor.js';
 import gravatarDescriptor from './identity/gravatar/descriptor.js';
+import pumpfunDescriptor from './social/pumpfun/descriptor.js';
 
 export { dispatchFacebookHybrid };
 
@@ -238,6 +239,7 @@ for (const descriptor of [
   ipLegalDescriptor,
   githubDescriptor,
   gravatarDescriptor,
+  pumpfunDescriptor,
 ]) {
   for (const alias of descriptor.aliases) {
     DESCRIPTORS[alias] = descriptor;
