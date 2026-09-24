@@ -1,0 +1,82 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Test API",
+    "version": "0.0.1"
+  },
+  "servers": [{ "url": "http://localhost:3001" }],
+  "paths": {
+    "/api/test/get-thing": {
+      "get": {
+        "operationId": "get_api_test_get_thing",
+        "summary": "Get a thing",
+        "security": [{ "sessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": { "type": "object" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/test/do-thing": {
+      "post": {
+        "operationId": "post_api_test_do_thing",
+        "summary": "Do a thing (paid)",
+        "security": [{ "x402Payment": [] }],
+        "x-tryitout": false,
+        "x-payment-info": { "protocols": ["x402"], "price": "0.001" },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["input"],
+                "properties": { "input": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Done" },
+          "402": { "description": "Payment Required" }
+        }
+      }
+    },
+    "/api/test/auth-thing": {
+      "post": {
+        "operationId": "post_api_test_auth_thing",
+        "summary": "Auth thing",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "token": { "type": "string" } } }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Done" }, "401": { "description": "Unauthorized" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer" },
+      "sessionCookie": { "type": "apiKey", "in": "header", "name": "x-session-cookie" },
+      "x402Payment": { "type": "apiKey", "in": "header", "name": "X-PAYMENT" }
+    }
+  }
+}

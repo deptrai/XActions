@@ -1,0 +1,43 @@
+{
+  "name": "@xactions/api-client",
+  "version": "0.1.0",
+  "description": "Typed API client for XActions — generated from api/openapi.json (Story 46.3)",
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "default": "./index.ts"
+    },
+    "./schema": {
+      "types": "./schema.d.ts"
+    },
+    "./client": {
+      "types": "./client.ts",
+      "default": "./client.ts"
+    }
+  },
+  "files": [
+    "index.ts",
+    "client.ts",
+    "schema.d.ts",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "echo 'no build step — ESM TS source'",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "xactions",
+    "api-client",
+    "openapi",
+    "typescript"
+  ],
+  "license": "Apache-2.0",
+  "author": "nichxbt",
+  "peerDependencies": {},
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
