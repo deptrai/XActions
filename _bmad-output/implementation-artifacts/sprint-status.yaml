@@ -365,7 +365,7 @@ epic-48:
       status: done
     - id: 48.4
       name: Admin Console Full Parity (/admin)
-      status: backlog
+      status: done
     - id: 48.5
       name: Fleet & Account Manager (/accounts, /proxies, /sessions)
       status: backlog
