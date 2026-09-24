@@ -320,7 +320,7 @@ epic-46:
 
 # Epic 47: Next.js Modern Frontend Application
 epic-47:
-  status: in-progress
+  status: done
   stories:
     - id: 47.1
       name: Next.js 15 App Router Scaffold & Universal Layout
@@ -336,4 +336,4 @@ epic-47:
       status: done
     - id: 47.5
       name: Universal Data Explorer & Export Screen
-      status: backlog
+      status: done
