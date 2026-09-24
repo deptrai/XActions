@@ -1277,6 +1277,57 @@ So that **tất cả 23+ crawlers tự động emit thin events vào Redis Strea
 
 ---
 
+### Story 20.3: jev-trading-pumpfun-native-social-crawler
+
+As a **Jev-Trading Quantitative Engineer**,  
+I want **PumpFunCrawler cào dữ liệu social native (theses, comments, top holders, KOL activity, livestream status) từ pump.fun bằng HTTP/2 REST unauthenticated**,  
+So that **jev-trading có thể ingest tín hiệu social của Solana mint token theo thời gian thực với độ trễ thấp (<300ms) mà không cần headless browser**.
+
+**Phạm vi & Vị trí:**
+- Thư mục: `src/scrapers/social/pumpfun/` (`index.js`, `client.js`, `crawler.js`, `comments.js`, `kolscan.js`, `livestream.js`, `velocity.js`, `normalizer.js`)
+- Endpoints: `https://frontend-api-v3.pump.fun/mint-positions/{mint}?sortBy=TOP&withThesis=true`, `/replies/{mint}`, `/coins/currently-live`
+- External Cache: `kolscan.io/coins/kolscan` (Redis TTL 10m + file seed fallback `config/kol-wallets-seed.json`)
+- Export: SDK contract `fetchMintSocial(mintAddress)` cho `jev-trading`
+
+**Acceptance Criteria:**
+
+* **Given** class `PumpFunCrawler` kế thừa `AbstractCrawler` (`src/core/base-crawler.js`) và `PumpFunClient` kế thừa `AbstractApiClient` (`src/core/base-client.js`)
+* **When** khởi tạo `new PumpFunCrawler({ proxyPool, rateLimiter, cacheTtlMs })`
+* **Then** tích hợp trực tiếp vào `ProxyIpPool` (`src/proxy/proxy-pool.js`) với cơ chế sticky session theo mint address và auto-quarantine khi nhận HTTP 429
+* **And** kiểm soát rate limit bằng `DistributedTokenBucket` (`src/core/distributed-token-bucket.js`) trần 40 req/phút/IP qua Redis atomic Lua script (fallback in-memory khi không có Redis)
+* **And** tự động fallback sang `createCurlTransport('pumpfun')` (`src/core/curl-transport.js`) khi HTTP/2 client dính Cloudflare TLS fingerprint block (HTTP 403)
+* **And** đăng ký action `pumpfun:fetch_mint_social` vào `globalActionRegistry` (`src/core/action-registry.js`) theo chuẩn AD-11
+
+* **When** gọi `fetchMintSocial(mintAddress)`
+* **Then** query `GET https://frontend-api-v3.pump.fun/mint-positions/{mint}?sortBy=TOP&withThesis=true`
+* **And** trích xuất mảng `theses`: `Array<{ user: string, wallet: string, content: string, timestamp: number, holdings: number, pnlSol?: number, isKol: boolean }>`
+* **And** chuẩn hóa metadata thesis theo `SchemaDriftGuard` (`src/core/schema-drift-guard.js`)
+
+* **When** lấy mẫu 50 replies gần nhất từ `GET /replies/{mint}`
+* **Then** module `velocity.js` tính toán `commentVelocity: { last1m: number, last5m: number, sampleSize: number }` bằng thuật toán time-delta nội suy giữa reply mới nhất và cũ nhất trong mẫu
+* **And** không thực hiện lặp phân trang gây cạn kiệt rate-limit quota (giới hạn 1 request per check)
+
+* **When** quét danh sách ví KOLs đối soát với holders và commenters của mint
+* **Then** đối chiếu với cache 2 tầng từ `kolscan.io` (Redis TTL 10 phút + `config/kol-wallets-seed.json`)
+* **And** trả về `kolActivity: { isKolPresent: boolean, kolCount: number, matchedKols: Array<{ name?: string, wallet: string }> }`
+* **And** nếu `kolscan.io` unreachable, tự động dùng seed file tĩnh mà không làm gián đoạn luồng cào
+
+* **When** phát hiện trạng thái livestream của token
+* **Then** query REST `/coins/currently-live` và trả về `livestream: { isActive: boolean, viewers: number, roomId?: string }`
+* **And** Phase 1 không duy trì WebSocket streaming chat nhằm đảm bảo độ tin cậy và latency <300ms
+
+* **When** gặp lỗi từ phía pump.fun
+* **Then** mint không tồn tại trả về `PlatformError` code `XACT_4004`
+* **And** rate limit trả về `XACT_4029` + kích hoạt backoff
+* **And** khi nhận HTTP 200 nhưng body rỗng, kích hoạt `JevChallengeDiagnoser` (`src/core/jev-challenge-diagnoser.js`) để xác minh silent block/captcha trước khi trả dữ liệu rỗng về cho `jev-trading`
+
+* **When** export SDK cho consumer `jev-trading`
+* **Then** module export hàm `createPumpFunCrawler` và class `PumpFunCrawler` từ `src/scrapers/social/pumpfun/index.js`
+* **And** toàn bộ TypeScript declaration có mặt trong `types/index.d.ts`
+* **And** bộ tests `tests/scrapers/social/pumpfun/` đạt 100% pass với cả mock data và real Solana mint live probe
+
+---
+
 > **External Milestones** (tracked ở Nowing repo, KHÔNG block Epic 20):
 > - **20.3** — Nowing Shadow-Run Validation: `x_scrape` + stream consumer parity ≥99% trong 7 ngày. Parity = `fields_matched/total_fields` trên matched records; volatile fields (`likesCount`, `viewsCount`, `publishedAt`, `crawledAt`) excluded.
 > - **20.4** — Nowing Legacy Decommissioning: xóa 20+ scraper dirs + Chromium/Selenium khỏi Dockerfile. Blocked by 20.3.

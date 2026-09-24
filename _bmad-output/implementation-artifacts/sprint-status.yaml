@@ -141,10 +141,11 @@ development_status:
   19-10-admin-mcp-tools: done
   epic-19-retrospective: done
 
-  epic-20: done
+  epic-20: in-progress
   20-1-multi-consumer-service-contract-x-scrape-x-actions: done
   20-2-universal-stream-publish-hook-snake-case-thin-event: done
-  epic-20-retrospective: done
+  20-3-jev-trading-pumpfun-native-social-crawler: backlog
+  epic-20-retrospective: optional
 
   epic-21: done
   21-1-b2b-tender-company-registry-crawler-masothue-hosocongty: done
