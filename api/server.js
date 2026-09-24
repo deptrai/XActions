@@ -112,6 +112,8 @@ import {
 import { validateConfig as validateX402Config } from './config/x402-config.js';
 import { generateSpec as generateOpenAPISpec, generateWellKnown as generateX402WellKnown } from './openapi.js';
 import { mountSwaggerUi } from './openapi-swagger.js';
+import { setupMcpRoutes } from './routes/mcp-bridge.js';
+
 
 const app = express();
 const httpServer = createServer(app);
@@ -511,9 +513,8 @@ app.get('/faq', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/faq.html'));
 });
 
-app.get('/mcp', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/mcp.html'));
-});
+// Story 40.1 / AD-20: Mount unified Streamable-HTTP MCP endpoint alongside dashboard HTML
+setupMcpRoutes(app);
 
 app.get('/ai', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/ai.html'));
