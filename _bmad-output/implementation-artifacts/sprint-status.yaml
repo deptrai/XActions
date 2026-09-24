@@ -320,11 +320,11 @@ epic-46:
 
 # Epic 47: Next.js Modern Frontend Application
 epic-47:
-  status: backlog
+  status: in-progress
   stories:
     - id: 47.1
       name: Next.js 15 App Router Scaffold & Universal Layout
-      status: backlog
+      status: done
     - id: 47.2
       name: Viral DNA Miner Dashboard & Charts Screen
       status: backlog
