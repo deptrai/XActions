@@ -63,7 +63,7 @@ const FALLBACK_SCRAPERS: ScraperItem[] = [
     costScore: 92,
     sampleCount: 48,
     consecutiveCleanRuns: 24,
-    evaluatedAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+    evaluatedAt: '2026-09-24T10:00:00.000Z', // fixed literal — avoids SSR hydration mismatch
     isAlert: false,
   },
   {
@@ -78,7 +78,7 @@ const FALLBACK_SCRAPERS: ScraperItem[] = [
     costScore: 90,
     sampleCount: 36,
     consecutiveCleanRuns: 8,
-    evaluatedAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
+    evaluatedAt: '2026-09-24T09:53:00.000Z', // fixed literal
     isAlert: false,
   },
   {
@@ -93,7 +93,7 @@ const FALLBACK_SCRAPERS: ScraperItem[] = [
     costScore: 66,
     sampleCount: 15,
     consecutiveCleanRuns: 0,
-    evaluatedAt: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
+    evaluatedAt: '2026-09-24T09:45:00.000Z', // fixed literal
     isAlert: true,
   },
   {
@@ -108,7 +108,7 @@ const FALLBACK_SCRAPERS: ScraperItem[] = [
     costScore: 94,
     sampleCount: 30,
     consecutiveCleanRuns: 18,
-    evaluatedAt: new Date(Date.now() - 1000 * 60 * 8).toISOString(),
+    evaluatedAt: '2026-09-24T09:57:00.000Z', // fixed literal
     isAlert: false,
   },
 ];

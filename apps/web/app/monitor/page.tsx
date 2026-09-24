@@ -80,21 +80,23 @@ const INITIAL_JOBS: JobProgress[] = [
 const INITIAL_EVENTS: EventItem[] = [
   {
     id: 'evt-1',
-    timestamp: new Date(Date.now() - 15000).toLocaleTimeString(),
+    // Fixed literal timestamps (not Date.now()/toLocaleTimeString) so SSR HTML
+    // matches the client hydration render — avoids hydration mismatch.
+    timestamp: '—',
     type: 'info',
     source: 'Realtime Engine',
     message: 'Telemetry channel established via same-origin transport',
   },
   {
     id: 'evt-2',
-    timestamp: new Date(Date.now() - 45000).toLocaleTimeString(),
+    timestamp: '—',
     type: 'success',
     source: 'Crawler',
     message: 'Canary probe for twitter-profile scraper succeeded (tier A)',
   },
   {
     id: 'evt-3',
-    timestamp: new Date(Date.now() - 90000).toLocaleTimeString(),
+    timestamp: '—',
     type: 'warn',
     source: 'RateLimiter',
     message: 'Rate limit bucket at 65% capacity. Pacing delayed by 1.2s',

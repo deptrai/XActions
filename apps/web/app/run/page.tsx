@@ -78,7 +78,8 @@ export default function RunPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [status, setStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle');
   const [logs, setLogs] = useState<string[]>([
-    `[${new Date().toLocaleTimeString()}] READY — Select a preset or type a command to execute`,
+    // Fixed literal — avoids SSR hydration mismatch from Date().toLocaleTimeString()
+    `[--:--:--] READY — Select a preset or type a command to execute`,
   ]);
   const [copied, setCopied] = useState(false);
 
