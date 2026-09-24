@@ -169,12 +169,13 @@ export class CommentTreeExtractor {
         const pageInfo = page?.pageInfo || { has_next_page: false, end_cursor: null };
         lastPageInfo = pageInfo;
         let nextCursor = pageInfo.has_next_page ? pageInfo.end_cursor : null;
+        // Story 49.2: empty-string cursor with has_next_page=true is a real edge case —
+        // treat as "use same cursor again" rather than stopping (was: stop on empty cursor).
         if (nextCursor === '') {
-          nextCursor = null;
-          pageInfo.has_next_page = false;
-          pageInfo.end_cursor = null;
+          nextCursor = after; // retry with same cursor — server may return real cursor next page
         }
-        if (nextCursor === after || total === prevTotal) {
+        if (nextCursor === after && total === prevTotal) {
+          // No progress — stop to avoid infinite loop
           break;
         }
         after = nextCursor;
@@ -225,10 +226,12 @@ export class CommentTreeExtractor {
    * @returns {boolean}
    */
   #wouldCreateCycle(parentId, childId, byId) {
+    // Story 49.2: visited-set re-encounter means an existing cycle — treat as cycle
+    // (was: return false, allowing re-attachment to an existing cycle).
     const visited = new Set();
     let current = byId.get(parentId);
     while (current) {
-      if (visited.has(current.id)) return false;
+      if (visited.has(current.id)) return true; // already-visited = existing cycle
       visited.add(current.id);
       if (current.id === childId) return true;
       if (!current.parentCommentId) break;
