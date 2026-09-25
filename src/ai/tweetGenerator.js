@@ -66,7 +66,8 @@ export { callLLM };
  * All three expose an OpenAI-compatible chat completions endpoint.
  */
 async function callLLM(messages, options = {}) {
-  const provider = resolveProvider(options);  const temperature = options.temperature ?? 0.8;
+  const provider = resolveProvider(options);
+  const temperature = options.temperature ?? 0.8;
   const maxTokens = options.maxTokens || 2000;
 
   let url, apiKey, headers, model;
@@ -74,8 +75,10 @@ async function callLLM(messages, options = {}) {
   if (provider === 'openai') {
     apiKey = options.openaiApiKey || options.apiKey || process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error('OpenAI API key required. Set OPENAI_API_KEY env var or pass apiKey option.');
-    url = OPENAI_URL;
-    model = options.model || PROVIDER_DEFAULTS.openai;
+    // OPENAI_BASE_URL lets us point at any OpenAI-compatible gateway
+    // (e.g. the ChainLens proxy) instead of api.openai.com.
+    url = options.baseUrl || process.env.OPENAI_BASE_URL || OPENAI_URL;
+    model = options.model || process.env.OPENAI_MODEL || PROVIDER_DEFAULTS.openai;
     headers = {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',

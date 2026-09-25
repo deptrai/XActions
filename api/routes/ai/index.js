@@ -535,10 +535,14 @@ router.get('/status', async (req, res) => {
     },
     {
       id: 'openai',
-      name: 'GPT-4o-mini',
-      provider: 'OpenAI',
+      // Resolve the real endpoint+model from env so a custom gateway
+      // (e.g. the ChainLens proxy) reports the model actually in use.
+      name: process.env.OPENAI_MODEL || 'GPT-4o-mini',
+      provider: process.env.OPENAI_BASE_URL ? 'OpenAI-Compatible' : 'OpenAI',
       envKeys: ['OPENAI_API_KEY'],
-      pingUrl: 'https://api.openai.com/v1/models',
+      // pingUrl is a /chat/completions endpoint; derive the /models sibling.
+      pingUrl: (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1/chat/completions')
+        .replace(/\/chat\/completions\/?$/, '/models'),
       authHeader: (k) => ({ Authorization: `Bearer ${k}` }),
     },
     {
@@ -579,7 +583,9 @@ router.get('/status', async (req, res) => {
     let status = 'online';
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 6000);
+      // 15s — slow gateways (e.g. the ChainLens proxy takes ~10s on
+      // /models because it health-checks upstreams) need headroom.
+      const timer = setTimeout(() => controller.abort(), 15000);
       const r = await fetch(p.pingUrl, {
         headers: p.authHeader(apiKey),
         signal: controller.signal,
