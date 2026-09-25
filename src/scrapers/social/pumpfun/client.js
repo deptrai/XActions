@@ -26,6 +26,7 @@ import {
 } from '../../../core/error-envelope.js';
 import { globalJevChallengeDiagnoser, extractSnippet } from '../../../core/jev-challenge-diagnoser.js';
 import { globalDistributedTokenBucket } from '../../../core/distributed-token-bucket.js';
+import { PumpFunLivechat } from './livechat.js';
 
 export const PUMPFUN_API_BASE = 'https://frontend-api-v3.pump.fun';
 
@@ -77,6 +78,14 @@ export class PumpFunClient extends AbstractApiClient {
    */
   #curlTransport = null;
 
+  /**
+   * Socket.IO livechat client for `wss://livechat.pump.fun` — source of
+   * coin comments/replies, which moved off REST on v3 (GET /replies → 404).
+   * Injected for tests; lazily constructed on first livechat call.
+   * @type {PumpFunLivechat | null}
+   */
+  livechat = null;
+
   constructor(options = {}) {
     super(options);
     this.baseUrl = typeof options.baseUrl === 'string' && options.baseUrl ? options.baseUrl : PUMPFUN_API_BASE;
@@ -86,6 +95,7 @@ export class PumpFunClient extends AbstractApiClient {
     if (typeof options.transport === 'string' && options.transport) {
       this.client = options.transport;
     }
+    if (options.livechat) this.livechat = options.livechat;
   }
 
   /**
@@ -277,6 +287,18 @@ export class PumpFunClient extends AbstractApiClient {
         platform: this.platform,
       });
     }
+    // Surface unexpected non-2xx statuses — otherwise an upstream 5xx/403 looks
+    // like a successful scrape with zero positions.
+    if (status !== 200) {
+      throw new PlatformError({
+        type: ErrorTypes.INTERNAL,
+        code: 'XACT_5000',
+        message: `pump.fun mint-positions returned status ${status}`,
+        statusCode: status,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: this.platform,
+      });
+    }
     const obj = data && typeof data === 'object' ? data : {};
     return {
       positions: Array.isArray(obj.positions) ? obj.positions : [],
@@ -286,25 +308,72 @@ export class PumpFunClient extends AbstractApiClient {
   }
 
   /**
-   * Fetch recent replies for comment-velocity. The `/replies/{mint}` path is
-   * absent on v3 (404) — callers should treat a 404 here as "no replies"
-   * (empty array), NOT as mint-not-found.
+   * Fetch recent replies/comments for comment-velocity.
+   *
+   * The `/replies/{mint}` REST path is absent on v3 (404) — comments moved to
+   * the Socket.IO livechat service (`wss://livechat.pump.fun`). Strategy:
+   *   1. Try REST (cheap, in case the route ever comes back).
+   *   2. On 404 / empty → fall back to livechat `getMessageHistory`.
+   *
+   * Livechat messages are normalized to `{ timestamp, ... }` so
+   * `computeCommentVelocity` works unchanged on either source.
+   *
    * @param {string} mintAddress
    * @param {Record<string, unknown>} [options]
    * @returns {Promise<any[]>}
    */
   async getReplies(mintAddress, options = {}) {
     const mint = this.assertValidMint(mintAddress);
-    const url = `${this.baseUrl}/replies/${encodeURIComponent(mint)}?offset=0&limit=50`;
-    const { status, data } = await this.#apiGet(url, options);
-    if (status === 404) {
-      return [];
+    const limit = Number.isFinite(options.limit) ? options.limit : 50;
+    const url = `${this.baseUrl}/replies/${encodeURIComponent(mint)}?offset=0&limit=${limit}`;
+    try {
+      const { status, data } = await this.#apiGet(url, options);
+      const rows = this.#extractArray(data, ['replies', 'comments', 'data', 'items', 'results']);
+      if (status !== 404 && rows.length > 0) return rows;
+      // 404 or empty REST → fall through to livechat.
+    } catch (err) {
+      // Preserve real errors (rate-limit, auth, network) — don't mask a 429 as
+      // "no comments". Only fall back to livechat for expected-missing/empty REST.
+      if (err && (err.code === 'XACT_4029' || err instanceof RateLimitError)) throw err;
+      // other REST failures → livechat fallback below.
     }
+    return this.#getRepliesViaLivechat(mint, options);
+  }
+
+  /**
+   * Pull chat history for a mint from the Socket.IO livechat service and
+   * normalize each message to the reply shape `computeCommentVelocity` expects
+   * ({ timestamp: <iso-or-ms>, ...original }).
+   * @param {string} mint
+   * @param {Record<string, unknown>} options
+   * @returns {Promise<any[]>}
+   */
+  async #getRepliesViaLivechat(mint, options = {}) {
+    const lc = this.livechat || (this.livechat = new PumpFunLivechat({
+      timeoutMs: Number.isFinite(options.livechatTimeoutMs) ? options.livechatTimeoutMs : 8000,
+    }));
+    const { messages } = await lc.getMessageHistory(mint, {
+      limit: Number.isFinite(options.limit) ? options.limit : 50,
+      ...(Number.isFinite(options.before) ? { before: options.before } : {}),
+    });
+    return messages.map((m) => ({
+      ...m,
+      // normalize: velocity expects a parseable `timestamp` field.
+      timestamp: m?.timestamp ?? m?.createdAt ?? m?.created_at ?? null,
+    }));
+  }
+
+  /**
+   * Extract the first array found under any of `keys` (or return data itself
+   * if it's already an array).
+   * @param {any} data
+   * @param {string[]} keys
+   * @returns {any[]}
+   */
+  #extractArray(data, keys) {
     if (Array.isArray(data)) return data;
     if (data && typeof data === 'object') {
-      for (const key of ['replies', 'comments', 'data', 'items', 'results']) {
-        if (Array.isArray(data[key])) return data[key];
-      }
+      for (const key of keys) if (Array.isArray(data[key])) return data[key];
     }
     return [];
   }
@@ -330,27 +399,27 @@ export class PumpFunClient extends AbstractApiClient {
    * @returns {Promise<T>}
    */
   dedup(mint, fn) {
-    const now = Date.now();
     const existing = this.#inFlight.get(mint);
-    if (existing && existing.expiresAt > now) {
+    const now = Date.now();
+    // Share an in-flight promise unconditionally while it's still pending; only
+    // apply the short reuse window once it has settled.
+    if (existing && (existing.settledAt == null || existing.settledAt + this.#dedupWindowMs > now)) {
       return existing.promise;
     }
-    const promise = (async () => {
+    const entry = { promise: null, settledAt: null };
+    entry.promise = (async () => {
       try {
         return await fn();
       } finally {
-        // Keep the settled promise briefly so near-simultaneous callers still
-        // share the result; purge after the dedup window.
-        const entry = this.#inFlight.get(mint);
-        if (entry && entry.promise === promise) {
-          setTimeout(() => {
-            if (this.#inFlight.get(mint)?.promise === promise) this.#inFlight.delete(mint);
-          }, Math.max(0, entry.expiresAt - Date.now())).unref?.();
-        }
+        entry.settledAt = Date.now();
+        // Purge after the dedup window measured from settle time.
+        setTimeout(() => {
+          if (this.#inFlight.get(mint) === entry) this.#inFlight.delete(mint);
+        }, Math.max(0, this.#dedupWindowMs)).unref?.();
       }
     })();
-    this.#inFlight.set(mint, { promise, expiresAt: now + this.#dedupWindowMs });
-    return promise;
+    this.#inFlight.set(mint, entry);
+    return entry.promise;
   }
 }
 

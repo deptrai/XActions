@@ -195,3 +195,43 @@ Implemented `PumpFunCrawler` and `PumpFunClient` as a native social crawler for 
 
 ### Residual Risks
 - `frontend-api-v3.pump.fun` comments/replies endpoint returns 404 on current live probe; code handles this gracefully by defaulting to empty replies and velocity `{0, 0}`. If pump.fun restores or exposes an official comments path, `getReplies()` can be updated without breaking callers.
+
+### Post-Story Update (2026-09-25) — Livechat comments resolved
+
+The residual risk above is now **resolved**: pump.fun v3 moved coin comments/replies off REST onto a Socket.IO livechat service (`wss://livechat.pump.fun`). Reverse-engineered from the pump.fun web bundle:
+
+- **Transport**: Engine.IO v4 over WebSocket (`/socket.io/?EIO=4&transport=websocket`); rooms keyed by mint address.
+- **Events**: `joinRoom { roomId, username? }` → ack `{ authenticated, isCreator, roomConfig }`; `getMessageHistory { roomId, before?, limit }` → ack `{ messages[], nextCursor }`. Read access needs no auth token; `tokenGateEnabled` only gates *posting*.
+- **Message shape**: `{ id, roomId, message, username, userAddress, profile_image, timestamp, messageType, expiresAt, isModerator, isCreator, userId, replyToId?, replyPreview? }`.
+
+**Implementation:**
+- `src/scrapers/social/pumpfun/livechat.js` — `PumpFunLivechat`, a minimal Socket.IO v4 client over `ws` (no `socket.io-client` dep): `connect()`, `joinRoom(mint)`, `getMessageHistory(mint, { before?, limit })`, `close()`.
+- `src/scrapers/social/pumpfun/client.js` — `getReplies()` now: (1) tries REST `/replies/{mint}` (cheap, in case the route returns), (2) on 404/empty falls back to `livechat.getMessageHistory`. Messages normalized to `{ timestamp }` so `computeCommentVelocity` works unchanged. `client.livechat` is injectable for tests.
+- `src/scrapers/social/pumpfun/crawler.js` — `fetchMintSocial` output gains `comments[]` (the livechat messages); `cleanup()` closes `client.livechat`.
+
+**Scope note:** This exceeds the spec's original "Phase 1 không duy trì WebSocket chat" constraint — that rule targeted *persistent* streaming; the implemented client is connect→join→fetch-history→close (one-shot read), not a maintained stream. A persistent-stream variant (subscribe to `newMessage`) remains future work if real-time ingestion is needed.
+
+**Live verification (2026-09-25):** `fetchMintSocial` on a real live mint returned `comments: 50` (e.g. `deeggnn: "73k lfg"`, `DJHEATMOBILE: "LFGGGG"`) plus `commentVelocity { sampleSize: 50 }` computed from real timestamps.
+
+**Tests:** 14/14 pass in `tests/scrapers/social/pumpfun/pumpfun.test.js`, including a new case asserting the livechat fallback path (injected fake `livechat`, no real ws in tests).
+
+### Review Findings
+
+Code review pass 2026-09-25 (3/4 layers completed; `edge-case-hunter` failed). Verdicts assigned at triage.
+
+- [x] [Review][Patch] Preserve rate-limit/upstream errors in `getReplies` — `catch {}` swallows `RateLimitError(XACT_4029)` and `#getRepliesViaLivechat` `catch → []` turns upstream 429/connection failures into a silent empty `comments`/`commentVelocity`. [src/scrapers/social/pumpfun/client.js:313-366]
+- [x] [Review][Patch] Don't auto-start `LivestreamPoller` on discovery — `new PumpFunCrawler()` in `actions-list.js` `crawlerLoaders` constructs a poller that `start()`s a 30s `setInterval` just to enumerate actions. Defer polling until `fetchMintSocial` or wire `autoStart:false` for discovery instances. [src/scrapers/social/pumpfun/livestream.js:32, src/scrapers/social/actions-list.js:130]
+- [x] [Review][Patch] Surface unexpected `getMintPositions` statuses — only 404 is handled; other non-2xx (5xx/403) fall through to `{positions:[],totalCount:0}` looking like a successful-but-empty scrape. [src/scrapers/social/pumpfun/client.js:276-296]
+- [x] [Review][Patch] `pnlSol` ← `pnlUsd` mislabels USD as SOL — spec maps `pnlSol`←`pnlUsd` for schema continuity, but consumers reading `pnlSol` get a USD value. Keep `pnlUsd` canonical; set `pnlSol` only when a real SOL conversion exists, else `null`. [src/scrapers/social/pumpfun/normalizer.js:52]
+- [x] [Review][Patch] Honor `args.limit` end-to-end — `optionalArgs:['mint','address','limit']` advertises `limit` but `fetchMintSocial` never passes it to `getReplies`; REST fixed at 50, livechat uses its own default. [src/scrapers/social/pumpfun/crawler.js:105,151-155]
+- [x] [Review][Patch] `timestamp` fallback uses `callout.calledOutAtMcap` (market-cap value, not a time) when `calloutTimestamp` is absent — use a real time field or `null`. [src/scrapers/social/pumpfun/normalizer.js:46]
+- [x] [Review][Patch] Add `comments` to `PumpFunMintSocialResult` — crawler returns `comments[]` but the public type omits it. [types/index.d.ts:1012]
+- [x] [Review][Patch] Normalize `comments` with `normalizePumpfunReplies` — raw livechat/REST records exposed without the comment shape (inconsistent author/id/timestamp fields). [src/scrapers/social/pumpfun/crawler.js:167, src/scrapers/social/pumpfun/comments.js]
+- [x] [Review][Patch] Assign `options.webSocketImpl` in `PumpFunLivechat` constructor — JSDoc advertises it but `connect()` uses imported `WebSocket` since `_WSImpl` is never set from options. [src/scrapers/social/pumpfun/livechat.js:52,80]
+- [x] [Review][Patch] `dedup` expiry is anchored to request-start — a request pending past `dedupWindowMs` can be duplicated; share the in-flight promise until it settles, then apply the settled window. [src/scrapers/social/pumpfun/client.js:387-410]
+- [x] [Review][Patch] `livestream.isLive` can report `isActive:false` before the first poll completes — `start()` fires `#tick()` without awaiting; add an initial-poll barrier or await readiness before `fetchMintSocial` reads it. [src/scrapers/social/pumpfun/livestream.js:36-42]
+- [x] [Review][Defer] Livechat protocol lacks a real-`ws` handshake/ack test — only an injected fake exercises the fallback; add a local WebSocket protocol test using the project's real `ws`. — deferred: test-infra addition, not a defect fix [src/scrapers/social/pumpfun/livechat.js, tests/scrapers/social/pumpfun/pumpfun.test.js]
+- [x] [Review][Defer] Broaden `config/kol-wallets-seed.json` — 1-wallet seed gives near-empty KOL coverage when kolscan.io is down; user chose to expand the seed list. — deferred: needs a curated KOL wallet list (external data) [config/kol-wallets-seed.json]
+
+**Rejected:**
+- `false` — Full `tests/scrapers` run fails: the 6 failures are all `tests/scrapers/social/instagram/client.test.js` proxy-resolution AC-4 (story 35.3, env/network-dependent), unrelated to this change — pre-existing.

@@ -1338,6 +1338,101 @@ So that **bất kỳ consumer nào (jev-trading, bot trading, analytics pipeline
 * **And** toàn bộ TypeScript declaration có mặt trong `types/index.d.ts`
 * **And** bộ tests `tests/scrapers/social/pumpfun/` đạt 100% pass với cả mock data và real Solana mint live probe
 
+
+### Story 20.6: pumpfun-full-social-intelligence (Metadata, Social Links, User Resolver, Discovery Feeds & Realtime Chat Stream)
+
+As a **Platform Consumer / Crypto Intelligence Bot**,  
+I want **PumpFunCrawler cào toàn bộ dữ liệu social và feed công khai của pump.fun (token metadata + social links, user-to-wallet resolver, discovery feeds toàn sàn và persistent realtime livechat streaming)**,  
+So that **hệ thống có cái nhìn 360 độ về mọi token: ai tạo, dev Twitter/Telegram nào, ai đang comment, token nào đang trending/sắp graduate, và nhận được luồng chat trực tiếp mà không bị giới hạn trong từng mint đơn lẻ**.
+
+**Phạm vi & Vị trí:**
+- Thư mục: `src/scrapers/social/pumpfun/` (`client.js`, `crawler.js`, `livechat.js`, `normalizer.js`, `descriptor.js`)
+- Endpoints mở rộng:
+  - `GET https://frontend-api-v3.pump.fun/coins/{mint}` (metadata, dev links, reply_count, market cap)
+  - `GET https://frontend-api-v3.pump.fun/users/{username}` (user-to-wallet profile mapping)
+  - `GET https://frontend-api-v3.pump.fun/coins?offset=...&limit=...&sort=...&order=...` (platform feeds)
+  - `wss://livechat.pump.fun` (Socket.IO persistent event streaming)
+- Actions mới/mở rộng:
+  - `fetch_mint_social`: làm giàu với `coinMeta` (social links: twitter, telegram, website; creator, market_cap_usd, reply_count)
+  - `fetch_platform_feed`: cào danh sách token theo feed (`koth`, `graduating`, `new_creations`, `last_trade`, `currently_live`)
+  - `resolve_user_wallet`: ánh xạ username thành địa chỉ ví Solana và trạng thái pump user
+  - `stream_mint_chat`: subscription realtime nhận sự kiện tin nhắn mới (`newMessage`, `pinnedMessage`, `addReaction`)
+
+**Acceptance Criteria:**
+
+* **Given** `PumpFunClient` và `PumpFunCrawler` đã có từ Story 20.5
+* **When** gọi `fetch_mint_social(mintAddress)`
+* **Then** tự động truy vấn song song thêm `GET /coins/{mint}` và tích hợp vào output:
+  - `socialLinks: { twitter: string|null, telegram: string|null, website: string|null }`
+  - `creator: string` (địa chỉ ví Solana của dev tạo token)
+  - `marketCapUsd: number`, `replyCount: number`, `bondingCurve: string`, `isCurrentlyLive: boolean`
+* **And** nếu `/coins/{mint}` trả 404 (token không tồn tại), ném `XACT_4004` thống nhất
+* **And** cache metadata token trong memory/Redis TTL 60s để tránh spam request cùng một mint
+
+* **When** gọi action `resolve_user_wallet(username)`
+* **Then** gọi `GET /users/{username}` trên `frontend-api-v3.pump.fun`
+* **And** trả về `{ username: string, walletAddress: string, userId: string, isPumpUser: boolean, profileImage?: string }`
+* **And** tích hợp resolver này vào luồng trích xuất comments: tự động giải mã `authorName` sang `walletAddress` nếu comment bị khuyết địa chỉ ví
+
+* **When** gọi action `fetch_platform_feed({ feedType, limit, offset, includeNsfw })`
+* **Then** hỗ trợ các `feedType`:
+  1. `'koth'` (King of the Hill — sort theo market cap / hill progress)
+  2. `'graduating'` (token gần chạm mốc 85 SOL bonding curve, sắp sang PumpSwap)
+  3. `'new_creations'` (sort `created_timestamp` DESC)
+  4. `'last_trade'` (sort `last_trade_timestamp` DESC)
+  5. `'currently_live'` (các token đang phát trực tiếp livestream)
+* **And** trả về mảng danh sách token được chuẩn hóa thống nhất theo schema `PumpFunFeedItem[]`
+
+* **When** gọi action `stream_mint_chat({ mintAddress, onMessage, onReaction, durationMs })`
+* **Then** module `livechat.js` duy trì kết nối WebSocket Socket.IO v4 tới `wss://livechat.pump.fun`
+* **And** tự động phát `joinRoom` và lắng nghe các sự kiện stream: `newMessage`, `message`, `pinnedMessage`, `addReaction`
+* **And** giải phóng kết nối (`leaveRoom` + `ws.close()`) an toàn khi hết `durationMs` hoặc khi caller emit stop
+* **And** hỗ trợ chuyển tiếp tin nhắn trực tiếp vào `RedisStreamPublisher` theo kênh `stream:social:pumpfun:chat` tuân thủ chuẩn Story 20.2
+
+---
+
+### Story 20.7: pumpfun-authenticated-live-media (Browser-as-Signer Session Bridge, Livestream API, Video Clips & Comment Posting)
+
+As a **Trading Automation Operator / Community Growth Agent**,  
+I want **PumpFunCrawler hỗ trợ authentication qua Browser-as-Signer bridge, truy cập các API phân quyền của livestream/profile, phân tích video clips và thực hiện tác vụ đăng tải (comment/reply)**,  
+So that **agent có thể tham gia tương tác, lấy dữ liệu KOL độc quyền nội bộ, cào nội dung video stream HLS và tự động hóa các chiến dịch social marketing trực tiếp trên pump.fun mà không cần cài đặt SDK Solana cồng kềnh**.
+
+**Phạm vi & Vị trí:**
+- Thư mục: `src/scrapers/social/pumpfun/` (`signer-bridge.js`, `livestream-api.js`, `media.js`, `client.js`, `crawler.js`)
+- Host & Endpoints:
+  - `https://frontend-api-v3.pump.fun/users/me`, `/following/{userId}` (authenticated profile data)
+  - `https://livestream-api.pump.fun` (`/kols`, `/livekit-token/*`, `/stream-livechat-token/*`)
+  - `https://clips.pump.fun` (HLS livestream video recording segments `.m3u8` & `.ts`)
+  - `POST https://frontend-api-v3.pump.fun/replies` (authenticated comment creation)
+- Architecture Decision: Tuân thủ `docs/architecture/adr-pumpfun-auth-and-dependencies.md` — dùng **Browser-as-Signer** trích xuất cookie + Privy JWT qua Chrome MCP / CDP, không dùng `@solana/web3.js`.
+
+**Acceptance Criteria:**
+
+* **Given** class `PumpFunBrowserBridge` (`src/scrapers/social/pumpfun/signer-bridge.js`)
+* **When** người dùng đã đăng nhập pump.fun trên trình duyệt Chrome
+* **Then** bridge trích xuất bundle xác thực: `privy:token` (Bearer JWT), `privy:id_token`, `decoded-jwt` (`userId`, `address`), và cookies (`_cfuvid`, `__cf_bm`)
+* **And** đăng ký session hợp lệ vào `SessionManager` (`src/core/session-manager.js`) dưới key `pumpfun:<accountId>`
+* **And** headless requests tự động đính kèm `Authorization: Bearer <jwt>` và cookies để vượt qua Cloudflare WAF tự nhiên
+
+* **When** gọi action `fetch_my_profile()` hoặc `fetch_user_following(userId)`
+* **Then** gọi `GET https://frontend-api-v3.pump.fun/users/me` và `GET /following/{userId}` với session đã xác thực
+* **And** trả về profile cá nhân, số lượng follower/following, và danh sách các tài khoản đang theo dõi
+
+* **When** thực thi truy vấn qua `livestream-api.pump.fun`
+* **Then** đính kèm JWT Bearer token vào headers
+* **And** gọi endpoint `GET /kols` lấy danh sách KOL nội bộ chính xác do pump.fun ghi nhận
+* **And** lấy được LiveKit connection token (`/livekit-token-host` hoặc viewer token) để kết nối trực tiếp vào audio/video stream room
+
+* **When** cào dữ liệu video và livestream clips
+* **Then** module `media.js` phân tích danh sách clip đã lưu trữ của một mint hoặc creator
+* **And** trích xuất URL playlist HLS (`https://clips.pump.fun/.../playlist_*.m3u8`) và các phân đoạn video `.ts` mà không tải raw video về đĩa
+* **And** trả về metadata clip: `{ clipId, streamerWallet, duration, resolution, hlsPlaylistUrl, startedAt, endedAt }`
+
+* **When** thực hiện action ghi `post_mint_reply({ mintAddress, text, replyToId, mediaUrl })`
+* **Then** kiểm tra session auth hợp lệ; nếu chưa có tài khoản, ném `AuthSessionExpiredError(XACT_4010)`
+* **And** áp dụng governor và rate limit an toàn: tối đa 5 comments / phút / tài khoản để bảo vệ ví khỏi bị shadowban
+* **And** gửi `POST https://frontend-api-v3.pump.fun/replies` với payload `{ mint, text, ... }`
+* **And** trả về kết quả comment đã đăng thành công kèm `commentId` và timestamp được xác nhận từ server
 ---
 
 > **External Milestones** (tracked ở Nowing repo, KHÔNG block Epic 20):

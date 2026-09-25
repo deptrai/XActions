@@ -61,6 +61,12 @@ function makeClient(overrides = {}) {
     }
     return { status: 404, headers: {}, data: {} };
   });
+  // Inject a fake livechat — no real wss://livechat.pump.fun connection in tests.
+  client.livechat = {
+    getMessageHistory: vi.fn(async () => ({ messages: [], nextCursor: null })),
+    joinRoom: vi.fn(async () => ({})),
+    close: vi.fn(async () => {}),
+  };
   Object.assign(client, overrides);
   return client;
 }
@@ -118,11 +124,34 @@ describe('PumpFunCrawler.fetchMintSocial', () => {
     await crawler.cleanup();
   });
 
-  it('graceful-degrades commentVelocity to 0 when replies endpoint 404s', async () => {
+  it('graceful-degrades commentVelocity to 0 when replies endpoint 404s and livechat is empty', async () => {
     const crawler = makeCrawler();
     const r = await crawler.fetchMintSocial({ mintAddress: VALID_MINT });
     expect(r.commentVelocity.last1m).toBe(0);
     expect(r.commentVelocity.sampleSize).toBe(0);
+    expect(r.comments).toEqual([]);
+    await crawler.cleanup();
+  });
+
+  it('falls back to livechat getMessageHistory when REST /replies 404s', async () => {
+    const crawler = makeCrawler();
+    const now = Date.now();
+    crawler.client.livechat.getMessageHistory = vi.fn(async () => ({
+      messages: [
+        { id: 'm1', message: 'gm', username: 'alice', userAddress: 'W1', timestamp: new Date(now - 30_000).toISOString() },
+        { id: 'm2', message: 'send it', username: 'bob', userAddress: 'W2', timestamp: new Date(now - 120_000).toISOString() },
+      ],
+      nextCursor: null,
+    }));
+    const r = await crawler.fetchMintSocial({ mintAddress: VALID_MINT });
+    expect(crawler.client.livechat.getMessageHistory).toHaveBeenCalledWith(
+      VALID_MINT,
+      expect.objectContaining({ limit: expect.any(Number) }),
+    );
+    expect(r.comments).toHaveLength(2);
+    expect(r.comments[0].authorName).toBe('alice');
+    expect(r.comments[0].platform).toBe('pumpfun');
+    expect(r.commentVelocity.sampleSize).toBe(2);
     await crawler.cleanup();
   });
 });

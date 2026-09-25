@@ -29,6 +29,8 @@ export class LivestreamPoller {
     /** @type {ReturnType<typeof setInterval> | null} */
     this._timer = null;
     this._running = false;
+    /** Resolves once the first poll tick completes (success or failure). */
+    this.ready = null;
     if (deps.autoStart !== false) this.start();
   }
 
@@ -36,7 +38,9 @@ export class LivestreamPoller {
   start() {
     if (this._running) return;
     this._running = true;
-    void this.#tick();
+    // Await the first tick so callers can `await poller.ready` for a populated
+    // set instead of racing the initial poll.
+    this.ready = this.#tick();
     this._timer = setInterval(() => { void this.#tick(); }, this.intervalMs);
     this._timer.unref?.();
   }

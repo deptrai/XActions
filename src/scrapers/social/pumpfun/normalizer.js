@@ -45,11 +45,16 @@ export function normalizeThesis(position, kolWallets) {
     user: p.userName || p.username || null,
     wallet,
     content,
-    timestamp: callout.calloutTimestamp ? Date.parse(callout.calloutTimestamp) : (callout.calledOutAtMcap ?? null),
+    // Prefer a real timestamp; `calledOutAtMcap` is market-cap data, not a time.
+    timestamp: callout.calloutTimestamp
+      ? Date.parse(callout.calloutTimestamp)
+      : (callout.calledOutAt ?? callout.createdAt ?? callout.timestamp
+          ? Date.parse(callout.calledOutAt ?? callout.createdAt ?? callout.timestamp)
+          : null),
     holdings: Number(p.amountHeld) || 0,
-    // Live API exposes USD PnL, not SOL — map to pnlSol slot while keeping the
-    // canonical USD fields so consumers see the real upstream values.
-    pnlSol: p.pnlUsd != null ? Number(p.pnlUsd) : undefined,
+    // Live API exposes USD PnL only — keep `pnlUsd` canonical and leave `pnlSol`
+    // unset rather than expose a USD value under a SOL-denominated field name.
+    pnlSol: null,
     pnlUsd: p.pnlUsd != null ? Number(p.pnlUsd) : undefined,
     pnlPercentage: p.pnlPercentage != null ? Number(p.pnlPercentage) : undefined,
     likes: Number(callout.likes) || 0,

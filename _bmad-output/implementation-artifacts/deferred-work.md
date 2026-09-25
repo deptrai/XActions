@@ -249,3 +249,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-48-1-web-api-foundation-bff.md`
   summary: Realtime foundation (lib/realtime.ts + socket.io-client dep + dashboard socket auth pattern) deferred to first socket-needing screen story (S1).
   evidence: `api/realtime/socketHandler.js:88` io.use chỉ đọc `socket.handshake.auth.token`; httpOnly cookie xa_bearer không reachable từ socket auth payload; sửa backend vi phạm spec boundary. Quyết định auth transport khi S1: extend io.use đọc cookie header (socket.handshake.headers.cookie) hoặc BFF token endpoint.
+
+## Deferred from: code review of spec-20-5-pumpfun-native-social-crawler (2026-09-25)
+- Livechat protocol real-ws test — `src/scrapers/social/pumpfun/livechat.js` Socket.IO handshake/ack has no test against a real `ws` server; only an injected fake exercises the fallback. Add a local WebSocket protocol test using the project's real `ws` implementation.
+- Broaden `config/kol-wallets-seed.json` — currently a single wallet, so KOL-matching fallback coverage is near-empty when kolscan.io is down. User opted to expand the seed list (needs a curated KOL wallet set).

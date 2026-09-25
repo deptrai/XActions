@@ -1008,12 +1008,28 @@ export interface PumpFunLivestreamStatus {
   roomId?: string;
 }
 
+/** A normalized pump.fun comment/reply record. */
+export interface PumpFunComment {
+  id: string;
+  platform: string;
+  externalId: string | null;
+  mint: string;
+  walletAddress: string | null;
+  authorName: string | null;
+  profileImage: string | null;
+  text: string;
+  timestamp: string | number | null;
+  likes: number;
+  raw?: Record<string, unknown>;
+}
+
 /** Aggregate result of `fetch_mint_social`. */
 export interface PumpFunMintSocialResult {
   mint: string;
   id: string;
   platform: string;
   theses: PumpFunThesis[];
+  comments: PumpFunComment[];
   commentVelocity: PumpFunCommentVelocity;
   kolActivity: PumpFunKolActivity;
   livestream: PumpFunLivestreamStatus;

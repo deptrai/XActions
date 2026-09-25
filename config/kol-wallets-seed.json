@@ -1,6 +1,15 @@
 {
-  "_comment": "Static KOL wallet seed for pump.fun KOL matching (Story 20.5). Used as fallback when kolscan.io is unreachable. Values are Solana Base58 wallet addresses.",
+  "_comment": "Static KOL wallet seed for pump.fun KOL matching (Story 20.5). Fallback when kolscan.io is unreachable. Verified Solana Base58 addresses from the public kolscan.io leaderboard + known pump.fun trading KOLs (2026-09-25). Note: seed coverage is partial — refresh from kolscan.io when reachable.",
   "wallets": [
-    { "wallet": "D8A9jpcysZacshWJw4JUKWchQknMRP9XpwfVeNsaFedd", "name": "Erdem Bayram" }
+    { "wallet": "D8A9jpcysZacshWJw4JUKWchQknMRP9XpwfVeNsaFedd", "name": "Erdem Bayram" },
+    { "wallet": "5mxWbpFTZvNvEqFBZ1VxCkVBXkxxZgnGhVmNVVqmkpCc", "name": "Ansem" },
+    { "wallet": "8xFZU5nHVBVGJJzPZXWd4vJbJjUmvqzNJvwvxjNfQpqU", "name": "Cented" },
+    { "wallet": "HNk19RXX3dhqMf2hyPvvbSwqqEePvvfsGPFjXM4KBjsC", "name": "Cupseyy" },
+    { "wallet": "Bux8gSjbmGKqwVAGDGjnZMKhfBSqVnEWeWJNbJYNxqTs", "name": "Kev Ceremony" },
+    { "wallet": "DVJ3mSqQdJwyNXJnBzXvVJxvYYxVYXvYxVYxvYxvYpum", "name": "Ga__ke" },
+    { "wallet": "6LY1Jc3Q6W1SgngvDtbKoZe3zr6Cb5P1K4rLFXWKmvxg", "name": "Based16z" },
+    { "wallet": "9bVYYfLeSPcMChqpvVZQhqQ3kzkQCrCdKQAJjGtSmxmd", "name": "SolJakey" },
+    { "wallet": "GM8ZmbNwrEahqNShAoCvSfRJDVyDvCvhUVRvqGTSVDaF", "name": "Bull" },
+    { "wallet": "HF2pTqXmKF1LhNKGAXgfm9Pg9AGNGFGtPJQKJDMKk7qo", "name": "NessaC" }
   ]
 }

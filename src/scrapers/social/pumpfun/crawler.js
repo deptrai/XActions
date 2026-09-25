@@ -19,6 +19,7 @@ import {
   extractTheses,
   extractTopHolders,
 } from './normalizer.js';
+import { normalizePumpfunReplies } from './comments.js';
 import {
   PlatformError,
   ErrorTypes,
@@ -88,11 +89,15 @@ export class PumpFunCrawler extends AbstractCrawler {
       ? deps.kolResolver
       : new KolscanResolver({ redis: deps.redis, fetchFn: deps.fetchFn });
 
-    const startPoller = deps.startLivestreamPoller !== false;
+    // Don't auto-start the poller here — constructing a crawler for
+    // discovery (`listActions` via actions-list loaders) shouldn't spawn a
+    // background interval + upstream poll. The poller lazy-starts on first
+    // `fetchMintSocial`. Pass `livestreamPoller` to inject a managed instance.
+    this._autoPoller = deps.livestreamPoller === undefined && deps.startLivestreamPoller !== false;
     this.livestreamPoller = deps.livestreamPoller !== undefined
       ? deps.livestreamPoller
-      : (startPoller
-          ? new LivestreamPoller({ client, intervalMs: deps.livestreamIntervalMs })
+      : (this._autoPoller
+          ? new LivestreamPoller({ client, intervalMs: deps.livestreamIntervalMs, autoStart: false })
           : null);
 
     // ── Action: fetch_mint_social ──
@@ -149,6 +154,8 @@ export class PumpFunCrawler extends AbstractCrawler {
         ? this.proxyPool.getStickyProxy(mint, this.client.requiresResidential, { pool: 'realtime' })
         : null;
       const reqOpts = { proxy, accountId: session?.accountId || null, session };
+      const replyLimit = Number.isFinite(args?.limit) ? Number(args.limit) : undefined;
+      if (replyLimit) reqOpts.limit = replyLimit;
 
       const [positionsRes, repliesRes] = await Promise.allSettled([
         this.client.getMintPositions(mint, reqOpts),
@@ -161,8 +168,10 @@ export class PumpFunCrawler extends AbstractCrawler {
       }
       const positions = positionsRes.value?.positions || [];
 
-      // replies 404 → graceful-empty (endpoint absent on v3), not an error.
+      // replies: REST 404 → livechat fallback already applied inside
+      // client.getReplies; a rejection here means livechat also failed.
       const replies = repliesRes.status === 'fulfilled' ? (repliesRes.value || []) : [];
+      const comments = normalizePumpfunReplies(replies, mint);
 
       // Theses + holders come from mint-positions callout.
       const kolWallets = await this.#kolWalletSet();
@@ -176,6 +185,15 @@ export class PumpFunCrawler extends AbstractCrawler {
       const kolActivity = await this.kolResolver.matchKols(walletsToCheck);
 
       const commentVelocity = computeCommentVelocity(replies);
+      // Lazy-start the poller on first fetch, then wait for its first tick so
+      // we don't report a false isActive:false on a mint that is live but not
+      // yet populated.
+      if (this.livestreamPoller && this._autoPoller && !this.livestreamPoller._running) {
+        this.livestreamPoller.start();
+      }
+      if (this.livestreamPoller && this.livestreamPoller.ready) {
+        try { await this.livestreamPoller.ready; } catch { /* non-fatal */ }
+      }
       const livestream = this.livestreamPoller
         ? this.livestreamPoller.isLive(mint)
         : { isActive: false, viewers: 0 };
@@ -185,6 +203,7 @@ export class PumpFunCrawler extends AbstractCrawler {
         id: namespacedPumpfunId(mint),
         platform: this.platform,
         theses,
+        comments,
         commentVelocity,
         kolActivity,
         livestream,
@@ -214,6 +233,11 @@ export class PumpFunCrawler extends AbstractCrawler {
   async cleanup() {
     try {
       this.livestreamPoller?.stop?.();
+    } catch {
+      /* non-fatal */
+    }
+    try {
+      await this.client?.livechat?.close?.();
     } catch {
       /* non-fatal */
     }
