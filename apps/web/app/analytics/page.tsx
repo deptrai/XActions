@@ -76,7 +76,7 @@ export default function AnalyticsPage() {
       if (res.ok && res.data?.metrics) {
         // Merge icon from seeded map by label (icons are ReactNode, can't cross JSON)
         const iconByLabel = new Map(SEEDED_METRICS.map((m) => [m.label, m.icon]));
-        setMetrics(res.data.metrics.map((m) => ({ ...m, icon: iconByLabel.get(m.label) ?? m.icon })));
+        setMetrics(res.data.metrics.map((m) => ({ ...m, icon: iconByLabel.get(m.label) })));
         if (res.data.weekly) setWeekly(res.data.weekly);
       }
     } catch {

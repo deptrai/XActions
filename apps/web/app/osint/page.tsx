@@ -199,7 +199,7 @@ export default function OsintPage() {
                     <div className="text-right shrink-0">
                       <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{r.followers?.toLocaleString() || '—'} followers</p>
                       <p className="text-xs text-slate-400">
-                        {Number.isFinite(r.confidence) ? `${(r.confidence * 100).toFixed(0)}% match` : '— match'}
+                        {typeof r.confidence === 'number' && Number.isFinite(r.confidence) ? `${(r.confidence * 100).toFixed(0)}% match` : '— match'}
                       </p>
                     </div>
                   </div>

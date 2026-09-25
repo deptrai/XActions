@@ -7,6 +7,7 @@ import {
   Coins, Rss, Radio, UserCircle, RefreshCw, Play, Square, Copy, Check,
   ExternalLink, Download, AlertTriangle, CheckCircle2, XCircle, Search,
 } from 'lucide-react';
+import type { ApiResult } from '@xactions/api-client';
 import { api } from '@/lib/api';
 
 // ---------------------------------------------------------------------------
@@ -128,23 +129,44 @@ const fmtTs = (ts?: number | string | null) => {
   return isNaN(d.getTime()) ? String(ts) : d.toLocaleTimeString();
 };
 
+interface PlatformEnvelope<T> {
+  ok: boolean;
+  platform?: string;
+  action?: string;
+  result?: T;
+  error?: string;
+  code?: string;
+}
+
 async function scrape<T = unknown>(action: string, args: Record<string, unknown>, signal?: AbortSignal) {
-  return api<T>('POST', '/api/platform/pumpfun/scrape', { body: { action, ...args }, signal });
+  const res = await api<PlatformEnvelope<T>>('POST', '/api/platform/pumpfun/scrape', { body: { action, ...args }, signal });
+  if (res.ok && res.data && typeof res.data === 'object' && 'result' in res.data) {
+    return { ok: true as const, status: res.status, data: (res.data as PlatformEnvelope<T>).result as T };
+  }
+  return res as unknown as ApiResult<T>;
 }
 
 async function automate<T = unknown>(action: string, args: Record<string, unknown>) {
-  return api<T>('POST', '/api/platform/pumpfun/automate', { body: { action, ...args } });
+  const res = await api<PlatformEnvelope<T>>('POST', '/api/platform/pumpfun/automate', { body: { action, ...args } });
+  if (res.ok && res.data && typeof res.data === 'object' && 'result' in res.data) {
+    return { ok: true as const, status: res.status, data: (res.data as PlatformEnvelope<T>).result as T };
+  }
+  return res as unknown as ApiResult<T>;
 }
 
 /** Map scrape() error payload → human banner kind + message. */
 function mapError(err: unknown): { kind: 'warn' | 'error'; msg: string } {
-  const e = err as { code?: string; message?: string } | undefined;
+  if (typeof err === 'string') {
+    if (err.includes('404') || err.includes('Not Found')) return { kind: 'warn', msg: '⚠️ Not found on pump.fun.' };
+    return { kind: 'error', msg: `❌ ${err}` };
+  }
+  const e = err as { code?: string; message?: string; error?: string } | undefined;
   const code = e?.code || '';
-  const msg = e?.message || 'Request failed';
-  if (code === 'XACT_4004') return { kind: 'warn', msg: '⚠️ Not found on pump.fun.' };
-  if (code === 'XACT_4010') return { kind: 'error', msg: '🔒 Auth required or session expired — connect in Account tab.' };
+  const msg = e?.message || e?.error || 'Request failed';
+  if (code === 'XACT_4004' || msg.includes('404') || msg.includes('Not Found')) return { kind: 'warn', msg: '⚠️ Not found on pump.fun.' };
+  if (code === 'XACT_4010' || msg.includes('401') || msg.includes('Unauthorized')) return { kind: 'error', msg: '🔒 Auth required or session expired — connect in Account tab.' };
   if (code === 'XACT_4291') return { kind: 'warn', msg: '⚠️ Stream/action cap reached — wait for an active stream to finish.' };
-  if (code === 'XACT_4029' || code === 'XACT_429') return { kind: 'warn', msg: '⚠️ Rate limited — pump.fun allows ~40 req/min/IP. Retry shortly.' };
+  if (code === 'XACT_4029' || code === 'XACT_429' || msg.includes('429')) return { kind: 'warn', msg: '⚠️ Rate limited — pump.fun allows ~40 req/min/IP. Retry shortly.' };
   return { kind: 'error', msg: `❌ ${msg}` };
 }
 
@@ -410,8 +432,8 @@ function PumpFunInner() {
             Meme-coin social signals, livestreams &amp; chat monitor.
           </p>
         </div>
-        <button onClick={checkAuth} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 text-sm text-slate-600 dark:text-slate-400">
-          <RefreshCw className="w-4 h-4" /><span>Refresh auth</span>
+        <button onClick={checkAuth} disabled={!authChecked || profile !== null} className="flex items-center gap-2 self-start md:self-center px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 text-sm text-slate-600 dark:text-slate-400 disabled:opacity-60 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors w-fit">
+          <RefreshCw className={`w-4 h-4 ${authChecked ? '' : 'animate-spin'}`} /><span>{authChecked ? 'Refresh auth' : 'Checking auth...'}</span>
         </button>
       </div>
 

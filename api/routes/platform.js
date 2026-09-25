@@ -427,9 +427,11 @@ router.post('/:platform/scrape', async (req, res) => {
   } catch (err) {
     console.error(`❌ POST /platform/${platform}/scrape error:`, err);
     const status = typeof err === 'object' && err !== null && 'statusCode' in err && typeof err.statusCode === 'number' ? err.statusCode : 500;
+    const code = typeof err === 'object' && err !== null && 'code' in err ? /** @type {any} */ (err).code : undefined;
     res.status(status).json({
       ok: false,
       error: err instanceof Error ? err.message : 'Scrape failed',
+      code,
     });
   }
 });
