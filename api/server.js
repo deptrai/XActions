@@ -75,6 +75,7 @@ import governorRoutes from './routes/governor.js';
 import notificationsRoutes from './routes/notifications.js';
 import teamsRoutes from './routes/teams.js';
 import optimizerRoutes from './routes/optimizer.js';
+import securityRoutes from './routes/security.js';
 import { defaultStreamMetricsCollector } from '../src/utils/stream-metrics-collector.js';
 import { defaultStreamAlertEngine } from '../src/utils/stream-alerts.js';
 import { startScheduler } from './services/unfollowerScheduler.js';
@@ -408,6 +409,7 @@ app.use('/api/governor', governorRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/teams', teamsRoutes);
 app.use('/api/optimizer', optimizerRoutes);
+app.use('/api/security', securityRoutes);
 app.use('/api/benchmark', benchmarkRoutes);
 
 // Plugin routes — mounted under /api/plugins/<plugin-name>/
