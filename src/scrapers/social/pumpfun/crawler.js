@@ -14,6 +14,9 @@ import { PumpFunClient } from './client.js';
 import { computeCommentVelocity } from './velocity.js';
 import { KolscanResolver } from './kolscan.js';
 import { LivestreamPoller } from './livestream.js';
+import { PumpFunAuth } from './auth.js';
+import { LivestreamApiClient } from './livestream-api.js';
+import { PumpFunMedia } from './media.js';
 import {
   namespacedPumpfunId,
   extractTheses,
@@ -91,6 +94,17 @@ export class PumpFunCrawler extends AbstractCrawler {
       ? deps.kolResolver
       : new KolscanResolver({ redis: deps.redis, fetchFn: deps.fetchFn });
 
+    // Auth & Livestream API client for authenticated actions (Story 20.7)
+    this.auth = deps.auth instanceof PumpFunAuth
+      ? deps.auth
+      : new PumpFunAuth(deps.accountId || 'default');
+    this.livestreamApi = deps.livestreamApi instanceof LivestreamApiClient
+      ? deps.livestreamApi
+      : new LivestreamApiClient(this.auth, { fetchFn: deps.fetchFn });
+    this.media = deps.media instanceof PumpFunMedia
+      ? deps.media
+      : new PumpFunMedia();
+
     // Don't auto-start the poller here — constructing a crawler for
     // discovery (`listActions` via actions-list loaders) shouldn't spawn a
     // background interval + upstream poll. The poller lazy-starts on first
@@ -163,6 +177,58 @@ export class PumpFunCrawler extends AbstractCrawler {
       outputType: '{ messageCount, durationMs }',
       example: { mintAddress: '5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump', durationMs: 15000 },
       handler: (args, session) => this.streamMintChat(args, session),
+    });
+
+    // ── Action: fetch_my_profile (Auth) ──
+    this.registerAction({
+      action: 'fetch_my_profile',
+      description: 'Fetch the authenticated pump.fun user profile (wallet, followers, following)',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: [],
+      optionalArgs: [],
+      outputType: '{ username, walletAddress, userId, isPumpUser, followers, following }',
+      example: {},
+      handler: (args, session) => this.fetchMyProfile(args, session),
+    });
+
+    // ── Action: fetch_user_following (Auth) ──
+    this.registerAction({
+      action: 'fetch_user_following',
+      description: 'Fetch the list of accounts a specific userId is following on pump.fun',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['userId'],
+      optionalArgs: [],
+      outputType: 'Array<Record<string, unknown>>',
+      example: { userId: '4e6186fa-df15-44b5-aa56-b3a7657be44a' },
+      handler: (args, session) => this.fetchUserFollowing(args, session),
+    });
+
+    // ── Action: fetch_livestream_clips ──
+    this.registerAction({
+      action: 'fetch_livestream_clips',
+      description: 'Fetch HLS video clips metadata for a pump.fun livestreamer or coin',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['mintOrWallet'],
+      optionalArgs: [],
+      outputType: 'PumpFunLivestreamClip[]',
+      example: { mintOrWallet: '5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump' },
+      handler: (args, session) => this.fetchLivestreamClips(args, session),
+    });
+
+    // ── Action: post_mint_reply (Auth) ──
+    this.registerAction({
+      action: 'post_mint_reply',
+      description: 'Post a reply/comment to a pump.fun mint coin page using an authenticated session',
+      category: 'social',
+      requiresAuth: true,
+      requiredArgs: ['mintAddress', 'text'],
+      optionalArgs: ['replyToId', 'mediaUrl'],
+      outputType: '{ commentId, timestamp, success }',
+      example: { mintAddress: '5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump', text: 'Greetings!' },
+      handler: (args, session) => this.postMintReply(args, session),
     });
   }
 
@@ -414,6 +480,150 @@ export class PumpFunCrawler extends AbstractCrawler {
     } finally {
       this.#activeStreams = Math.max(0, this.#activeStreams - 1);
     }
+  }
+
+  /**
+   * Fetch the authenticated user's own profile from pump.fun.
+   * @param {Record<string, unknown>} args
+   * @param {Record<string, unknown>} [session]
+   * @returns {Promise<Record<string, unknown>>}
+   */
+  async fetchMyProfile(args, session = {}) {
+    if (!this.auth.hasSession() || !this.auth.isValid()) {
+      throw new PlatformError({
+        type: ErrorTypes.AUTH_REQUIRED,
+        code: 'XACT_4010',
+        message: 'fetch_my_profile requires an active pump.fun session',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: this.platform,
+      });
+    }
+    return this.livestreamApi.getMyProfile();
+  }
+
+  /**
+   * Fetch following list for a specific user.
+   * @param {Record<string, unknown>} args
+   * @param {Record<string, unknown>} [session]
+   * @returns {Promise<Array>}
+   */
+  async fetchUserFollowing(args, session = {}) {
+    if (!this.auth.hasSession() || !this.auth.isValid()) {
+      throw new PlatformError({
+        type: ErrorTypes.AUTH_REQUIRED,
+        code: 'XACT_4010',
+        message: 'fetch_user_following requires an active pump.fun session',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: this.platform,
+      });
+    }
+    const userId = String(args?.userId || session?.userId || '');
+    if (!userId) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4002',
+        message: 'Parameter "userId" is required',
+        statusCode: 400,
+        platform: this.platform,
+      });
+    }
+    return this.livestreamApi.getFollowing(userId);
+  }
+
+  /**
+   * Fetch livestream clips / video metadata for a mint or wallet.
+   * @param {Record<string, unknown>} args
+   * @param {Record<string, unknown>} [session]
+   * @returns {Promise<Array>}
+   */
+  async fetchLivestreamClips(args, session = {}) {
+    if (!this.auth.hasSession() || !this.auth.isValid()) {
+      throw new PlatformError({
+        type: ErrorTypes.AUTH_REQUIRED,
+        code: 'XACT_4010',
+        message: 'fetch_livestream_clips requires an active pump.fun session',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: this.platform,
+      });
+    }
+    const mintOrWallet = String(args?.mintOrWallet || args?.mint || args?.wallet || '');
+    if (!mintOrWallet) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4002',
+        message: 'Parameter "mintOrWallet" is required',
+        statusCode: 400,
+        platform: this.platform,
+      });
+    }
+    const rawClips = await this.livestreamApi.getLivestreamClips(mintOrWallet);
+    return (Array.isArray(rawClips) ? rawClips : [rawClips]).map((c) => this.media.normalizeClip(c));
+  }
+
+  /**
+   * Post a comment/reply to a pump.fun mint page.
+   * Enforces max 5 comments per minute rate limit to prevent shadowban.
+   * @param {Record<string, unknown>} args
+   * @param {Record<string, unknown>} [session]
+   * @returns {Promise<Record<string, unknown>>}
+   */
+  async postMintReply(args, session = {}) {
+    if (!this.auth.hasSession() || !this.auth.isValid()) {
+      throw new PlatformError({
+        type: ErrorTypes.AUTH_REQUIRED,
+        code: 'XACT_4010',
+        message: 'post_mint_reply requires an active pump.fun session',
+        statusCode: 401,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: this.platform,
+      });
+    }
+    const mint = this.#resolveMint(args || {});
+    const text = String(args?.text || '').trim();
+    if (!text) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4002',
+        message: 'Parameter "text" cannot be empty',
+        statusCode: 400,
+        platform: this.platform,
+      });
+    }
+
+    // Enforce rate limit: max 5 comments / min / account
+    const rateKey = `post_reply:${this.auth.accountId}`;
+    // Simple in-memory counter for rate limiting (shared via SessionManager would be better for distributed)
+    this._replyTimestamps = this._replyTimestamps || [];
+    const now = Date.now();
+    this._replyTimestamps = this._replyTimestamps.filter(t => now - t < 60_000);
+    if (this._replyTimestamps.length >= 5) {
+      throw new PlatformError({
+        type: ErrorTypes.RATE_LIMIT,
+        code: 'XACT_4291',
+        message: 'Comment rate limit exceeded (max 5/min per account)',
+        statusCode: 429,
+        suggestedAction: SuggestedActions.WAIT,
+        platform: this.platform,
+      });
+    }
+    this._replyTimestamps.push(now);
+
+    const result = await this.livestreamApi.postMintReply(mint, text, {
+      replyToId: args.replyToId,
+      mediaUrl: args.mediaUrl,
+    });
+
+    return {
+      success: true,
+      mint,
+      text,
+      commentId: result?.id || result?.commentId || null,
+      timestamp: result?.timestamp || result?.createdAt || Date.now(),
+      raw: result,
+    };
   }
 
   /**

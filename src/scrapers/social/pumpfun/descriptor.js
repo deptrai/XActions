@@ -28,6 +28,16 @@ const PUMPFUN_ACTION_MAP = {
   stream_mint_chat: 'stream_mint_chat',
   stream_chat: 'stream_mint_chat',
   chat_stream: 'stream_mint_chat',
+  fetch_my_profile: 'fetch_my_profile',
+  my_profile: 'fetch_my_profile',
+  fetch_user_following: 'fetch_user_following',
+  user_following: 'fetch_user_following',
+  fetch_livestream_clips: 'fetch_livestream_clips',
+  livestream_clips: 'fetch_livestream_clips',
+  clips: 'fetch_livestream_clips',
+  post_mint_reply: 'post_mint_reply',
+  post_reply: 'post_mint_reply',
+  comment: 'post_mint_reply',
 };
 
 export default {
@@ -55,6 +65,12 @@ export default {
     if (options.username || options.user) mappedArgs.username = String(options.username || options.user);
     if (options.feedType || options.feed) mappedArgs.feedType = String(options.feedType || options.feed);
     if (options.durationMs != null) mappedArgs.durationMs = Number(options.durationMs);
+    // Story 20.7 args
+    if (options.userId) mappedArgs.userId = String(options.userId);
+    if (options.mintOrWallet) mappedArgs.mintOrWallet = String(options.mintOrWallet);
+    if (options.text) mappedArgs.text = String(options.text);
+    if (options.replyToId) mappedArgs.replyToId = String(options.replyToId);
+    if (options.mediaUrl) mappedArgs.mediaUrl = String(options.mediaUrl);
     return mappedArgs;
   },
 

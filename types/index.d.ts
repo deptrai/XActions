@@ -1126,8 +1126,57 @@ export declare class PumpFunCrawler {
   resolveUserWallet(args: Record<string, unknown>, session?: Record<string, unknown>): Promise<PumpFunResolvedUser | null>;
   fetchPlatformFeed(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<PumpFunFeedItem[]>;
   streamMintChat(args: Record<string, unknown>, session?: Record<string, unknown>): Promise<{ messageCount: number; durationMs: number }>;
+  // Story 20.7 authenticated methods
+  fetchMyProfile(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  fetchUserFollowing(args: Record<string, unknown>, session?: Record<string, unknown>): Promise<unknown[]>;
+  fetchLivestreamClips(args: Record<string, unknown>, session?: Record<string, unknown>): Promise<PumpFunLivestreamClip[]>;
+  postMintReply(args: Record<string, unknown>, session?: Record<string, unknown>): Promise<{ success: boolean; mint: string; text: string; commentId: string | null; timestamp: unknown; raw: unknown }>;
   cleanup(): Promise<void>;
   listActions(): Array<{ action: string; [key: string]: unknown }>;
+}
+
+/** PumpFun Browser-as-Signer session bridge — extracts auth tokens from active Chrome session. */
+export declare class PumpFunAuth {
+  accountId: string;
+  constructor(accountId?: string);
+  hasSession(): boolean;
+  isValid(): boolean;
+  getAuthHeaders(): Record<string, string>;
+}
+
+/** PumpFun authenticated livestream & profile API client. */
+export declare class LivestreamApiClient {
+  auth: PumpFunAuth;
+  livestreamBase: string;
+  profileBase: string;
+  frontendBase: string;
+  constructor(auth: PumpFunAuth, deps?: Record<string, unknown>);
+  getKols(): Promise<unknown[]>;
+  getMyProfile(): Promise<Record<string, unknown>>;
+  getFollowing(userId: string): Promise<unknown[]>;
+  getLivestreamClips(mintOrWallet: string): Promise<unknown[]>;
+  postMintReply(mint: string, text: string, opts?: { replyToId?: string; mediaUrl?: string }): Promise<Record<string, unknown>>;
+}
+
+/** PumpFun media parser for HLS video clips. */
+export declare class PumpFunMedia {
+  normalizeClip(raw: Record<string, unknown>): PumpFunLivestreamClip;
+  parseHlsPlaylist(playlistContent: string, baseUrl?: string): Array<{ url: string; duration: number }>;
+}
+
+/** A normalized livestream clip record from clips.pump.fun / livestream-api. */
+export interface PumpFunLivestreamClip {
+  clipId: string | null;
+  streamerWallet: string | null;
+  title: string;
+  duration: number;
+  resolution: string | null;
+  hlsPlaylistUrl: string | null;
+  thumbnailUrl: string | null;
+  startedAt: string | number | null;
+  endedAt: string | number | null;
+  viewers: number;
+  raw?: Record<string, unknown>;
 }
 
 /** PumpFun Socket.IO livechat client. */

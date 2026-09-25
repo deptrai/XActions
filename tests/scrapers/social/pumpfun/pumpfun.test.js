@@ -14,6 +14,10 @@ import { computeCommentVelocity } from '../../../../src/scrapers/social/pumpfun/
 import { KolscanResolver } from '../../../../src/scrapers/social/pumpfun/kolscan.js';
 import { LivestreamPoller } from '../../../../src/scrapers/social/pumpfun/livestream.js';
 import { extractTheses, extractTopHolders, normalizeThesis } from '../../../../src/scrapers/social/pumpfun/normalizer.js';
+import { PumpFunAuth } from '../../../../src/scrapers/social/pumpfun/auth.js';
+import { LivestreamApiClient } from '../../../../src/scrapers/social/pumpfun/livestream-api.js';
+import { PumpFunMedia } from '../../../../src/scrapers/social/pumpfun/media.js';
+import { globalSessionManager } from '../../../../src/core/session-manager.js';
 
 const VALID_MINT = '5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump';
 
@@ -119,7 +123,28 @@ function makeClient(overrides = {}) {
 function makeCrawler(clientOverrides = {}) {
   const client = makeClient(clientOverrides);
   const kolResolver = new KolscanResolver({ seedPath: 'nonexistent.json', fetchFn: async () => { throw new Error('kolscan down'); } });
-  return new PumpFunCrawler({ client, kolResolver, startLivestreamPoller: false });
+  const auth = new PumpFunAuth('test');
+  const livestreamApi = new LivestreamApiClient(auth, { fetchFn: vi.fn() });
+  return new PumpFunCrawler({
+    client,
+    kolResolver,
+    auth,
+    livestreamApi,
+    startLivestreamPoller: false,
+  });
+}
+
+// Seed a valid session for auth tests
+function seedAuthSession() {
+  globalSessionManager.set('pumpfun:test', {
+    accountId: 'pumpfun:test',
+    platform: 'pumpfun',
+    jwt: 'eyJhbGciOiJFUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.fake',
+    cookies: '_cfuvid=test',
+    userAgent: 'test-agent',
+    userId: 'u_test123',
+    walletAddress: 'WALLET123',
+  });
 }
 
 describe('PumpFunClient.assertValidMint', () => {
@@ -371,6 +396,76 @@ describe('Story 20.6: stream_mint_chat', () => {
     expect(messages[0].text).toBe('hi from stream');
     expect(reactions).toHaveLength(1);
     expect(reactions[0].emoji).toBe('🔥');
+    await crawler.cleanup();
+  });
+});
+
+describe('Story 20.7: Authenticated Live Media & Write Actions', () => {
+  it('throws XACT_4010 when no session is active for authenticated actions', async () => {
+    globalSessionManager.delete('pumpfun:test');
+    const crawler = makeCrawler();
+    await expect(crawler.fetchMyProfile({})).rejects.toMatchObject({ code: 'XACT_4010' });
+    await expect(crawler.fetchUserFollowing({ userId: 'u1' })).rejects.toMatchObject({ code: 'XACT_4010' });
+    await expect(crawler.postMintReply({ mintAddress: VALID_MINT, text: 'hi' })).rejects.toMatchObject({ code: 'XACT_4010' });
+    await crawler.cleanup();
+  });
+
+  it('fetches authenticated my_profile when session is valid', async () => {
+    seedAuthSession();
+    const crawler = makeCrawler();
+    // Mock livestreamApi.getMyProfile
+    crawler.livestreamApi.getMyProfile = vi.fn(async () => ({
+      username: 'testuser',
+      userId: 'u_test123',
+      address: 'WALLET123',
+      is_pump_user: true,
+      followers: 5,
+      following: 10,
+    }));
+    const profile = await crawler.fetchMyProfile({});
+    expect(profile.username).toBe('testuser');
+    expect(profile.address).toBe('WALLET123');
+    expect(profile.is_pump_user).toBe(true);
+    await crawler.cleanup();
+  });
+
+  it('fetches user_following with valid session', async () => {
+    seedAuthSession();
+    const crawler = makeCrawler();
+    crawler.livestreamApi.getFollowing = vi.fn(async (uid) => [{ userId: uid, username: 'following_user' }]);
+    const following = await crawler.fetchUserFollowing({ userId: 'u_test123' });
+    expect(Array.isArray(following)).toBe(true);
+    expect(following[0].username).toBe('following_user');
+    await crawler.cleanup();
+  });
+
+  it('enforces rate limit on post_mint_reply (max 5/min)', async () => {
+    seedAuthSession();
+    const crawler = makeCrawler();
+    crawler.livestreamApi.postMintReply = vi.fn(async () => ({ id: 'c1', timestamp: Date.now() }));
+
+    // Post 5 comments successfully
+    for (let i = 0; i < 5; i++) {
+      await crawler.postMintReply({ mintAddress: VALID_MINT, text: `test ${i}` });
+    }
+    // 6th should fail with rate limit
+    await expect(crawler.postMintReply({ mintAddress: VALID_MINT, text: 'test 6' })).rejects.toMatchObject({ code: 'XACT_4291' });
+    await crawler.cleanup();
+  });
+
+  it('posts mint reply with valid session', async () => {
+    seedAuthSession();
+    const crawler = makeCrawler();
+    crawler.livestreamApi.postMintReply = vi.fn(async (mint, text) => ({
+      id: 'comment_abc123',
+      mint,
+      text,
+      timestamp: Date.now(),
+    }));
+    const result = await crawler.postMintReply({ mintAddress: VALID_MINT, text: 'Great token!' });
+    expect(result.success).toBe(true);
+    expect(result.commentId).toBe('comment_abc123');
+    expect(result.mint).toBe(VALID_MINT);
     await crawler.cleanup();
   });
 });
