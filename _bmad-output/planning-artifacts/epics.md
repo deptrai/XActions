@@ -1433,6 +1433,71 @@ So that **agent có thể tham gia tương tác, lấy dữ liệu KOL độc qu
 * **And** áp dụng governor và rate limit an toàn: tối đa 5 comments / phút / tài khoản để bảo vệ ví khỏi bị shadowban
 * **And** gửi `POST https://frontend-api-v3.pump.fun/replies` với payload `{ mint, text, ... }`
 * **And** trả về kết quả comment đã đăng thành công kèm `commentId` và timestamp được xác nhận từ server
+
+---
+
+### Story 20.8: pumpfun-dashboard-frontend (Dashboard Page, Platform Grid & Navigation Integration)
+
+As a **Dashboard User / Meme-Coin Intel Analyst**,
+I want **một trang dashboard `/pumpfun` với 4 chế độ (Mint Intelligence, Platform Feed, Live Chat Monitor, Account Tools) cùng pump.fun xuất hiện trên platform grid và navigation**,
+So that **tôi có thể chạy mọi action pump.fun (fetch_mint_social, fetch_platform_feed, stream_mint_chat, fetch_my_profile, resolve_user_wallet, post_mint_reply) từ UI trong ≤3 click mà không cần chạy lệnh `scrape()` thủ công qua CLI/MCP**.
+
+**UX Source:** `_bmad-output/planning-artifacts/ux-designs/ux-pumpfun-frontend-2026-09-25/DESIGN.md` + wireframes.
+
+**Phạm vi & Vị trí:**
+- Mới: `apps/web/app/pumpfun/page.tsx` (~450 LOC, client component, 4 tabs)
+- Sửa: `apps/web/lib/nav.ts` (+1 NavItem trong group `intelligence` sau `Facebook`)
+- Sửa: `apps/web/app/platform/page.tsx` (+1 entry `PLATFORMS` seed)
+- Sửa: `api/routes/platforms.js` (+1 entry `PLATFORM_META`)
+- Sửa: `_bmad-output/planning-artifacts/ux/DESIGN.md` (+token `accent-pumpfun: "#83F3C0"`)
+- Mới: `dashboard/docs/pumpfun-auth.html` (hướng dẫn kết nối session Browser Bridge)
+- Backend: **tái sử dụng nguyên trạng** route `POST /api/platform/pumpfun/scrape` + `POST /api/platform/pumpfun/automate` (descriptor `pumpfun` đã dispatch trong `src/scrapers/index.js`). Không tạo route mới.
+
+**Acceptance Criteria:**
+
+* **Given** nav config `apps/web/lib/nav.ts` (`NAV_GROUPS`)
+* **When** dev thêm item `{ label: 'Pump.fun', href: '/pumpfun', keywords: ['meme','solana','livestream','crypto','mint'] }` vào group `intelligence` ngay sau `Facebook`
+* **Then** sidebar hiển thị "Pump.fun" trong Intelligence group, breadcrumb `Intelligence / Pump.fun` render đúng qua `groupForPath`/`itemForPath`, và ⌘K palette tìm được bằng từ khóa `pump`, `meme`, `solana`, `livestream`, `crypto`, `mint`
+
+* **Given** `api/routes/platforms.js` PLATFORM_META
+* **When** thêm `{ id: 'pumpfun', name: 'Pump.fun', icon: '🎰', features: ['Scraping','Livestreams','Chat Stream','Auth'] }`
+* **Then** `GET /api/platforms` trả `status: 'supported'` cho pumpfun (vì `platforms` registry có descriptor) và card 🎰 xuất hiện trên `/platform` grid cùng seed entry tương ứng
+
+* **Given** route `/pumpfun` (`apps/web/app/pumpfun/page.tsx`)
+* **When** người dùng mở URL `/pumpfun?tab=mint|feed|live|account` (default `mint`)
+* **Then** render shell chung: icon 🎰 + tiêu đề "Pump.fun Intelligence", auth status banner, pill tabs giữ state qua URL param (`useSearchParams`), deep-link `?tab=mint&mint=<addr>` auto-prefill + auto-fetch
+
+* **When** tab Mint — người dùng nhập mint address và bấm Fetch
+* **Then** gọi `POST /api/platform/pumpfun/scrape` body `{ action: 'fetch_mint_social', mintAddress }`
+* **And** render 3 vùng: coin header card (name/symbol/image/creator ⧉copy/marketCapUsd+marketCapSol/athMarketCap/isLive badge/replyCount), social links chips (twitter/telegram/website external-link), replies table top-20 (username, wallet truncated ⧉copy, text, timestamp)
+* **And** nút Fetch disabled khi input rỗng hoặc <32 chars; skeleton loading 3 hàng khi đang fetch
+
+* **When** tab Feed — chọn feedType (`latest`/`live`/`graduating`/`marketcap`/`new`) + limit + Go
+* **Then** gọi `fetch_platform_feed` và render coin card grid (3 cột desktop / 1 cột mobile): image, name, $SYMBOL, marketCapUsd, replyCount, `🔴 LIVE` + viewers khi `isLive`
+* **And** nút "View→" trên card điều hướng `/pumpfun?tab=mint&mint=<mint>` auto-fetch
+* **And** "Load more" append trang tiếp (`offset += limit`)
+
+* **When** tab Live Chat — nhập mint, chọn duration (15s/30s/60s/120s), Start
+* **Then** gọi `stream_mint_chat` với `{ mintAddress, durationMs }`, hiển thị progress countdown "Collecting for Xs…" (Phương án A — batch, KHÔNG SSE), khi resolve render bảng tin `messages[]` (timestamp, username, text) có auto-scroll, cap 200 tin buffered
+* **And** nút Stop gọi `AbortController.abort()` hủy request (backend đã forward `signal` từ Story 20.6)
+* **And** `Export JSON`/`Export CSV` download `result.messages` qua client-side Blob
+* **And** `XACT_4291` (5-stream cap) hiển thị banner "Stream limit reached — wait for an active stream to finish"
+
+* **When** trang load hoặc chuyển tab Account — kiểm tra auth state
+* **Then** gọi `fetch_my_profile` qua `/api/platform/pumpfun/scrape`; `XACT_4010` → hiển thị banner ⚠ "No pump.fun session" + nút "How to connect" mở modal hướng dẫn Browser Bridge (link `/docs/pumpfun-auth.html`); 200 → banner ✅ "Connected as <username> (<wallet trunc>)" + render My Profile card
+* **And** tab Account khi unauth: disable inputs auth-gated (My Profile, Following, Post Reply, Clips) — các tab public (Mint/Feed/Live Chat) vẫn dùng được
+
+* **When** tab Account — các sub-tools auth-gated
+* **Then** "Following list" gọi `fetch_user_following` (userId default từ profile) render table username+wallet; "Username→Wallet" gọi `resolve_user_wallet` trả ví ⧉copy; "Livestream Clips" gọi `fetch_livestream_clips` render clip cards có nút "Open ↗"
+* **And** "Post Reply" gọi `POST /api/platform/pumpfun/automate` (KHÔNG `/scrape`) với `{ action: 'post_mint_reply', mintAddress, text, replyToId?, mediaUrl? }`, bắt buộc confirm modal "This posts as <username> on pump.fun" + warning card "⚠ 5 comments/min", success → toast + link `pump.fun/coin/{mint}`
+
+* **When** error mapping global trên mọi tab
+* **Then** `XACT_4004`→amber "Mint not found", `XACT_4010`→đỏ "Auth required/expired"+link Account tab, `XACT_4029`/429→amber "Rate limited" + retry countdown, `XACT_4291`→amber stream-cap, `XACT_5000/5001`→đỏ "pump.fun API/network error" + raw message collapse; empty states có icon + "Nothing here yet" copy
+
+* **When** triển khai hoàn tất
+* **Then** không thêm dependency mới (không `@solana/web3.js`, không wallet adapter — đúng ADR `docs/architecture/adr-pumpfun-auth-and-dependencies.md`), tuân thủ DESIGN tokens hiện có + `accent-pumpfun`, mobile responsive (coin grid 1 cột, tabs scrollable ngang)
+* **And** `docs`/`dashboard/docs/pumpfun-auth.html` mô tả quy trình "xactions pumpfun auth" / Browser Bridge để người dùng tự cấp session
+
 ---
 
 > **External Milestones** (tracked ở Nowing repo, KHÔNG block Epic 20):
