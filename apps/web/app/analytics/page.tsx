@@ -72,9 +72,11 @@ export default function AnalyticsPage() {
   const fetchAnalytics = async () => {
     setIsLoading(true);
     try {
-      const res = await api<{ metrics?: MetricCard[]; weekly?: ChartPoint[] }>('GET', '/api/analytics/overview');
+      const res = await api<{ metrics?: Array<Omit<MetricCard, 'icon'>>; weekly?: ChartPoint[] }>('GET', '/api/analytics/overview');
       if (res.ok && res.data?.metrics) {
-        setMetrics(res.data.metrics);
+        // Merge icon from seeded map by label (icons are ReactNode, can't cross JSON)
+        const iconByLabel = new Map(SEEDED_METRICS.map((m) => [m.label, m.icon]));
+        setMetrics(res.data.metrics.map((m) => ({ ...m, icon: iconByLabel.get(m.label) ?? m.icon })));
         if (res.data.weekly) setWeekly(res.data.weekly);
       }
     } catch {

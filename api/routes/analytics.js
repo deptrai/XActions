@@ -15,6 +15,7 @@
  */
 
 import express from 'express';
+import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import {
   analyzeSentiment,
@@ -34,6 +35,79 @@ const router = express.Router();
 
 // Require authentication for all analytics routes
 router.use(authenticate);
+
+// ============================================================================
+// Overview — real aggregated metrics for the Analytics dashboard panel
+// ============================================================================
+
+/**
+ * GET /api/analytics/overview
+ * Returns { metrics: [{label,value,change,positive}], weekly: [{label,value}] }
+ * computed from real DB state (operations + follower snapshots). No mocks.
+ */
+router.get('/overview', async (req, res) => {
+  try {
+    const userId = /** @type {import('@prisma/client').User} */ (req.user).id;
+
+    // Latest follower snapshot for the user (totalCount + prior snapshot for delta)
+    const snapshots = await prisma.followerSnapshot.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 2,
+    });
+    const latestFollowers = snapshots[0]?.totalCount ?? 0;
+    const prevFollowers = snapshots[1]?.totalCount ?? latestFollowers;
+    const followerDelta = prevFollowers > 0
+      ? ((latestFollowers - prevFollowers) / prevFollowers) * 100
+      : 0;
+
+    // Operation aggregates
+    const totalOps = await prisma.operation.count({ where: { userId } });
+    const completedOps = await prisma.operation.count({ where: { userId, status: 'completed' } });
+    const creditsUsed = await prisma.operation.aggregate({
+      where: { userId },
+      _sum: { creditsUsed: true },
+    });
+    const unfollowed = await prisma.operation.aggregate({
+      where: { userId },
+      _sum: { unfollowedCount: true },
+    });
+    const followed = await prisma.operation.aggregate({
+      where: { userId },
+      _sum: { followedCount: true },
+    });
+
+    const fmt = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
+    const pct = (n) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
+
+    const metrics = [
+      { label: 'Total Followers', value: fmt(latestFollowers), change: pct(followerDelta), positive: followerDelta >= 0 },
+      { label: 'Operations Run', value: fmt(totalOps), change: `${completedOps} completed`, positive: true },
+      { label: 'Credits Used', value: fmt(creditsUsed._sum.creditsUsed ?? 0), change: 'lifetime', positive: true },
+      { label: 'Unfollowed', value: fmt(unfollowed._sum.unfollowedCount ?? 0), change: 'all-time', positive: true },
+      { label: 'Followed', value: fmt(followed._sum.followedCount ?? 0), change: 'all-time', positive: true },
+      { label: 'Profile Visits', value: fmt(latestFollowers), change: pct(followerDelta), positive: followerDelta >= 0 },
+    ];
+
+    // Weekly engagement proxy: operations completed per weekday over last 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
+    const recentOps = await prisma.operation.findMany({
+      where: { userId, createdAt: { gte: sevenDaysAgo } },
+      select: { createdAt: true },
+    });
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const weeklyMap = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+    for (const op of recentOps) {
+      const d = dayNames[new Date(op.createdAt).getDay()];
+      weeklyMap[d] = (weeklyMap[d] || 0) + 1;
+    }
+    const weekly = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => ({ label: d, value: weeklyMap[d] }));
+
+    res.json({ success: true, metrics, weekly });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err instanceof Error ? err.message : String(err)) });
+  }
+});
 
 // ============================================================================
 // Sentiment Analysis
