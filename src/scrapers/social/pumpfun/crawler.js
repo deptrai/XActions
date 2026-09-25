@@ -18,6 +18,8 @@ import {
   namespacedPumpfunId,
   extractTheses,
   extractTopHolders,
+  normalizeCoinMeta,
+  normalizeFeedItem,
 } from './normalizer.js';
 import { normalizePumpfunReplies } from './comments.js';
 import {
@@ -123,6 +125,45 @@ export class PumpFunCrawler extends AbstractCrawler {
       handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) =>
         this.fetchMintSocial(args, session),
     });
+
+    // ── Action: resolve_user_wallet ──
+    this.registerAction({
+      action: 'resolve_user_wallet',
+      description: 'Resolve a pump.fun username to a Solana wallet address and pump user status',
+      category: 'social',
+      requiresAuth: false,
+      requiredArgs: ['username'],
+      optionalArgs: [],
+      outputType: '{ username, walletAddress, userId, isPumpUser, profileImage, followers, following }',
+      example: { username: 'alice' },
+      handler: (args, session) => this.resolveUserWallet(args, session),
+    });
+
+    // ── Action: fetch_platform_feed ──
+    this.registerAction({
+      action: 'fetch_platform_feed',
+      description: 'Fetch global discovery feeds across pump.fun coins (koth, graduating, new_creations, last_trade, currently_live)',
+      category: 'social',
+      requiresAuth: false,
+      requiredArgs: [],
+      optionalArgs: ['feedType', 'limit', 'offset', 'includeNsfw'],
+      outputType: 'PumpFunFeedItem[]',
+      example: { feedType: 'koth', limit: 20 },
+      handler: (args, session) => this.fetchPlatformFeed(args, session),
+    });
+
+    // ── Action: stream_mint_chat ──
+    this.registerAction({
+      action: 'stream_mint_chat',
+      description: 'Stream realtime livechat messages from wss://livechat.pump.fun for a given mint address',
+      category: 'social',
+      requiresAuth: false,
+      requiredArgs: ['mintAddress'],
+      optionalArgs: ['mint', 'durationMs', 'onMessage', 'onReaction'],
+      outputType: '{ messageCount, durationMs }',
+      example: { mintAddress: '5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump', durationMs: 15000 },
+      handler: (args, session) => this.streamMintChat(args, session),
+    });
   }
 
   /**
@@ -157,16 +198,28 @@ export class PumpFunCrawler extends AbstractCrawler {
       const replyLimit = Number.isFinite(args?.limit) ? Number(args.limit) : undefined;
       if (replyLimit) reqOpts.limit = replyLimit;
 
-      const [positionsRes, repliesRes] = await Promise.allSettled([
+      const [positionsRes, repliesRes, coinRes] = await Promise.allSettled([
         this.client.getMintPositions(mint, reqOpts),
         this.client.getReplies(mint, reqOpts),
+        this.client.getCoin(mint, reqOpts),
       ]);
 
-      // mint-positions 404 → mint not found is a hard error.
+      // mint-positions or coins 404 → mint not found is a hard error.
       if (positionsRes.status === 'rejected') {
         throw positionsRes.reason;
       }
+      if (coinRes.status === 'rejected') {
+        // If coin endpoint returned 404 or rate limit, propagate immediately
+        if (coinRes.reason?.statusCode === 404 || coinRes.reason?.code === 'XACT_4004') {
+          throw coinRes.reason;
+        }
+        if (coinRes.reason?.statusCode === 429 || coinRes.reason?.code === 'XACT_4029') {
+          throw coinRes.reason;
+        }
+      }
       const positions = positionsRes.value?.positions || [];
+      const coinRaw = coinRes.status === 'fulfilled' ? coinRes.value : null;
+      const coinMeta = coinRaw ? normalizeCoinMeta(coinRaw) : null;
 
       // replies: REST 404 → livechat fallback already applied inside
       // client.getReplies; a rejection here means livechat also failed.
@@ -202,6 +255,7 @@ export class PumpFunCrawler extends AbstractCrawler {
         mint,
         id: namespacedPumpfunId(mint),
         platform: this.platform,
+        coinMeta,
         theses,
         comments,
         commentVelocity,
@@ -223,6 +277,142 @@ export class PumpFunCrawler extends AbstractCrawler {
       return new Set(map.keys());
     } catch {
       return new Set();
+    }
+  }
+
+  /**
+   * Resolve a pump.fun username to public wallet address and user profile info.
+   * @param {Record<string, unknown>} args
+   * @param {Record<string, unknown>} [session]
+   * @returns {Promise<Record<string, unknown> | null>}
+   */
+  async resolveUserWallet(args, session = {}) {
+    const username = typeof args?.username === 'string' ? args.username.trim() : '';
+    if (!username) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4002',
+        message: 'Parameter "username" is required for resolve_user_wallet',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: this.platform,
+      });
+    }
+    const raw = await this.client.getUser(username, { session });
+    if (!raw) return null;
+    return {
+      username: raw.username || username,
+      walletAddress: raw.address || null,
+      userId: raw.userId || null,
+      isPumpUser: Boolean(raw.is_pump_user),
+      profileImage: raw.profile_image || null,
+      followers: Number(raw.followers) || 0,
+      following: Number(raw.following) || 0,
+    };
+  }
+
+  /**
+   * Fetch discovery feeds across pump.fun coins.
+   * @param {Record<string, unknown>} [args]
+   * @param {Record<string, unknown>} [session]
+   * @returns {Promise<Array<Record<string, unknown>>>}
+   */
+  async fetchPlatformFeed(args = {}, session = {}) {
+    const a = args || {};
+    const feedType = String(a.feedType || 'last_trade').toLowerCase();
+    const limit = Number.isFinite(a.limit) ? Number(a.limit) : 50;
+    const offset = Number.isFinite(a.offset) ? Number(a.offset) : 0;
+    const includeNsfw = Boolean(a.includeNsfw);
+
+    if (feedType === 'currently_live') {
+      const list = await this.client.getCurrentlyLive({ session });
+      return (Array.isArray(list) ? list : []).slice(offset, offset + limit).map(normalizeFeedItem);
+    }
+
+    const sortMap = {
+      koth: { sort: 'market_cap', order: 'DESC' },
+      graduating: { sort: 'market_cap', order: 'DESC' },
+      new_creations: { sort: 'created_timestamp', order: 'DESC' },
+      last_trade: { sort: 'last_trade_timestamp', order: 'DESC' },
+    };
+    const params = {
+      limit,
+      offset,
+      includeNsfw,
+      ...(sortMap[feedType] || { sort: 'last_trade_timestamp', order: 'DESC' }),
+    };
+
+    const rawCoins = await this.client.getCoinsFeed(params, { session });
+    let items = (Array.isArray(rawCoins) ? rawCoins : []).map(normalizeFeedItem);
+
+    if (feedType === 'graduating') {
+      // Filter coins that are incomplete and close to graduation threshold
+      items = items.filter((c) => !c.complete && c.marketCapUsd >= 30_000);
+    }
+
+    return items;
+  }
+
+  /** @type {number} Active stream connections counter */
+  #activeStreams = 0;
+
+  /**
+   * Stream livechat messages for a coin room over a bounded duration.
+   * Enforces a ceiling of 5 concurrent stream connections per crawler instance.
+   *
+   * @param {Record<string, unknown>} args
+   * @param {Record<string, unknown>} [session]
+   * @returns {Promise<{ messageCount: number, durationMs: number }>}
+   */
+  async streamMintChat(args, session = {}) {
+    if (this.#activeStreams >= 5) {
+      throw new PlatformError({
+        type: ErrorTypes.RATE_LIMIT,
+        code: 'XACT_4291',
+        message: 'Maximum concurrent stream connections (5) exceeded on PumpFunCrawler',
+        statusCode: 429,
+        suggestedAction: SuggestedActions.WAIT,
+        platform: this.platform,
+      });
+    }
+
+    const a = args || {};
+    const mint = this.#resolveMint(a);
+    const durationMs = Number.isFinite(a.durationMs) ? Number(a.durationMs) : 30_000;
+    const onMessage = typeof a.onMessage === 'function' ? a.onMessage : undefined;
+    const onReaction = typeof a.onReaction === 'function' ? a.onReaction : undefined;
+    const signal = a.signal || session?.signal;
+
+    // Use dedicated stream instance if available on client, else create one
+    let lc = this.client.livechat;
+    if (!lc || typeof lc.subscribeRoom !== 'function') {
+      const { PumpFunLivechat } = await import('./livechat.js');
+      lc = new PumpFunLivechat({
+        timeoutMs: 10_000,
+        webSocketImpl: this.client.livechat?._WSImpl,
+      });
+    }
+
+    this.#activeStreams++;
+    try {
+      return await lc.subscribeRoom(mint, {
+        durationMs,
+        signal,
+        onMessage: (msg) => {
+          onMessage?.(msg);
+          // Forward to RedisStreamPublisher if configured
+          if (this.redisPublisher && typeof this.redisPublisher.publish === 'function') {
+            void this.redisPublisher.publish('stream:social:pumpfun:chat', {
+              mint,
+              message: msg,
+              timestamp: Date.now(),
+            }).catch(() => {});
+          }
+        },
+        onReaction,
+      });
+    } finally {
+      this.#activeStreams = Math.max(0, this.#activeStreams - 1);
     }
   }
 

@@ -391,6 +391,135 @@ export class PumpFunClient extends AbstractApiClient {
   }
 
   /**
+   * Fetch full coin metadata: social links, market cap, creator, bonding curve.
+   * Cached in-memory for 60s to prevent rate-limit exhaustion.
+   * @param {string} mintAddress
+   * @param {Record<string, unknown>} [options]
+   * @returns {Promise<Record<string, unknown>>}
+   */
+  async getCoin(mintAddress, options = {}) {
+    const mint = this.assertValidMint(mintAddress);
+    const cacheKey = `coin:${mint}`;
+    const cached = this.#cacheGet(cacheKey);
+    if (cached) return cached;
+
+    const url = `${this.baseUrl}/coins/${encodeURIComponent(mint)}`;
+    const { status, data } = await this.#apiGet(url, options);
+    if (status === 404) {
+      throw new PlatformError({
+        type: ErrorTypes.NOT_FOUND,
+        code: 'XACT_4004',
+        message: `Coin with mint "${mint}" not found on pump.fun`,
+        statusCode: 404,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        platform: this.platform,
+      });
+    }
+    if (status !== 200) {
+      throw new PlatformError({
+        type: ErrorTypes.INTERNAL,
+        code: 'XACT_5000',
+        message: `pump.fun coins returned status ${status}`,
+        statusCode: status,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: this.platform,
+      });
+    }
+    const result = data && typeof data === 'object' ? data : {};
+    this.#cacheSet(cacheKey, result, 60_000);
+    return result;
+  }
+
+  /**
+   * Resolve public user profile by username: wallet address, userId, is_pump_user.
+   * Cached in-memory for 5 minutes.
+   * @param {string} username
+   * @param {Record<string, unknown>} [options]
+   * @returns {Promise<Record<string, unknown> | null>}
+   */
+  async getUser(username, options = {}) {
+    let cleanUser = typeof username === 'string' ? username.trim() : '';
+    if (cleanUser.startsWith('@')) cleanUser = cleanUser.slice(1).trim();
+    if (!cleanUser) return null;
+
+    const cacheKey = `user:${cleanUser.toLowerCase()}`;
+    const cached = this.#cacheGet(cacheKey);
+    if (cached !== undefined) return cached;
+
+    const url = `${this.baseUrl}/users/${encodeURIComponent(cleanUser)}`;
+    try {
+      const { status, data } = await this.#apiGet(url, options);
+      if (status === 404) {
+        this.#cacheSet(cacheKey, null, 300_000);
+        return null;
+      }
+      if (status !== 200) return null;
+      const result = data && typeof data === 'object' ? data : null;
+      this.#cacheSet(cacheKey, result, 300_000);
+      return result;
+    } catch (err) {
+      if (err && (err.code === 'XACT_4029' || err instanceof RateLimitError)) throw err;
+      return null;
+    }
+  }
+
+  /**
+   * Fetch discovery feeds across pump.fun coins.
+   * @param {object} [params]
+   * @param {number} [params.offset=0]
+   * @param {number} [params.limit=50]
+   * @param {string} [params.sort='last_trade_timestamp'] - created_timestamp | last_trade_timestamp | market_cap
+   * @param {string} [params.order='DESC'] - ASC | DESC
+   * @param {boolean} [params.includeNsfw=false]
+   * @param {Record<string, unknown>} [options]
+   * @returns {Promise<any[]>}
+   */
+  async getCoinsFeed(params = {}, options = {}) {
+    const q = new URLSearchParams();
+    q.set('offset', String(params.offset || 0));
+    q.set('limit', String(params.limit || 50));
+    q.set('sort', params.sort || 'last_trade_timestamp');
+    q.set('order', params.order || 'DESC');
+    q.set('includeNsfw', params.includeNsfw ? 'true' : 'false');
+
+    const url = `${this.baseUrl}/coins?${q.toString()}`;
+    const { status, data } = await this.#apiGet(url, options);
+    if (status !== 200 && status !== 0) {
+      throw new PlatformError({
+        type: ErrorTypes.INTERNAL,
+        code: 'XACT_5000',
+        message: `pump.fun coins feed returned status ${status}`,
+        statusCode: status,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: this.platform,
+      });
+    }
+    return Array.isArray(data) ? data : [];
+  }
+
+  /** @type {Map<string, { value: any, expiresAt: number }>} */
+  #ttlCache = new Map();
+
+  #cacheGet(key) {
+    const entry = this.#ttlCache.get(key);
+    if (!entry) return undefined;
+    if (Date.now() > entry.expiresAt) {
+      this.#ttlCache.delete(key);
+      return undefined;
+    }
+    return entry.value;
+  }
+
+  #cacheSet(key, value, ttlMs) {
+    // Keep cache bounded to 500 items max
+    if (this.#ttlCache.size >= 500) {
+      const oldestKey = this.#ttlCache.keys().next().value;
+      if (oldestKey) this.#ttlCache.delete(oldestKey);
+    }
+    this.#ttlCache.set(key, { value, expiresAt: Date.now() + ttlMs });
+  }
+
+  /**
    * In-flight deduplication: concurrent callers for the same mint within
    * `dedupWindowMs` share one upstream Promise.
    * @template T

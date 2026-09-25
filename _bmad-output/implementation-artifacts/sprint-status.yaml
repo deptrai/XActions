@@ -145,7 +145,7 @@ development_status:
   20-1-multi-consumer-service-contract-x-scrape-x-actions: done
   20-2-universal-stream-publish-hook-snake-case-thin-event: done
   20-5-pumpfun-native-social-crawler: done
-  20-6-pumpfun-full-social-intelligence: ready-for-dev
+  20-6-pumpfun-full-social-intelligence: done
   20-7-pumpfun-authenticated-live-media: ready-for-dev
   epic-20-retrospective: optional
 

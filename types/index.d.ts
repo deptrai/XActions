@@ -1023,11 +1023,72 @@ export interface PumpFunComment {
   raw?: Record<string, unknown>;
 }
 
+/** Full coin metadata from GET /coins/{mint}. */
+export interface PumpFunCoinMeta {
+  mint: string | null;
+  name: string | null;
+  symbol: string | null;
+  description: string;
+  imageUri: string | null;
+  metadataUri: string | null;
+  socialLinks: {
+    twitter: string | null;
+    telegram: string | null;
+    website: string | null;
+  };
+  creator: string | null;
+  createdTimestamp: number | null;
+  bondingCurve: string | null;
+  associatedBondingCurve: string | null;
+  marketCapUsd: number;
+  replyCount: number;
+  lastTradeTimestamp: number | null;
+  isCurrentlyLive: boolean;
+  videoUri: string | null;
+  complete: boolean;
+  raydiumPool: string | null;
+  athMarketCap: number | null;
+}
+
+/** Normalized coin item in platform discovery feeds. */
+export interface PumpFunFeedItem {
+  mint: string | null;
+  name: string | null;
+  symbol: string | null;
+  description: string;
+  imageUri: string | null;
+  marketCapUsd: number;
+  replyCount: number;
+  creator: string | null;
+  createdTimestamp: number | null;
+  lastTradeTimestamp: number | null;
+  isCurrentlyLive: boolean;
+  complete: boolean;
+  bondingCurve: string | null;
+  socialLinks: {
+    twitter: string | null;
+    telegram: string | null;
+    website: string | null;
+  };
+}
+
+/** Public user profile resolved from GET /users/{username}. */
+export interface PumpFunResolvedUser {
+  username: string;
+  walletAddress: string | null;
+  userId: string | null;
+  isPumpUser: boolean;
+  profileImage: string | null;
+  followers: number;
+  following: number;
+}
+
 /** Aggregate result of `fetch_mint_social`. */
 export interface PumpFunMintSocialResult {
   mint: string;
   id: string;
   platform: string;
+  coinMeta?: PumpFunCoinMeta | null;
   theses: PumpFunThesis[];
   comments: PumpFunComment[];
   commentVelocity: PumpFunCommentVelocity;
@@ -1050,17 +1111,36 @@ export declare class PumpFunClient {
   getMintPositions(mintAddress: string, options?: Record<string, unknown>): Promise<{ positions: unknown[]; totalCount: number; hasMore: boolean }>;
   getReplies(mintAddress: string, options?: Record<string, unknown>): Promise<unknown[]>;
   getCurrentlyLive(options?: Record<string, unknown>): Promise<unknown[]>;
+  getCoin(mintAddress: string, options?: Record<string, unknown>): Promise<Record<string, unknown>>;
+  getUser(username: string, options?: Record<string, unknown>): Promise<Record<string, unknown> | null>;
+  getCoinsFeed(params?: Record<string, unknown>, options?: Record<string, unknown>): Promise<unknown[]>;
   dedup<T>(mint: string, fn: () => Promise<T>): Promise<T>;
 }
 
-/** PumpFun crawler — registers `fetch_mint_social`. */
+/** PumpFun crawler — registers `fetch_mint_social`, `resolve_user_wallet`, `fetch_platform_feed`, `stream_mint_chat`. */
 export declare class PumpFunCrawler {
   client: PumpFunClient;
   constructor(deps?: Record<string, unknown>);
   start(command: { action: string; args?: Record<string, unknown>; session?: Record<string, unknown> }): Promise<unknown>;
   fetchMintSocial(args: Record<string, unknown>, session?: Record<string, unknown>): Promise<PumpFunMintSocialResult>;
+  resolveUserWallet(args: Record<string, unknown>, session?: Record<string, unknown>): Promise<PumpFunResolvedUser | null>;
+  fetchPlatformFeed(args?: Record<string, unknown>, session?: Record<string, unknown>): Promise<PumpFunFeedItem[]>;
+  streamMintChat(args: Record<string, unknown>, session?: Record<string, unknown>): Promise<{ messageCount: number; durationMs: number }>;
   cleanup(): Promise<void>;
   listActions(): Array<{ action: string; [key: string]: unknown }>;
+}
+
+/** PumpFun Socket.IO livechat client. */
+export declare class PumpFunLivechat {
+  url: string;
+  timeoutMs: number;
+  constructor(options?: Record<string, unknown>);
+  connect(): Promise<void>;
+  joinRoom(mint: string, username?: string): Promise<Record<string, unknown> | null>;
+  getMessageHistory(mint: string, options?: { before?: number; limit?: number }): Promise<{ messages: unknown[]; nextCursor: unknown }>;
+  subscribeRoom(mint: string, options?: { onMessage?: (msg: unknown) => void; onReaction?: (reaction: unknown) => void; durationMs?: number; signal?: AbortSignal }): Promise<{ messageCount: number; durationMs: number }>;
+  onEvent(fn: (event: string, data: unknown) => void): void;
+  close(): Promise<void>;
 }
 
 export declare function createPumpFunClient(options?: Record<string, unknown>): PumpFunClient;

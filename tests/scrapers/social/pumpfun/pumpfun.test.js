@@ -46,6 +46,37 @@ const POSITION_NO_THESIS = {
   pnlPercentage: 2,
 };
 
+const COIN_META_FIXTURE = {
+  mint: VALID_MINT,
+  name: 'Foxtilki',
+  symbol: 'FOXTILKI',
+  description: 'Fox meme on Solana',
+  image_uri: 'https://ipfs.io/ipfs/bafkrei...',
+  metadata_uri: 'https://ipfs.io/ipfs/bafkreicdj...',
+  twitter: 'https://x.com/foxtilki',
+  telegram: 'https://t.me/foxtilki',
+  website: 'https://foxtilki.com',
+  bonding_curve: 'AXiRFmUiojawfUJisJcedzXDyDEeZ57BURbncYvNetQo',
+  associated_bonding_curve: 'GUK7feUv1o2saQESQe9stQ6Z6WNNafhtnP517wfoTXuX',
+  creator: '2Fez68NcinnEh17ts9o6i2c3PPZWLu3zR85Bwy1UUbgc',
+  created_timestamp: 1758013154278,
+  complete: false,
+  market_cap: 485.3,
+  market_cap_usd: 57703.2,
+  reply_count: 2029,
+  is_currently_live: true,
+};
+
+const USER_FIXTURE = {
+  address: '2Fez68NcinnEh17ts9o6i2c3PPZWLu3zR85Bwy1UUbgc',
+  userId: 'u_dev123',
+  username: 'foxtilki_dev',
+  is_pump_user: true,
+  profile_image: 'https://socialimages.pump.fun/dev.webp',
+  followers: 42,
+  following: 10,
+};
+
 function makeClient(overrides = {}) {
   const client = new PumpFunClient({});
   // Inject a fake request transport — feeds fixed payloads, no real network.
@@ -59,12 +90,26 @@ function makeClient(overrides = {}) {
     if (url.includes('/coins/currently-live')) {
       return { status: 200, headers: {}, data: [{ mint: VALID_MINT, viewers: 12, roomId: 'r1' }] };
     }
+    if (url.match(/\/coins\/[1-9A-HJ-NP-Za-km-z]+/)) {
+      return { status: 200, headers: {}, data: COIN_META_FIXTURE };
+    }
+    if (url.includes('/users/')) {
+      return { status: 200, headers: {}, data: USER_FIXTURE };
+    }
+    if (url.includes('/coins?')) {
+      return { status: 200, headers: {}, data: [COIN_META_FIXTURE] };
+    }
     return { status: 404, headers: {}, data: {} };
   });
   // Inject a fake livechat — no real wss://livechat.pump.fun connection in tests.
   client.livechat = {
     getMessageHistory: vi.fn(async () => ({ messages: [], nextCursor: null })),
     joinRoom: vi.fn(async () => ({})),
+    subscribeRoom: vi.fn(async (mint, opts) => {
+      opts.onMessage?.({ id: 'msg1', text: 'hi from stream' });
+      opts.onReaction?.({ emoji: '🔥' });
+      return { messageCount: 1, durationMs: 100 };
+    }),
     close: vi.fn(async () => {}),
   };
   Object.assign(client, overrides);
@@ -227,13 +272,105 @@ describe('LivestreamPoller (0ms in-memory lookup)', () => {
 });
 
 describe('scrape() dispatcher integration', () => {
-  it('lists fetch_mint_social via listActions', async () => {
+  it('lists all registered pumpfun actions via listActions', async () => {
     const crawler = makeCrawler();
     const actions = crawler.listActions();
-    expect(actions.map((a) => a.action)).toContain('fetch_mint_social');
-    const desc = actions.find((a) => a.action === 'fetch_mint_social');
-    expect(desc.category).toBe('social');
-    expect(desc.requiredArgs).toContain('mintAddress');
+    const actionNames = actions.map((a) => a.action);
+    expect(actionNames).toContain('fetch_mint_social');
+    expect(actionNames).toContain('resolve_user_wallet');
+    expect(actionNames).toContain('fetch_platform_feed');
+    expect(actionNames).toContain('stream_mint_chat');
+    await crawler.cleanup();
+  });
+});
+
+describe('Story 20.6: Full Social Intelligence (coinMeta enrichment)', () => {
+  it('enriches fetchMintSocial with coinMeta (socialLinks, creator, marketCapUsd)', async () => {
+    const crawler = makeCrawler();
+    const r = await crawler.fetchMintSocial({ mintAddress: VALID_MINT });
+    expect(r.coinMeta).toBeTruthy();
+    expect(r.coinMeta.name).toBe('Foxtilki');
+    expect(r.coinMeta.creator).toBe('2Fez68NcinnEh17ts9o6i2c3PPZWLu3zR85Bwy1UUbgc');
+    expect(r.coinMeta.socialLinks).toEqual({
+      twitter: 'https://x.com/foxtilki',
+      telegram: 'https://t.me/foxtilki',
+      website: 'https://foxtilki.com',
+    });
+    expect(r.coinMeta.marketCapUsd).toBeCloseTo(57703.2);
+    expect(r.coinMeta.replyCount).toBe(2029);
+    await crawler.cleanup();
+  });
+
+  it('caches getCoin in-memory so repeated calls skip upstream request', async () => {
+    const client = makeClient();
+    const c1 = await client.getCoin(VALID_MINT);
+    const c2 = await client.getCoin(VALID_MINT);
+    expect(c1.name).toBe('Foxtilki');
+    expect(c2.name).toBe('Foxtilki');
+    // Only 1 upstream request should be made due to in-memory TTL cache
+    const coinCalls = client.request.mock.calls.filter(([, url]) => url.endsWith(`/coins/${VALID_MINT}`)).length;
+    expect(coinCalls).toBe(1);
+  });
+});
+
+describe('Story 20.6: resolve_user_wallet', () => {
+  it('resolves username to wallet address and user profile', async () => {
+    const crawler = makeCrawler();
+    const user = await crawler.resolveUserWallet({ username: 'foxtilki_dev' });
+    expect(user).toBeTruthy();
+    expect(user.username).toBe('foxtilki_dev');
+    expect(user.walletAddress).toBe('2Fez68NcinnEh17ts9o6i2c3PPZWLu3zR85Bwy1UUbgc');
+    expect(user.userId).toBe('u_dev123');
+    expect(user.isPumpUser).toBe(true);
+    expect(user.followers).toBe(42);
+    await crawler.cleanup();
+  });
+
+  it('throws XACT_4002 when username is empty', async () => {
+    const crawler = makeCrawler();
+    await expect(crawler.resolveUserWallet({ username: '' })).rejects.toMatchObject({ code: 'XACT_4002' });
+    await crawler.cleanup();
+  });
+});
+
+describe('Story 20.6: fetch_platform_feed', () => {
+  it('fetches and normalizes coins from platform feeds', async () => {
+    const crawler = makeCrawler();
+    const feed = await crawler.fetchPlatformFeed({ feedType: 'new_creations', limit: 10 });
+    expect(Array.isArray(feed)).toBe(true);
+    expect(feed).toHaveLength(1);
+    expect(feed[0].mint).toBe(VALID_MINT);
+    expect(feed[0].name).toBe('Foxtilki');
+    expect(feed[0].socialLinks.twitter).toBe('https://x.com/foxtilki');
+    await crawler.cleanup();
+  });
+
+  it('supports currently_live feedType from poller/live list', async () => {
+    const crawler = makeCrawler();
+    const feed = await crawler.fetchPlatformFeed({ feedType: 'currently_live' });
+    expect(Array.isArray(feed)).toBe(true);
+    expect(feed).toHaveLength(1);
+    expect(feed[0].mint).toBe(VALID_MINT);
+    await crawler.cleanup();
+  });
+});
+
+describe('Story 20.6: stream_mint_chat', () => {
+  it('subscribes to livechat events and invokes callbacks', async () => {
+    const crawler = makeCrawler();
+    const messages = [];
+    const reactions = [];
+    const result = await crawler.streamMintChat({
+      mintAddress: VALID_MINT,
+      durationMs: 100,
+      onMessage: (m) => messages.push(m),
+      onReaction: (r) => reactions.push(r),
+    });
+    expect(result.messageCount).toBe(1);
+    expect(messages).toHaveLength(1);
+    expect(messages[0].text).toBe('hi from stream');
+    expect(reactions).toHaveLength(1);
+    expect(reactions[0].emoji).toBe('🔥');
     await crawler.cleanup();
   });
 });

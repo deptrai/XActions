@@ -18,8 +18,8 @@ import { namespacedPumpfunId } from './normalizer.js';
 export function normalizePumpfunReply(raw, mint) {
   const r = raw && typeof raw === 'object' ? raw : {};
   const id = r.id || r.replyId || r.commentId || r._id || null;
-  const wallet = r.walletAddress || r.wallet || r.user || r.author || null;
-  const text = r.text || r.content || r.body || r.comment || '';
+  const wallet = r.walletAddress || r.wallet || r.userAddress || r.user || r.author || null;
+  const text = r.text || r.content || r.body || r.comment || r.message || '';
   const ts = r.timestamp || r.created_at || r.createdAt || r.created_timestamp || null;
   return {
     id: id != null ? namespacedPumpfunId(String(id)) : namespacedPumpfunId(`${mint}:${wallet ?? 'anon'}`),

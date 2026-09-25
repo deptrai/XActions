@@ -139,6 +139,64 @@ export class PumpFunLivechat {
    */
   onEvent(fn) { this._onEvent = fn; }
 
+  /**
+   * Subscribe to live events for a mint room over a bounded duration.
+   * Emits incoming messages to callbacks and automatically leaves the room and
+   * closes the socket when durationMs expires or abortSignal fires.
+   *
+   * @param {string} mint
+   * @param {object} [options]
+   * @param {(msg: any) => void} [options.onMessage]
+   * @param {(reaction: any) => void} [options.onReaction]
+   * @param {number} [options.durationMs=30000] - auto-disconnect safety cap (default 30s)
+   * @param {AbortSignal} [options.signal]
+   * @returns {Promise<{ messageCount: number, durationMs: number }>}
+   */
+  async subscribeRoom(mint, options = {}) {
+    const durationMs = Math.max(1000, Math.min(Number.isFinite(options.durationMs) ? options.durationMs : 30_000, 300_000));
+    let messageCount = 0;
+    let stopped = false;
+
+    await this.connect();
+    await this.joinRoom(mint);
+
+    const stop = async (resolve) => {
+      if (stopped) return;
+      stopped = true;
+      try {
+        await this.#emitWithAck('leaveRoom', { roomId: mint });
+      } catch {}
+      await this.close();
+      resolve({ messageCount, durationMs });
+    };
+
+    return new Promise((resolve) => {
+      // Check if already aborted
+      if (options.signal?.aborted) {
+        void stop(resolve);
+        return;
+      }
+
+      this.onEvent((event, data) => {
+        if (stopped) return;
+        if (event === 'newMessage' || event === 'message' || event === 'pinnedMessage') {
+          messageCount++;
+          options.onMessage?.(data);
+        } else if (event === 'addReaction' || event === 'removeReaction') {
+          options.onReaction?.(data);
+        }
+      });
+
+      const timer = setTimeout(() => void stop(resolve), durationMs);
+      if (options.signal) {
+        options.signal.addEventListener('abort', () => {
+          clearTimeout(timer);
+          void stop(resolve);
+        }, { once: true });
+      }
+    });
+  }
+
   /** Leave the room and close the socket. */
   async close() {
     try { this._ws?.close(); } catch { /* noop */ }

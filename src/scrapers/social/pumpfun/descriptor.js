@@ -17,6 +17,17 @@ const PUMPFUN_ACTION_MAP = {
   mint_social: 'fetch_mint_social',
   social: 'fetch_mint_social',
   mint: 'fetch_mint_social',
+  resolve_user_wallet: 'resolve_user_wallet',
+  user_wallet: 'resolve_user_wallet',
+  resolve_user: 'resolve_user_wallet',
+  user: 'resolve_user_wallet',
+  fetch_platform_feed: 'fetch_platform_feed',
+  platform_feed: 'fetch_platform_feed',
+  feed: 'fetch_platform_feed',
+  coins: 'fetch_platform_feed',
+  stream_mint_chat: 'stream_mint_chat',
+  stream_chat: 'stream_mint_chat',
+  chat_stream: 'stream_mint_chat',
 };
 
 export default {
@@ -40,6 +51,10 @@ export default {
       options.tokenAddress;
     if (mint != null) mappedArgs.mintAddress = String(mint);
     if (options.limit != null) mappedArgs.limit = Number(options.limit);
+    if (options.offset != null) mappedArgs.offset = Number(options.offset);
+    if (options.username || options.user) mappedArgs.username = String(options.username || options.user);
+    if (options.feedType || options.feed) mappedArgs.feedType = String(options.feedType || options.feed);
+    if (options.durationMs != null) mappedArgs.durationMs = Number(options.durationMs);
     return mappedArgs;
   },
 

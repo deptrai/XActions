@@ -122,4 +122,79 @@ export function extractTopHolders(positions, kolWallets) {
   return (Array.isArray(positions) ? positions : []).map((p) => normalizeHolder(p, kolWallets));
 }
 
-export default { namespacedPumpfunId, normalizeThesis, normalizeHolder, extractTheses, extractTopHolders };
+/**
+ * Normalize a raw coin payload from `GET /coins/{mint}` into canonical metadata.
+ * @param {Record<string, unknown>} raw
+ * @returns {Record<string, unknown>}
+ */
+export function normalizeCoinMeta(raw) {
+  const c = raw && typeof raw === 'object' ? raw : {};
+  return {
+    mint: c.mint ? String(c.mint) : null,
+    name: c.name || null,
+    symbol: c.symbol || null,
+    description: c.description || '',
+    imageUri: c.image_uri || c.imageUri || null,
+    metadataUri: c.metadata_uri || c.metadataUri || null,
+    socialLinks: {
+      twitter: c.twitter || null,
+      telegram: c.telegram || null,
+      website: c.website || null,
+    },
+    creator: c.creator ? String(c.creator) : null,
+    createdTimestamp: Number(c.created_timestamp) || null,
+    bondingCurve: c.bonding_curve || null,
+    associatedBondingCurve: c.associated_bonding_curve || null,
+    marketCapUsd: c.market_cap_usd != null ? Number(c.market_cap_usd) : (c.market_cap != null ? Number(c.market_cap) : 0),
+    marketCapSol: c.market_cap != null ? Number(c.market_cap) : null,
+    replyCount: Number(c.reply_count ?? c.replyCount ?? 0) || 0,
+    lastTradeTimestamp: Number(c.last_trade_timestamp) || null,
+    isCurrentlyLive: Boolean(c.is_currently_live),
+    videoUri: c.video_uri || null,
+    complete: Boolean(c.complete),
+    raydiumPool: c.raydium_pool || c.pump_swap_pool || null,
+    athMarketCap: Number(c.ath_market_cap) || null,
+  };
+}
+
+/**
+ * Normalize a coin item from platform feeds (explore, koth, graduating, new, live).
+ * @param {Record<string, unknown>} raw
+ * @returns {Record<string, unknown>}
+ */
+export function normalizeFeedItem(raw) {
+  const c = raw && typeof raw === 'object' ? raw : {};
+  const isLive = c.is_currently_live !== undefined ? Boolean(c.is_currently_live) : (c.viewers !== undefined || c.roomId !== undefined);
+  return {
+    mint: c.mint ? String(c.mint) : null,
+    name: c.name || null,
+    symbol: c.symbol || null,
+    description: c.description || '',
+    imageUri: c.image_uri || c.imageUri || null,
+    marketCapUsd: c.market_cap_usd != null ? Number(c.market_cap_usd) : (c.market_cap != null ? Number(c.market_cap) : 0),
+    replyCount: Number(c.reply_count ?? c.replyCount ?? 0) || 0,
+    creator: c.creator ? String(c.creator) : null,
+    createdTimestamp: Number(c.created_timestamp) || null,
+    lastTradeTimestamp: Number(c.last_trade_timestamp) || null,
+    isCurrentlyLive: isLive,
+    viewers: c.viewers != null ? Number(c.viewers) : undefined,
+    roomId: c.roomId || undefined,
+    complete: Boolean(c.complete),
+    bondingCurve: c.bonding_curve || null,
+    socialLinks: {
+      twitter: c.twitter || null,
+      telegram: c.telegram || null,
+      website: c.website || null,
+    },
+  };
+}
+
+export default {
+  namespacedPumpfunId,
+  normalizeThesis,
+  normalizeHolder,
+  extractTheses,
+  extractTopHolders,
+  normalizeCoinMeta,
+  normalizeFeedItem,
+};
