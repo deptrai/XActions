@@ -13,7 +13,7 @@ interface ProfileResult {
   followers?: number;
   verified?: boolean;
   profileUrl?: string;
-  confidence: number;
+  confidence?: number;
 }
 
 interface Cluster {
@@ -65,7 +65,19 @@ export default function OsintPage() {
         { body: { query: handle.trim(), queryType: platform === 'auto' ? 'auto' : 'username', platforms: platform === 'auto' ? undefined : [platform] } }
       );
       if (res.ok && res.data) {
-        setResults(Array.isArray(res.data.profiles) ? res.data.profiles : []);
+        // Backend returns ProfileItem {username,name,followersCount,...}; the UI
+        // expects {handle,displayName,followers}. Normalize so fields render.
+        const raw = Array.isArray(res.data.profiles) ? res.data.profiles : [];
+        setResults(raw.map((p: any) => ({
+          handle: p.handle ?? p.username ?? p.externalId ?? '',
+          displayName: p.displayName ?? p.name ?? p.authorName,
+          bio: p.bio,
+          followers: typeof p.followers === 'number' ? p.followers : p.followersCount,
+          verified: p.verified,
+          profileUrl: p.profileUrl,
+          platform: p.platform,
+          confidence: typeof p.confidence === 'number' ? p.confidence : undefined,
+        })));
         if (Array.isArray(res.data.clusters)) setClusters(res.data.clusters);
       } else {
         const msg = !res.ok && 'error' in res ? String((res.error as {message?:string})?.message || 'Lookup failed') : 'Lookup failed';
@@ -186,7 +198,9 @@ export default function OsintPage() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{r.followers?.toLocaleString() || '—'} followers</p>
-                      <p className="text-xs text-slate-400">{(r.confidence * 100).toFixed(0)}% match</p>
+                      <p className="text-xs text-slate-400">
+                        {Number.isFinite(r.confidence) ? `${(r.confidence * 100).toFixed(0)}% match` : '— match'}
+                      </p>
                     </div>
                   </div>
                 ))

@@ -35,7 +35,9 @@ export default function PlaygroundPage() {
         'POST', '/api/ai/generate',
         { body: { prompt: prompt.trim(), model, maxTokens, temperature } }
       );
-      const output = res.ok && 'data' in res ? (res.data?.text || res.data?.output || 'No output') : 'Generation failed — backend offline';
+      const output = res.ok && 'data' in res
+        ? (res.data?.text || res.data?.output || 'No output')
+        : `Generation failed — ${('error' in res && (res.error as {message?:string})?.message) || 'backend offline'}`;
       const gen: Generation = {
         id: `g${Date.now()}`,
         prompt: prompt.trim(),

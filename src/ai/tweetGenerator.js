@@ -59,13 +59,14 @@ function resolveProvider(options = {}) {
   return 'openrouter';
 }
 
+export { callLLM };
+
 /**
  * Call an LLM via the configured provider (OpenRouter, OpenAI, or Grok/xAI).
  * All three expose an OpenAI-compatible chat completions endpoint.
  */
 async function callLLM(messages, options = {}) {
-  const provider = resolveProvider(options);
-  const temperature = options.temperature ?? 0.8;
+  const provider = resolveProvider(options);  const temperature = options.temperature ?? 0.8;
   const maxTokens = options.maxTokens || 2000;
 
   let url, apiKey, headers, model;

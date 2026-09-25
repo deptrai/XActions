@@ -606,6 +606,40 @@ router.get('/status', async (req, res) => {
   res.json({ success: true, models });
 });
 
+/**
+ * POST /api/ai/generate
+ * Lightweight single-shot generation for the AI Playground. Calls the
+ * configured LLM provider via callLLM with a single user prompt.
+ * Body: { prompt: string, model?: string, maxTokens?: number, temperature?: number }
+ */
+router.post('/generate', async (req, res) => {
+  try {
+    const { prompt, model, maxTokens, temperature } = /** @type {{prompt?:string;model?:string;maxTokens?:number;temperature?:number}} */ (req.body || {});
+    if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+      return res.status(400).json({ success: false, error: 'prompt is required (non-empty string)' });
+    }
+    const { callLLM } = await import('../../../src/ai/tweetGenerator.js');
+    const result = await callLLM(
+      [{ role: 'user', content: prompt.trim() }],
+      {
+        model: model || undefined,
+        maxTokens: typeof maxTokens === 'number' ? maxTokens : 500,
+        temperature: typeof temperature === 'number' ? temperature : 0.7,
+      }
+    );
+    res.json({
+      success: true,
+      text: result.content,
+      output: result.content,
+      tokens: result.usage?.total_tokens ?? result.usage?.completion_tokens ?? 0,
+      model: result.model,
+      provider: result.provider,
+    });
+  } catch (err) {
+    res.status(502).json({ success: false, error: { code: 'GENERATION_FAILED', message: (err instanceof Error ? err.message : String(err)) } });
+  }
+});
+
 // Mount original route modules
 router.use('/scrape', scrapeRoutes);
 router.use('/action', actionRoutes);
