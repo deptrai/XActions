@@ -52,6 +52,7 @@ import ipLegal from './legal/ip-trademark/index.js';
 import youtube from './social/youtube/index.js';
 import zalo from './social/zalo/index.js';
 import * as tiktokShop from './ecom/tiktok-shop/index.js';
+import * as pumpfunModule from './social/pumpfun/index.js';
 
 const redditProxy = new Proxy(redditModule, {
   get(target, prop, receiver) {
@@ -145,6 +146,9 @@ export const platforms = {
   instagram: instagramProxy,
   ig: instagramProxy,
   insta: instagramProxy,
+  pumpfun: pumpfunModule,
+  pump: pumpfunModule,
+  'pump.fun': pumpfunModule,
 };
 
 /**

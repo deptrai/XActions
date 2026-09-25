@@ -27,11 +27,11 @@ const VALID_PLATFORMS = [
   'facebook', 'x', 'twitter', 'threads', 'bluesky', 'mastodon', 'tiktok',
   'reddit', 'rdt', 'shopee', 'tiktokshop', 'tiktok-shop', 'topcv',
   'vietnamworks', 'linkedin', 'batdongsan', 'chotot', 'youtube', 'zalo',
-  'instagram', 'ig', 'insta',
+  'instagram', 'ig', 'insta', 'pumpfun', 'pump', 'pump.fun',
 ];
 
 /** @type {Record<string, string>} */
-const PLATFORM_ALIASES = { 'tiktok-shop': 'tiktokshop' };
+const PLATFORM_ALIASES = { 'tiktok-shop': 'tiktokshop', 'pump': 'pumpfun', 'pump.fun': 'pumpfun' };
 
 /**
  * @param {string} platform

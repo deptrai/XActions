@@ -460,11 +460,16 @@ export class PumpFunCrawler extends AbstractCrawler {
     }
 
     this.#activeStreams++;
+    // Accumulate messages so HTTP callers (dashboard UI) receive the captured
+    // batch — subscribeRoom alone only returns { messageCount, durationMs }.
+    const collected = [];
+    const MAX_COLLECTED = 500;
     try {
-      return await lc.subscribeRoom(mint, {
+      const res = await lc.subscribeRoom(mint, {
         durationMs,
         signal,
         onMessage: (msg) => {
+          if (collected.length < MAX_COLLECTED) collected.push(msg);
           onMessage?.(msg);
           // Forward to RedisStreamPublisher if configured
           if (this.redisPublisher && typeof this.redisPublisher.publish === 'function') {
@@ -477,6 +482,13 @@ export class PumpFunCrawler extends AbstractCrawler {
         },
         onReaction,
       });
+      const totalCount = Number(res?.messageCount ?? collected.length);
+      return {
+        ...res,
+        mint,
+        messages: collected,
+        truncated: totalCount > collected.length, // F3
+      };
     } finally {
       this.#activeStreams = Math.max(0, this.#activeStreams - 1);
     }

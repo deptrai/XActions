@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pump.fun Auth — Connect a Session | XActions</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:760px;margin:40px auto;padding:0 20px;color:#202124;line-height:1.6}
+  h1{font-size:1.6rem} h2{font-size:1.15rem;margin-top:2rem}
+  code,pre{background:#f1f3f4;border-radius:6px;padding:2px 6px;font-family:'JetBrains Mono',monospace;font-size:.85em}
+  pre{padding:14px;overflow-x:auto}
+  .box{border:1px solid #e0e0e0;border-radius:10px;padding:16px;margin:16px 0}
+  .warn{border-color:#f9ab00;background:#fffbeb}
+  .ok{border-color:#34a853;background:#f0fdf4}
+  a{color:#1a73e8}
+</style>
+</head>
+<body>
+<h1>🎰 Pump.fun Authentication — Browser Bridge</h1>
+<p>Pump.fun uses <strong>Privy</strong> auth (Google OAuth + embedded Solana wallet). XActions does <em>not</em> re-implement Solana signing — instead it reuses a session you're already logged into via the <strong>Browser-as-Signer / CDP bridge</strong>. See <code>docs/architecture/adr-pumpfun-auth-and-dependencies.md</code>.</p>
+
+<h2>When do I need this?</h2>
+<div class="box">
+  Public reads (mint social, platform feeds, live chat history) work <strong>without auth</strong>.
+  These actions need a session:
+  <ul>
+    <li><code>fetch_my_profile</code>, <code>fetch_user_following</code></li>
+    <li><code>fetch_livestream_clips</code>, <code>post_mint_reply</code></li>
+    <li><code>livestream-api.pump.fun/kols</code> (Bearer-gated)</li>
+  </ul>
+</div>
+
+<h2>Connect a session</h2>
+<ol>
+  <li>Open <a href="https://pump.fun" target="_blank" rel="noreferrer">pump.fun</a> in Chrome and sign in (Privy).</li>
+  <li>Keep the tab open. XActions extracts <code>privy:token</code> (Bearer JWT), <code>privy:id_token</code>, <code>decoded-jwt</code> (userId, wallet) and cookies (<code>_cfuvid</code>, <code>__cf_bm</code>) via Chrome MCP / CDP.</li>
+  <li>The bridge registers the session into <code>globalSessionManager</code> under key <code>pumpfun:&lt;accountId&gt;</code>.</li>
+  <li>Headless requests then attach <code>Authorization: Bearer &lt;jwt&gt;</code> + cookies automatically.</li>
+</ol>
+
+<div class="box warn">
+  ⚠️ <strong>Session expiry.</strong> JWTs expire. If calls return <code>XACT_4010</code>, re-extract the session from an active pump.fun tab.
+</div>
+
+<h2>Disconnect &amp; revoke</h2>
+<div class="box">
+  To clear stored credentials:
+  <ol>
+    <li>Log out of pump.fun in the browser tab to invalidate the server-side Privy session.</li>
+    <li>In XActions, the session is held in-memory in <code>globalSessionManager</code> under <code>pumpfun:&lt;accountId&gt;</code> — restart the service or clear the key programmatically:
+      <pre>import { globalSessionManager } from 'xactions/core';
+globalSessionManager.delete('pumpfun:default');</pre>
+    </li>
+    <li>Revoked sessions will receive <code>XACT_4010 (Unauthorized)</code> on subsequent calls.</li>
+  </ol>
+</div>
+
+<h2>Verify it's working</h2>
+<pre>POST /api/platform/pumpfun/scrape
+{ "action": "fetch_my_profile" }
+# → 200 { ok:true, result:{ username, address, userId, is_pump_user } }</pre>
+
+<h2>Rate limits</h2>
+<div class="box">
+  <code>post_mint_reply</code> is capped at <strong>5 comments / minute / account</strong> to protect the wallet from shadowban.
+</div>
+</body>
+</html>

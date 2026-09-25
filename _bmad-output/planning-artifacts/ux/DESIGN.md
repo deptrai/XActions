@@ -9,6 +9,7 @@ colors:
   accent-twitter: "#000000"
   accent-bluesky: "#0066ff"
   accent-mastodon: "#6364ff"
+  accent-pumpfun: "#83F3C0"
   success: "#34a853"
   warning: "#f9ab00"
   error: "#ea4335"

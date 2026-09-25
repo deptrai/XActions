@@ -26,6 +26,7 @@ const PLATFORMS: Platform[] = [
   { id: 'mastodon', name: 'Mastodon', status: 'supported', features: ['Scraping', 'Posting'], icon: '🐘' },
   { id: 'telegram', name: 'Telegram', status: 'partial', features: ['Scraping', 'Monitoring'], icon: '✈️' },
   { id: 'discord', name: 'Discord', status: 'coming_soon', features: ['Monitoring'], icon: '💬' },
+  { id: 'pumpfun', name: 'Pump.fun', status: 'supported', features: ['Scraping', 'Livestreams', 'Chat Stream', 'Auth'], icon: '🎰' },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {

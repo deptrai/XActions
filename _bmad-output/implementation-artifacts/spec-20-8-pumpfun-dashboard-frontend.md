@@ -2,8 +2,8 @@
 title: 'Story 20.8 — PumpFun Dashboard Frontend (4-Tab Intelligence Page)'
 type: 'feature'
 created: '2026-09-25'
-status: 'draft'
-baseline_revision: 'd8ded361'
+status: 'done'
+baseline_revision: '5bc1ab55518898de750158e9b9e0c59bd4e32041'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -75,20 +75,25 @@ deferred:
   - Shared: `useAuthSession()` hook (fetch_my_profile once), `ErrBanner` component (XACT_* mapping), `CopyField` (truncated ⧉copy).
 - `apps/web/lib/nav.ts` — +NavItem `{ label:'Pump.fun', href:'/pumpfun', keywords:['meme','solana','livestream','crypto','mint'] }` trong `intelligence` sau `Facebook`.
 - `apps/web/app/platform/page.tsx` — +PLATFORMS seed `{ id:'pumpfun', name:'Pump.fun', status:'supported', features:['Scraping','Livestreams','Chat Stream','Auth'], icon:'🎰' }`.
-- `api/routes/platforms.js` — +PLATFORM_META entry tương ứng.
+- `api/routes/platforms.js` — +PLATFORM_META entry `{ id:'pumpfun', name:'Pump.fun', icon:'🎰', features:[…] }`.
+- `api/routes/platform.js` — **BẮT BUỘC**: thêm `'pumpfun'` vào `VALID_PLATFORMS` (line ~26) để `normalizePlatform` không trả null → tránh 400 "Unknown platform" trên `/api/platform/pumpfun/*`. KHÔNG tạo route mới; `POST /:platform/scrape` + `/:platform/automate` đã dispatch generic. `buildAuthCookie`/`resolveAccountCookie` KHÔNG cần case pumpfun (auth qua `globalSessionManager` Browser Bridge, không qua PlatformAccount DB) — frontend không gửi `accountIds`.
 - `_bmad-output/planning-artifacts/ux/DESIGN.md` — +`accent-pumpfun: "#83F3C0"` vào colors.
 - `dashboard/docs/pumpfun-auth.html` — **MỚI**: hướng dẫn Browser Bridge session connect.
 
 ## Tasks & Acceptance
 
 **Execution:**
-1. `api/routes/platforms.js` + `apps/web/app/platform/page.tsx` + `apps/web/lib/nav.ts` — đăng ký pumpfun (meta/grid/nav).
-2. `apps/web/app/pumpfun/page.tsx` — shell + 4 tabs + auth hook + error banner.
-3. `dashboard/docs/pumpfun-auth.html` — docs stub.
-4. `DESIGN.md` — token accent-pumpfun.
-5. Verify: `GET /api/platforms` shows pumpfun supported; `POST /api/platform/pumpfun/scrape {action:'fetch_platform_feed',feedType:'currently_live'}` 200.
+1. `api/routes/platform.js` — thêm `'pumpfun'` vào `VALID_PLATFORMS` — **blocker**: nếu thiếu, mọi `/api/platform/pumpfun/*` trả 400.
+2. `api/routes/platforms.js` — +PLATFORM_META — grid status `supported`.
+3. `apps/web/app/platform/page.tsx` — +PLATFORMS seed — card 🎰.
+4. `apps/web/lib/nav.ts` — +NavItem Intelligence sau Facebook.
+5. `apps/web/app/pumpfun/page.tsx` — shell + 4 tabs + `useAuthSession` + `ErrBanner` + `CopyField`.
+6. `dashboard/docs/pumpfun-auth.html` — docs stub Browser Bridge.
+7. `_bmad-output/planning-artifacts/ux/DESIGN.md` — +`accent-pumpfun`.
+8. Verify: `POST /api/platform/pumpfun/scrape {action:'fetch_platform_feed',feedType:'currently_live',limit:3}` → 200 `{ok:true,result:{items:[…]}}` (không còn 400 Unknown platform).
 
 **Acceptance Criteria:** (mirror epics.md 20.8)
+- AC0: `POST /api/platform/pumpfun/scrape` với action hợp lệ KHÔNG trả `400 Unknown platform` — tức `'pumpfun'` đã trong `VALID_PLATFORMS`.
 - AC1: nav Pump.fun + ⌘K searchable (`pump`,`meme`,`solana`,`livestream`,`crypto`,`mint`).
 - AC2: `/pumpfun` 4 tabs + `?tab=` deep-link + `?mint=` auto-fetch.
 - AC3: platform grid + API trả `supported`.
@@ -105,5 +110,6 @@ deferred:
 **Commands:**
 - `cd apps/web && npx next build` (hoặc `npx tsc --noEmit`) — expected: no type errors.
 - `curl -s http://localhost:3000/api/platforms | jq '.platforms[] | select(.id=="pumpfun")'` — expected: `status: "supported"` (qua BFF proxy → backend).
-- `curl -s -X POST http://localhost:PORT/api/platform/pumpfun/scrape -H 'content-type: application/json' -d '{"action":"fetch_platform_feed","feedType":"currently_live","limit":3}'` — expected: `{ok:true, result:{items:[…]}}`.
+- `curl -s -X POST http://localhost:PORT/api/platform/pumpfun/scrape -H 'content-type: application/json' -d '{"action":"fetch_platform_feed","feedType":"currently_live","limit":3}'` — expected: HTTP 200 `{ok:true, result:{items:[…]}}` (KHÔNG phải `400 Unknown platform` — xác nhận VALID_PLATFORMS có pumpfun).
+- `node -e "const s=require('fs').readFileSync('api/routes/platform.js','utf8'); console.log(s.includes('pumpfun'))"` — expected: `true`.
 - Manual: mở `/pumpfun`, 4 tabs hoạt động, `?tab=mint&mint=<real>` auto-fetch.

@@ -27,6 +27,7 @@ const PLATFORM_META = [
   { id: 'mastodon',  name: 'Mastodon',    icon: '🐘', features: ['Scraping', 'Posting'] },
   { id: 'telegram',  name: 'Telegram',    icon: '✈️', features: ['Scraping', 'Monitoring'] },
   { id: 'discord',   name: 'Discord',     icon: '💬', features: ['Monitoring'] },
+  { id: 'pumpfun',   name: 'Pump.fun',    icon: '🎰', features: ['Scraping', 'Livestreams', 'Chat Stream', 'Auth'] },
 ];
 
 /** Platforms the dashboard advertises that are NOT in the scraper registry. */
