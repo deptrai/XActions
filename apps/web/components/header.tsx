@@ -107,11 +107,17 @@ export function Header() {
 
   return (
     <header className="flex items-center justify-between h-16 px-6 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm sticky top-0 z-30">
-      {/* Global Search Mock */}
-      <div className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 w-72">
+      {/* Command palette trigger */}
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new Event('xa:open-palette'))}
+        aria-label="Open command palette (Cmd+K)"
+        className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 w-72 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-500 dark:hover:text-slate-300 transition-colors cursor-pointer"
+      >
         <Search className="w-4 h-4" />
-        <span className="text-xs">Quick search (cmd+k)...</span>
-      </div>
+        <span className="text-xs">Search features...</span>
+        <kbd className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 font-mono">⌘K</kbd>
+      </button>
 
       {/* Right controls */}
       <div className="flex items-center gap-3">
