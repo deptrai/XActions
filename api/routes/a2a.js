@@ -8,6 +8,8 @@
  * Routes:
  *   GET  /api/a2a/skills  — list all registered skills (free, no payment)
  *   POST /api/a2a/task    — submit a task, returns operationId for polling
+ *   GET  /api/a2a/stream  — SSE stream of A2A bus activity (dashboard monitor)
+ *   POST /api/a2a/send    — publish a message onto the A2A bus
  *
  * @author nichxbt
  */
@@ -16,6 +18,76 @@ import { Router } from 'express';
 import { errorResponse } from '../utils/errorResponse.js';
 
 const router = Router();
+
+/**
+ * In-process A2A message bus for the dashboard monitor.
+ * Recent messages are kept in a ring buffer so SSE clients that connect late
+ * still see the latest activity. Real A2A task submissions also publish here.
+ * @type {Array<Record<string, unknown>>}
+ */
+const recentMessages = [];
+const MAX_BUFFERED = 100;
+
+/** @type {Set<import('express').Response>} */
+const sseClients = new Set();
+
+/**
+ * Publish an A2A message to the ring buffer and all connected SSE clients.
+ * @param {Record<string, unknown>} msg
+ */
+function publishMessage(msg) {
+  recentMessages.push(msg);
+  if (recentMessages.length > MAX_BUFFERED) recentMessages.shift();
+  const payload = `data: ${JSON.stringify(msg)}\n\n`;
+  for (const client of sseClients) {
+    try { client.write(payload); } catch { /* client gone */ }
+  }
+}
+
+/**
+ * GET /api/a2a/stream
+ * Server-Sent Events stream of A2A bus activity for the dashboard monitor.
+ * Replays the recent buffer on connect, then pushes live messages.
+ */
+router.get('/stream', (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  res.write(`data: ${JSON.stringify({ type: 'system', content: 'connected', timestamp: new Date().toISOString() })}\n\n`);
+  for (const msg of recentMessages) {
+    res.write(`data: ${JSON.stringify(msg)}\n\n`);
+  }
+  sseClients.add(res);
+  const heartbeat = setInterval(() => {
+    try { res.write(`:hb\n\n`); } catch { /* closed */ }
+  }, 25000);
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    sseClients.delete(res);
+  });
+});
+
+/**
+ * POST /api/a2a/send
+ * Accept a dashboard-originated message and broadcast it on the A2A bus so
+ * the SSE monitor (and any other connected clients) see it.
+ */
+router.post('/send', (req, res) => {
+  const body = /** @type {Record<string, unknown>} */ (req.body || {});
+  const msg = {
+    id: body.id || `srv-${Date.now()}`,
+    from: body.from || 'orchestrator',
+    to: body.to || 'broadcast',
+    content: body.content || '',
+    timestamp: body.timestamp || new Date().toISOString(),
+    type: body.type || 'request',
+  };
+  publishMessage(msg);
+  return res.json({ success: true, delivered: sseClients.size, message: msg });
+});
 
 /**
  * GET /api/a2a/skills

@@ -75,9 +75,15 @@ export default function AiApiPage() {
             >
               <span className={`text-xs font-bold px-2 py-0.5 rounded ${METHOD_COLORS[ep.method]}`}>{ep.method}</span>
               <span className="font-mono text-sm text-slate-900 dark:text-white flex-1 text-left">{ep.path}</span>
-              <button onClick={(e) => { e.stopPropagation(); copyPath(ep.path); }} className="p-1 rounded text-slate-400 hover:text-slate-600">
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); copyPath(ep.path); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); copyPath(ep.path); } }}
+                className="p-1 rounded text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
                 {copied === ep.path ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-              </button>
+              </span>
               {expanded === ep.path ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
             </button>
             {expanded === ep.path && (

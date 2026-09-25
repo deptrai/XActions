@@ -517,6 +517,95 @@ router.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString(), version: '2.0.0' });
 });
 
+/**
+ * GET /api/ai/status
+ * Real model/provider status for the AI Dashboard panel. Reports which LLM
+ * providers are configured (env API keys present) and measures live latency
+ * with a lightweight models-list ping. No mocks — status reflects actual env.
+ */
+router.get('/status', async (req, res) => {
+  const providers = [
+    {
+      id: 'openrouter',
+      name: 'OpenRouter (Gemini Flash)',
+      provider: 'OpenRouter',
+      envKeys: ['OPENROUTER_API_KEY'],
+      pingUrl: 'https://openrouter.ai/api/v1/models',
+      authHeader: (k) => ({ Authorization: `Bearer ${k}` }),
+    },
+    {
+      id: 'openai',
+      name: 'GPT-4o-mini',
+      provider: 'OpenAI',
+      envKeys: ['OPENAI_API_KEY'],
+      pingUrl: 'https://api.openai.com/v1/models',
+      authHeader: (k) => ({ Authorization: `Bearer ${k}` }),
+    },
+    {
+      id: 'grok',
+      name: 'Grok 3 Mini',
+      provider: 'xAI',
+      envKeys: ['XAI_API_KEY', 'GROK_API_KEY'],
+      pingUrl: 'https://api.x.ai/v1/models',
+      authHeader: (k) => ({ Authorization: `Bearer ${k}` }),
+    },
+    {
+      id: 'anthropic',
+      name: 'Claude (Anthropic)',
+      provider: 'Anthropic',
+      envKeys: ['ANTHROPIC_API_KEY'],
+      pingUrl: 'https://api.anthropic.com/v1/models',
+      authHeader: (k) => ({ 'x-api-key': k, 'anthropic-version': '2023-06-01' }),
+    },
+  ];
+
+  const models = await Promise.all(providers.map(async (p) => {
+    const apiKey = p.envKeys.map((k) => process.env[k]).find(Boolean);
+    const configured = Boolean(apiKey);
+    if (!configured) {
+      return {
+        id: p.id,
+        name: p.name,
+        provider: p.provider,
+        status: 'offline',
+        latency: 0,
+        requests24h: 0,
+        cost24h: '—',
+        configured: false,
+      };
+    }
+    // Ping the provider's model-list endpoint for a real latency reading.
+    const t0 = Date.now();
+    let status = 'online';
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 6000);
+      const r = await fetch(p.pingUrl, {
+        headers: p.authHeader(apiKey),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (r.status === 401 || r.status === 403) status = 'degraded';
+      else if (!r.ok) status = 'degraded';
+    } catch {
+      status = 'offline';
+    }
+    const latency = Date.now() - t0;
+    return {
+      id: p.id,
+      name: p.name,
+      provider: p.provider,
+      status,
+      latency,
+      requests24h: 0,
+      cost24h: '—',
+      configured: true,
+    };
+  }));
+
+  res.json({ success: true, models });
+});
+
 // Mount original route modules
 router.use('/scrape', scrapeRoutes);
 router.use('/action', actionRoutes);
