@@ -18,6 +18,7 @@ import {
 } from '../services/licenseManager.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { getStats as getPaymentStats } from '../services/payment-stats.js';
+import { getMetricsSummary, getCallTrace } from '../services/gatewayMetrics.js';
 import {
   getWebhookStatus,
   testWebhooks,
@@ -820,6 +821,54 @@ router.get('/retention/stats', requireAdminOrApiKey, async (req, res) => {
         type: errorType,
         message: err instanceof Error ? err.message : String(err),
       },
+    });
+  }
+});
+
+/**
+ * GET /api/admin/gateway/metrics
+ * Gateway observability metrics — Story 50.4 (Epic 50)
+ * Aggregates quota stats, 24h degrade rates by reason, upstream health percentiles,
+ * and recent call history from the in-memory ring buffer.
+ */
+router.get('/gateway/metrics', requireAdminOrApiKey, (req, res) => {
+  try {
+    const summary = getMetricsSummary();
+    res.json({
+      success: true,
+      data: summary,
+    });
+  } catch (err) {
+    console.error('❌ GET /api/admin/gateway/metrics error:', err);
+    res.status(500).json({
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+/**
+ * GET /api/admin/gateway/trace/:requestId
+ * Trace lookup for a specific request ID — Story 50.4
+ */
+router.get('/gateway/trace/:requestId', requireAdminOrApiKey, (req, res) => {
+  try {
+    const trace = getCallTrace(req.params.requestId);
+    if (!trace) {
+      return res.status(404).json({
+        success: false,
+        error: `Trace not found for requestId "${req.params.requestId}"`,
+      });
+    }
+    res.json({
+      success: true,
+      data: trace,
+    });
+  } catch (err) {
+    console.error(`❌ GET /api/admin/gateway/trace/${req.params.requestId} error:`, err);
+    res.status(500).json({
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
     });
   }
 });

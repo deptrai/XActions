@@ -426,7 +426,7 @@ epic-50:
       status: done
     story-50-4:
       slug: per-consumer-quota-x402-observability-dashboard
-      status: backlog
+      status: done
     story-50-5:
       slug: self-discovery-api-actions-catalog-playground
       status: backlog

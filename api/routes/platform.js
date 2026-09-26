@@ -21,7 +21,9 @@ import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { eitherAuth } from '../middleware/serviceAuth.js';
 import { requestId } from '../middleware/requestId.js';
+import { gatewayQuota } from '../middleware/gatewayQuota.js';
 import { errorBody, scrapeErrorKind, isRetryableError } from '../services/gatewayEnvelope.js';
+import { recordGatewayCall } from '../services/gatewayMetrics.js';
 
 const router = express.Router();
 
@@ -433,12 +435,13 @@ export async function resolveAccountCookie(userId, accountId, platform) {
  * `res` and never throws contract errors. The catch below only handles
  * non-contract infra throws, flattened to the unified ErrorEnvelope.
  */
-router.post('/:platform/scrape', requestId, eitherAuth, async (req, res) => {
+router.post('/:platform/scrape', requestId, eitherAuth, gatewayQuota, async (req, res) => {
   const reqUser = /** @type {import('@prisma/client').User | undefined} */ (req.user);
   const platform = /** @type {string} */ (req.platform || req.params.platform);
   const body = /** @type {Record<string, unknown>} */ (req.body ?? {});
   const action = /** @type {string | undefined} */ (body.action);
   const reqId = /** @type {string | undefined} */ (req.requestId);
+  const startMs = Date.now();
 
   if (!action || typeof action !== 'string') {
     return res.status(400).json(errorBody({
@@ -496,6 +499,21 @@ router.post('/:platform/scrape', requestId, eitherAuth, async (req, res) => {
         res.setHeader(name, value);
       }
     }
+
+    recordGatewayCall({
+      timestamp: Date.now(),
+      requestId: reqId || 'unknown',
+      consumerId: req.consumer?.consumerId || 'anonymous',
+      consumerType: req.consumer?.source === 'serviceAuth' ? 'named' : (req.consumer?.source === 'userJWT' ? 'internal' : 'anonymous'),
+      platform,
+      action,
+      mode: body.mode === 'sync' ? 'sync' : 'async',
+      durationMs: Date.now() - startMs,
+      status: outcome.status,
+      degradedReason: outcome.body?.degraded_reason,
+      errorKind: outcome.body?.error?.kind,
+    });
+
     return res.status(outcome.status).json(outcome.body);
   } catch (err) {
     console.error(`❌ POST /platform/${platform}/scrape error:`, err);
@@ -515,6 +533,19 @@ router.post('/:platform/scrape', requestId, eitherAuth, async (req, res) => {
     if (retryable) {
       res.setHeader('Retry-After', String(Math.max(1, Math.ceil((errBody.error.retry_after_ms ?? 2000) / 1000))));
     }
+
+    recordGatewayCall({
+      timestamp: Date.now(),
+      requestId: reqId || 'unknown',
+      consumerId: req.consumer?.consumerId || 'anonymous',
+      platform,
+      action,
+      mode: body.mode === 'sync' ? 'sync' : 'async',
+      durationMs: Date.now() - startMs,
+      status,
+      errorKind: errBody.error.kind,
+    });
+
     return res.status(status).json(errBody);
   }
 });

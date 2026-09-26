@@ -103,7 +103,7 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
     expect(req.consumer.apiKeyValid).toBe(true);
   });
 
-  it('HAPPY_ANON_DEV: no keys + NODE_ENV=development → anonymous internal', async () => {
+  it('HAPPY_ANON: no Authorization header → anonymous consumer (Story 50.4 free-tier lane)', async () => {
     process.env.XACTIONS_SERVICE_KEYS = '';
     process.env.XACTIONS_MCP_API_KEY = '';
     process.env.XACTIONS_API_TOKEN = '';
@@ -115,7 +115,10 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
     await serviceAuth(req, res, next);
 
     expect(state.error).toBeUndefined();
-    expect(req.consumer.consumerId).toBe('internal');
+    // Story 50.4: absence of credentials NEVER grants `internal` trust —
+    // a no-Bearer request resolves to the metered anonymous consumer
+    // (IP-bucketed 10/min free tier by gatewayQuota).
+    expect(req.consumer.consumerId).toBe('anonymous');
     expect(req.consumer.source).toBe('anonymous');
     expect(req.consumer.apiKeyValid).toBe(true);
   });
@@ -138,7 +141,7 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
     expect(req.consumer).toBeUndefined();
   });
 
-  it('VG-1: EDGE_PROD_MISSING_HEADER: prod + no keys + no authorization header → fail-closed 401', async () => {
+  it('VG-1: EDGE_PROD_MISSING_HEADER: prod + no keys + no authorization header → anonymous free-tier lane (Story 50.4)', async () => {
     process.env.XACTIONS_SERVICE_KEYS = '';
     process.env.XACTIONS_MCP_API_KEY = '';
     process.env.XACTIONS_API_TOKEN = '';
@@ -149,11 +152,14 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
 
     await serviceAuth(req, res, next);
 
-    expect(state.error).toBeInstanceOf(ApiError);
-    expect(state.error.statusCode).toBe(401);
-    expect(state.error.code).toBe('XACT_4001');
-    expect(state.error.type).toBe('auth');
-    expect(req.consumer).toBeUndefined();
+    // Story 50.4 supersedes the 50.1 fail-closed-on-absence rule: a
+    // completely absent Authorization header is the anonymous free-tier
+    // lane (IP-bucketed by gatewayQuota) — NOT internal trust. A presented
+    // invalid credential still 401s (see EDGE_PROD_NO_KEYS).
+    expect(state.error).toBeUndefined();
+    expect(req.consumer).toBeDefined();
+    expect(req.consumer.consumerId).toBe('anonymous');
+    expect(req.consumer.source).toBe('anonymous');
   });
 
   it('ERR_INVALID_BEARER: unknown Bearer → 401', async () => {

@@ -101,6 +101,10 @@ beforeEach(() => {
   delete process.env.XACTIONS_MCP_API_KEY;
   delete process.env.XACTIONS_API_TOKEN;
   delete process.env.REDIS_STREAM_ENABLED;
+  // Story 50.4 — anonymous free tier is metered per IP+platform+action; these
+  // tests exercise the envelope contract, not quota. Raise the ceiling so
+  // the shared in-process bucket never gates contract assertions.
+  process.env.XACTIONS_CONSUMER_QUOTAS = JSON.stringify({ default: '100000/min' });
   process.env.NODE_ENV = 'development';
   _resetServiceKeyMap();
   _resetDispatch();
@@ -221,7 +225,9 @@ describe('POST /api/platform/:platform/scrape — unified envelope', () => {
     expect(res.body.mode).toBe('sync');
     expect(res.body.metadata.platform).toBe('reddit');
     expect(res.body.metadata.action).toBe('search');
-    expect(res.body.metadata.consumer_id).toBe('internal');
+    // Story 50.4 — no Bearer is the anonymous free-tier lane; absence of
+    // credentials never grants `internal` trust.
+    expect(res.body.metadata.consumer_id).toBe('anonymous');
     expect(typeof res.body.metadata.duration_ms).toBe('number');
     expect(res.body.metadata.sync_capable).toBe(true);
     expect(res.body.data).toEqual(payload);

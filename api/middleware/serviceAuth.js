@@ -113,17 +113,10 @@ function resolveConsumerFromBearer(token) {
   const legacyKey = getExpectedApiKey();
   const apiKeyRequired = Object.keys(keyMap).length > 0 || legacyKey !== null;
 
-  // No token provided
+  // No token provided — since serviceAuth routes the absent-Authorization
+  // case to the anonymous lane BEFORE this function, reaching here with
+  // !token means a PRESENTED but malformed/unparseable credential → 401.
   if (!token) {
-    // Production fail-closed: no token + keys configured → invalid.
-    // Dev parity: no keys configured + NODE_ENV=development → anonymous ok.
-    if (!apiKeyRequired) {
-      const isProd = process.env.NODE_ENV === 'production';
-      if (isProd) {
-        return { consumerId: 'internal', apiKeyValid: false, apiKeyRequired: true };
-      }
-      return { consumerId: 'internal', apiKeyValid: true, apiKeyRequired: false };
-    }
     return { consumerId: 'internal', apiKeyValid: false, apiKeyRequired: true };
   }
 
@@ -174,8 +167,15 @@ export function serviceAuth(req, res, next) {
   req.consumerHint = hint;
 
   try {
+    const rawAuth = typeof req?.headers?.authorization === 'string' ? req.headers.authorization.trim() : '';
+    // Story 50.4 — the ONLY no-credential lane: a completely absent
+    // Authorization header. A present-but-malformed header (`Token x`,
+    // `Basic x`) is still a presented credential → 401 (not anonymous).
+    const hasNoAuthHeader = rawAuth.length === 0;
     const token = extractBearerToken(req);
-    resolved = resolveConsumerFromBearer(token);
+    resolved = hasNoAuthHeader
+      ? { consumerId: 'anonymous', apiKeyValid: true, apiKeyRequired: false }
+      : resolveConsumerFromBearer(token);
 
     if (!resolved.apiKeyValid) {
       return next(new ApiError('XACT_4001', 401, 'Invalid or missing Bearer token for XActions service API', undefined, 'auth'));

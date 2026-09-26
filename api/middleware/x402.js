@@ -109,6 +109,17 @@ function buildRouteConfig() {
     'Run a browser script server-side and return its result',
   );
 
+  // Gateway Scrape routes — Story 50.4 (x402 Paid Lane for Scrape Gateway)
+  const defaultScrapePrice = AI_OPERATION_PRICES['scrape:search'] || '$0.01';
+  routes['POST /api/platform/:platform/scrape'] = paidRoute(
+    defaultScrapePrice,
+    'Scrape data across platforms via Public Scrape Gateway',
+  );
+  routes['POST /api/platform/all/scrape'] = paidRoute(
+    AI_OPERATION_PRICES['scrape:followers'] || '$0.01',
+    'Batch scrape across all platforms via Public Scrape Gateway',
+  );
+
   return routes;
 }
 
