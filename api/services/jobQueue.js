@@ -72,9 +72,32 @@ const operationsQueue = new Queue('operations', {
   }
 });
 
+// Dedicated queue for the public scrape lane (Story 50.2 ops hardening).
+// Bull delivers each job to ONE consumer of the shared 'operations' queue —
+// a stale/mixed-version instance that lacks the 'scrape' handler would steal
+// the job and fail it with "Missing process handler". Old code never
+// instantiates 'operations-scrape', so scrape jobs are unreachable to it.
+const scrapeQueue = new Queue('operations-scrape', {
+  prefix: process.env.REDIS_QUEUE_PREFIX || 'xactions',
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: Number(process.env.REDIS_PORT || 6379),
+    password: process.env.REDIS_PASSWORD
+  },
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 2000
+    },
+    removeOnComplete: 100,
+    removeOnFail: 50
+  }
+});
+
 // Test seam (repo mandate: injected seams, no vi.mock). Overrides the queue
 // object used ONLY by addJob/queueJob/getJob — processors stay bound to the
-// real `operationsQueue` so job execution semantics never change under test.
+// real queues so job execution semantics never change under test.
 let _queueOverride = null;
 /** @param {Record<string, unknown> | null} q */
 export function _setOperationsQueue(q) {
@@ -85,6 +108,10 @@ export function _resetOperationsQueue() {
 }
 function queue() {
   return /** @type {any} */ (_queueOverride || operationsQueue);
+}
+/** @param {string} type */
+function queueFor(type) {
+  return /** @type {any} */ (_queueOverride || (type === 'scrape' ? scrapeQueue : operationsQueue));
 }
 
 /**
@@ -138,7 +165,7 @@ async function addJob(type, data, options = {}) {
 
   let job;
   try {
-    job = await queue().add(type, jobData, {
+    job = await queueFor(type).add(type, jobData, {
       priority: Number(options.priority) || 10,
       delay: Number(options.delay) || 0,
       attempts: Number(options.attempts) || 3,
@@ -198,7 +225,7 @@ async function getJob(jobId) {
   // have no Bull job at all and already resolve via operation.status).
   let bullJob = null;
   try {
-    bullJob = await queue().getJob(jobId);
+    bullJob = await queueFor(operation.type).getJob(jobId);
   } catch {
     bullJob = null;
   }
@@ -322,8 +349,9 @@ async function cancelJob(jobId) {
   // Mark as cancelled in memory (for long-running operations to check)
   cancelledJobs.add(jobId);
 
-  // Try to remove from Bull queue if not yet started
-  const bullJob = await operationsQueue.getJob(jobId);
+  // Try to remove from Bull queue if not yet started — scrape jobs live on
+  // their own queue, so check both.
+  const bullJob = (await operationsQueue.getJob(jobId)) || (await scrapeQueue.getJob(jobId));
   
   if (bullJob) {
     const state = await bullJob.getState();
@@ -503,9 +531,11 @@ operationsQueue.process('datasetFetch', 2, async (job) => {
 });
 
 // Process jobs - scrape (Story 50.2 — public gateway async lane)
+// Registered on the dedicated scrapeQueue so stale 'operations' consumers can
+// never steal these jobs.
 // Job data is credential-free: {platform, action, options, userId, consumerId,
 // accountIds?}. Stored-account cookies are re-resolved here, server-side.
-operationsQueue.process('scrape', 2, async (job) => {
+scrapeQueue.process('scrape', 2, async (job) => {
   console.log(`🔄 Processing job ${job.id}: scrape (${job.data.platform}:${job.data.action})`);
 
   const operationId = job.data.operationId;
@@ -571,7 +601,7 @@ function deliverCallback(url, payload) {
 
 // ── Job event handlers ──────────────────────────────────────────────────────
 
-operationsQueue.on('active', async (job) => {
+const onActive = async (job) => {
   console.log(`▶️  Job active: ${job.id} (${job.data.type || job.name})`);
   try {
     // Never rewind a 'cancelled' row — cancelJob can land between the Bull
@@ -588,16 +618,16 @@ operationsQueue.on('active', async (job) => {
     type: job.data.type,
     startedAt: new Date().toISOString(),
   });
-});
+};
 
-operationsQueue.on('progress', (job, progress) => {
+const onProgress = (job, progress) => {
   global.io?.to(`job:${job.data.operationId}`).emit('job:progress', {
     jobId: job.data.operationId,
     progress,
   });
-});
+};
 
-operationsQueue.on('completed', async (job, result) => {
+const onCompleted = async (job, result) => {
   console.log(`✅ Job completed: ${job.id}`);
 
   const operationId = job?.data?.operationId;
@@ -636,9 +666,9 @@ operationsQueue.on('completed', async (job, result) => {
     // worker (unhandledRejection).
     console.warn(`⚠️  completed-handler failed for operation ${operationId}:`, handlerErr instanceof Error ? handlerErr.message : handlerErr);
   }
-});
+};
 
-operationsQueue.on('failed', async (job, err) => {
+const onFailed = async (job, err) => {
   console.error(`❌ Job failed: ${job?.id}`, err);
 
   const operationId = job?.data?.operationId;
@@ -670,11 +700,21 @@ operationsQueue.on('failed', async (job, err) => {
     // Transient prisma/io failure must not crash the worker process.
     console.warn(`⚠️  failed-handler failed for operation ${operationId}:`, handlerErr instanceof Error ? handlerErr.message : handlerErr);
   }
-});
+};
 
-operationsQueue.on('stalled', (job) => {
+const onStalled = (job) => {
   console.warn(`⚠️ Job stalled: ${job.id}`);
-});
+};
+
+// Same lifecycle handlers on both queues — scrape jobs must get DB status
+// updates, socket events, and callbacks identical to legacy operations.
+for (const q of [operationsQueue, scrapeQueue]) {
+  q.on('active', onActive);
+  q.on('progress', onProgress);
+  q.on('completed', onCompleted);
+  q.on('failed', onFailed);
+  q.on('stalled', onStalled);
+}
 
 // ── Graceful shutdown ───────────────────────────────────────────────────────
 
@@ -684,10 +724,16 @@ operationsQueue.on('stalled', (job) => {
 async function gracefulShutdown(signal) {
   console.log(`📊 Received ${signal} — draining job queue…`);
   try {
-    await operationsQueue.pause(true /* isLocal */);
+    await Promise.all([
+      operationsQueue.pause(true /* isLocal */),
+      scrapeQueue.pause(true),
+    ]);
 
     await Promise.race([
-      operationsQueue.whenCurrentJobsFinished(),
+      Promise.all([
+        operationsQueue.whenCurrentJobsFinished(),
+        scrapeQueue.whenCurrentJobsFinished(),
+      ]),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Drain timeout after 30s')), 30_000)
       ),
@@ -702,6 +748,7 @@ async function gracefulShutdown(signal) {
     }
 
     await operationsQueue.close();
+    await scrapeQueue.close();
     await prisma.$disconnect();
     console.log('✅ Graceful shutdown complete.');
   } catch (err) {
