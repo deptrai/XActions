@@ -355,6 +355,8 @@ export const CATEGORIES = Object.freeze({
   LEGAL: 'legal',
   // Video sharing & channels (YouTube Data API v3).
   VIDEO: 'video',
+  // Crypto token/DEX data (dexscreener, pumpfun coin metadata, future DEX feeds).
+  CRYPTO: 'crypto',
   // Internal category tags for normalized social items.
   PROFILE: 'profile',
   POST: 'post',

@@ -33,10 +33,11 @@ const VALID_PLATFORMS = [
   'reddit', 'rdt', 'shopee', 'tiktokshop', 'tiktok-shop', 'topcv',
   'vietnamworks', 'linkedin', 'batdongsan', 'chotot', 'youtube', 'zalo',
   'instagram', 'ig', 'insta', 'pumpfun', 'pump', 'pump.fun',
+  'dexscreener', 'dex', 'dexscreen',
 ];
 
 /** @type {Record<string, string>} */
-export const PLATFORM_ALIASES = { 'tiktok-shop': 'tiktokshop', 'pump': 'pumpfun', 'pump.fun': 'pumpfun' };
+export const PLATFORM_ALIASES = { 'tiktok-shop': 'tiktokshop', 'pump': 'pumpfun', 'pump.fun': 'pumpfun', 'dex': 'dexscreener', 'dexscreen': 'dexscreener' };
 
 /**
  * @param {string} platform

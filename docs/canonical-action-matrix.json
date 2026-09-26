@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-26T23:14:37.058Z",
+  "generated": "2026-09-26T23:37:21.105Z",
   "platforms": {
     "twitter": {
       "category": "social",
@@ -4313,6 +4313,108 @@
           "outputType": "{ commentId, timestamp, success }",
           "requiresAuth": true,
           "syncCapable": false,
+          "status": "stable"
+        }
+      ]
+    },
+    "dexscreener": {
+      "category": "crypto",
+      "no_crawler": false,
+      "actions": [
+        {
+          "action": "token_socials",
+          "description": "Fetch dexscreener token social links + websites for a chain/address pair",
+          "requiredArgs": [
+            "chainId",
+            "tokenAddress"
+          ],
+          "optionalArgs": [
+            "chain",
+            "token",
+            "address",
+            "mint"
+          ],
+          "example": {
+            "chainId": "solana",
+            "tokenAddress": "5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"
+          },
+          "outputType": "{ platform, category, type, data: { chain_id, token_address, name, symbol, description, image, url, socials[], websites[] } }",
+          "requiresAuth": false,
+          "syncCapable": true,
+          "status": "stable"
+        },
+        {
+          "action": "token_legitimacy",
+          "description": "Fetch dexscreener dev-paid orders + boost status for a chain/address pair",
+          "requiredArgs": [
+            "chainId",
+            "tokenAddress"
+          ],
+          "optionalArgs": [
+            "chain",
+            "token",
+            "address",
+            "mint"
+          ],
+          "example": {
+            "chainId": "solana",
+            "tokenAddress": "5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"
+          },
+          "outputType": "{ platform, category, type, data: { chain_id, token_address, orders[], boosted, boosts_active } }",
+          "requiresAuth": false,
+          "syncCapable": true,
+          "status": "stable"
+        },
+        {
+          "action": "token_lookup",
+          "description": "Fetch dexscreener pair data (dex_id, price_usd, liquidity) for a chain/address pair",
+          "requiredArgs": [
+            "chainId",
+            "tokenAddress"
+          ],
+          "optionalArgs": [
+            "chain",
+            "token",
+            "address",
+            "mint"
+          ],
+          "example": {
+            "chainId": "solana",
+            "tokenAddress": "5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"
+          },
+          "outputType": "{ platform, category, type, data: { chain_id, token_address, pair_count, pairs[] } }",
+          "requiresAuth": false,
+          "syncCapable": true,
+          "status": "stable"
+        },
+        {
+          "action": "latest_boosted",
+          "description": "Fetch dexscreener trending boosted tokens (platform-wide, no chain filter)",
+          "requiredArgs": [],
+          "optionalArgs": [
+            "limit"
+          ],
+          "example": {
+            "limit": 25
+          },
+          "outputType": "BoostedToken[]",
+          "requiresAuth": false,
+          "syncCapable": true,
+          "status": "stable"
+        },
+        {
+          "action": "latest_profiles",
+          "description": "Fetch dexscreener newly updated token profiles (platform-wide)",
+          "requiredArgs": [],
+          "optionalArgs": [
+            "limit"
+          ],
+          "example": {
+            "limit": 25
+          },
+          "outputType": "TokenProfile[]",
+          "requiresAuth": false,
+          "syncCapable": true,
           "status": "stable"
         }
       ]

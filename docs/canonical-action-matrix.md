@@ -1,6 +1,6 @@
 # Canonical Action/Arg Matrix
 
-> Auto-generated 2026-09-26T23:14:37.060Z. Do not edit manually.
+> Auto-generated 2026-09-26T23:37:21.108Z. Do not edit manually.
 
 | Platform | Category | Action | Sync | Required Args | Optional Args | Example |
 |----------|----------|--------|------|---------------|---------------|---------|
@@ -228,3 +228,8 @@
 | pumpfun | social | fetch_user_following | — | userId | — | `{"userId":"4e6186fa-df15-44b5-aa56-b3a7657be44a"}` |
 | pumpfun | social | fetch_livestream_clips | — | mintOrWallet | — | `{"mintOrWallet":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"}` |
 | pumpfun | social | post_mint_reply | — | mintAddress, text | replyToId, mediaUrl | `{"mintAddress":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump","text":"Greetings!"}` |
+| dexscreener | crypto | token_socials | ✅ | chainId, tokenAddress | chain, token, address, mint | `{"chainId":"solana","tokenAddress":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"}` |
+| dexscreener | crypto | token_legitimacy | ✅ | chainId, tokenAddress | chain, token, address, mint | `{"chainId":"solana","tokenAddress":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"}` |
+| dexscreener | crypto | token_lookup | ✅ | chainId, tokenAddress | chain, token, address, mint | `{"chainId":"solana","tokenAddress":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"}` |
+| dexscreener | crypto | latest_boosted | ✅ | — | limit | `{"limit":25}` |
+| dexscreener | crypto | latest_profiles | ✅ | — | limit | `{"limit":25}` |

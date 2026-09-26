@@ -37,6 +37,7 @@ const CANONICAL_PLATFORMS = [
   'vietnamworks',
   'masothue',
   'pumpfun',
+  'dexscreener',
 ];
 
 /** @type {Record<string, string>} — derived from DESCRIPTORS aliases, not a manual map */
@@ -73,6 +74,7 @@ const PLATFORM_CATEGORIES = {
   healthcare: 'healthcare',
   ipvietnam: 'legal',
   pumpfun: 'social',
+  dexscreener: 'crypto',
 };
 
 /** @type {Record<string, string>} */
@@ -128,6 +130,7 @@ export async function executeActionListTool(options = {}) {
     () => import("../recruitment/vietnamworks/crawler.js").then((m) => new m.VietnamWorksCrawler()),
     () => import("../procurement/masothue/crawler.js").then((m) => new m.MaSoThueCrawler()),
     () => import("./pumpfun/crawler.js").then((m) => new m.PumpFunCrawler()),
+    () => import("../crypto/dexscreener/crawler.js").then((m) => new m.DexscreenerCrawler()),
   ];
 
   const crawlers = [];

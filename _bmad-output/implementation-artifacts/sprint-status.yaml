@@ -435,7 +435,7 @@ epic-50:
       status: done
     story-50-7:
       slug: crypto-dexscreener-descriptor
-      status: backlog
+      status: done
     story-50-8:
       slug: social-telegram-descriptor-skeleton
       status: backlog
