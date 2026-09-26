@@ -38,6 +38,7 @@ const CANONICAL_PLATFORMS = [
   'masothue',
   'pumpfun',
   'dexscreener',
+  'telegram',
 ];
 
 /** @type {Record<string, string>} — derived from DESCRIPTORS aliases, not a manual map */
@@ -131,6 +132,7 @@ export async function executeActionListTool(options = {}) {
     () => import("../procurement/masothue/crawler.js").then((m) => new m.MaSoThueCrawler()),
     () => import("./pumpfun/crawler.js").then((m) => new m.PumpFunCrawler()),
     () => import("../crypto/dexscreener/crawler.js").then((m) => new m.DexscreenerCrawler()),
+    () => import("./telegram/crawler.js").then((m) => new m.TelegramCrawler()),
   ];
 
   const crawlers = [];
@@ -177,7 +179,7 @@ export async function executeActionListTool(options = {}) {
         const capList = Array.isArray(desc?.syncCapableActions) ? desc.syncCapableActions : [];
         const mapped = desc?.actionMap?.[action.action] || action.action;
         action.syncCapable = capList.includes(action.action) || capList.includes(mapped);
-        action.status = 'stable';
+        action.status = desc?.coming_soon === true ? 'coming_soon' : 'stable';
       }
     }
 

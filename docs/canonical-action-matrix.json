@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-26T23:37:21.105Z",
+  "generated": "2026-09-26T23:51:58.197Z",
   "platforms": {
     "twitter": {
       "category": "social",
@@ -4416,6 +4416,80 @@
           "requiresAuth": false,
           "syncCapable": true,
           "status": "stable"
+        }
+      ]
+    },
+    "telegram": {
+      "category": "social",
+      "no_crawler": false,
+      "actions": [
+        {
+          "action": "channel_messages",
+          "description": "[coming soon] Fetch recent posts from a public telegram channel",
+          "requiredArgs": [
+            "channel"
+          ],
+          "optionalArgs": [
+            "limit",
+            "before",
+            "after"
+          ],
+          "example": {
+            "channel": "durov",
+            "limit": 25
+          },
+          "outputType": "ChannelMessage[]",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "coming_soon"
+        },
+        {
+          "action": "channel_info",
+          "description": "[coming soon] Fetch channel metadata (member count, description, linked chat)",
+          "requiredArgs": [
+            "channel"
+          ],
+          "optionalArgs": [],
+          "example": {
+            "channel": "durov"
+          },
+          "outputType": "{ channel, title, member_count, description, linked_chat_id }",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "coming_soon"
+        },
+        {
+          "action": "search_channels",
+          "description": "[coming soon] Search public telegram channels by keyword",
+          "requiredArgs": [
+            "query"
+          ],
+          "optionalArgs": [
+            "limit"
+          ],
+          "example": {
+            "query": "crypto news",
+            "limit": 10
+          },
+          "outputType": "ChannelSearchResult[]",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "coming_soon"
+        },
+        {
+          "action": "user_resolve",
+          "description": "[coming soon] Resolve a telegram @username to a profile record",
+          "requiredArgs": [
+            "username"
+          ],
+          "optionalArgs": [],
+          "example": {
+            "username": "durov"
+          },
+          "outputType": "{ username, user_id, display_name, bio, is_bot }",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "coming_soon"
         }
       ]
     }

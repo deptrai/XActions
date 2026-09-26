@@ -34,10 +34,11 @@ const VALID_PLATFORMS = [
   'vietnamworks', 'linkedin', 'batdongsan', 'chotot', 'youtube', 'zalo',
   'instagram', 'ig', 'insta', 'pumpfun', 'pump', 'pump.fun',
   'dexscreener', 'dex', 'dexscreen',
+  'telegram', 'tg',
 ];
 
 /** @type {Record<string, string>} */
-export const PLATFORM_ALIASES = { 'tiktok-shop': 'tiktokshop', 'pump': 'pumpfun', 'pump.fun': 'pumpfun', 'dex': 'dexscreener', 'dexscreen': 'dexscreener' };
+export const PLATFORM_ALIASES = { 'tiktok-shop': 'tiktokshop', 'pump': 'pumpfun', 'pump.fun': 'pumpfun', 'dex': 'dexscreener', 'dexscreen': 'dexscreener', 'tg': 'telegram' };
 
 /**
  * @param {string} platform

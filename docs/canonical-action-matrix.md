@@ -1,6 +1,6 @@
 # Canonical Action/Arg Matrix
 
-> Auto-generated 2026-09-26T23:37:21.108Z. Do not edit manually.
+> Auto-generated 2026-09-26T23:51:58.200Z. Do not edit manually.
 
 | Platform | Category | Action | Sync | Required Args | Optional Args | Example |
 |----------|----------|--------|------|---------------|---------------|---------|
@@ -233,3 +233,7 @@
 | dexscreener | crypto | token_lookup | ✅ | chainId, tokenAddress | chain, token, address, mint | `{"chainId":"solana","tokenAddress":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"}` |
 | dexscreener | crypto | latest_boosted | ✅ | — | limit | `{"limit":25}` |
 | dexscreener | crypto | latest_profiles | ✅ | — | limit | `{"limit":25}` |
+| telegram | social | channel_messages | — | channel | limit, before, after | `{"channel":"durov","limit":25}` |
+| telegram | social | channel_info | — | channel | — | `{"channel":"durov"}` |
+| telegram | social | search_channels | — | query | limit | `{"query":"crypto news","limit":10}` |
+| telegram | social | user_resolve | — | username | — | `{"username":"durov"}` |

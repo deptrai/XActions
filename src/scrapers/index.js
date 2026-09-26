@@ -97,6 +97,7 @@ import githubDescriptor from './identity/github/descriptor.js';
 import gravatarDescriptor from './identity/gravatar/descriptor.js';
 import pumpfunDescriptor from './social/pumpfun/descriptor.js';
 import dexscreenerDescriptor from './crypto/dexscreener/descriptor.js';
+import telegramDescriptor from './social/telegram/descriptor.js';
 
 export { dispatchFacebookHybrid };
 
@@ -242,6 +243,7 @@ for (const descriptor of [
   gravatarDescriptor,
   pumpfunDescriptor,
   dexscreenerDescriptor,
+  telegramDescriptor,
 ]) {
   for (const alias of descriptor.aliases) {
     DESCRIPTORS[alias] = descriptor;

@@ -438,7 +438,7 @@ epic-50:
       status: done
     story-50-8:
       slug: social-telegram-descriptor-skeleton
-      status: backlog
+      status: done
     story-50-9:
       slug: reddit-search-e2e-contract-test-migration-guide
       status: backlog
