@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: 09-24-2026
+last_updated: 09-26-2026
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -408,3 +408,37 @@ epic-49:
     - id: 49.5
       name: Checkpoint Optimistic Locking + P2 Sweep
       status: done
+
+# Epic 50: Public Scrape Gateway — Unified Service Contract
+epic-50:
+  status: in-progress
+  source_spec: _bmad-output/specs/spec-xactions-public-scrape-gateway/SPEC.md
+  source_spine: _bmad-output/planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md
+  stories:
+    story-50-1:
+      slug: service-auth-lane-bearer-consumer-derivation
+      status: done
+    story-50-2:
+      slug: sync-async-mode-dispatch-202-degrade
+      status: backlog
+    story-50-3:
+      slug: unified-envelope-request-id-error-envelope
+      status: backlog
+    story-50-4:
+      slug: per-consumer-quota-x402-observability-dashboard
+      status: backlog
+    story-50-5:
+      slug: self-discovery-api-actions-catalog-playground
+      status: backlog
+    story-50-6:
+      slug: pumpfun-fetch-coin-meta-action
+      status: backlog
+    story-50-7:
+      slug: crypto-dexscreener-descriptor
+      status: backlog
+    story-50-8:
+      slug: social-telegram-descriptor-skeleton
+      status: backlog
+    story-50-9:
+      slug: reddit-search-e2e-contract-test-migration-guide
+      status: backlog

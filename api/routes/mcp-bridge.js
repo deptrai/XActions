@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { createMcpServer } from '../../src/mcp/server.js';
+import { createMcpServer, initializeBackend } from '../../src/mcp/server.js';
 import { identifyConsumer, runWithConsumerContext } from '../../src/mcp/consumer-context.js';
 import { createMcpPaymentMiddleware, mcpPricingHandler } from '../../src/mcp/x402-mcp.js';
 
@@ -20,7 +20,14 @@ const __dirname = path.dirname(__filename);
 /** @type {Map<string, { server: any, transport: StreamableHTTPServerTransport }>} */
 const sessions = new Map();
 
+let _backendReady = null;
+function ensureBackend() {
+  if (!_backendReady) _backendReady = initializeBackend();
+  return _backendReady;
+}
+
 export function setupMcpRoutes(app) {
+  ensureBackend().catch(err => console.error('[mcp-bridge] initializeBackend failed:', err));
   // Pricing endpoint for x402 discovery
   app.get('/mcp/pricing', mcpPricingHandler);
 

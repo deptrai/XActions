@@ -7,14 +7,16 @@
 
 import { proxyToBackend } from '@/lib/proxy';
 
+const opts = { followRedirects: true } as const;
+
 export async function GET(req: Request) {
-  return proxyToBackend(req);
+  return proxyToBackend(req, opts);
 }
 
 export async function HEAD(req: Request) {
-  return proxyToBackend(req);
+  return proxyToBackend(req, opts);
 }
 
 export async function OPTIONS(req: Request) {
-  return proxyToBackend(req);
+  return proxyToBackend(req, opts);
 }

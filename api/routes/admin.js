@@ -502,6 +502,27 @@ router.post('/proxies/release', authenticateToken, requireAdmin, handleReleasePr
 router.post('/proxies/:key/release', authenticateToken, requireAdmin, handleReleaseProxy);
 
 /**
+ * Shared handler: collect all pool accounts with health + circuit state.
+ * Used by both /accounts and the spec-named /sessions alias.
+ */
+const listAccountsWithHealth = () => {
+  const platform = undefined;
+  const rawAccounts = globalAccountPool.listAccountDetails(platform);
+  const healthStatus = globalSessionHealthOrchestrator.getStatus();
+  return rawAccounts.map((a) => {
+    const key = `${a.platform || 'default'}:${a.accountId}`;
+    const score = healthStatus.healthScores[key] ?? 100;
+    const circuit = healthStatus.circuitBreakerStates[key] || { state: 'closed', failures: 0, nextProbeAt: 0, openedAt: 0 };
+    return {
+      ...a,
+      healthScore: score,
+      circuitState: circuit.state,
+      circuitBreaker: circuit,
+    };
+  });
+};
+
+/**
  * GET /api/admin/accounts
  * List all accounts with status, hibernation, velocity, and assigned proxies (Story 19.2 & Story 19.8)
  */
@@ -525,6 +546,28 @@ router.get('/accounts', requireAdminOrApiKey, (req, res) => {
       success: true,
       total: accounts.length,
       accounts,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: (err instanceof Error ? err.message : String(err)),
+    });
+  }
+});
+
+/**
+ * GET /api/admin/sessions
+ * Spec-named alias for the account-session table consumed by the
+ * /sessions dashboard. Returns the same per-account hibernation state
+ * under a `sessions` key so the frontend secondary fetch resolves.
+ */
+router.get('/sessions', requireAdminOrApiKey, (req, res) => {
+  try {
+    const sessions = listAccountsWithHealth();
+    res.json({
+      success: true,
+      total: sessions.length,
+      sessions,
     });
   } catch (err) {
     res.status(500).json({

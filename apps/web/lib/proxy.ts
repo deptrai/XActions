@@ -14,6 +14,14 @@ export interface ProxyOptions {
   baseUrl?: string;
   /** Explicit pathname override. Defaults to pathname of req.url. */
   targetPath?: string;
+  /**
+   * Follow upstream redirects server-side instead of bouncing them to the
+   * browser. Use for endpoints (e.g. Swagger UI at /api-docs) where the
+   * upstream canonicalizes the path with a trailing slash that Next.js would
+   * otherwise strip — producing a 301↔308 redirect loop for the client.
+   * Auth cookies are re-injected on each hop by fetch, so this stays safe.
+   */
+  followRedirects?: boolean;
 }
 
 const HOP_BY_HOP_REQUEST_HEADERS = new Set([
@@ -78,7 +86,7 @@ export async function proxyToBackend(
   const init: RequestInit & { duplex?: 'half' } = {
     method,
     headers: forwardHeaders,
-    redirect: 'manual',
+    redirect: opts.followRedirects ? 'follow' : 'manual',
   };
 
   if (method !== 'GET' && method !== 'HEAD' && req.body) {

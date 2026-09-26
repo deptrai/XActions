@@ -6,6 +6,9 @@ inputDocuments:
   - 'planning-artifacts/archive/epics-1-9-legacy.md'
   - 'prisma/schema.prisma'
   - '../nowing/_bmad-output/planning-artifacts/architecture/architecture-xactions-social-integration-2026-08-15/ARCHITECTURE-SPINE.md'
+  - 'specs/spec-xactions-public-scrape-gateway/SPEC.md'
+  - 'planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md'
+  - 'planning-artifacts/research/market-crypto-xactions-features-2026-09-26/research.md'
 ---
 
 # XActions Universal Hybrid Scraping & Automation Engine — Epic Breakdown (Epics 10–20)
@@ -3558,3 +3561,382 @@ So that **concurrent pause/resume không ghi đè và ledger sạch**.
 **Given** deferred-work P2 entries + checkpoint locking item  
 **When** implement  
 **Then** version check trên checkpoint mutations (409 trên conflict); P2 sweep list trong spec story; mỗi entry resolved hoặc explicit re-defer với lý do.
+
+
+---
+
+# Epic 50: Public Scrape Gateway — Unified Service Contract
+
+> **Source spec:** `_bmad-output/specs/spec-xactions-public-scrape-gateway/SPEC.md` (CAP-1..10, C-1..13, NG-1..8)  
+> **Source spine:** `_bmad-output/planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md` (AD-1..7, OQ-1..3 resolved)  
+> **Source research:** `_bmad-output/planning-artifacts/research/market-crypto-xactions-features-2026-09-26/research.md` (D1-D4)  
+> **UX review:** `_bmad-output/specs/spec-xactions-public-scrape-gateway/ux-review.md` (UX-1..5 patched inline)  
+> **Trigger:** jev-trading forked `PumpFunCrawler` in-repo vì không có sync REST surface + service auth — gateway phải mở contract này cho mọi machine consumer (jev, Nowing, ChainLens, third-party).
+
+**Epic Goal:** Biến `POST /api/platform/:platform/scrape` thành public service contract đầy đủ — service-auth lane, sync/async dispatch, unified envelope, per-consumer quota, self-discovery, observability dashboard, interactive playground, và migration quickstart — để bất kỳ backend consumer nào cũng integrate mà không cần session cookie, MCP-only path, hoặc queue+poll bắt buộc.
+
+**FRs covered:** FR1–FR12  
+**NFRs covered:** NFR1–NFR8  
+**UX findings patched:** UX-1 (REST introspection), UX-2 (error.kind), UX-3 (degraded_reason), UX-4 (migration doc), UX-5 (hint-vs-authoritative doc)  
+**Dependencies:** Epic 20 (ThinEvent + envelope), Epic 25 (descriptor dispatcher), Epic 32 (token bucket)
+
+---
+
+### Story 50.1: Service-Auth Lane — Bearer→Consumer Derivation
+
+As a **backend service consumer (jev, Nowing, ChainLens)**,
+I want **authenticate via Bearer token that cryptographically binds to my consumer_id**,
+So that **I can call the gateway without a user session cookie, and my identity cannot be spoofed via headers**.
+
+**Acceptance Criteria:**
+
+**Given** `api/middleware/serviceAuth.js` does not yet exist
+**When** implement middleware
+**Then** new file `api/middleware/serviceAuth.js` exports `serviceAuth(req,res,next)` that:
+- Extracts `Authorization: Bearer <token>` via `extractBearerToken` from `src/mcp/consumer-context.js`
+- Looks up token in env-driven map `XACTIONS_SERVICE_KEYS` (JSON: `{"<token>": {"consumer_id":"jev","tier":"internal"}}`) — falls back to `XACTIONS_MCP_API_KEY`/`XACTIONS_API_TOKEN` legacy check
+- Sets `req.consumer = {consumerId, apiKeyValid:true, source:'serviceAuth'}`
+- On invalid/missing token → `401 + ErrorEnvelope{code:'XACT_4001', kind:'auth', message:'Invalid Bearer token'}`
+- **Ignores `X-Consumer-Id` header for identity** — logs it as hint only (`req.consumerHint`)
+
+**And** `api/routes/platform.js` mounts `serviceAuth` as alternative lane:
+- `router.post('/:platform/scrape', eitherAuth, handler)` where `eitherAuth` tries `authenticate` (user JWT) first, falls back to `serviceAuth` — never both
+- `req.consumer` is populated regardless of which lane succeeded
+
+**And** spoof test: request with valid Bearer but `X-Consumer-Id: internal` resolves to Bearer's mapped consumer (e.g. `jev`), NOT `internal` — verified by contract test
+
+**And** legacy `XACTIONS_MCP_API_KEY` Bearer (single shared token) still works → maps to `internal` consumer
+
+---
+
+### Story 50.2: Sync/Async Mode Dispatch + 202 Degrade Contract
+
+As a **backend consumer**,
+I want **pick `mode:'sync'` for sub-second reads or `mode:'async'` for heavy jobs on the same route**,
+So that **lightweight calls don't pay queue+poll latency and heavy calls don't silently hang**.
+
+**Acceptance Criteria:**
+
+**Given** `POST /api/platform/:platform/scrape` currently runs sync-only
+**When** add `mode` handling
+**Then** request body accepts `mode: 'sync' | 'async' | undefined`:
+- `undefined` → resolve per-action `syncCapable` manifest (default `async` for unlisted)
+- `mode:'sync'` + action syncCapable → run `scrape()` in-process with 1.5s timer
+- `mode:'sync'` + action NOT syncCapable → `400 + ErrorEnvelope{code:'XACT_4001', kind:'validation', message:'action not sync-eligible'}` — contract violation, NOT a degrade
+- `mode:'async'` → enqueue Bull job via `jobQueue`, return `202 + {operationId, mode:'async'}` immediately
+- Caller may override sync→async; never async→sync
+
+**And** sync call exceeding 1.5s:
+- Returns `202 + {operationId, mode:'async', degraded_reason, retry_after_ms}` + `Retry-After` header
+- `degraded_reason` closed enum: `'upstream_timeout' | 'cf_challenge' | 'upstream_rate_limit' | 'queue_fallback'`
+- Job continues in background via Bull — consumer polls `/api/ai/action/status/:id`
+- Never returns `200 + error` for timeout — 202 is the ONLY degrade shape
+
+**And** sync call completing <1.5s → `200 + unified envelope` (see Story 50.3)
+
+**And** `syncCapable` manifest lives in each platform's `descriptor.js` as `syncCapableActions: string[]` — reddit declares `['search','subreddit','post_comments']`, pumpfun declares `['fetch_coin_meta']` (new in 50.6), etc.
+
+**And** batch dispatch on same route — `platform:'all'` hoặc `platform:['x','reddit']` triggers `UniversalActionDispatcher.dispatch` (`Promise.allSettled` per `dispatcher.js:296`):
+- `mode:'sync'` batch runs platforms in parallel; **1.5s ceiling applies per-platform**, not whole-batch — batch total bounded by slowest single platform
+- Per-platform failure does not fail the batch — `results[]` carries per-platform `{platform, success, data|error}` entries
+- `mode:'async'` batch enqueues per-platform jobs, returns `202 + {operationIds[]}` — one id per platform
+
+---
+
+### Story 50.3: Unified Envelope + Request-Id Propagation + ErrorEnvelope
+
+As a **consumer of any platform**,
+I want **every gateway call to return the same envelope shape with request-id end-to-end AND errors that tell me WHICH quota/upstream failed**,
+So that **my client adapter is platform-agnostic, traceable, and debuggable**.
+
+**Acceptance Criteria:**
+
+**Given** current scrape route returns `{ok:true, ...}` ad-hoc
+**When** normalize response
+**Then** every call returns:
+```
+{
+  success: boolean,
+  mode: 'sync'|'async',
+  metadata: { request_id, platform, action, consumer_id, duration_ms, sync_capable, ... },
+  stream: { enabled: boolean, name?: string, cursor?: string },
+  preview: [],   // verbatim slice of data[0..10] — never derived summary
+  data: []
+}
+```
+
+**And** `X-Request-Id` honored: inbound header preserved, or generated (`req_${Date.now()}_${rand}`), propagated to `metadata.request_id` and logged
+
+**And** W3C `traceparent` inbound header propagated to `metadata.traceparent` if present
+
+**And** all errors funnel through `ErrorEnvelope` — `{success:false, error:{code, kind, message, status, request_id, retryable, retry_after_ms?}}` — never raw scraper stack
+
+**And** `error.kind` is a closed enum: `'auth' | 'validation' | 'consumer_quota' | 'upstream_rate_limit' | 'proxy_ip_block' | 'upstream_error' | 'internal'` — lets consumers pick retry strategy without guessing
+- `consumer_quota` → slow own request rate (their fault)
+- `upstream_rate_limit` → degrade to async, XActions' pool hot (our upstream)
+- `proxy_ip_block` → escalate to XActions ops (infra)
+- `retryable:true` + `retry_after_ms` required on 429/503
+
+**And** `preview` is `data.slice(0,10)` verbatim; never a summary object (summaries go in `metadata`)
+
+**And** contract test asserts envelope shape on `reddit/search`, `pumpfun/fetch_coin_meta`, `x/search` — identical keys + identical `error.kind` enum coverage
+
+---
+
+### Story 50.4: Per-Consumer Rate-Limit Bucket + Anonymous Free Tier + x402 Route Config + Observability Dashboard
+
+As a **platform operator**,
+I want **token-bucket keyed on derived consumer_id + a tight anonymous free tier + x402 paid route on the gateway + a dashboard to observe it all**,
+So that **one consumer can't starve another, anonymous callers get a taste, heavy use pays — and I can see it happening**.
+
+**Acceptance Criteria:**
+
+**Backend — quota & x402:**
+
+**Given** `DistributedTokenBucket` exists in `src/core/distributed-token-bucket.js`
+**When** wire per-consumer quota
+**Then** bucket key = `{derived_consumer_id}:{platform}:{action}` — e.g. `jev:reddit:search`
+- Named consumers (`jev`,`nowing`,`chainlens`) get free quota per env config `XACTIONS_CONSUMER_QUOTAS` (JSON: `{"jev":{"reddit:search":"100/min"}}`)
+- `internal` consumer unmetered (trusted)
+- Unknown/anonymous callers (no Bearer) → `anonymous` bucket, IP-bucketed, tight ceiling (default `10/min` per IP+platform+action)
+
+**And** on quota exhaustion → `429 + ErrorEnvelope{code:'XACT_4029', kind:'consumer_quota', message:'quota exceeded', retryable:true, retry_after_ms}` + `Retry-After` header
+
+**And** `api/middleware/x402.js` `buildRouteConfig` extended:
+- Adds `POST /api/platform/:platform/scrape` route family
+- Per-action pricing from `AI_OPERATION_PRICES` — `scrape:reddit:search`, `scrape:pumpfun:coin_meta`, `scrape:dexscreener:token_socials`, etc.
+- `x402` engages when anonymous quota exhausted OR action tagged `premium` in manifest
+
+**And** settle timing: x402 verifies payment pre-handler, settles post-response (per `@x402/express` README:111). For `202` async degrade, settle on accept not result.
+
+**And** spoof test: anonymous caller forging `X-Consumer-Id: jev` still gets `anonymous` bucket — identity derives from Bearer only (Story 50.1).
+
+**Frontend — observability dashboard at `apps/web/app/gateway/monitor/`:**
+
+**Given** backend quota + degrade data exists
+**When** implement monitor page
+**Then** page shows:
+- **Quota panel**: table of `consumer_id × platform × action` with current bucket fill %, RPM actual, 429-count last hour — sorted by consumption
+- **Sync-degrade panel**: rolling chart of `mode:'sync'` → `mode:'async'` degrade rate over 24h, colored by `degraded_reason`; alert badge on >10% degrade
+- **Upstream health panel**: per-platform upstream p50/p95/p99, error rate, last-429 timestamp — signals pool exhaustion before consumers notice
+- **Anonymous vs named split**: pie chart `internal`/`named`/`anonymous`/`x402-paid` traffic share
+- **Request-id lookup**: input → fetch envelope by `request_id` → show full trace for debugging
+
+**And** data source: new endpoint `GET /api/admin/gateway/metrics` (admin-auth) aggregating `DistributedTokenBucket` + Bull stats + ring-buffer of last 1000 calls
+
+**And** auto-refresh 10s, pause-on-tab-blur, time-range selector (1h/6h/24h)
+
+**And** read-only — quota tuning stays env-config ops, not a UI concern (NG-6)
+
+---
+
+### Story 50.5: Self-Discovery — `GET /api/actions` + openapi.json + x_actions_list + Public Catalog UI
+
+As a **consumer integrating the gateway**,
+I want **enumerate every (platform, action, syncCapable, mode) triple via REST, MCP, openapi spec, AND a browsable catalog**,
+So that **my adapter knows what's callable — whichever discovery surface I happen to hit first**.
+
+**Acceptance Criteria:**
+
+**Backend — manifest endpoint:**
+
+**Given** `api/openapi.json` exists and `x_actions_list` MCP tool exists
+**When** regenerate openapi + add REST introspection route
+**Then** `GET /api/actions` returns full manifest unauthenticated:
+- Lists every `{platform, action, syncCapable, required_args[], category, description}` triple
+- <100ms response, cached from descriptor registry
+- Same payload as `x_actions_list` MCP tool — REST and MCP consumers on equal footing (UX-1 fix)
+
+**And** `api/openapi.json` documents `POST /api/platform/{platform}/scrape` with:
+- `platform` path param enum from `VALID_PLATFORMS`
+- Request body schema `{action, options, mode}` with `mode` enum `['sync','async']`
+- Response schema = unified envelope + `202` degrade shape
+- Auth: `securitySchemes` for Bearer + x402
+- `X-Consumer-Id` annotated as *observability hint only* (UX-5)
+
+**And** `src/scrapers/social/actions-list.js` `x_actions_list` output includes per-action `syncCapable: boolean` flag sourced from descriptor `syncCapableActions`
+
+**And** new platforms register identically — `dexscreener` and `telegram` appear in listing when descriptors land (Stories 50.7, 50.8); telegram flagged `coming_soon:true`
+
+**And** `npm run docs:matrix` regenerated — canonical action matrix includes new actions + syncCapable column
+
+**Frontend — public catalog at `apps/web/app/actions/`:**
+
+**Given** `GET /api/actions` manifest exists
+**When** implement catalog page
+**Then** page renders:
+- Catalog grid grouped by `category` (social, crypto, e-commerce, video, hr, realestate, etc.)
+- Per-platform card: platform name, icon, action count, `syncCapable` count, status badge (stable/beta/coming_soon)
+- Click platform → drill into actions: name, syncCapable badge, `requiredArgs[]`, one-line description, `Try it →` button linking to playground (50.5 continues) with platform+action pre-filled
+- Search bar filtering by action name/platform
+
+**And** deep-linkable: `/actions?platform=reddit&action=search` opens with detail panel pre-open
+
+**And** no auth required to *view* — `Try it` links to playground which does require auth (clear UX separation: browse ≠ call)
+
+**And** SEO-friendly: `generateStaticParams` per platform, sitemap entry, OpenGraph tags
+
+**Frontend — interactive playground at `apps/web/app/gateway/`:**
+
+**Given** manifest + scrape route exist
+**When** implement `apps/web/app/gateway/page.tsx`
+**Then** page provides:
+- Platform selector (dropdown populated from `GET /api/actions`)
+- Action selector (filtered by platform, shows `syncCapable` badge)
+- Mode picker (sync/async radio with hint about eligibility)
+- Auth simulator (Bearer token input, X-Consumer-Id input with "hint only" tooltip per UX-5)
+- Options JSON editor (textarea with validation)
+- Send button → renders unified envelope response: success/mode/metadata/stream/preview/data with collapsible JSON tree
+- Error display: `error.kind` badge color-coded (`consumer_quota` orange, `upstream_rate_limit` yellow, `proxy_ip_block` red, `auth` purple, `validation` blue)
+- Request-id + traceparent shown in metadata panel
+
+**And** curl-generator: "Copy as curl" button produces ready-to-paste command matching playground state
+
+**And** recent-calls log: last 20 calls in localStorage with replay button
+
+**And** degrade UX: `202 + degraded_reason` shows amber banner "Sync degraded — reason: {reason}" with link to status polling
+
+**And** `error.kind` examples auto-populated — "Show me XACT_4029" button fills request to trigger rate-limit
+
+---
+
+### Story 50.6: pumpfun `fetch_coin_meta` Lightweight Action
+
+As a **trading consumer (jev)**,
+I want **call `POST /api/platform/pumpfun/scrape {action:'fetch_coin_meta'}` for just coin metadata**,
+So that **I get creator/socials/bonding_curve in ~300ms without paying the full `fetch_mint_social` cost**.
+
+**Acceptance Criteria:**
+
+**Given** `src/scrapers/social/pumpfun/client.js` already has `getCoin(mint)` hitting `frontend-api-v3.pump.fun/coins/{mint}`
+**When** register new action in `descriptor.js` + `crawler.js`
+**Then** `action:'fetch_coin_meta'` (aliases: `coin_meta`, `coin`) calls `client.getCoin(mint)` alone — NOT `mint-positions`, NOT `replies`, NOT livestream poller
+
+**And** returns `{mint, coinMeta: normalizeCoinMeta(raw)}` shape — ThinEvent `data` carries `creator`, `market_cap_usd`, `twitter`, `telegram`, `website`, `bonding_curve`, `ath_market_cap`, `is_currently_live`
+
+**And** `syncCapableActions` includes `fetch_coin_meta` (fast CF-bypassed fetch ~300ms)
+
+**And** 404 on mint → `XACT_4004` mapped error, not generic 500
+
+**And** rate-limit on pumpfun upstream → `XACT_4029` + `Retry-After` (inherits from base-client governor)
+
+**And** integration test: real `mint` from pump.fun returns full coinMeta envelope in <1.5s sync
+
+---
+
+### Story 50.7: `crypto/dexscreener` Platform Descriptor
+
+As a **crypto consumer (jev, ChainLens)**,
+I want **scrape Dexscreener's public REST for token socials + legitimacy signals**,
+So that **I can detect dev-paid orders, boosts, and social link maps without my own Dexscreener integration**.
+
+**Acceptance Criteria:**
+
+**Given** Dexscreener API is keyless/free (verified in research: `api.dexscreener.com/latest/dex/*`)
+**When** create `src/scrapers/crypto/dexscreener/` descriptor + client + crawler + normalizer
+**Then** descriptor registers actions:
+- `token_socials` — `GET /tokens/v1/{chainId}/{tokenAddress}` → `info.socials[]` map
+- `token_legitimacy` — `GET /orders/v1/{chainId}/{tokenAddress}` → dev-paid order + boost status
+- `token_lookup` — `GET /token-pairs/v1/{chainId}/{tokenAddress}` → pair data + liquidity + priceUsd
+- `latest_boosted` — `GET /token-boosts/latest/v1` → trending boosted tokens
+- `latest_profiles` — `GET /token-profiles/latest/v1` → newly updated profiles
+
+**And** `category: 'crypto'` on all ThinEvents; domain fields (`boosts.active`, `orders[].type`, `pair.dexId`) live in `data` payload only — never core envelope
+
+**And** `syncCapableActions` = all 5 (all are sub-second REST reads)
+
+**And** proxy pool optional — Dexscreener is permissive but per-consumer rate-limit applies (Story 50.4)
+
+**And** covers Raydium + Orca + others via `pair.dexId` — no separate DEX scrapers needed
+
+**And** normalizer emits ThinEvent snake_case (`token_address`, `chain_id`, `dex_id`, `price_usd`, `socials[]`, `boosts`, `orders[]`)
+
+---
+
+### Story 50.8: `social/telegram` Platform Descriptor (Skeleton — Transport Deferred)
+
+As a **platform engineer**,
+I want **scaffold the Telegram descriptor with action stubs and a transport decision gate**,
+So that **the D4 spec can pick MTProto-vs-Bot without restructuring the platform**.
+
+**Acceptance Criteria:**
+
+**Given** Telegram transport choice deferred (spine NG-2)
+**When** scaffold `src/scrapers/social/telegram/` descriptor + client + crawler + normalizer
+**Then** descriptor registers action stubs:
+- `channel_messages` — fetch recent posts from public channel(s)
+- `channel_info` — metadata (member count, description, linked chat)
+- `search_channels` — find channels by keyword
+- `user_resolve` — username → profile
+
+**And** `telegram-client.js` is a strategy-shim: `transport: 'mtproto' | 'bot' | 'web'` selected via env `TELEGRAM_TRANSPORT`, throws `XACT_4001 'transport not implemented'` if invoked before D4 spec picks
+
+**And** `syncCapableActions = []` (none until transport lands — forces async)
+
+**And** descriptor exposes `requiredArgs`, envelope shape, and normalizer stubs so Story 50.5 self-discovery lists it as `coming_soon: true`
+
+**And** NO MTProto/TDLib dependency added yet — only the interface seam; real impl lands in D4 spec PR
+
+---
+
+### Story 50.9: Reddit Search E2E Validation + Contract Test + Migration Quickstart
+
+As a **consumer (jev)**,
+I want **`POST /api/platform/reddit/scrape {action:'search'}` to return reddit search results in <1.5s sync — AND a migration guide that converts my existing `xactionsClient.ts` to the new contract**,
+So that **my `searchReddit()` stops returning `[]` and I upgrade in <30 minutes instead of reverse-engineering**.
+
+**Acceptance Criteria:**
+
+**Contract verification:**
+
+**Given** `RedditCrawler.search` exists (`src/scrapers/social/reddit/crawler.js:155`) and `reddit` in `VALID_PLATFORMS`
+**When** end-to-end integration test
+**Then**:
+- `POST /api/platform/reddit/scrape {action:'search', options:{query:'solana memecoin'}, mode:'sync'}` → `200` in <1.5s
+- Response = unified envelope, `data[]` contains `PostItem[]` with snake_case fields
+- `X-Consumer-Id: jev` + valid Bearer → resolves to `jev` consumer bucket, not `internal`
+- Anonymous call → `anonymous` bucket, tighter ceiling
+
+**And** contract test suite (`tests/gateway/`) covers:
+- All 4 auth combinations (user-JWT, serviceAuth Bearer, x402-valid, anonymous)
+- Sync happy path, sync timeout→202 degrade with `degraded_reason`, async queue+poll
+- Spoofed `X-Consumer-Id` rejection (verifies Bearer-derived identity)
+- Envelope shape validation across `reddit`, `pumpfun`, `x` — identical `error.kind` enum coverage
+- Per-consumer quota isolation (two tokens, one exhausts, other succeeds)
+- `not_sync_capable` returns 400 not 202
+- `GET /api/actions` returns manifest matching `x_actions_list` shape
+
+**And** `npm run docs:matrix` includes `reddit/search` with `syncCapable:true`
+
+**And** live manual verification against `api.dexscreener.com` + `frontend-api-v3.pump.fun` + `reddit.com` documents response times in `_bmad-output/planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/live-probe-results.md`
+
+**Migration quickstart (UX-4 fix):**
+
+**Given** jev's `xactionsClient.ts` uses `POST /api/ai/discovery/search` + queue+poll
+**When** write `docs/consumer-quickstart.md` + interactive guide at `apps/web/app/gateway/quickstart/`
+**Then**:
+- Markdown doc covers: before/after `xactionsClient.ts` diff (searchTwitter + searchReddit methods rewritten), auth migration (drop `sessionCookie` → add Bearer), sync-vs-async decision tree, `error.kind` → retry-strategy mapping, common pitfalls
+- Interactive page walks: pick consumer type → pick platform+action → paste existing client code → highlights which lines change (side-by-side diff) → link to playground pre-filled
+- jev-specific section: references actual file paths in jev-trading repo, shows working diff
+- Doc lives in `docs/` (repo-visible) AND web route (interactive) — same content, two surfaces
+
+---
+
+### Epic 50 — Story Dependency Map
+
+```
+[Gateway seam]
+ 50.1 serviceAuth        ──┐
+                           ├──► 50.2 mode dispatch ──► 50.3 envelope ──► 50.4 quota+x402+dashboard ──► 50.5 manifest+catalog+playground
+ existing authenticate   ──┘
+ 
+[Crypto capabilities — parallel sau 50.3]
+ 50.6 pumpfun coin-meta ──► needs 50.2+50.3 only
+ 50.7 dexscreener       ──► needs 50.2+50.3 only
+ 50.8 telegram skeleton ──► needs 50.3 only
+
+[Integration gate]
+ 50.9 e2e contract test + migration doc ──► needs ALL backend (1-8)
+```
+
+Stories 50.6–50.8 are parallelizable after 50.3 lands. 50.9 is the backend integration gate; frontend surfaces ship inside 50.4 (dashboard) + 50.5 (catalog+playground) + 50.9 (quickstart) — no separate FE epic needed.

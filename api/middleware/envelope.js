@@ -31,14 +31,16 @@ export class ApiError extends Error {
    * @param {number} statusCode HTTP status
    * @param {string} [message] human-readable message
    * @param {unknown} [details] arbitrary detail bag (zod issues, auth extras, ...)
+   * @param {string} [type]    error-type enum (auth|validation|consumer_quota|upstream_rate_limit|proxy_ip_block|upstream_error|internal) — serialized by sendErrorEnvelope
    */
-  constructor(code, statusCode, message, details) {
+  constructor(code, statusCode, message, details, type) {
     super(message ?? code);
     this.name = 'ApiError';
     this.isApiError = true;
     this.code = code;
     this.statusCode = statusCode;
     if (details !== undefined) this.details = details;
+    if (type !== undefined) this.type = type;
   }
 }
 
@@ -132,6 +134,7 @@ export function errorMiddleware(err, req, res, next) {
     return sendErrorEnvelope(res, {
       status: safeHttpStatus(err.statusCode),
       code: err.code,
+      type: err.type,
       message: err.message,
       details: err.details,
     });

@@ -19,6 +19,8 @@ import express from 'express';
 import crypto from 'crypto';
 import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
+import { eitherAuth } from '../middleware/serviceAuth.js';
+import { runWithConsumerContext } from '../../src/mcp/consumer-context.js';
 
 const router = express.Router();
 
@@ -216,7 +218,12 @@ function buildAuthCookie(platform, cookie) {
   return cookie;
 }
 
-router.use(authenticate);
+// Story 50.1 — Scope user-JWT to accounts/automate only. `/:platform/scrape`
+// mounts `eitherAuth` at the route level so machine consumers can hit it with a
+// Bearer service key instead of a user session.
+router.use('/:platform/accounts', authenticate);
+router.use('/:platform/accounts/:id', authenticate);
+router.use('/:platform/automate', authenticate);
 
 /**
  * Validate :platform on all /api/platform/:platform/* routes.
@@ -385,9 +392,13 @@ async function resolveAccountCookie(userId, accountId, platform) {
 
 /**
  * POST /api/platform/:platform/scrape
+ *
+ * Story 50.1 — `eitherAuth` accepts user-JWT (dashboard) OR Bearer service key
+ * (machine consumer). `req.user` is only populated for the JWT lane;
+ * `req.consumer` is populated by either lane.
  */
-router.post('/:platform/scrape', async (req, res) => {
-  const reqUser = /** @type {import('@prisma/client').User} */ (req.user);
+router.post('/:platform/scrape', eitherAuth, async (req, res) => {
+  const reqUser = /** @type {import('@prisma/client').User | undefined} */ (req.user);
   const platform = /** @type {string} */ (req.platform || req.params.platform);
   const body = /** @type {Record<string, unknown>} */ (req.body ?? {});
   const action = /** @type {string | undefined} */ (body.action);
@@ -409,9 +420,20 @@ router.post('/:platform/scrape', async (req, res) => {
       options.resume = false;
     }
 
-    // Resolve account if provided
+    // Resolve account if provided — requires user session (req.user).
+    // Service-auth callers cannot use accountIds (their req.user is undefined).
     const accountIds = /** @type {string[] | undefined} */ (body.accountIds);
     if (Array.isArray(accountIds) && accountIds.length > 0) {
+      if (!reqUser || typeof reqUser.id !== 'string') {
+        return res.status(400).json({
+          ok: false,
+          error: {
+            code: 'VALIDATION_FAILED',
+            type: 'validation',
+            message: 'Stored account resolution requires user session authentication',
+          },
+        });
+      }
       const cookie = await resolveAccountCookie(reqUser.id, accountIds[0], platform);
       options.authCookie = buildAuthCookie(platform, cookie);
       options.accountId = accountIds[0];
@@ -422,7 +444,13 @@ router.post('/:platform/scrape', async (req, res) => {
       }
     }
 
-    const result = await scrape(platform, action, options);
+    const consumerCtx = req.consumer ? {
+      consumerId: req.consumer.consumerId,
+      apiKeyValid: req.consumer.apiKeyValid,
+      apiKeyRequired: req.consumer.source === 'serviceAuth',
+    } : { consumerId: 'internal', apiKeyValid: true, apiKeyRequired: false };
+
+    const result = await runWithConsumerContext(consumerCtx, () => scrape(platform, action, options));
     res.json({ ok: true, platform, action, dryRun: Boolean(body.dryRun), result });
   } catch (err) {
     console.error(`❌ POST /platform/${platform}/scrape error:`, err);
