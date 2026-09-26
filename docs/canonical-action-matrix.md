@@ -1,6 +1,6 @@
 # Canonical Action/Arg Matrix
 
-> Auto-generated 2026-09-26T22:42:15.189Z. Do not edit manually.
+> Auto-generated 2026-09-26T23:14:37.060Z. Do not edit manually.
 
 | Platform | Category | Action | Sync | Required Args | Optional Args | Example |
 |----------|----------|--------|------|---------------|---------------|---------|
@@ -220,6 +220,7 @@
 | masothue | b2b | search_by_province | — | province | page, limit | `{"province":"binh-duong","page":1}` |
 | masothue | b2b | detail | — | taxCode | slug | `{"taxCode":"0013180180"}` |
 | pumpfun | social | fetch_mint_social | — | mintAddress | mint, address, limit | `{"mintAddress":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"}` |
+| pumpfun | social | fetch_coin_meta | ✅ | mintAddress | mint, address | `{"mintAddress":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"}` |
 | pumpfun | social | resolve_user_wallet | — | username | — | `{"username":"alice"}` |
 | pumpfun | social | fetch_platform_feed | — | — | feedType, limit, offset, includeNsfw | `{"feedType":"koth","limit":20}` |
 | pumpfun | social | stream_mint_chat | — | mintAddress | mint, durationMs, onMessage, onReaction | `{"mintAddress":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump","durationMs":15000}` |

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-26T22:42:15.187Z",
+  "generated": "2026-09-26T23:14:37.058Z",
   "platforms": {
     "twitter": {
       "category": "social",
@@ -4179,6 +4179,24 @@
           "outputType": "{ mint, theses: Thesis[], commentVelocity: {last1m,last5m}, kolActivity, livestream, topHolders[] }",
           "requiresAuth": false,
           "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "fetch_coin_meta",
+          "description": "Fetch pump.fun coin metadata only (creator, socials, bonding_curve, market_cap) — fast ~300ms read, sync-lane eligible",
+          "requiredArgs": [
+            "mintAddress"
+          ],
+          "optionalArgs": [
+            "mint",
+            "address"
+          ],
+          "example": {
+            "mintAddress": "5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"
+          },
+          "outputType": "{ mint, coinMeta: { creator, socialLinks, bondingCurve, marketCapUsd, isCurrentlyLive, athMarketCap } }",
+          "requiresAuth": false,
+          "syncCapable": true,
           "status": "stable"
         },
         {

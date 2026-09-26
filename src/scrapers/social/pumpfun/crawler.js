@@ -140,6 +140,20 @@ export class PumpFunCrawler extends AbstractCrawler {
         this.fetchMintSocial(args, session),
     });
 
+    // ── Action: fetch_coin_meta (Story 50.6 — lightweight sync-lane call) ──
+    this.registerAction({
+      action: 'fetch_coin_meta',
+      description: 'Fetch pump.fun coin metadata only (creator, socials, bonding_curve, market_cap) — fast ~300ms read, sync-lane eligible',
+      category: 'social',
+      requiresAuth: false,
+      requiredArgs: ['mintAddress'],
+      optionalArgs: ['mint', 'address'],
+      outputType: '{ mint, coinMeta: { creator, socialLinks, bondingCurve, marketCapUsd, isCurrentlyLive, athMarketCap } }',
+      example: { mintAddress: '5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump' },
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) =>
+        this.fetchCoinMeta(args, session),
+    });
+
     // ── Action: resolve_user_wallet ──
     this.registerAction({
       action: 'resolve_user_wallet',
@@ -331,6 +345,22 @@ export class PumpFunCrawler extends AbstractCrawler {
         items: theses, // extractRecords/stream hook picks up `items`
       };
     });
+  }
+
+  /**
+   * Story 50.6 — lightweight coin-metadata-only call for the gateway's sync lane.
+   * Single `client.getCoin(mint)` hit; no positions/replies/livestream calls.
+   * @param {Record<string, unknown>} args
+   * @param {Record<string, unknown>} [session]
+   * @returns {Promise<{ mint: string, coinMeta: Record<string, unknown> }>}
+   */
+  async fetchCoinMeta(args, session = {}) {
+    const mint = this.#resolveMint(args || {});
+    const proxy = this.proxyPool && typeof this.proxyPool.getStickyProxy === 'function'
+      ? this.proxyPool.getStickyProxy(mint, this.client.requiresResidential, { pool: 'realtime' })
+      : null;
+    const raw = await this.client.getCoin(mint, { proxy, accountId: session?.accountId || null, session });
+    return { mint, coinMeta: normalizeCoinMeta(raw) };
   }
 
   /**

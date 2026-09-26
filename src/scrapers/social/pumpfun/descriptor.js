@@ -17,6 +17,12 @@ const PUMPFUN_ACTION_MAP = {
   mint_social: 'fetch_mint_social',
   social: 'fetch_mint_social',
   mint: 'fetch_mint_social',
+  // Story 50.6 — lightweight metadata-only call (sync lane)
+  fetch_coin_meta: 'fetch_coin_meta',
+  coin_meta: 'fetch_coin_meta',
+  coin: 'fetch_coin_meta',
+  coinMeta: 'fetch_coin_meta',
+  meta: 'fetch_coin_meta',
   resolve_user_wallet: 'resolve_user_wallet',
   user_wallet: 'resolve_user_wallet',
   resolve_user: 'resolve_user_wallet',
