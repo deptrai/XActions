@@ -429,7 +429,7 @@ epic-50:
       status: done
     story-50-5:
       slug: self-discovery-api-actions-catalog-playground
-      status: backlog
+      status: done
     story-50-6:
       slug: pumpfun-fetch-coin-meta-action
       status: backlog

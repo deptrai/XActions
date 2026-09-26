@@ -34,6 +34,8 @@ for (const action of actions) {
     example: action.example || {},
     outputType: action.outputType,
     requiresAuth: action.requiresAuth || false,
+    syncCapable: Boolean(action.syncCapable),
+    status: action.status || 'stable',
   });
 }
 
@@ -49,12 +51,12 @@ writeFileSync(
 // Write Markdown
 let md = '# Canonical Action/Arg Matrix\n\n';
 md += `> Auto-generated ${new Date().toISOString()}. Do not edit manually.\n\n`;
-md += '| Platform | Category | Action | Required Args | Optional Args | Example |\n';
-md += '|----------|----------|--------|---------------|---------------|---------|\n';
+md += '| Platform | Category | Action | Sync | Required Args | Optional Args | Example |\n';
+md += '|----------|----------|--------|------|---------------|---------------|---------|\n';
 
 for (const [platform, info] of Object.entries(matrix.platforms)) {
   for (const action of info.actions) {
-    md += `| ${platform} | ${info.category} | ${action.action || '—'} | ${(action.requiredArgs || []).join(', ') || '—'} | ${(action.optionalArgs || []).join(', ') || '—'} | \`${JSON.stringify(action.example)}\` |\n`;
+    md += `| ${platform} | ${info.category} | ${action.action || '—'} | ${action.syncCapable ? '✅' : '—'} | ${(action.requiredArgs || []).join(', ') || '—'} | ${(action.optionalArgs || []).join(', ') || '—'} | \`${JSON.stringify(action.example)}\` |\n`;
   }
 }
 

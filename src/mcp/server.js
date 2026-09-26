@@ -2948,7 +2948,7 @@ const TOOLS = [
   },
   {
     name: 'x_actions_list',
-    description: 'List all available crawler actions across supported platforms. Optionally filter by platform.',
+    description: 'List all available crawler actions across supported platforms (each entry carries syncCapable + status fields — Story 50.5). Optionally filter by platform/category.',
     inputSchema: {
       type: 'object',
       properties: {

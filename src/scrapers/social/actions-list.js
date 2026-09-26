@@ -154,10 +154,27 @@ export async function executeActionListTool(options = {}) {
       }
     }
 
+    // Story 50.5 — decorate each action with `syncCapable` sourced from the
+    // platform descriptor's `syncCapableActions` manifest, and `status` for
+    // the public catalog badges.
+    /** @param {string} platformKey @returns {Record<string, any> | undefined} */
+    const descriptorFor = (platformKey) => {
+      const d = DESCRIPTORS[platformKey];
+      if (!d) return undefined;
+      // DESCRIPTORS is keyed by EVERY alias — resolve to canonical for lookup
+      const canonical = Array.isArray(d.aliases) && d.aliases.length > 0 ? d.aliases[0] : platformKey;
+      return DESCRIPTORS[canonical] || d;
+    };
+
     for (const action of allActions) {
       delete action.checkpointResolver;
       if (typeof action.platform === 'string') {
         action.category = action.category || PLATFORM_CATEGORIES[action.platform] || 'social';
+        const desc = descriptorFor(action.platform);
+        const capList = Array.isArray(desc?.syncCapableActions) ? desc.syncCapableActions : [];
+        const mapped = desc?.actionMap?.[action.action] || action.action;
+        action.syncCapable = capList.includes(action.action) || capList.includes(mapped);
+        action.status = 'stable';
       }
     }
 
@@ -168,6 +185,8 @@ export async function executeActionListTool(options = {}) {
           platform: canonical,
           action: null,
           category: PLATFORM_CATEGORIES[canonical] || 'unknown',
+          syncCapable: false,
+          status: 'coming_soon',
           no_crawler: true,
           description: 'Platform registered in DESCRIPTORS but no Crawler class available',
         });
@@ -195,11 +214,13 @@ export async function executeActionListTool(options = {}) {
     }
 
     if (opts.detailLevel === 'summary') {
-      filtered = filtered.map(({ platform, action, description, requiredArgs, no_crawler, category }) => ({
+      filtered = filtered.map(({ platform, action, description, requiredArgs, no_crawler, category, syncCapable, status }) => ({
         platform,
         action,
         description,
         requiredArgs: requiredArgs || [],
+        syncCapable: Boolean(syncCapable),
+        status: status || (no_crawler ? 'coming_soon' : 'stable'),
         no_crawler: no_crawler || false,
         category,
       }));

@@ -96,6 +96,7 @@ import tweetScheduleRoutes from './routes/tweetSchedule.js';
 import { startTweetScheduler } from './services/tweetScheduler.js';
 import { startRetentionScheduler, requestRetentionShutdown, getIsProcessing } from './services/retentionScheduler.js';
 import platformRoutes from './routes/platform.js';
+import actionsRoutes from './routes/actions.js';
 import platformsRoutes from './routes/platforms.js';
 import priceCorrelationRoutes from './routes/priceCorrelation.js';
 import benchmarkRoutes from './routes/benchmark.js';
@@ -374,6 +375,8 @@ app.use('/api/facebook/accounts', facebookAccountsRoutes);
 app.use('/api/facebook', facebookRoutes);
 app.use('/api/platform', platformRoutes);
 app.use('/api/platforms', platformsRoutes);
+// Story 50.5 — public actions catalog (unauthenticated, 60s cache).
+app.use('/api/actions', actionsRoutes);
 app.use('/api/price-correlation', priceCorrelationRoutes);
 app.use('/api/session', sessionAuthRoutes);
 app.use('/api/license', licenseRoutes);

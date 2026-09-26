@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-22T19:01:47.970Z",
+  "generated": "2026-09-26T22:42:15.187Z",
   "platforms": {
     "twitter": {
       "category": "social",
@@ -30,7 +30,9 @@
             "limit": 20
           },
           "outputType": "{ posts: PostItem[], users: ProfileItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "hashtag",
@@ -56,7 +58,9 @@
             "limit": 50
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "trending",
@@ -72,7 +76,9 @@
             "limit": 30
           },
           "outputType": "{ trends: PostItem[], pageInfo: { has_next_page: false, end_cursor: null } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "thread",
@@ -89,7 +95,9 @@
             "tweetId": "1234567890"
           },
           "outputType": "{ posts: PostItem[], rootTweet: PostItem | null, pageInfo: any }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "unroll_thread",
@@ -110,7 +118,9 @@
             "destPath": "/tmp/thread.md"
           },
           "outputType": "{ posts: PostItem[], markdown?: string, text?: string, json?: string, destPath?: string }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "likes",
@@ -127,7 +137,9 @@
             "limit": 100
           },
           "outputType": "{ likers: ProfileItem[], pageInfo: any }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "likers",
@@ -144,7 +156,9 @@
             "limit": 100
           },
           "outputType": "{ likers: ProfileItem[], pageInfo: any }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "bookmarks",
@@ -158,7 +172,9 @@
             "limit": 50
           },
           "outputType": "{ posts: PostItem[], pageInfo: any }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "export_bookmarks",
@@ -175,7 +191,9 @@
             "destPath": "/tmp/bookmarks.csv"
           },
           "outputType": "{ posts: PostItem[], json?: string, csv?: string, destPath?: string }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "profile",
@@ -189,7 +207,9 @@
             "username": "elonmusk"
           },
           "outputType": "{ profile: ProfileItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "followers",
@@ -206,7 +226,9 @@
             "limit": 100
           },
           "outputType": "{ followers: ProfileItem[], pageInfo: any }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "following",
@@ -223,7 +245,9 @@
             "limit": 100
           },
           "outputType": "{ following: ProfileItem[], pageInfo: any }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "retweeters",
@@ -240,7 +264,9 @@
             "limit": 100
           },
           "outputType": "{ retweeters: ProfileItem[], pageInfo: any }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "non_followers",
@@ -256,7 +282,9 @@
             "limit": 1000
           },
           "outputType": "{ nonFollowers: ProfileItem[], mutuals: ProfileItem[], stats: object }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "list_members",
@@ -274,7 +302,9 @@
             "limit": 100
           },
           "outputType": "{ members: ProfileItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "community_members",
@@ -292,7 +322,9 @@
             "limit": 100
           },
           "outputType": "{ members: ProfileItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "spaces",
@@ -310,7 +342,9 @@
             "limit": 20
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "media",
@@ -329,7 +363,9 @@
             "limit": 20
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "download_video",
@@ -346,7 +382,9 @@
             "destPath": "/tmp/video.mp4"
           },
           "outputType": "{ url: string, destPath: string | null, bytes: number, width: number, height: number, bitrate: number, contentType: string, durationMs: number | null, variants: Array<{bitrate, contentType, url}> }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post",
@@ -368,7 +406,9 @@
             "dryRun": false
           },
           "outputType": "{ tweet: PostItem }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "reply",
@@ -389,7 +429,9 @@
             "dryRun": false
           },
           "outputType": "{ tweet: PostItem }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "quote",
@@ -410,7 +452,9 @@
             "dryRun": false
           },
           "outputType": "{ tweet: PostItem }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "schedule",
@@ -431,7 +475,9 @@
             "dryRun": false
           },
           "outputType": "{ tweet: PostItem }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "like",
@@ -447,7 +493,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "unlike",
@@ -463,7 +511,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "retweet",
@@ -479,7 +529,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "undo_retweet",
@@ -495,7 +547,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "follow",
@@ -511,7 +565,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "unfollow",
@@ -527,7 +583,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "block",
@@ -543,7 +601,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "unblock",
@@ -559,7 +619,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "mute",
@@ -575,7 +637,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "unmute",
@@ -591,7 +655,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "bookmark",
@@ -607,7 +673,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "unbookmark",
@@ -623,7 +691,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "send_dm",
@@ -643,7 +713,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean, messageId?: string, createdAt?: string }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "dm_conversations",
@@ -657,7 +729,9 @@
             "limit": 20
           },
           "outputType": "{ conversations: object[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "dm_messages",
@@ -674,7 +748,9 @@
             "limit": 50
           },
           "outputType": "{ messages: object[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "create_list",
@@ -694,7 +770,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean, listId?: string, name?: string }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "add_list_members",
@@ -716,7 +794,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean, listId: string, addedCount: number, batchCount: number }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "remove_list_members",
@@ -737,7 +817,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean, listId: string, removedCount: number, batchCount: number }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -761,7 +843,9 @@
             "handle": "nichxbt.bsky.social"
           },
           "outputType": "ProfileItem",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "followers",
@@ -782,7 +866,9 @@
             "limit": 50
           },
           "outputType": "{ profiles: ProfileItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "following",
@@ -803,7 +889,9 @@
             "limit": 50
           },
           "outputType": "{ profiles: ProfileItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "posts",
@@ -825,7 +913,9 @@
             "limit": 30
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "tweets",
@@ -846,7 +936,9 @@
             "limit": 30
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "search",
@@ -869,7 +961,9 @@
             "limit": 25
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "trending",
@@ -884,7 +978,9 @@
             "limit": 20
           },
           "outputType": "{ trends: PostItem[], pageInfo: { end_cursor: null, has_next_page: false } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "feed",
@@ -904,7 +1000,9 @@
             "feedUri": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot"
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post_detail",
@@ -924,7 +1022,9 @@
             "postUrl": "https://bsky.app/profile/alice.bsky.social/post/3abc"
           },
           "outputType": "{ post: PostItem, posts: PostItem[] }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post",
@@ -943,7 +1043,9 @@
             "dryRun": false
           },
           "outputType": "{ uri: string, cid: string, success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "reply",
@@ -966,7 +1068,9 @@
             "parentCid": "bafyre..."
           },
           "outputType": "{ uri: string, cid: string, success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "like",
@@ -985,7 +1089,9 @@
             "cid": "bafyre..."
           },
           "outputType": "{ uri: string, cid: string, success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "repost",
@@ -1004,7 +1110,9 @@
             "cid": "bafyre..."
           },
           "outputType": "{ uri: string, cid: string, success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "retweet",
@@ -1023,7 +1131,9 @@
             "cid": "bafyre..."
           },
           "outputType": "{ uri: string, cid: string, success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "follow",
@@ -1041,7 +1151,9 @@
             "subject": "did:plc:z72i7hdynmk6r22z27h6tvur"
           },
           "outputType": "{ uri: string, cid: string, success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "unfollow",
@@ -1058,7 +1170,9 @@
             "rkey": "3k2v..."
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -1082,7 +1196,9 @@
             "instance": "https://mastodon.social"
           },
           "outputType": "ProfileItem",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "followers",
@@ -1102,7 +1218,9 @@
             "limit": 40
           },
           "outputType": "{ profiles: ProfileItem[], pageInfo: { next_max_id: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "following",
@@ -1122,7 +1240,9 @@
             "limit": 40
           },
           "outputType": "{ profiles: ProfileItem[], pageInfo: { next_max_id: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "posts",
@@ -1144,7 +1264,9 @@
             "limit": 20
           },
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post_detail",
@@ -1163,7 +1285,9 @@
             "postUrl": "https://mastodon.social/@Gargron/1234567890"
           },
           "outputType": "{ post: PostItem, posts: PostItem[] }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "get_user_feed",
@@ -1182,7 +1306,9 @@
             "limit": 20
           },
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "search",
@@ -1202,7 +1328,9 @@
             "limit": 20
           },
           "outputType": "{ posts: PostItem[], profiles: ProfileItem[], hashtags: any[] }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "hashtag",
@@ -1221,7 +1349,9 @@
             "limit": 20
           },
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "trending",
@@ -1236,7 +1366,9 @@
             "limit": 20
           },
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post",
@@ -1257,7 +1389,9 @@
             "dryRun": false
           },
           "outputType": "{ status: any, success: boolean }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "reply",
@@ -1278,7 +1412,9 @@
             "in_reply_to_id": "123456789"
           },
           "outputType": "{ status: any, success: boolean }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "like",
@@ -1295,7 +1431,9 @@
             "statusId": "123456789"
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "reblog",
@@ -1312,7 +1450,9 @@
             "statusId": "123456789"
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "retweet",
@@ -1329,7 +1469,9 @@
             "statusId": "123456789"
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "follow",
@@ -1347,7 +1489,9 @@
             "accountId": "12345"
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "unfollow",
@@ -1365,7 +1509,9 @@
             "accountId": "12345"
           },
           "outputType": "{ success: boolean }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -1385,7 +1531,9 @@
           ],
           "example": {},
           "outputType": "{ posts: PostItem[], pageInfo?: any }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "page_posts",
@@ -1399,7 +1547,9 @@
           ],
           "example": {},
           "outputType": "{ posts: PostItem[], pageInfo?: any }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "get_comments",
@@ -1414,7 +1564,9 @@
           ],
           "example": {},
           "outputType": "{ comments: CommentItem[], pageInfo?: any }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post_comments",
@@ -1432,7 +1584,9 @@
           ],
           "example": {},
           "outputType": "{ comments: CommentItem[], pageInfo?: any }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post_detail",
@@ -1445,7 +1599,9 @@
           ],
           "example": {},
           "outputType": "{ post: PostItem | null, posts: PostItem[] }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "group_comments",
@@ -1463,7 +1619,9 @@
           ],
           "example": {},
           "outputType": "{ comments: CommentItem[], pageInfo?: any }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "profile",
@@ -1477,7 +1635,9 @@
             "username": "zuck"
           },
           "outputType": "{ profile: ProfileItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "followers",
@@ -1494,7 +1654,9 @@
             "limit": 20
           },
           "outputType": "{ followers: ProfileItem[], pageInfo?: any }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "following",
@@ -1510,7 +1672,9 @@
             "username": "zuck"
           },
           "outputType": "{ following?: ProfileItem[], note?: string, pageInfo?: any }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "group_members",
@@ -1527,7 +1691,9 @@
             "limit": 50
           },
           "outputType": "{ members: ProfileItem[], pageInfo?: any }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "search",
@@ -1547,7 +1713,9 @@
             "limit": 20
           },
           "outputType": "{ posts?: PostItem[], people?: PostItem[], pages?: PostItem[], groups?: PostItem[], pageInfo?: any }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "group_search",
@@ -1566,7 +1734,9 @@
             "limit": 20
           },
           "outputType": "{ posts: PostItem[], pageInfo?: any }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "marketplace",
@@ -1600,7 +1770,9 @@
             "limit": 20
           },
           "outputType": "{ posts: PostItem[], pageInfo?: { has_next_page: boolean, end_cursor: string | null }, searchUrl?: string, dryRun?: boolean, note?: string }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "like",
@@ -1619,7 +1791,9 @@
             "postUrl": "https://www.facebook.com/zuck/posts/1011565502"
           },
           "outputType": "{ results: { postUrl: string, liked: boolean, alreadyLiked: boolean, error?: string }[], dryRun: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "comment",
@@ -1640,7 +1814,9 @@
             "text": "Great update!"
           },
           "outputType": "{ results: { postUrl: string, commentId?: string, error?: string }[], dryRun: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post",
@@ -1664,7 +1840,9 @@
             "text": "Hello Facebook from XActions Hybrid Crawler!"
           },
           "outputType": "{ results: { targetUrl: string, postId?: string, error?: string }[], dryRun: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "share",
@@ -1684,7 +1862,9 @@
             "postUrl": "https://www.facebook.com/zuck/posts/1011565502"
           },
           "outputType": "{ results: { postUrl: string, shared: boolean, error?: string }[], dryRun: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "messenger_share",
@@ -1708,7 +1888,9 @@
             ]
           },
           "outputType": "{ results: { recipientUid: string, ok: boolean, method?: string, error?: string }[], dryRun: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "share_link_uid",
@@ -1728,7 +1910,9 @@
             "recipientUid": "100001234567890"
           },
           "outputType": "{ ok: boolean, postUrl: string, recipientUid: string, method?: string, error?: string, dryRun: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "join_group",
@@ -1752,7 +1936,9 @@
             ]
           },
           "outputType": "{ results: { groupUrl: string, joined: boolean, pending?: boolean, error?: string }[], dryRun: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "send_friend_request",
@@ -1774,7 +1960,9 @@
             ]
           },
           "outputType": "{ results: { target: string, ok: boolean, error?: string }[], dryRun: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "warmup_scroll",
@@ -1790,7 +1978,9 @@
             "durationSeconds": 60
           },
           "outputType": "{ dryRun: boolean, platform: \"facebook\", preview?: any }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "warmup_account",
@@ -1807,7 +1997,9 @@
             "allowReactions": true
           },
           "outputType": "{ dryRun: boolean, platform: \"facebook\", preview?: any }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "cancel_friend_requests",
@@ -1823,7 +2015,9 @@
             "olderThanDays": 7
           },
           "outputType": "{ dryRun: boolean, platform: \"facebook\" }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -1846,7 +2040,9 @@
             "count": 20
           },
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "search",
@@ -1864,7 +2060,9 @@
             "count": 20
           },
           "outputType": "PostItem[] | { posts: PostItem[], pageInfo: any }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "get_post_comments",
@@ -1883,7 +2081,9 @@
             "maxComments": 100
           },
           "outputType": "CommentItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post_detail",
@@ -1904,7 +2104,9 @@
             "maxComments": 100
           },
           "outputType": "{ post: PostItem, comments?: CommentItem[], pageInfo?: any }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "profile",
@@ -1917,7 +2119,9 @@
             "username": "zuck"
           },
           "outputType": "ProfileItem",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "followers",
@@ -1934,7 +2138,9 @@
             "count": 50
           },
           "outputType": "{ profiles: ProfileItem[], counts: object, note?: string }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "following",
@@ -1951,7 +2157,9 @@
             "count": 50
           },
           "outputType": "{ profiles: ProfileItem[], counts: object, note?: string }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post",
@@ -1967,7 +2175,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean, id?: string, dryRun?: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "reply",
@@ -1985,7 +2195,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean, id?: string, dryRun?: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "like",
@@ -2001,7 +2213,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean, dryRun?: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "repost",
@@ -2017,7 +2231,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean, dryRun?: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "retweet",
@@ -2033,7 +2249,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean, dryRun?: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "follow",
@@ -2050,7 +2268,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean, dryRun?: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "unfollow",
@@ -2067,7 +2287,9 @@
             "dryRun": false
           },
           "outputType": "{ success: boolean, dryRun?: boolean }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -2095,7 +2317,9 @@
             "sort": "new"
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": true,
+          "status": "stable"
         },
         {
           "action": "user",
@@ -2116,7 +2340,9 @@
             "limit": 25
           },
           "outputType": "{ profile: ProfileItem, posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "search",
@@ -2137,7 +2363,9 @@
             "limit": 25
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": true,
+          "status": "stable"
         },
         {
           "action": "post_comments",
@@ -2159,7 +2387,9 @@
             "limit": 100
           },
           "outputType": "{ comments: CommentItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": true,
+          "status": "stable"
         },
         {
           "action": "subreddit_info",
@@ -2174,7 +2404,9 @@
             "name": "programming"
           },
           "outputType": "PostItem",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -2198,7 +2430,9 @@
             "limit": 10
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "author",
@@ -2216,7 +2450,9 @@
             "limit": 10
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "posts",
@@ -2234,7 +2470,9 @@
             "limit": 10
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "tweets",
@@ -2252,7 +2490,9 @@
             "limit": 10
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "feed",
@@ -2270,7 +2510,9 @@
             "limit": 10
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "publication",
@@ -2290,7 +2532,9 @@
             "limit": 10
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "pub",
@@ -2310,7 +2554,9 @@
             "limit": 10
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "magazine",
@@ -2330,7 +2576,9 @@
             "limit": 10
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "tag",
@@ -2348,7 +2596,9 @@
             "limit": 10
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "hashtag",
@@ -2366,7 +2616,9 @@
             "limit": 10
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "topic",
@@ -2384,7 +2636,9 @@
             "limit": 10
           },
           "outputType": "{ posts: PostItem[], pageInfo: { end_cursor: string | null, has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post",
@@ -2400,7 +2654,9 @@
             "postId": "a64152b37c35"
           },
           "outputType": "{ post: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post_detail",
@@ -2416,7 +2672,9 @@
             "postId": "a64152b37c35"
           },
           "outputType": "{ post: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "article",
@@ -2432,7 +2690,9 @@
             "postId": "a64152b37c35"
           },
           "outputType": "{ post: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -2456,7 +2716,9 @@
             "limit": 25
           },
           "outputType": "{ profile: ProfileItem, posts: PostItem[], pageInfo }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "author",
@@ -2471,7 +2733,9 @@
           ],
           "example": {},
           "outputType": "{ profile, posts, pageInfo }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "profile",
@@ -2486,7 +2750,9 @@
           ],
           "example": {},
           "outputType": "{ profile, posts, pageInfo }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "hashtag",
@@ -2504,7 +2770,9 @@
             "limit": 25
           },
           "outputType": "{ posts: PostItem[], pageInfo }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "tag",
@@ -2519,7 +2787,9 @@
           ],
           "example": {},
           "outputType": "{ posts, pageInfo }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "topic",
@@ -2534,7 +2804,9 @@
           ],
           "example": {},
           "outputType": "{ posts, pageInfo }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post",
@@ -2549,7 +2821,9 @@
             "shortcode": "Cxyz123"
           },
           "outputType": "{ post: PostItem }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post_detail",
@@ -2562,7 +2836,9 @@
           ],
           "example": {},
           "outputType": "{ post }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "media",
@@ -2575,7 +2851,9 @@
           ],
           "example": {},
           "outputType": "{ post }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "comments",
@@ -2593,7 +2871,9 @@
             "limit": 50
           },
           "outputType": "{ comments: CommentItem[], pageInfo }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -2616,7 +2896,9 @@
             "count": 12
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "hashtag_feed",
@@ -2633,7 +2915,9 @@
             "count": 30
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "post_detail",
@@ -2650,7 +2934,9 @@
             "videoId": "7325759242735676680"
           },
           "outputType": "{ post: PostItem, comments?: CommentItem[], pageInfo?: any }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "get_post_comments",
@@ -2669,7 +2955,9 @@
             "maxComments": 100
           },
           "outputType": "{ comments: CommentItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -2684,7 +2972,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "trending_vn",
@@ -2693,7 +2983,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "trending",
@@ -2702,7 +2994,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "channel_videos",
@@ -2711,7 +3005,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "channel_detail",
@@ -2720,7 +3016,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "channel",
@@ -2729,7 +3027,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "profile",
@@ -2738,7 +3038,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "video_detail",
@@ -2747,7 +3049,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "video",
@@ -2756,7 +3060,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "detail",
@@ -2765,7 +3071,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "video_comments",
@@ -2774,7 +3082,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "comments",
@@ -2783,7 +3093,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -2798,7 +3110,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "posts",
@@ -2807,7 +3121,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "articles",
@@ -2816,7 +3132,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "feed",
@@ -2825,7 +3143,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "oa_followers",
@@ -2834,7 +3154,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "followers",
@@ -2843,7 +3165,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "oa_detail",
@@ -2852,7 +3176,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "oa_info",
@@ -2861,7 +3187,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "detail",
@@ -2870,7 +3198,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "profile",
@@ -2879,7 +3209,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "info",
@@ -2888,7 +3220,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "marketplace_products",
@@ -2897,7 +3231,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "marketplace_search",
@@ -2906,7 +3242,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "products",
@@ -2915,7 +3253,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "marketplace",
@@ -2924,7 +3264,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": true
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -2947,7 +3289,9 @@
             "limit": 20
           },
           "outputType": "{ products: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "product_detail",
@@ -2960,7 +3304,9 @@
             "productId": "172948291048"
           },
           "outputType": "{ product: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "search_products",
@@ -2978,7 +3324,9 @@
             "limit": 20
           },
           "outputType": "{ products: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -3004,7 +3352,9 @@
             "district": "dong-da"
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean, page: number } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "newly_opened",
@@ -3024,7 +3374,9 @@
             "city": "ho-chi-minh"
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean, page: number } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "search_by_district",
@@ -3044,7 +3396,9 @@
             "district": "dong-da"
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean, page: number } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "detail",
@@ -3063,7 +3417,9 @@
             "city": "ha-noi"
           },
           "outputType": "{ post: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -3078,7 +3434,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "search_doctors",
@@ -3087,7 +3445,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "get_stores",
@@ -3096,7 +3456,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "pharmacy_catalog",
@@ -3105,7 +3467,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "detail",
@@ -3114,7 +3478,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -3129,7 +3495,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "search",
@@ -3138,7 +3506,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "get_weekly_list",
@@ -3147,7 +3517,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "yearly_summary",
@@ -3156,7 +3528,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "detail",
@@ -3165,7 +3539,9 @@
           "optionalArgs": [],
           "example": {},
           "outputType": "PostItem[]",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -3197,7 +3573,9 @@
             "page": 1
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean, page: number } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "list",
@@ -3214,7 +3592,9 @@
             "page": 1
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean, page: number } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "detail",
@@ -3231,7 +3611,9 @@
             "id": "6917077"
           },
           "outputType": "{ post: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -3258,7 +3640,9 @@
             "platform": "hosocongty"
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "search_tenders",
@@ -3277,7 +3661,9 @@
             "keyword": "xây dựng"
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "detail",
@@ -3296,7 +3682,9 @@
             "platform": "hosocongty"
           },
           "outputType": "{ post: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -3322,7 +3710,9 @@
             "limit": 10
           },
           "outputType": "{ jobs: PostItem[], pageInfo: { current_page: number, has_next_page: boolean, total_items?: number } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "job_detail",
@@ -3338,7 +3728,9 @@
             "jobId": "3892104910"
           },
           "outputType": "{ job: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "company_profile",
@@ -3359,7 +3751,9 @@
             "companySlug": "microsoft"
           },
           "outputType": "{ company: ProfileItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "lead_profile",
@@ -3380,7 +3774,9 @@
             "profileUrl": "https://www.linkedin.com/in/satyanadella"
           },
           "outputType": "{ lead: ProfileItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -3407,7 +3803,9 @@
             "limit": 20
           },
           "outputType": "{ listings: PostItem[], pageInfo: { current_page: number, has_next_page: boolean, total_items?: number } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "listing_detail",
@@ -3423,7 +3821,9 @@
             "productId": "39821049"
           },
           "outputType": "{ listing: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -3457,7 +3857,9 @@
             "includePhone": true
           },
           "outputType": "{ listings: PostItem[], pageInfo: { current_page: number, has_next_page: boolean, total_items?: number } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "listing_detail",
@@ -3474,7 +3876,9 @@
             "includePhone": true
           },
           "outputType": "{ listing: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "get_phone",
@@ -3487,7 +3891,9 @@
             "listId": "11223344"
           },
           "outputType": "{ phone: string | null, isPhoneVerified: boolean }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -3513,7 +3919,9 @@
             "sortBy": "sales"
           },
           "outputType": "{ products: PostItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "product_detail",
@@ -3528,7 +3936,9 @@
             "shopId": "333444"
           },
           "outputType": "{ product: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "product_reviews",
@@ -3548,7 +3958,9 @@
             "limit": 20
           },
           "outputType": "{ reviews: CommentItem[], pageInfo: { has_next_page: boolean, end_cursor: string | null } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -3575,7 +3987,9 @@
             "limit": 20
           },
           "outputType": "{ jobs: PostItem[], pageInfo: { current_page: number, has_next_page: boolean, total_items?: number } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "job_detail",
@@ -3591,7 +4005,9 @@
             "jobUrl": "https://www.topcv.vn/viec-lam/lap-trinh-vien-nodejs/123456.html"
           },
           "outputType": "{ job: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "company_detail",
@@ -3607,7 +4023,9 @@
             "companyUrl": "https://www.topcv.vn/brand/techcorp-vn"
           },
           "outputType": "{ company: ProfileItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -3638,7 +4056,9 @@
             "limit": 20
           },
           "outputType": "{ jobs: PostItem[], pageInfo: { current_page: number, has_next_page: boolean, total_items?: number } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "job_detail",
@@ -3654,7 +4074,9 @@
             "jobId": "1987654"
           },
           "outputType": "{ job: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "company_detail",
@@ -3670,7 +4092,9 @@
             "companyName": "VNG Corporation"
           },
           "outputType": "{ company: ProfileItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -3692,7 +4116,9 @@
             "q": "0013180180"
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "search_by_province",
@@ -3709,7 +4135,9 @@
             "page": 1
           },
           "outputType": "{ posts: PostItem[], pageInfo: { has_next_page: boolean } }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         },
         {
           "action": "detail",
@@ -3724,7 +4152,150 @@
             "taxCode": "0013180180"
           },
           "outputType": "{ post: PostItem }",
-          "requiresAuth": false
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
+        }
+      ]
+    },
+    "pumpfun": {
+      "category": "social",
+      "no_crawler": false,
+      "actions": [
+        {
+          "action": "fetch_mint_social",
+          "description": "Fetch pump.fun mint social signals (theses, comment velocity, top holders, KOL activity, livestream status)",
+          "requiredArgs": [
+            "mintAddress"
+          ],
+          "optionalArgs": [
+            "mint",
+            "address",
+            "limit"
+          ],
+          "example": {
+            "mintAddress": "5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"
+          },
+          "outputType": "{ mint, theses: Thesis[], commentVelocity: {last1m,last5m}, kolActivity, livestream, topHolders[] }",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "resolve_user_wallet",
+          "description": "Resolve a pump.fun username to a Solana wallet address and pump user status",
+          "requiredArgs": [
+            "username"
+          ],
+          "optionalArgs": [],
+          "example": {
+            "username": "alice"
+          },
+          "outputType": "{ username, walletAddress, userId, isPumpUser, profileImage, followers, following }",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "fetch_platform_feed",
+          "description": "Fetch global discovery feeds across pump.fun coins (koth, graduating, new_creations, last_trade, currently_live)",
+          "requiredArgs": [],
+          "optionalArgs": [
+            "feedType",
+            "limit",
+            "offset",
+            "includeNsfw"
+          ],
+          "example": {
+            "feedType": "koth",
+            "limit": 20
+          },
+          "outputType": "PumpFunFeedItem[]",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "stream_mint_chat",
+          "description": "Stream realtime livechat messages from wss://livechat.pump.fun for a given mint address",
+          "requiredArgs": [
+            "mintAddress"
+          ],
+          "optionalArgs": [
+            "mint",
+            "durationMs",
+            "onMessage",
+            "onReaction"
+          ],
+          "example": {
+            "mintAddress": "5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump",
+            "durationMs": 15000
+          },
+          "outputType": "{ messageCount, durationMs }",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "fetch_my_profile",
+          "description": "Fetch the authenticated pump.fun user profile (wallet, followers, following)",
+          "requiredArgs": [],
+          "optionalArgs": [],
+          "example": {},
+          "outputType": "{ username, walletAddress, userId, isPumpUser, followers, following }",
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "fetch_user_following",
+          "description": "Fetch the list of accounts a specific userId is following on pump.fun",
+          "requiredArgs": [
+            "userId"
+          ],
+          "optionalArgs": [],
+          "example": {
+            "userId": "4e6186fa-df15-44b5-aa56-b3a7657be44a"
+          },
+          "outputType": "Array<Record<string, unknown>>",
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "fetch_livestream_clips",
+          "description": "Fetch HLS video clips metadata for a pump.fun livestreamer or coin",
+          "requiredArgs": [
+            "mintOrWallet"
+          ],
+          "optionalArgs": [],
+          "example": {
+            "mintOrWallet": "5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"
+          },
+          "outputType": "PumpFunLivestreamClip[]",
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "post_mint_reply",
+          "description": "Post a reply/comment to a pump.fun mint coin page using an authenticated session",
+          "requiredArgs": [
+            "mintAddress",
+            "text"
+          ],
+          "optionalArgs": [
+            "replyToId",
+            "mediaUrl"
+          ],
+          "example": {
+            "mintAddress": "5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump",
+            "text": "Greetings!"
+          },
+          "outputType": "{ commentId, timestamp, success }",
+          "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     }
