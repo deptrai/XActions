@@ -3629,14 +3629,14 @@ So that **lightweight calls don't pay queue+poll latency and heavy calls don't s
 **And** sync call exceeding 1.5s:
 - Returns `202 + {operationId, mode:'async', degraded_reason, retry_after_ms}` + `Retry-After` header
 - `degraded_reason` closed enum: `'upstream_timeout' | 'cf_challenge' | 'upstream_rate_limit' | 'queue_fallback'`
-- Job continues in background via Bull — consumer polls `/api/ai/action/status/:id`
+- In-flight work continues in background via detached operation tracking (timeout degrade does NOT re-enqueue Bull — no double upstream execution); consumer polls `/api/ai/action/status/:id` — operationId always resolves
 - Never returns `200 + error` for timeout — 202 is the ONLY degrade shape
 
 **And** sync call completing <1.5s → `200 + unified envelope` (see Story 50.3)
 
 **And** `syncCapable` manifest lives in each platform's `descriptor.js` as `syncCapableActions: string[]` — reddit declares `['search','subreddit','post_comments']`, pumpfun declares `['fetch_coin_meta']` (new in 50.6), etc.
 
-**And** batch dispatch on same route — `platform:'all'` hoặc `platform:['x','reddit']` triggers `UniversalActionDispatcher.dispatch` (`Promise.allSettled` per `dispatcher.js:296`):
+**And** batch dispatch on same route — `platform:'all'` hoặc `platform:['x','reddit']` fans out via `Promise.allSettled` semantics (per-platform isolation; gateway fan-out, not `UniversalActionDispatcher` — that dispatcher is write-oriented):
 - `mode:'sync'` batch runs platforms in parallel; **1.5s ceiling applies per-platform**, not whole-batch — batch total bounded by slowest single platform
 - Per-platform failure does not fail the batch — `results[]` carries per-platform `{platform, success, data|error}` entries
 - `mode:'async'` batch enqueues per-platform jobs, returns `202 + {operationIds[]}` — one id per platform

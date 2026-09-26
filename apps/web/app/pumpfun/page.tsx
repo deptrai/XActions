@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import type { ApiResult } from '@xactions/api-client';
 import { api } from '@/lib/api';
+import { isAsyncAccepted, pollOperation } from '@/lib/scrape-poll';
+import type { AsyncAccepted } from '@/lib/scrape-poll';
 
 // ---------------------------------------------------------------------------
 // Types matching PumpFun crawler output (src/scrapers/social/pumpfun/*)
@@ -138,10 +140,19 @@ interface PlatformEnvelope<T> {
   code?: string;
 }
 
-async function scrape<T = unknown>(action: string, args: Record<string, unknown>, signal?: AbortSignal) {
-  const res = await api<PlatformEnvelope<T>>('POST', '/api/platform/pumpfun/scrape', { body: { action, ...args }, signal });
-  if (res.ok && res.data && typeof res.data === 'object' && 'result' in res.data) {
-    return { ok: true as const, status: res.status, data: (res.data as PlatformEnvelope<T>).result as T };
+async function scrape<T = unknown>(action: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<ApiResult<T>> {
+  const res = await api<PlatformEnvelope<T> & AsyncAccepted>('POST', '/api/platform/pumpfun/scrape', { body: { action, ...args }, signal });
+  if (res.ok && res.data && typeof res.data === 'object') {
+    // Story 50.2 (D-1): a 202 async accept — explicit or degraded — carries
+    // {mode:'async', statusUrl, retry_after_ms?}. Poll it (honouring the
+    // degrade hint as the first delay) and return the result like a sync call.
+    if (isAsyncAccepted(res.data)) {
+      return pollOperation<T>(res.data.statusUrl as string, signal, res.data.retry_after_ms);
+    }
+    const env = res.data as PlatformEnvelope<T>;
+    if ('result' in env) {
+      return { ok: true as const, status: res.status, data: env.result as T };
+    }
   }
   return res as unknown as ApiResult<T>;
 }

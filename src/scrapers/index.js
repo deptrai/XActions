@@ -326,6 +326,49 @@ export async function scrape(platform, action, options = {}) {
   }
 }
 
+/**
+ * Whether `(platform, action)` is eligible for the gateway's sync lane
+ * (Story 50.2 — `mode` absent defaults from this manifest; `mode:'sync'` on
+ * a non-eligible action is a 400 contract violation).
+ *
+ * Mirrors `scrape()` resolution semantics: `mapAction` is a FUNCTION
+ * `(options, ctx)` — we build the same `ctx={platform,platformName,action}`
+ * and call it, falling back to `actionMap` lookup. Descriptors with only
+ * `dispatch` (facebook) can only match the requested action. Both the
+ * requested action AND its mapped form are checked, so alias variants like
+ * reddit `posts`→`subreddit` inherit capability.
+ *
+ * @param {string} platform
+ * @param {string} action
+ * @param {Record<string, any>} [options]
+ * @returns {boolean}
+ */
+export function isSyncCapable(platform, action, options = {}) {
+  const platformName = String(platform || '').toLowerCase();
+  const descriptor = DESCRIPTORS[platformName];
+  const syncList = descriptor?.syncCapableActions;
+  if (!descriptor || !Array.isArray(syncList) || syncList.length === 0) return false;
+  if (syncList.includes(action)) return true;
+
+  // Dispatch-only descriptors (no mapAction/actionMap): requested-action
+  // match above is the only possible check.
+  if (descriptor.dispatch && typeof descriptor.mapAction !== 'function' && !descriptor.actionMap) {
+    return false;
+  }
+
+  const ctx = { platform, platformName, action };
+  let mapped = action;
+  try {
+    mapped = typeof descriptor.mapAction === 'function'
+      ? descriptor.mapAction(options || {}, ctx)
+      : (descriptor.actionMap?.[action] || action);
+  } catch {
+    // mapAction throwing (unknown action) → not sync-capable.
+    return false;
+  }
+  return mapped !== action ? syncList.includes(mapped) : false;
+}
+
 // ============================================================================
 // Default Export — backward compatible
 // ============================================================================
@@ -380,6 +423,7 @@ export default {
   
   // Multi-platform
   scrape,
+  isSyncCapable,
   platforms,
   getPlatform,
   

@@ -18,6 +18,7 @@ import { followEngagersBrowser } from './operations/puppeteer/followEngagers.js'
 import { keywordFollowBrowser } from './operations/puppeteer/keywordFollow.js';
 import { autoCommentBrowser } from './operations/puppeteer/autoComment.js';
 import { runBrowserScript } from './operations/puppeteer/scriptRunner.js';
+import { runWithConsumerContext } from '../../src/mcp/consumer-context.js';
 // In-memory job cancellation tracking
 const cancelledJobs = new Set();
 
@@ -35,6 +36,19 @@ function safeParseJson(value) {
     return /** @type {Record<string, unknown>} */ (JSON.parse(trimmed));
   } catch {
     return null;
+  }
+}
+
+/**
+ * Serialize a job result for the `Operation.result` String? column.
+ * @param {unknown} value
+ * @returns {string | null}
+ */
+function safeStringify(value) {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
   }
 }
 
@@ -58,6 +72,42 @@ const operationsQueue = new Queue('operations', {
   }
 });
 
+// Test seam (repo mandate: injected seams, no vi.mock). Overrides the queue
+// object used ONLY by addJob/queueJob/getJob — processors stay bound to the
+// real `operationsQueue` so job execution semantics never change under test.
+let _queueOverride = null;
+/** @param {Record<string, unknown> | null} q */
+export function _setOperationsQueue(q) {
+  _queueOverride = q && typeof q === 'object' ? q : null;
+}
+export function _resetOperationsQueue() {
+  _queueOverride = null;
+}
+function queue() {
+  return /** @type {any} */ (_queueOverride || operationsQueue);
+}
+
+/**
+ * Normalize a Bull job state against its retry budget.
+ * A `failed` attempt with retries remaining is NOT terminal — report
+ * 'processing' so consumer polls don't stop mid-retry-window (EDGE_STATUS_FLAP).
+ * @param {string | null | undefined} bullState
+ * @param {number | string | null | undefined} attemptsMade
+ * @param {number | string | null | undefined} maxAttempts
+ * @param {string} fallbackStatus DB status when Bull has no state
+ * @returns {string}
+ */
+export function normalizeBullState(bullState, attemptsMade, maxAttempts, fallbackStatus) {
+  const made = Number(attemptsMade);
+  const max = Number(maxAttempts);
+  // Non-numeric attempt metadata → trust the raw Bull state (a terminal
+  // 'failed'/'completed' must stay terminal — never guess 'processing').
+  if (bullState === 'failed' && Number.isFinite(made) && Number.isFinite(max) && made < max) {
+    return 'processing';
+  }
+  return bullState || fallbackStatus;
+}
+
 /**
  * Add a new job to the queue
  * @param {string} type - Job type (operation name)
@@ -65,12 +115,16 @@ const operationsQueue = new Queue('operations', {
  * @param {Record<string, unknown>} options - Queue options (priority, delay, etc.)
  */
 async function addJob(type, data, options = {}) {
-  // Create operation record in database
+  // Create operation record in database.
+  // Story 50.2: userId is null-safe (service-auth callers have no user —
+  // String(undefined) used to mint the literal 'undefined' → P2003 FK crash,
+  // e.g. the a2a.js task path). consumerId carries service attribution (D-2).
   const operation = await prisma.operation.create({
     data: {
       type,
       status: 'queued',
-      userId: String(data.userId),
+      userId: data.userId ? String(data.userId) : null,
+      consumerId: data.consumerId ? String(data.consumerId) : null,
       config: JSON.stringify(data.config || {}),
       createdAt: new Date()
     }
@@ -82,13 +136,32 @@ async function addJob(type, data, options = {}) {
     ...data
   };
 
-  const job = await operationsQueue.add(type, jobData, {
-    priority: Number(options.priority) || 10,
-    delay: Number(options.delay) || 0,
-    attempts: Number(options.attempts) || 3,
-    jobId: operation.id // Use operation ID as job ID for easy lookup
-  });
-  
+  let job;
+  try {
+    job = await queue().add(type, jobData, {
+      priority: Number(options.priority) || 10,
+      delay: Number(options.delay) || 0,
+      attempts: Number(options.attempts) || 3,
+      jobId: operation.id // Use operation ID as job ID for easy lookup
+    });
+  } catch (err) {
+    // Redis down / enqueue failure — don't orphan a 'queued' row that a
+    // consumer would poll forever.
+    try {
+      await prisma.operation.update({
+        where: { id: operation.id },
+        data: {
+          status: 'failed',
+          error: `enqueue failed: ${(err instanceof Error ? err.message : String(err))}`,
+          completedAt: new Date(),
+        },
+      });
+    } catch (dbErr) {
+      console.warn(`⚠️  Could not mark operation ${operation.id} failed after enqueue error:`, dbErr instanceof Error ? dbErr.message : dbErr);
+    }
+    throw err;
+  }
+
   console.log(`📨 Job queued: ${job.id} (${type})`);
   return { jobId: operation.id, bullJobId: job.id, operation };
 }
@@ -98,7 +171,7 @@ async function addJob(type, data, options = {}) {
  * @param {Record<string, unknown>} jobData
  */
 async function queueJob(jobData) {
-  const job = await operationsQueue.add(String(jobData.type), jobData, {
+  const job = await queue().add(String(jobData.type), jobData, {
     priority: Number(jobData.priority) || 10
   });
   
@@ -120,14 +193,26 @@ async function getJob(jobId) {
     return null;
   }
 
-  // Get Bull job for live progress
-  const bullJob = await operationsQueue.getJob(jobId);
+  // Get Bull job for live progress. Story 50.2: Redis hiccups must not 500
+  // the status poll — fall back to the DB state (detached scrape operations
+  // have no Bull job at all and already resolve via operation.status).
+  let bullJob = null;
+  try {
+    bullJob = await queue().getJob(jobId);
+  } catch {
+    bullJob = null;
+  }
   let progress = null;
   let state = operation.status;
 
   if (bullJob) {
-    progress = await bullJob.progress();
-    state = await bullJob.getState();
+    try {
+      progress = await bullJob.progress();
+      const bullState = await bullJob.getState();
+      state = normalizeBullState(bullState, bullJob.attemptsMade, bullJob?.opts?.attempts, operation.status);
+    } catch {
+      state = operation.status;
+    }
   }
 
   const parsedConfig = safeParseJson(operation.config);
@@ -417,6 +502,57 @@ operationsQueue.process('datasetFetch', 2, async (job) => {
   return data;
 });
 
+// Process jobs - scrape (Story 50.2 — public gateway async lane)
+// Job data is credential-free: {platform, action, options, userId, consumerId,
+// accountIds?}. Stored-account cookies are re-resolved here, server-side.
+operationsQueue.process('scrape', 2, async (job) => {
+  console.log(`🔄 Processing job ${job.id}: scrape (${job.data.platform}:${job.data.action})`);
+
+  const operationId = job.data.operationId;
+  // Honour a cancel that raced the dequeue — the row stays 'cancelled'
+  // (the completed-handler's not-cancelled guard backstops this write).
+  if (operationId && cancelledJobs.has(operationId)) {
+    try {
+      await prisma.operation.updateMany({
+        where: { id: operationId, status: { not: 'cancelled' } },
+        data: { status: 'cancelled', completedAt: new Date() },
+      });
+    } catch (e) {
+      console.warn(`⚠️  Could not mark cancelled scrape operation ${operationId}:`, e instanceof Error ? e.message : e);
+    }
+    return { cancelled: true };
+  }
+
+  const platform = job.data.platform;
+  const action = job.data.action;
+  const options = { ...(job.data.options || {}) };
+  const userId = job.data.userId || null;
+  const accountIds = Array.isArray(job.data.accountIds) ? job.data.accountIds : [];
+
+  if (userId && accountIds.length) {
+    const { resolveAccountCookie, buildAuthCookie } = await import('../routes/platform.js');
+    const cookie = await resolveAccountCookie(String(userId), accountIds[0], platform);
+    options.authCookie = buildAuthCookie(platform, cookie);
+    options.accountId = accountIds[0];
+    if (cookie && typeof cookie === 'object') {
+      if (cookie.clientId && !options.clientId) options.clientId = cookie.clientId;
+      if (cookie.clientSecret && !options.clientSecret) options.clientSecret = cookie.clientSecret;
+      if (cookie.username && !options.redditUsername) options.redditUsername = cookie.username;
+    }
+  }
+
+  const { scrape } = await import('../../src/scrapers/index.js');
+  const consumerCtx = {
+    consumerId: job.data.consumerId || 'internal',
+    apiKeyValid: true,
+    // Caller lane is carried in the job payload — apiKeyRequired follows the
+    // service-auth lane, NOT Boolean(consumerId) (JWT-lane jobs → false, same
+    // as the sync path's consumerCtx).
+    apiKeyRequired: job.data.apiKeyRequired === true,
+  };
+  return await runWithConsumerContext(consumerCtx, () => scrape(platform, action, options));
+});
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /** Fire a best-effort POST to a callbackUrl with the job result
@@ -438,8 +574,10 @@ function deliverCallback(url, payload) {
 operationsQueue.on('active', async (job) => {
   console.log(`▶️  Job active: ${job.id} (${job.data.type || job.name})`);
   try {
-    await prisma.operation.update({
-      where: { id: job.data.operationId },
+    // Never rewind a 'cancelled' row — cancelJob can land between the Bull
+    // dequeue and this event.
+    await prisma.operation.updateMany({
+      where: { id: job.data.operationId, status: { not: 'cancelled' } },
       data: { status: 'processing', startedAt: new Date() },
     });
   } catch (err) {
@@ -462,39 +600,55 @@ operationsQueue.on('progress', (job, progress) => {
 operationsQueue.on('completed', async (job, result) => {
   console.log(`✅ Job completed: ${job.id}`);
 
-  await prisma.operation.update({
-    where: { id: job.data.operationId },
-    data: { status: 'completed', completedAt: new Date(), result },
-  });
+  const operationId = job?.data?.operationId;
+  try {
+    // Operation.result is String? — serialize structured results (scrape
+    // payloads are objects; writing them raw violates the column type).
+    const serializedResult = result == null
+      ? null
+      : (typeof result === 'string' ? result : safeStringify(result));
 
-  global.io?.to(`job:${job.data.operationId}`).emit('job:completed', {
-    jobId: job.data.operationId,
-    result,
-    completedAt: new Date().toISOString(),
-  });
+    let applied = { count: 0 };
+    if (operationId) {
+      // A 'cancelled' status is never overwritten by a late completion.
+      applied = await prisma.operation.updateMany({
+        where: { id: operationId, status: { not: 'cancelled' } },
+        data: { status: 'completed', completedAt: new Date(), result: serializedResult },
+      });
+    }
+    if (applied.count === 0 && operationId) return; // cancelled or missing
 
-  deliverCallback(job.data.config?.callbackUrl, {
-    event: 'job.completed',
-    jobId: job.data.operationId,
-    type: job.data.type,
-    result,
-    completedAt: new Date().toISOString(),
-  });
+    global.io?.to(`job:${operationId}`).emit('job:completed', {
+      jobId: operationId,
+      result,
+      completedAt: new Date().toISOString(),
+    });
+
+    deliverCallback(job.data.config?.callbackUrl, {
+      event: 'job.completed',
+      jobId: operationId,
+      type: job.data.type,
+      result,
+      completedAt: new Date().toISOString(),
+    });
+  } catch (handlerErr) {
+    // A transient prisma blip inside an event handler must not crash the
+    // worker (unhandledRejection).
+    console.warn(`⚠️  completed-handler failed for operation ${operationId}:`, handlerErr instanceof Error ? handlerErr.message : handlerErr);
+  }
 });
 
 operationsQueue.on('failed', async (job, err) => {
   console.error(`❌ Job failed: ${job?.id}`, err);
 
   const operationId = job?.data?.operationId;
-  if (operationId) {
-    try {
-      await prisma.operation.update({
-        where: { id: operationId },
+  try {
+    if (operationId) {
+      // updateMany-guarded: a 'cancelled' status is never overwritten.
+      await prisma.operation.updateMany({
+        where: { id: operationId, status: { not: 'cancelled' } },
         data: { status: 'failed', error: (err instanceof Error ? err.message : String(err)), retryCount: job.attemptsMade },
       });
-    } catch (dbErr) {
-      const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
-      console.warn(`⚠️ Failed to update operation ${operationId} status:`, msg);
     }
 
     global.io?.to(`job:${operationId}`).emit('job:failed', {
@@ -502,16 +656,19 @@ operationsQueue.on('failed', async (job, err) => {
       error: (err instanceof Error ? err.message : String(err)),
       failedAt: new Date().toISOString(),
     });
-  }
 
-  if (job?.data?.config?.callbackUrl) {
-    deliverCallback(job.data.config.callbackUrl, {
-      event: 'job.failed',
-      jobId: operationId,
-      type: job.data.type,
-      error: (err instanceof Error ? err.message : String(err)),
-      failedAt: new Date().toISOString(),
-    });
+    if (job?.data?.config?.callbackUrl) {
+      deliverCallback(job.data.config.callbackUrl, {
+        event: 'job.failed',
+        jobId: operationId,
+        type: job.data.type,
+        error: (err instanceof Error ? err.message : String(err)),
+        failedAt: new Date().toISOString(),
+      });
+    }
+  } catch (handlerErr) {
+    // Transient prisma/io failure must not crash the worker process.
+    console.warn(`⚠️  failed-handler failed for operation ${operationId}:`, handlerErr instanceof Error ? handlerErr.message : handlerErr);
   }
 });
 

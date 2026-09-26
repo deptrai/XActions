@@ -46,6 +46,13 @@ export default {
   actionMap: PUMPFUN_ACTION_MAP,
 
   /**
+   * Story 50.2 — sync-lane manifest. `fetch_coin_meta` is the lightweight
+   * metadata read (lands in Story 50.6 — inert until the crawler action
+   * exists); everything else (mint social, streams, writes) is async-only.
+   */
+  syncCapableActions: ['fetch_coin_meta'],
+
+  /**
    * @param {Record<string, any>} options
    * @returns {Record<string, any>}
    */

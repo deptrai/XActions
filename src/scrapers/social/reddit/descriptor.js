@@ -35,6 +35,14 @@ export default {
   actionMap: REDDIT_ACTION_MAP,
 
   /**
+   * Story 50.2 — actions eligible for the gateway's sync lane (1.5s ceiling).
+   * These are public, lightweight reads. The manifest is matched against BOTH
+   * the requested action and its mapped form, so aliases like `posts`→
+   * `subreddit`, `comments`/`thread`→`post_comments` are sync-capable too.
+   */
+  syncCapableActions: ['search', 'subreddit', 'post_comments'],
+
+  /**
    * @param {Record<string, any>} options
    * @returns {Record<string, any>}
    */

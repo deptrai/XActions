@@ -20,7 +20,6 @@ import crypto from 'crypto';
 import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { eitherAuth } from '../middleware/serviceAuth.js';
-import { runWithConsumerContext } from '../../src/mcp/consumer-context.js';
 
 const router = express.Router();
 
@@ -33,7 +32,7 @@ const VALID_PLATFORMS = [
 ];
 
 /** @type {Record<string, string>} */
-const PLATFORM_ALIASES = { 'tiktok-shop': 'tiktokshop', 'pump': 'pumpfun', 'pump.fun': 'pumpfun' };
+export const PLATFORM_ALIASES = { 'tiktok-shop': 'tiktokshop', 'pump': 'pumpfun', 'pump.fun': 'pumpfun' };
 
 /**
  * @param {string} platform
@@ -180,7 +179,7 @@ function buildCookie(platform, body) {
  * @param {Record<string, string>} cookie
  * @returns {Record<string, unknown>}
  */
-function buildAuthCookie(platform, cookie) {
+export function buildAuthCookie(platform, cookie) {
   if (platform === 'facebook') {
     return { c_user: cookie.c_user, xs: cookie.xs };
   }
@@ -230,6 +229,19 @@ router.use('/:platform/automate', authenticate);
  * @type {import('express-serve-static-core').RequestParamHandler}
  */
 const platformParamHandler = (req, res, next, value) => {
+  // Story 50.2 (D-3): 'all' batch fan-out is admitted ONLY on the /scrape
+  // route — whitelisting it router-wide would open POST /all/automate write
+  // fan-out via UniversalActionDispatcher and literal `all:` account labels.
+  if (String(value).toLowerCase().trim() === 'all') {
+    // Normalize before the scrape check — '/all/scrape/' and '/all/SCRAPE'
+    // (case-insensitive router match) must admit like '/all/scrape'.
+    const reqPath = String(req.path || '').toLowerCase().replace(/\/+$/, '');
+    if (reqPath.endsWith('/scrape')) {
+      /** @type {any} */ (req).platform = 'all';
+      return next();
+    }
+    return res.status(400).json({ ok: false, error: `Unknown platform: ${value}` });
+  }
   const normalized = normalizePlatform(value);
   if (!normalized) {
     return res.status(400).json({ ok: false, error: `Unknown platform: ${value}` });
@@ -339,11 +351,13 @@ router.delete('/:platform/accounts/:id', async (req, res) => {
 
 /**
  * Resolve decrypted account cookie for a run.
+ * Exported for the scrape worker processor (Story 50.2 — re-resolves
+ * server-side so credential plaintext never enters the Bull payload).
  * @param {string} userId
  * @param {string} accountId
  * @param {string} platform
  */
-async function resolveAccountCookie(userId, accountId, platform) {
+export async function resolveAccountCookie(userId, accountId, platform) {
   const isTwitter = platform === 'x' || platform === 'twitter';
   const isReddit = platform === 'reddit' || platform === 'rdt';
   const labelPrefix = isReddit ? 'reddit:' : `${platform}:`;
@@ -396,6 +410,20 @@ async function resolveAccountCookie(userId, accountId, platform) {
  * Story 50.1 — `eitherAuth` accepts user-JWT (dashboard) OR Bearer service key
  * (machine consumer). `req.user` is only populated for the JWT lane;
  * `req.consumer` is populated by either lane.
+ *
+ * Story 50.2 — mode dispatch. `mode` (body) selects the lane:
+ *   'sync'  → in-process scrape() under a hard 1.5s ceiling; breach or typed
+ *             upstream failure degrades to `202 + operationId + Retry-After`
+ *             (poll /api/ai/action/status/:id).
+ *   'async' → Bull job + `202 {operationId, statusUrl}` immediately.
+ *   absent  → per-action `syncCapableActions` manifest decides.
+ * `platform` in the body overrides the path (string | 'all' | string[]≤25);
+ * batch fans out via Promise.allSettled with the ceiling per-platform.
+ *
+ * The route owns every `res` write: scrapeDispatch returns outcome
+ * descriptors `{kind:'json', status, body, headers?}` — it never touches
+ * `res` and never throws contract errors. The catch below only handles
+ * non-contract infra throws.
  */
 router.post('/:platform/scrape', eitherAuth, async (req, res) => {
   const reqUser = /** @type {import('@prisma/client').User | undefined} */ (req.user);
@@ -403,55 +431,51 @@ router.post('/:platform/scrape', eitherAuth, async (req, res) => {
   const body = /** @type {Record<string, unknown>} */ (req.body ?? {});
   const action = /** @type {string | undefined} */ (body.action);
 
-  if (!action) {
+  if (!action || typeof action !== 'string') {
     return res.status(400).json({ ok: false, error: 'action is required' });
   }
 
+  // Stored-account resolution requires a user session — this guard runs
+  // BEFORE mode dispatch (covers single and batch alike; EDGE_ACCOUNTIDS_SERVICE).
+  const accountIds = body.accountIds;
+  // A truthy non-array accountIds is a caller bug — 400, not silent drop.
+  if (accountIds !== undefined && accountIds !== null && !Array.isArray(accountIds)) {
+    return res.status(400).json({
+      ok: false,
+      error: {
+        code: 'VALIDATION_FAILED',
+        type: 'validation',
+        message: 'accountIds must be an array of account ids',
+      },
+    });
+  }
+  if (Array.isArray(accountIds) && accountIds.length > 0 && (!reqUser || typeof reqUser.id !== 'string')) {
+    return res.status(400).json({
+      ok: false,
+      error: {
+        code: 'VALIDATION_FAILED',
+        type: 'validation',
+        message: 'Stored account resolution requires user session authentication',
+      },
+    });
+  }
+
   try {
-    const { scrape } = await import('../../src/scrapers/index.js');
-
-    /** @type {Record<string, unknown>} */
-    const options = { ...body };
-    delete options.action;
-
-    // Interactive dashboard scrapes and preview dryRuns should start fresh from cursor 0
-    // unless the caller explicitly requested resume: true.
-    if (options.resume === undefined) {
-      options.resume = false;
-    }
-
-    // Resolve account if provided — requires user session (req.user).
-    // Service-auth callers cannot use accountIds (their req.user is undefined).
-    const accountIds = /** @type {string[] | undefined} */ (body.accountIds);
-    if (Array.isArray(accountIds) && accountIds.length > 0) {
-      if (!reqUser || typeof reqUser.id !== 'string') {
-        return res.status(400).json({
-          ok: false,
-          error: {
-            code: 'VALIDATION_FAILED',
-            type: 'validation',
-            message: 'Stored account resolution requires user session authentication',
-          },
-        });
-      }
-      const cookie = await resolveAccountCookie(reqUser.id, accountIds[0], platform);
-      options.authCookie = buildAuthCookie(platform, cookie);
-      options.accountId = accountIds[0];
-      if (cookie && typeof cookie === 'object') {
-        if (cookie.clientId && !options.clientId) options.clientId = cookie.clientId;
-        if (cookie.clientSecret && !options.clientSecret) options.clientSecret = cookie.clientSecret;
-        if (cookie.username && !options.redditUsername) options.redditUsername = cookie.username;
+    const { dispatch } = await import('../services/scrapeDispatch.js');
+    const outcome = await dispatch({
+      pathPlatform: platform,
+      body,
+      action,
+      userId: reqUser && typeof reqUser.id === 'string' ? reqUser.id : null,
+      accountIds: Array.isArray(accountIds) ? accountIds : undefined,
+      consumer: /** @type {Record<string, unknown> | null} */ (req.consumer ?? null),
+    });
+    if (outcome.headers) {
+      for (const [name, value] of Object.entries(outcome.headers)) {
+        res.setHeader(name, value);
       }
     }
-
-    const consumerCtx = req.consumer ? {
-      consumerId: req.consumer.consumerId,
-      apiKeyValid: req.consumer.apiKeyValid,
-      apiKeyRequired: req.consumer.source === 'serviceAuth',
-    } : { consumerId: 'internal', apiKeyValid: true, apiKeyRequired: false };
-
-    const result = await runWithConsumerContext(consumerCtx, () => scrape(platform, action, options));
-    res.json({ ok: true, platform, action, dryRun: Boolean(body.dryRun), result });
+    return res.status(outcome.status).json(outcome.body);
   } catch (err) {
     console.error(`❌ POST /platform/${platform}/scrape error:`, err);
     const status = typeof err === 'object' && err !== null && 'statusCode' in err && typeof err.statusCode === 'number' ? err.statusCode : 500;
