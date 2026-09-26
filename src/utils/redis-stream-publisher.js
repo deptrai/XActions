@@ -225,6 +225,15 @@ export class RedisStreamPublisher {
   }
 
   /**
+   * Public read-only accessor for the configured stream key — the gateway
+   * envelope's `stream.name` reads from here (Story 50.3). Never mutates.
+   * @returns {string}
+   */
+  get streamKey() {
+    return this.#streamKey;
+  }
+
+  /**
    * Ensure Redis client is available and connected.
    * @returns {Promise<import('../core/types.js').RedisClientLike | null>}
    */

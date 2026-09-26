@@ -20,6 +20,8 @@ import crypto from 'crypto';
 import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { eitherAuth } from '../middleware/serviceAuth.js';
+import { requestId } from '../middleware/requestId.js';
+import { errorBody, scrapeErrorKind, isRetryableError } from '../services/gatewayEnvelope.js';
 
 const router = express.Router();
 
@@ -420,19 +422,34 @@ export async function resolveAccountCookie(userId, accountId, platform) {
  * `platform` in the body overrides the path (string | 'all' | string[]≤25);
  * batch fans out via Promise.allSettled with the ceiling per-platform.
  *
+ * Story 50.3 — unified envelope + request-id. `requestId` middleware mounts
+ * BEFORE `eitherAuth` so even a 401 auth failure carries `request_id`
+ * end-to-end (echoed via the `X-Request-Id` response header). Every response
+ * — sync 200, async/degraded 202, batch, guards, catch — emits the unified
+ * envelope shape owned by `api/services/gatewayEnvelope.js`.
+ *
  * The route owns every `res` write: scrapeDispatch returns outcome
  * descriptors `{kind:'json', status, body, headers?}` — it never touches
  * `res` and never throws contract errors. The catch below only handles
- * non-contract infra throws.
+ * non-contract infra throws, flattened to the unified ErrorEnvelope.
  */
-router.post('/:platform/scrape', eitherAuth, async (req, res) => {
+router.post('/:platform/scrape', requestId, eitherAuth, async (req, res) => {
   const reqUser = /** @type {import('@prisma/client').User | undefined} */ (req.user);
   const platform = /** @type {string} */ (req.platform || req.params.platform);
   const body = /** @type {Record<string, unknown>} */ (req.body ?? {});
   const action = /** @type {string | undefined} */ (body.action);
+  const reqId = /** @type {string | undefined} */ (req.requestId);
 
   if (!action || typeof action !== 'string') {
-    return res.status(400).json({ ok: false, error: 'action is required' });
+    return res.status(400).json(errorBody({
+      code: 'XACT_4001',
+      type: 'validation',
+      kind: 'validation',
+      message: 'action is required',
+      status: 400,
+      requestId: reqId,
+      retryable: false,
+    }));
   }
 
   // Stored-account resolution requires a user session — this guard runs
@@ -440,24 +457,26 @@ router.post('/:platform/scrape', eitherAuth, async (req, res) => {
   const accountIds = body.accountIds;
   // A truthy non-array accountIds is a caller bug — 400, not silent drop.
   if (accountIds !== undefined && accountIds !== null && !Array.isArray(accountIds)) {
-    return res.status(400).json({
-      ok: false,
-      error: {
-        code: 'VALIDATION_FAILED',
-        type: 'validation',
-        message: 'accountIds must be an array of account ids',
-      },
-    });
+    return res.status(400).json(errorBody({
+      code: 'VALIDATION_FAILED',
+      type: 'validation',
+      kind: 'validation',
+      message: 'accountIds must be an array of account ids',
+      status: 400,
+      requestId: reqId,
+      retryable: false,
+    }));
   }
   if (Array.isArray(accountIds) && accountIds.length > 0 && (!reqUser || typeof reqUser.id !== 'string')) {
-    return res.status(400).json({
-      ok: false,
-      error: {
-        code: 'VALIDATION_FAILED',
-        type: 'validation',
-        message: 'Stored account resolution requires user session authentication',
-      },
-    });
+    return res.status(400).json(errorBody({
+      code: 'VALIDATION_FAILED',
+      type: 'validation',
+      kind: 'validation',
+      message: 'Stored account resolution requires user session authentication',
+      status: 400,
+      requestId: reqId,
+      retryable: false,
+    }));
   }
 
   try {
@@ -469,6 +488,8 @@ router.post('/:platform/scrape', eitherAuth, async (req, res) => {
       userId: reqUser && typeof reqUser.id === 'string' ? reqUser.id : null,
       accountIds: Array.isArray(accountIds) ? accountIds : undefined,
       consumer: /** @type {Record<string, unknown> | null} */ (req.consumer ?? null),
+      requestId: reqId,
+      traceparent: /** @type {string | undefined} */ (req.traceparent),
     });
     if (outcome.headers) {
       for (const [name, value] of Object.entries(outcome.headers)) {
@@ -479,12 +500,22 @@ router.post('/:platform/scrape', eitherAuth, async (req, res) => {
   } catch (err) {
     console.error(`❌ POST /platform/${platform}/scrape error:`, err);
     const status = typeof err === 'object' && err !== null && 'statusCode' in err && typeof err.statusCode === 'number' ? err.statusCode : 500;
-    const code = typeof err === 'object' && err !== null && 'code' in err ? /** @type {any} */ (err).code : undefined;
-    res.status(status).json({
-      ok: false,
-      error: err instanceof Error ? err.message : 'Scrape failed',
-      code,
+    const retryable = isRetryableError(err) || status === 503 || status === 429;
+    const retryAfterMs = typeof /** @type {any} */ (err)?.retryAfterMs === 'number' ? /** @type {any} */ (err).retryAfterMs : undefined;
+    const errBody = errorBody({
+      code: typeof /** @type {any} */ (err)?.code === 'string' ? /** @type {any} */ (err).code : 'XACT_5000',
+      type: typeof /** @type {any} */ (err)?.type === 'string' ? /** @type {any} */ (err).type : undefined,
+      kind: scrapeErrorKind(err),
+      message: err instanceof Error ? err.message : 'Scrape failed',
+      status,
+      requestId: reqId,
+      retryable,
+      retryAfterMs,
     });
+    if (retryable) {
+      res.setHeader('Retry-After', String(Math.max(1, Math.ceil((errBody.error.retry_after_ms ?? 2000) / 1000))));
+    }
+    return res.status(status).json(errBody);
   }
 });
 

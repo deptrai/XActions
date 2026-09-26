@@ -595,12 +595,17 @@ describe('POST /api/platform/:platform/scrape — mode dispatch', () => {
       .send({ action: 'user', mode: 'sync' });
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
-    expect(res.body.error).toEqual({
+    // Story 50.3 envelope superset — the 50.2 fields are pinned, the new
+    // contract fields (status/request_id/retryable) are additive.
+    expect(res.body.error).toMatchObject({
       code: 'XACT_4001',
       kind: 'validation',
       type: 'validation',
       message: 'action not sync-eligible',
+      status: 400,
+      retryable: false,
     });
+    expect(typeof res.body.error.request_id).toBe('string');
     expect(enq.calls).toHaveLength(0);
     expect(scrapeSpy.calls).toHaveLength(0);
   });
@@ -615,7 +620,7 @@ describe('POST /api/platform/:platform/scrape — mode dispatch', () => {
     expect(res.body.error.kind).toBe('validation');
   });
 
-  it('ERR_NONRETRYABLE_SYNC: non-retryable scrape error → legacy {ok:false} error, never degrade', async () => {
+  it('ERR_NONRETRYABLE_SYNC: non-retryable scrape error → unified ErrorEnvelope, never degrade', async () => {
     _setScrapeImpl(async () => {
       throw new PlatformError({ code: 'XACT_4001', type: 'invalid_args', statusCode: 400, message: 'bad args' });
     });
@@ -623,8 +628,19 @@ describe('POST /api/platform/:platform/scrape — mode dispatch', () => {
       .post('/api/platform/reddit/scrape')
       .send({ action: 'search', mode: 'sync' });
     expect(res.status).toBe(400);
-    expect(res.body.ok).toBe(false);
-    expect(res.body.error).toBe('bad args');
+    // Story 50.3: every /scrape error is the unified ErrorEnvelope —
+    // {success:false, error:{code,kind,type,message,status,request_id,
+    // retryable}} — not the retired {ok:false,error:<string>} dialect.
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatchObject({
+      code: 'XACT_4001',
+      kind: 'validation',
+      type: 'invalid_args',
+      message: 'bad args',
+      status: 400,
+      retryable: false,
+    });
+    expect(typeof res.body.error.request_id).toBe('string');
     expect(enq.calls).toHaveLength(0);
   });
 

@@ -49,7 +49,7 @@ const RETRYABLE_TYPES = new Set([
  * @param {string} type
  * @returns {boolean}
  */
-function isRetryableType(type) {
+export function isRetryableType(type) {
   return RETRYABLE_TYPES.has(type);
 }
 

@@ -19,7 +19,8 @@
  * @module api/middleware/envelope
  */
 
-import { PlatformError } from '../../src/core/error-envelope.js';
+import { PlatformError, isRetryableType } from '../../src/core/error-envelope.js';
+import { ERROR_KINDS, RETRY_AFTER_DEFAULT_MS, errorKind } from '../services/gatewayEnvelope.js';
 
 /**
  * Non-domain API error. Carries the canonical taxonomy code, HTTP status,
@@ -83,12 +84,41 @@ export function envelopeMiddleware(_req, res, next) {
 /**
  * Serialize one canonical error envelope. Used by the error middleware and the
  * 404 handler — emits directly so it never depends on helper availability.
+ *
+ * Story 50.3 — CONDITIONAL gateway extension: when `req.requestId` is truthy
+ * (the request traversed the scrape-gateway `requestId` middleware), the error
+ * object additionally carries the unified contract fields
+ * `{kind, status, request_id, retryable, retry_after_ms?}` (C-10: `kind` is a
+ * closed enum; `retryable:true` requires `retry_after_ms`). Requests that did
+ * NOT pass through the gateway emit the byte-identical legacy shape —
+ * `envelope.test.js` `toEqual` asserts stay green.
+ *
+ * @param {import('express').Response} res
+ * @param {{ status: number, code: string, message: string, type?: string, details?: unknown, kind?: string, isRetryable?: boolean, retryAfterMs?: number }} fields
+ * @param {import('express').Request} [req]
  */
-export function sendErrorEnvelope(res, { status, code, message, type, details }) {
+export function sendErrorEnvelope(res, { status, code, message, type, details, kind, isRetryable, retryAfterMs }, req) {
   if (res.headersSent) return;
   const error = { code, message };
   if (type) error.type = type;
   if (details !== undefined) error.details = details;
+  const requestId = req && typeof req === 'object' ? req.requestId : undefined;
+  if (requestId) {
+    error.kind = typeof kind === 'string' && ERROR_KINDS.includes(kind) ? kind : errorKind(type);
+    error.status = status;
+    error.request_id = requestId;
+    const retryable = isRetryable === true
+      || (typeof type === 'string' && isRetryableType(type))
+      || status === 429 || status === 503;
+    error.retryable = retryable;
+    if (retryable) {
+      const ms = Number(
+        retryAfterMs
+        ?? (details && typeof details === 'object' ? /** @type {any} */ (details).retry_after_ms : undefined),
+      );
+      error.retry_after_ms = Number.isFinite(ms) && ms > 0 ? ms : RETRY_AFTER_DEFAULT_MS;
+    }
+  }
   res.status(status).json({ success: false, error });
 }
 
@@ -117,7 +147,6 @@ function safeHttpStatus(statusCode) {
 }
 
 export function errorMiddleware(err, req, res, next) {
-  void req;
   if (res.headersSent) return next(err);
 
   if (err instanceof PlatformError) {
@@ -127,7 +156,11 @@ export function errorMiddleware(err, req, res, next) {
       type: err.type,
       message: err.message,
       details: err.toEnvelope(),
-    });
+      // Gateway-extension inputs (consumed only when req.requestId is set):
+      kind: /** @type {any} */ (err).kind,
+      isRetryable: err.isRetryable === true,
+      retryAfterMs: err.retryAfterMs,
+    }, req);
   }
 
   if (err instanceof ApiError) {
@@ -137,13 +170,16 @@ export function errorMiddleware(err, req, res, next) {
       type: err.type,
       message: err.message,
       details: err.details,
-    });
+      kind: /** @type {any} */ (err).kind,
+      isRetryable: /** @type {any} */ (err).isRetryable === true,
+      retryAfterMs: /** @type {any} */ (err).retryAfterMs,
+    }, req);
   }
 
   const parserHit = typeof err?.type === 'string' ? BODY_PARSER_ERRORS[err.type] : undefined;
-  if (parserHit) return sendErrorEnvelope(res, parserHit);
+  if (parserHit) return sendErrorEnvelope(res, { ...parserHit, kind: 'validation' }, req);
   if (typeof err?.type === 'string' && err.type.startsWith('entity.')) {
-    return sendErrorEnvelope(res, { status: 400, code: 'VALIDATION_FAILED', message: 'Invalid request body' });
+    return sendErrorEnvelope(res, { status: 400, code: 'VALIDATION_FAILED', message: 'Invalid request body', kind: 'validation' }, req);
   }
 
   console.error('❌ Unhandled error:', err?.message ?? err);
@@ -160,7 +196,10 @@ export function errorMiddleware(err, req, res, next) {
       safeStatus >= 500 && process.env.NODE_ENV === 'production'
         ? 'Internal server error'
         : err?.message || 'Internal server error',
-  });
+    kind: typeof /** @type {any} */ (err)?.kind === 'string' ? /** @type {any} */ (err).kind : undefined,
+    isRetryable: /** @type {any} */ (err)?.isRetryable === true,
+    retryAfterMs: typeof /** @type {any} */ (err)?.retryAfterMs === 'number' ? /** @type {any} */ (err).retryAfterMs : undefined,
+  }, req);
 }
 
 /**
@@ -171,7 +210,7 @@ export function notFoundHandler(req, res) {
     status: 404,
     code: 'NOT_FOUND',
     message: `Route not found: ${req.method} ${req.originalUrl ?? req.path}`,
-  });
+  }, req);
 }
 
 /**

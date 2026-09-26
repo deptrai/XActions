@@ -355,9 +355,11 @@ describe('platform.js route-level auth scoping (Story 50.1 ACs)', () => {
       .send({}); // missing action
 
     // 400 means handler was REACHED (action is required) — auth passed!
+    // Story 50.3: unified ErrorEnvelope — {success:false, error:{...}}.
     expect(res.status).toBe(400);
-    expect(res.body.ok).toBe(false);
-    expect(res.body.error).toContain('action is required');
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.message).toBe('action is required');
+    expect(res.body.error.kind).toBe('validation');
   });
 
   it('EDGE_ACCOUNTIDS_NO_USER: service caller with accountIds gets 400 validation error (no TypeError crash)', async () => {
@@ -370,9 +372,10 @@ describe('platform.js route-level auth scoping (Story 50.1 ACs)', () => {
       .send({ action: 'search', accountIds: ['acc-123'] });
 
     expect(res.status).toBe(400);
-    expect(res.body.ok).toBe(false);
+    expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('VALIDATION_FAILED');
     expect(res.body.error.message).toContain('Stored account resolution requires user session');
+    expect(res.body.error.kind).toBe('validation');
   });
 
   it('non-scrape routes remain user-JWT only: service key gets 401 on /accounts', async () => {

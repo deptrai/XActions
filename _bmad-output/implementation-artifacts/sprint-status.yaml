@@ -420,10 +420,10 @@ epic-50:
       status: done
     story-50-2:
       slug: sync-async-mode-dispatch-202-degrade
-      status: review
+      status: done
     story-50-3:
       slug: unified-envelope-request-id-error-envelope
-      status: backlog
+      status: done
     story-50-4:
       slug: per-consumer-quota-x402-observability-dashboard
       status: backlog

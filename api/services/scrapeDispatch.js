@@ -42,14 +42,30 @@
  * @license MIT
  */
 
+import {
+  errorBody,
+  successEnvelope,
+  buildMetadata,
+  buildStreamBlock,
+  normalizeData,
+  errorKind,
+  scrapeErrorKind,
+  isRetryableError,
+} from './gatewayEnvelope.js';
+
 // ── Contract constants (pinned by spec — no env overrides) ───────────────────
 
 /** Hard sync ceiling in ms (C-2). Bound = ceiling + bookkeeping. */
 export const SYNC_BUDGET_MS = 1500;
 /** Explicit platform array cap ('all'-expansion is exempt — D-3). */
 export const MAX_BATCH_PLATFORMS = 25;
-/** Default Retry-After hint for timeout/fallback degrades. */
-export const RETRY_AFTER_DEFAULT_MS = 2000;
+/**
+ * Default Retry-After hint for timeout/fallback degrades.
+ * Re-exported from gatewayEnvelope.js (its canonical home — api/middleware/
+ * envelope.js needs it too and importing scrapeDispatch there would cycle).
+ */
+export { RETRY_AFTER_DEFAULT_MS } from './gatewayEnvelope.js';
+import { RETRY_AFTER_DEFAULT_MS } from './gatewayEnvelope.js';
 /** Bound on the detached tracking-row create await — a hung prisma write must not stall the response. */
 export const TRACKING_CREATE_TIMEOUT_MS = 2000;
 /** Closed enum for 202 degrade bodies (C-11). */
@@ -175,68 +191,95 @@ function jsonOutcome(status, body, headers) {
   return { kind: 'json', status, body, ...(headers ? { headers } : {}) };
 }
 
-/** 400 contract body — hand-rolled: `kind` is not part of sendErrorEnvelope taxonomy. */
-function validationOutcome(message) {
-  return jsonOutcome(400, {
-    success: false,
-    error: { code: 'XACT_4001', kind: 'validation', type: 'validation', message },
-  });
+/**
+ * 400 contract body — unified ErrorEnvelope (C-10). `requestId` propagates so
+ * a validation failure still carries the end-to-end trace id.
+ * @param {string} message
+ * @param {string} [requestId]
+ */
+function validationOutcome(message, requestId) {
+  return jsonOutcome(400, errorBody({
+    code: 'XACT_4001',
+    type: 'validation',
+    kind: 'validation',
+    message,
+    status: 400,
+    requestId,
+    retryable: false,
+  }));
 }
 
-/** 503 contract body — nothing to poll when no operationId could be minted. */
-function unavailableOutcome(message = 'scrape job could not be tracked — try again') {
-  return jsonOutcome(503, {
-    success: false,
-    error: { code: 'XACT_5000', kind: 'internal', type: 'internal', message },
-  });
+/**
+ * 503 contract body — nothing to poll when no operationId could be minted.
+ * Retryable: `retryable:true` + `retry_after_ms` + `Retry-After` header (C-10).
+ * @param {string} [message]
+ * @param {string} [requestId]
+ */
+function unavailableOutcome(message = 'scrape job could not be tracked — try again', requestId) {
+  return jsonOutcome(503, errorBody({
+    code: 'XACT_5000',
+    type: 'internal',
+    kind: 'internal',
+    message,
+    status: 503,
+    requestId,
+    retryable: true,
+    retryAfterMs: RETRY_AFTER_DEFAULT_MS,
+  }), retryAfterHeaders(RETRY_AFTER_DEFAULT_MS));
 }
 
-/** Non-contract scrape error — keeps the legacy `{ok:false,error,code}` dialect. */
-function scrapeErrorOutcome(err) {
+/**
+ * Scrape-lane error → unified ErrorEnvelope. `kind` comes from
+ * `scrapeErrorKind` (typed → `errorKind(type)`; untyped → 'upstream_error').
+ * Status from `err.statusCode` (4xx/5xx honoured); retryable field reflects
+ * `isRetryableError(err)` — and a retryable error always carries
+ * `retry_after_ms` (C-10) plus a `Retry-After` header.
+ * @param {unknown} err
+ * @param {string} [requestId]
+ */
+function scrapeErrorOutcome(err, requestId) {
   const status = typeof err?.statusCode === 'number' && err.statusCode >= 400 && err.statusCode < 600
     ? err.statusCode
     : 500;
-  const code = typeof err?.code === 'string' ? err.code : undefined;
-  return jsonOutcome(status, {
-    ok: false,
-    error: err instanceof Error ? err.message : 'Scrape failed',
-    ...(code ? { code } : {}),
+  const retryable = isRetryableError(err) || status === 503 || status === 429;
+  const retryAfterMs = typeof /** @type {any} */ (err)?.retryAfterMs === 'number'
+    ? /** @type {any} */ (err).retryAfterMs
+    : undefined;
+  const body = errorBody({
+    code: typeof err?.code === 'string' ? err.code : 'XACT_5000',
+    type: typeof /** @type {any} */ (err)?.type === 'string' ? /** @type {any} */ (err).type : undefined,
+    kind: scrapeErrorKind(err),
+    message: err instanceof Error ? err.message : 'Scrape failed',
+    status,
+    requestId,
+    retryable,
+    retryAfterMs,
   });
+  return jsonOutcome(status, body, retryable ? retryAfterHeaders(body.error.retry_after_ms ?? RETRY_AFTER_DEFAULT_MS) : undefined);
 }
 
-/** Per-entry error object for batch results — full {code,kind,type,message} shape. */
+/**
+ * Per-entry error object for batch results — full {code,kind,type,message}
+ * shape plus `retryable` when derivable (entries are not HTTP responses, so
+ * no `status`/`request_id` — the top-level envelope carries those).
+ * @param {unknown} err
+ * @param {string} [fallbackCode]
+ */
 function entryError(err, fallbackCode = 'XACT_5000') {
   const type = typeof err?.type === 'string' ? err.type : 'internal';
-  return {
+  const out = {
     code: typeof err?.code === 'string' ? err.code : fallbackCode,
     kind: errorKind(type),
     type,
     message: err instanceof Error ? err.message : String(err),
   };
+  if (isRetryableError(err)) out.retryable = true;
+  return out;
 }
 
 const VALIDATION_ENTRY_ERROR = (message) => ({
   code: 'XACT_4001', kind: 'validation', type: 'validation', message,
 });
-
-/**
- * Map PlatformError `type` → error.kind enum (C-10 subset).
- * @param {string} type
- */
-function errorKind(type) {
-  switch (type) {
-    case 'rate_limit': return 'upstream_rate_limit';
-    case 'bot_challenge':
-    case 'proxy_exhausted': return 'proxy_ip_block';
-    case 'auth_expired': return 'auth';
-    case 'invalid_args':
-    case 'not_found':
-    case 'target_not_found':
-    case 'deprecated':
-    case 'validation': return 'validation';
-    default: return 'internal';
-  }
-}
 
 /** @param {string} operationId */
 function statusUrl(operationId) {
@@ -250,28 +293,45 @@ function retryAfterHeaders(retryAfterMs) {
 
 /**
  * 202 degrade descriptor — upstream_timeout | cf_challenge | upstream_rate_limit | queue_fallback.
+ * Full success envelope + lane extras; `data`/`preview` are empty (nothing
+ * returned yet) and `stream` carries `{enabled, name}` without a cursor.
  * @param {string} reason one of DEGRADED_REASONS
+ * @param {string} operationId
+ * @param {number} retryAfterMs
+ * @param {{ metadata?: Record<string, unknown>, stream?: Record<string, unknown> }} [envelope]
  */
-function degradedOutcome(reason, operationId, retryAfterMs) {
+function degradedOutcome(reason, operationId, retryAfterMs, envelope = {}) {
   const ms = Number.isFinite(retryAfterMs) && retryAfterMs > 0 ? retryAfterMs : RETRY_AFTER_DEFAULT_MS;
-  return jsonOutcome(202, {
-    success: true,
+  return jsonOutcome(202, successEnvelope({
     mode: 'async',
-    operationId,
-    degraded_reason: reason,
-    retry_after_ms: ms,
-    statusUrl: statusUrl(operationId),
-  }, retryAfterHeaders(ms));
+    metadata: envelope.metadata,
+    stream: envelope.stream,
+    data: [],
+    extra: {
+      operationId,
+      degraded_reason: reason,
+      retry_after_ms: ms,
+      statusUrl: statusUrl(operationId),
+    },
+  }), retryAfterHeaders(ms));
 }
 
-/** 202 accepted descriptor for caller-requested async — no degraded_reason. */
-function queuedOutcome(operationId) {
-  return jsonOutcome(202, {
-    success: true,
+/**
+ * 202 accepted descriptor for caller-requested async — no degraded_reason.
+ * @param {string} operationId
+ * @param {{ metadata?: Record<string, unknown>, stream?: Record<string, unknown> }} [envelope]
+ */
+function queuedOutcome(operationId, envelope = {}) {
+  return jsonOutcome(202, successEnvelope({
     mode: 'async',
-    operationId,
-    statusUrl: statusUrl(operationId),
-  });
+    metadata: envelope.metadata,
+    stream: envelope.stream,
+    data: [],
+    extra: {
+      operationId,
+      statusUrl: statusUrl(operationId),
+    },
+  }));
 }
 
 /**
@@ -547,16 +607,19 @@ function isKnownAction(descriptor, platform, action, options) {
 
 /**
  * SPINE operational log — one structured line per degrade/queue decision
- * (Design Notes). Logging must never break dispatch.
- * @param {{ platform: string, action: string, consumerId: string | null, mode: string, degradedReason?: string, retryAfterMs?: number, upstreamStatus?: number, durationMs: number }} line
+ * (Design Notes). Logging must never break dispatch. Story 50.3 adds
+ * `request_id` so a log line correlates with the envelope's
+ * `metadata.request_id` / `error.request_id` end-to-end.
+ * @param {{ platform: string, action: string, consumerId: string | null, mode: string, degradedReason?: string, retryAfterMs?: number, upstreamStatus?: number, durationMs: number, requestId?: string }} line
  */
-function logGatewayLine({ platform, action, consumerId, mode, degradedReason, retryAfterMs, upstreamStatus, durationMs }) {
+function logGatewayLine({ platform, action, consumerId, mode, degradedReason, retryAfterMs, upstreamStatus, durationMs, requestId }) {
   try {
     console.info(`[scrape-gateway] ${JSON.stringify({
       platform,
       action,
       consumer_id: consumerId ?? null,
       mode,
+      ...(requestId ? { request_id: requestId } : {}),
       ...(degradedReason ? { degraded_reason: degradedReason } : {}),
       ...(typeof retryAfterMs === 'number' ? { retry_after_ms: retryAfterMs } : {}),
       ...(typeof upstreamStatus === 'number' ? { upstream_status: upstreamStatus } : {}),
@@ -851,38 +914,51 @@ export async function runSyncWithCeiling({ run, platform, action, options, userI
 // ── Single-platform dispatch ──────────────────────────────────────────────────
 
 /**
- * @param {{ platform: string, action: string, options: Record<string, unknown>, requestedMode?: string, userId: string | null, consumerId: string | null, apiKeyRequired: boolean, callbackUrl?: string, accountIds?: string[], consumerCtx: Record<string, unknown>, dryRun: boolean, registry: Record<string, any> }} args
+ * @param {{ platform: string, action: string, options: Record<string, unknown>, requestedMode?: string, userId: string | null, consumerId: string | null, apiKeyRequired: boolean, callbackUrl?: string, accountIds?: string[], consumerCtx: Record<string, unknown>, dryRun: boolean, registry: Record<string, any>, requestId?: string, traceparent?: string }} args
  */
-async function dispatchSingle({ platform, action, options, requestedMode, userId, consumerId, apiKeyRequired, callbackUrl, accountIds, consumerCtx, dryRun, registry }) {
+async function dispatchSingle({ platform, action, options, requestedMode, userId, consumerId, apiKeyRequired, callbackUrl, accountIds, consumerCtx, dryRun, registry, requestId, traceparent }) {
   const startedAt = Date.now();
   const descriptor = registry.DESCRIPTORS[platform];
   if (!descriptor) {
-    return validationOutcome(`Unknown platform: ${platform}`);
+    return validationOutcome(`Unknown platform: ${platform}`, requestId);
   }
   // Unknown actions never reach scrape()/Bull (pre-50.2 immediate-reject).
   if (!isKnownAction(descriptor, platform, action, options)) {
-    return validationOutcome(`Unknown action: ${action}`);
+    return validationOutcome(`Unknown action: ${action}`, requestId);
   }
 
   const capable = registry.isSyncCapable(platform, action, options);
   const mode = resolveMode({ capable, requestedMode });
   if (mode === 'not_sync_capable') {
-    return validationOutcome('action not sync-eligible');
+    return validationOutcome('action not sync-eligible', requestId);
   }
+
+  const effectiveConsumerId = typeof consumerCtx?.consumerId === 'string' ? consumerCtx.consumerId : 'internal';
+  const baseMetadata = () => buildMetadata({
+    requestId,
+    traceparent,
+    platform,
+    action,
+    consumerId: effectiveConsumerId,
+    durationMs: Date.now() - startedAt,
+    syncCapable: capable,
+    dryRun,
+  });
 
   if (mode === 'async') {
     try {
       const { operationId } = await enqueueScrapeJob({
         platform, action, options, userId, consumerId, apiKeyRequired, callbackUrl, accountIds,
       });
-      logGatewayLine({ platform, action, consumerId, mode: 'async', durationMs: Date.now() - startedAt });
-      return queuedOutcome(operationId);
+      logGatewayLine({ platform, action, consumerId, mode: 'async', durationMs: Date.now() - startedAt, requestId });
+      const stream = await buildStreamBlock({ withCursor: false });
+      return queuedOutcome(operationId, { metadata: baseMetadata(), stream });
     } catch (err) {
       if (/** @type {any} */ (err)?.isDispatchValidation) {
-        return validationOutcome(/** @type {Error} */ (err).message);
+        return validationOutcome(/** @type {Error} */ (err).message, requestId);
       }
-      logGatewayLine({ platform, action, consumerId, mode: 'async', upstreamStatus: 503, durationMs: Date.now() - startedAt });
-      return unavailableOutcome('scrape job could not be queued');
+      logGatewayLine({ platform, action, consumerId, mode: 'async', upstreamStatus: 503, durationMs: Date.now() - startedAt, requestId });
+      return unavailableOutcome('scrape job could not be queued', requestId);
     }
   }
 
@@ -907,18 +983,36 @@ async function dispatchSingle({ platform, action, options, requestedMode, userId
   });
 
   switch (outcome.outcome) {
-    case 'completed':
-      return jsonOutcome(200, { ok: true, platform, action, mode: 'sync', dryRun, result: outcome.result });
+    case 'completed': {
+      const data = normalizeData(outcome.result);
+      const stream = await buildStreamBlock({ withCursor: true });
+      return jsonOutcome(200, successEnvelope({
+        mode: 'sync',
+        metadata: baseMetadata(),
+        stream,
+        data,
+        extra: {
+          platform,
+          action,
+          dryRun,
+          // Deprecated verbatim mirror for the in-repo apps/web consumer.
+          result: outcome.result ?? null,
+        },
+      }));
+    }
     case 'degraded':
       logGatewayLine({
         platform, action, consumerId, mode: 'async',
         degradedReason: outcome.reason, retryAfterMs: outcome.retryAfterMs,
-        durationMs: Date.now() - startedAt,
+        durationMs: Date.now() - startedAt, requestId,
       });
-      return degradedOutcome(outcome.reason, outcome.operationId, outcome.retryAfterMs);
+      return degradedOutcome(outcome.reason, outcome.operationId, outcome.retryAfterMs, {
+        metadata: baseMetadata(),
+        stream: await buildStreamBlock({ withCursor: false }),
+      });
     case 'unavailable':
-      logGatewayLine({ platform, action, consumerId, mode: 'async', upstreamStatus: 503, durationMs: Date.now() - startedAt });
-      return unavailableOutcome();
+      logGatewayLine({ platform, action, consumerId, mode: 'async', upstreamStatus: 503, durationMs: Date.now() - startedAt, requestId });
+      return unavailableOutcome(undefined, requestId);
     default: {
       // Typed retryable error inside the budget → degrade via Bull retry,
       // carrying the upstream retryAfterMs into both the response and the
@@ -935,18 +1029,21 @@ async function dispatchSingle({ platform, action, options, requestedMode, userId
             platform, action, consumerId, mode: 'async',
             degradedReason: reason, retryAfterMs: delayMs || RETRY_AFTER_DEFAULT_MS,
             upstreamStatus: typeof /** @type {any} */ (outcome.error)?.statusCode === 'number' ? /** @type {any} */ (outcome.error).statusCode : undefined,
-            durationMs: Date.now() - startedAt,
+            durationMs: Date.now() - startedAt, requestId,
           });
-          return degradedOutcome(reason, operationId, delayMs || RETRY_AFTER_DEFAULT_MS);
+          return degradedOutcome(reason, operationId, delayMs || RETRY_AFTER_DEFAULT_MS, {
+            metadata: baseMetadata(),
+            stream: await buildStreamBlock({ withCursor: false }),
+          });
         } catch (enqErr) {
           if (/** @type {any} */ (enqErr)?.isDispatchValidation) {
-            return scrapeErrorOutcome(outcome.error);
+            return scrapeErrorOutcome(outcome.error, requestId);
           }
-          logGatewayLine({ platform, action, consumerId, mode: 'async', upstreamStatus: 503, durationMs: Date.now() - startedAt });
-          return unavailableOutcome();
+          logGatewayLine({ platform, action, consumerId, mode: 'async', upstreamStatus: 503, durationMs: Date.now() - startedAt, requestId });
+          return unavailableOutcome(undefined, requestId);
         }
       }
-      return scrapeErrorOutcome(outcome.error);
+      return scrapeErrorOutcome(outcome.error, requestId);
     }
   }
 }
@@ -959,7 +1056,7 @@ async function dispatchSingle({ platform, action, options, requestedMode, userId
  * @param {{ action: string, options: Record<string, unknown>, requestedMode?: string, userId: string | null, consumerId: string | null, apiKeyRequired: boolean, callbackUrl?: string, accountIds?: string[], consumerCtx: Record<string, unknown>, registry: Record<string, any> }} shared
  */
 async function dispatchEntry(target, shared) {
-  const { action, options, requestedMode, userId, consumerId, apiKeyRequired, callbackUrl, accountIds, consumerCtx, registry } = shared;
+  const { action, options, requestedMode, userId, consumerId, apiKeyRequired, callbackUrl, accountIds, consumerCtx, registry, requestId } = shared;
   const startedAt = Date.now();
   const label = target.canonical || String(target.raw);
 
@@ -984,7 +1081,7 @@ async function dispatchEntry(target, shared) {
       const { operationId } = await enqueueScrapeJob({
         platform, action, options, userId, consumerId, apiKeyRequired, callbackUrl, accountIds,
       });
-      logGatewayLine({ platform, action, consumerId, mode: 'async', durationMs: Date.now() - startedAt });
+      logGatewayLine({ platform, action, consumerId, mode: 'async', durationMs: Date.now() - startedAt, requestId });
       return { platform, success: true, status: 'queued', operationId, statusUrl: statusUrl(operationId) };
     } catch (err) {
       // enqueue infra failure is XACT_5000/internal; dispatch validation
@@ -1020,7 +1117,7 @@ async function dispatchEntry(target, shared) {
       logGatewayLine({
         platform, action, consumerId, mode: 'async',
         degradedReason: outcome.reason, retryAfterMs: outcome.retryAfterMs,
-        durationMs: Date.now() - startedAt,
+        durationMs: Date.now() - startedAt, requestId,
       });
       return {
         platform,
@@ -1032,8 +1129,8 @@ async function dispatchEntry(target, shared) {
         statusUrl: statusUrl(outcome.operationId),
       };
     case 'unavailable':
-      logGatewayLine({ platform, action, consumerId, mode: 'async', upstreamStatus: 503, durationMs: Date.now() - startedAt });
-      return { platform, success: false, status: 'failed', error: { code: 'XACT_5000', kind: 'internal', type: 'internal', message: 'scrape job could not be tracked' } };
+      logGatewayLine({ platform, action, consumerId, mode: 'async', upstreamStatus: 503, durationMs: Date.now() - startedAt, requestId });
+      return { platform, success: false, status: 'failed', error: { code: 'XACT_5000', kind: 'internal', type: 'internal', message: 'scrape job could not be tracked', retryable: true } };
     default: {
       const reason = classifyDegrade(outcome.error);
       if (reason) {
@@ -1047,7 +1144,7 @@ async function dispatchEntry(target, shared) {
             platform, action, consumerId, mode: 'async',
             degradedReason: reason, retryAfterMs: delayMs || RETRY_AFTER_DEFAULT_MS,
             upstreamStatus: typeof /** @type {any} */ (outcome.error)?.statusCode === 'number' ? /** @type {any} */ (outcome.error).statusCode : undefined,
-            durationMs: Date.now() - startedAt,
+            durationMs: Date.now() - startedAt, requestId,
           });
           return {
             platform,
@@ -1073,14 +1170,19 @@ async function dispatchEntry(target, shared) {
  * Dispatch a scrape request. Returns an outcome descriptor — the route owns
  * every `res` write.
  *
- * @param {{ pathPlatform: string, body: Record<string, unknown>, action: string, userId: string | null, accountIds?: string[], consumer?: Record<string, unknown> | null }} args
+ * Story 50.3 threads `requestId`/`traceparent` end-to-end: every outcome
+ * (2xx envelope + every error body) carries `request_id` so the consumer can
+ * correlate the call, and `traceparent` lands in `metadata` when present.
+ *
+ * @param {{ pathPlatform: string, body: Record<string, unknown>, action: string, userId: string | null, accountIds?: string[], consumer?: Record<string, unknown> | null, requestId?: string, traceparent?: string }} args
  * @returns {Promise<{ kind: 'json', status: number, body: Record<string, unknown>, headers?: Record<string, string> }>}
  */
-export async function dispatch({ pathPlatform, body = {}, action, userId, accountIds, consumer }) {
+export async function dispatch({ pathPlatform, body = {}, action, userId, accountIds, consumer, requestId, traceparent }) {
+  const dispatchStartedAt = Date.now();
   // Request-level mode validation — closed enum, whole-request 400.
   const requestedMode = body.mode;
   if (requestedMode !== undefined && requestedMode !== 'sync' && requestedMode !== 'async') {
-    return validationOutcome("mode must be 'sync' or 'async'");
+    return validationOutcome("mode must be 'sync' or 'async'", requestId);
   }
 
   // callbackUrl is a dispatch field — hoisted into the Bull job config where
@@ -1091,7 +1193,13 @@ export async function dispatch({ pathPlatform, body = {}, action, userId, accoun
   const registry = await getRegistry();
   const { PLATFORM_ALIASES } = /** @type {{ PLATFORM_ALIASES: Record<string, string> }} */ (await import('../routes/platform.js'));
   const resolved = resolveTargets(pathPlatform, body.platform, registry.DESCRIPTORS, PLATFORM_ALIASES);
-  if ('error' in resolved) return resolved.error;
+  if ('error' in resolved) {
+    // resolveTargets emits validationOutcome bodies — re-stamp request_id.
+    if (requestId && resolved.error?.body?.error && typeof resolved.error.body.error === 'object') {
+      resolved.error.body.error.request_id = requestId;
+    }
+    return resolved.error;
+  }
 
   const options = sanitizeOptions(body);
   const dryRun = Boolean(body.dryRun);
@@ -1121,12 +1229,14 @@ export async function dispatch({ pathPlatform, body = {}, action, userId, accoun
       consumerCtx,
       dryRun,
       registry,
+      requestId,
+      traceparent,
     });
   }
 
   const settled = await Promise.allSettled(
     resolved.targets.map((target) => dispatchEntry(target, {
-      action, options, requestedMode, userId, consumerId, apiKeyRequired, callbackUrl, accountIds, consumerCtx, registry,
+      action, options, requestedMode, userId, consumerId, apiKeyRequired, callbackUrl, accountIds, consumerCtx, registry, requestId,
     })),
   );
 
@@ -1139,6 +1249,24 @@ export async function dispatch({ pathPlatform, body = {}, action, userId, accoun
         error: { code: 'XACT_5000', kind: 'internal', type: 'internal', message: s.reason instanceof Error ? s.reason.message : String(s.reason) },
       });
 
+  const platformsList = resolved.targets
+    .map((t) => t.canonical || (typeof t.raw === 'string' ? t.raw : String(t.raw)))
+    .filter(Boolean);
+  const batchMetadata = buildMetadata({
+    requestId,
+    traceparent,
+    platforms: platformsList,
+    action,
+    consumerId: typeof consumerCtx?.consumerId === 'string' ? consumerCtx.consumerId : 'internal',
+    durationMs: Date.now() - dispatchStartedAt,
+    dryRun,
+  });
+  // data = concat of every 'completed' entry's normalized payload (verbatim);
+  // preview = its ≤10 slice. Per-entry `status`/`success` semantics unchanged.
+  const batchData = results
+    .filter((r) => r.status === 'completed')
+    .flatMap((r) => normalizeData(r.data));
+
   // Top-level mode mirrors the HTTP response lane: 'async' only on the
   // caller-requested 202 path; default/mixed batches land on 200/'sync'.
   if (requestedMode === 'async') {
@@ -1147,16 +1275,23 @@ export async function dispatch({ pathPlatform, body = {}, action, userId, accoun
     // 202 that promises pollable operationIds it doesn't have. Partial
     // success stays 202 with the per-entry results.
     if (operationIds.length === 0) {
-      const out = unavailableOutcome('no scrape jobs could be queued');
+      const out = unavailableOutcome('no scrape jobs could be queued', requestId);
       out.body.results = results;
       return out;
     }
-    return jsonOutcome(202, {
-      success: true,
+    return jsonOutcome(202, successEnvelope({
       mode: 'async',
-      results,
-      operationIds,
-    });
+      metadata: batchMetadata,
+      stream: await buildStreamBlock({ withCursor: false }),
+      data: batchData,
+      extra: { results, operationIds },
+    }));
   }
-  return jsonOutcome(200, { ok: true, mode: 'sync', results });
+  return jsonOutcome(200, successEnvelope({
+    mode: 'sync',
+    metadata: batchMetadata,
+    stream: await buildStreamBlock({ withCursor: false }),
+    data: batchData,
+    extra: { results },
+  }));
 }

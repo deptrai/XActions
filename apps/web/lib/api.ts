@@ -101,9 +101,18 @@ export async function api<T = unknown>(
     }
 
     if (status >= 200 && status < 300) {
-      // Unbox canonical backend envelope {success:true, data:T} when present
+      // Unbox canonical backend envelope {success:true, data:T} when present.
+      // Story 50.3 regression gate (D-1): the unified GATEWAY envelope also
+      // carries {success:true, data:[]} but must NOT be unboxed — its 202
+      // async body has `data:[]` which would unbox to `[]` and break
+      // isAsyncAccepted()/pollOperation on the pumpfun page. Discriminate on
+      // gateway-only keys (mode/operationId/metadata) — the canonical
+      // {success,data,page?} envelope never carries them.
+      const isObj = typeof parsed === 'object' && parsed !== null;
+      const isGatewayEnvelope =
+        isObj && ('mode' in parsed || 'operationId' in parsed || 'metadata' in parsed);
       const isEnvelope =
-        typeof parsed === 'object' && parsed !== null && 'success' in parsed && 'data' in parsed;
+        isObj && 'success' in parsed && 'data' in parsed && !isGatewayEnvelope;
       const data: T = isEnvelope
         ? ((parsed as BackendEnvelope<T>).data as T)
         : (parsed as T);
