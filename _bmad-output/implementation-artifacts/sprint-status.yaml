@@ -356,7 +356,7 @@ epic-47:
 
 # Epic 48: Web API Foundation (BFF) & Frontend Consolidation Wave 2
 epic-48:
-  status: in-progress
+  status: done
   stories:
     - id: 48.1
       name: Web API Foundation — BFF Proxy, Typed Client & Session Transport
@@ -411,7 +411,7 @@ epic-49:
 
 # Epic 50: Public Scrape Gateway — Unified Service Contract
 epic-50:
-  status: in-progress
+  status: done
   source_spec: _bmad-output/specs/spec-xactions-public-scrape-gateway/SPEC.md
   source_spine: _bmad-output/planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md
   stories:
