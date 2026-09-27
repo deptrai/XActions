@@ -136,7 +136,7 @@ async function forwardToApp(req, bodyBuffer) {
   };
 }
 
-describe('Story 19.3: Admin Dashboard — Stream Metrics & Alerts View', () => {
+describe.skip('Story 19.x: Admin Dashboard — LEGACY (decommissioned Story 48.10, Next.js at apps/web/app/admin/page.tsx) — Stream Metrics & Alerts View', () => {
   let server;
   let serverUrl;
   let adminUser;

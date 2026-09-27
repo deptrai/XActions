@@ -268,7 +268,7 @@ let adminUser;
 let adminToken;
 let a2aApiKey;
 
-describe('Story 19.1: Admin Dashboard — Jobs & Checkpoints View', () => {
+describe.skip('Story 19.x: Admin Dashboard — LEGACY (decommissioned Story 48.10, Next.js at apps/web/app/admin/page.tsx) — Jobs & Checkpoints View', () => {
   beforeAll(async () => {
     if (!process.env.JWT_SECRET) {
       process.env.JWT_SECRET = TEST_SECRET;

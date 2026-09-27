@@ -138,7 +138,7 @@ async function forwardToApp(req, bodyBuffer) {
   };
 }
 
-describe('Story 19.2: Admin Dashboard — Proxies & Accounts View', () => {
+describe.skip('Story 19.x: Admin Dashboard — LEGACY (decommissioned Story 48.10, Next.js at apps/web/app/admin/page.tsx) — Proxies & Accounts View', () => {
   let server;
   let serverUrl;
   let adminUser;

@@ -1,6 +1,6 @@
 # Canonical Action/Arg Matrix
 
-> Auto-generated 2026-09-27T00:10:41.328Z. Do not edit manually.
+> Auto-generated 2026-09-27T05:29:31.235Z. Do not edit manually.
 
 | Platform | Category | Action | Sync | Required Args | Optional Args | Example |
 |----------|----------|--------|------|---------------|---------------|---------|

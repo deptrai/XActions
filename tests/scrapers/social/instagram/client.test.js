@@ -220,9 +220,11 @@ describe('instagrapi capability check', () => {
 });
 
 describe('proxy resolution (AC-4)', () => {
-  it('falls back to PROXY_URL env when no provider injected', () => {
+  it('falls back to PROXY_URL env when no provider injected', async () => {
     process.env.PROXY_URL = 'http://env-proxy:8080';
-    const c = new InstagramClient({ requiresProxy: true });
+    const { ProxyIpPool } = await import('../../../../src/proxy/proxy-pool.js');
+    const emptyPool = new ProxyIpPool({ validateOnAdd: false, proxies: [] });
+    const c = new InstagramClient({ requiresProxy: true, proxyPool: emptyPool });
     const proxy = c.resolveProxy('acct9', true, true, {});
     expect(proxy).toBe('http://env-proxy:8080');
     delete process.env.PROXY_URL;

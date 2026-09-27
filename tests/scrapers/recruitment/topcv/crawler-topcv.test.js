@@ -38,9 +38,10 @@ describe('Story 18.1 — TopCV Job & Company Scraper (TDD)', () => {
           body,
         });
 
+        console.log('MOCK URL:', url.pathname, url.search);
         // Search jobs HTML endpoint
         if (url.pathname.includes('/tim-viec-lam')) {
-          if (url.searchParams.get('category') === 'challenge_test') {
+          if (url.searchParams.get('category') === 'challenge_test' || url.pathname.includes('challenge-test') || url.pathname.includes('challenge_test')) {
             res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
             res.end('<html><head><title>Attention Required! | Cloudflare</title></head><body><div class="cf-browser-verification">cf</div></body></html>');
             return;

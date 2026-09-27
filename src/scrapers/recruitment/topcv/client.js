@@ -76,7 +76,14 @@ export class TopCvClient extends AbstractApiClient {
       if (typeof response?.body === 'string') return response.body;
       return String(response?.data || response?.body || '');
     } catch (err) {
-      // Automatic Cloudflare fallback via Stealth Browser
+      // PlatformErrors (BotChallenge/rate-limit) must surface to the caller so
+      // the governor / account pool can rotate — never silently browser-fallback
+      // an already-punished response (defer triage: XACT_4030 must propagate).
+      if (/** @type {any} */ (err)?.isPlatformError) {
+        throw err;
+      }
+      // Automatic Cloudflare fallback via Stealth Browser for transport-level
+      // failures only (network errors, not bot challenges).
       try {
         const { createBrowser } = await import('../../browser.js');
         const browser = await createBrowser({ headless: true });

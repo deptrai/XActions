@@ -300,7 +300,7 @@ describe('judgePostVariants — edge cases', () => {
   it('DEGRADED: meta.degraded → degraded:true, never throws', async () => {
     const brain = makeBrain(jevDegraded('budget'));
     const r = await judgePostVariants(TEXTS, { brain });
-    expect(r).toEqual({ selectedIndex: -1, cringe: [], pickChoice: null, pickConfidence: 0, degraded: true });
+    expect(r).toEqual({ selectedIndex: -1, cringe: [], pickChoice: null, pickConfidence: 0, degraded: true, viralBoostApplied: false });
   });
 
   it('decide() rejects → degraded:true, never throws', async () => {

@@ -101,7 +101,7 @@ describe('Story 10.2: PrismaStore — Category Validation Guard (AC: Category Va
     const validCategories = Object.values(CATEGORIES);
     expect(validCategories).toEqual([
       'social', 'ecom', 'realestate', 'recruitment', 'b2b',
-      'automotive', 'fnb_merchant', 'healthcare', 'legal', 'video',
+      'automotive', 'fnb_merchant', 'healthcare', 'legal', 'video', 'crypto',
       'profile', 'post', 'trending',
     ]);
     for (const cat of validCategories) {

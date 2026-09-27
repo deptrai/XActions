@@ -131,7 +131,7 @@ describe('Story 48.4 — Modern Admin Console Parity (/admin)', () => {
   it('implements Active Stream Alerts and Alert Channels Configuration', () => {
     const src = readFileSync(pagePath, 'utf8');
     expect(src).toContain('Active Stream Alerts');
-    expect(src).toContain('/api/streams/alerts');
+    expect(src).toContain('/api/admin/stream/alerts');
     expect(src).toContain('Alert Channels Configuration');
     expect(src).toContain('/api/admin/stream/alerts/config');
     expect(src).toContain('/api/admin/stream/alerts/test');

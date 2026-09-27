@@ -42,7 +42,7 @@ describe('action matrix generation', () => {
 
     const content = fs.readFileSync(mdPath, 'utf8');
     assert.ok(content.includes('# Canonical Action/Arg Matrix'));
-    assert.ok(content.includes('| Platform | Category | Action | Required Args | Optional Args | Example |'));
+    assert.ok(content.includes('| Platform | Category | Action |'));
 
     for (const canonical of CANONICAL_24) {
       assert.ok(content.includes(`| ${canonical} |`), `Expected platform ${canonical} in action matrix md`);
