@@ -44,6 +44,10 @@ const PUMPFUN_ACTION_MAP = {
   post_mint_reply: 'post_mint_reply',
   post_reply: 'post_mint_reply',
   comment: 'post_mint_reply',
+  fetch_mint_comments: 'fetch_mint_comments',
+  mint_comments: 'fetch_mint_comments',
+  get_comments: 'fetch_mint_comments',
+  comments: 'fetch_mint_comments',
 };
 
 export default {

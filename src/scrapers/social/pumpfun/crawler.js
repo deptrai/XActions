@@ -666,6 +666,32 @@ export class PumpFunCrawler extends AbstractCrawler {
   }
 
   /**
+   * Fetch comments/chat history for a pump.fun mint via Socket.IO livechat.
+   * Standalone action — no auth required for reading.
+   * @param {Record<string, unknown>} args
+   * @param {Record<string, unknown>} [session]
+   * @returns {Promise<{ comments: Array, count: number, nextCursor: any }>}
+   */
+  async fetchMintComments(args, session = {}) {
+    const mint = this.#resolveMint(args || {});
+    const limit = Number.isFinite(args?.limit) ? args.limit : 50;
+    const before = Number.isFinite(args?.before) ? args.before : undefined;
+
+    const comments = await this.client.getReplies(mint, {
+      limit,
+      skipRest: true, // /replies/{mint} is retired — go straight to livechat
+      ...(before ? { before } : {}),
+      session,
+    });
+
+    return {
+      mint,
+      comments,
+      count: comments.length,
+    };
+  }
+
+  /**
    * Stop the livestream poller and release resources.
    * AbstractCrawler.cleanup() is abstract (throws) — this is the concrete impl.
    */

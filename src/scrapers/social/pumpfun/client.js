@@ -325,11 +325,18 @@ export class PumpFunClient extends AbstractApiClient {
   async getReplies(mintAddress, options = {}) {
     const mint = this.assertValidMint(mintAddress);
     const limit = Number.isFinite(options.limit) ? options.limit : 50;
+
+    // Skip REST if we know /replies is retired (set after first 404 or on options.skipRest)
+    if (options.skipRest || this.#repliesRetired) {
+      return this.#getRepliesViaLivechat(mint, options);
+    }
+
     const url = `${this.baseUrl}/replies/${encodeURIComponent(mint)}?offset=0&limit=${limit}`;
     try {
       const { status, data } = await this.#apiGet(url, options);
       const rows = this.#extractArray(data, ['replies', 'comments', 'data', 'items', 'results']);
       if (status !== 404 && rows.length > 0) return rows;
+      if (status === 404) this.#repliesRetired = true; // mark endpoint as dead
       // 404 or empty REST → fall through to livechat.
     } catch (err) {
       // Preserve real errors (rate-limit, auth, network) — don't mask a 429 as
@@ -552,6 +559,10 @@ export class PumpFunClient extends AbstractApiClient {
     }
     return Array.isArray(data) ? data : [];
   }
+
+  /** @type {Map<string, { value: any, expiresAt: number }>} */
+  /** @type {boolean} — true once /replies/{mint} returns 404 (endpoint retired) */
+  #repliesRetired = false;
 
   /** @type {Map<string, { value: any, expiresAt: number }>} */
   #ttlCache = new Map();
