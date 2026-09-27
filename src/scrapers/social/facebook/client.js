@@ -11,6 +11,7 @@
 import { AbstractApiClient } from '../../../core/base-client.js';
 import { FacebookPlatformResponseValidator } from './validator.js';
 import { FacebookBrowserBridge } from './signer-bridge.js';
+import { GraphQLReplayEngine, InMemoryReplayStore } from './graphql-replay.js';
 import { PreSignedTokenRing } from '../../../core/signer-pool.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import crypto from 'node:crypto';
@@ -137,6 +138,10 @@ export class FacebookClient extends AbstractApiClient {
 
   /** @type {FacebookBrowserBridge | null} */
   #ownedBrowserBridge = null;
+  /** @type {any} */
+  #replayEngine = null;
+  /** @type {any} */
+  #replayEngineCaptureHook = null;
 
   /** @type {Map<string, { tokens: Record<string, any>, expiresAt: number }>} */
   #tokenCache = new Map();
@@ -680,6 +685,49 @@ export class FacebookClient extends AbstractApiClient {
       platform: 'facebook',
       accountId: options.accountId,
     });
+  }
+
+  /**
+   * Replay a GraphQL query using captured/cached doc_id tokens (Story 13.12, FR-112).
+   * Falls back to browser re-capture via GraphQLCaptureHook when tokens are stale.
+   * @param {string} docId
+   * @param {Record<string, any>} variables
+   * @param {Record<string, any>} [options={}]
+   * @param {import('puppeteer').Page} [options.page] — browser page for re-capture on miss
+   * @param {boolean} [options.forceCapture] — bypass cache, always re-capture
+   * @returns {Promise<{data: any, replayed: boolean, rotated: boolean}>}
+   */
+  async replayGraphQl(docId, variables = {}, options = {}) {
+    if (!this.#replayEngine) {
+      this.#replayEngine = new GraphQLReplayEngine({
+        store: this.replayStore || new InMemoryReplayStore(),
+        client: this,
+      });
+    }
+    if (options.page && !this.#replayEngineCaptureHook) {
+      const { GraphQLCaptureHook } = await import('./graphql-replay.js');
+      this.#replayEngineCaptureHook = new GraphQLCaptureHook(this.#replayEngine ? undefined : undefined);
+      // Re-create engine with capture hook
+      this.#replayEngine = new GraphQLReplayEngine({
+        store: this.replayStore || new InMemoryReplayStore(),
+        captureHook: this.#replayEngineCaptureHook,
+        client: this,
+      });
+    }
+    return this.#replayEngine.replay(docId, variables, options);
+  }
+
+  /**
+   * Attach a GraphQL capture hook to a Puppeteer page so subsequent requests
+   * are captured into the replay store for future HTTP replays.
+   * @param {import('puppeteer').Page} page
+   * @param {InMemoryReplayStore|import('./graphql-replay.js').RedisReplayStore} [store]
+   * @returns {GraphQLCaptureHook}
+   */
+  attachGraphQLCapture(page, store) {
+    const hook = new GraphQLCaptureHook(store || this.replayStore || new InMemoryReplayStore());
+    hook.attach(page);
+    return hook;
   }
 
   /**
