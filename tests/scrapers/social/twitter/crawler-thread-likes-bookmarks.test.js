@@ -332,7 +332,7 @@ describe('Story 13.2.2 — Twitter Hybrid Thread, Likes & Bookmarks', () => {
       expect(threadAction).toBeDefined();
       expect(threadAction?.requiredArgs).toEqual(['tweetId']);
       expect(threadAction?.optionalArgs).toContain('walkToRoot');
-      expect(threadAction?.requiresAuth).toBe(false);
+      expect(threadAction?.requiresAuth).toBe(true);
 
       expect(likesAction).toBeDefined();
       expect(likesAction?.requiredArgs).toEqual(['tweetId']);

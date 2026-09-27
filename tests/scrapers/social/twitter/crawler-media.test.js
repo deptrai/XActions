@@ -454,7 +454,7 @@ describe('Story 13.2.4 — Twitter Hybrid Media Scraper', () => {
     expect(downloadAction?.requiredArgs).toContain('tweetId');
     expect(downloadAction?.optionalArgs).toContain('quality');
     expect(downloadAction?.optionalArgs).toContain('destPath');
-    expect(downloadAction?.requiresAuth).toBe(false);
+    expect(downloadAction?.requiresAuth).toBe(true);
   });
 
   it('[AC-2] should fetch user media and return PostItem[] with metadata.media', async () => {

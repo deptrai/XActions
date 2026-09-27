@@ -67,6 +67,12 @@ export class YouTubeVNCrawler extends AbstractCrawler {
     this.client = client;
     this.category = 'video';
     this.publisher = deps.publisher || deps.eventPublisher || null;
+    this.innertube = deps.innertube || new InnerTubeClient({
+      accountPool: deps.accountPool,
+      governor: deps.governor,
+      proxyPool: deps.proxyPool,
+      requiresProxy: deps.requiresProxy ?? true,
+    });
     this.#registerActions();
   }
 

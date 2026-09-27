@@ -166,12 +166,12 @@ export class TwitterCrawler extends AbstractCrawler {
     // ── Story 13.2.2 Actions: thread, likes, bookmarks ──
     this.registerAction({
       action: 'thread',
-      description: 'Scrape Twitter conversation thread; full conversation requires auth, root tweet available as guest',
+      description: 'Scrape Twitter conversation thread (requires auth; upstream guest endpoint now blocks guest tokens)',
       requiredArgs: ['tweetId'],
       optionalArgs: ['cursor', 'limit', 'walkToRoot'],
       example: { tweetId: '1234567890' },
       outputType: '{ posts: PostItem[], rootTweet: PostItem | null, pageInfo: any }',
-      requiresAuth: false,
+      requiresAuth: true,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.thread(args, session),
     });
 
@@ -425,7 +425,7 @@ export class TwitterCrawler extends AbstractCrawler {
       optionalArgs: ['quality', 'destPath'],
       example: { tweetId: '1234567890123456789', destPath: '/tmp/video.mp4' },
       outputType: '{ url: string, destPath: string | null, bytes: number, width: number, height: number, bitrate: number, contentType: string, durationMs: number | null, variants: Array<{bitrate, contentType, url}> }',
-      requiresAuth: false,
+      requiresAuth: true,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.downloadVideo(args, session),
     });
 

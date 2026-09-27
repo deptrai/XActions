@@ -106,7 +106,22 @@ describe('EPS-4 AI Tweet Writer — input validation', () => {
 
     it('accepts a topic without a voice profile (does not throw on validation)', async () => {
       // Should get past validation; will then throw on missing API key (real path).
-      await expect(generateBio(null, { topic: 'indie hacker' })).rejects.toThrow(/API key required/i);
+      const origOR = process.env.OPENROUTER_API_KEY;
+      const origOA = process.env.OPENAI_API_KEY;
+      const origXA = process.env.XAI_API_KEY;
+      const origGR = process.env.GROK_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
+      delete process.env.OPENAI_API_KEY;
+      delete process.env.XAI_API_KEY;
+      delete process.env.GROK_API_KEY;
+      try {
+        await expect(generateBio(null, { topic: 'indie hacker' })).rejects.toThrow(/API key required/i);
+      } finally {
+        if (origOR) process.env.OPENROUTER_API_KEY = origOR;
+        if (origOA) process.env.OPENAI_API_KEY = origOA;
+        if (origXA) process.env.XAI_API_KEY = origXA;
+        if (origGR) process.env.GROK_API_KEY = origGR;
+      }
     });
   });
 

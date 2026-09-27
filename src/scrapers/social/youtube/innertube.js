@@ -125,8 +125,7 @@ export class InnerTubeClient extends AbstractApiClient {
     params.prettyPrint = 'false';
 
     try {
-      const response = await this.request(url, {
-        method: 'POST',
+      const response = await this.request('POST', url, {
         params,
         body: JSON.stringify(requestBody),
         headers: {
