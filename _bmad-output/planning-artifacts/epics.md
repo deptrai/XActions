@@ -3940,3 +3940,182 @@ So that **my `searchReddit()` stops returning `[]` and I upgrade in <30 minutes 
 ```
 
 Stories 50.6–50.8 are parallelizable after 50.3 lands. 50.9 is the backend integration gate; frontend surfaces ship inside 50.4 (dashboard) + 50.5 (catalog+playground) + 50.9 (quickstart) — no separate FE epic needed.
+
+---
+
+# Epic 51: Frontend Platform Suites & Interactive Intelligence Interfaces
+
+> **Source spec:** `_bmad-output/specs/spec-fe-platform-suites/SPEC.md` (CAP-1..5, C-1..5, NG-1..3)  
+> **Source UX review:** `_bmad-output/specs/spec-fe-platform-suites/ux-review.md` (Personas, Interaction Patterns, Wireframes)  
+> **Source PRD:** `_bmad-output/planning-artifacts/prd.md` (§7.1 FR-141..145, §7.2 NFR-29..30)  
+> **Trigger:** Backend XActions sở hữu 28 platforms và 242 actions hoạt động ổn định nhưng Frontend (`apps/web`) còn thiếu giao diện tương tác chuyên biệt cho các mảng dữ liệu giá trị cao (Crypto DEX, YouTube, Fediverse, Doanh nghiệp VN, Tuyển dụng IT). Người dùng hiện phải gọi API thô qua `/gateway` hoặc xem catalog tĩnh tại `/actions`.
+
+**Epic Goal:** Xây dựng 5 bộ giao diện người dùng (Platform Suites) hiện đại, giàu tính tương tác và chuẩn mực UX trên `apps/web` (Next.js 15, Tailwind, Lucide), biến năng lực cào dữ liệu backend thành các bảng điều khiển tác nghiệp thời gian thực cho Crypto Trader, Content Creator, Nhà nghiên cứu mạng xã hội phi tập trung, và Chuyên viên B2B/Tuyển dụng.
+
+**FRs covered:** FR-141, FR-142, FR-143, FR-144, FR-145  
+**NFRs covered:** NFR-24, NFR-25, NFR-26, NFR-27, NFR-29, NFR-30  
+**Dependencies:** Epic 47 (Next.js App Shell), Epic 48 (BFF & Session Transport), Epic 50 (Public Scrape Gateway)
+
+---
+
+### Story 51.1: DEX & Token Liquidity Intelligence Suite (`/dexscreener`)
+
+As a **Web3 trader and crypto researcher**,  
+I want **a dedicated DEX intelligence suite at `/dexscreener` with multi-chain search, token pair metrics, and Pump.fun origin linking**,  
+So that **I can monitor token liquidity and price movements across Solana, Base, and Ethereum in real-time without switching apps**.
+
+**Acceptance Criteria:**
+
+**UI & Information Architecture:**
+**Given** route `apps/web/app/dexscreener/page.tsx` is accessed  
+**When** user loads the page  
+**Then**:
+- Header displays DEX Intelligence title, chain filter badges (`All`, `Solana`, `Base`, `Ethereum`, `BSC`), and a sort dropdown (`24h Volume`, `Liquidity`, `Price Change`)
+- Search input auto-detects token symbol (e.g., `BONK`), mint address, or pair contract address
+- Submitting search triggers `dexscreener:search_pairs` or `dexscreener:token_pairs` via Next.js BFF (`/api/gateway/scrape` or `/api/platform/dexscreener/scrape`) in `mode: 'sync'`
+- Results render in responsive grid of token cards: Pair Name (e.g. `$BONK / SOL`), DEX badge (Raydium, Uniswap, Aerodrome), Price with 24h change pill (Green `+X%` / Red `-X%`), 24h Volume, Liquidity, FDV
+- If token originated from Pump.fun bonding curve (Solana mint), card displays a distinct **"Pump.fun Origin"** badge linking directly to `/pumpfun?mint=<mint>`
+- Action buttons on card: "Copy Pair Address" (with 1.5s checkmark feedback) and "View on Dexscreener" external link
+
+**Error & Edge-Case Handling (NFR-29, NFR-30):**
+**And** when upstream returns bot-challenge `XACT_4030` or rate limit, card area displays an informative Empty State with ShieldAlert icon and "Retry with Proxy" button — never a raw crash or blank screen  
+**And** external token logo images apply `referrerPolicy="no-referrer"` with fallback generic coin icon on error
+
+---
+
+### Story 51.2: YouTube Video & Channel Insights Suite (`/youtube`)
+
+As a **content creator and digital marketing lead**,  
+I want **an unauthenticated YouTube intelligence interface at `/youtube` with Trending VN feed, Channel Inspector, and hierarchical comment reader**,  
+So that **I can analyze viral video topics, track channel stats, and gauge audience sentiment without personalization algorithm bias**.
+
+**Acceptance Criteria:**
+
+**Tabs & Navigation:**
+**Given** route `apps/web/app/youtube/page.tsx` is accessed  
+**When** user switches between tabs  
+**Then**:
+- **Tab 1: Trending VN** (`youtube:trending_vn`):
+  - Renders grid of current top trending videos in Vietnam
+  - Video cards display high-res thumbnail (`referrerPolicy="no-referrer"`), duration badge, title, channel name, view count, published time ago
+  - Clicking a video opens the Comment Reader modal for that video
+- **Tab 2: Channel Inspector** (`youtube:channel_detail`, `youtube:channel_videos`):
+  - Input accepts channel handle (e.g. `@MixiGaming3004`) or channelId
+  - Displays channel header: avatar, channel title, verified badge, subscriber count formatted (e.g. `2.5M subs`), total video count
+  - Displays grid of the channel's 12 most recent uploads with individual view counts
+- **Tab 3: Comment & Sentiment Reader** (`youtube:video_comments`):
+  - Input accepts YouTube video URL or ID (e.g. `dQw4w9WgXcQ`)
+  - Displays top 20 comments with author avatar, comment text, upvote count, and published date
+  - Provides quick sentiment summary pill (Positive / Neutral / Skeptical) computed via XActions AI endpoint or simple heuristic
+
+**And** loading states use realistic Skeleton cards matching exact video card aspect ratio (16:9 thumbnail + 2 text lines)  
+**And** all requests pass through BFF proxy with 15-minute SWR caching for trending data
+
+---
+
+### Story 51.3: Decentralized Social Deck (`/fediverse`)
+
+As an **open web advocate and privacy-focused researcher**,  
+I want **a multi-column social deck at `/fediverse` streaming live posts from Bluesky (AT Protocol) and Mastodon (ActivityPub)**,  
+So that **I can monitor decentralized network conversations side-by-side in real-time without personal login credentials**.
+
+**Acceptance Criteria:**
+
+**Multi-Column Deck Layout:**
+**Given** route `apps/web/app/fediverse/page.tsx` is accessed  
+**When** user loads the page on desktop (width >= 1024px)  
+**Then**:
+- Renders TweetDeck-style horizontal multi-column layout with 3 default columns:
+  - **Column 1: Bluesky What's Hot** (`bluesky:feed` with `whats-hot` feed URI)
+  - **Column 2: Bluesky Profile Stream** (`bluesky:posts`, default configurable e.g. `bsky.app` or `nichxbt.bsky.social`)
+  - **Column 3: Mastodon Trending Timeline** (`mastodon:trending` from `mastodon.social`)
+- Top deck toolbar allows toggling column visibility, adding a custom handle column, and refreshing all columns simultaneously
+- Post cards display: author avatar, display name, handle (e.g. `@alice.bsky.social` or `@user@instance.social`), post text with clickable link mentions, timestamp, repost/boost count, and like/favorite count
+- If post contains image media: renders image with `referrerPolicy="no-referrer"`; clicking image opens modal Lightbox
+- Infinite scroll: scrolling to bottom of column triggers next page cursor fetch seamlessly
+
+**Responsive Adaptation:**
+**And** on mobile devices (width < 1024px), columns transform into a horizontal swipeable tab bar (`Bluesky Hot` | `Bluesky Profile` | `Mastodon`) with single-column view  
+**And** zero credentials required: works 100% in public guest mode without requiring `xa_bearer` or user login
+
+---
+
+### Story 51.4: Vietnam B2B Diligence & Procurement Portal (`/enterprise-vn`)
+
+As a **B2B business development manager and legal compliance officer**,  
+I want **an enterprise diligence portal at `/enterprise-vn` combining tax code (MST) verification, company legal status, and IP trademark portfolios with CSV export**,  
+So that **I can verify corporate credentials, partnership legality, and brand ownership in under 2 seconds**.
+
+**Acceptance Criteria:**
+
+**Search & Enterprise Dossier:**
+**Given** route `apps/web/app/enterprise-vn/page.tsx` is accessed  
+**When** user enters an enterprise tax code (10 or 13 digits) or company name keyword  
+**Then**:
+- Submitting search triggers `masothue:search` / `masothue:detail` and `b2b_registry_extended:search_enterprises`
+- Displays Enterprise Dossier card:
+  - Legal business name, international trade name, and abbreviation
+  - Tax Code (MST) with "Copy" button
+  - Operational Status badge (Green: `Đang hoạt động`, Red: `Ngừng hoạt động / Đóng MST`, Yellow: `Tạm ngừng kinh doanh`)
+  - Legal representative (Người đại diện pháp luật), founding date, registered business address, governing tax department
+- **Tab IP / Trademarks** (`ipvietnam:search`):
+  - Queries trademark registry by enterprise name
+  - Displays table of registered trademarks, application numbers, class (nhóm ngành Nice), and application filing status
+- **Export Action**:
+  - "Export Dossier (JSON / CSV)" button exports company profile + trademark portfolio formatted in UTF-8 BOM for Microsoft Excel compatibility
+
+**And** handles rate-limiting / Cloudflare on government portals gracefully: displays last cached snapshot if live fetch receives `XACT_4030`
+
+---
+
+### Story 51.5: Live Vietnam IT & Tech Jobs Aggregator (`/jobs-vn` & Explorer Upgrade)
+
+As a **tech talent recruiter and software engineer**,  
+I want **a real-time tech job aggregator at `/jobs-vn` and an upgraded Jobs tab on `/explorer` pulling live postings from TopCV, VietnamWorks, and LinkedIn with salary & tech stack filters**,  
+So that **I can discover active hiring opportunities and salary benchmarks without placeholder static data**.
+
+**Acceptance Criteria:**
+
+**Live Job Aggregation:**
+**Given** route `apps/web/app/jobs-vn/page.tsx` is accessed (or tab `Jobs` selected on `/explorer`)  
+**When** user sets filters (Keyword: `React`, Location: `HCMC`, Platform: `All`)  
+**Then**:
+- Dispatches parallel scraper queries to `topcv:search_jobs`, `vietnamworks:search_jobs`, and `linkedin:search_jobs` via BFF gateway
+- Replaces legacy static mock data (`j1`, `j2` in `CATEGORY_DATA.jobs`) with live consolidated results
+- Job Card displays:
+  - Company logo with fallback initials avatar
+  - Job title and company name
+  - Salary package pill (e.g. `$2,000 - $3,500` or `Thỏa thuận` — highlighted in emerald badge)
+  - Location pill (`Hà Nội`, `TP. Hồ Chí Minh`, `Remote`)
+  - Source platform pill (`TopCV` | `VietnamWorks` | `LinkedIn`)
+  - Extracted tech stack tags (`TypeScript`, `Docker`, `PostgreSQL`)
+  - "Apply on Source" external link button
+- Sticky filter bar allows filtering by:
+  - Experience level (Junior, Mid, Senior, Lead)
+  - Work mode (On-site, Hybrid, Remote)
+  - Salary range slider or quick presets (`>$1,500`, `>$3,000`, `>$5,000`)
+- "Export Job Leads (CSV)" button exports current filtered results for HR CRM pipeline
+
+**And** when TopCV or VietnamWorks triggers Cloudflare captcha (`XACT_4030`), the platform tab indicates `Temporarily rate-limited` while still rendering results from other healthy platforms (graceful partial degradation)  
+**And** sidebar navigation in `apps/web` includes direct links to `/dexscreener`, `/youtube`, `/fediverse`, and `/enterprise-vn` under a new **"Platform Suites"** navigation group
+
+---
+
+### Epic 51 — Story Dependency Map
+
+```
+[Prerequisites: Epic 48 BFF + Epic 50 Scrape Gateway]
+   │
+   ├─► Story 51.1: Dexscreener Suite (/dexscreener) ────────┐
+   │                                                        │
+   ├─► Story 51.2: YouTube Insights (/youtube) ─────────────┤
+   │                                                        ├─► All suites operational
+   ├─► Story 51.3: Fediverse Deck (/fediverse) ─────────────┤   & linked in App Sidebar
+   │                                                        │
+   ├─► Story 51.4: Enterprise VN Portal (/enterprise-vn) ───┤
+   │                                                        │
+   └─► Story 51.5: Live Tech Jobs & Explorer Upgrade ───────┘
+```
+
+All 5 stories can be implemented independently and in parallel since each targets an isolated Next.js page route (`app/*/page.tsx`) consuming existing, verified backend actions via the common BFF Gateway client.
+

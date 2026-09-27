@@ -235,6 +235,11 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-138 (Distributed Consumer Quota):** Quota enforcement đúng multi-worker qua Redis-backed store (`REDIS_URL`), single-worker in-memory không đổi. (Epic 49 — Story 49.3)
 * **FR-139 (Webhook Delivery Isolation):** Webhook delivery qua queue worker với per-endpoint isolation + retry/backoff — xóa head-of-line blocking. (Epic 49 — Story 49.4)
 * **FR-140 (Checkpoint Concurrency Safety):** Optimistic locking (version check, 409 conflict) trên checkpoint mutations. (Epic 49 — Story 49.5)
+* **FR-141 (DEX & Token Liquidity Intelligence Suite):** Giao diện `/dexscreener` tìm kiếm và phân tích cặp thanh khoản DEX (Solana/Base/ETH), tính năng liên kết 2 chiều với Pump.fun bonding curve. (Epic 51 — Story 51.1)
+* **FR-142 (YouTube Video & Channel Insights Suite):** Giao diện `/youtube` tra cứu kênh, video trending VN, đọc cây bình luận phân cấp và phân tích dư luận không cần đăng nhập. (Epic 51 — Story 51.2)
+* **FR-143 (Decentralized Social Deck):** Giao diện `/fediverse` đa cột phong cách TweetDeck tích hợp Bluesky (AT Protocol) & Mastodon (ActivityPub) công khai. (Epic 51 — Story 51.3)
+* **FR-144 (Vietnam B2B Diligence & Procurement Portal):** Giao diện `/enterprise-vn` tra cứu MST, hồ sơ pháp nhân, tình trạng hoạt động và nhãn hiệu bản quyền từ Cục SHTT. (Epic 51 — Story 51.4)
+* **FR-145 (Live Vietnam IT & Tech Jobs Aggregator):** Nâng cấp tab Jobs tại `/explorer` và route `/jobs-vn` kết nối live data TopCV, VietnamWorks, LinkedIn với bộ lọc dải lương và tech stack. (Epic 51 — Story 51.5)
 
 ### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17 ➔ NFR-26)
 
@@ -250,6 +255,8 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **NFR-26 (UX Feedback & Connectivity Visibility):** Long-running jobs hiển thị realtime progress (không silent stall); trạng thái kết nối backend luôn visible qua header badge. (Epic 47)
 * **NFR-27 (Web Credential Transport Security):** Credentials (JWT, X session cookie) vận chuyển qua httpOnly `SameSite=Lax` cookies do BFF quản lý — không trong `localStorage` (pattern legacy `authToken`), không trong response body; `GET /session` chỉ trả boolean flags. (Epic 48 — AD-2)
 * **NFR-28 (Realtime Transport Convention):** socket.io-client direct-connect `NEXT_PUBLIC_SOCKET_URL` (không qua BFF); SSE đi qua BFF verbatim-streaming; mỗi màn realtime dùng `lib/realtime.ts` — không tự chọn transport. (Epic 48 — AD-3)
+* **NFR-29 (Graceful Anti-Bot & Challenge State UX):** Khi upstream platform chặn request (Cloudflare 403, PerimeterX/Bot-challenge 429), giao diện web không được hiển thị trang trắng hay lỗi kỹ thuật thô (`XACT_4030`). Phải hiển thị Empty State component có ý nghĩa kèm giải thích ngữ cảnh và nút thử lại có kiểm soát. (Epic 51)
+* **NFR-30 (Image Hotlink & CORS Protection):** Toàn bộ hình ảnh từ các nền tảng xã hội bên ngoài phải được áp dụng chính sách bảo vệ referrer (`referrerPolicy="no-referrer"`) hoặc định tuyến qua BFF IPFS / media proxy (`/api/ipfs/[cid]`) để ngăn chặn việc vỡ layout do hotlink protection. (Epic 51)
 
 ### 7.3. Lộ trình phân kỳ cập nhật
 
@@ -307,6 +314,7 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 | Story 27.5 (Fingerprint Spoofing — Epic 27, gated) | FR-113 |
 | Story 33.3 (Zalo Personal — Epic 33, gated) | FR-114 |
 | Story 33.4 (YouTube VN Advanced — Epic 33, gated) | FR-115 |
+| Epic 51 (Web Platform Suites) | FR-141, FR-142, FR-143, FR-144, FR-145, NFR-29, NFR-30 |
 
 ### 7.5. Canonicalization & Related Documents
 
