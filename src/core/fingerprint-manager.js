@@ -40,6 +40,21 @@ import { browserFamilyFromUA, TlsProfileProvider } from './tls-profile-provider.
 /** @param {number} min @param {number} max @returns {number} */
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 /** @param {any[]} arr @returns {any} */
+
+/**
+ * 32-bit FNV-1a hash to derive a deterministic integer seed from a string.
+ * Used by Story 27.5 for per-account-stable noise injection.
+ * @param {string} str
+ * @returns {number}
+ */
+export function hashSeed(str) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+  }
+  return h >>> 0;
+}
+
 const pick = (arr) => arr[rand(0, arr.length - 1)];
 
 // ---------------------------------------------------------------------------
@@ -307,11 +322,13 @@ export class FingerprintManager {
 
     const persisted = await this._loadPersisted(platform, accountId);
     if (persisted && persisted.userAgent && persisted.webgl && Array.isArray(persisted.fonts)) {
+      if (!persisted.noiseSeed) persisted.noiseSeed = hashSeed(`${platform}:${accountId}`);
       this._byAccount.set(key, persisted);
       return persisted;
     }
 
     const fp = this._generate(region);
+    fp.noiseSeed = hashSeed(`${platform}:${accountId}`);
     this._byAccount.set(key, fp);
     await this._persist(platform, accountId, fp);
     return fp;

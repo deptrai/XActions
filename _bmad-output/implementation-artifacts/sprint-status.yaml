@@ -198,7 +198,7 @@ development_status:
   27-2-sessionhealthorchestrator-continuous-health-score-circuit-br: done
   27-3-challengesignaturedetector-automated-bot-detection-page-dete: done
   27-4-obscura-public-scraping-backend-watch-gate: done
-  27-5-canvas-webgl-audio-fingerprint-spoofing-conditional: ready-for-dev
+  27-5-canvas-webgl-audio-fingerprint-spoofing-conditional: done
   epic-27-retrospective: done
 
   epic-28: done

@@ -299,6 +299,84 @@ export async function createStealthPage(browser, options = {}) {
       if (parameter === 37446) return webglRenderer;
       return getParameter.call(this, parameter);
     };
+
+    // Story 27.5: Canvas / WebGL buffer / Audio noise injection (FR-113)
+    // Deterministic per-account noise prevents fingerprinting via rendering entropy
+    if (fp && fp.noiseSeed) {
+      function mulberry32(a) {
+        return function() {
+          let t = a += 0x6D2B79F5;
+          t = Math.imul(t ^ t >>> 15, t | 1);
+          t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+          return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        };
+      }
+
+      // 1. Canvas noise injection
+      if (typeof CanvasRenderingContext2D !== 'undefined') {
+        const origGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+        CanvasRenderingContext2D.prototype.getImageData = function(sx, sy, sw, sh, settings) {
+          const imgData = origGetImageData.call(this, sx, sy, sw, sh, settings);
+          const d = imgData.data;
+          const localRng = mulberry32(fp.noiseSeed ^ (sw * 31 + sh));
+          for (let i = 0; i < d.length; i += 64) {
+            const shift = localRng() > 0.5 ? 1 : -1;
+            d[i] = Math.max(0, Math.min(255, d[i] + shift));
+          }
+          return imgData;
+        };
+
+        const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
+        HTMLCanvasElement.prototype.toDataURL = function(...args) {
+          try {
+            const ctx = this.getContext('2d');
+            if (ctx && this.width > 0 && this.height > 0) {
+              const imgData = ctx.getImageData(0, 0, Math.min(this.width, 16), Math.min(this.height, 16));
+              ctx.putImageData(imgData, 0, 0);
+            }
+          } catch {}
+          return origToDataURL.apply(this, args);
+        };
+      }
+
+      // 2. WebGL buffer readback noise
+      function perturbWebGL(glProto) {
+        if (!glProto || !glProto.readPixels) return;
+        const origReadPixels = glProto.readPixels;
+        glProto.readPixels = function(x, y, w, h, format, type, pixels) {
+          origReadPixels.call(this, x, y, w, h, format, type, pixels);
+          if (pixels && pixels.length > 0) {
+            const localRng = mulberry32(fp.noiseSeed ^ 0xDEADBEEF);
+            for (let i = 0; i < Math.min(pixels.length, 32); i += 8) {
+              pixels[i] = (pixels[i] + (localRng() > 0.5 ? 1 : 255)) & 0xFF;
+            }
+          }
+        };
+      }
+      if (typeof WebGLRenderingContext !== 'undefined') perturbWebGL(WebGLRenderingContext.prototype);
+      if (typeof WebGL2RenderingContext !== 'undefined') perturbWebGL(WebGL2RenderingContext.prototype);
+
+      // 3. AudioContext / AnalyserNode noise injection
+      if (typeof AnalyserNode !== 'undefined') {
+        const origGetFloatFreq = AnalyserNode.prototype.getFloatFrequencyData;
+        AnalyserNode.prototype.getFloatFrequencyData = function(array) {
+          origGetFloatFreq.call(this, array);
+          const localRng = mulberry32(fp.noiseSeed ^ 0xCAFEBABE);
+          for (let i = 0; i < array.length; i += 16) {
+            array[i] += (localRng() - 0.5) * 0.1;
+          }
+        };
+
+        const origGetByteFreq = AnalyserNode.prototype.getByteFrequencyData;
+        AnalyserNode.prototype.getByteFrequencyData = function(array) {
+          origGetByteFreq.call(this, array);
+          const localRng = mulberry32(fp.noiseSeed ^ 0xFEEDFACE);
+          for (let i = 0; i < array.length; i += 16) {
+            array[i] = Math.max(0, Math.min(255, array[i] + (localRng() > 0.5 ? 1 : -1)));
+          }
+        };
+      }
+    }
   }, fp || null);
 
   // Set realistic viewport
