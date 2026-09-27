@@ -9,6 +9,7 @@
 
 import { AbstractCrawler } from '../../../core/base-crawler.js';
 import { YouTubeClient } from './client.js';
+import { InnerTubeClient } from './innertube.js';
 import { normalizeYouTubeResults } from './normalizer.js';
 import {
   PlatformError,
@@ -217,6 +218,83 @@ export class YouTubeVNCrawler extends AbstractCrawler {
       description: 'Alias for video_comments',
       handler: (/** @type {Record<string, any>} */ args) => this.videoComments(args),
     });
+
+    // Story 33.4 — InnerTube advanced data (FR-115)
+    this.registerAction({
+      action: 'live_chat',
+      description: 'Fetch live chat messages for a video (InnerTube, no API key)',
+      schema: {
+        type: 'object',
+        properties: {
+          videoId: { type: 'string', description: 'YouTube video ID' },
+          continuation: { type: 'string', description: 'Continuation token for next batch' },
+        },
+        required: ['videoId'],
+      },
+      handler: (/** @type {Record<string, any>} */ args) => this.liveChat(args),
+    });
+
+    this.registerAction({
+      action: 'livechat',
+      description: 'Alias for live_chat',
+      handler: (/** @type {Record<string, any>} */ args) => this.liveChat(args),
+    });
+
+    this.registerAction({
+      action: 'shorts_analytics',
+      description: 'Fetch Shorts engagement metrics (InnerTube, no API key)',
+      schema: {
+        type: 'object',
+        properties: {
+          videoId: { type: 'string', description: 'YouTube Shorts video ID' },
+        },
+        required: ['videoId'],
+      },
+      handler: (/** @type {Record<string, any>} */ args) => this.shortsAnalytics(args),
+    });
+
+    this.registerAction({
+      action: 'shorts',
+      description: 'Alias for shorts_analytics',
+      handler: (/** @type {Record<string, any>} */ args) => this.shortsAnalytics(args),
+    });
+
+    this.registerAction({
+      action: 'subscriber_history',
+      description: 'Fetch channel subscriber count snapshot (InnerTube, no API key)',
+      schema: {
+        type: 'object',
+        properties: {
+          channelId: { type: 'string', description: 'YouTube channel ID' },
+        },
+        required: ['channelId'],
+      },
+      handler: (/** @type {Record<string, any>} */ args) => this.subscriberHistory(args),
+    });
+
+    this.registerAction({
+      action: 'subscribers',
+      description: 'Alias for subscriber_history',
+      handler: (/** @type {Record<string, any>} */ args) => this.subscriberHistory(args),
+    });
+
+    this.registerAction({
+      action: 'music_trending_vn',
+      description: 'Fetch YouTube Music VN trending (InnerTube, no API key)',
+      schema: {
+        type: 'object',
+        properties: {
+          limit: { type: 'number', description: 'Max tracks to return' },
+        },
+      },
+      handler: (/** @type {Record<string, any>} */ args) => this.musicTrendingVn(args),
+    });
+
+    this.registerAction({
+      action: 'youtube_music_vn',
+      description: 'Alias for music_trending_vn',
+      handler: (/** @type {Record<string, any>} */ args) => this.musicTrendingVn(args),
+    });
   }
 
   /**
@@ -255,6 +333,68 @@ export class YouTubeVNCrawler extends AbstractCrawler {
    * Persist post items and emit thin events.
    * @param {import('../../../core/types.js').PostItem[]} posts
    */
+  /**
+   * Fetch live chat messages via InnerTube.
+   * @param {Record<string, any>} args
+   * @returns {Promise<any>}
+   */
+  async liveChat(args = {}) {
+    const { videoId, continuation } = args;
+    const result = await this.innertube.getLiveChat(videoId, { continuation });
+    return {
+      success: true,
+      data: result.messages,
+      continuation: result.continuation,
+      timeoutMs: result.timeoutMs,
+      source: 'innertube',
+    };
+  }
+
+  /**
+   * Fetch Shorts analytics via InnerTube.
+   * @param {Record<string, any>} args
+   * @returns {Promise<any>}
+   */
+  async shortsAnalytics(args = {}) {
+    const { videoId } = args;
+    const result = await this.innertube.getShortsAnalytics(videoId);
+    return {
+      success: true,
+      data: [result],
+      source: 'innertube',
+    };
+  }
+
+  /**
+   * Fetch subscriber count via InnerTube.
+   * @param {Record<string, any>} args
+   * @returns {Promise<any>}
+   */
+  async subscriberHistory(args = {}) {
+    const { channelId } = args;
+    const result = await this.innertube.getSubscriberCount(channelId);
+    return {
+      success: true,
+      data: [result],
+      source: 'innertube',
+    };
+  }
+
+  /**
+   * Fetch YouTube Music VN trending via InnerTube.
+   * @param {Record<string, any>} args
+   * @returns {Promise<any>}
+   */
+  async musicTrendingVn(args = {}) {
+    const result = await this.innertube.getMusicTrendingVn({ limit: args.limit });
+    return {
+      success: true,
+      data: result.tracks,
+      region: result.region,
+      source: 'innertube',
+    };
+  }
+
   /**
    * Persist pre-validated posts to the store.
    * Callers are expected to have already run filterValidItems — this method

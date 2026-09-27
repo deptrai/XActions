@@ -26,6 +26,15 @@ const YOUTUBE_ACTION_MAP = {
   detail: 'video_detail',
   video_comments: 'video_comments',
   comments: 'video_comments',
+  // Story 33.4 — InnerTube advanced data (FR-115)
+  live_chat: 'live_chat',
+  livechat: 'live_chat',
+  shorts_analytics: 'shorts_analytics',
+  shorts: 'shorts_analytics',
+  subscriber_history: 'subscriber_history',
+  subscribers: 'subscriber_history',
+  music_trending_vn: 'music_trending_vn',
+  youtube_music_vn: 'music_trending_vn',
 };
 
 export default {
