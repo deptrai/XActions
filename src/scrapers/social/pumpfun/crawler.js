@@ -196,9 +196,9 @@ export class PumpFunCrawler extends AbstractCrawler {
     // ── Action: fetch_my_profile (Auth) ──
     this.registerAction({
       action: 'fetch_my_profile',
-      description: 'Fetch the authenticated pump.fun user profile (wallet, followers, following)',
+      description: 'Fetch the pump.fun user profile (wallet, followers, following)',
       category: 'social',
-      requiresAuth: true,
+      requiresAuth: false,
       requiredArgs: [],
       optionalArgs: [],
       outputType: '{ username, walletAddress, userId, isPumpUser, followers, following }',
@@ -211,7 +211,7 @@ export class PumpFunCrawler extends AbstractCrawler {
       action: 'fetch_user_following',
       description: 'Fetch the list of accounts a specific userId is following on pump.fun',
       category: 'social',
-      requiresAuth: true,
+      requiresAuth: false,
       requiredArgs: ['userId'],
       optionalArgs: [],
       outputType: 'Array<Record<string, unknown>>',
@@ -224,7 +224,7 @@ export class PumpFunCrawler extends AbstractCrawler {
       action: 'fetch_livestream_clips',
       description: 'Fetch HLS video clips metadata for a pump.fun livestreamer or coin',
       category: 'social',
-      requiresAuth: true,
+      requiresAuth: false,
       requiredArgs: ['mintOrWallet'],
       optionalArgs: [],
       outputType: 'PumpFunLivestreamClip[]',
@@ -289,10 +289,8 @@ export class PumpFunCrawler extends AbstractCrawler {
         throw positionsRes.reason;
       }
       if (coinRes.status === 'rejected') {
-        // If coin endpoint returned 404 or rate limit, propagate immediately
-        if (coinRes.reason?.statusCode === 404 || coinRes.reason?.code === 'XACT_4004') {
-          throw coinRes.reason;
-        }
+        // Coin metadata is optional — mint-positions succeeded means mint exists.
+        // 404/rate-limit on coin meta → coinMeta stays null (graceful degrade).
         if (coinRes.reason?.statusCode === 429 || coinRes.reason?.code === 'XACT_4029') {
           throw coinRes.reason;
         }
@@ -531,16 +529,7 @@ export class PumpFunCrawler extends AbstractCrawler {
    * @returns {Promise<Record<string, unknown>>}
    */
   async fetchMyProfile(args, session = {}) {
-    if (!this.auth.hasSession() || !this.auth.isValid()) {
-      throw new PlatformError({
-        type: ErrorTypes.AUTH_REQUIRED,
-        code: 'XACT_4010',
-        message: 'fetch_my_profile requires an active pump.fun session',
-        statusCode: 401,
-        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: this.platform,
-      });
-    }
+    // /users/me works unauthenticated (returns anonymous/default profile)
     return this.livestreamApi.getMyProfile();
   }
 
@@ -551,16 +540,6 @@ export class PumpFunCrawler extends AbstractCrawler {
    * @returns {Promise<Array>}
    */
   async fetchUserFollowing(args, session = {}) {
-    if (!this.auth.hasSession() || !this.auth.isValid()) {
-      throw new PlatformError({
-        type: ErrorTypes.AUTH_REQUIRED,
-        code: 'XACT_4010',
-        message: 'fetch_user_following requires an active pump.fun session',
-        statusCode: 401,
-        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: this.platform,
-      });
-    }
     const userId = String(args?.userId || session?.userId || '');
     if (!userId) {
       throw new PlatformError({
@@ -581,16 +560,6 @@ export class PumpFunCrawler extends AbstractCrawler {
    * @returns {Promise<Array>}
    */
   async fetchLivestreamClips(args, session = {}) {
-    if (!this.auth.hasSession() || !this.auth.isValid()) {
-      throw new PlatformError({
-        type: ErrorTypes.AUTH_REQUIRED,
-        code: 'XACT_4010',
-        message: 'fetch_livestream_clips requires an active pump.fun session',
-        statusCode: 401,
-        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
-        platform: this.platform,
-      });
-    }
     const mintOrWallet = String(args?.mintOrWallet || args?.mint || args?.wallet || '');
     if (!mintOrWallet) {
       throw new PlatformError({
@@ -602,7 +571,9 @@ export class PumpFunCrawler extends AbstractCrawler {
       });
     }
     const rawClips = await this.livestreamApi.getLivestreamClips(mintOrWallet);
-    return (Array.isArray(rawClips) ? rawClips : [rawClips]).map((c) => this.media.normalizeClip(c));
+    // Response shape: { clips: [...] } or bare array
+    const clipList = Array.isArray(rawClips) ? rawClips : (rawClips?.clips || []);
+    return clipList.map((c) => this.media.normalizeClip(c));
   }
 
   /**

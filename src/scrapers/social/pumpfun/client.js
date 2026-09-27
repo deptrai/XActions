@@ -584,6 +584,17 @@ export class PumpFunClient extends AbstractApiClient {
     this.#inFlight.set(mint, entry);
     return entry.promise;
   }
+  /**
+   * Fetch user profile by wallet address.
+   * @param {string} usernameOrWallet — pump.fun username or Solana wallet
+   * @param {Object} [options]
+   * @returns {Promise<Object>} user profile
+   */
+  async getUser(usernameOrWallet, options = {}) {
+    const url = `${this.baseUrl}/users/${encodeURIComponent(usernameOrWallet)}`;
+    const raw = await this.#apiGet(url, options);
+    return raw?.data || raw;
+  }
 }
 
 export default PumpFunClient;

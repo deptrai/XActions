@@ -24,6 +24,19 @@ export class LivestreamApiClient {
   }
 
   /**
+   * Get auth headers if session available, empty object otherwise.
+   * Public pump.fun endpoints (clips, following, users) work without auth.
+   * @returns {Object}
+   */
+  #safeAuthHeaders() {
+    try {
+      return this.auth.getAuthHeaders();
+    } catch {
+      return {};
+    }
+  }
+
+  /**
    * Internal fetch wrapper with auth headers and error handling.
    * @param {string} url
    * @param {object} [options]
@@ -33,7 +46,8 @@ export class LivestreamApiClient {
     const headers = {
       'accept': 'application/json',
       ...(options.headers || {}),
-      ...this.auth.getAuthHeaders(),
+      // Auth headers are optional — public endpoints work without them
+      ...(options.noAuth ? {} : this.#safeAuthHeaders()),
     };
 
     try {
