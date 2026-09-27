@@ -45,7 +45,7 @@ export function setupMcpRoutes(app) {
   app.all('/mcp', async (req, res, next) => {
     // If it is a browser requesting the web page, serve HTML
     if (req.method === 'GET' && req.accepts('html') && !req.headers['mcp-session-id'] && req.headers['accept']?.includes('text/html')) {
-      return res.sendFile(path.join(__dirname, '../../dashboard/mcp.html'));
+      return res.sendFile(path.join(__dirname, '../../dashboard/docs/mcp-server.html'));
     }
 
     // Consumer authentication / identification (AD-20)

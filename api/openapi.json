@@ -3,8 +3,8 @@
   "info": {
     "title": "XActions AI API",
     "version": "2.0.0",
-    "description": "X/Twitter automation API for AI agents. Pay-per-request via x402 protocol (USDC on Base). Scrape profiles, automate actions, monitor followers, download media, and generate content. Deployment note: on the serverless (Vercel) surface only a subset of mounts is served \u2014 unavailable paths return 503 there; the full set runs on the primary Node/Express deployment.",
-    "x-guidance": "XActions is a pay-per-request X/Twitter automation API designed for AI agents.\n\nHow to use this API:\n1. All paid endpoints are under /api/ai/ and accept POST requests with JSON bodies.\n2. Most endpoints require a sessionCookie field \u2014 set the user's X/Twitter auth_token cookie value in the request body or X-Session-Cookie header.\n3. Payment is handled via the x402 protocol: send a request without payment to receive a 402 response with payment requirements, sign a USDC payment, then retry with the X-PAYMENT header.\n4. Payments settle in USDC on Base (chain ID 8453). Base Sepolia (84532) is supported for testing.\n5. Free info endpoints: GET /api/ai/ (docs), GET /api/ai/health (status), GET /api/ai/pricing (rates).\n\nCategories:\n- scrape: Extract data from X/Twitter (profiles, followers, tweets, hashtags, media, likes, retweets, replies)\n- action: Automate account actions (unfollow, like, follow, auto-like, bulk operations)\n- posting: Create content (tweet, thread, poll, schedule, delete, reply, bookmark, article)\n- engagement: Engagement automation (follow, like, retweet, mute/unmute, trends, bot detection, influencer finder)\n- analytics: Deep analytics (account, post, competitor, audience overlap, growth rate, voice analysis)\n- messages: Direct messages (send, list conversations, export)\n- profile: Profile management (update, settings, protected mode, blocked accounts)\n- grok: Grok AI integration (query, summarize, image analysis)\n- lists: Twitter Lists (get lists, list members)\n- spaces: Twitter Spaces (discover, join, scrape metadata, transcripts)\n- monitor: Track changes (account, followers, following, keyword monitoring, snapshots)\n- sentiment: Sentiment analysis and reputation monitoring\n- streams: Real-time keyword streams\n- workflows: Multi-step automation workflows\n- personas: Automation personas for 24/7 growth agents\n- graph: Social network graph analysis (PageRank, betweenness centrality, community detection)\n- portability: Account export, migration to Bluesky/Mastodon/Threads\n- crm: Follower CRM (tag, segment, search contacts)\n- schedule: Post scheduling and RSS auto-posting\n- optimizer: Tweet optimization (hashtags, variations, performance prediction)\n- writer: AI content generation (voice analysis, tweet generator, content calendar)\n- utility: Video download, bookmark export, thread unroll, profile/tweet analysis\n- notify: Webhook notifications\n- datasets: Pre-built datasets\n- teams: Team management for multi-user automation\n\nFree alternatives: Browser scripts, CLI, and Node.js library at https://xactions.app are 100% free. This paid API is for remote AI agent access only.",
+    "description": "X/Twitter automation API for AI agents. Pay-per-request via x402 protocol (USDC on Base). Scrape profiles, automate actions, monitor followers, download media, and generate content. Deployment note: on the serverless (Vercel) surface only a subset of mounts is served — unavailable paths return 503 there; the full set runs on the primary Node/Express deployment.",
+    "x-guidance": "XActions is a pay-per-request X/Twitter automation API designed for AI agents.\n\nHow to use this API:\n1. All paid endpoints are under /api/ai/ and accept POST requests with JSON bodies.\n2. Most endpoints require a sessionCookie field — set the user's X/Twitter auth_token cookie value in the request body or X-Session-Cookie header.\n3. Payment is handled via the x402 protocol: send a request without payment to receive a 402 response with payment requirements, sign a USDC payment, then retry with the X-PAYMENT header.\n4. Payments settle in USDC on Base (chain ID 8453). Base Sepolia (84532) is supported for testing.\n5. Free info endpoints: GET /api/ai/ (docs), GET /api/ai/health (status), GET /api/ai/pricing (rates).\n\nCategories:\n- scrape: Extract data from X/Twitter (profiles, followers, tweets, hashtags, media, likes, retweets, replies)\n- action: Automate account actions (unfollow, like, follow, auto-like, bulk operations)\n- posting: Create content (tweet, thread, poll, schedule, delete, reply, bookmark, article)\n- engagement: Engagement automation (follow, like, retweet, mute/unmute, trends, bot detection, influencer finder)\n- analytics: Deep analytics (account, post, competitor, audience overlap, growth rate, voice analysis)\n- messages: Direct messages (send, list conversations, export)\n- profile: Profile management (update, settings, protected mode, blocked accounts)\n- grok: Grok AI integration (query, summarize, image analysis)\n- lists: Twitter Lists (get lists, list members)\n- spaces: Twitter Spaces (discover, join, scrape metadata, transcripts)\n- monitor: Track changes (account, followers, following, keyword monitoring, snapshots)\n- sentiment: Sentiment analysis and reputation monitoring\n- streams: Real-time keyword streams\n- workflows: Multi-step automation workflows\n- personas: Automation personas for 24/7 growth agents\n- graph: Social network graph analysis (PageRank, betweenness centrality, community detection)\n- portability: Account export, migration to Bluesky/Mastodon/Threads\n- crm: Follower CRM (tag, segment, search contacts)\n- schedule: Post scheduling and RSS auto-posting\n- optimizer: Tweet optimization (hashtags, variations, performance prediction)\n- writer: AI content generation (voice analysis, tweet generator, content calendar)\n- utility: Video download, bookmark export, thread unroll, profile/tweet analysis\n- notify: Webhook notifications\n- datasets: Pre-built datasets\n- teams: Team management for multi-user automation\n\nFree alternatives: Browser scripts, CLI, and Node.js library at https://xactions.app are 100% free. This paid API is for remote AI agent access only.",
     "contact": {
       "name": "nichxbt",
       "url": "https://github.com/nirholas/XActions"
@@ -472,7 +472,7 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",
-        "description": "User JWT \u2014 Authorization: Bearer <token>"
+        "description": "User JWT — Authorization: Bearer <token>"
       },
       "a2aApiKey": {
         "type": "apiKey",
@@ -691,148 +691,6 @@
           "data",
           "page"
         ]
-      },
-      "GatewayEnvelope": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean"
-          },
-          "ok": {
-            "type": "boolean",
-            "description": "Legacy mirror of success (transitional)"
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "sync",
-              "async"
-            ]
-          },
-          "metadata": {
-            "type": "object",
-            "properties": {
-              "request_id": {
-                "type": "string"
-              },
-              "platform": {
-                "type": "string"
-              },
-              "platforms": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "action": {
-                "type": "string"
-              },
-              "consumer_id": {
-                "type": "string"
-              },
-              "duration_ms": {
-                "type": "number"
-              },
-              "sync_capable": {
-                "type": "boolean"
-              },
-              "dry_run": {
-                "type": "boolean"
-              },
-              "traceparent": {
-                "type": "string"
-              }
-            }
-          },
-          "stream": {
-            "type": "object",
-            "properties": {
-              "enabled": {
-                "type": "boolean"
-              },
-              "name": {
-                "type": "string"
-              },
-              "cursor": {
-                "type": "string"
-              }
-            }
-          },
-          "preview": {
-            "type": "array",
-            "description": "First \u226410 items of data, verbatim slice"
-          },
-          "data": {
-            "type": "array"
-          },
-          "operationId": {
-            "type": "string"
-          },
-          "statusUrl": {
-            "type": "string"
-          },
-          "degraded_reason": {
-            "type": "string",
-            "enum": [
-              "upstream_timeout",
-              "cf_challenge",
-              "upstream_rate_limit",
-              "queue_fallback"
-            ]
-          },
-          "retry_after_ms": {
-            "type": "number"
-          }
-        }
-      },
-      "GatewayError": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "enum": [
-              false
-            ]
-          },
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string"
-              },
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "auth",
-                  "validation",
-                  "consumer_quota",
-                  "upstream_rate_limit",
-                  "proxy_ip_block",
-                  "upstream_error",
-                  "internal"
-                ]
-              },
-              "type": {
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              },
-              "status": {
-                "type": "integer"
-              },
-              "request_id": {
-                "type": "string"
-              },
-              "retryable": {
-                "type": "boolean"
-              },
-              "retry_after_ms": {
-                "type": "number"
-              }
-            }
-          }
-        }
       }
     }
   },
@@ -945,7 +803,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -1061,7 +919,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -1177,7 +1035,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -1293,7 +1151,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -1405,7 +1263,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -1519,7 +1377,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -1633,7 +1491,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -1747,7 +1605,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -1887,7 +1745,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -1997,7 +1855,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -2095,7 +1953,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -2213,7 +2071,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -2325,7 +2183,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -2437,7 +2295,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -2565,7 +2423,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -2669,7 +2527,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -2773,7 +2631,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -2897,7 +2755,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -3005,7 +2863,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -3109,7 +2967,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -3231,7 +3089,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -3369,7 +3227,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -3497,7 +3355,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -3615,7 +3473,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -3737,7 +3595,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -3901,7 +3759,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -4013,7 +3871,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -4125,7 +3983,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -4237,7 +4095,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -4349,7 +4207,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -4461,7 +4319,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -4561,7 +4419,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -4693,7 +4551,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -4797,7 +4655,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -4901,7 +4759,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -5005,7 +4863,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -5109,7 +4967,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -5223,7 +5081,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -5335,7 +5193,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -5447,7 +5305,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -5563,7 +5421,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -5681,7 +5539,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -5807,7 +5665,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -6014,7 +5872,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -6126,7 +5984,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -6256,7 +6114,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -6372,7 +6230,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -6476,7 +6334,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -6590,7 +6448,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -6694,7 +6552,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -6794,7 +6652,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -6884,7 +6742,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -6996,7 +6854,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -7100,7 +6958,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -7204,7 +7062,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -7308,7 +7166,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -7412,7 +7270,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -7526,7 +7384,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -7638,7 +7496,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -7746,7 +7604,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -7864,7 +7722,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -7974,7 +7832,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -8094,7 +7952,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -8198,7 +8056,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -8302,7 +8160,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -8402,7 +8260,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -8502,7 +8360,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -8606,7 +8464,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -8726,7 +8584,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -8836,7 +8694,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -8950,7 +8808,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -9054,7 +8912,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -9166,7 +9024,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -9278,7 +9136,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -9382,7 +9240,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -9482,7 +9340,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -9594,7 +9452,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -9698,7 +9556,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -9810,7 +9668,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -9916,7 +9774,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -10020,7 +9878,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -10132,7 +9990,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -10244,7 +10102,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -10356,7 +10214,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -10476,7 +10334,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -10598,7 +10456,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -10702,7 +10560,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -10808,7 +10666,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -10920,7 +10778,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -11020,7 +10878,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -11128,7 +10986,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -11244,7 +11102,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -11334,7 +11192,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -11424,7 +11282,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -11522,7 +11380,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -11622,7 +11480,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -11732,7 +11590,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -11836,7 +11694,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -11946,7 +11804,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -12036,7 +11894,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -12148,7 +12006,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -12248,7 +12106,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -12352,7 +12210,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -12456,7 +12314,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -12560,7 +12418,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -12664,7 +12522,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -12768,7 +12626,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -12872,7 +12730,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -12984,7 +12842,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -13096,7 +12954,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -13200,7 +13058,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -13304,7 +13162,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -13497,7 +13355,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -13609,7 +13467,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -13721,7 +13579,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -13837,7 +13695,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -13941,7 +13799,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -14077,7 +13935,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -14181,7 +14039,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -14320,7 +14178,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -14470,7 +14328,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -14574,7 +14432,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -14754,7 +14612,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -14935,7 +14793,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -15039,7 +14897,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -15143,7 +15001,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -15257,7 +15115,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -15377,7 +15235,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -15489,7 +15347,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -15663,7 +15521,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -15777,7 +15635,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -15889,7 +15747,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -15999,7 +15857,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -16117,7 +15975,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -16217,7 +16075,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -16335,7 +16193,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -16439,7 +16297,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -16543,7 +16401,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -16659,7 +16517,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -16795,7 +16653,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -16907,7 +16765,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -17005,7 +16863,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -17143,7 +17001,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -17263,7 +17121,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -17375,7 +17233,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -17479,7 +17337,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -17591,7 +17449,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -17695,7 +17553,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -17799,7 +17657,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -17919,7 +17777,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -18095,7 +17953,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -18211,7 +18069,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -18315,7 +18173,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -18392,7 +18250,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -18479,7 +18337,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -18563,7 +18421,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -18644,7 +18502,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -18721,7 +18579,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -18805,7 +18663,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -18886,7 +18744,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -18967,7 +18825,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -19048,7 +18906,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -19129,7 +18987,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -19213,7 +19071,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -19290,7 +19148,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -19367,7 +19225,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -19448,7 +19306,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -19532,7 +19390,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -19609,7 +19467,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -19696,7 +19554,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -19780,7 +19638,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -19857,7 +19715,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -19934,7 +19792,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -20018,7 +19876,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -20102,7 +19960,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -20179,7 +20037,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -20266,7 +20124,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -20343,7 +20201,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -20420,7 +20278,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -20507,7 +20365,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -20584,7 +20442,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -20671,7 +20529,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -20758,7 +20616,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -20842,7 +20700,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -20923,7 +20781,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -21000,7 +20858,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -21077,7 +20935,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -21154,7 +21012,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -21231,7 +21089,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -21308,7 +21166,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -21385,7 +21243,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -21462,7 +21320,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -21539,7 +21397,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -21616,7 +21474,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -21693,7 +21551,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -21770,7 +21628,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -21847,7 +21705,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -21924,7 +21782,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -22001,7 +21859,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -22078,7 +21936,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -22155,7 +22013,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -22232,7 +22090,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -22319,7 +22177,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -22396,7 +22254,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -22473,7 +22331,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -22550,7 +22408,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -22627,7 +22485,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -22704,7 +22562,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -22781,7 +22639,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -22865,7 +22723,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -22942,7 +22800,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -23019,7 +22877,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -23096,7 +22954,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -23180,7 +23038,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -23257,7 +23115,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -23334,7 +23192,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -23418,7 +23276,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -23495,7 +23353,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -23572,7 +23430,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -23649,7 +23507,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -23726,7 +23584,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -23807,7 +23665,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -23884,7 +23742,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -23961,7 +23819,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -24038,7 +23896,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -24115,7 +23973,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -24192,7 +24050,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -24269,7 +24127,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -24346,7 +24204,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -24423,7 +24281,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -24500,7 +24358,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -24577,7 +24435,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -24662,7 +24520,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -24744,7 +24602,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -24826,7 +24684,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -24911,7 +24769,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -24997,7 +24855,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -25081,7 +24939,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -25165,7 +25023,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -25246,7 +25104,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -25323,7 +25181,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -25407,7 +25265,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -25495,7 +25353,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -25572,7 +25430,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -25649,7 +25507,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -25733,7 +25591,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -25817,7 +25675,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -25904,7 +25762,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -25989,7 +25847,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -26076,7 +25934,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -26153,7 +26011,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -26237,7 +26095,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -26318,7 +26176,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -26399,7 +26257,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -26483,7 +26341,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -26560,7 +26418,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -26644,7 +26502,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -27078,7 +26936,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -27155,7 +27013,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -27232,7 +27090,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -27309,7 +27167,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -27393,7 +27251,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -27470,7 +27328,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -27556,7 +27414,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -27633,7 +27491,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -27710,7 +27568,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -27794,7 +27652,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -27871,7 +27729,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -27948,7 +27806,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -28029,7 +27887,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -28106,7 +27964,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -28183,7 +28041,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -28267,7 +28125,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -28344,7 +28202,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -28431,7 +28289,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -28493,7 +28351,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -28534,7 +28392,7 @@
             }
           },
           "402": {
-            "description": "Payment Required \u2014 sign a USDC payment and retry with X-PAYMENT header",
+            "description": "Payment Required — sign a USDC payment and retry with X-PAYMENT header",
             "content": {
               "application/json": {
                 "schema": {
@@ -35138,331 +34996,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/actions": {
-      "get": {
-        "tags": [
-          "Gateway"
-        ],
-        "summary": "Public actions catalog \u2014 every (platform, action, syncCapable, requiredArgs) triple",
-        "description": "Unauthenticated introspection of the Public Scrape Gateway manifest. Identical payload to the MCP `x_actions_list` tool (shared executor \u2014 UX-1). 60-second cache.",
-        "parameters": [
-          {
-            "name": "platform",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Canonical platform key or alias (e.g. reddit, x\u2192twitter)"
-          },
-          {
-            "name": "category",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Category filter (social, ecom, procurement, recruitment, realestate, legal, fnb, healthcare, vehicles)"
-          },
-          {
-            "name": "detailLevel",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "summary",
-                "full"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Actions manifest",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "enum": [
-                        true
-                      ]
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "platform": {
-                            "type": "string"
-                          },
-                          "action": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "category": {
-                            "type": "string"
-                          },
-                          "description": {
-                            "type": "string"
-                          },
-                          "requiredArgs": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "optionalArgs": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "syncCapable": {
-                            "type": "boolean",
-                            "description": "True when the action is in the platform descriptor's syncCapableActions manifest (eligible for mode:sync 1.5s lane)"
-                          },
-                          "status": {
-                            "type": "string",
-                            "enum": [
-                              "stable",
-                              "beta",
-                              "coming_soon"
-                            ]
-                          },
-                          "no_crawler": {
-                            "type": "boolean"
-                          },
-                          "outputType": {
-                            "type": "string"
-                          },
-                          "example": {
-                            "type": "object"
-                          }
-                        }
-                      }
-                    },
-                    "count": {
-                      "type": "integer"
-                    },
-                    "categories": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "generatedAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/platform/{platform}/scrape": {
-      "post": {
-        "tags": [
-          "Gateway"
-        ],
-        "summary": "Unified scrape gateway \u2014 sync/async dispatch with unified envelope",
-        "description": "Story 50.x public scrape gateway. `mode:sync` runs in-process under a 1.5s ceiling (degrades to 202+operationId on breach); `mode:async` enqueues a Bull job. Anonymous callers get a 10/min IP-bucketed free tier (429+XACT_4029 on exhaustion \u2014 present X-PAYMENT for the x402 lane).",
-        "security": [
-          {
-            "bearerAuth": []
-          },
-          {
-            "x402Payment": []
-          },
-          {}
-        ],
-        "parameters": [
-          {
-            "name": "platform",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "twitter",
-                "bluesky",
-                "mastodon",
-                "facebook",
-                "threads",
-                "reddit",
-                "medium",
-                "instagram",
-                "tiktok",
-                "youtube",
-                "zalo",
-                "tiktokshop",
-                "fnb",
-                "healthcare",
-                "ipvietnam",
-                "automotive",
-                "b2b_registry_extended",
-                "linkedin",
-                "batdongsan",
-                "chotot",
-                "shopee",
-                "topcv",
-                "vietnamworks",
-                "masothue",
-                "pumpfun",
-                "all",
-                "dexscreener",
-                "dex",
-                "dexscreen",
-                "telegram",
-                "tg"
-              ]
-            }
-          },
-          {
-            "name": "X-Consumer-Id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Observability hint only \u2014 NEVER authoritative for quota or billing (UX-5). Identity derives from Bearer/service-auth."
-          },
-          {
-            "name": "X-Request-Id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_\\-:.]{1,128}$"
-            },
-            "description": "Trace id \u2014 echoed verbatim in metadata.request_id and X-Request-Id response header"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "action"
-                ],
-                "properties": {
-                  "action": {
-                    "type": "string",
-                    "description": "Action id from GET /api/actions",
-                    "example": "search"
-                  },
-                  "mode": {
-                    "type": "string",
-                    "enum": [
-                      "sync",
-                      "async"
-                    ],
-                    "description": "absent \u2192 per-action syncCapable manifest decides"
-                  },
-                  "platform": {
-                    "oneOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        },
-                        "maxItems": 25
-                      }
-                    ],
-                    "description": "Overrides path; 'all' or array \u2192 batch fan-out"
-                  },
-                  "dryRun": {
-                    "type": "boolean"
-                  },
-                  "stream": {
-                    "type": "boolean"
-                  },
-                  "accountIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "additionalProperties": true
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Sync/batch completed \u2014 unified envelope",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GatewayEnvelope"
-                }
-              }
-            }
-          },
-          "202": {
-            "description": "Accepted (async) or degraded sync \u2014 envelope carries operationId + statusUrl + optional degraded_reason",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GatewayEnvelope"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failure \u2014 ErrorEnvelope",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GatewayError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Auth failure \u2014 ErrorEnvelope kind:auth",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GatewayError"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Quota exhausted \u2014 ErrorEnvelope kind:consumer_quota + Retry-After header",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GatewayError"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Upstream unavailable \u2014 ErrorEnvelope kind:upstream_error, retryable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GatewayError"
                 }
               }
             }

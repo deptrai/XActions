@@ -48,12 +48,16 @@ describe('Story 47.1 — Next.js 15 App Router & Layout Scaffold', () => {
   });
 
   it('Sidebar component includes core navigation items', () => {
+    // Sidebar composes items from lib/nav.ts — check the data source plus
+    // the sidebar import line for the indirection.
+    const navSrc = readFileSync(resolve(webDir, 'lib', 'nav.ts'), 'utf8');
     const sidebarSrc = readFileSync(resolve(webDir, 'components', 'sidebar.tsx'), 'utf8');
-    expect(sidebarSrc).toContain('Viral DNA Miner');
-    expect(sidebarSrc).toContain('Follower CRM');
-    expect(sidebarSrc).toContain('Content Optimizer');
-    expect(sidebarSrc).toContain('Universal Explorer');
-    expect(sidebarSrc).toContain('Swagger API Docs');
+    expect(navSrc).toContain('Viral DNA Miner');
+    expect(navSrc).toContain('Follower CRM');
+    expect(navSrc).toContain('Content Optimizer');
+    expect(navSrc).toContain('Universal Explorer');
+    expect(navSrc).toContain('API Docs');
+    expect(sidebarSrc).toMatch(/NAV_GROUPS|nav/);
   });
 
   it('BackendStatus component checks localhost:3001/api/health', () => {

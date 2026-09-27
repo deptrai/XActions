@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 import { sessionCookieShim } from '../../../api/middleware/session-cookie-shim.js';
-import { miningJobs } from '../../../api/routes/viral.js';
+import { miningJobs, jobCredentials } from '../../../api/routes/viral.js';
 import app from '../../../api/server.js';
 
 function runShim(req) {
@@ -64,7 +64,8 @@ describe('Story 46.2 — sessionCookieShim (unit)', () => {
 describe('Story 46.2 — shim on the real app (viral pilot)', () => {
   // The session credential is stripped from API responses (publicJob) — assert
   // precedence on the stored job via the exported registry map instead.
-  const storedSession = (res) => miningJobs.get(res.body.data.jobId)?.session;
+  // Story 49.1: session credential moved to jobCredentials map (not in miningJobs).
+  const storedSession = (res) => jobCredentials.get(res.body.data.jobId);
 
   it('POST /api/viral/mine accepts sessionCookie in body (legacy transport)', async () => {
     const res = await request(app)
