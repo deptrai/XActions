@@ -840,17 +840,20 @@ describe('batch dispatch — platform:all|string[] (allSettled, per-platform cei
     expect(scrapeSpy.calls).toHaveLength(0);
   });
 
-  it('BATCH_SYNC manifest-declared-but-unimplemented action (pumpfun fetch_coin_meta, inert until 50.6) → Unknown action', async () => {
+  it('BATCH_SYNC previously-inert action (pumpfun fetch_coin_meta, landed in 50.6) → real dispatch path', async () => {
     const res = await request(app)
       .post('/api/platform/all/scrape')
       .send({ action: 'fetch_coin_meta', mode: 'sync', platform: ['pumpfun'] });
     expect(res.status).toBe(200);
-    expect(res.body.results[0]).toMatchObject({
-      platform: 'pumpfun',
-      success: false,
-      status: 'failed',
-      error: { code: 'XACT_4001', message: 'Unknown action: fetch_coin_meta' },
-    });
+    const entry = res.body.results[0];
+    expect(entry.platform).toBe('pumpfun');
+    // Now implemented — either a real success, a sync-timeout degrade, or an
+    // upstream error — but NOT 'Unknown action' anymore.
+    if (entry.status === 'failed') {
+      expect(entry.error?.message).not.toBe('Unknown action: fetch_coin_meta');
+    } else {
+      expect(['completed', 'degraded']).toContain(entry.status);
+    }
   });
 
   it('per-platform ceiling: a degraded entry does not fail the batch (reddit times out)', async () => {

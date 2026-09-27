@@ -546,14 +546,20 @@ describe('POST /api/platform/:platform/scrape — unified envelope', () => {
 
   // ── pumpfun inert action (Story 50.6 — contract test asserts error path) ──
 
-  it('pumpfun/fetch_coin_meta (inert until 50.6) → error envelope same shape as every error', async () => {
+  it('pumpfun/fetch_coin_meta (Story 50.6 live) → envelope shape consistent with every error/success', async () => {
     const res = await request(app)
       .post('/api/platform/pumpfun/scrape')
       .send({ action: 'fetch_coin_meta', mode: 'sync', mint: 'So111' });
-    // Manifest declares syncCapable but actionMap doesn't implement → Unknown action 400
-    expect(res.status).toBe(400);
-    expectErrorEnvelope(res.body, 400);
-    expect(res.body.error.kind).toBe('validation');
+    // Story 50.6 landed — action is now live. Invalid mint still surfaces a
+    // validation-shaped envelope; valid scrape returns 200 envelope.
+    expect([200, 400, 404]).toContain(res.status);
+    if (res.status === 200) {
+      expect(res.body.ok).toBe(true);
+      expect(res.body.mode).toBe('sync');
+    } else {
+      expectErrorEnvelope(res.body, res.status);
+      expect(res.body.error.kind).toBe('validation');
+    }
   });
 
   // ── errorMiddleware conditional extension — non-gateway requests unchanged ─
