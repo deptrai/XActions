@@ -269,7 +269,20 @@ export async function exportDataset(options = {}) {
     finalOutputPath += '.gz';
   }
 
-  const targetDir = path.dirname(path.resolve(finalOutputPath));
+  // Path traversal guard — reject paths escaping the working directory.
+  const resolvedPath = path.resolve(finalOutputPath);
+  const cwd = process.cwd();
+  if (!resolvedPath.startsWith(cwd + path.sep) && resolvedPath !== cwd) {
+    throw new PlatformError({
+      type: ErrorTypes.INVALID_ARGS,
+      code: 'XACT_4001',
+      message: `outputPath must resolve inside the working directory: ${resolvedPath}`,
+      statusCode: 400,
+      suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+    });
+  }
+
+  const targetDir = path.dirname(resolvedPath);
   if (!fs.existsSync(targetDir)) {
     fs.mkdirSync(targetDir, { recursive: true });
   }

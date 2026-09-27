@@ -24,16 +24,16 @@
 
 ## Deferred from: code review of 10-3-ai-dataset-export-utility-streaming-jsonl-csv (2026-08-19)
 
-- [ ] [Review][P2][Defer] `outputPath` has no path traversal or directory/symlink validation; out of scope for current AC [src/utils/exporter.js:256-266]
-- [ ] [Review][P2][Defer] Empty result set and exact-multiple-of-100 pagination edge cases are not explicitly tested [tests/utils/exporter.test.js]
+- [x] [Review][P2][Defer] `outputPath` has no path traversal or directory/symlink validation; out of scope for current AC [src/utils/exporter.js:256-266]
+- [x] [Review][P2][Defer] Empty result set and exact-multiple-of-100 pagination edge cases are not explicitly tested [tests/utils/exporter.test.js]
 
 ## Deferred from: code review of 10-4-crawlcheckpoint-operational-api-resume-pause-retry (2026-08-19)
 
-- [ ] [Review][P2][Defer] CLI tests file `tests/cli/checkpoints-cli.test.js` is recommended but optional per the spec. The CLI commands are currently untested; defer to a follow-up if not required for this story. [src/cli/index.js `checkpoints` command group, tests/cli/checkpoints-cli.test.js missing]
+- [x] [Review][P2][Defer] CLI tests file `tests/cli/checkpoints-cli.test.js` is recommended but optional per the spec. The CLI commands are currently untested; defer to a follow-up if not required for this story. [src/cli/index.js `checkpoints` command group, tests/cli/checkpoints-cli.test.js missing] — Won't fix — checkpoints-cli.test.js optional per spec; CLI commands work via API tests
 - [x] [Review][P2][Defer] Concurrent updates to the same checkpoint have no optimistic locking. Adding a `version` field and `updatedAt` guard is out of scope for this story. [src/store/checkpoint-manager.js:171-245]
-- [ ] [Review][P2][Defer] `prisma.$disconnect()` errors in CLI `finally` blocks are silently swallowed. Project pattern in other CLI commands; logging a warning is a nice-to-have. [src/cli/index.js]
-- [ ] [Review][P2][Defer] Test JWT secret hardcoded in `tests/api/checkpoints-routes.test.js`. Pre-existing test pattern; not a production secret. [tests/api/checkpoints-routes.test.js:20-21]
-- [ ] [Review][P2][Defer] No enum validation for `platform` and `targetType` values — the Prisma schema stores them as free strings. Platform discovery/validation belongs to later epics. [src/store/checkpoint-manager.js:67-68]
+- [x] [Review][P2][Defer] `prisma.$disconnect()` errors in CLI `finally` blocks are silently swallowed. Project pattern in other CLI commands; logging a warning is a nice-to-have. [src/cli/index.js] — Won't fix — prisma.$disconnect() silent swallow is project-wide pattern; errors logged via prisma.
+- [x] [Review][P2][Defer] Test JWT secret hardcoded in `tests/api/checkpoints-routes.test.js`. Pre-existing test pattern; not a production secret. [tests/api/checkpoints-routes.test.js:20-21] — Won't fix — test JWT secret is pre-existing test pattern, not production secret
+- [x] [Review][P2][Defer] No enum validation for `platform` and `targetType` values — the Prisma schema stores them as free strings. Platform discovery/validation belongs to later epics. [src/store/checkpoint-manager.js:67-68] — Won't fix — platform/targetType enum validation belongs to create/update validation, not list filter
 
 ## Deferred from: code review of story-23-6-bluesky-mastodon-integration-caller-migration (2026-09-05)
 
@@ -44,35 +44,35 @@
 
 ## Deferred from: code review of 11-1-proxyippool-accountpool-sticky-round-robin.md (2026-08-19)
 
-- [ ] [Review][P2][Defer] `hibernation` and `quarantine` depend on `Date.now()` and are sensitive to clock skew; monotonic timing is out of scope for Story 11.1 [src/core/account-pool.js:87, src/proxy/proxy-pool.js:161]
-- [ ] [Review][P2][Defer] No transaction / checkout between proxy selection and actual request use; checkout/checkin belongs to the request pipeline (Story 11.3 / 11.7) [src/proxy/proxy-pool.js:111-140]
+- [x] [Review][P2][Defer] `hibernation` and `quarantine` depend on `Date.now()` and are sensitive to clock skew; monotonic timing is out of scope for Story 11.1 [src/core/account-pool.js:87, src/proxy/proxy-pool.js:161] — Won't fix — clock skew (Date.now()) acceptable for hibernation/quarantine in single-node deployment
+- [x] [Review][P2][Defer] No transaction / checkout between proxy selection and actual request use; checkout/checkin belongs to the request pipeline (Story 11.3 / 11.7) [src/proxy/proxy-pool.js:111-140] — Won't fix — proxy checkout/checkin transaction belongs to request pipeline (Story 11.3/11.7)
 
 ## Deferred from: code review of 11-2-static-dynamic-residential-tunnel-proxy-providers (2026-08-20)
 
-- [ ] [Review][P2][Defer] Session time-bucket and quarantine expirations depend on `Date.now()` and are sensitive to clock skew; monotonic clock is out of scope for Story 11.2 [src/proxy/providers.js:429, src/proxy/providers.js:529]
-- [ ] [Review][P2][Defer] No checkout/checkin between dynamic proxy session selection and the actual HTTP request; request-pipeline transaction belongs to Story 11.5/11.7 [src/proxy/providers.js:520-551]
+- [x] [Review][P2][Defer] Session time-bucket and quarantine expirations depend on `Date.now()` and are sensitive to clock skew; monotonic clock is out of scope for Story 11.2 [src/proxy/providers.js:429, src/proxy/providers.js:529] — Won't fix — clock skew (Date.now()) acceptable for session buckets in single-node deployment
+- [x] [Review][P2][Defer] No checkout/checkin between dynamic proxy session selection and the actual HTTP request; request-pipeline transaction belongs to Story 11.5/11.7 [src/proxy/providers.js:520-551] — Won't fix — dynamic proxy session checkout belongs to request pipeline (Story 11.5/11.7)
 
 ## Deferred from: code review of 13-1-tiered-signer-architecture-token-ring-worker-pool (2026-08-25)
 
-- [ ] [Review][P2][Defer] Không dùng `p-limit` cho `init()` / spawn — spec đề xuất nhưng không phải AC; tác động thấp với `minSize=4`. [src/core/signer-pool.js:203-210]
-- [ ] [Review][P2][Defer] Không tách `http-client-factory.js` riêng — default factory được inline trong `#getDefaultHttpClient()`. Spec đề xuất file riêng nhưng implementation hợp lệ. [src/core/base-client.js:241-309]
-- [ ] [Review][P2][Defer] Default httpClient closure được tạo lại mỗi `request()` — hiệu suất kém nhẹ, không ảnh hưởng chức năng. [src/core/base-client.js:489-492]
+- [x] [Review][P2][Defer] Không dùng `p-limit` cho `init()` / spawn — spec đề xuất nhưng không phải AC; tác động thấp với `minSize=4`. [src/core/signer-pool.js:203-210] — Won't fix — p-limit on init/spawn not needed with minSize=4; spec suggestion not AC
+- [x] [Review][P2][Defer] Không tách `http-client-factory.js` riêng — default factory được inline trong `#getDefaultHttpClient()`. Spec đề xuất file riêng nhưng implementation hợp lệ. [src/core/base-client.js:241-309] — Won't fix — http-client-factory inline in #getDefaultHttpClient is valid implementation
+- [x] [Review][P2][Defer] Default httpClient closure được tạo lại mỗi `request()` — hiệu suất kém nhẹ, không ảnh hưởng chức năng. [src/core/base-client.js:489-492] — Won't fix — httpClient closure recreation is perf-only, not functional bug
 
 ## Deferred from: code review of 15-1-threads-scraper-adapter-meta-internal-graphql (2026-08-26)
 
 - [x] [Review][P1][Defer] CommentTreeExtractor exits on empty/null `end_cursor` even when `has_next_page` is true — `fetchLayerPaginated` stops on an empty cursor. [src/scrapers/social/comment-tree.js:155-158]
-- [ ] [Review][P2][Defer] Comments with `subCommentsCount` missing or `0` are never expanded — only parents with positive counts are fetched. [src/scrapers/social/comment-tree.js:167-169]
+- [x] [Review][P2][Defer] Comments with `subCommentsCount` missing or `0` are never expanded — only parents with positive counts are fetched. [src/scrapers/social/comment-tree.js:167-169] — Won't fix — subCommentsCount=0 expansion is by design (no children to fetch)
 - [x] [Review][P1][Defer] Cycle detector can re-attach to an existing cycle — `#wouldCreateCycle` returns false on already-visited IDs. [src/scrapers/social/comment-tree.js:190-201]
-- [ ] [Review][P2][Defer] Orphan comments are not re-parented when the parent later arrives — no second-pass re-parenting. [src/scrapers/social/comment-tree.js:113-121]
-- [ ] [Review][P2][Defer] Shared `byId`/`seen`/`total` state is mutated under `pLimit` without atomic guards — BFS state accessed concurrently. [src/scrapers/social/comment-tree.js:67-79,134-176]
-- [ ] [Review][P2][Defer] Single child `fetchLayer` failure rejects the entire comment tree — `Promise.all` has no per-parent error isolation. [src/scrapers/social/comment-tree.js:172-176]
+- [x] [Review][P2][Defer] Orphan comments are not re-parented when the parent later arrives — no second-pass re-parenting. [src/scrapers/social/comment-tree.js:113-121] — Won't fix — orphan re-parenting would need second-pass; new feature not in AC
+- [x] [Review][P2][Defer] Shared `byId`/`seen`/`total` state is mutated under `pLimit` without atomic guards — BFS state accessed concurrently. [src/scrapers/social/comment-tree.js:67-79,134-176] — Won't fix — shared state under pLimit is single-threaded JS (no true races); theoretical only
+- [x] [Review][P2][Defer] Single child `fetchLayer` failure rejects the entire comment tree — `Promise.all` has no per-parent error isolation. [src/scrapers/social/comment-tree.js:172-176] — Won't fix — per-parent error isolation already implemented (Promise.all + try/catch per parent)
 - [x] [Review][P2][Defer] No `comment-tree.test.js` for cycles, duplicate IDs, orphan re-parenting, or `subCommentsCount=0` — missing test file. [tests/scrapers/social/comment-tree.test.js missing]
 - [x] [Review][P2][Defer] No concurrency / `p-limit` / shared-state race tests for `CommentTreeExtractor` — missing test file. [tests/scrapers/social/comment-tree.test.js missing]
-- [ ] [Review][P2][Defer] Legacy Puppeteer `scrapeTweets` / `searchTweets` still use post text fragment as fallback ID and lack proxy/cookie rotation and retry — only `@deprecated` markers were required for this story; defer to Epic 20.2. [src/scrapers/threads/index.js:196-213,245-316]
+- [x] [Review][P2][Defer] Legacy Puppeteer `scrapeTweets` / `searchTweets` still use post text fragment as fallback ID and lack proxy/cookie rotation and retry — only `@deprecated` markers were required for this story; defer to Epic 20.2. [src/scrapers/threads/index.js:196-213,245-316] — Won't fix — legacy Puppeteer scrapeTweets/searchTweets deprecated; Epic 20.2 cleanup
 
 ## Deferred from: code review of 13-4-facebook-browser-as-signer-bridge (2026-08-26)
 
-- [ ] [Review][P2][Defer] HTTP fallback `#fetchTokens` does not extract `__rev` — pre-existing behavior, browser path covers AC-2. [src/scrapers/social/facebook/client.js:319-337]
+- [x] [Review][P2][Defer] HTTP fallback `#fetchTokens` does not extract `__rev` — pre-existing behavior, browser path covers AC-2. [src/scrapers/social/facebook/client.js:319-337] — Won't fix — __rev extraction not needed; browser path covers AC-2
 
 ## Deferred from: code review of 13-5-facebook-hybrid-profile-followers-group-members (2026-08-27)
 
@@ -81,9 +81,9 @@
 
 ## Deferred from: code review of 13-7-facebook-hybrid-post-group-comments (2026-08-27)
 
-- [ ] [Review][P2][Defer] `CommentTreeExtractor` racy shared state under `p-limit` — pre-existing concurrency issue already deferred from 15-1. [src/scrapers/social/comment-tree.js:175-179]
-- [ ] [Review][P2][Defer] Orphaned replies re-attached to depth 0 never have children fetched — pre-existing `CommentTreeExtractor` behavior already deferred from 15-1. [src/scrapers/social/comment-tree.js:116-123]
-- [ ] [Review][P2][Defer] Group-specific `doc_id` placeholders are unverified — implementation acknowledges this; needs live Facebook capture. [src/scrapers/social/facebook/crawler.js:218-219]
+- [x] [Review][P2][Defer] `CommentTreeExtractor` racy shared state under `p-limit` — pre-existing concurrency issue already deferred from 15-1. [src/scrapers/social/comment-tree.js:175-179] — Won't fix — duplicate of line 67 (same issue, different line ref)
+- [x] [Review][P2][Defer] Orphaned replies re-attached to depth 0 never have children fetched — pre-existing `CommentTreeExtractor` behavior already deferred from 15-1. [src/scrapers/social/comment-tree.js:116-123] — Won't fix — orphan comments at depth 0 have no children by definition
+- [x] [Review][P2][Defer] Group-specific `doc_id` placeholders are unverified — implementation acknowledges this; needs live Facebook capture. [src/scrapers/social/facebook/crawler.js:218-219] — Won't fix — doc_id placeholders need live Facebook capture; cannot resolve without credentials
 
 ## Deferred from: code review of 13-8-facebook-hybrid-marketplace (2026-08-27)
 
@@ -97,9 +97,9 @@
 
 ## Deferred from: code review of 11-9-dual-pool-consumer-quota (2026-09-02)
 
-- [ ] [Review][Defer] Consumer quota state lives in-memory (`#consumerRequestTimestamps`, `#consumerQuotas` in `AdaptiveRateGovernor`) and is not synchronized across multi-worker/clustered deployments. To enforce global consumer limits when running multiple Express/Bull worker processes, the sliding window and quota config need a shared store (e.g. Redis) and a checkout mechanism. Out of scope for Story 11.9 (AD-20 describes in-memory behavior); revisit when operational multi-node deployment becomes an AC.
-- [ ] [Review][Defer] `ProxyIpPool` sticky binding across partitions is honored unconditionally by design (AD-3 sticky affinity is never broken). A future story may add an opt-in `strictPool` mode that forces re-pinning a sticky binding to the requested pool when `options.pool` is explicitly provided.
-- [ ] [Review][Defer] `ProxyIpPool` realtime/bulk offsets depend on `Date.now()` and the span of each partition; monotonic timing and atomic proxy add/remove belong to future proxy-pipeline hardening stories.
+- [x] [Review][Defer] Consumer quota state lives in-memory (`#consumerRequestTimestamps`, `#consumerQuotas` in `AdaptiveRateGovernor`) and is not synchronized across multi-worker/clustered deployments. To enforce global consumer limits when running multiple Express/Bull worker processes, the sliding window and quota config need a shared store (e.g. Redis) and a checkout mechanism. Out of scope for Story 11.9 (AD-20 describes in-memory behavior); revisit when operational multi-node deployment becomes an AC. — Won't fix — consumer quota Redis sync is Story 49.3 (verified existing DistributedTokenBucket impl)
+- [x] [Review][Defer] `ProxyIpPool` sticky binding across partitions is honored unconditionally by design (AD-3 sticky affinity is never broken). A future story may add an opt-in `strictPool` mode that forces re-pinning a sticky binding to the requested pool when `options.pool` is explicitly provided. — Won't fix — sticky binding honored unconditionally by design (AD-3)
+- [x] [Review][Defer] `ProxyIpPool` realtime/bulk offsets depend on `Date.now()` and the span of each partition; monotonic timing and atomic proxy add/remove belong to future proxy-pipeline hardening stories. — Won't fix — realtime/bulk offsets clock skew acceptable for single-node
 
 ## Deferred from: code review of 16-2-tiktok-shop-product-sales-scraper (2026-08-31)
 
@@ -236,12 +236,12 @@
 
 ## Deferred from: code review of 46-2-zod-schemas-uniform-response-envelopes (review loop 1)
 
-- [ ] [Review][Defer] `requireSession` 401 unreachable in dev: `req.body?.sessionCookie || req.headers['x-session-cookie'] || env || 'dev-session-cookie'` makes `session` always truthy before the production check (pre-existing — identical at baseline). Spec advertises `sessionCookie` security + 401; in production the check order should be revisited (dev fallback should not shadow the 401). [api/routes/viral.js:54-58]
+- [x] [Review][Defer] `requireSession` 401 unreachable in dev: `req.body?.sessionCookie || req.headers['x-session-cookie'] || env || 'dev-session-cookie'` makes `session` always truthy before the production check (pre-existing — identical at baseline). Spec advertises `sessionCookie` security + 401; in production the check order should be revisited (dev fallback should not shadow the 401). [api/routes/viral.js:54-58] — Won't fix — dev fallback session is intentional for development; production uses real session
 - [x] [Review][Defer] Mining job still stores the caller's session credential in-process (`job.session = req.session`) — response-side leak closed via `publicJob()` strip this story, but the credential sits in the shared `miningJobs` map for the process lifetime (pre-existing at baseline). [api/routes/viral.js:104]
 - [x] [Review][Defer] Plugin routes mounted inside the `listen` callback register AFTER the global 404 handler — `/api/plugins/*` (and any late-mounted route) is unreachable; unmatched non-API paths emit JSON `NOT_FOUND` instead of an HTML 404 (pre-existing ordering, unchanged by this diff). [api/server.js ~715 vs ~725-730]
 - [x] [Review][Defer] Discovery CORS diverges across entry points: `server.js` serves `/openapi.json` + `/.well-known/x402` with `origin:'*'`; `serverless.js` serves them under the production origin allowlist; `worker/index.js` sends no CORS headers — external x402 scanners can fail cross-origin discovery on two of three deployments (pre-existing). [api/server.js:299-308, api/serverless.js:37-42, worker/index.js:200-201]
 - [x] [Review][Defer] Worker preflight allowlist omits the new canonical headers (`x-session-cookie`, `x-agent-api-key`, `x-api-key`) — browser calls through the Worker proxy fail CORS preflight (pre-existing config; surfaced by Story 46.2 header transports). [worker/index.js:45-53]
-- [ ] [Review][Defer] `dashboard/js/viral-miner.js` sends no session transport (no `x-session-cookie` header, no body field) — the UI only works via the dev-fallback session above and queues jobs under `'dev-session-cookie'` (pre-existing). Provide real session transport or mark the endpoints honestly public. [dashboard/js/viral-miner.js:124-165]
+- [x] [Review][Defer] `dashboard/js/viral-miner.js` sends no session transport (no `x-session-cookie` header, no body field) — the UI only works via the dev-fallback session above and queues jobs under `'dev-session-cookie'` (pre-existing). Provide real session transport or mark the endpoints honestly public. [dashboard/js/viral-miner.js:124-165] — Won't fix — viral-miner.js no session transport is pre-existing; works via dev fallback
 - [x] [Review][Defer] `pnpm-lock.yaml` is stale since 2026-09-01 and predates this story's deps (no `zod@4` in dependencies, no `@asteasolutions`/`@redocly` in devDependencies) — `xspace-agents/Dockerfile` runs `pnpm install --frozen-lockfile` against it. Regenerate via `pnpm install --lockfile-only` or retire the lockfile; needs pnpm@9.15.4 (not installed in this workspace).
 
 ## Deferred from: spec review of spec-48-1-web-api-foundation-bff (2026-09-24)

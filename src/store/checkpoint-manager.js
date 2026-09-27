@@ -88,7 +88,19 @@ export async function listCheckpoints(options = {}) {
 
   const where = {};
   if (platform) where.platform = String(platform);
-  if (targetType) where.targetType = String(targetType);
+  if (targetType) {
+    const t = String(targetType).trim();
+    if (!/^[a-z_][a-z0-9_]{1,49}$/i.test(t)) {
+      throw new PlatformError({
+        type: ErrorTypes.INVALID_ARGS,
+        code: 'XACT_4001',
+        message: 'targetType must be a non-empty alphanumeric string (max 50 chars)',
+        statusCode: 400,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+      });
+    }
+    where.targetType = t;
+  }
   if (status) where.status = String(status);
   if (targetKey) {
     const trimmed = String(targetKey).trim();

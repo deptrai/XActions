@@ -393,3 +393,72 @@ describe('Story 10.3: Cursor Pagination & Large Export', () => {
     expect(content.trim()).toBe(CSV_COLUMNS.join(','));
   });
 });
+
+describe('Path traversal guard (defer item)', () => {
+  it('rejects outputPath outside working directory', async () => {
+    const { exportDataset } = await import('../../src/utils/exporter.js');
+    await expect(
+      exportDataset({
+        outputPath: '/tmp/evil.jsonl',
+        format: 'jsonl',
+        prisma: { post: { count: async () => 0, findMany: async () => [] } },
+      })
+    ).rejects.toThrowError(/outputPath must resolve inside/);
+  });
+
+  it('rejects outputPath with path traversal sequences', async () => {
+    const { exportDataset } = await import('../../src/utils/exporter.js');
+    await expect(
+      exportDataset({
+        outputPath: '../../../etc/passwd',
+        format: 'jsonl',
+        prisma: { post: { count: async () => 0, findMany: async () => [] } },
+      })
+    ).rejects.toThrowError(/outputPath must resolve inside/);
+  });
+
+  it('accepts outputPath inside working directory', async () => {
+    const { exportDataset } = await import('../../src/utils/exporter.js');
+    const tmp = await import('node:fs');
+    const out = './test-export-tmp.jsonl';
+    const res = await exportDataset({
+      outputPath: out,
+      format: 'jsonl',
+      includeComments: false,
+      prisma: { post: { count: async () => 0, findMany: async () => [] } },
+    });
+    expect(res.outputPath).toBeTruthy();
+    await tmp.promises.unlink(res.outputPath).catch(() => {});
+  });
+});
+
+describe('Edge cases (defer item)', () => {
+  it('handles exact-multiple-of-100 pagination', async () => {
+    const { exportDataset } = await import('../../src/utils/exporter.js');
+    const posts = Array.from({ length: 200 }, (_, i) => ({
+      id: `p${i}`, platform: 'test', title: `t${i}`, content: 'c', authorName: 'a',
+      crawledAt: new Date('2026-01-01'),
+    }));
+    // Cursor-based pagination: cursor.id → skip past it, take 100
+    let callCount = 0;
+    const prisma = {
+      post: {
+        count: async () => 200,
+        findMany: async (query) => {
+          callCount++;
+          const { cursor, take = 100 } = query;
+          const startIdx = cursor ? posts.findIndex(p => p.id === cursor.id) + 1 : 0;
+          return posts.slice(startIdx, startIdx + take);
+        },
+      },
+      comment: { count: async () => 0, findMany: async () => [] },
+    };
+    const tmp = await import('node:fs');
+    const out = './test-export-200.jsonl';
+    // 200 posts = exactly 2 pages of 100 → exact-multiple edge case
+    const res = await exportDataset({ outputPath: out, prisma, format: 'jsonl', includeComments: false });
+    expect(res.rowCount).toBe(200);
+    expect(callCount).toBe(3); // page 1 (100), page 2 (100), page 3 (empty → break)
+    await tmp.promises.unlink(res.outputPath).catch(() => {});
+  });
+});
