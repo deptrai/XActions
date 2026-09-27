@@ -403,9 +403,25 @@ export class PumpFunClient extends AbstractApiClient {
     const cached = this.#cacheGet(cacheKey);
     if (cached) return cached;
 
-    const url = `${this.baseUrl}/coins/${encodeURIComponent(mint)}`;
-    const { status, data } = await this.#apiGet(url, options);
+    // Primary endpoint /coins/{mint} was retired upstream (observed 2026-09-27 —
+    // 404s even for live mints). Fall back to /coins?search=<mint>&limit=…
+    // which still works; filter the result set to the exact mint so a
+    // mis-matched prefix match never surfaces wrong data.
+    const primaryUrl = `${this.baseUrl}/coins/${encodeURIComponent(mint)}`;
+    let { status, data } = await this.#apiGet(primaryUrl, options);
+
     if (status === 404) {
+      const fallbackUrl = `${this.baseUrl}/coins?search=${encodeURIComponent(mint)}&limit=10&sort=market_cap&order=DESC`;
+      const fb = await this.#apiGet(fallbackUrl, options);
+      if (fb.status === 200 && Array.isArray(fb.data)) {
+        const exact = fb.data.find(
+          (c) => c && typeof c === 'object' && c.mint === mint,
+        );
+        if (exact) {
+          this.#cacheSet(cacheKey, exact, 60_000);
+          return exact;
+        }
+      }
       throw new PlatformError({
         type: ErrorTypes.NOT_FOUND,
         code: 'XACT_4004',
