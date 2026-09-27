@@ -36,3 +36,31 @@
 - `ApiResult<T>` union requires `'data' in res` narrowing for error access
 - Next.js 15 `outputFileTracingRoot` needed for monorepo lockfile resolution
 - Seeded fallback data pattern works well for auth-protected backend endpoints
+
+---
+
+## Epic 49 Session Continuation — Defer Items Triaged (2026-09-27)
+
+Additional defer item resolution performed during Epic 49+50 wrap-up:
+
+### CommentTreeExtractor — Story 49.2 verified
+- `tests/scrapers/social/comment-tree.test.js` rewritten with 10 real tests (was 4 mock-only tests)
+- Empty cursor pagination fix verified working (`fetchLayerPaginated` retries same cursor on empty `end_cursor` with `has_next_page=true`)
+- Cycle detector fix verified (`#wouldCreateCycle` returns true on already-visited nodes)
+- Per-parent error isolation working (single fetchLayer failure doesn't kill tree)
+- Orphan re-attach to depth 0 verified
+
+### Proxy injection tests — env fix
+- `tests/scrapers/proxy-injection.test.js` PROXY_URL fallback tests fixed
+- Root cause: `socksnode.com` proxies can't be quarantined (pool-level guard for rotating gateways)
+- Fix: use `emptyPool()` (empty ProxyIpPool) instead of draining global pool — deterministic
+- `emptyPool()` added; `restoreGlobalPool` updated to re-add removed proxies
+
+### Sprint status
+- epic-48, epic-50 status flags flipped to `done` (were `in-progress` despite all stories done)
+- All epics 1-50 now `done` in sprint-status.yaml
+
+### Deferred items ledger update
+- 10 items marked resolved this session (49.2 P1 fixes, 49.5 locking, 49.1 route order/CORS/session/lockfile)
+- 27 remaining P2 items — all design/out-of-scope, not bugs
+- No P1 items remain open in deferred-work.md
