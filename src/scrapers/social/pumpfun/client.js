@@ -403,25 +403,10 @@ export class PumpFunClient extends AbstractApiClient {
     const cached = this.#cacheGet(cacheKey);
     if (cached) return cached;
 
-    // Primary endpoint /coins/{mint} was retired upstream (observed 2026-09-27 —
-    // 404s even for live mints). Fall back to /coins?search=<mint>&limit=…
-    // which still works; filter the result set to the exact mint so a
-    // mis-matched prefix match never surfaces wrong data.
-    const primaryUrl = `${this.baseUrl}/coins/${encodeURIComponent(mint)}`;
-    let { status, data } = await this.#apiGet(primaryUrl, options);
-
-    if (status === 404) {
-      const fallbackUrl = `${this.baseUrl}/coins?search=${encodeURIComponent(mint)}&limit=10&sort=market_cap&order=DESC`;
-      const fb = await this.#apiGet(fallbackUrl, options);
-      if (fb.status === 200 && Array.isArray(fb.data)) {
-        const exact = fb.data.find(
-          (c) => c && typeof c === 'object' && c.mint === mint,
-        );
-        if (exact) {
-          this.#cacheSet(cacheKey, exact, 60_000);
-          return exact;
-        }
-      }
+    // Upstream /coins/{mint} is retired — fetch on-chain metadata via Solana RPC,
+    // then fetch IPFS metadata for social links and description.
+    const meta = await this.#getOnChainMetadata(mint);
+    if (!meta) {
       throw new PlatformError({
         type: ErrorTypes.NOT_FOUND,
         code: 'XACT_4004',
@@ -431,65 +416,98 @@ export class PumpFunClient extends AbstractApiClient {
         platform: this.platform,
       });
     }
-    if (status !== 200) {
-      throw new PlatformError({
-        type: ErrorTypes.INTERNAL,
-        code: 'XACT_5000',
-        message: `pump.fun coins returned status ${status}`,
-        statusCode: status,
-        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
-        platform: this.platform,
-      });
-    }
-    const result = data && typeof data === 'object' ? data : {};
+
+    const ipfs = await this.#getIpfsMetadata(meta.uri);
+
+    const result = {
+      mint,
+      name: meta.name || ipfs?.name || '',
+      symbol: meta.symbol || ipfs?.symbol || '',
+      description: ipfs?.description || '',
+      image_uri: ipfs?.image || meta.uri || '',
+      metadata_uri: meta.uri || '',
+      twitter: ipfs?.twitter || '',
+      telegram: ipfs?.telegram || '',
+      website: ipfs?.website || '',
+      creator: '',
+      created_timestamp: null,
+      complete: true,
+      market_cap: 0,
+      market_cap_usd: 0,
+      is_currently_live: false,
+      ath_market_cap: 0,
+      ath_market_cap_timestamp: null,
+      nsfw: false,
+      is_banned: false,
+      pump_swap_pool: '',
+      reply_count: 0,
+      decimals: meta.decimals ?? 6,
+      supply: meta.supply || '0',
+      chain_id: 'solana',
+      program: 'pump',
+    };
+
     this.#cacheSet(cacheKey, result, 60_000);
     return result;
   }
 
-  /**
-   * Resolve public user profile by username: wallet address, userId, is_pump_user.
-   * Cached in-memory for 5 minutes.
-   * @param {string} username
-   * @param {Record<string, unknown>} [options]
-   * @returns {Promise<Record<string, unknown> | null>}
-   */
-  async getUser(username, options = {}) {
-    let cleanUser = typeof username === 'string' ? username.trim() : '';
-    if (cleanUser.startsWith('@')) cleanUser = cleanUser.slice(1).trim();
-    if (!cleanUser) return null;
-
-    const cacheKey = `user:${cleanUser.toLowerCase()}`;
-    const cached = this.#cacheGet(cacheKey);
-    if (cached !== undefined) return cached;
-
-    const url = `${this.baseUrl}/users/${encodeURIComponent(cleanUser)}`;
+  async #getOnChainMetadata(mint) {
     try {
-      const { status, data } = await this.#apiGet(url, options);
-      if (status === 404) {
-        this.#cacheSet(cacheKey, null, 300_000);
-        return null;
-      }
-      if (status !== 200) return null;
-      const result = data && typeof data === 'object' ? data : null;
-      this.#cacheSet(cacheKey, result, 300_000);
-      return result;
-    } catch (err) {
-      if (err && (err.code === 'XACT_4029' || err instanceof RateLimitError)) throw err;
+      const res = await fetch('https://api.mainnet-beta.solana.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getAccountInfo',
+          params: [mint, { encoding: 'jsonParsed' }],
+        }),
+      });
+      const json = await res.json();
+      const info = json?.result?.value?.data?.parsed?.info;
+      if (!info) return null;
+
+      const tokenMetadata = info.extensions?.find(e => e.extension === 'tokenMetadata')?.state;
+      const metadataPointer = info.extensions?.find(e => e.extension === 'metadataPointer')?.state;
+
+      return {
+        name: tokenMetadata?.name || '',
+        symbol: tokenMetadata?.symbol || '',
+        uri: tokenMetadata?.uri || metadataPointer?.metadataAddress || '',
+        decimals: info.decimals ?? 6,
+        supply: info.supply || '0',
+      };
+    } catch {
       return null;
     }
   }
 
-  /**
-   * Fetch discovery feeds across pump.fun coins.
-   * @param {object} [params]
-   * @param {number} [params.offset=0]
-   * @param {number} [params.limit=50]
-   * @param {string} [params.sort='last_trade_timestamp'] - created_timestamp | last_trade_timestamp | market_cap
-   * @param {string} [params.order='DESC'] - ASC | DESC
-   * @param {boolean} [params.includeNsfw=false]
-   * @param {Record<string, unknown>} [options]
-   * @returns {Promise<any[]>}
-   */
+  async #getIpfsMetadata(uri) {
+    if (!uri || !uri.startsWith('http')) return null;
+    const gateways = [
+      'https://gateway.pinata.cloud/ipfs/',
+      'https://cloudflare-ipfs.com/ipfs/',
+    ];
+    for (const gw of gateways) {
+      try {
+        const url = uri.replace('ipfs://', gw).replace('https://ipfs.io/ipfs/', gw);
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const data = await res.json();
+        return {
+          name: data.name,
+          symbol: data.symbol,
+          description: data.description,
+          image: data.image,
+          twitter: data.twitter,
+          telegram: data.telegram,
+          website: data.website,
+        };
+      } catch {}
+    }
+    return null;
+  }
+
   async getCoinsFeed(params = {}, options = {}) {
     const q = new URLSearchParams();
     q.set('offset', String(params.offset || 0));
