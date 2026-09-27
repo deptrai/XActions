@@ -638,11 +638,12 @@ app.get('/changelog', (req, res) => {
 
 // Story 48.10 / Deployment — Forward all non-API web traffic to Next.js App Router (port 3000)
 // This enables xactions.medirus.online to serve the Next.js frontend through port 3001
-const WEB_APP_URL = process.env.WEB_APP_URL || 'http://127.0.0.1:3000';
+// localhost (not 127.0.0.1) — Next dev binds IPv6 ::1 only; Node fetch resolves AAAA first
+const WEB_APP_URL = process.env.WEB_APP_URL || 'http://localhost:3000';
 app.use(async (req, res, next) => {
   // Skip API routes, socket.io, webhooks, well-known, static files
   if (
-    req.path.startsWith('/api/') ||
+    (req.path.startsWith('/api/') && !req.path.startsWith('/api/ipfs/')) || // /api/ipfs/* is a Next.js BFF image proxy
     req.path.startsWith('/socket.io/') ||
     req.path.startsWith('/.well-known/') ||
     req.path === '/openapi.json' ||

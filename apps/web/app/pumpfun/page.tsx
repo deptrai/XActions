@@ -10,6 +10,7 @@ import {
 import type { ApiResult } from '@xactions/api-client';
 import { api } from '@/lib/api';
 import { isAsyncAccepted, pollOperation } from '@/lib/scrape-poll';
+import { proxiedImageUrl } from '@/lib/ipfs-image';
 import type { AsyncAccepted } from '@/lib/scrape-poll';
 
 // ---------------------------------------------------------------------------
@@ -512,8 +513,8 @@ function PumpFunInner() {
           {mintData?.coinMeta && !mintLoading && (
             <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3">
               <div className="flex items-start gap-3">
-                {mintData.coinMeta.imageUri
-                  ? <img src={mintData.coinMeta.imageUri} alt="" className="w-14 h-14 rounded-lg object-cover" />
+                {proxiedImageUrl(mintData.coinMeta.imageUri)
+                  ? <img src={proxiedImageUrl(mintData.coinMeta.imageUri) || undefined} alt="" className="w-14 h-14 rounded-lg object-cover" referrerPolicy="no-referrer" />
                   : <div className="w-14 h-14 rounded-lg bg-slate-100 dark:bg-slate-800" />}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -594,8 +595,8 @@ function PumpFunInner() {
             {feedItems.map((it, i) => (
               <div key={it.mint || i} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2.5">
                 <div className="flex items-center gap-2.5">
-                  {it.imageUri
-                    ? <img src={it.imageUri} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                  {proxiedImageUrl(it.imageUri)
+                    ? <img src={proxiedImageUrl(it.imageUri) || undefined} alt="" className="w-10 h-10 rounded-lg object-cover" referrerPolicy="no-referrer" />
                     : <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800" />}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{it.name || '—'}</p>
