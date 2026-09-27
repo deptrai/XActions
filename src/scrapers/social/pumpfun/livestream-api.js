@@ -45,13 +45,28 @@ export class LivestreamApiClient {
   async #apiRequest(url, options = {}) {
     const headers = {
       'accept': 'application/json',
+      // Chrome UA — Cloudflare blocks default Node fetch UA (error 1015)
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36',
       ...(options.headers || {}),
       // Auth headers are optional — public endpoints work without them
       ...(options.noAuth ? {} : this.#safeAuthHeaders()),
     };
 
     try {
-      const res = await this.fetchFn(url, { ...options, headers });
+      let res = await this.fetchFn(url, { ...options, headers });
+      // Cloudflare TLS-fingerprint block (403 or 429/error-1015) → retry via curl
+      if (res.status === 403 || res.status === 429) {
+        const text = await res.text().catch(() => '');
+        if (res.status === 403 || text.includes('1015')) {
+          const { createCurlTransport } = await import('../../../core/curl-transport.js');
+          const transport = createCurlTransport('pumpfun');
+          const curlRes = await transport({ url, method: 'GET', headers, timeout: 15000 });
+          res = { status: curlRes.status, ok: curlRes.status >= 200 && curlRes.status < 300, json: async () => curlRes.data, text: async () => (typeof curlRes.data === 'string' ? curlRes.data : JSON.stringify(curlRes.data)) };
+        } else {
+          // Non-1015 429 — re-wrap as Response-like for error handling below
+          res = { status: res.status, ok: false, json: async () => ({}), text: async () => text };
+        }
+      }
       if (res.status === 401) {
         throw new PlatformError({
           type: ErrorTypes.AUTH_REQUIRED,

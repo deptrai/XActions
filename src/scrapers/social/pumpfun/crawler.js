@@ -16,6 +16,7 @@ import { KolscanResolver } from './kolscan.js';
 import { LivestreamPoller } from './livestream.js';
 import { PumpFunAuth } from './auth.js';
 import { globalSessionManager } from '../../../core/session-manager.js';
+import { globalAccountPool } from '../../../core/account-pool.js';
 import { LivestreamApiClient } from './livestream-api.js';
 import { PumpFunLivechat } from './livechat.js';
 import { PumpFunMedia } from './media.js';
@@ -103,6 +104,16 @@ export class PumpFunCrawler extends AbstractCrawler {
     this.livestreamApi = deps.livestreamApi instanceof LivestreamApiClient
       ? deps.livestreamApi
       : new LivestreamApiClient(this.auth, { fetchFn: deps.fetchFn });
+
+    // Env-session fallback — when PUMPFUN_AUTH_TOKEN is set, register the
+    // default account into the account pool so auth-required actions resolve
+    // an accountId in server contexts (API async lane) with no stored account.
+    if (!this.accountPool && this.auth.hasSession()) {
+      try {
+        this.accountPool = globalAccountPool;
+        globalAccountPool.registerAccounts('pumpfun', ['default'], {});
+      } catch { /* account pool registration is best-effort */ }
+    }
     this.media = deps.media instanceof PumpFunMedia
       ? deps.media
       : new PumpFunMedia();
@@ -245,6 +256,19 @@ export class PumpFunCrawler extends AbstractCrawler {
       outputType: '{ commentId, timestamp, success }',
       example: { mintAddress: '5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump', text: 'Greetings!' },
       handler: (args, session) => this.postMintReply(args, session),
+    });
+
+    // ── Action: fetch_mint_comments ──
+    this.registerAction({
+      action: 'fetch_mint_comments',
+      description: 'Fetch comments/chat history for a pump.fun mint via Socket.IO livechat',
+      category: 'social',
+      requiresAuth: false,
+      requiredArgs: ['mintAddress'],
+      optionalArgs: ['limit', 'before'],
+      outputType: '{ comments: Array, count: number }',
+      example: { mintAddress: '5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump', limit: 50 },
+      handler: (args, session) => this.fetchMintComments(args, session),
     });
   }
 

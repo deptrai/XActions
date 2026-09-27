@@ -134,6 +134,12 @@ export class PumpFunClient extends AbstractApiClient {
     // in-memory fallback). Throws XACT_4029 + retryAfterMs when over quota so the
     // caller backs off instead of hammering upstream.
     await this.#consumeRateToken(options);
+    // Cloudflare blocks default Node UA (error 1015) — always send a Chrome UA
+    options.headers = {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36',
+      'accept': 'application/json',
+      ...(options.headers || {}),
+    };
     let response;
     try {
       response = await this.request('GET', url, { skipResponseValidation: true, ...options });
@@ -208,7 +214,10 @@ export class PumpFunClient extends AbstractApiClient {
    */
   #isTlsBlock(err) {
     const status = err?.statusCode ?? err?.status ?? 0;
-    return status === 403;
+    if (status === 403) return true;
+    // Cloudflare error 1015 — rate limited per TLS fingerprint — retry via curl
+    if (status === 429 && typeof err?.details === 'string' && err.details.includes('1015')) return true;
+    return false;
   }
 
   /**

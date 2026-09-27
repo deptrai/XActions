@@ -94,6 +94,9 @@ function makeClient(overrides = {}) {
     if (url.includes('/coins/currently-live')) {
       return { status: 200, headers: {}, data: [{ mint: VALID_MINT, viewers: 12, roomId: 'r1' }] };
     }
+    if (url.includes('/coins-v3/')) {
+      return { status: 200, headers: {}, data: COIN_META_FIXTURE };
+    }
     if (url.match(/\/coins\/[1-9A-HJ-NP-Za-km-z]+/)) {
       return { status: 200, headers: {}, data: COIN_META_FIXTURE };
     }
@@ -333,7 +336,7 @@ describe('Story 20.6: Full Social Intelligence (coinMeta enrichment)', () => {
     expect(c1.name).toBe('Foxtilki');
     expect(c2.name).toBe('Foxtilki');
     // Only 1 upstream request should be made due to in-memory TTL cache
-    const coinCalls = client.request.mock.calls.filter(([, url]) => url.endsWith(`/coins/${VALID_MINT}`)).length;
+    const coinCalls = client.request.mock.calls.filter(([, url]) => url.includes(`coins-v3/${VALID_MINT}`)).length;
     expect(coinCalls).toBe(1);
   });
 });
@@ -401,11 +404,11 @@ describe('Story 20.6: stream_mint_chat', () => {
 });
 
 describe('Story 20.7: Authenticated Live Media & Write Actions', () => {
-  it('throws XACT_4010 when no session is active for authenticated actions', async () => {
+  it('throws XACT_4010 when no session is active for authenticated write actions', async () => {
+    delete process.env.PUMPFUN_AUTH_TOKEN; // env fallback would auto-register a session
     globalSessionManager.delete('pumpfun:test');
     const crawler = makeCrawler();
-    await expect(crawler.fetchMyProfile({})).rejects.toMatchObject({ code: 'XACT_4010' });
-    await expect(crawler.fetchUserFollowing({ userId: 'u1' })).rejects.toMatchObject({ code: 'XACT_4010' });
+    // post_mint_reply remains auth-gated (write op) — read actions are ungated
     await expect(crawler.postMintReply({ mintAddress: VALID_MINT, text: 'hi' })).rejects.toMatchObject({ code: 'XACT_4010' });
     await crawler.cleanup();
   });

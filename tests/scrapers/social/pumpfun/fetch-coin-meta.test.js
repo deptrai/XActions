@@ -37,6 +37,9 @@ const COIN_META_FIXTURE = {
 function makeClient(overrides = {}) {
   const client = new PumpFunClient({});
   client.request = vi.fn(async (method, url) => {
+    if (url.includes('/coins-v3/')) {
+      return { status: 200, headers: {}, data: COIN_META_FIXTURE };
+    }
     if (url.match(/\/coins\/[1-9A-HJ-NP-Za-km-z]+/)) {
       return { status: 200, headers: {}, data: COIN_META_FIXTURE };
     }
@@ -71,9 +74,9 @@ describe('Story 50.6 — pumpfun fetch_coin_meta action', () => {
     expect(r.coinMeta.isCurrentlyLive).toBe(true);
     expect(r.coinMeta.athMarketCap).toBe(71000);
 
-    // Only the /coins/{mint} endpoint is hit — never positions/replies/livestream
+    // Only the coin-meta endpoint is hit — never positions/replies/livestream
     const urls = crawler.client.request.mock.calls.map(c => c[1]);
-    expect(urls.every(u => u.includes('/coins/'))).toBe(true);
+    expect(urls.every(u => u.includes('/coins-v3/') || u.includes('/coins/'))).toBe(true);
     expect(urls.some(u => u.includes('/mint-positions'))).toBe(false);
     expect(urls.some(u => u.includes('/replies'))).toBe(false);
   });

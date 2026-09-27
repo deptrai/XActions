@@ -11,11 +11,29 @@ import { AuthSessionExpiredError, PlatformError, ErrorTypes } from '../../../cor
 
 /**
  * PumpFunAuth — resolves and injects authenticated session data.
+ * Session sources (in priority order):
+ *   1. globalSessionManager (registered via PumpFunBrowserBridge)
+ *   2. env vars: PUMPFUN_AUTH_TOKEN (+ optional PUMPFUN_DEVICE_ID) — set at boot
  */
 export class PumpFunAuth {
   /** @param {string} accountId - unique account identifier (e.g., 'default') */
   constructor(accountId = 'default') {
     this.accountId = `pumpfun:${accountId}`;
+    // Env fallback — register once at construction if no session exists yet
+    if (!globalSessionManager.has(this.accountId) && process.env.PUMPFUN_AUTH_TOKEN) {
+      globalSessionManager.set(this.accountId, {
+        accountId: this.accountId,
+        platform: 'pumpfun',
+        jwt: process.env.PUMPFUN_AUTH_TOKEN,
+        deviceId: process.env.PUMPFUN_DEVICE_ID || null,
+        userId: process.env.PUMPFUN_USER_ID || null,
+        walletAddress: process.env.PUMPFUN_WALLET || null,
+        cookies: process.env.PUMPFUN_AUTH_TOKEN ? `auth_token=${process.env.PUMPFUN_AUTH_TOKEN}` : '',
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36',
+        source: 'env',
+        updatedAt: Date.now(),
+      });
+    }
   }
 
   /**
