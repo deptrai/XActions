@@ -215,8 +215,11 @@ export class PumpFunClient extends AbstractApiClient {
   #isTlsBlock(err) {
     const status = err?.statusCode ?? err?.status ?? 0;
     if (status === 403) return true;
-    // Cloudflare error 1015 — rate limited per TLS fingerprint — retry via curl
-    if (status === 429 && typeof err?.details === 'string' && err.details.includes('1015')) return true;
+    // Cloudflare error 1015 — rate limited per TLS fingerprint — retry via curl.
+    // details may be a CF JSON envelope object or an HTML string.
+    let det = err?.details;
+    if (det && typeof det === 'object') det = JSON.stringify(det);
+    if (status === 429 && typeof det === 'string' && (det.includes('1015') || det.includes('cloudflare_error'))) return true;
     return false;
   }
 
