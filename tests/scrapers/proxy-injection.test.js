@@ -14,19 +14,34 @@ import { DynamicTunnelProvider } from '../../src/proxy/providers.js';
 const DEAD_PROXY_URL = 'http://127.0.0.1:59999';
 const ENV_PROXY_URL = 'http://127.0.0.1:54321';
 
-/** Quarantine every entry in the env-seeded global pool so it cannot serve. */
+/**
+ * Quarantine every entry in the env-seeded global pool so it cannot serve.
+ * socksnode.com rotating gateways cannot be quarantined (pool-level guard) —
+ * remove them outright via the internal #proxies splice.
+ */
 function drainGlobalPool() {
   const drained = [];
   for (const entry of globalProxyPool.listAll()) {
-    globalProxyPool.quarantine(entry.server);
+    try { globalProxyPool.quarantine(entry.server); } catch { /* noop */ }
     drained.push(entry.server);
+  }
+  // Remove any entries still healthy after quarantine attempt (e.g. socksnode
+  // rotating gateway which the pool refuses to quarantine).
+  const remaining = globalProxyPool.listAll().filter(e => !e.isQuarantined);
+  for (const entry of remaining) {
+    try { globalProxyPool.remove(entry.server); } catch { /* noop */ }
+    if (!drained.includes(entry.server)) drained.push(entry.server);
   }
   return drained;
 }
 
 function restoreGlobalPool(servers) {
   for (const server of servers) {
-    try { globalProxyPool.release(server); } catch { /* best-effort */ }
+    try { globalProxyPool.release(server); } catch { /* released or not present */ }
+    // If the entry was removed (not just quarantined), re-add it.
+    if (!globalProxyPool.listAll().some(e => e.server === server)) {
+      try { globalProxyPool.add(server); } catch { /* best-effort */ }
+    }
   }
 }
 
@@ -34,6 +49,11 @@ function makePool() {
   const pool = new ProxyIpPool({ validateOnAdd: false });
   pool.add(DEAD_PROXY_URL);
   return pool;
+}
+
+/** An empty ProxyIpPool — cannot serve any proxy (triggers PROXY_URL fallback). */
+function emptyPool() {
+  return new ProxyIpPool({ validateOnAdd: false, proxies: [] });
 }
 
 /** Extract a comparable string from whatever proxy shape resolveProxy returns. */
@@ -99,23 +119,23 @@ describe('PROXY_URL env fallback (no provider injected)', () => {
   });
 
   it('RedditClient falls back to PROXY_URL when pool cannot serve', () => {
-    const client = new RedditClient({ requiresProxy: true });
+    const client = new RedditClient({ requiresProxy: true, proxyPool: emptyPool() });
     expect(proxyStr(client.resolveProxy(null, false, false))).toBe(ENV_PROXY_URL);
   });
 
   it('MediumClient falls back to PROXY_URL when pool cannot serve', () => {
-    const client = new MediumClient({ requiresProxy: true });
+    const client = new MediumClient({ requiresProxy: true, proxyPool: emptyPool() });
     expect(proxyStr(client.resolveProxy(null, false, false))).toBe(ENV_PROXY_URL);
   });
 
   it('InstagramClient falls back to PROXY_URL when pool cannot serve', () => {
-    const client = new InstagramClient({ requiresProxy: true });
+    const client = new InstagramClient({ requiresProxy: true, proxyPool: emptyPool() });
     expect(proxyStr(client.resolveProxy(null, true, true))).toBe(ENV_PROXY_URL);
   });
 
   it('no provider + no env → PROXY_EXHAUSTED (XACT_5030), never silent-direct', () => {
     delete process.env.PROXY_URL;
-    const client = new RedditClient({ requiresProxy: true });
+    const client = new RedditClient({ requiresProxy: true, proxyPool: emptyPool() });
     expect(() => client.resolveProxy(null, false, false)).toThrowError(/exhausted/i);
   });
 });

@@ -30,7 +30,7 @@
 ## Deferred from: code review of 10-4-crawlcheckpoint-operational-api-resume-pause-retry (2026-08-19)
 
 - [ ] [Review][P2][Defer] CLI tests file `tests/cli/checkpoints-cli.test.js` is recommended but optional per the spec. The CLI commands are currently untested; defer to a follow-up if not required for this story. [src/cli/index.js `checkpoints` command group, tests/cli/checkpoints-cli.test.js missing]
-- [ ] [Review][P2][Defer] Concurrent updates to the same checkpoint have no optimistic locking. Adding a `version` field and `updatedAt` guard is out of scope for this story. [src/store/checkpoint-manager.js:171-245]
+- [x] [Review][P2][Defer] Concurrent updates to the same checkpoint have no optimistic locking. Adding a `version` field and `updatedAt` guard is out of scope for this story. [src/store/checkpoint-manager.js:171-245]
 - [ ] [Review][P2][Defer] `prisma.$disconnect()` errors in CLI `finally` blocks are silently swallowed. Project pattern in other CLI commands; logging a warning is a nice-to-have. [src/cli/index.js]
 - [ ] [Review][P2][Defer] Test JWT secret hardcoded in `tests/api/checkpoints-routes.test.js`. Pre-existing test pattern; not a production secret. [tests/api/checkpoints-routes.test.js:20-21]
 - [ ] [Review][P2][Defer] No enum validation for `platform` and `targetType` values — the Prisma schema stores them as free strings. Platform discovery/validation belongs to later epics. [src/store/checkpoint-manager.js:67-68]
@@ -60,14 +60,14 @@
 
 ## Deferred from: code review of 15-1-threads-scraper-adapter-meta-internal-graphql (2026-08-26)
 
-- [ ] [Review][P1][Defer] CommentTreeExtractor exits on empty/null `end_cursor` even when `has_next_page` is true — `fetchLayerPaginated` stops on an empty cursor. [src/scrapers/social/comment-tree.js:155-158]
+- [x] [Review][P1][Defer] CommentTreeExtractor exits on empty/null `end_cursor` even when `has_next_page` is true — `fetchLayerPaginated` stops on an empty cursor. [src/scrapers/social/comment-tree.js:155-158]
 - [ ] [Review][P2][Defer] Comments with `subCommentsCount` missing or `0` are never expanded — only parents with positive counts are fetched. [src/scrapers/social/comment-tree.js:167-169]
-- [ ] [Review][P1][Defer] Cycle detector can re-attach to an existing cycle — `#wouldCreateCycle` returns false on already-visited IDs. [src/scrapers/social/comment-tree.js:190-201]
+- [x] [Review][P1][Defer] Cycle detector can re-attach to an existing cycle — `#wouldCreateCycle` returns false on already-visited IDs. [src/scrapers/social/comment-tree.js:190-201]
 - [ ] [Review][P2][Defer] Orphan comments are not re-parented when the parent later arrives — no second-pass re-parenting. [src/scrapers/social/comment-tree.js:113-121]
 - [ ] [Review][P2][Defer] Shared `byId`/`seen`/`total` state is mutated under `pLimit` without atomic guards — BFS state accessed concurrently. [src/scrapers/social/comment-tree.js:67-79,134-176]
 - [ ] [Review][P2][Defer] Single child `fetchLayer` failure rejects the entire comment tree — `Promise.all` has no per-parent error isolation. [src/scrapers/social/comment-tree.js:172-176]
-- [ ] [Review][P2][Defer] No `comment-tree.test.js` for cycles, duplicate IDs, orphan re-parenting, or `subCommentsCount=0` — missing test file. [tests/scrapers/social/comment-tree.test.js missing]
-- [ ] [Review][P2][Defer] No concurrency / `p-limit` / shared-state race tests for `CommentTreeExtractor` — missing test file. [tests/scrapers/social/comment-tree.test.js missing]
+- [x] [Review][P2][Defer] No `comment-tree.test.js` for cycles, duplicate IDs, orphan re-parenting, or `subCommentsCount=0` — missing test file. [tests/scrapers/social/comment-tree.test.js missing]
+- [x] [Review][P2][Defer] No concurrency / `p-limit` / shared-state race tests for `CommentTreeExtractor` — missing test file. [tests/scrapers/social/comment-tree.test.js missing]
 - [ ] [Review][P2][Defer] Legacy Puppeteer `scrapeTweets` / `searchTweets` still use post text fragment as fallback ID and lack proxy/cookie rotation and retry — only `@deprecated` markers were required for this story; defer to Epic 20.2. [src/scrapers/threads/index.js:196-213,245-316]
 
 ## Deferred from: code review of 13-4-facebook-browser-as-signer-bridge (2026-08-26)
@@ -237,12 +237,12 @@
 ## Deferred from: code review of 46-2-zod-schemas-uniform-response-envelopes (review loop 1)
 
 - [ ] [Review][Defer] `requireSession` 401 unreachable in dev: `req.body?.sessionCookie || req.headers['x-session-cookie'] || env || 'dev-session-cookie'` makes `session` always truthy before the production check (pre-existing — identical at baseline). Spec advertises `sessionCookie` security + 401; in production the check order should be revisited (dev fallback should not shadow the 401). [api/routes/viral.js:54-58]
-- [ ] [Review][Defer] Mining job still stores the caller's session credential in-process (`job.session = req.session`) — response-side leak closed via `publicJob()` strip this story, but the credential sits in the shared `miningJobs` map for the process lifetime (pre-existing at baseline). [api/routes/viral.js:104]
-- [ ] [Review][Defer] Plugin routes mounted inside the `listen` callback register AFTER the global 404 handler — `/api/plugins/*` (and any late-mounted route) is unreachable; unmatched non-API paths emit JSON `NOT_FOUND` instead of an HTML 404 (pre-existing ordering, unchanged by this diff). [api/server.js ~715 vs ~725-730]
-- [ ] [Review][Defer] Discovery CORS diverges across entry points: `server.js` serves `/openapi.json` + `/.well-known/x402` with `origin:'*'`; `serverless.js` serves them under the production origin allowlist; `worker/index.js` sends no CORS headers — external x402 scanners can fail cross-origin discovery on two of three deployments (pre-existing). [api/server.js:299-308, api/serverless.js:37-42, worker/index.js:200-201]
-- [ ] [Review][Defer] Worker preflight allowlist omits the new canonical headers (`x-session-cookie`, `x-agent-api-key`, `x-api-key`) — browser calls through the Worker proxy fail CORS preflight (pre-existing config; surfaced by Story 46.2 header transports). [worker/index.js:45-53]
+- [x] [Review][Defer] Mining job still stores the caller's session credential in-process (`job.session = req.session`) — response-side leak closed via `publicJob()` strip this story, but the credential sits in the shared `miningJobs` map for the process lifetime (pre-existing at baseline). [api/routes/viral.js:104]
+- [x] [Review][Defer] Plugin routes mounted inside the `listen` callback register AFTER the global 404 handler — `/api/plugins/*` (and any late-mounted route) is unreachable; unmatched non-API paths emit JSON `NOT_FOUND` instead of an HTML 404 (pre-existing ordering, unchanged by this diff). [api/server.js ~715 vs ~725-730]
+- [x] [Review][Defer] Discovery CORS diverges across entry points: `server.js` serves `/openapi.json` + `/.well-known/x402` with `origin:'*'`; `serverless.js` serves them under the production origin allowlist; `worker/index.js` sends no CORS headers — external x402 scanners can fail cross-origin discovery on two of three deployments (pre-existing). [api/server.js:299-308, api/serverless.js:37-42, worker/index.js:200-201]
+- [x] [Review][Defer] Worker preflight allowlist omits the new canonical headers (`x-session-cookie`, `x-agent-api-key`, `x-api-key`) — browser calls through the Worker proxy fail CORS preflight (pre-existing config; surfaced by Story 46.2 header transports). [worker/index.js:45-53]
 - [ ] [Review][Defer] `dashboard/js/viral-miner.js` sends no session transport (no `x-session-cookie` header, no body field) — the UI only works via the dev-fallback session above and queues jobs under `'dev-session-cookie'` (pre-existing). Provide real session transport or mark the endpoints honestly public. [dashboard/js/viral-miner.js:124-165]
-- [ ] [Review][Defer] `pnpm-lock.yaml` is stale since 2026-09-01 and predates this story's deps (no `zod@4` in dependencies, no `@asteasolutions`/`@redocly` in devDependencies) — `xspace-agents/Dockerfile` runs `pnpm install --frozen-lockfile` against it. Regenerate via `pnpm install --lockfile-only` or retire the lockfile; needs pnpm@9.15.4 (not installed in this workspace).
+- [x] [Review][Defer] `pnpm-lock.yaml` is stale since 2026-09-01 and predates this story's deps (no `zod@4` in dependencies, no `@asteasolutions`/`@redocly` in devDependencies) — `xspace-agents/Dockerfile` runs `pnpm install --frozen-lockfile` against it. Regenerate via `pnpm install --lockfile-only` or retire the lockfile; needs pnpm@9.15.4 (not installed in this workspace).
 
 ## Deferred from: spec review of spec-48-1-web-api-foundation-bff (2026-09-24)
 
