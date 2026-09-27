@@ -78,3 +78,38 @@
 3. Add "upstream-shape-first" rule to future platform specs — live-probe
    before freezing normalizer contracts (catches the /tokens/v1 pair-payload
    surprise early).
+
+---
+
+## Session 2026-09-27 — Full Epic Verification + E2E
+
+### E2E Results (live server, real upstream)
+
+| Endpoint | Result |
+|---|---|
+| `GET /api/actions` | 233 actions, 27 platforms, 8 categories |
+| `POST /api/platform/dexscreener/scrape` (sync) | 200, real Wrapped SOL data, 363ms |
+| `POST /api/platform/reddit/scrape` (sync) | 202 degrade, `upstream_timeout`, opId tracked |
+| `POST /api/platform/reddit/scrape` (async) | 202, operationId + statusUrl |
+| `POST /api/platform/telegram/scrape` (sync) | 400, XACT_4001 validation |
+| `GET /api/ai/action/status/:id` | tracking: `processing` |
+| `GET /openapi.json` | 383 paths, 5 security schemes |
+| 16 frontend routes | all 200 (login, monitor, admin, accounts, osint, workflows, explorer, viral, crm, ai, thread, playground, unfollowers, platform, agent, security) |
+
+### Test suite status
+- comment-tree.test.js: 10/10 pass (real CommentTreeExtractor tests)
+- proxy-injection.test.js: 14/14 pass (env fallback fixed)
+- gateway tests: 201/201 pass
+- contract tests: 93/93 pass
+
+### Defer items
+- 10 marked resolved this session
+- 27 remaining — all P2 design/out-of-scope
+- 0 P1 open
+
+### Blocked stories (activation conditions unmet)
+- 13.12: needs ≥80% doc_id stable 30 days + Product Council approval
+- 27.5: needs FR-40..54 stable + checkpoint rate >5%
+- 33.3: needs 2-week research spike + legal/compliance approval
+- 33.4: needs 33.2 stable ≥2 weeks + YouTube API quota
+- 35.5: needs live Instagram credentials + residential proxy
