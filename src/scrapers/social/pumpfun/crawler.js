@@ -15,7 +15,9 @@ import { computeCommentVelocity } from './velocity.js';
 import { KolscanResolver } from './kolscan.js';
 import { LivestreamPoller } from './livestream.js';
 import { PumpFunAuth } from './auth.js';
+import { globalSessionManager } from '../../../core/session-manager.js';
 import { LivestreamApiClient } from './livestream-api.js';
+import { PumpFunLivechat } from './livechat.js';
 import { PumpFunMedia } from './media.js';
 import {
   namespacedPumpfunId,
@@ -624,16 +626,40 @@ export class PumpFunCrawler extends AbstractCrawler {
     }
     this._replyTimestamps.push(now);
 
-    const result = await this.livestreamApi.postMintReply(mint, text, {
-      replyToId: args.replyToId,
-      mediaUrl: args.mediaUrl,
-    });
+    // pump.fun comments use Socket.IO livechat sendMessage, not REST API.
+    // Try REST first (in case endpoint exists), fallback to livechat.
+    let result;
+    try {
+      result = await this.livestreamApi.postMintReply(mint, text, {
+        replyToId: args.replyToId,
+        mediaUrl: args.mediaUrl,
+      });
+    } catch (restErr) {
+      // REST endpoint doesn't exist — use livechat sendMessage instead
+      const session = globalSessionManager.get(this.auth.accountId);
+      const authToken = session?.jwt || null; // auth_token cookie value
+      const deviceId = session?.deviceId || null;
+      const lc = new PumpFunLivechat({
+        timeoutMs: 8000,
+        authToken,
+        deviceId,
+      });
+      try {
+        await lc.joinRoom(mint);
+        result = await lc.sendMessage(mint, text, {
+          replyToId: args.replyToId,
+        });
+      } finally {
+        await lc.close();
+        this.client.livechat = null;
+      }
+    }
 
     return {
       success: true,
       mint,
       text,
-      commentId: result?.id || result?.commentId || null,
+      commentId: result?.id || result?.commentId || result?.messageId || null,
       timestamp: result?.timestamp || result?.createdAt || Date.now(),
       raw: result,
     };

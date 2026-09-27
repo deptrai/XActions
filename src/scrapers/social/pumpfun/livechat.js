@@ -71,10 +71,24 @@ export class PumpFunLivechat {
     this._onEvent = null;
     /** @type {Promise<void> | null} */
     this._ready = null;
+    /** @type {string | null} auth_token for authenticated operations */
+    this._authToken = options.authToken || null;
+    /** @type {string | null} device ID for auth handshake */
+    this._deviceId = options.deviceId || null;
+  }
+
+  /**
+   * Set auth token for authenticated operations (sendMessage, etc.)
+   * @param {string} token — pump.fun auth_token cookie value
+   */
+  setAuthToken(token) {
+    this._authToken = token;
   }
 
   /**
    * Open the ws, complete Engine.IO + Socket.IO handshake.
+   * If authToken is set, sends auth in the Socket.IO connect payload:
+   *   40{"origin":"https://pump.fun","timestamp":...,"token":"<auth_token>","deviceId":"..."}
    * @returns {Promise<void>}
    */
   connect() {
@@ -101,10 +115,11 @@ export class PumpFunLivechat {
    * @param {string} [username]
    * @returns {Promise<object|null>} join ack payload (roomConfig, flags)
    */
-  async joinRoom(mint, username) {
+  async joinRoom(mint, username, authToken) {
     await this.connect();
     const payload = { roomId: mint };
     if (username) payload.username = username;
+    if (authToken) payload.token = authToken;
     const ack = await this.#emitWithAck('joinRoom', payload);
     return ack ?? null;
   }
@@ -197,6 +212,25 @@ export class PumpFunLivechat {
     });
   }
 
+  /**
+   * Send a chat message to a coin room.
+   * @param {string} mint
+   * @param {string} text
+   * @param {object} [opts]
+   * @param {string} [opts.username]
+   * @param {string} [opts.replyToId]
+   * @returns {Promise<object|null>} ack payload
+   */
+  async sendMessage(mint, text, opts = {}) {
+    await this.connect();
+    const payload = { roomId: mint, message: text };
+    if (opts.username) payload.username = opts.username;
+    if (opts.replyToId) payload.replyToId = opts.replyToId;
+    if (opts.token) payload.token = opts.token;
+    const ack = await this.#emitWithAck('sendMessage', payload);
+    return ack ?? null;
+  }
+
   /** Leave the room and close the socket. */
   async close() {
     try { this._ws?.close(); } catch { /* noop */ }
@@ -231,7 +265,18 @@ export class PumpFunLivechat {
   #onMessage(data, resolveConnect, connectTimer) {
     const msg = data.toString();
     if (msg.startsWith(EIO_OPEN)) {
-      this._ws.send(SIO_CONNECT);
+      // Socket.IO connect — include auth payload if token available
+      if (this._authToken) {
+        const authPayload = {
+          origin: 'https://pump.fun',
+          timestamp: Date.now(),
+          token: this._authToken,
+          deviceId: this._deviceId || `device-${Math.random().toString(36).slice(2)}`,
+        };
+        this._ws.send(SIO_CONNECT + JSON.stringify(authPayload));
+      } else {
+        this._ws.send(SIO_CONNECT);
+      }
       return;
     }
     if (msg === EIO_PING) { this._ws.send(EIO_PONG); return; }

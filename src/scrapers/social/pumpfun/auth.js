@@ -32,7 +32,7 @@ export class PumpFunAuth {
    */
   hasSession() {
     const s = this.#getSession();
-    return !!(s && s.jwt && s.cookies);
+    return !!(s && s.jwt);
   }
 
   /**

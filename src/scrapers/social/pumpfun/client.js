@@ -403,8 +403,30 @@ export class PumpFunClient extends AbstractApiClient {
     const cached = this.#cacheGet(cacheKey);
     if (cached) return cached;
 
-    // Upstream /coins/{mint} is retired — fetch on-chain metadata via Solana RPC,
-    // then fetch IPFS metadata for social links and description.
+    // Try new /coins-v3/{mint} endpoint first (richer data than on-chain)
+    const url = `${this.baseUrl}/coins-v3/${encodeURIComponent(mint)}`;
+    try {
+      const { status, data } = await this.#apiGet(url, options);
+      if (status === 200 && data && data.mint) {
+        this.#cacheSet(cacheKey, data, 60_000);
+        return data;
+      }
+      if (status === 404) {
+        throw new PlatformError({
+          type: ErrorTypes.NOT_FOUND,
+          code: 'XACT_4004',
+          message: `Coin with mint "${mint}" not found on pump.fun`,
+          statusCode: 404,
+          suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+          platform: this.platform,
+        });
+      }
+    } catch (err) {
+      if (err instanceof PlatformError) throw err;
+      // Fall through to on-chain fallback
+    }
+
+    // Fallback: fetch on-chain metadata via Solana RPC + IPFS
     const meta = await this.#getOnChainMetadata(mint);
     if (!meta) {
       throw new PlatformError({

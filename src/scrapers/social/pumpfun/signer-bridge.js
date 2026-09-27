@@ -1,8 +1,12 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * PumpFunBrowserBridge — Browser-as-Signer session bridge for pump.fun.
- * Extracts live authentication tokens (Privy JWT, user ID, wallet address, Cloudflare cookies)
- * from an active Chrome browser session via CDP or Chrome MCP.
+ * Extracts live authentication tokens (auth_token cookie, Privy JWT, user ID, wallet)
+ * from an active browser session via CDP or Chrome MCP.
+ *
+ * Pump.fun auth uses a dual-token system:
+ *   - auth_token cookie — long-lived JWT (~30 days) for API auth (Bearer + livechat)
+ *   - privy:token (localStorage) — short-lived Privy JWT (~1 hour) for wallet ops
  *
  * @author nich (@nichxbt)
  * @license Apache-2.0
@@ -20,9 +24,18 @@ export function extractPumpFunTokensScript() {
   const doc = typeof document !== 'undefined' ? document : {};
   const storage = win.localStorage || {};
 
-  const jwt = (storage.getItem ? storage.getItem('privy:token') : null)?.replace(/^"|"$/g, '') || null;
+  // Parse cookies into map
+  const cookieMap = {};
+  (doc.cookie || '').split(';').forEach(c => {
+    const idx = c.indexOf('=');
+    if (idx > 0) cookieMap[c.slice(0, idx).trim()] = decodeURIComponent(c.slice(idx + 1).trim());
+  });
+
+  const authToken = cookieMap['auth_token'] || null;
+  const privyJwt = (storage.getItem ? storage.getItem('privy:token') : null)?.replace(/^"|"$/g, '') || null;
   const idToken = (storage.getItem ? storage.getItem('privy:id_token') : null)?.replace(/^"|"$/g, '') || null;
   const decodedJwtStr = storage.getItem ? storage.getItem('decoded-jwt') : null;
+  const deviceId = cookieMap['pump_device_id'] || null;
 
   let decoded = null;
   try {
@@ -31,11 +44,24 @@ export function extractPumpFunTokensScript() {
     /* ignore malformed */
   }
 
+  // Decode auth_token payload for userId/walletAddress
+  let authPayload = null;
+  if (authToken) {
+    try {
+      const parts = authToken.split('.');
+      if (parts.length >= 2) {
+        authPayload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      }
+    } catch { /* ignore */ }
+  }
+
   return {
-    jwt,
+    authToken,           // long-lived auth JWT (from auth_token cookie)
+    jwt: privyJwt,       // short-lived privy JWT
     idToken,
-    userId: decoded?.userId || null,
-    walletAddress: decoded?.address || null,
+    userId: authPayload?.userId || decoded?.userId || null,
+    walletAddress: authPayload?.address || decoded?.address || null,
+    deviceId,
     cookie: doc.cookie || '',
     userAgent: win.navigator?.userAgent || '',
     extractedAt: Date.now(),
@@ -48,25 +74,30 @@ export function extractPumpFunTokensScript() {
 export class PumpFunBrowserBridge {
   /**
    * Register extracted tokens into global SessionManager.
+   * Accepts either auth_token (long-lived) or privy jwt (short-lived).
    * @param {string} accountId
    * @param {ReturnType<typeof extractPumpFunTokensScript>} tokens
    */
   static registerSession(accountId = 'default', tokens) {
-    if (!tokens || !tokens.jwt) {
-      throw new Error('Invalid pump.fun token bundle: missing JWT (privy:token)');
+    // Prefer auth_token (30-day expiry) over privy jwt (1-hour expiry)
+    const effectiveToken = tokens?.authToken || tokens?.jwt;
+    if (!effectiveToken) {
+      throw new Error('Invalid pump.fun token bundle: missing auth_token or privy:token');
     }
     const sessionData = {
       accountId: `pumpfun:${accountId}`,
       platform: 'pumpfun',
-      jwt: tokens.jwt,
+      jwt: effectiveToken,          // use auth_token as primary JWT
+      privyJwt: tokens.jwt || null, // keep privy jwt for reference
       idToken: tokens.idToken,
       userId: tokens.userId,
       walletAddress: tokens.walletAddress,
-      cookies: tokens.cookie,
+      deviceId: tokens.deviceId || null,
+      cookies: tokens.cookie || '',
       userAgent: tokens.userAgent,
       headers: {
-        authorization: `Bearer ${tokens.jwt}`,
-        cookie: tokens.cookie,
+        authorization: `Bearer ${effectiveToken}`,
+        cookie: tokens.cookie || '',
         'user-agent': tokens.userAgent,
       },
       updatedAt: Date.now(),
