@@ -71,8 +71,14 @@ function PlaygroundInner() {
   useEffect(() => {
     setHistory(readHistory());
     (async () => {
-      const res = await api<Manifest>('GET', '/api/actions?detailLevel=summary');
-      if (res.ok && res.data?.success) setManifest(res.data.data);
+      const res = await api<any>('GET', '/api/actions?detailLevel=summary');
+      if (res.ok) {
+        if (Array.isArray(res.data)) {
+          setManifest(res.data);
+        } else if (res.data?.success && Array.isArray(res.data.data)) {
+          setManifest(res.data.data);
+        }
+      }
     })();
   }, []);
 
