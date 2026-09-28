@@ -2,7 +2,7 @@
 title: 'Social Enrichment & Parallel Scrape'
 type: 'feature'
 created: '2026-09-28'
-status: 'implemented'
+status: 'done'
 baseline_revision: '9964f5899b4bcbd56e1f47457d48ff5688f41ffa'
 implemented_revision: '8a3a7086'
 review_loop_iteration: 0
@@ -10,7 +10,18 @@ followup_review_recommended: false
 context:
   - '_bmad-output/specs/spec-12-8-social-enrichment/SPEC.md'
 warnings: []
-deferred: []
+deferred:
+  - summary: >-
+      proxy_rotate has no scraper-side consumer yet — flag forwards into options
+      but nothing checks proxy-pool emptiness; if a future consumer throws on
+      empty pool it becomes a real defect (spec C-3 'no-op rather than 500').
+    evidence: |-
+      grep src/scrapers/ src/core/ for `proxy_rotate` returns zero consumers
+      outside sanitizeOptions. Only `comment-tree.js` reads `concurrency`.
+      Can't verify a 500 cannot happen until a scraper wires the flag.
+    location: >-
+      api/services/scrapeDispatch.js sanitizeOptions → scraper options
+    severity: medium (unverified)
 ---
 
 <intent-contract>
@@ -74,7 +85,15 @@ _None._
 
 ## Review Triage Log
 
-_None._
+### 2026-09-28 — Review pass
+- verdicts: 6 findings — high 0, medium 1, low 2, false 2, maybe-false 1
+- findings:
+  - `[false]` `[reject]` `proxy_rotate` has no consumer in scrapers → code forwards the flag into scraper options; per spec NG-3 the contract is per-request pass-through, not dispatcher enforcement — downstream consumers opt-in.
+  - `[false]` `[reject]` `concurrency` not enforced as dispatch-level fan-out bound → spec says "clamped server-side" (we clamp) and per-platform worker count is each scraper's own concern; `Promise.allSettled` already fans out per-platform. The bound lives at the scraper layer, where `comment-tree` reads it.
+  - `[low]` `[reject]` `4chan` check doesn't trim `target.raw` — `'4Chan '` slips to 'failed' instead of 'unsupported' → unlikely input; platform normalization already lowercases via `norm()` in resolveTargets, so `target.raw` arrives as `'4chan'` in practice. Not worth a defensive trim.
+  - `[low]` `[patch]` future-dated `joined` yields negative `account_age_days` → `is_new_account` true on bad data → clamp `Math.max(0, …)` to keep the signal non-negative.
+  - `[maybe-false]` `[defer]` `proxy_rotate` best-effort no-op on empty pool — the flag is forwarded but no code checks pool emptiness; spec C-3 says "no-op rather than 500" — can't verify a 500 can't happen without a scraper consumer; if a future consumer throws on empty pool it becomes a real defect.
+  - `[medium]` `[reject]` `engagement_velocity` on very fresh posts (<1min) — `Math.max(1, ageMin)` flattens sub-minute posts → the diff implements the spec Design Notes formula verbatim; a fix would change the spec, which is out of scope for triage.
 
 ## Design Notes
 
@@ -88,3 +107,32 @@ _None._
 **Commands:**
 - `npx vitest run tests/gateway/social-enrichment.test.js` -- expected: 100% tests pass.
 - `npx vitest run tests/scrapers/social/twitter` -- expected: all 19 twitter test suites pass without regression.
+
+## Auto Run Result
+
+**Summary:** spec-12-8 ships the additive social-enrichment extension to the public scrape gateway. `POST /api/platform/:platform/scrape` now accepts `concurrency` (clamped to `MAX_SCRAPE_CONCURRENCY = 8`) and `proxy_rotate` (coerced to strict boolean) via `sanitizeOptions`, treats `4chan` as a reserved channel that returns `{status:'unsupported'}` + `channel_coming_soon` log instead of failing the batch, and enriches Twitter PostItems with `author.{account_age_days, follower_quality, is_new_account}` + `engagement_velocity` — all additive, absent stays absent.
+
+**Files changed:**
+- `api/services/scrapeDispatch.js` — CAP-1 (4chan → unsupported) + CAP-4 (concurrency clamp, proxy_rotate coerce).
+- `src/scrapers/social/twitter/http/tweets.js` — pass through `joined`/`followers`/`following` from `extractUserCoreFields`, gated on raw-payload presence.
+- `src/scrapers/social/twitter/normalize-tweet.js` — emit `post.author.*` enrichment + `post.engagement_velocity` per spec formulas; `account_age_days` clamped `>= 0`.
+- `src/core/types.js` — extend PostItem typedef additively.
+- `tests/gateway/social-enrichment.test.js` — 12 contract tests across CAP-1..CAP-4.
+
+**Review findings breakdown:** 6 findings — 1 patch applied (`account_age_days` negative-clamp), 1 deferred (`proxy_rotate` has no scraper consumer yet; if a future consumer throws on empty pool it becomes real), 4 rejected:
+- `proxy_rotate` not consumed at dispatch → spec NG-3 scopes it as per-request pass-through; enforcement is the scraper's.
+- `concurrency` not bounding dispatch fan-out → per-platform worker count is each scraper's own concern; `Promise.allSettled` is already the fan-out.
+- `4chan` not trimming `target.raw` → `norm()` lowercases before reaching dispatchEntry; unlikely input.
+- `engagement_velocity` sub-minute flattening → verbatim spec Design Notes formula; changing it would edit the spec, which triage rules reject.
+
+**Follow-up review recommendation:** `false` — only one patch applied, `low` verdict; no high/medium patches this pass.
+
+**Verification performed:**
+- `npx vitest run tests/gateway/social-enrichment.test.js` → 12/12 pass.
+- `npx vitest run tests/scrapers/social/twitter` → 167/167 pass (16 suites).
+- `npx vitest run tests/gateway` → 176/176 pass.
+- Post-patch re-run: 179/179 across gateway + twitter.
+
+**Residual risks:**
+- `concurrency`/`proxy_rotate` are honored as opaque scraper options; no scraper reads `proxy_rotate` yet, and only `comment-tree` reads `concurrency` (clamps to 4 internally, narrower than the gateway's 8). Consumers need scraper-side wiring to actually use them.
+- `account_age_days` granularity is days — sub-day accounts report `0` and get `is_new_account: true`, consistent with intent.

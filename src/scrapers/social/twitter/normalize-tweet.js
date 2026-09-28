@@ -28,7 +28,7 @@ export function tweetToPostItem(rawTweet, context = {}) {
   // ── spec-12-8 CAP-2: Author enrichment (additive — absent fields stay absent) ──
   const authorJoined = author.joined ? new Date(author.joined).getTime() : null;
   const accountAgeDays = authorJoined !== null && Number.isFinite(authorJoined)
-    ? Math.floor((Date.now() - authorJoined) / (1000 * 60 * 60 * 24))
+    ? Math.max(0, Math.floor((Date.now() - authorJoined) / (1000 * 60 * 60 * 24)))
     : undefined;
   const followersCount = typeof author.followers === 'number' ? author.followers : undefined;
   const followingCount = typeof author.following === 'number' ? author.following : undefined;
