@@ -25,6 +25,28 @@ export function tweetToPostItem(rawTweet, context = {}) {
   const hashtags = Array.isArray(parsed.hashtags) ? parsed.hashtags : [];
   const mentions = Array.isArray(parsed.mentions) ? parsed.mentions.map((m) => m.username || m).filter(Boolean) : [];
 
+  // ── spec-12-8 CAP-2: Author enrichment (additive — absent fields stay absent) ──
+  const authorJoined = author.joined ? new Date(author.joined).getTime() : null;
+  const accountAgeDays = authorJoined !== null && Number.isFinite(authorJoined)
+    ? Math.floor((Date.now() - authorJoined) / (1000 * 60 * 60 * 24))
+    : undefined;
+  const followersCount = typeof author.followers === 'number' ? author.followers : undefined;
+  const followingCount = typeof author.following === 'number' ? author.following : undefined;
+  const isVerified = author.verified === true;
+  // follower_quality: engagement-reach ratio dampened by verification status.
+  // Absent when followers/following are not present in the raw payload.
+  const followerQuality = followersCount !== undefined
+    ? Math.min(1.0, followersCount / Math.max(1, followingCount || 1)) * (isVerified ? 1.0 : 0.8)
+    : undefined;
+  const isNewAccount = accountAgeDays !== undefined ? accountAgeDays <= 30 : undefined;
+
+  // ── spec-12-8 CAP-3: Engagement velocity (interactions/minute) ──
+  const postAgeMs = parsed.createdAt ? Math.max(0, Date.now() - new Date(parsed.createdAt).getTime()) : null;
+  const postAgeMin = postAgeMs !== null ? Math.max(1, postAgeMs / (1000 * 60)) : null;
+  const engagementVelocity = postAgeMin !== null
+    ? ((Number(metrics.likes) || 0) + (Number(metrics.retweets) || 0) + (Number(metrics.replies) || 0)) / postAgeMin
+    : undefined;
+
   /** @type {import('../../../core/types.js').PostItem} */
   const post = {
     id: `twitter:${parsed.id}`,
@@ -61,6 +83,19 @@ export function tweetToPostItem(rawTweet, context = {}) {
       ...(context.extraMetadata || {}),
     },
   };
+
+  // Additive enrichment — only set when the raw data supports them.
+  // jev-trading reads these fields verbatim; absence is a signal, not an error.
+  if (accountAgeDays !== undefined || followerQuality !== undefined || isNewAccount !== undefined) {
+    post.author = {
+      ...(accountAgeDays !== undefined ? { account_age_days: accountAgeDays } : {}),
+      ...(followerQuality !== undefined ? { follower_quality: followerQuality } : {}),
+      ...(isNewAccount !== undefined ? { is_new_account: isNewAccount } : {}),
+    };
+  }
+  if (engagementVelocity !== undefined) {
+    post.engagement_velocity = engagementVelocity;
+  }
 
   return post;
 }

@@ -80,6 +80,9 @@ const SYNC_TIMEOUT = Symbol('sync-ceiling-breach');
 
 /** Body keys that are dispatch fields, never scraper options. */
 const DISPATCH_KEYS = new Set(['action', 'mode', 'platform', 'accountIds', 'options', 'callbackUrl']);
+
+/** Per-request parallelism ceiling — clamped, not errored (spec-12-8 C-2). */
+const MAX_SCRAPE_CONCURRENCY = 8;
 /**
  * Credential keys — allowed in SYNC run options (the legacy body-cookie flow
  * must still reach scrape()), but NEVER persisted to tracking-row config /
@@ -357,6 +360,19 @@ export function sanitizeOptions(body) {
   for (const key of DISPATCH_KEYS) delete opts[key];
   // Dashboard scrapes start fresh from cursor 0 unless caller asked to resume.
   if (opts.resume === undefined) opts.resume = false;
+  // spec-12-8 CAP-4: caller-tunable parallelism + proxy rotation.
+  // Clamp `concurrency` to the gateway ceiling — never error on large values.
+  if (opts.concurrency !== undefined) {
+    const n = Number(opts.concurrency);
+    if (!Number.isFinite(n) || n < 1) {
+      delete opts.concurrency;
+    } else {
+      opts.concurrency = Math.min(Math.floor(n), MAX_SCRAPE_CONCURRENCY);
+    }
+  }
+  if (opts.proxy_rotate !== undefined) {
+    opts.proxy_rotate = opts.proxy_rotate === true || opts.proxy_rotate === 'true';
+  }
   return opts;
 }
 
@@ -1061,6 +1077,23 @@ async function dispatchEntry(target, shared) {
   const label = target.canonical || String(target.raw);
 
   if (!target.canonical) {
+    // Reserved channel names that don't have a descriptor yet return
+    // 'unsupported' (soft-not-ready) instead of 'failed' — the batch must
+    // never crash on a partially-known channel list.
+    if (typeof target.raw === 'string' && target.raw.toLowerCase() === '4chan') {
+      console.warn(`⚠️ [GATEWAY] channel_coming_soon: ${label}`);
+      return {
+        platform: label,
+        success: false,
+        status: 'unsupported',
+        error: {
+          code: 'XACT_4001',
+          kind: 'validation',
+          type: 'validation',
+          message: `Channel "${label}" is reserved but has no descriptor yet`,
+        },
+      };
+    }
     return { platform: label, success: false, status: 'failed', error: VALIDATION_ENTRY_ERROR('Unknown platform') };
   }
   const platform = target.canonical;

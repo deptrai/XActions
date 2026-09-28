@@ -26,6 +26,11 @@
  * @property {Object} [metadata]
  * @property {Date | null} [publishedAt]
  * @property {Date} crawledAt
+ * @property {Object} [author] - spec-12-8 CAP-2: optional enrichment object; keys only present when computable
+ * @property {number} [author.account_age_days]
+ * @property {number} [author.follower_quality] - 0..1
+ * @property {boolean} [author.is_new_account]
+ * @property {number} [engagement_velocity] - spec-12-8 CAP-3: interactions/minute
  */
 
 /**

@@ -110,6 +110,17 @@ export function parseTweetData(rawTweet) {
     name: authorCore.name,
     avatar: authorCore.avatar,
     verified: authorCore.verified,
+    // spec-12-8 CAP-2: pass through enrichment inputs; normalizer decides
+    // whether they are present enough to emit (absent stays absent). Detect
+    // presence at the raw-payload level — extractUserCoreFields collapses
+    // missing counts to 0, which would falsely compute follower_quality.
+    ...(authorCore.joined ? { joined: authorCore.joined } : {}),
+    ...((typeof authorResult?.relationship_counts?.followers_count === 'number'
+      || typeof authorResult?.legacy?.followers_count === 'number')
+      ? { followers: authorCore.followers } : {}),
+    ...((typeof authorResult?.relationship_counts?.following_count === 'number'
+      || typeof authorResult?.legacy?.friends_count === 'number')
+      ? { following: authorCore.following } : {}),
   };
 
   // ---- Metrics ----------------------------------------------------------
