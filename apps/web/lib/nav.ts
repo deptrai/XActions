@@ -42,6 +42,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Universal Explorer', href: '/explorer', keywords: ['scrape', 'platforms', 'facebook', 'cho tot', 'batdongsan'] },
       { label: 'Facebook', href: '/facebook', keywords: ['meta', 'fb', 'scraper'] },
       { label: 'Pump.fun', href: '/pumpfun', keywords: ['meme', 'solana', 'livestream', 'crypto', 'mint', 'pump'] },
+      { label: 'Dexscreener', href: '/dexscreener', keywords: ['dex', 'tokens', 'liquidity', 'pairs', 'crypto', 'solana', 'boosted', 'trending'] },
     ],
   },
   {
