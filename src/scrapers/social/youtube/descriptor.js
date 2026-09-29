@@ -43,6 +43,20 @@ export default {
   actionMap: YOUTUBE_ACTION_MAP,
 
   /**
+   * Story 50.2 — sync-lane manifest. Every YouTube action is a key-based
+   * REST read against googleapis.com/youtube/v3 → sync-capable.
+   */
+  syncCapableActions: [
+    'trending_vn',
+    'trending',
+    'channel_detail',
+    'channel_videos',
+    'video_comments',
+    'video_detail',
+    'search',
+  ],
+
+  /**
    * @param {Record<string, any>} options
    * @param {Record<string, any>} ctx
    * @returns {Record<string, any>}
