@@ -1235,6 +1235,27 @@ export async function dispatch({ pathPlatform, body = {}, action, userId, accoun
   }
 
   const options = sanitizeOptions(body);
+  // `platform` can double as a scraper-level SUB-SITE arg (automotive
+  // `oto_vn`, b2b `hosocongty`, fnb `pasgo`, … — see their manifest examples
+  // which send it flat). When the raw string resolves to a DIFFERENT
+  // canonical than the envelope target, it carries scraper info beyond the
+  // route, so re-apply it. A raw that just echoes the resolved platform
+  // stays stripped (dispatch-field contract), and batch forms
+  // (array / 'all') are envelope-only.
+  if (!resolved.batch) {
+    const nestedOpts = body.options && typeof body.options === 'object' && !Array.isArray(body.options)
+      ? body.options
+      : {};
+    for (const candidate of [body.platform, nestedOpts.platform]) {
+      if (typeof candidate !== 'string') continue;
+      const raw = candidate.trim();
+      if (!raw || raw.toLowerCase() === 'all') continue;
+      if (raw.toLowerCase() !== resolved.platform.toLowerCase()) {
+        options.platform = raw;
+        break;
+      }
+    }
+  }
   const dryRun = Boolean(body.dryRun);
   const consumerCtx = consumer && typeof consumer === 'object'
     ? {

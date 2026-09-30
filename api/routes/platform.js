@@ -35,6 +35,16 @@ const VALID_PLATFORMS = [
   'instagram', 'ig', 'insta', 'pumpfun', 'pump', 'pump.fun',
   'dexscreener', 'dex', 'dexscreen',
   'telegram', 'tg',
+  // Story-group scrapers advertised by /api/actions (27-platform manifest) —
+  // keep in sync with that manifest; registry-only platforms (github, gravatar)
+  // stay out until they ship public actions. Aliases mirror src/scrapers DESCRIPTORS.
+  'automotive', 'oto_vn', 'bonbanh', 'chotot_xe',
+  'b2b_registry_extended', 'hosocongty', 'muasamcong',
+  'fnb', 'pasgo', 'foody', 'riviu',
+  'healthcare', 'medpro', 'youmed', 'nhathuoclongchau', 'thuocsi',
+  'ipvietnam', 'ip_legal', 'legal',
+  'masothue', 'maso_thue', 'mst',
+  'medium', 'md', 'medium_com',
 ];
 
 /** @type {Record<string, string>} */

@@ -480,6 +480,34 @@ describe('POST /api/platform/:platform/scrape — mode dispatch', () => {
     expect(options.clientSecret).toBe('LEGACY_SECRET');
   });
 
+  it('SUBSITE_PLATFORM: flat string platform resolving to a different canonical reaches scraper options', async () => {
+    // automotive/b2b/fnb manifest examples send a flat sub-site `platform`
+    // (oto_vn, hosocongty, pasgo) — envelope resolves the route target, the
+    // raw string must survive as the scraper-level arg.
+    const res = await request(app)
+      .post('/api/platform/automotive/scrape')
+      .send({ action: 'search', mode: 'async', platform: 'oto_vn', brand: 'toyota', city: 'hanoi' });
+    expect(res.status).toBe(202);
+    expect(enq.calls).toHaveLength(1);
+    expect(enq.calls[0].data.platform).toBe('automotive');
+    expect(enq.calls[0].data.options.platform).toBe('oto_vn');
+    expect(enq.calls[0].data.options.brand).toBe('toyota');
+    expect(enq.calls[0].data.options.city).toBe('hanoi');
+    // Envelope dispatch fields still never reach scraper options.
+    for (const k of ['mode', 'action', 'accountIds', 'callbackUrl', 'options']) {
+      expect(enq.calls[0].data.options).not.toHaveProperty(k);
+    }
+
+    // Nested options.platform is preserved too.
+    enq.calls.length = 0;
+    const res2 = await request(app)
+      .post('/api/platform/automotive/scrape')
+      .send({ action: 'search', mode: 'async', options: { platform: 'bonbanh', brand: 'honda' } });
+    expect(res2.status).toBe(202);
+    expect(enq.calls[0].data.options.platform).toBe('bonbanh');
+    expect(enq.calls[0].data.options.brand).toBe('honda');
+  });
+
   it('EDGE_CREDS_ASYNC: credential keys + async lane → 400 validation (explicit AND manifest-default)', async () => {
     // Explicit async — queued work cannot carry secrets.
     const res = await request(app)
