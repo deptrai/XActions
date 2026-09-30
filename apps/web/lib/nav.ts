@@ -45,6 +45,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Dexscreener', href: '/dexscreener', keywords: ['dex', 'tokens', 'liquidity', 'pairs', 'crypto', 'solana', 'boosted', 'trending'] },
       { label: 'YouTube', href: '/youtube', keywords: ['video', 'channel', 'trending', 'comments', 'views', 'creators'] },
       { label: 'Fediverse', href: '/fediverse', keywords: ['bluesky', 'mastodon', 'fediverse', 'atproto', 'activitypub', 'deck', 'trending', 'whats-hot', 'columns'] },
+      { label: 'Enterprise VN', href: '/enterprise-vn', keywords: ['tax', 'mst', 'company', 'trademark', 'doanh nghiệp', 'pháp lý', 'b2b'] },
     ],
   },
   {
