@@ -1,6 +1,7 @@
 // by nichxbt
 // Single source of truth for dashboard navigation — consumed by the sidebar,
 // the ⌘K command palette, and the breadcrumb. One edit updates all three.
+import { findGroupForPath, findItemForPath } from './nav-resolve';
 import {
   LayoutDashboard, BarChart3, Search, Network, TrendingUp, Database,
   Workflow, Zap, Calendar, Terminal, MessageSquare, Bot,
@@ -33,6 +34,15 @@ export const NAV_GROUPS: NavGroup[] = [
     id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/', items: [],
   },
   {
+    id: 'platform-suites', label: 'Platform Suites', icon: Layers, badge: 'Live', items: [
+      { label: 'Dexscreener', href: '/dexscreener', keywords: ['dex', 'tokens', 'liquidity', 'pairs', 'crypto', 'solana', 'boosted', 'trending'] },
+      { label: 'YouTube', href: '/youtube', keywords: ['video', 'channel', 'trending', 'comments', 'views', 'creators'] },
+      { label: 'Fediverse', href: '/fediverse', keywords: ['bluesky', 'mastodon', 'fediverse', 'atproto', 'activitypub', 'deck', 'trending', 'whats-hot', 'columns'] },
+      { label: 'Enterprise VN', href: '/enterprise-vn', keywords: ['tax', 'mst', 'company', 'trademark', 'doanh nghiệp', 'pháp lý', 'b2b'] },
+      { label: 'Jobs VN', href: '/jobs-vn', keywords: ['jobs', 'recruitment', 'tuyển dụng', 'vieclam', 'topcv', 'vietnamworks', 'linkedin', 'hiring', 'tech'] },
+    ],
+  },
+  {
     id: 'intelligence', label: 'Intelligence', icon: BarChart3, items: [
       { label: 'Analytics', href: '/analytics', keywords: ['stats', 'metrics'] },
       { label: 'OSINT Lookup', href: '/osint', keywords: ['search', 'profile', 'find'] },
@@ -42,10 +52,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Universal Explorer', href: '/explorer', keywords: ['scrape', 'platforms', 'facebook', 'cho tot', 'batdongsan'] },
       { label: 'Facebook', href: '/facebook', keywords: ['meta', 'fb', 'scraper'] },
       { label: 'Pump.fun', href: '/pumpfun', keywords: ['meme', 'solana', 'livestream', 'crypto', 'mint', 'pump'] },
-      { label: 'Dexscreener', href: '/dexscreener', keywords: ['dex', 'tokens', 'liquidity', 'pairs', 'crypto', 'solana', 'boosted', 'trending'] },
-      { label: 'YouTube', href: '/youtube', keywords: ['video', 'channel', 'trending', 'comments', 'views', 'creators'] },
-      { label: 'Fediverse', href: '/fediverse', keywords: ['bluesky', 'mastodon', 'fediverse', 'atproto', 'activitypub', 'deck', 'trending', 'whats-hot', 'columns'] },
-      { label: 'Enterprise VN', href: '/enterprise-vn', keywords: ['tax', 'mst', 'company', 'trademark', 'doanh nghiệp', 'pháp lý', 'b2b'] },
     ],
   },
   {
@@ -128,17 +134,10 @@ export const NAV_ACTIONS = [
 
 /** Find the group that owns a pathname (for breadcrumb + auto-expand). */
 export function groupForPath(pathname: string): NavGroup | undefined {
-  if (pathname === '/') return NAV_GROUPS[0];
-  const clean = pathname.replace(/\/+$/, '');
-  return NAV_GROUPS.find((g) => g.items.some((it) => it.href.replace(/\/+$/, '') === clean));
+  return findGroupForPath<NavGroup>(NAV_GROUPS, pathname);
 }
 
 /** Find the item label for a pathname (for breadcrumb leaf). */
 export function itemForPath(pathname: string): NavItem | undefined {
-  const clean = pathname.replace(/\/+$/, '');
-  for (const g of NAV_GROUPS) {
-    const hit = g.items.find((it) => it.href.replace(/\/+$/, '') === clean);
-    if (hit) return hit;
-  }
-  return undefined;
+  return findItemForPath<NavItem>(NAV_GROUPS, pathname);
 }

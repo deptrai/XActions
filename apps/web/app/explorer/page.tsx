@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Database,
   Search,
@@ -13,7 +13,13 @@ import {
   ExternalLink,
   Table,
   Check,
+  RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
+import type { ApiResult } from '@xactions/api-client';
+import { api } from '@/lib/api';
+import { isAsyncAccepted, pollOperation } from '@/lib/scrape-poll';
+import type { AsyncAccepted } from '@/lib/scrape-poll';
 
 type Category = 'jobs' | 'real_estate' | 'enterprises' | 'social';
 
@@ -27,50 +33,92 @@ interface ExplorerItem {
   url: string;
 }
 
+interface PlatformEnvelope<T> {
+  ok: boolean;
+  platform?: string;
+  action?: string;
+  result?: T;
+  error?: string;
+  code?: string;
+}
+
+async function scrape<T = unknown>(
+  platform: 'topcv' | 'vietnamworks' | 'linkedin',
+  action: string,
+  args: Record<string, unknown>,
+  signal?: AbortSignal
+): Promise<ApiResult<T>> {
+  const res = await api<PlatformEnvelope<T> & AsyncAccepted>(
+    'POST',
+    `/api/platform/${platform}/scrape`,
+    { body: { action, ...args }, signal }
+  );
+  if (res.ok && res.data && typeof res.data === 'object') {
+    if (isAsyncAccepted(res.data)) {
+      return pollOperation<T>(res.data.statusUrl as string, signal, res.data.retry_after_ms);
+    }
+    const env = res.data as PlatformEnvelope<T>;
+    if ('result' in env) {
+      return { ok: true as const, status: res.status, data: env.result as T };
+    }
+  }
+  return res as unknown as ApiResult<T>;
+}
+
+function mapPostToExplorerItem(post: any, platformName: string): ExplorerItem {
+  const meta = (post?.metadata && typeof post.metadata === 'object' ? post.metadata : {}) as Record<string, unknown>;
+  const title = String(meta.title || post.title || post.content?.split('\n')[0] || 'Vị trí tuyển dụng').trim();
+
+  // Field 1: Salary
+  let salary = 'Thỏa thuận';
+  if (meta.isNegotiable) {
+    salary = 'Thỏa thuận';
+  } else if (typeof meta.rawSalary === 'string' && meta.rawSalary.trim()) {
+    salary = meta.rawSalary.trim();
+  } else if (meta.salaryMin != null && meta.salaryMax != null) {
+    const curr = meta.salaryCurrency === 'USD' ? '$' : '';
+    const suffix = meta.salaryCurrency === 'VND' ? ' VNĐ' : '';
+    salary = `${curr}${Number(meta.salaryMin).toLocaleString()} - ${curr}${Number(meta.salaryMax).toLocaleString()}${suffix}`;
+  } else if (meta.salaryMin != null) {
+    salary = `Từ ${Number(meta.salaryMin).toLocaleString()}`;
+  }
+
+  // Field 2: Company & Location
+  const company = String(meta.companyName || post.authorName || 'Doanh nghiệp').trim();
+  const location = String(meta.location || '').trim();
+  const field2 = location ? `${company} • ${location}` : company;
+
+  // Date
+  let date = new Date().toISOString().slice(0, 10);
+  if (post.publishedAt) {
+    try {
+      date = new Date(post.publishedAt).toISOString().slice(0, 10);
+    } catch {}
+  } else if (meta.postedAt) {
+    date = String(meta.postedAt).slice(0, 10);
+  }
+
+  const url = String(meta.postUrl || post.postUrl || '#');
+  const id = String(post.id || meta.jobId || `${platformName.toLowerCase()}-${Math.random().toString(36).slice(2, 7)}`);
+
+  return {
+    id,
+    title,
+    source: platformName,
+    field1: salary,
+    field2,
+    date,
+    url,
+  };
+}
+
 const CATEGORY_DATA: Record<Category, { label: string; icon: any; col1: string; col2: string; items: ExplorerItem[] }> = {
   jobs: {
     label: 'Jobs & Hiring',
     icon: Briefcase,
     col1: 'Salary / Package',
     col2: 'Company & Location',
-    items: [
-      {
-        id: 'j1',
-        title: 'Senior AI Engineer (LLM & Fine-tuning)',
-        source: 'VietnamWorks',
-        field1: '$3,500 - $5,000 / mo',
-        field2: 'VNG Corporation • HCMC',
-        date: '2026-09-23',
-        url: 'https://vietnamworks.com/job/senior-ai-engineer',
-      },
-      {
-        id: 'j2',
-        title: 'Staff Rust & Systems Developer',
-        source: 'TopCV',
-        field1: '$4,000 - $6,000 / mo',
-        field2: 'FPT Software • Da Nang',
-        date: '2026-09-22',
-        url: 'https://topcv.vn/job/staff-rust-dev',
-      },
-      {
-        id: 'j3',
-        title: 'Head of Growth Marketing',
-        source: 'TopCV',
-        field1: '$2,500 - $3,800 / mo',
-        field2: 'Base.vn • Hanoi',
-        date: '2026-09-21',
-        url: 'https://topcv.vn/job/head-of-growth',
-      },
-      {
-        id: 'j4',
-        title: 'DevOps & Site Reliability Engineer',
-        source: 'VietnamWorks',
-        field1: '$2,000 - $3,200 / mo',
-        field2: 'MoMo • HCMC',
-        date: '2026-09-20',
-        url: 'https://vietnamworks.com/job/devops-engineer',
-      },
-    ],
+    items: [],
   },
   real_estate: {
     label: 'Real Estate',
@@ -165,9 +213,72 @@ export default function UniversalExplorerPage() {
   const [activeCategory, setActiveCategory] = useState<Category>('jobs');
   const [search, setSearch] = useState('');
   const [exported, setExported] = useState(false);
+  const [liveJobs, setLiveJobs] = useState<ExplorerItem[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+  const [jobsRefreshKey, setJobsRefreshKey] = useState(0);
+  // Debounce từ khóa: mỗi phím gõ nếu gọi thẳng sẽ bắn 3 request song song
+  // (topcv/vietnamworks/linkedin) và nhanh chóng chạm rate limit upstream.
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    if (activeCategory !== 'jobs') return;
+
+    const controller = new AbortController();
+    let mounted = true;
+
+    async function fetchLiveJobs() {
+      setJobsLoading(true);
+      setJobsError(null);
+
+      try {
+        const [topcvRes, vnwRes, linkedinRes] = await Promise.allSettled([
+          scrape<any>('topcv', 'search_jobs', { keyword: debouncedSearch || 'engineer', limit: 10 }, controller.signal),
+          scrape<any>('vietnamworks', 'search_jobs', { keyword: debouncedSearch || 'engineer', limit: 10 }, controller.signal),
+          scrape<any>('linkedin', 'search_jobs', { keyword: debouncedSearch || 'engineer', location: 'Vietnam', limit: 10 }, controller.signal),
+        ]);
+
+        if (!mounted) return;
+
+        const collected: ExplorerItem[] = [];
+        if (topcvRes.status === 'fulfilled' && topcvRes.value.ok && topcvRes.value.data) {
+          const list = topcvRes.value.data.jobs || topcvRes.value.data.posts || (Array.isArray(topcvRes.value.data) ? topcvRes.value.data : []);
+          collected.push(...list.map((j: any) => mapPostToExplorerItem(j, 'TopCV')));
+        }
+        if (vnwRes.status === 'fulfilled' && vnwRes.value.ok && vnwRes.value.data) {
+          const list = vnwRes.value.data.jobs || vnwRes.value.data.posts || (Array.isArray(vnwRes.value.data) ? vnwRes.value.data : []);
+          collected.push(...list.map((j: any) => mapPostToExplorerItem(j, 'VietnamWorks')));
+        }
+        if (linkedinRes.status === 'fulfilled' && linkedinRes.value.ok && linkedinRes.value.data) {
+          const list = linkedinRes.value.data.jobs || linkedinRes.value.data.posts || (Array.isArray(linkedinRes.value.data) ? linkedinRes.value.data : []);
+          collected.push(...list.map((j: any) => mapPostToExplorerItem(j, 'LinkedIn')));
+        }
+
+        setLiveJobs(collected);
+      } catch (err: any) {
+        if (!mounted || err?.name === 'AbortError') return;
+        setJobsError(err?.message || 'Không thể tải dữ liệu việc làm');
+      } finally {
+        if (mounted) setJobsLoading(false);
+      }
+    }
+
+    fetchLiveJobs();
+
+    return () => {
+      mounted = false;
+      controller.abort();
+    };
+  }, [activeCategory, debouncedSearch, jobsRefreshKey]);
 
   const currentConfig = CATEGORY_DATA[activeCategory];
-  const items = currentConfig.items.filter((item) =>
+  const sourceItems = activeCategory === 'jobs' ? liveJobs : currentConfig.items;
+  const items = sourceItems.filter((item) =>
     item.title.toLowerCase().includes(search.toLowerCase()) ||
     item.field1.toLowerCase().includes(search.toLowerCase()) ||
     item.field2.toLowerCase().includes(search.toLowerCase()) ||
@@ -294,40 +405,78 @@ export default function UniversalExplorerPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
-              {items.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="py-3.5 px-4 max-w-xs">
-                    <span className="font-semibold text-slate-900 dark:text-white block line-clamp-1">
-                      {item.title}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                      {item.source}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                    {item.field1}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 text-xs max-w-xs truncate">
-                    {item.field2}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-400 text-xs font-mono whitespace-nowrap">
-                    {item.date}
-                  </td>
-                  <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-block"
-                      title="View original listing"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
+              {jobsLoading && activeCategory === 'jobs' ? (
+                Array.from({ length: 4 }).map((_, idx) => (
+                  <tr key={`loading-${idx}`} className="animate-pulse">
+                    <td className="py-4 px-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4" /></td>
+                    <td className="py-4 px-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-16" /></td>
+                    <td className="py-4 px-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-24" /></td>
+                    <td className="py-4 px-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-32" /></td>
+                    <td className="py-4 px-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-20" /></td>
+                    <td className="py-4 px-4 text-right"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-6 ml-auto" /></td>
+                  </tr>
+                ))
+              ) : jobsError ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-sm">
+                    <div className="inline-flex flex-col items-center gap-2">
+                      <AlertTriangle className="w-6 h-6 text-amber-500" />
+                      <span className="text-amber-700 dark:text-amber-400">{jobsError}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        Nền tảng tuyển dụng có thể đang áp dụng xác thực chống bot. Vui lòng thử lại sau vài phút.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setJobsRefreshKey((k) => k + 1)}
+                        className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" /> Thử lại
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : items.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-sm text-slate-500">
+                    Không tìm thấy dữ liệu phù hợp với tìm kiếm.
+                  </td>
+                </tr>
+              ) : (
+                items.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3.5 px-4 max-w-xs">
+                      <span className="font-semibold text-slate-900 dark:text-white block line-clamp-1">
+                        {item.title}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        {item.source}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                      {item.field1}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 text-xs max-w-xs truncate">
+                      {item.field2}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-400 text-xs font-mono whitespace-nowrap">
+                      {item.date}
+                    </td>
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-block"
+                        title="View original listing"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
