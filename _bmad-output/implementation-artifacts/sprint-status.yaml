@@ -65,7 +65,7 @@ development_status:
   12-3-terminal-qr-full-backfill: done
   epic-12-retrospective: done
 
-  epic-13: in-progress
+  epic-13: done
   13-1-tiered-signer-architecture-token-ring-worker-pool: done
   13-1-2-tier-0-pure-algorithm-crypto-signer-bridge: done
   13-2-refactor-twitter-scraper-to-hybrid-architecture: done
@@ -141,7 +141,7 @@ development_status:
   19-10-admin-mcp-tools: done
   epic-19-retrospective: done
 
-  epic-20: in-progress
+  epic-20: done
   20-1-multi-consumer-service-contract-x-scrape-x-actions: done
   20-2-universal-stream-publish-hook-snake-case-thin-event: done
   20-5-pumpfun-native-social-crawler: done
@@ -307,6 +307,13 @@ development_status:
   epic-44-retrospective: optional
 
   epic-45: done
+  # Epic 51 — Frontend Platform Suites (2026-09-30/10-01, 5 trang độc lập)
+  epic-51: done
+  51-1-dexscreener-suite: done
+  51-2-youtube-insights-suite: done
+  51-3-fediverse-social-deck: done
+  51-4-enterprise-vn-portal: done
+  51-5-jobs-vn-aggregator: done
   45-1-jev-viral-miner-universal-corpus-scraping-jev-batch-classification: done
   45-2-jev-viral-stats-stats-aggregation-storage: done
   45-3-jev-content-intel-feed-stats-vào-content-generation: done
