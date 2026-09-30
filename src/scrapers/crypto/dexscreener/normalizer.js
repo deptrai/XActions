@@ -31,6 +31,22 @@ export function namespacedDexscreenerId(externalId) {
 const asObj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? /** @type {Record<string, unknown>} */ (v) : {});
 
 /**
+ * Upstream `icon` is frequently a bare CDN key (e.g. `mWl9YY091RIGUZW5`,
+ * verified live 2026-09-29) instead of a full URL. Rendering it raw makes
+ * the browser resolve it against its own origin → 404 per token. Absolutize
+ * bare keys against the Dexscreener images CDN; pass absolute/data URLs through.
+ * @param {unknown} icon
+ * @returns {string | null}
+ */
+function normalizeIcon(icon) {
+  if (typeof icon !== 'string') return null;
+  const trimmed = icon.trim();
+  if (!trimmed) return null;
+  if (/^(https?:|ipfs:|data:|blob:)/i.test(trimmed)) return trimmed;
+  return `https://cdn.dexscreener.com/cms/images/${trimmed.replace(/^\/+/, '')}`;
+}
+
+/**
  * Split a `links[]` entry into social vs website buckets. Dexscreener tags
  * entries with `type` ('twitter'|'telegram'|...) or `label` (freeform website).
  * @param {unknown[]} links
@@ -253,7 +269,7 @@ export function normalizeBoostedToken(raw) {
       total_amount: b.totalAmount != null ? Number(b.totalAmount) : null,
       url: typeof b.url === 'string' ? b.url : null,
       description: typeof b.description === 'string' ? b.description : null,
-      icon: typeof b.icon === 'string' ? b.icon : null,
+      icon: normalizeIcon(b.icon),
     },
   };
 }
@@ -275,7 +291,7 @@ export function normalizeTokenProfile(raw) {
       chain_id: typeof p.chainId === 'string' ? p.chainId : null,
       url: typeof p.url === 'string' ? p.url : null,
       description: typeof p.description === 'string' ? p.description : null,
-      icon: typeof p.icon === 'string' ? p.icon : null,
+      icon: normalizeIcon(p.icon),
       header: typeof p.header === 'string' ? p.header : null,
       socials,
       websites,

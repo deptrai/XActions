@@ -223,4 +223,23 @@ describe('Story 50.7 — dexscreener descriptor + 5 actions', () => {
       expect(a.status).toBe('stable');
     }
   });
+
+  it('D-12: bare icon keys are absolutized against the images CDN', async () => {
+    const boosted = makeCrawler({
+      '/token-boosts/latest/v1': [{ tokenAddress: TOKEN, chainId: 'solana', amount: 1, totalAmount: 1, url: 'https://dexscreener.com/x', description: 'd', icon: 'mWl9YY091RIGUZW5' }],
+    });
+    const b = await boosted.fetchLatestBoosted({});
+    expect(b[0].data.icon).toBe('https://cdn.dexscreener.com/cms/images/mWl9YY091RIGUZW5');
+
+    const profiles = makeCrawler({
+      '/token-profiles/latest/v1': [{ tokenAddress: TOKEN, chainId: 'solana', url: 'https://dexscreener.com/x', description: 'd', icon: 'bareKey', header: 'https://header', links: [] }],
+    });
+    const p = await profiles.fetchLatestProfiles({ limit: 1 });
+    expect(p[0].data.icon).toBe('https://cdn.dexscreener.com/cms/images/bareKey');
+
+    // Absolute URLs pass through unchanged
+    const abs = makeCrawler({ '/token-boosts/latest/v1': [{ tokenAddress: TOKEN, chainId: 'solana', amount: 1, totalAmount: 1, url: 'x', icon: 'https://cdn.example.com/i.png' }] });
+    const a = await abs.fetchLatestBoosted({});
+    expect(a[0].data.icon).toBe('https://cdn.example.com/i.png');
+  });
 });
