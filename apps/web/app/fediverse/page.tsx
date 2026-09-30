@@ -265,24 +265,24 @@ export function FediverseDeck() {
     setColumn(col, isMore ? { loadingMore: true } : { loading: true, error: null });
     let res: ApiResult<unknown>;
     try {
+      // Bluesky/Mastodon actions are NOT sync-eligible (no syncCapableActions
+      // in their descriptors) — omit `mode` so the gateway resolves to the
+      // async lane; scrape() polls via statusUrl (isAsyncAccepted).
       if (col === 'bsky-hot') {
         res = await scrape<unknown>('bluesky', 'feed', {
           feedUri: WHATS_HOT_FEED_URI,
           limit: PAGE_LIMIT,
           ...(opts.cursor ? { cursor: opts.cursor } : {}),
-          mode: 'sync',
         }, opts.signal);
       } else if (col === 'bsky-profile') {
         res = await scrape<unknown>('bluesky', 'posts', {
           handle: opts.handle ?? activeHandle,
           limit: PAGE_LIMIT,
           ...(opts.cursor ? { cursor: opts.cursor } : {}),
-          mode: 'sync',
         }, opts.signal);
       } else {
         res = await scrape<unknown>('mastodon', 'trending', {
           limit: PAGE_LIMIT,
-          mode: 'sync',
         }, opts.signal);
       }
     } catch (err) {

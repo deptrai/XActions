@@ -35,8 +35,10 @@ describe('fediverse page architecture & constraints', () => {
     expect(pageSrc).toContain('at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot');
   });
 
-  it('requests sync mode and limit 30', () => {
-    expect(pageSrc).toContain("mode: 'sync'");
+  it('uses async lane (no forced sync mode) and limit 30', () => {
+    // Bluesky/Mastodon actions are NOT sync-eligible — page must NOT force
+    // mode:'sync' (backend 400 contract violation); omit mode for async+poll.
+    expect(pageSrc).not.toContain("mode: 'sync'");
     expect(pageSrc).toContain('PAGE_LIMIT = 30');
   });
 
