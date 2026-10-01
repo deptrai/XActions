@@ -189,7 +189,7 @@ function emptyStateMessage(col: ColumnId): string {
   }
 }
 
-export function FediverseDeck() {
+function FediverseDeck() {
   const [columns, setColumns] = useState<Record<ColumnId, ColumnState>>({
     'bsky-hot': INITIAL_COLUMN,
     'bsky-profile': INITIAL_COLUMN,

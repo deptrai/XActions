@@ -167,6 +167,9 @@ export default function FleetAccountsPage() {
         setAccounts(res.data.accounts.map(normalizeAccount));
       } else if (res.status === 401) {
         showToast('Authentication required for live accounts. Showing seed data.', 'info');
+      } else if (res.status === 403) {
+        showToast('Admin privileges required to view live account pool. Showing seed data.', 'info');
+        setInlineError('Live account pool requires admin privileges. Displaying read-only reference data.');
       }
     } catch {
       // Graceful offline fallback — keep seeded rows

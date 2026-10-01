@@ -109,10 +109,11 @@ export async function api<T = unknown>(
       // gateway-only keys (mode/operationId/metadata) — the canonical
       // {success,data,page?} envelope never carries them.
       const isObj = typeof parsed === 'object' && parsed !== null;
+      const asRecord = parsed as Record<string, unknown>;
       const isGatewayEnvelope =
-        isObj && ('mode' in parsed || 'operationId' in parsed || 'metadata' in parsed);
+        isObj && ('mode' in asRecord || 'operationId' in asRecord || 'metadata' in asRecord);
       const isEnvelope =
-        isObj && 'success' in parsed && 'data' in parsed && !isGatewayEnvelope;
+        isObj && 'success' in asRecord && 'data' in asRecord && !isGatewayEnvelope;
       const data: T = isEnvelope
         ? ((parsed as BackendEnvelope<T>).data as T)
         : (parsed as T);

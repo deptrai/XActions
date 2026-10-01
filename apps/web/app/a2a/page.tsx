@@ -62,14 +62,28 @@ export default function A2APage() {
     try {
       const es = new EventSource('/api/a2a/stream');
       eventSourceRef.current = es;
-      es.onopen = () => { setConnected(true); setSseStatus('connected'); };
+      let opened = false;
+      const timeout = setTimeout(() => {
+        if (!opened) setSseStatus('error');
+      }, 5000);
+      es.onopen = () => {
+        opened = true;
+        clearTimeout(timeout);
+        setConnected(true);
+        setSseStatus('connected');
+      };
       es.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data) as A2AMessage;
           setMessages((prev) => [...prev, msg]);
         } catch {}
       };
-      es.onerror = () => { setConnected(false); setSseStatus('error'); es.close(); };
+      es.onerror = () => {
+        clearTimeout(timeout);
+        setConnected(false);
+        setSseStatus('error');
+        es.close();
+      };
     } catch {
       setSseStatus('error');
     }

@@ -165,7 +165,7 @@ function mapError(err: unknown): { kind: 'warn' | 'error'; msg: string } {
   return { kind: 'error', msg };
 }
 
-export function extractVideoId(input: string): string {
+function extractVideoId(input: string): string {
   const clean = input.trim();
   if (!clean) return '';
   // youtu.be/<id>

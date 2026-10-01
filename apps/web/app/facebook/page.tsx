@@ -28,15 +28,28 @@ export default function FacebookPage() {
   const checkStatus = async () => {
     setIsLoading(true);
     try {
-      const res = await api<FBStatus>('GET', '/api/facebook/status');
-      if (res.ok && 'data' in res) setStatus(res.data as FBStatus);
-    } catch { /* keep state */ } finally { setIsLoading(false); }
+      const res = await api<{ accounts?: Array<{ id: string; label: string }> }>('GET', '/api/facebook/accounts');
+      if (res.ok && res.data?.accounts) {
+        const count = res.data.accounts.length;
+        setStatus({
+          connected: count > 0,
+          account: count > 0 ? res.data.accounts[0].label : undefined,
+          pages: count,
+        });
+      } else {
+        setStatus({ connected: false });
+      }
+    } catch {
+      setStatus({ connected: false });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const runAction = async (actionId: string) => {
     setRunning((prev) => new Set(prev).add(actionId));
     try {
-      const res = await api('POST', '/api/facebook/action', { body: { action: actionId } });
+      const res = await api('POST', '/api/platform/facebook/scrape', { body: { action: actionId } });
       setResults((prev) => ({ ...prev, [actionId]: res.ok ? '✅ Completed' : '⚠️ Queued (backend offline)' }));
     } catch {
       setResults((prev) => ({ ...prev, [actionId]: '❌ Failed' }));

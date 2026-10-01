@@ -22,6 +22,18 @@ export interface ProxyOptions {
    * Auth cookies are re-injected on each hop by fetch, so this stays safe.
    */
   followRedirects?: boolean;
+  /**
+   * Rewrite root-relative HTML asset references to the proxy prefix.
+   *
+   * Swagger UI's bundle HTML references its assets as `./swagger-ui.css`.
+   * Upstream canonicalizes `/api-docs/` → `/api-docs` (trailing slash
+   * stripped), so the browser resolves `./` against `/` and requests
+   * `/swagger-ui.css` — outside this catch-all, which 404s and renders a
+   * blank page. Rewriting them to `/api-docs/…` keeps the mount self-contained
+   * regardless of which path the browser landed on.
+   */
+  /** Serve assets under this prefix instead of upstream root (e.g. '/api-docs'). */
+  htmlAssetBasePath?: string;
 }
 
 const HOP_BY_HOP_REQUEST_HEADERS = new Set([
@@ -132,6 +144,23 @@ export async function proxyToBackend(
   }
 
   const isNullBodyStatus = upstreamRes.status === 204 || upstreamRes.status === 304;
+
+  if (opts.htmlAssetBasePath) {
+    const contentType = upstreamRes.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+      const html = await upstreamRes.text();
+      const base = opts.htmlAssetBasePath.replace(/\/+$/, '');
+      const rewritten = html
+        .replaceAll('href="./', `href="${base}/`)
+        .replaceAll('src="./', `src="${base}/`);
+      return new Response(rewritten, {
+        status: upstreamRes.status,
+        statusText: upstreamRes.statusText,
+        headers: responseHeaders,
+      });
+    }
+  }
+
   const resBody = isNullBodyStatus ? null : upstreamRes.body;
 
   return new Response(resBody, {

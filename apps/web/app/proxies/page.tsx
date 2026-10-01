@@ -153,6 +153,9 @@ export default function ProxyPoolPage() {
         if (typeof res.data.healthyCount === 'number' && typeof res.data.totalCount === 'number') {
           setStats({ healthyCount: res.data.healthyCount, totalCount: res.data.totalCount, isAllQuarantined: (res.data as Record<string, unknown>).isAllQuarantined as boolean | undefined });
         }
+      } else if (res.status === 403) {
+        showToast('Admin privileges required to manage proxy pool. Showing seed data.', 'info');
+        setInlineError('Proxy fleet control requires admin privileges. Displaying read-only reference data.');
       }
 
       // Secondary: public pool health counters

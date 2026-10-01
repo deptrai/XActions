@@ -200,6 +200,7 @@ export default function AccountSessionsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [inlineError, setInlineError] = useState<string | null>(null);
 
   // Toast Helper
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -251,6 +252,9 @@ export default function AccountSessionsPage() {
         setSessions(res.data.accounts.map(normalizeSession));
       } else if (res.status === 401) {
         showToast('Authentication required for live sessions. Showing seed data.', 'info');
+      } else if (res.status === 403) {
+        showToast('Admin privileges required to view live sessions. Showing seed data.', 'info');
+        setInlineError('Live session state requires admin privileges. Displaying read-only reference data.');
       }
 
       // Secondary: attempt spec-named /api/admin/sessions if available
@@ -494,6 +498,14 @@ export default function AccountSessionsPage() {
           );
         })}
       </div>
+
+      {/* Inline non-admin notice banner */}
+      {inlineError && (
+        <div className="p-3.5 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span>{inlineError}</span>
+        </div>
+      )}
 
       {/* Filter Toolbar + Session State Table */}
       <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-4 shadow-sm">

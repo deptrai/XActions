@@ -7,7 +7,10 @@
 
 import { proxyToBackend } from '@/lib/proxy';
 
-const opts = { followRedirects: true } as const;
+const opts = {
+  followRedirects: true,
+  htmlAssetBasePath: '/api-docs',
+} as const;
 
 export async function GET(req: Request) {
   return proxyToBackend(req, opts);
