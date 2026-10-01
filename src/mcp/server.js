@@ -4287,6 +4287,120 @@ function getAllTools() {
   return TOOLS;
 }
 
+// ============================================================================
+// Dual-Mode Runtime Engine (Story 52.2 / Epic 52)
+// Supports compact (10 Domain Tools) and full (224 legacy tools) modes.
+// Priority: Dynamic (setToolMode) > CLI flags (--mode=..., --compact, --full)
+//           > Environment variable (MCP_TOOL_MODE) > Default ('compact')
+// ============================================================================
+
+let explicitToolMode = null;
+
+/**
+ * Resolve tool mode from command-line arguments.
+ * Supports: --mode=compact|full, --mode <compact|full>, --compact, --full
+ *
+ * @param {string[]} [argv=process.argv]
+ * @returns {'compact' | 'full' | null}
+ */
+function resolveCliToolMode(argv = process.argv) {
+  if (!Array.isArray(argv)) return null;
+  for (let i = argv.length - 1; i >= 0; i--) {
+    const arg = argv[i];
+    if (typeof arg !== 'string') continue;
+    const lower = arg.toLowerCase().trim();
+    if (lower === '--full') return 'full';
+    if (lower === '--compact') return 'compact';
+    if (lower.startsWith('--mode=')) {
+      const val = lower.slice(7).trim().replace(/^['"]|['"]$/g, '');
+      if (val === 'full' || val === 'compact') return val;
+    }
+    if (lower === '--mode' && i + 1 < argv.length) {
+      const nextArg = String(argv[i + 1]).toLowerCase().trim().replace(/^['"]|['"]$/g, '');
+      if (nextArg === 'full' || nextArg === 'compact') return nextArg;
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve tool mode from environment variable MCP_TOOL_MODE.
+ *
+ * @param {Record<string, string | undefined>} [env=process.env]
+ * @returns {'compact' | 'full' | null}
+ */
+function resolveEnvToolMode(env = process.env) {
+  if (!env || !env.MCP_TOOL_MODE) return null;
+  const val = String(env.MCP_TOOL_MODE).trim().toLowerCase();
+  if (val === 'full' || val === 'compact') return val;
+  return null;
+}
+
+/**
+ * Get current tool mode ('compact' or 'full').
+ * Priority: explicit setToolMode > CLI flags > MCP_TOOL_MODE env > 'compact'
+ *
+ * @returns {'compact' | 'full'}
+ */
+function getToolMode() {
+  if (explicitToolMode) {
+    return explicitToolMode;
+  }
+  const cliMode = resolveCliToolMode();
+  if (cliMode) {
+    return cliMode;
+  }
+  const envMode = resolveEnvToolMode();
+  if (envMode) {
+    return envMode;
+  }
+  return 'compact';
+}
+
+/**
+ * Explicitly set the active tool mode.
+ * Pass null or 'reset' to clear explicit override and revert to auto-resolution.
+ *
+ * @param {'compact' | 'full' | null} mode
+ */
+function setToolMode(mode) {
+  if (mode === null || mode === 'reset') {
+    explicitToolMode = null;
+    return;
+  }
+  if (!mode || typeof mode !== 'string') {
+    throw new Error(`Invalid tool mode: "${mode}". Valid modes: "compact", "full".`);
+  }
+  const normalized = mode.trim().toLowerCase();
+  if (normalized !== 'compact' && normalized !== 'full') {
+    throw new Error(`Invalid tool mode: "${mode}". Valid modes: "compact", "full".`);
+  }
+  explicitToolMode = normalized;
+}
+
+/**
+ * Reset explicit tool mode override.
+ */
+function resetToolMode() {
+  explicitToolMode = null;
+}
+
+/**
+ * Return the active tools array based on mode or current configuration.
+ *
+ * @param {'compact' | 'full'} [mode]
+ * @returns {Record<string, unknown>[]}
+ */
+function getActiveTools(mode) {
+  const resolvedMode = (mode !== undefined && mode !== null)
+    ? String(mode).trim().toLowerCase()
+    : getToolMode();
+  if (resolvedMode === 'full') {
+    return TOOLS;
+  }
+  return DOMAIN_TOOLS;
+}
+
 function setLocalTools(tools) {
   if (!tools) {
     localTools = null;
@@ -7538,7 +7652,7 @@ function createMcpServer() {
   // List available tools (core + plugins)
   srv.setRequestHandler(ListToolsRequestSchema, async () => {
     const pluginToolDefs = getPluginTools().map(({ _plugin, handler, ...def }) => def);
-    return { tools: [...TOOLS, ...pluginToolDefs] };
+    return { tools: [...getActiveTools(), ...pluginToolDefs] };
   });
 
   // Resources (MCP Resource Exposure)
@@ -7611,6 +7725,8 @@ function createMcpServer() {
       const statusData = {
         version: VERSION,
         mode: MODE,
+        toolMode: getToolMode(),
+        activeToolCount: getActiveTools().length,
         uptime: process.uptime(),
         governor: governorStatus,
       };
@@ -7868,9 +7984,11 @@ process.on('SIGTERM', async () => {
  */
 function printBanner(pluginCount, pluginToolCount) {
   const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+  const toolMode = getToolMode();
+  const activeTools = getActiveTools(toolMode);
 
   console.error('');
-  console.error(`⚡ XActions MCP Server v${VERSION} — ${TOOLS.length + pluginToolCount} tools`);
+  console.error(`⚡ XActions MCP Server v${VERSION} [${toolMode.toUpperCase()} mode] — ${activeTools.length + pluginToolCount} tools`);
   console.error('   The free, open-source Twitter/X MCP server');
   console.error('   https://github.com/nirholas/XActions');
   console.error('');
@@ -7904,23 +8022,27 @@ function printBanner(pluginCount, pluginToolCount) {
   console.error('');
 
   // ── Tool Summary ──
-  const totalTools = TOOLS.length + pluginToolCount;
-  console.error(`📋 Tools available: ${totalTools}`);
+  const totalTools = activeTools.length + pluginToolCount;
+  console.error(`📋 Tools available: ${totalTools} (${toolMode} mode)`);
   if (pluginCount > 0) {
     console.error(`   Plugins loaded: ${pluginCount} (${pluginToolCount} tools)`);
   }
 
-  const categories = {
-    'Scraping':  ['x_get_profile', 'x_get_followers', 'x_get_following', 'x_get_tweets', 'x_search_tweets', 'x_get_thread', 'x_download_video'],
-    'Analysis':  ['x_detect_unfollowers', 'x_analyze_sentiment', 'x_best_time_to_post', 'x_competitor_analysis', 'x_brand_monitor'],
-    'Actions':   ['x_follow', 'x_unfollow', 'x_like', 'x_post_tweet', 'x_post_thread', 'x_reply'],
-    'AI':        ['x_analyze_voice', 'x_generate_tweet', 'x_ai_write', 'x_rewrite_tweet', 'x_summarize_thread'],
-  };
+  if (toolMode === 'compact') {
+    console.error(`   Domain Dispatchers: ${activeTools.map((t) => t.name).join(', ')}`);
+  } else {
+    const categories = {
+      'Scraping':  ['x_get_profile', 'x_get_followers', 'x_get_following', 'x_get_tweets', 'x_search_tweets', 'x_get_thread', 'x_download_video'],
+      'Analysis':  ['x_detect_unfollowers', 'x_analyze_sentiment', 'x_best_time_to_post', 'x_competitor_analysis', 'x_brand_monitor'],
+      'Actions':   ['x_follow', 'x_unfollow', 'x_like', 'x_post_tweet', 'x_post_thread', 'x_reply'],
+      'AI':        ['x_analyze_voice', 'x_generate_tweet', 'x_ai_write', 'x_rewrite_tweet', 'x_summarize_thread'],
+    };
 
-  for (const [cat, tools] of Object.entries(categories)) {
-    const available = tools.filter(t => TOOLS.some(td => td.name === t));
-    if (available.length) {
-      console.error(`   ${cat}: ${available.join(', ')}`);
+    for (const [cat, tools] of Object.entries(categories)) {
+      const available = tools.filter(t => activeTools.some(td => td.name === t));
+      if (available.length) {
+        console.error(`   ${cat}: ${available.join(', ')}`);
+      }
     }
   }
 
@@ -7953,7 +8075,16 @@ async function startHttpTransport() {
 
   // Health check
   app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', transport: 'http', tools: TOOLS.length, sessions: sessions.size });
+    res.json({
+      status: 'ok',
+      transport: 'http',
+      executionMode: MODE,
+      toolMode: getToolMode(),
+      mode: getToolMode(),
+      tools: getActiveTools().length,
+      allTools: TOOLS.length,
+      sessions: sessions.size,
+    });
   });
 
   // Stream Metrics endpoint (Story 14.3)
@@ -8137,6 +8268,12 @@ export {
   DOMAIN_DISPATCH_MAP,
   getDomainTools,
   getAllTools,
+  getToolMode,
+  setToolMode,
+  resetToolMode,
+  getActiveTools,
+  resolveCliToolMode,
+  resolveEnvToolMode,
   setLocalTools,
   main,
   createMcpServer,
