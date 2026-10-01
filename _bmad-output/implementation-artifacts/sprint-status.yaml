@@ -450,8 +450,8 @@ epic-50:
       slug: reddit-search-e2e-contract-test-migration-guide
       status: done
 
-  epic-52: in-progress
+  epic-52: done
   52-1-domain-dispatcher-schemas-routing-facade: done
   52-2-dual-mode-runtime-engine-cli-flags: done
-  52-3-verification-test-suite-backward-compatibility: backlog
+  52-3-verification-test-suite-backward-compatibility: done
   epic-52-retrospective: optional

@@ -1194,3 +1194,16 @@ export declare class PumpFunLivechat {
 
 export declare function createPumpFunClient(options?: Record<string, unknown>): PumpFunClient;
 export declare function createPumpFunCrawler(client?: PumpFunClient | Record<string, unknown>, options?: Record<string, unknown>): PumpFunCrawler;
+
+// ── MCP Server & Dual-Mode Runtime (Epic 52 / Story 52.3) ───────────────────
+
+export * as mcp from '../src/mcp/server';
+export type {
+  ToolMode,
+  McpToolProperty,
+  McpToolSchema,
+  McpToolDefinition,
+  DomainActionDispatchConfig,
+  DomainDispatchMap,
+} from '../src/mcp/server';
+

@@ -73,6 +73,12 @@ export { default as settingsManager } from './settingsManager.js';
 export { default as spacesManager } from './spacesManager.js';
 
 // ============================================================================
+// MCP Server & Dual-Mode Runtime (Epic 52 / Story 52.3)
+// ============================================================================
+
+export * as mcp from './mcp/server.js';
+
+// ============================================================================
 // Browser Script Catalog (IIFE scripts — paste in x.com console)
 // ============================================================================
 
