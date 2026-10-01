@@ -7,6 +7,7 @@ import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { TOOLS, executeTool, executeScrapeTool } from '../../src/mcp/server.js';
 import { PlatformError } from '../../src/core/error-envelope.js';
+import { executeActionListTool } from '../../src/scrapers/social/actions-list.js';
 
 describe('x_scrape tool registration and schema', () => {
   it('registers x_scrape in TOOLS array with required schema fields', () => {
@@ -187,5 +188,155 @@ describe('x_scrape validation & error handling', () => {
         process.env.REDIS_STREAM_ENABLED = originalEnv;
       }
     }
+  });
+
+  it('validates missing requiredArgs for newly mapped crawlers (dexscreener, github, gravatar)', async () => {
+    // dexscreener missing args
+    await assert.rejects(
+      async () => {
+        await executeScrapeTool({ platform: 'dexscreener', action: 'token_lookup', args: {} });
+      },
+      (err) => {
+        assert.ok(err instanceof PlatformError);
+        assert.equal(err.code, 'XACT_4002');
+        assert.deepEqual(err.missing, ['chainId', 'tokenAddress']);
+        return true;
+      }
+    );
+
+    // github missing args
+    await assert.rejects(
+      async () => {
+        await executeScrapeTool({ platform: 'github', action: 'profile', args: {} });
+      },
+      (err) => {
+        assert.ok(err instanceof PlatformError);
+        assert.equal(err.code, 'XACT_4002');
+        assert.deepEqual(err.missing, ['username']);
+        return true;
+      }
+    );
+
+    // gravatar missing args
+    await assert.rejects(
+      async () => {
+        await executeScrapeTool({ platform: 'gravatar', action: 'profile', args: {} });
+      },
+      (err) => {
+        assert.ok(err instanceof PlatformError);
+        assert.equal(err.code, 'XACT_4002');
+        assert.deepEqual(err.missing, ['email']);
+        return true;
+      }
+    );
+  });
+});
+
+describe('dedicated crypto scraper tools (dexscreener & pumpfun)', () => {
+  const DEXSCREENER_TOOLS = [
+    'x_dexscreener_token_socials',
+    'x_dexscreener_token_legitimacy',
+    'x_dexscreener_token_lookup',
+    'x_dexscreener_latest_boosted',
+    'x_dexscreener_latest_profiles',
+  ];
+
+  const PUMPFUN_TOOLS = [
+    'x_pumpfun_mint_social',
+    'x_pumpfun_coin_meta',
+    'x_pumpfun_resolve_user',
+    'x_pumpfun_feed',
+    'x_pumpfun_chat',
+    'x_pumpfun_my_profile',
+    'x_pumpfun_user_following',
+    'x_pumpfun_livestream_clips',
+    'x_pumpfun_post_reply',
+    'x_pumpfun_mint_comments',
+  ];
+
+  it('registers all 5 dexscreener and 10 pumpfun dedicated tools in TOOLS', () => {
+    for (const toolName of [...DEXSCREENER_TOOLS, ...PUMPFUN_TOOLS]) {
+      const tool = TOOLS.find((t) => t.name === toolName);
+      assert.ok(tool, `${toolName} should be registered in TOOLS`);
+      assert.equal(typeof tool.description, 'string');
+      assert.equal(tool.inputSchema.type, 'object');
+      assert.ok(tool.inputSchema.properties);
+    }
+  });
+
+  it('verifies required properties on dexscreener and pumpfun tools', () => {
+    const lookup = TOOLS.find((t) => t.name === 'x_dexscreener_token_lookup');
+    assert.deepEqual(lookup.inputSchema.required, ['chainId', 'tokenAddress']);
+
+    const mintSocial = TOOLS.find((t) => t.name === 'x_pumpfun_mint_social');
+    assert.deepEqual(mintSocial.inputSchema.required, ['mintAddress']);
+
+    const postReply = TOOLS.find((t) => t.name === 'x_pumpfun_post_reply');
+    assert.deepEqual(postReply.inputSchema.required, ['mintAddress', 'text']);
+
+    const feed = TOOLS.find((t) => t.name === 'x_pumpfun_feed');
+    assert.deepEqual(feed.inputSchema.required, []);
+  });
+
+  it('dispatches dedicated tools via executeTool and validates requiredArgs', async () => {
+    // Missing required args should throw XACT_4002
+    await assert.rejects(
+      async () => {
+        await executeTool('x_dexscreener_token_lookup', {});
+      },
+      (err) => {
+        assert.ok(err instanceof PlatformError);
+        assert.equal(err.code, 'XACT_4002');
+        assert.deepEqual(err.missing, ['chainId', 'tokenAddress']);
+        return true;
+      }
+    );
+
+    await assert.rejects(
+      async () => {
+        await executeTool('x_pumpfun_mint_social', {});
+      },
+      (err) => {
+        assert.ok(err instanceof PlatformError);
+        assert.equal(err.code, 'XACT_4002');
+        assert.deepEqual(err.missing, ['mintAddress']);
+        return true;
+      }
+    );
+  });
+
+  it('discovers github and gravatar actions through executeActionListTool', async () => {
+    const ghActions = await executeActionListTool({ platform: 'github' });
+    assert.equal(ghActions.length, 1);
+    assert.equal(ghActions[0].action, 'profile');
+    assert.deepEqual(ghActions[0].requiredArgs, ['username']);
+
+    const grActions = await executeActionListTool({ platform: 'gravatar' });
+    assert.equal(grActions.length, 1);
+    assert.equal(grActions[0].action, 'profile');
+    assert.deepEqual(grActions[0].requiredArgs, ['email']);
+  });
+
+  it('executes dedicated tools with dryRun: true returning preview envelope', async () => {
+    const res = await executeTool('x_dexscreener_latest_boosted', { dryRun: true, limit: 10 });
+    assert.ok(res, 'Should return a result');
+    assert.equal(res.success, true);
+    assert.equal(res.mode, 'direct');
+    assert.ok(res.meta);
+    assert.equal(res.meta.tool, 'x_scrape');
+  });
+
+  it('validates telegram requiredArgs pre-validation via executeScrapeTool', async () => {
+    await assert.rejects(
+      async () => {
+        await executeScrapeTool({ platform: 'telegram', action: 'channel_messages', args: {} });
+      },
+      (err) => {
+        assert.ok(err instanceof PlatformError);
+        assert.equal(err.code, 'XACT_4002');
+        assert.deepEqual(err.missing, ['channel']);
+        return true;
+      }
+    );
   });
 });

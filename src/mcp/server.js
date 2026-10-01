@@ -2958,7 +2958,7 @@ const TOOLS = [
         },
         category: {
           type: 'string',
-          description: 'Filter by category: social, ecom, recruitment, realestate, procurement, legal, fnb, healthcare, vehicles',
+          description: 'Filter by category: social, ecom, recruitment, realestate, procurement, legal, fnb, healthcare, vehicles, crypto, identity',
         },
         detailLevel: {
           type: 'string',
@@ -3004,6 +3004,201 @@ const TOOLS = [
         },
       },
       required: ['platform', 'action', 'args'],
+    },
+  },
+
+  // ── Dedicated Dexscreener Tools (Story 50.7 / Epic 50) ───────────────────
+  {
+    name: 'x_dexscreener_token_socials',
+    description: 'Fetch dexscreener token social links + websites for a chain/address pair',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        chainId: { type: 'string', description: 'Blockchain identifier (e.g. solana, ethereum, bsc)' },
+        tokenAddress: { type: 'string', description: 'Token contract or mint address' },
+        limit: { type: 'number', description: 'Max items to return' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: ['chainId', 'tokenAddress'],
+    },
+  },
+  {
+    name: 'x_dexscreener_token_legitimacy',
+    description: 'Fetch dexscreener dev-paid orders + boost status for a chain/address pair',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        chainId: { type: 'string', description: 'Blockchain identifier (e.g. solana, ethereum, bsc)' },
+        tokenAddress: { type: 'string', description: 'Token contract or mint address' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: ['chainId', 'tokenAddress'],
+    },
+  },
+  {
+    name: 'x_dexscreener_token_lookup',
+    description: 'Fetch dexscreener pair data (dex_id, price_usd, liquidity) for a chain/address pair',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        chainId: { type: 'string', description: 'Blockchain identifier (e.g. solana, ethereum, bsc)' },
+        tokenAddress: { type: 'string', description: 'Token contract or mint address' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: ['chainId', 'tokenAddress'],
+    },
+  },
+  {
+    name: 'x_dexscreener_latest_boosted',
+    description: 'Fetch dexscreener trending boosted tokens (platform-wide, no chain filter)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: 'Max items to return (default: 25)' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'x_dexscreener_latest_profiles',
+    description: 'Fetch dexscreener newly updated token profiles (platform-wide)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: 'Max items to return (default: 25)' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: [],
+    },
+  },
+
+  // ── Dedicated Pump.fun Tools (Story 50.6 / Epic 50) ──────────────────────
+  {
+    name: 'x_pumpfun_mint_social',
+    description: 'Fetch pump.fun mint social signals (theses, comment velocity, top holders, KOL activity, livestream status)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        mintAddress: { type: 'string', description: 'Solana mint address of the pump.fun coin' },
+        limit: { type: 'number', description: 'Max items to return' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: ['mintAddress'],
+    },
+  },
+  {
+    name: 'x_pumpfun_coin_meta',
+    description: 'Fetch pump.fun coin metadata only (creator, socials, bonding_curve, market_cap) — fast ~300ms read, sync-lane eligible',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        mintAddress: { type: 'string', description: 'Solana mint address of the pump.fun coin' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: ['mintAddress'],
+    },
+  },
+  {
+    name: 'x_pumpfun_resolve_user',
+    description: 'Resolve a pump.fun username to a Solana wallet address and pump user status',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        username: { type: 'string', description: 'pump.fun username to resolve' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: ['username'],
+    },
+  },
+  {
+    name: 'x_pumpfun_feed',
+    description: 'Fetch global discovery feeds across pump.fun coins (koth, graduating, new_creations, last_trade, currently_live)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        feedType: { type: 'string', description: 'Feed type: koth, graduating, new_creations, last_trade, currently_live (default: koth)' },
+        limit: { type: 'number', description: 'Max items to return (default: 50)' },
+        offset: { type: 'number', description: 'Pagination offset (default: 0)' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'x_pumpfun_chat',
+    description: 'Stream realtime livechat messages from wss://livechat.pump.fun for a given mint address',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        mintAddress: { type: 'string', description: 'Solana mint address of the pump.fun coin' },
+        durationMs: { type: 'number', description: 'Chat streaming duration in milliseconds (default: 15000)' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: ['mintAddress'],
+    },
+  },
+  {
+    name: 'x_pumpfun_my_profile',
+    description: 'Fetch the pump.fun user profile (wallet, followers, following)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'x_pumpfun_user_following',
+    description: 'Fetch the list of accounts a specific userId is following on pump.fun',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string', description: 'pump.fun user ID (UUID)' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: ['userId'],
+    },
+  },
+  {
+    name: 'x_pumpfun_livestream_clips',
+    description: 'Fetch HLS video clips metadata for a pump.fun livestreamer or coin',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        mintOrWallet: { type: 'string', description: 'Solana mint address or streamer wallet address' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: ['mintOrWallet'],
+    },
+  },
+  {
+    name: 'x_pumpfun_post_reply',
+    description: 'Post a reply/comment to a pump.fun mint coin page using an authenticated session',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        mintAddress: { type: 'string', description: 'Solana mint address of the pump.fun coin' },
+        text: { type: 'string', description: 'Reply text to post' },
+        replyToId: { type: 'string', description: 'Optional comment ID to reply to' },
+        mediaUrl: { type: 'string', description: 'Optional media attachment URL' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: ['mintAddress', 'text'],
+    },
+  },
+  {
+    name: 'x_pumpfun_mint_comments',
+    description: 'Fetch comments/chat history for a pump.fun mint via Socket.IO livechat',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        mintAddress: { type: 'string', description: 'Solana mint address of the pump.fun coin' },
+        limit: { type: 'number', description: 'Max comments to return' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: ['mintAddress'],
     },
   },
   {
@@ -3365,6 +3560,25 @@ async function initializeBackend() {
   }
 }
 
+// Dedicated platform tools — thin wrappers over x_scrape
+const DEDICATED_SCRAPE_TOOLS = {
+  x_dexscreener_token_socials:   { platform: 'dexscreener', action: 'token_socials' },
+  x_dexscreener_token_legitimacy: { platform: 'dexscreener', action: 'token_legitimacy' },
+  x_dexscreener_token_lookup:    { platform: 'dexscreener', action: 'token_lookup' },
+  x_dexscreener_latest_boosted:  { platform: 'dexscreener', action: 'latest_boosted' },
+  x_dexscreener_latest_profiles: { platform: 'dexscreener', action: 'latest_profiles' },
+  x_pumpfun_mint_social:         { platform: 'pumpfun', action: 'fetch_mint_social' },
+  x_pumpfun_coin_meta:           { platform: 'pumpfun', action: 'fetch_coin_meta' },
+  x_pumpfun_resolve_user:        { platform: 'pumpfun', action: 'resolve_user_wallet' },
+  x_pumpfun_feed:                { platform: 'pumpfun', action: 'fetch_platform_feed' },
+  x_pumpfun_chat:                { platform: 'pumpfun', action: 'stream_mint_chat' },
+  x_pumpfun_my_profile:          { platform: 'pumpfun', action: 'fetch_my_profile' },
+  x_pumpfun_user_following:      { platform: 'pumpfun', action: 'fetch_user_following' },
+  x_pumpfun_livestream_clips:    { platform: 'pumpfun', action: 'fetch_livestream_clips' },
+  x_pumpfun_post_reply:          { platform: 'pumpfun', action: 'post_mint_reply' },
+  x_pumpfun_mint_comments:       { platform: 'pumpfun', action: 'fetch_mint_comments' },
+};
+
 /**
  * Execute a tool using the appropriate backend
  */
@@ -3458,6 +3672,13 @@ async function executeTool(name, args) {
 
   if (name === 'x_scrape') {
     return await executeScrapeTool(args);
+  }
+
+  // Dedicated platform tools — thin wrappers over x_scrape
+  if (DEDICATED_SCRAPE_TOOLS[name]) {
+    const { platform, action } = DEDICATED_SCRAPE_TOOLS[name];
+    const { context, accountId, proxyUrl, dryRun, artifactFormat, ...actionArgs } = args || {};
+    return await executeScrapeTool({ platform, action, args: actionArgs, context, accountId, proxyUrl, dryRun, artifactFormat });
   }
 
   if (name === 'x_social_find_profiles') {
@@ -4104,6 +4325,10 @@ async function executeScrapeTool(args) {
       vietnamworks: '../scrapers/recruitment/vietnamworks/crawler.js',
       masothue: '../scrapers/procurement/masothue/crawler.js',
       pumpfun: '../scrapers/social/pumpfun/crawler.js',
+      dexscreener: '../scrapers/crypto/dexscreener/crawler.js',
+      telegram: '../scrapers/social/telegram/crawler.js',
+      github: '../scrapers/identity/github/crawler.js',
+      gravatar: '../scrapers/identity/gravatar/crawler.js',
     };
     const crawlerPath = crawlerModuleMap[platformKey];
     if (crawlerPath) {

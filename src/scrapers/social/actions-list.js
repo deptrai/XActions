@@ -39,6 +39,8 @@ const CANONICAL_PLATFORMS = [
   'pumpfun',
   'dexscreener',
   'telegram',
+  'github',
+  'gravatar',
 ];
 
 /** @type {Record<string, string>} — derived from DESCRIPTORS aliases, not a manual map */
@@ -76,6 +78,8 @@ const PLATFORM_CATEGORIES = {
   ipvietnam: 'legal',
   pumpfun: 'social',
   dexscreener: 'crypto',
+  github: 'identity',
+  gravatar: 'identity',
 };
 
 /** @type {Record<string, string>} */
@@ -92,6 +96,7 @@ const CATEGORY_MAP = {
   realestate: 'realestate',
   legal: 'legal',
   healthcare: 'healthcare',
+  identity: 'identity',
 };
 
 /**
@@ -133,6 +138,8 @@ export async function executeActionListTool(options = {}) {
     () => import("./pumpfun/crawler.js").then((m) => new m.PumpFunCrawler()),
     () => import("../crypto/dexscreener/crawler.js").then((m) => new m.DexscreenerCrawler()),
     () => import("./telegram/crawler.js").then((m) => new m.TelegramCrawler()),
+    () => import("../identity/github/crawler.js").then((m) => new m.GitHubCrawler()),
+    () => import("../identity/gravatar/crawler.js").then((m) => new m.GravatarCrawler()),
   ];
 
   const crawlers = [];
