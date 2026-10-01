@@ -90,7 +90,7 @@ export function detectPlatform(toolName, args = {}, rawResult) {
     return result.platform;
   }
 
-  if (toolName.startsWith('x_facebook_')) return 'facebook';
+  if (toolName.startsWith('x_facebook')) return 'facebook';
   if (toolName.startsWith('x_threads_')) return 'threads';
   if (toolName.startsWith('x_bluesky_')) return 'bluesky';
   if (toolName.startsWith('x_mastodon_')) return 'mastodon';

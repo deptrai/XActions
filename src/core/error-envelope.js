@@ -22,6 +22,19 @@ export const ErrorTypes = Object.freeze({
   BUDGET_CEILING_REACHED: 'budget_ceiling_reached', // Story 40.1 — proxy daily budget exhausted
 });
 
+export const ErrorCodes = Object.freeze({
+  MISSING_OR_INVALID_ACTION: 'XACT_4001',
+  MISSING_REQUIRED_ARGS: 'XACT_4002',
+  AUTH_REQUIRED: 'XACT_4003',
+  INVALID_AUTH_TOKEN: 'XACT_4010',
+  RATE_LIMIT_EXCEEDED: 'XACT_4030',
+  NOT_FOUND: 'XACT_4041',
+  HIBERNATION: 'XACT_4090',
+  CONSUMER_QUOTA_EXCEEDED: 'XACT_4291',
+  INTERNAL_ERROR: 'XACT_5000',
+  ARTIFACT_ERROR: 'XACT_5002',
+});
+
 export const SuggestedActions = Object.freeze({
   RETRY_AFTER_DELAY: 'retry_after_delay',
   ROTATE_PROXY: 'rotate_proxy',
@@ -83,6 +96,9 @@ export class PlatformError extends Error {
     this.platform = opts.platform;
     this.consumerId = opts.consumerId;
     this.details = opts.details;
+    if (opts.availableActions !== undefined) this.availableActions = opts.availableActions;
+    if (opts.missing !== undefined) this.missing = opts.missing;
+    if (opts.example !== undefined) this.example = opts.example;
     if (opts.cause !== undefined) this.cause = opts.cause;
   }
 
@@ -107,6 +123,9 @@ export class PlatformError extends Error {
       // AD-20 additive fields — present only when set, preserving legacy shape.
       ...(this.consumerId ? { consumerId: this.consumerId } : {}),
       ...(this.details !== undefined ? { details: this.details } : {}),
+      ...(this.availableActions !== undefined ? { availableActions: this.availableActions } : {}),
+      ...(this.missing !== undefined ? { missing: this.missing } : {}),
+      ...(this.example !== undefined ? { example: this.example } : {}),
     };
   }
 }

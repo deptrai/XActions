@@ -4119,3 +4119,21 @@ So that **I can discover active hiring opportunities and salary benchmarks witho
 
 All 5 stories can be implemented independently and in parallel since each targets an isolated Next.js page route (`app/*/page.tsx`) consuming existing, verified backend actions via the common BFF Gateway client.
 
+
+
+### Epic 52: MCP Tool Surface Consolidation & Dual-Mode Runtime
+*Tái cấu trúc bề mặt công cụ MCP của XActions từ 224 tools tĩnh thành 10 Domain Dispatchers, tối ưu hóa triệt để context window và đảm bảo tương thích 100% với Claude Code CLI.*
+
+#### Story 52.1: Domain Dispatcher Schemas & Routing Facade
+- Định nghĩa mảng `DOMAIN_TOOLS` gồm 10 tools với schema chuẩn mực.
+- Xây dựng `DOMAIN_DISPATCH_MAP` ánh xạ `(domain_tool, action) -> legacy_handler`.
+- Đảm bảo trả về `ToolEnvelope` và bắt lỗi `XACT_4002` khi thiếu requiredArgs của action.
+
+#### Story 52.2: Dual-Mode Runtime Engine & CLI Flags
+- Hỗ trợ biến môi trường `MCP_TOOL_MODE=compact|full` và tham số khởi động `--mode=compact|full`.
+- Mặc định là `compact` (chỉ export 10 tools). Khi bật `full`, export toàn bộ mảng legacy tools.
+- Export helper `getAllTools()` và `getDomainTools()` phục vụ kiểm thử.
+
+#### Story 52.3: Verification Test Suite & Backward Compatibility Assurance
+- Viết test suite `tests/mcp/domain-dispatchers.test.js` kiểm tra khả năng dispatch của cả 10 tools.
+- Cập nhật `tests/mcp/server.test.js` để chạy tương thích ở cả 2 mode mà không bị fail assertion.

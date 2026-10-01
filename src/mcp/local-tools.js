@@ -511,7 +511,10 @@ export async function x_best_time_to_post({ username, limit = 100 }) {
 // 8–9. Follow / Unfollow
 // ============================================================================
 
-export async function x_follow({ username }) {
+export async function x_follow({ username, dryRun = false }) {
+  if (dryRun) {
+    return { success: true, dryRun: true, message: `Dry run: Follow @${username} preview` };
+  }
   const { page: pg } = await ensureBrowser();
   await pg.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
   await randomDelay();
@@ -527,7 +530,10 @@ export async function x_follow({ username }) {
   return { success: false, message: `Could not follow @${username}` };
 }
 
-export async function x_unfollow({ username }) {
+export async function x_unfollow({ username, dryRun = false }) {
+  if (dryRun) {
+    return { success: true, dryRun: true, message: `Dry run: Unfollow @${username} preview` };
+  }
   const { page: pg } = await ensureBrowser();
   await pg.goto(`https://x.com/${username}`, { waitUntil: 'networkidle2' });
   await randomDelay();
@@ -583,7 +589,10 @@ export async function x_detect_unfollowers({ username }) {
 // 12–14. Post / Like / Retweet
 // ============================================================================
 
-export async function x_post_tweet({ text }) {
+export async function x_post_tweet({ text, dryRun = false }) {
+  if (dryRun) {
+    return { success: true, dryRun: true, message: 'Dry run: Tweet preview generated', text };
+  }
   const { page: pg } = await ensureBrowser();
   await pg.goto('https://x.com/compose/tweet', { waitUntil: 'networkidle2' });
   await randomDelay();

@@ -3560,6 +3560,741 @@ async function initializeBackend() {
   }
 }
 
+// ============================================================================
+// Domain Dispatchers (Story 52.1 / Epic 52)
+// Consolidates 224 granular MCP tools into 10 cohesive domain facades.
+// ============================================================================
+
+const DOMAIN_TOOLS = [
+  {
+    name: 'x_post',
+    description: 'Unified Twitter/X content creation, scheduling, and posting dispatcher',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['tweet', 'thread', 'reply', 'quote', 'retweet', 'like', 'delete', 'schedule', 'poll'],
+          description: 'Posting action to execute: tweet, thread, reply, quote, retweet, like, delete, schedule, poll',
+        },
+        text: { type: 'string', description: 'Tweet or comment text (max 280 chars or thread part)' },
+        tweets: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of tweet texts for thread (2+ tweets)',
+        },
+        url: { type: 'string', description: 'URL of the tweet to like, retweet, delete, or reply to' },
+        tweetUrl: { type: 'string', description: 'Alternative URL alias for target tweet' },
+        scheduledAt: { type: 'string', description: 'ISO 8601 datetime for scheduled posting' },
+        content: { type: 'string', description: 'Content for scheduled post' },
+        question: { type: 'string', description: 'Poll question text' },
+        options: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Poll options (2-4 choices)',
+        },
+        durationMinutes: { type: 'number', description: 'Poll duration in minutes (default: 1440)' },
+        dryRun: { type: 'boolean', description: 'Preview mode without publishing (default: false)' },
+      },
+      required: ['action'],
+    },
+  },
+  {
+    name: 'x_user',
+    description: 'Unified Twitter/X user profile, social graph, following, and relationship management dispatcher',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'profile', 'followers', 'following', 'follow', 'unfollow',
+            'unfollow_non_followers', 'unfollow_all', 'detect_unfollowers',
+            'mute', 'unmute', 'update_profile',
+          ],
+          description: 'User operation to execute: profile, followers, following, follow, unfollow, unfollow_non_followers, unfollow_all, detect_unfollowers, mute, unmute, update_profile',
+        },
+        username: { type: 'string', description: 'Username (without @)' },
+        limit: { type: 'number', description: 'Maximum users or items to retrieve' },
+        maxUnfollows: { type: 'number', description: 'Maximum unfollow operations to perform' },
+        name: { type: 'string', description: 'Display name for profile update' },
+        bio: { type: 'string', description: 'Bio description for profile update' },
+        location: { type: 'string', description: 'Location for profile update' },
+        website: { type: 'string', description: 'Website URL for profile update' },
+        dryRun: { type: 'boolean', description: 'Preview mode without persisting changes (default: false)' },
+      },
+      required: ['action'],
+    },
+  },
+  {
+    name: 'x_read',
+    description: 'Unified Twitter/X retrieval, search, timeline, bookmarks, trends, and lists dispatcher',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['search', 'tweets', 'thread', 'bookmarks', 'trends', 'explore', 'notifications', 'lists', 'replies', 'likes'],
+          description: 'Read operation to execute: search, tweets, thread, bookmarks, trends, explore, notifications, lists, replies, likes',
+        },
+        query: { type: 'string', description: 'Search query string' },
+        username: { type: 'string', description: 'Target Twitter username (without @)' },
+        url: { type: 'string', description: 'Target tweet URL for thread or replies' },
+        tweetUrl: { type: 'string', description: 'Target tweet URL alias' },
+        limit: { type: 'number', description: 'Maximum records to retrieve' },
+        filter: { type: 'string', description: 'Filter option (e.g. mentions vs all for notifications)' },
+        format: { type: 'string', description: 'Output format (json, csv)' },
+        dryRun: { type: 'boolean', description: 'Preview without network writes' },
+      },
+      required: ['action'],
+    },
+  },
+  {
+    name: 'x_dm',
+    description: 'Unified Twitter/X direct messaging and inbox management dispatcher',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['send', 'conversations', 'export'],
+          description: 'Direct message action: send, conversations, export',
+        },
+        username: { type: 'string', description: 'Recipient username (without @)' },
+        message: { type: 'string', description: 'Direct message text to send' },
+        limit: { type: 'number', description: 'Maximum conversations or messages to export (default: 20)' },
+        dryRun: { type: 'boolean', description: 'Preview mode without sending' },
+      },
+      required: ['action'],
+    },
+  },
+  {
+    name: 'x_facebook',
+    description: 'Unified Facebook automation and scraping facade (profiles, posts, groups, marketplace, comments)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'automate', 'posts', 'profile', 'followers', 'following',
+            'group_posts', 'group_comments', 'marketplace', 'search',
+            'post_comments', 'group_search',
+          ],
+          description: 'Facebook action: automate, posts, profile, followers, following, group_posts, group_comments, marketplace, search, post_comments, group_search',
+        },
+        url: { type: 'string', description: 'Target Facebook URL (post, group, or profile)' },
+        query: { type: 'string', description: 'Search term for marketplace, search, or group_search' },
+        authCookie: FACEBOOK_AUTH_COOKIE_SCHEMA,
+        text: { type: 'string', description: 'Post or comment text' },
+        urls: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Post URLs for batch liking or commenting',
+        },
+        recipients: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Recipient Page IDs or names for messenger share',
+        },
+        content: { type: 'string', description: 'Message body for messenger share' },
+        postUrl: { type: 'string', description: 'Post URL to share via messenger' },
+        automateAction: { type: 'string', enum: ['like', 'comment', 'post', 'messenger'], description: 'Automation action to run (like, comment, post, messenger)' },
+        subAction: { type: 'string', description: 'Specific automation sub-action alias (like, comment, post, messenger)' },
+        limit: { type: 'number', description: 'Max items to scrape' },
+        maxBatch: { type: 'number', description: 'Batch execution limit' },
+        dryRun: { type: 'boolean', description: 'Preview mode without real writes (default: true)' },
+      },
+      required: ['action'],
+    },
+  },
+  {
+    name: 'x_crypto',
+    description: 'Unified cryptocurrency intelligence facade consolidating Dexscreener and Pump.fun operations',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        platform: {
+          type: 'string',
+          enum: ['dexscreener', 'pumpfun'],
+          description: 'Crypto platform: dexscreener or pumpfun',
+        },
+        action: {
+          type: 'string',
+          enum: [
+            'token_socials', 'token_legitimacy', 'token_lookup', 'latest_boosted', 'latest_profiles',
+            'mint_social', 'coin_meta', 'resolve_user', 'feed', 'chat', 'chat_stream', 'post_reply', 'mint_comments',
+          ],
+          description: 'Crypto operation to execute',
+        },
+        args: { type: 'object', description: 'Optional nested arguments object' },
+        chainId: { type: 'string', description: 'Blockchain chain ID (e.g. solana, ethereum)' },
+        tokenAddress: { type: 'string', description: 'Token pair or contract address' },
+        mintAddress: { type: 'string', description: 'Solana mint address for pump.fun coin' },
+        username: { type: 'string', description: 'pump.fun username' },
+        walletAddress: { type: 'string', description: 'Solana wallet address' },
+        feedType: { type: 'string', description: 'Feed type: koth, graduating, new_creations, last_trade, currently_live' },
+        text: { type: 'string', description: 'Reply text to post' },
+        limit: { type: 'number', description: 'Max items to return' },
+        offset: { type: 'number', description: 'Pagination offset' },
+        durationMs: { type: 'number', description: 'Duration in ms for chat stream' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests' },
+      },
+      required: ['action'],
+    },
+  },
+  TOOLS.find((t) => t.name === 'x_scrape') || {
+    name: 'x_scrape',
+    description: 'Generic scrape dispatcher — calls scrape(platform, action, args).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        platform: { type: 'string', description: 'Canonical platform key' },
+        action: { type: 'string', description: 'Canonical action name' },
+        args: { type: 'object', description: 'Action arguments' },
+      },
+      required: ['platform', 'action', 'args'],
+    },
+  },
+  {
+    name: 'x_persona',
+    description: 'Autonomous growth agent, thought leader, and persona orchestration dispatcher',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['create', 'list', 'status', 'edit', 'delete', 'run', 'presets'],
+          description: 'Persona action: create, list, status, edit, delete, run, presets',
+        },
+        personaId: { type: 'string', description: 'Persona identifier' },
+        name: { type: 'string', description: 'Persona name' },
+        preset: { type: 'string', description: 'Niche preset (e.g. ai-engineer, web3-builder, indie-hacker)' },
+        strategy: { type: 'string', description: 'Engagement strategy (conservative, moderate, aggressive, viral-chaser)' },
+        activityPattern: { type: 'string', description: 'Daily activity pattern (morning-person, night-owl, always-on, business-hours)' },
+        topics: { type: 'array', items: { type: 'string' }, description: 'Target topics and keywords' },
+        searchTerms: { type: 'array', items: { type: 'string' }, description: 'Search queries for discovering content' },
+        targetAccounts: { type: 'array', items: { type: 'string' }, description: 'Key accounts in niche to engage with' },
+        sessions: { type: 'number', description: 'Number of sessions to run (default: 1)' },
+        headless: { type: 'boolean', description: 'Run browser in headless mode (default: true)' },
+        dryRun: { type: 'boolean', description: 'Log actions without liking/commenting/following (default: false)' },
+      },
+      required: ['action'],
+    },
+  },
+  {
+    name: 'x_analytics',
+    description: 'Engagement metrics, graph algorithms, and viral trend analysis dispatcher',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'account', 'post', 'sentiment', 'reputation', 'buzzwords',
+            'voice', 'growth', 'competitor', 'audience_overlap', 'graph_analyze',
+          ],
+          description: 'Analytics action to perform: account, post, sentiment, reputation, buzzwords, voice, growth, competitor, audience_overlap, graph_analyze',
+        },
+        username: { type: 'string', description: 'Twitter username to analyze (without @)' },
+        url: { type: 'string', description: 'Post or tweet URL for post analytics' },
+        text: { type: 'string', description: 'Text for sentiment analysis' },
+        texts: { type: 'array', items: { type: 'string' }, description: 'Batch texts for sentiment analysis' },
+        target: { type: 'string', description: 'Target mention or account for reputation monitoring' },
+        monitorId: { type: 'string', description: 'Monitor ID for reputation status or stopping' },
+        period: { type: 'string', description: 'Reporting period (e.g. 7d, 30d, 90d)' },
+        format: { type: 'string', description: 'Output format (json, markdown, summary)' },
+        sampleSize: { type: 'number', description: 'Sample size of followers or tweets to inspect' },
+        limit: { type: 'number', description: 'Limit of items to analyze' },
+        days: { type: 'number', description: 'Number of days for growth rate calculation (default: 7)' },
+        metric: { type: 'string', description: 'Metric for account comparison: followers_count, following_count, tweet_count' },
+        usernames: { type: 'array', items: { type: 'string' }, description: 'List of usernames to compare' },
+        username1: { type: 'string', description: 'First username for audience overlap' },
+        username2: { type: 'string', description: 'Second username for audience overlap' },
+        graphId: { type: 'string', description: 'Graph ID for graph analysis' },
+        dryRun: { type: 'boolean', description: 'Preview mode without persisting' },
+      },
+      required: ['action'],
+    },
+  },
+  {
+    name: 'x_system',
+    description: 'Operational health, system status, quota checks, rate-limit governor, and streaming controls dispatcher',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'admin_status', 'governor_status', 'stream_status',
+            'stream_start', 'stream_stop', 'workflow_run', 'settings',
+          ],
+          description: 'System operation to perform: admin_status, governor_status, stream_status, stream_start, stream_stop, workflow_run, settings',
+        },
+        streamId: { type: 'string', description: 'Active stream ID to inspect or stop' },
+        type: { type: 'string', description: 'Stream event type: tweet, follower, mention' },
+        username: { type: 'string', description: 'Target account username for streaming' },
+        interval: { type: 'number', description: 'Stream polling interval in seconds' },
+        workflow: { type: 'string', description: 'Workflow ID or name to execute' },
+        workflowId: { type: 'string', description: 'Workflow ID alias' },
+        token: { type: 'string', description: 'JWT Bearer token for admin operations' },
+        userId: { type: 'string', description: 'Explicit user ID for admin operations' },
+        dryRun: { type: 'boolean', description: 'Preview mode' },
+      },
+      required: ['action'],
+    },
+  },
+];
+
+const DOMAIN_DISPATCH_MAP = {
+  x_post: {
+    tweet: {
+      targetTool: 'x_post_tweet',
+      requiredArgs: ['text'],
+    },
+    thread: {
+      targetTool: 'x_post_thread',
+      requiredArgs: ['tweets'],
+      mapArgs: (args) => {
+        if (typeof args.tweets === 'string') {
+          try { args.tweets = JSON.parse(args.tweets); } catch { args.tweets = [args.tweets]; }
+        }
+        return args;
+      },
+    },
+    reply: {
+      targetTool: 'x_reply',
+      requiredArgs: ['url', 'text'],
+      mapArgs: (args) => {
+        if (!args.url && args.tweetUrl) args.url = args.tweetUrl;
+        return args;
+      },
+    },
+    quote: {
+      targetTool: 'x_quote_tweet',
+      requiredArgs: ['tweetUrl', 'text'],
+      mapArgs: (args) => {
+        if (!args.tweetUrl && args.url) args.tweetUrl = args.url;
+        return args;
+      },
+    },
+    retweet: {
+      targetTool: 'x_retweet',
+      requiredArgs: ['url'],
+      mapArgs: (args) => {
+        if (!args.url && args.tweetUrl) args.url = args.tweetUrl;
+        return args;
+      },
+    },
+    like: {
+      targetTool: 'x_like',
+      requiredArgs: ['url'],
+      mapArgs: (args) => {
+        if (!args.url && args.tweetUrl) args.url = args.tweetUrl;
+        return args;
+      },
+    },
+    delete: {
+      targetTool: 'x_delete_tweet',
+      requiredArgs: ['url'],
+      mapArgs: (args) => {
+        if (!args.url && args.tweetUrl) args.url = args.tweetUrl;
+        return args;
+      },
+    },
+    schedule: {
+      targetTool: 'x_schedule',
+      requiredArgs: ['scheduledAt', 'content'],
+      mapArgs: (args) => {
+        if (!args.content && args.text) args.content = args.text;
+        return args;
+      },
+    },
+    poll: {
+      targetTool: 'x_create_poll',
+      requiredArgs: ['question', 'options'],
+    },
+  },
+
+  x_user: {
+    profile: {
+      targetTool: 'x_get_profile',
+      requiredArgs: ['username'],
+    },
+    followers: {
+      targetTool: 'x_get_followers',
+      requiredArgs: ['username'],
+    },
+    following: {
+      targetTool: 'x_get_following',
+      requiredArgs: ['username'],
+    },
+    follow: {
+      targetTool: 'x_follow',
+      requiredArgs: ['username'],
+    },
+    unfollow: {
+      targetTool: 'x_unfollow',
+      requiredArgs: ['username'],
+    },
+    unfollow_non_followers: {
+      targetTool: 'x_unfollow_non_followers',
+      requiredArgs: ['username'],
+    },
+    unfollow_all: {
+      targetTool: 'x_unfollow_all',
+      requiredArgs: [],
+    },
+    detect_unfollowers: {
+      targetTool: 'x_detect_unfollowers',
+      requiredArgs: ['username'],
+    },
+    mute: {
+      targetTool: 'x_mute_user',
+      requiredArgs: ['username'],
+    },
+    unmute: {
+      targetTool: 'x_unmute_user',
+      requiredArgs: ['username'],
+    },
+    update_profile: {
+      targetTool: 'x_update_profile',
+      requiredArgs: [],
+    },
+  },
+
+  x_read: {
+    search: {
+      targetTool: 'x_search_tweets',
+      requiredArgs: ['query'],
+    },
+    tweets: {
+      targetTool: 'x_get_tweets',
+      requiredArgs: ['username'],
+    },
+    thread: {
+      targetTool: 'x_get_thread',
+      requiredArgs: ['url'],
+      mapArgs: (args) => {
+        if (!args.url && args.tweetUrl) args.url = args.tweetUrl;
+        return args;
+      },
+    },
+    bookmarks: {
+      targetTool: 'x_get_bookmarks',
+      requiredArgs: [],
+    },
+    trends: {
+      targetTool: 'x_get_trends',
+      requiredArgs: [],
+    },
+    explore: {
+      targetTool: 'x_get_explore',
+      requiredArgs: [],
+    },
+    notifications: {
+      targetTool: 'x_get_notifications',
+      requiredArgs: [],
+    },
+    lists: {
+      targetTool: 'x_get_lists',
+      requiredArgs: [],
+    },
+    replies: {
+      targetTool: 'x_get_replies',
+      requiredArgs: ['tweetUrl'],
+      mapArgs: (args) => {
+        if (!args.tweetUrl && args.url) args.tweetUrl = args.url;
+        return args;
+      },
+    },
+    likes: {
+      targetTool: 'x_get_likes',
+      requiredArgs: ['username'],
+    },
+  },
+
+  x_dm: {
+    send: {
+      targetTool: 'x_send_dm',
+      requiredArgs: ['username', 'message'],
+    },
+    conversations: {
+      targetTool: 'x_get_conversations',
+      requiredArgs: [],
+    },
+    export: {
+      targetTool: 'x_export_dms',
+      requiredArgs: [],
+    },
+  },
+
+  x_facebook: {
+    automate: {
+      targetTool: 'x_facebook_automate',
+      requiredArgs: ['automateAction'],
+      mapArgs: (args) => {
+        const targetAct = args.automateAction || args.subAction;
+        if (targetAct) {
+          args.action = targetAct;
+          args.automateAction = targetAct;
+        }
+        return args;
+      },
+    },
+    posts: {
+      targetTool: 'x_facebook_posts',
+      requiredArgs: ['url'],
+    },
+    profile: {
+      targetTool: 'x_facebook_profile',
+      requiredArgs: ['url'],
+    },
+    followers: {
+      targetTool: 'x_facebook_followers',
+      requiredArgs: ['url'],
+    },
+    following: {
+      targetTool: 'x_facebook_following',
+      requiredArgs: ['url'],
+    },
+    group_posts: {
+      targetTool: 'x_facebook_group_posts',
+      requiredArgs: ['url'],
+    },
+    group_comments: {
+      targetTool: 'x_facebook_group_comments',
+      requiredArgs: ['url'],
+    },
+    marketplace: {
+      targetTool: 'x_facebook_marketplace',
+      requiredArgs: ['query'],
+    },
+    search: {
+      targetTool: 'x_facebook_search',
+      requiredArgs: ['query'],
+    },
+    post_comments: {
+      targetTool: 'x_facebook_post_comments',
+      requiredArgs: ['url'],
+    },
+    group_search: {
+      targetTool: 'x_facebook_group_search',
+      requiredArgs: ['query'],
+    },
+  },
+
+  x_crypto: {
+    token_socials: {
+      platform: 'dexscreener',
+      action: 'token_socials',
+      requiredArgs: ['chainId', 'tokenAddress'],
+    },
+    token_legitimacy: {
+      platform: 'dexscreener',
+      action: 'token_legitimacy',
+      requiredArgs: ['chainId', 'tokenAddress'],
+    },
+    token_lookup: {
+      platform: 'dexscreener',
+      action: 'token_lookup',
+      requiredArgs: ['chainId', 'tokenAddress'],
+    },
+    latest_boosted: {
+      platform: 'dexscreener',
+      action: 'latest_boosted',
+      requiredArgs: [],
+    },
+    latest_profiles: {
+      platform: 'dexscreener',
+      action: 'latest_profiles',
+      requiredArgs: [],
+    },
+    mint_social: {
+      platform: 'pumpfun',
+      action: 'fetch_mint_social',
+      requiredArgs: ['mintAddress'],
+    },
+    coin_meta: {
+      platform: 'pumpfun',
+      action: 'fetch_coin_meta',
+      requiredArgs: ['mintAddress'],
+    },
+    resolve_user: {
+      platform: 'pumpfun',
+      action: 'resolve_user_wallet',
+      requiredArgs: ['username'],
+      mapArgs: (args) => {
+        if (!args.username && args.walletAddress) args.username = args.walletAddress;
+        return args;
+      },
+    },
+    feed: {
+      platform: 'pumpfun',
+      action: 'fetch_platform_feed',
+      requiredArgs: [],
+    },
+    chat_stream: {
+      platform: 'pumpfun',
+      action: 'stream_mint_chat',
+      requiredArgs: ['mintAddress'],
+    },
+    chat: {
+      platform: 'pumpfun',
+      action: 'stream_mint_chat',
+      requiredArgs: ['mintAddress'],
+    },
+    post_reply: {
+      platform: 'pumpfun',
+      action: 'post_mint_reply',
+      requiredArgs: ['mintAddress', 'text'],
+    },
+    mint_comments: {
+      platform: 'pumpfun',
+      action: 'fetch_mint_comments',
+      requiredArgs: ['mintAddress'],
+    },
+  },
+
+  x_persona: {
+    create: {
+      targetTool: 'x_persona_create',
+      requiredArgs: ['name', 'preset'],
+    },
+    list: {
+      targetTool: 'x_persona_list',
+      requiredArgs: [],
+    },
+    status: {
+      targetTool: 'x_persona_status',
+      requiredArgs: ['personaId'],
+    },
+    edit: {
+      targetTool: 'x_persona_edit',
+      requiredArgs: ['personaId'],
+    },
+    delete: {
+      targetTool: 'x_persona_delete',
+      requiredArgs: ['personaId'],
+    },
+    run: {
+      targetTool: 'x_persona_run',
+      requiredArgs: ['personaId'],
+    },
+    presets: {
+      targetTool: 'x_persona_presets',
+      requiredArgs: [],
+    },
+  },
+
+  x_analytics: {
+    account: {
+      targetTool: 'x_account_report',
+      requiredArgs: ['username'],
+    },
+    post: {
+      targetTool: 'x_get_post_analytics',
+      requiredArgs: ['url'],
+    },
+    sentiment: {
+      targetTool: 'x_analyze_sentiment',
+      requiredArgs: ['text'],
+      mapArgs: (args) => {
+        if (!args.text && Array.isArray(args.texts) && args.texts.length > 0) {
+          args.text = args.texts[0];
+        }
+        return args;
+      },
+    },
+    reputation: {
+      targetTool: 'x_monitor_reputation',
+      requiredArgs: [],
+      mapArgs: (args) => {
+        if ((!args.action || args.action === 'reputation') && args.username) {
+          args.target = args.target || `@${args.username.replace(/^@/, '')}`;
+          args.action = args.subAction || 'status';
+        }
+        return args;
+      },
+    },
+    buzzwords: {
+      targetTool: 'x_analytics_buzzwords',
+      requiredArgs: [],
+    },
+    voice: {
+      targetTool: 'x_analyze_voice',
+      requiredArgs: ['username'],
+    },
+    growth: {
+      targetTool: 'x_growth_rate',
+      requiredArgs: ['username'],
+    },
+    competitor: {
+      targetTool: 'x_compare_accounts',
+      requiredArgs: ['usernames', 'metric'],
+    },
+    audience_overlap: {
+      targetTool: 'x_audience_overlap',
+      requiredArgs: ['username1', 'username2'],
+    },
+    graph_analyze: {
+      targetTool: 'x_graph_analyze',
+      requiredArgs: ['graphId'],
+    },
+  },
+
+  x_system: {
+    admin_status: {
+      targetTool: 'x_admin_status',
+      requiredArgs: [],
+    },
+    governor_status: {
+      targetTool: 'x_governor_status',
+      requiredArgs: [],
+    },
+    stream_status: {
+      targetTool: 'x_stream_status',
+      requiredArgs: ['streamId'],
+    },
+    stream_start: {
+      targetTool: 'x_stream_start',
+      requiredArgs: ['type', 'username'],
+    },
+    stream_stop: {
+      targetTool: 'x_stream_stop',
+      requiredArgs: ['streamId'],
+    },
+    workflow_run: {
+      targetTool: 'x_workflow_run',
+      requiredArgs: ['workflow'],
+      mapArgs: (args) => {
+        if (!args.workflow && args.workflowId) args.workflow = args.workflowId;
+        return args;
+      },
+    },
+    settings: {
+      targetTool: 'x_get_settings',
+      requiredArgs: [],
+    },
+  },
+};
+
+function getDomainTools() {
+  return DOMAIN_TOOLS;
+}
+
+function getAllTools() {
+  return TOOLS;
+}
+
+function setLocalTools(tools) {
+  if (!tools) {
+    localTools = null;
+  } else {
+    localTools = { ...(localTools || {}), ...tools };
+  }
+}
+
 // Dedicated platform tools — thin wrappers over x_scrape
 const DEDICATED_SCRAPE_TOOLS = {
   x_dexscreener_token_socials:   { platform: 'dexscreener', action: 'token_socials' },
@@ -3584,8 +4319,132 @@ const DEDICATED_SCRAPE_TOOLS = {
  */
 async function executeTool(name, args) {
   // Add session cookie to args if provided globally
-  if (SESSION_COOKIE && !args.cookie && name === 'x_login') {
+  if (SESSION_COOKIE && !args?.cookie && name === 'x_login') {
+    if (!args) args = {};
     args.cookie = SESSION_COOKIE;
+  }
+
+  // Handle Domain Dispatcher Tools (Story 52.1 / Epic 52)
+  if (DOMAIN_DISPATCH_MAP[name]) {
+    const domainMap = DOMAIN_DISPATCH_MAP[name];
+    const availableActions = Object.keys(domainMap);
+
+    if (!args || !args.action || typeof args.action !== 'string') {
+      const err = new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `Tool "${name}": action is required. Available: ${availableActions.join(', ')}`,
+        statusCode: 400,
+        isRetryable: false,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        availableActions,
+        details: { availableActions },
+      });
+      err.availableActions = availableActions;
+      throw err;
+    }
+
+    const actionEntry = domainMap[args.action];
+    if (!actionEntry) {
+      const err = new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `Action "${args.action}" not supported for ${name}. Available: ${availableActions.join(', ')}`,
+        statusCode: 400,
+        isRetryable: false,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        availableActions,
+        details: { availableActions },
+      });
+      err.availableActions = availableActions;
+      throw err;
+    }
+
+    // Merge nested args.args if provided
+    let actionArgs = {
+      ...(args.args && typeof args.args === 'object' && !Array.isArray(args.args) ? args.args : {}),
+      ...args,
+    };
+
+    if (typeof actionEntry.mapArgs === 'function') {
+      actionArgs = actionEntry.mapArgs(actionArgs);
+    }
+
+    // Validate required arguments for this action
+    const requiredArgs = actionEntry.requiredArgs || [];
+    const missing = requiredArgs.filter(
+      (arg) => actionArgs[arg] === undefined || actionArgs[arg] === null || actionArgs[arg] === ''
+    );
+    if (missing.length > 0) {
+      const err = new PlatformError({
+        code: 'XACT_4002',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `Action "${args.action}" on tool "${name}" requires argument(s): ${missing.join(', ')}`,
+        statusCode: 400,
+        isRetryable: false,
+        suggestedAction: SuggestedActions.USE_ACTIONS_LIST,
+        details: { missing },
+      });
+      err.missing = missing;
+      throw err;
+    }
+
+    const startedAt = Date.now();
+
+    // Special case: x_crypto delegates directly to executeScrapeTool
+    if (name === 'x_crypto') {
+      const platform = actionArgs.platform || actionEntry.platform || 'dexscreener';
+      const scrapeAction = actionEntry.action || args.action;
+      const res = await executeScrapeTool({
+        platform,
+        action: scrapeAction,
+        args: actionArgs,
+        context: actionArgs.context,
+        accountId: actionArgs.accountId,
+        proxyUrl: actionArgs.proxyUrl,
+        dryRun: actionArgs.dryRun,
+        artifactFormat: actionArgs.artifactFormat,
+      });
+      if (res && typeof res === 'object') {
+        if (res.meta) res.meta.tool = 'x_crypto';
+        if (res.metadata) res.metadata.tool = 'x_crypto';
+      }
+      return res;
+    }
+
+    // Delegate to underlying legacy tool
+    const targetTool = actionEntry.targetTool;
+    let rawResult;
+    try {
+      rawResult = await executeTool(targetTool, actionArgs);
+    } catch (err) {
+      if (err instanceof PlatformError || err?.isPlatformError) {
+        throw err;
+      }
+      throw new PlatformError({
+        code: 'XACT_5000',
+        type: ErrorTypes.INTERNAL,
+        message: err instanceof Error ? err.message : String(err),
+        statusCode: 500,
+        suggestedAction: SuggestedActions.CONTACT_SUPPORT,
+        cause: err,
+      });
+    }
+
+    // If underlying tool already returned an envelope with mode or isError
+    if (rawResult && typeof rawResult === 'object' && 'mode' in rawResult && 'success' in rawResult) {
+      return rawResult;
+    }
+
+    // If underlying tool returned an MCP error result
+    if (rawResult && rawResult.isError === true) {
+      return rawResult;
+    }
+
+    // Wrap in standard ToolEnvelope
+    const envelope = await wrapToolResult(name, rawResult, startedAt, { args: actionArgs });
+    envelope.mode = envelope.mode || 'direct';
+    return envelope;
   }
 
   // Handle admin/operator tools (Story 19.10)
@@ -3608,8 +4467,8 @@ async function executeTool(name, args) {
     return await executeAnalyticsTool(name, args);
   }
 
-  // Handle AI tools (voice, generation, rewrite, summarization, Epic 4 writer)
-  if (name === 'x_analyze_voice' || name === 'x_generate_tweet' || name === 'x_rewrite_tweet' || name === 'x_summarize_thread' || name === 'x_ai_write') {
+  // Handle AI tools (voice, generation, rewrite, summarization, Epic 4 writer, schemas, governor)
+  if (name === 'x_analyze_voice' || name === 'x_generate_tweet' || name === 'x_rewrite_tweet' || name === 'x_summarize_thread' || name === 'x_ai_write' || name === 'x_schema_list' || name === 'x_schema_get' || name === 'x_governor_status') {
     return await executeAITool(name, args);
   }
 
@@ -7272,4 +8131,25 @@ if (isEntryPoint()) {
 
 // Exported so the tool list can be inspected without starting a transport.
 // Also export Facebook automation tools for direct programmatic use.
-export { TOOLS, main, createMcpServer, initializeBackend, executeTool, executeFacebookAutomateTool, executeFacebookEpic4Tool, executeFacebookScrapeTool, executeFacebookListAccounts, executeActionListTool, executeCrawlPostTool, executeCrawlCommentsTreeTool, executeScrapeTool, executeSocialFindProfilesTool, startHttpTransport };
+export {
+  TOOLS,
+  DOMAIN_TOOLS,
+  DOMAIN_DISPATCH_MAP,
+  getDomainTools,
+  getAllTools,
+  setLocalTools,
+  main,
+  createMcpServer,
+  initializeBackend,
+  executeTool,
+  executeFacebookAutomateTool,
+  executeFacebookEpic4Tool,
+  executeFacebookScrapeTool,
+  executeFacebookListAccounts,
+  executeActionListTool,
+  executeCrawlPostTool,
+  executeCrawlCommentsTreeTool,
+  executeScrapeTool,
+  executeSocialFindProfilesTool,
+  startHttpTransport,
+};
