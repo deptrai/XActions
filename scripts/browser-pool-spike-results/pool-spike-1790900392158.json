@@ -1,0 +1,108 @@
+[
+  {
+    "backend": "obscura",
+    "mode": "pool-isolated-context",
+    "jobs": 8,
+    "poolSize": 4,
+    "results": [
+      {
+        "jobId": 0,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 12,
+        "navMs": 1412,
+        "totalMs": 1424
+      },
+      {
+        "jobId": 1,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 22,
+        "navMs": 1404,
+        "totalMs": 1426
+      },
+      {
+        "jobId": 2,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 23,
+        "navMs": 1405,
+        "totalMs": 1428
+      },
+      {
+        "jobId": 3,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 23,
+        "navMs": 1408,
+        "totalMs": 1431
+      },
+      {
+        "jobId": 4,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 13,
+        "navMs": 1383,
+        "totalMs": 2829
+      },
+      {
+        "jobId": 5,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 23,
+        "navMs": 1380,
+        "totalMs": 2836
+      },
+      {
+        "jobId": 6,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 23,
+        "navMs": 1380,
+        "totalMs": 2836
+      },
+      {
+        "jobId": 7,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 23,
+        "navMs": 1385,
+        "totalMs": 2841
+      }
+    ],
+    "metrics": {
+      "wallMs": 4644,
+      "memStartMB": 47,
+      "memEndMB": 75,
+      "memDeltaMB": 28,
+      "navMs": {
+        "p50": 1404,
+        "p95": 1412,
+        "p99": 1412,
+        "min": 1380,
+        "max": 1412,
+        "n": 8
+      },
+      "pageAcquireMs": {
+        "p50": 23,
+        "p95": 23,
+        "p99": 23,
+        "min": 12,
+        "max": 23,
+        "n": 8
+      },
+      "succeeded": 8,
+      "failed": 0
+    },
+    "isolation": {
+      "backend": "obscura",
+      "sharedContextLeak": false,
+      "isolatedContextLeak": false
+    },
+    "poolStats": {
+      "active": 0,
+      "queued": 0,
+      "max": 4
+    }
+  }
+]

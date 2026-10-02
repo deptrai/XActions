@@ -1,0 +1,214 @@
+[
+  {
+    "backend": "chrome",
+    "mode": "launch-per-job",
+    "jobs": 4,
+    "poolSize": 2,
+    "results": [
+      {
+        "jobId": 1,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 1558,
+        "navMs": 256,
+        "totalMs": 1814
+      },
+      {
+        "jobId": 0,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 1563,
+        "navMs": 277,
+        "totalMs": 1840
+      },
+      {
+        "jobId": 3,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 1387,
+        "navMs": 314,
+        "totalMs": 1701
+      },
+      {
+        "jobId": 2,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 1445,
+        "navMs": 288,
+        "totalMs": 1733
+      }
+    ],
+    "metrics": {
+      "wallMs": 4061,
+      "memStartMB": 47,
+      "memEndMB": 80,
+      "memDeltaMB": 33,
+      "navMs": {
+        "p50": 288,
+        "p95": 314,
+        "p99": 314,
+        "min": 256,
+        "max": 314,
+        "n": 4
+      },
+      "pageAcquireMs": {
+        "p50": 1558,
+        "p95": 1563,
+        "p99": 1563,
+        "min": 1387,
+        "max": 1563,
+        "n": 4
+      },
+      "succeeded": 4,
+      "failed": 0
+    }
+  },
+  {
+    "backend": "chrome",
+    "mode": "pool-shared-context",
+    "jobs": 4,
+    "poolSize": 2,
+    "results": [
+      {
+        "jobId": 0,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 65,
+        "navMs": 31,
+        "totalMs": 96
+      },
+      {
+        "jobId": 1,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 99,
+        "navMs": 47,
+        "totalMs": 146
+      },
+      {
+        "jobId": 2,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 49,
+        "navMs": 54,
+        "totalMs": 201
+      },
+      {
+        "jobId": 3,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 70,
+        "navMs": 38,
+        "totalMs": 257
+      }
+    ],
+    "metrics": {
+      "wallMs": 2022,
+      "memStartMB": 80,
+      "memEndMB": 82,
+      "memDeltaMB": 2,
+      "navMs": {
+        "p50": 47,
+        "p95": 54,
+        "p99": 54,
+        "min": 31,
+        "max": 54,
+        "n": 4
+      },
+      "pageAcquireMs": {
+        "p50": 70,
+        "p95": 99,
+        "p99": 99,
+        "min": 49,
+        "max": 99,
+        "n": 4
+      },
+      "succeeded": 4,
+      "failed": 0
+    },
+    "isolation": {
+      "backend": "chrome",
+      "sharedContextLeak": true,
+      "isolatedContextLeak": null
+    },
+    "poolStats": {
+      "active": 0,
+      "queued": 0,
+      "max": 2
+    }
+  },
+  {
+    "backend": "chrome",
+    "mode": "pool-isolated-context",
+    "jobs": 4,
+    "poolSize": 2,
+    "results": [
+      {
+        "jobId": 0,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 389,
+        "navMs": 293,
+        "totalMs": 682
+      },
+      {
+        "jobId": 1,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 392,
+        "navMs": 270,
+        "totalMs": 662
+      },
+      {
+        "jobId": 2,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 437,
+        "navMs": 270,
+        "totalMs": 1416
+      },
+      {
+        "jobId": 3,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 294,
+        "navMs": 295,
+        "totalMs": 1458
+      }
+    ],
+    "metrics": {
+      "wallMs": 4988,
+      "memStartMB": 82,
+      "memEndMB": 91,
+      "memDeltaMB": 9,
+      "navMs": {
+        "p50": 293,
+        "p95": 295,
+        "p99": 295,
+        "min": 270,
+        "max": 295,
+        "n": 4
+      },
+      "pageAcquireMs": {
+        "p50": 392,
+        "p95": 437,
+        "p99": 437,
+        "min": 294,
+        "max": 437,
+        "n": 4
+      },
+      "succeeded": 4,
+      "failed": 0
+    },
+    "isolation": {
+      "backend": "chrome",
+      "sharedContextLeak": false,
+      "isolatedContextLeak": false
+    },
+    "poolStats": {
+      "active": 0,
+      "queued": 0,
+      "max": 2
+    }
+  }
+]

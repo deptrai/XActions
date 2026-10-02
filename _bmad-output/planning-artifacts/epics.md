@@ -4137,3 +4137,30 @@ All 5 stories can be implemented independently and in parallel since each target
 #### Story 52.3: Verification Test Suite & Backward Compatibility Assurance
 - Viết test suite `tests/mcp/domain-dispatchers.test.js` kiểm tra khả năng dispatch của cả 10 tools.
 - Cập nhật `tests/mcp/server.test.js` để chạy tương thích ở cả 2 mode mà không bị fail assertion.
+
+
+### Epic 53: Browser Page Pool — Sharded, Backend-Aware
+*Tách đơn vị công việc scrape từ "browser process" xuống "page/context" — một shared `BrowserPool` phục vụ N job đồng thời, backend-aware sharding theo ceiling đã đo trong spike. Enabler cho NFR-11 (≥85% RAM) & NFR-12 (5–10x) ở worker layer. Opt-in, reversible, không đổi default.*
+
+- **Spec:** `implementation-artifacts/spike-browser-page-pool.md`; **Proposal:** `sprint-change-proposal-2026-10-02-browser-page-pool.md`; **AD:** AD-24.
+- **FRs:** FR-146, NFR-11, NFR-12.
+
+#### Story 53.1: BrowserPool Core — acquire/release/drain/stats + isolated contexts
+- `src/scraping/browserPool.js`: `BrowserPool` (per-backend), `acquire()` → isolated `browserContext` per job (default), `release()` đóng context không đụng browser, `drain()`, `stats()`, queue/backpressure khi cạn slot.
+- `SharedContextPool` opt-in cho anonymous public scraping.
+
+#### Story 53.2: Adapter + stealthBrowser `pooled` opt
+- `launchStealthBrowser({pooled:true})` và `PuppeteerAdapter.launch({pooled:true})` trả page/context handle từ pool thay vì browser mới.
+- Teardown respect `browser.__backend` (AD-23): obscura→`disconnect()`, chrome→`close()`; pool-own-browser lifecycle.
+
+#### Story 53.3: jobQueue scrape processor thread `pooled`
+- `api/services/jobQueue.js` scrape processor đọc `job.data.pooled`/`XACTIONS_BROWSER_POOL_SIZE`; `scrapeDispatch.js` clamp + propagate pool size hints.
+
+#### Story 53.4: Obscura pool-of-processes shard strategy
+- Vì obscura bottleneck là nav/render (không phải context-create), shard qua nhiều `obscura serve` process (~30MB/process), mỗi process ~2–4 page/CDP-connection. Chrome shard qua ~4–6 isolated contexts/browser.
+
+#### Story 53.5: Crash containment + respawn + Bull re-queue
+- Pool detect dead browser → respawn; chỉ in-flight jobs trên browser đó fail; Bull `attempts`/`backoff` re-queue. Không silent loss.
+
+#### Story 53.6: Telemetry dims + spike verify gate
+- `emitRun` thêm `pooled`, `poolBackend`, `poolWaitMs` (gated `XACTIONS_BROWSER_BACKEND_METRICS=1`). Promote `browser-pool-spike.mjs` thành verify gate pre-release.

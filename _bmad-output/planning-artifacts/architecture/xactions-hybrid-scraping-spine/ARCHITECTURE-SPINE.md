@@ -550,3 +550,18 @@ Tất cả AD UX đã được chuyển thành story acceptance criteria trong `
   * **Rule 6 — Watch → Verify → Promote gate:** không auto-update; `obscura-for-auth` chỉ mở opt-in sau khi spike xanh (`/home` mount `data-testid`) + change request + human approve.
 * **Spec:** `implementation-artifacts/spec-27-4-obscura-public-scraping-backend-watch.md`; **Docs:** `docs/obscura-backend.md`, `docs/obscura-watch.md`; **Proposal:** `sprint-change-proposal-2026-09-13-obscura-backend.md`.
 * **Trigger:** Obscura spike evaluation + pluggable backend decision, approved by Luisphan.
+
+### Decision Changelog bổ sung (2026-10-02 — Browser Page Pool)
+
+* **AD-24 adopted:** Browser Page Pool & Backend-Aware Sharding. Scrape jobs acquire a page/context from a shared `BrowserPool` thay vì launch browser per job. Quyết định từ spike `scripts/browser-pool-spike.mjs` (`spike-browser-page-pool.md`): `newPage()`/context-acquire ~22x rẻ hơn `browser.launch()` (70ms vs 1558ms p50), pool giảm ΔRSS ~16x.
+  * **Rule 1 — Opt-in only:** `XACTIONS_BROWSER_POOL_SIZE` (default 0 = launch-per-job, byte-identical current behavior). Flag off → zero change to existing paths.
+  * **Rule 2 — Isolated context default:** mỗi job acquire một `browserContext` riêng (incognito-equivalent, cookie/storage isolated — spike `isoLeak=false`). Shared-context CHỈ cho anonymous public scraping qua opt-in tường minh.
+  * **Rule 3 — Backend-aware ceiling (from spike):** chrome → sharded-pool (~4–6 isolated contexts/browser, spawn browser thứ hai khi vượt); obscura → pool-of-processes (nhiều `obscura serve`, ~2–4 page/CDP-connection — nav/render là bottleneck, KHÔNG phải context-create).
+  * **Rule 4 — Teardown contract:** `release(page)` đóng context/page, không đụng shared browser. Browser lifecycle thuộc pool, không thuộc job. Vẫn respect AD-23 `__backend` (`obscura`→`disconnect()`, `chrome`→`close()`).
+  * **Rule 5 — Post-auth guard unchanged:** `requiresAuth===true` vẫn reject `obscura` (AD-23); pooled post-auth dùng isolated chrome context per account.
+  * **Rule 6 — Crash containment:** pool detect dead browser → respawn; chỉ in-flight jobs trên browser đó fail (Bull retry re-queue) — không silent.
+  * **Rule 7 — Telemetry:** `emitRun` thêm `pooled`/`poolBackend`/`poolWaitMs` khi `XACTIONS_BROWSER_BACKEND_METRICS=1`.
+* **Binds:** `src/scraping/browserPool.js` (new), `src/scraping/stealthBrowser.js`, `src/scrapers/adapters/puppeteer.js`, `api/services/jobQueue.js`, `api/services/scrapeDispatch.js`.
+* **Prevents:** per-job browser launch RAM blowup; Chromium IPC / context-create single-process bottleneck khi nhiều job scrape đồng thời.
+* **Spec:** `implementation-artifacts/spike-browser-page-pool.md`; **Proposal:** `sprint-change-proposal-2026-10-02-browser-page-pool.md`; **Epic:** Epic 53.
+* **Trigger:** Browser-page-pool spike evidence + NFR-11/NFR-12 enablement, approved by Luisphan.

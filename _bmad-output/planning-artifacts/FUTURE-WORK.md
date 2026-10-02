@@ -133,4 +133,12 @@ Tài liệu này tập hợp các yêu cầu, ý tưởng, và tính năng bị 
 
 ---
 
+---
+
+## Recorded Contract Changes (không qua epic)
+
+| Ngày | Thay đổi | Lý do | Artifact |
+|---|---|---|---|
+| 2026-10-03 | `twitter.thread` → `requiresAuth: true` (canonical-action-matrix regen) | Upstream X/Twitter chặn guest token trên conversation endpoint — root tweet cũng không còn available as guest | `docs/canonical-action-matrix.{json,md}` |
+
 *Document owner: BMad Product Council. Reviewed every sprint-end for activation conditions.*

@@ -1,0 +1,29 @@
+[
+  {
+    "backend": "chrome",
+    "mode": "pool-shared-context",
+    "jobs": 2,
+    "poolSize": 2,
+    "results": [],
+    "metrics": {
+      "wallMs": 1996,
+      "memStartMB": 47,
+      "memEndMB": 77,
+      "memDeltaMB": 30,
+      "navMs": {},
+      "pageAcquireMs": {},
+      "succeeded": 0,
+      "failed": 0
+    },
+    "isolation": {
+      "backend": "chrome",
+      "sharedContextLeak": true,
+      "isolatedContextLeak": null
+    },
+    "poolStats": {
+      "active": 0,
+      "queued": 0,
+      "max": 2
+    }
+  }
+]

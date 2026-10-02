@@ -1,0 +1,7 @@
+[
+  {
+    "backend": "chrome",
+    "mode": "pool-shared-context",
+    "fatal": "Failed to launch the browser process:  Code: null\n\nstderr:\ndlopen /Users/luisphan/.cache/puppeteer/chrome/mac_arm-148.0.7778.97/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/../Frameworks/Google Chrome for Testing Framework.framework/Versions/148.0.7778.97/Google Chrome for Testing Framework: dlopen(/Users/luisphan/.cache/puppeteer/chrome/mac_arm-148.0.7778.97/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/../Frameworks/Google Chrome for Testing Framework.framework/Versions/148.0.7778.97/Google Chrome for Testing Framework, 0x0105): tried: '/Users/luisphan/.cache/puppeteer/chrome/mac_arm-148.0.7778.97/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/../Frameworks/Google Chrome for Testing Framework.framework/Versions/148.0.7778.97/Google Chrome for Testing Framework' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/Users/luisphan/.cache/puppeteer/chrome/mac_arm-148.0.7778.97/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/../Frameworks/Google Chrome for Testing Framework.framework/Versions/148.0.7778.97/Google Chrome for Testing Framework' (no such file), '/Users/luisphan/.cache/puppeteer/chrome/mac_arm-148.0.7778.97/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/../Frameworks/Google Chrome for Testing Framework.framework/Versions/148.0.7778.97/Google Chrome for Testing Framework' (no such file).\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n"
+  }
+]

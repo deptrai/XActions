@@ -240,6 +240,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-143 (Decentralized Social Deck):** Giao diện `/fediverse` đa cột phong cách TweetDeck tích hợp Bluesky (AT Protocol) & Mastodon (ActivityPub) công khai. (Epic 51 — Story 51.3)
 * **FR-144 (Vietnam B2B Diligence & Procurement Portal):** Giao diện `/enterprise-vn` tra cứu MST, hồ sơ pháp nhân, tình trạng hoạt động và nhãn hiệu bản quyền từ Cục SHTT. (Epic 51 — Story 51.4)
 * **FR-145 (Live Vietnam IT & Tech Jobs Aggregator):** Nâng cấp tab Jobs tại `/explorer` và route `/jobs-vn` kết nối live data TopCV, VietnamWorks, LinkedIn với bộ lọc dải lương và tech stack. (Epic 51 — Story 51.5)
+* **FR-146 (Browser Page Pool — Sharded, Backend-Aware):** Scrape jobs acquire một page/context từ shared `BrowserPool` thay vì launch browser per job. Opt-in qua `XACTIONS_BROWSER_POOL_SIZE`; isolated `browserContext` per job mặc định (không leak state cross-job); backend-aware ceiling — chrome shard ít context/browser, obscura shard qua nhiều `obscura serve` process. Enabler cho NFR-11 (≥85% RAM) & NFR-12 (5–10x) ở worker layer. (Epic 53 — AD-24)
 
 ### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17 ➔ NFR-26)
 
@@ -315,6 +316,7 @@ Cập nhật pha triển khai để bao gồm Epic 19–20 và không còn forwa
 | Story 33.3 (Zalo Personal — Epic 33, gated) | FR-114 |
 | Story 33.4 (YouTube VN Advanced — Epic 33, gated) | FR-115 |
 | Epic 51 (Web Platform Suites) | FR-141, FR-142, FR-143, FR-144, FR-145, NFR-29, NFR-30 |
+| Epic 53 (Browser Page Pool) | FR-146, NFR-11, NFR-12 |
 
 ### 7.5. Canonicalization & Related Documents
 

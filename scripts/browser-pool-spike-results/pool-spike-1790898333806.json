@@ -1,0 +1,68 @@
+[
+  {
+    "backend": "chrome",
+    "mode": "pool-shared-context",
+    "jobs": 3,
+    "poolSize": 2,
+    "results": [
+      {
+        "jobId": 0,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 66,
+        "navMs": 33,
+        "totalMs": 99
+      },
+      {
+        "jobId": 1,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 96,
+        "navMs": 50,
+        "totalMs": 146
+      },
+      {
+        "jobId": 2,
+        "ok": true,
+        "title": "Example Domain",
+        "pageMs": 50,
+        "navMs": 37,
+        "totalMs": 195
+      }
+    ],
+    "metrics": {
+      "wallMs": 1880,
+      "memStartMB": 47,
+      "memEndMB": 78,
+      "memDeltaMB": 31,
+      "navMs": {
+        "p50": 37,
+        "p95": 50,
+        "p99": 50,
+        "min": 33,
+        "max": 50,
+        "n": 3
+      },
+      "pageAcquireMs": {
+        "p50": 66,
+        "p95": 96,
+        "p99": 96,
+        "min": 50,
+        "max": 96,
+        "n": 3
+      },
+      "succeeded": 3,
+      "failed": 0
+    },
+    "isolation": {
+      "backend": "chrome",
+      "sharedContextLeak": true,
+      "isolatedContextLeak": null
+    },
+    "poolStats": {
+      "active": 0,
+      "queued": 0,
+      "max": 2
+    }
+  }
+]
