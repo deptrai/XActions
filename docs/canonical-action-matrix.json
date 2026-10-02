@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-27T05:29:31.232Z",
+  "generated": "2026-09-27T23:21:26.231Z",
   "platforms": {
     "twitter": {
       "category": "social",
@@ -82,7 +82,7 @@
         },
         {
           "action": "thread",
-          "description": "Scrape Twitter conversation thread; full conversation requires auth, root tweet available as guest",
+          "description": "Scrape Twitter conversation thread (requires auth; upstream guest endpoint now blocks guest tokens)",
           "requiredArgs": [
             "tweetId"
           ],
@@ -95,7 +95,7 @@
             "tweetId": "1234567890"
           },
           "outputType": "{ posts: PostItem[], rootTweet: PostItem | null, pageInfo: any }",
-          "requiresAuth": false,
+          "requiresAuth": true,
           "syncCapable": false,
           "status": "stable"
         },
@@ -382,7 +382,7 @@
             "destPath": "/tmp/video.mp4"
           },
           "outputType": "{ url: string, destPath: string | null, bytes: number, width: number, height: number, bitrate: number, contentType: string, durationMs: number | null, variants: Array<{bitrate, contentType, url}> }",
-          "requiresAuth": false,
+          "requiresAuth": true,
           "syncCapable": false,
           "status": "stable"
         },
@@ -3096,6 +3096,94 @@
           "requiresAuth": false,
           "syncCapable": false,
           "status": "stable"
+        },
+        {
+          "action": "live_chat",
+          "description": "Fetch live chat messages for a video (InnerTube, no API key)",
+          "requiredArgs": [],
+          "optionalArgs": [],
+          "example": {},
+          "outputType": "PostItem[]",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "livechat",
+          "description": "Alias for live_chat",
+          "requiredArgs": [],
+          "optionalArgs": [],
+          "example": {},
+          "outputType": "PostItem[]",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "shorts_analytics",
+          "description": "Fetch Shorts engagement metrics (InnerTube, no API key)",
+          "requiredArgs": [],
+          "optionalArgs": [],
+          "example": {},
+          "outputType": "PostItem[]",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "shorts",
+          "description": "Alias for shorts_analytics",
+          "requiredArgs": [],
+          "optionalArgs": [],
+          "example": {},
+          "outputType": "PostItem[]",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "subscriber_history",
+          "description": "Fetch channel subscriber count snapshot (InnerTube, no API key)",
+          "requiredArgs": [],
+          "optionalArgs": [],
+          "example": {},
+          "outputType": "PostItem[]",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "subscribers",
+          "description": "Alias for subscriber_history",
+          "requiredArgs": [],
+          "optionalArgs": [],
+          "example": {},
+          "outputType": "PostItem[]",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "music_trending_vn",
+          "description": "Fetch YouTube Music VN trending (InnerTube, no API key)",
+          "requiredArgs": [],
+          "optionalArgs": [],
+          "example": {},
+          "outputType": "PostItem[]",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "youtube_music_vn",
+          "description": "Alias for music_trending_vn",
+          "requiredArgs": [],
+          "optionalArgs": [],
+          "example": {},
+          "outputType": "PostItem[]",
+          "requiresAuth": false,
+          "syncCapable": false,
+          "status": "stable"
         }
       ]
     },
@@ -4256,12 +4344,12 @@
         },
         {
           "action": "fetch_my_profile",
-          "description": "Fetch the authenticated pump.fun user profile (wallet, followers, following)",
+          "description": "Fetch the pump.fun user profile (wallet, followers, following)",
           "requiredArgs": [],
           "optionalArgs": [],
           "example": {},
           "outputType": "{ username, walletAddress, userId, isPumpUser, followers, following }",
-          "requiresAuth": true,
+          "requiresAuth": false,
           "syncCapable": false,
           "status": "stable"
         },
@@ -4276,7 +4364,7 @@
             "userId": "4e6186fa-df15-44b5-aa56-b3a7657be44a"
           },
           "outputType": "Array<Record<string, unknown>>",
-          "requiresAuth": true,
+          "requiresAuth": false,
           "syncCapable": false,
           "status": "stable"
         },
@@ -4291,7 +4379,7 @@
             "mintOrWallet": "5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"
           },
           "outputType": "PumpFunLivestreamClip[]",
-          "requiresAuth": true,
+          "requiresAuth": false,
           "syncCapable": false,
           "status": "stable"
         },
@@ -4312,6 +4400,25 @@
           },
           "outputType": "{ commentId, timestamp, success }",
           "requiresAuth": true,
+          "syncCapable": false,
+          "status": "stable"
+        },
+        {
+          "action": "fetch_mint_comments",
+          "description": "Fetch comments/chat history for a pump.fun mint via Socket.IO livechat",
+          "requiredArgs": [
+            "mintAddress"
+          ],
+          "optionalArgs": [
+            "limit",
+            "before"
+          ],
+          "example": {
+            "mintAddress": "5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump",
+            "limit": 50
+          },
+          "outputType": "{ comments: Array, count: number }",
+          "requiresAuth": false,
           "syncCapable": false,
           "status": "stable"
         }

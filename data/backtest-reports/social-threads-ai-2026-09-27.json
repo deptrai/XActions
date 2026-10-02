@@ -1,5 +1,5 @@
 {
-  "reportId": "backtest-1790482805172",
+  "reportId": "backtest-1790550850824",
   "platform": "threads",
   "niche": "ai",
   "days": 7,
@@ -27,6 +27,6 @@
     }
   },
   "summary": "Backtest complete: 0% precision, 0% recall. ignore hooks: 0% accurate.",
-  "generatedAt": "2026-09-27T04:20:05.174Z",
+  "generatedAt": "2026-09-27T23:14:10.828Z",
   "status": "completed"
 }

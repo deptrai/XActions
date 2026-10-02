@@ -1,6 +1,6 @@
 # Canonical Action/Arg Matrix
 
-> Auto-generated 2026-09-27T05:29:31.235Z. Do not edit manually.
+> Auto-generated 2026-09-27T23:21:26.234Z. Do not edit manually.
 
 | Platform | Category | Action | Sync | Required Args | Optional Args | Example |
 |----------|----------|--------|------|---------------|---------------|---------|
@@ -160,6 +160,14 @@
 | youtube | social | detail | — | — | — | `{}` |
 | youtube | social | video_comments | — | — | — | `{}` |
 | youtube | social | comments | — | — | — | `{}` |
+| youtube | social | live_chat | — | — | — | `{}` |
+| youtube | social | livechat | — | — | — | `{}` |
+| youtube | social | shorts_analytics | — | — | — | `{}` |
+| youtube | social | shorts | — | — | — | `{}` |
+| youtube | social | subscriber_history | — | — | — | `{}` |
+| youtube | social | subscribers | — | — | — | `{}` |
+| youtube | social | music_trending_vn | — | — | — | `{}` |
+| youtube | social | youtube_music_vn | — | — | — | `{}` |
 | zalo | social | oa_posts | — | — | — | `{}` |
 | zalo | social | posts | — | — | — | `{}` |
 | zalo | social | articles | — | — | — | `{}` |
@@ -228,6 +236,7 @@
 | pumpfun | social | fetch_user_following | — | userId | — | `{"userId":"4e6186fa-df15-44b5-aa56-b3a7657be44a"}` |
 | pumpfun | social | fetch_livestream_clips | — | mintOrWallet | — | `{"mintOrWallet":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"}` |
 | pumpfun | social | post_mint_reply | — | mintAddress, text | replyToId, mediaUrl | `{"mintAddress":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump","text":"Greetings!"}` |
+| pumpfun | social | fetch_mint_comments | — | mintAddress | limit, before | `{"mintAddress":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump","limit":50}` |
 | dexscreener | crypto | token_socials | ✅ | chainId, tokenAddress | chain, token, address, mint | `{"chainId":"solana","tokenAddress":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"}` |
 | dexscreener | crypto | token_legitimacy | ✅ | chainId, tokenAddress | chain, token, address, mint | `{"chainId":"solana","tokenAddress":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"}` |
 | dexscreener | crypto | token_lookup | ✅ | chainId, tokenAddress | chain, token, address, mint | `{"chainId":"solana","tokenAddress":"5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump"}` |

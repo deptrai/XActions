@@ -1,5 +1,5 @@
 {
-  "reportId": "backtest-1790482846773",
+  "reportId": "backtest-1790550912667",
   "platform": "twitter",
   "niche": "web3",
   "days": 7,
@@ -37,6 +37,6 @@
     }
   },
   "summary": "Backtest complete: 100% precision, 100% recall. assertion hooks: 100% accurate.",
-  "generatedAt": "2026-09-27T04:20:46.773Z",
+  "generatedAt": "2026-09-27T23:15:12.667Z",
   "status": "completed"
 }
