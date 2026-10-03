@@ -97,7 +97,7 @@ export const GRAPHQL = {
   TweetResultByRestId:  { queryId: 'GZsN2Pc4knAoit6pXa4HSA', operationName: 'TweetResultByRestId' },  // x.com bundle 2026-09
 
   // ---- Queries (search) ----
-  SearchTimeline:       { queryId: 'hyPfJYJ_XAtDYoslQc-Rgg', operationName: 'SearchTimeline' },       // x.com bundle 2026-09
+  SearchTimeline:       { queryId: 'uGB-gNd5HE4TkpO70OcFNw', operationName: 'SearchTimeline' },       // x.com bundle 2026-10 (live-verified)
 
   // ---- Queries (relationships) ----
   Followers:            { queryId: 'JNyQdTISpzCkj_1fqxDvFg', operationName: 'Followers' },             // x.com bundle 2026-09

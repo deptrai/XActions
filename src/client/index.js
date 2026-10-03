@@ -32,6 +32,20 @@ export class Scraper {
     if (filePath) {
       const fs = await import('node:fs/promises');
       const raw = await fs.readFile(filePath, 'utf8');
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          for (const c of parsed) {
+            if (c?.name && c?.value) this.cookies[c.name] = c.value;
+          }
+          return;
+        } else if (parsed && typeof parsed === 'object') {
+          for (const [k, v] of Object.entries(parsed)) {
+            if (k && typeof v === 'string') this.cookies[k] = v;
+          }
+          return;
+        }
+      } catch {}
       for (const pair of raw.split(';')) {
         const [k, ...v] = pair.trim().split('=');
         if (k) this.cookies[k.trim()] = v.join('=').trim();

@@ -422,6 +422,9 @@ export class TwitterClient extends AbstractApiClient {
 
     const transactionId = isAuth ? await this.#signTransactionId({ url: `${this.baseUrl}/i/api/graphql/${queryId}/${operationName}`, method }) : null;
 
+    // X/Twitter GraphQL now expects a JSON body on POST (form-urlencoded is
+    // rejected with "invalid JSON body"). Default POST content-type to JSON;
+    // callers may still override via actualOptions.headers.
     const headers = /** @type {Record<string, string>} */ ({ 'content-type': 'application/x-www-form-urlencoded', ...(actualOptions.headers || {}) });
     if (transactionId) headers['x-client-transaction-id'] = transactionId;
 
@@ -434,7 +437,13 @@ export class TwitterClient extends AbstractApiClient {
     let body = undefined;
 
     if (method === 'POST') {
-      body = this.#buildGraphQLBody(relayAwareVariables, actualFeatures, actualFieldToggles).toString();
+      body = JSON.stringify({
+        variables: relayAwareVariables,
+        features: actualFeatures || DEFAULT_FEATURES,
+        ...(actualFieldToggles ? { fieldToggles: actualFieldToggles } : {}),
+        queryId,
+      });
+      headers['content-type'] = 'application/json';
     } else {
       const params = new URLSearchParams();
       params.set('variables', JSON.stringify(relayAwareVariables));

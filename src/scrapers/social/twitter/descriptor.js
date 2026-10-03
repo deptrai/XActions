@@ -7,6 +7,9 @@
  * @license Apache-2.0
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 import { TwitterCrawler } from './crawler.js';
 import { TwitterClient } from './client.js';
 import { actionNotAvailable } from '../../platforms.js';
@@ -165,9 +168,56 @@ export default {
    * @returns {Record<string, any>}
    */
   createSession(options) {
+    let cookies = options.authCookie || options.cookies || options.authToken || '';
+    let accountId = options.accountId;
+
+    if (!cookies) {
+      if (process.env.XACTIONS_SESSION_COOKIE) {
+        if (process.env.XACTIONS_SESSION_COOKIE.includes('auth_token=')) {
+          cookies = process.env.XACTIONS_SESSION_COOKIE;
+        } else {
+          cookies = `auth_token=${process.env.XACTIONS_SESSION_COOKIE}`;
+          if (process.env.XACTIONS_CSRF_TOKEN) {
+            cookies += `; ct0=${process.env.XACTIONS_CSRF_TOKEN}`;
+          }
+        }
+      } else if (process.env.TWITTER_COOKIES) {
+        cookies = process.env.TWITTER_COOKIES;
+      }
+
+      if (!cookies) {
+        try {
+          const cookiePath = path.join(os.homedir(), '.xactions', 'cookies.json');
+          if (fs.existsSync(cookiePath)) {
+            const raw = JSON.parse(fs.readFileSync(cookiePath, 'utf8'));
+            if (Array.isArray(raw)) {
+              cookies = raw.map((c) => `${c.name}=${c.value}`).join('; ');
+            } else if (typeof raw === 'object' && raw !== null) {
+              cookies = Object.entries(raw).map(([k, v]) => `${k}=${v}`).join('; ');
+            }
+          }
+        } catch {}
+      }
+    }
+
+    if (!accountId) {
+      if (process.env.TWITTER_USERNAME) {
+        accountId = process.env.TWITTER_USERNAME;
+      } else {
+        try {
+          const configPath = path.join(os.homedir(), '.xactions', 'config.json');
+          if (fs.existsSync(configPath)) {
+            const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            if (cfg.activeSession) accountId = cfg.activeSession;
+          }
+        } catch {}
+      }
+      if (!accountId) accountId = 'twitter-guest';
+    }
+
     return {
-      accountId: options.accountId || 'twitter-guest',
-      cookies: options.authCookie || options.cookies || options.authToken || '',
+      accountId,
+      cookies,
     };
   },
 };
