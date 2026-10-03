@@ -20,12 +20,14 @@
  * @license MIT
  */
 
+import { spawn } from 'child_process';
 import { launchStealthBrowser, createStealthPage, closeStealthBrowser } from './stealthBrowser.js';
 
 /**
  * @typedef {object} BrowserPoolOptions
  * @property {number} [size] - max concurrent slots (default env `XACTIONS_BROWSER_POOL_SIZE`, then 4).
- * @property {number} [contextsPerBrowser] - isolated-context ceiling per browser before spawning another (default 5 chrome / 3 obscura).
+ * @property {number} [contextsPerBrowser] - isolated-context ceiling per browser before spawning another (default 5 chrome / clamp [4,6]).
+ * @property {number} [pagesPerProcess] - CDP page connections per obscura serve process (default 3, min 1).
  * @property {number} [acquireTimeoutMs] - max wait for a slot; 0 = forever.
  * @property {string} [backend] - 'chrome' | 'obscura'.
  * @property {string} [fallbackBackend] - default 'none' inside a pool.
@@ -41,6 +43,27 @@ import { launchStealthBrowser, createStealthPage, closeStealthBrowser } from './
  * @property {any} [fingerprintManager] - FingerprintManager instance.
  * @property {string} [accountId] - account for fingerprint resolution.
  * @property {string} [platform] - platform key for fingerprint resolution.
+ */
+
+/**
+ * @typedef {object} PoolStats
+ * @property {number} size
+ * @property {number} active
+ * @property {number} queued
+ * @property {boolean} draining
+ * @property {number} [browsers]
+ * @property {number} [capacity]
+ * @property {Array<{endpoint: string, pages: number, pending: number}>} [endpoints]
+ */
+
+/**
+ * @typedef {object} PoolAcquire
+ * @property {any} page
+ * @property {any} context
+ * @property {string} backend
+ * @property {number} waitMs
+ * @property {number} pageMs
+ * @property {string} [endpoint]
  */
 
 // ============================================================================
@@ -81,11 +104,113 @@ export class BrowserPool {
     const _sz = Number(options.size ?? process.env.XACTIONS_BROWSER_POOL_SIZE ?? 4);
     this._size = Number.isFinite(_sz) && _sz >= 0 ? _sz : 4;
     this._backend = options.backend || process.env.XACTIONS_BROWSER_BACKEND || 'chrome';
-    this._contextsPerBrowser = Number(
-      options.contextsPerBrowser ?? (this._backend === 'obscura' ? 3 : 5)
-    );
     this._acquireTimeoutMs = Number(options.acquireTimeoutMs ?? 0) || 0;
     this._isolated = options.isolated !== false;
+    /** @type {number} */
+    this._pagesPerProcess = 3;
+    /** @type {number} */
+    this._contextsPerBrowser = 5;
+    /** @type {number} */
+    this._capacity = 0;
+    /** @type {string[]} */
+    this._endpoints = [];
+
+    if (this._backend === 'obscura') {
+      const pppRaw = options.pagesPerProcess ?? process.env.XACTIONS_BROWSER_PAGES_PER_PROCESS ?? 3;
+      const pppNum = Number(pppRaw);
+      this._pagesPerProcess = (Number.isFinite(pppNum) && pppNum >= 1) ? Math.floor(pppNum) : 3;
+
+      // One parse path for every endpoint source (env list, env singular,
+      // option): trim → new URL → ws:/wss: protocol → normalized .href.
+      /** @param {unknown} raw @param {string} source */
+      const normalizeEndpoint = (raw, source) => {
+        const trimmed = String(raw ?? '').trim();
+        if (!trimmed) {
+          throw new Error(`BrowserPool: malformed obscura endpoint in ${source}: empty entry`);
+        }
+        let urlObj;
+        try {
+          urlObj = new URL(trimmed);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          throw new Error(`BrowserPool: malformed obscura endpoint '${trimmed}': ${msg}`);
+        }
+        if (urlObj.protocol !== 'ws:' && urlObj.protocol !== 'wss:') {
+          throw new Error(`BrowserPool: obscura endpoint '${trimmed}' must use ws:// or wss://`);
+        }
+        return urlObj.href;
+      };
+
+      const rawEndpoints = process.env.OBSCURA_WS_ENDPOINTS;
+      let endpointsList = [];
+      if (typeof rawEndpoints === 'string' && rawEndpoints.trim().length > 0) {
+        const rawList = rawEndpoints.split(',');
+        const seen = new Set();
+        for (const rawEntry of rawList) {
+          const normalized = normalizeEndpoint(rawEntry, 'OBSCURA_WS_ENDPOINTS');
+          if (!seen.has(normalized)) {
+            seen.add(normalized);
+            endpointsList.push(normalized);
+          }
+        }
+      } else {
+        // Singular fallback — whitespace-only means unset (same contract as
+        // the list env), then through the identical normalize path.
+        const singleRaw = options.wsEndpoint ?? process.env.OBSCURA_WS_ENDPOINT;
+        const single = typeof singleRaw === 'string' ? singleRaw.trim() : singleRaw;
+        if (single) {
+          endpointsList.push(normalizeEndpoint(single, 'OBSCURA_WS_ENDPOINT/wsEndpoint'));
+        } else if (process.env.OBSCURA_BIN) {
+          const basePort = Number(process.env.OBSCURA_PORT_BASE || 9222);
+          const count = Math.max(1, Math.ceil(this._size / this._pagesPerProcess));
+          this._children = [];
+          for (let i = 0; i < count; i++) {
+            const port = basePort + i;
+            const endpoint = `ws://127.0.0.1:${port}`;
+            endpointsList.push(endpoint);
+            try {
+              const child = spawn(process.env.OBSCURA_BIN, ['serve', '--port', String(port)], {
+                stdio: 'ignore',
+                detached: false,
+              });
+              // Missing/unexecutable binary surfaces asynchronously as an
+              // 'error' event — without a listener it crashes the process.
+              child.on('error', () => { /* dev best-effort — failure surfaces at connect */ });
+              this._children.push(child);
+            } catch {
+              /* best-effort dev spawn */
+            }
+          }
+        } else {
+          endpointsList.push('ws://127.0.0.1:9222');
+        }
+      }
+
+      this._endpoints = endpointsList;
+      // SharedContextPool pins endpoints[0] — its live fleet is exactly one
+      // process, so its ceiling is one pagesPerProcess, not the whole fleet.
+      this._capacity = (this._isolated ? this._endpoints.length : 1) * this._pagesPerProcess;
+      this._size = Math.min(this._size, this._capacity);
+
+      /** @type {Array<{endpoint?: string, browser: any, contexts: Set<any>, pending: number}>} */
+      this._browsers = this._endpoints.map((endpoint) => ({
+        endpoint,
+        browser: null,
+        contexts: new Set(),
+        pending: 0,
+      }));
+    } else {
+      let cpb;
+      if (options.contextsPerBrowser !== undefined) {
+        cpb = Number(options.contextsPerBrowser);
+      } else {
+        const envCpb = Number(process.env.XACTIONS_BROWSER_CONTEXTS_PER_BROWSER ?? 5);
+        cpb = (Number.isFinite(envCpb) && envCpb >= 1) ? Math.min(6, Math.max(4, Math.floor(envCpb))) : 5;
+      }
+      this._contextsPerBrowser = cpb;
+      /** @type {Array<{endpoint?: string, browser: any, contexts: Set<any>, pending: number}>} */
+      this._browsers = [];
+    }
 
     // Launch options forwarded verbatim to launchStealthBrowser on each spawn.
     this._launchOptions = {
@@ -111,8 +236,6 @@ export class BrowserPool {
       platform: options.platform,
     };
 
-    /** @type {Array<{browser: any, contexts: Set<any>}>} */
-    this._browsers = [];
     this._active = 0;
     /** @type {Array<{resolve: Function, reject: Function, timer: any}>} */
     this._queue = [];
@@ -130,7 +253,7 @@ export class BrowserPool {
 
   /**
    * Acquire a page for one job.
-   * @returns {Promise<{page: any, context: any, backend: string, waitMs: number, pageMs: number}>}
+   * @returns {Promise<PoolAcquire>}
    *   `context` is the isolated BrowserContext (null for SharedContextPool).
    *   `waitMs` = time queued; `pageMs` = context+page creation — feed
    *   `poolWaitMs` telemetry dim (53.6).
@@ -144,6 +267,7 @@ export class BrowserPool {
     await this._waitForSlot();
     const waitMs = Date.now() - t0;
 
+    /** @type {any} */
     let context = null;
     try {
       const tPage = Date.now();
@@ -167,7 +291,12 @@ export class BrowserPool {
       const pageMs = Date.now() - tPage;
       const backend = browser.__backend || this._backend;
       this._leases.set(page, { context, browser, backend });
-      return { page, context, backend, waitMs, pageMs };
+      /** @type {{page: any, context: any, backend: string, waitMs: number, pageMs: number, endpoint?: string}} */
+      const result = { page, context, backend, waitMs, pageMs };
+      if (this._backend === 'obscura') {
+        result.endpoint = /** @type {any} */ (obtained).endpoint || browser.__endpoint;
+      }
+      return result;
     } catch (err) {
       // Context/page creation failed after the slot was granted — free the
       // slot, clean up any orphaned context, wake the next waiter.
@@ -232,23 +361,50 @@ export class BrowserPool {
       if (this._active > 0) {
         await new Promise((resolve) => { this._onIdle = resolve; });
       }
-      for (const entry of this._browsers.splice(0)) {
-        try { await closeStealthBrowser(entry.browser); } catch { /* best-effort */ }
+      // Obscura entry slots carry fleet identity for stats().endpoints —
+      // keep them post-drain; chrome entries are expendable spawn records.
+      const entries = this._backend === 'obscura' ? this._browsers : this._browsers.splice(0);
+      for (const entry of entries) {
+        if (entry.browser) {
+          try { await closeStealthBrowser(entry.browser); } catch { /* best-effort */ }
+        }
+      }
+      if (this._children && this._children.length > 0) {
+        for (const child of this._children.splice(0)) {
+          try { child.kill('SIGTERM'); } catch { /* best-effort */ }
+        }
       }
     })();
     return this._drainPromise;
   }
 
   /**
-   * @returns {{size: number, active: number, queued: number, browsers: number, draining: boolean}}
+   * Pool health and occupancy stats.
+   * @returns {PoolStats}
    */
   stats() {
-    return {
+    const base = {
       size: this._size,
       active: this._active,
       queued: this._queue.length,
-      browsers: this._browsers.length,
       draining: this._draining,
+    };
+    if (this._backend === 'obscura') {
+      return {
+        ...base,
+        capacity: this._capacity,
+        endpoints: this._browsers.map((entry, i) => ({
+          endpoint: entry.endpoint || '',
+          // Shared mode has no per-job context — the pinned endpoint[0]
+          // serves every active page.
+          pages: this._isolated ? entry.contexts.size : (i === 0 ? this._active : 0),
+          pending: entry.pending || 0,
+        })),
+      };
+    }
+    return {
+      ...base,
+      browsers: this._browsers.length,
     };
   }
 
@@ -305,19 +461,37 @@ export class BrowserPool {
    */
   async _obtainContext() {
     if (!this._isolated) {
+      if (this._backend === 'obscura') {
+        const entry = this._browsers[0];
+        if (!entry) {
+          throw new Error('BrowserPool: no obscura endpoints configured');
+        }
+        if (!entry.browser) {
+          await this._ensureObscuraConnection(entry);
+        }
+        return { browser: entry.browser, context: null, endpoint: entry.endpoint };
+      }
       // SharedContextPool: one browser, pages on the default context.
       // Route through _spawnLock to serialize concurrent launches.
       const entry = await this._spawnSharedBrowser();
       return { browser: entry.browser, context: null };
     }
 
+    if (this._backend === 'obscura') {
+      return this._obtainObscuraContext();
+    }
+
+    // Chrome path:
     // Find a browser below its context ceiling (contexts.size + pending
     // reservations so concurrent acquirers don't overshoot the ceiling).
     let entry = this._browsers.find(
-      (e) => (e.contexts.size + (e.pending || 0)) < this._contextsPerBrowser
+      (e) => Boolean(e?.contexts && (e.contexts.size + (e.pending || 0)) < (this._contextsPerBrowser ?? 5))
     );
     if (!entry) {
       entry = await this._spawnBrowser();
+    }
+    if (!entry) {
+      throw new Error(`BrowserPool: failed to obtain browser entry for backend '${this._backend}'`);
     }
 
     // Reserve a pending slot before the async createBrowserContext call so
@@ -340,6 +514,115 @@ export class BrowserPool {
   }
 
   /**
+   * Select an obscura endpoint entry by highest headroom (first-fit),
+   * lazily connecting if needed. Skips entries that fail to connect.
+   * @private
+   */
+  async _obtainObscuraContext() {
+    const failedThisAcquire = new Set();
+    let lastError = null;
+
+    while (true) {
+      if (this._draining) throw new PoolDrainingError();
+
+      let bestEntry = null;
+      let maxHeadroom = 0;
+
+      for (const entry of this._browsers) {
+        if (!entry || !entry.contexts || failedThisAcquire.has(entry)) continue;
+        const headroom = this._pagesPerProcess - entry.contexts.size - (entry.pending || 0);
+        if (headroom > maxHeadroom) {
+          maxHeadroom = headroom;
+          bestEntry = entry;
+        }
+      }
+
+      if (!bestEntry) {
+        // Only attribute the failure to a dead endpoint when EVERY entry
+        // failed this acquire — otherwise the truth is "live fleet is full".
+        if (lastError && failedThisAcquire.size === this._browsers.length) throw lastError;
+        throw new Error(
+          `BrowserPool: all live obscura endpoints are at capacity (${this._pagesPerProcess} pages/process)`
+        );
+      }
+
+      bestEntry.pending = (bestEntry.pending || 0) + 1;
+      try {
+        if (!bestEntry.browser) {
+          try {
+            await this._ensureObscuraConnection(bestEntry);
+          } catch (err) {
+            failedThisAcquire.add(bestEntry);
+            lastError = err;
+            continue;
+          }
+        }
+
+        const context = typeof bestEntry.browser.createBrowserContext === 'function'
+          ? await bestEntry.browser.createBrowserContext()
+          : null;
+        if (!context) {
+          throw new Error(
+            `BrowserPool: browser for backend '${this._backend}' does not support isolated contexts (createBrowserContext unavailable or returned null)`
+          );
+        }
+        bestEntry.contexts.add(context);
+        return { browser: bestEntry.browser, context, endpoint: bestEntry.endpoint };
+      } finally {
+        bestEntry.pending--;
+      }
+    }
+  }
+
+  /**
+   * Lazily connect to an obscura endpoint through the spawn lock.
+   * @param {{endpoint?: string, browser: any, contexts: Set<any>, pending: number}} entry
+   * @private
+   */
+  _ensureObscuraConnection(entry) {
+    const run = this._spawnLock.then(async () => {
+      if (this._draining) throw new PoolDrainingError();
+      if (entry.browser) return entry;
+
+      let browser;
+      try {
+        browser = await launchStealthBrowser({
+          ...this._launchOptions,
+          wsEndpoint: entry.endpoint,
+        });
+      } catch (err) {
+        const e = /** @type {any} */ (err);
+        const wrapped = new Error(
+          `BrowserPool: launch failed for backend '${this._backend}' (endpoint ${entry.endpoint}): ${e?.message || e}`
+        );
+        wrapped.cause = e;
+        wrapped.name = e?.name || 'Error';
+        if (e && typeof e === 'object') {
+          /** @type {any} */ (wrapped).type = e.type;
+          /** @type {any} */ (wrapped).suggestedAction = e.suggestedAction;
+          if (e.constructor && e.constructor !== Error) {
+            Object.setPrototypeOf(wrapped, Object.getPrototypeOf(e));
+          }
+        }
+        throw wrapped;
+      }
+
+      if (this._draining) {
+        try { await closeStealthBrowser(browser); } catch { /* best-effort */ }
+        throw new PoolDrainingError();
+      }
+
+      /** @type {any} */ (browser).__endpoint = entry.endpoint;
+      /** @type {any} */ (browser).__backend = 'obscura';
+      entry.browser = browser;
+      return entry;
+    });
+
+    this._spawnLock = run.catch(() => {});
+    return run;
+  }
+
+  /**
    * Serialize spawns: concurrent acquires must not double-launch.
    * Re-checks for a browser with headroom *inside* the lock — an earlier
    * waiter may have already spawned one.
@@ -348,7 +631,7 @@ export class BrowserPool {
     const run = this._spawnLock.then(() => {
       if (this._draining) throw new PoolDrainingError();
       const existing = this._browsers.find(
-        (e) => (e.contexts.size + (e.pending || 0)) < this._contextsPerBrowser
+        (e) => Boolean(e?.contexts && (e.contexts.size + (e.pending || 0)) < (this._contextsPerBrowser ?? 5))
       );
       if (existing) return existing;
       return this._ensureBrowser(this._browsers.length);
@@ -398,6 +681,7 @@ export class BrowserPool {
       try { await closeStealthBrowser(browser); } catch { /* best-effort */ }
       throw new PoolDrainingError();
     }
+    /** @type {{endpoint?: string, browser: any, contexts: Set<any>, pending: number}} */
     const entry = { browser, contexts: new Set(), pending: 0 };
     this._browsers.push(entry);
     return entry;

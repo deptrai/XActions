@@ -12,8 +12,10 @@ import type { StealthBrowserOptions } from './stealthBrowser.js';
 export interface BrowserPoolOptions {
   /** Max concurrent slots (default env `XACTIONS_BROWSER_POOL_SIZE`, then 4). */
   size?: number;
-  /** Isolated-context ceiling per browser before spawning another (default 5 chrome / 3 obscura). */
+  /** Isolated-context ceiling per browser before spawning another (chrome only — default 5, clamped to [4,6]; obscura uses pagesPerProcess). */
   contextsPerBrowser?: number;
+  /** CDP page connections per obscura serve process (default 3, min 1). */
+  pagesPerProcess?: number;
   /** Max wait for a slot; 0 = forever. */
   acquireTimeoutMs?: number;
   /** 'chrome' | 'obscura' */
@@ -47,13 +49,17 @@ export interface PoolAcquire {
   waitMs: number;
   /** Context+page creation time. */
   pageMs: number;
+  /** Obscura CDP WebSocket endpoint serving this page. */
+  endpoint?: string;
 }
 
 export interface PoolStats {
   size: number;
   active: number;
   queued: number;
-  browsers: number;
+  browsers?: number;
+  capacity?: number;
+  endpoints?: Array<{ endpoint: string; pages: number; pending: number }>;
   draining: boolean;
 }
 

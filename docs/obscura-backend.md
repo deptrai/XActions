@@ -58,6 +58,25 @@ await closeStealthBrowser(browser);                                  // disconne
 - `XACTIONS_BROWSER_BACKEND_METRICS` (`1` or `0`, default `0`): When `1`, attaches `browserBackend` to telemetry runs.
 - `OBSCURA_BIN` (spike auto-spawn only), `PROXY_SERVER`, `HEADFUL=1`, `SHOTS=1`.
 
+## Sharded Fleet & BrowserPool (Story 53.4)
+
+When pooled scraping is enabled (`XACTIONS_BROWSER_POOL_SIZE > 0`), Obscura shards across an external fleet of `obscura serve` processes rather than scaling page connections on a single process.
+
+### Configuration
+
+| Variable | Scope | Default | Description |
+|---|---|---|---|
+| `OBSCURA_WS_ENDPOINTS` | obscura | unset | Comma-separated list of external WebSocket endpoints (e.g. `ws://127.0.0.1:9222,ws://127.0.0.1:9223`). Takes precedence over `OBSCURA_WS_ENDPOINT`. |
+| `OBSCURA_WS_ENDPOINT` | obscura | `ws://127.0.0.1:9222` | Single WebSocket endpoint fallback when `OBSCURA_WS_ENDPOINTS` is unset. |
+| `XACTIONS_BROWSER_PAGES_PER_PROCESS` | obscura | `3` | Maximum concurrent CDP page connections per serve process (headroom ceiling, min 1). |
+| `XACTIONS_BROWSER_CONTEXTS_PER_BROWSER` | chrome | `5` | Isolated-context ceiling per Chrome browser instance (clamped to `[4, 6]`). |
+| `OBSCURA_BIN` / `OBSCURA_PORT_BASE` | obscura | unset / `9222` | Optional dev auto-spawn: consulted only when no endpoint environment variables are set. |
+
+### Fleet Ownership & Drain Semantics
+
+- **External ownership:** The Obscura fleet processes are managed by external supervisors/operators. On pool `drain()`, XActions issues `browser.disconnect()` to close CDP connections without terminating the external daemons (per AD-23).
+- **Dev auto-spawn exception:** If processes are spawned locally via `OBSCURA_BIN`, `drain()` automatically sends `SIGTERM` to clean up child processes.
+
 ## Verify
 
 ```bash

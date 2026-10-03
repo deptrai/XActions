@@ -7,13 +7,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mock stealthBrowser before importing the pool ────────────────────────────
 const mocks = vi.hoisted(() => {
+  /** @type {{ launches: any[], teardowns: any[], launchError: any, launchErrorsByEndpoint: Record<string, any>, nextBackend: string, spawnedChildren: any[] }} */
   const state = {
     launches: [],
     teardowns: [],
     launchError: null,
+    launchErrorsByEndpoint: {},
     nextBackend: 'chrome',
+    spawnedChildren: [],
   };
+  /** @param {string} [backend] */
   function makeFakeBrowser(backend) {
+    /** @type {any} */
     const browser = {
       __backend: backend,
       __fingerprint: { userAgent: 'TEST-UA', locale: 'en-US' },
@@ -42,6 +47,9 @@ const mocks = vi.hoisted(() => {
     state,
     makeFakeBrowser,
     launchStealthBrowser: vi.fn(async (opts) => {
+      if (opts.wsEndpoint && state.launchErrorsByEndpoint[opts.wsEndpoint]) {
+        throw state.launchErrorsByEndpoint[opts.wsEndpoint];
+      }
       if (state.launchError) throw state.launchError;
       const b = makeFakeBrowser(opts.backend === 'obscura' ? 'obscura' : (state.nextBackend || 'chrome'));
       state.launches.push({ opts, browser: b });
@@ -66,9 +74,18 @@ vi.mock('../../src/scraping/stealthBrowser.js', () => ({
   closeStealthBrowser: mocks.closeStealthBrowser,
 }));
 
+vi.mock('child_process', () => ({
+  spawn: vi.fn((bin, args) => {
+    const child = { bin, args, on: vi.fn(), kill: vi.fn() };
+    mocks.state.spawnedChildren.push(child);
+    return child;
+  }),
+}));
+
 import { BrowserPool, SharedContextPool, PoolDrainingError, PoolAcquireTimeoutError } from '../../src/scraping/browserPool.js';
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 describe('BrowserPool', () => {
@@ -76,7 +93,9 @@ describe('BrowserPool', () => {
     mocks.state.launches.length = 0;
     mocks.state.teardowns.length = 0;
     mocks.state.launchError = null;
+    mocks.state.launchErrorsByEndpoint = {};
     mocks.state.nextBackend = 'chrome';
+    vi.unstubAllEnvs();
     vi.clearAllMocks();
   });
 
@@ -98,6 +117,7 @@ describe('BrowserPool', () => {
 
   it('BACKPRESSURE — hết slot → FIFO queue, waiter thứ N chỉ được phục vụ khi có release', async () => {
     const pool = new BrowserPool({ size: 2, backend: 'chrome' });
+    /** @type {string[]} */
     const order = [];
     const a = await pool.acquire();
     const b = await pool.acquire();
@@ -215,7 +235,7 @@ describe('BrowserPool', () => {
     const pool = new BrowserPool({ size: 4, backend: 'obscura', wsEndpoint: 'ws://x' });
     const a = await pool.acquire();
     expect(mocks.launchStealthBrowser).toHaveBeenCalledWith(
-      expect.objectContaining({ backend: 'obscura', wsEndpoint: 'ws://x', fallbackBackend: 'none' })
+      expect.objectContaining({ backend: 'obscura', wsEndpoint: 'ws://x/', fallbackBackend: 'none' })
     );
     await pool.release(a.page);
     await pool.drain();
@@ -255,8 +275,6 @@ describe('BrowserPool', () => {
     // Launch succeeds but createBrowserContext fails → acquire() in-flight throws
     mocks.state.launchError = null;
     const pool = new BrowserPool({ size: 1, backend: 'chrome' });
-    // Monkey-patch: launch OK but context creation fails after slot granted
-    const origLaunch = mocks.launchStealthBrowser.getMockImplementation();
     mocks.launchStealthBrowser.mockImplementationOnce(async (opts) => {
       const b = mocks.makeFakeBrowser('chrome');
       b.createBrowserContext = async () => { await sleep(30); throw new Error('ctx fail'); };
@@ -328,5 +346,382 @@ describe('SharedContextPool (opt-in, public anon only)', () => {
     await pool.release(b.page);
     await pool.drain();
     expect(mocks.state.teardowns.length).toBe(1);
+  });
+});
+
+describe('Story 53.4 — Obscura pool-of-processes shard strategy', () => {
+  beforeEach(() => {
+    mocks.state.launches.length = 0;
+    mocks.state.teardowns.length = 0;
+    mocks.state.launchError = null;
+    mocks.state.launchErrorsByEndpoint = {};
+    mocks.state.nextBackend = 'obscura';
+    mocks.state.spawnedChildren.length = 0;
+    vi.unstubAllEnvs();
+    vi.clearAllMocks();
+  });
+
+  it('FLEET_MULTI — 2 endpoints fleet, size 8, pagesPerProcess 4: leases distribute and stats reflect pages/pending', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222,ws://127.0.0.1:9223');
+    const pool = new BrowserPool({ size: 8, pagesPerProcess: 4, backend: 'obscura' });
+
+    expect(pool.stats().capacity).toBe(8);
+    expect(pool.stats().endpoints).toHaveLength(2);
+
+    const acqs = await Promise.all([
+      pool.acquire(), pool.acquire(), pool.acquire(), pool.acquire(),
+      pool.acquire(), pool.acquire(), pool.acquire(), pool.acquire(),
+    ]);
+
+    // 8 leases across 2 endpoints with ceiling 4: each endpoint must have exactly 4 pages
+    const stats = pool.stats();
+    expect(stats.active).toBe(8);
+    expect(stats.endpoints).toHaveLength(2);
+    expect(stats.endpoints?.[0].pages).toBe(4);
+    expect(stats.endpoints?.[0].pending).toBe(0);
+    expect(stats.endpoints?.[1].pages).toBe(4);
+    expect(stats.endpoints?.[1].pending).toBe(0);
+
+    const endpointsUsed = new Set(acqs.map((a) => a.endpoint));
+    expect(endpointsUsed.size).toBe(2);
+    expect(endpointsUsed.has('ws://127.0.0.1:9222/')).toBe(true);
+    expect(endpointsUsed.has('ws://127.0.0.1:9223/')).toBe(true);
+
+    for (const a of acqs) {
+      await pool.release(a.page);
+    }
+    await pool.drain();
+  });
+
+  it('FLEET_FALLBACK — singular OBSCURA_WS_ENDPOINT fallback when OBSCURA_WS_ENDPOINTS unset', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINT', 'ws://127.0.0.1:9222');
+    const pool = new BrowserPool({ size: 4, backend: 'obscura' });
+
+    expect(pool.stats().capacity).toBe(3); // 1 endpoint * default 3 pagesPerProcess
+    expect(pool.stats().endpoints).toHaveLength(1);
+    expect(pool.stats().endpoints?.[0].endpoint).toBe('ws://127.0.0.1:9222/');
+
+    const acq = await pool.acquire();
+    expect(acq.endpoint).toBe('ws://127.0.0.1:9222/');
+    await pool.release(acq.page);
+    await pool.drain();
+  });
+
+  it('PARSE_MALFORMED — malformed endpoint throws loudly with the offending entry', () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222,not a url');
+    expect(() => new BrowserPool({ backend: 'obscura' })).toThrow(/malformed.*not a url/);
+  });
+
+  it('PARSE_DEDUPE — duplicate endpoints after URL normalization are deduped to 1', () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222, ws://127.0.0.1:9222/');
+    const pool = new BrowserPool({ backend: 'obscura' });
+    expect(pool.stats().endpoints).toHaveLength(1);
+    expect(pool.stats().endpoints?.[0].endpoint).toBe('ws://127.0.0.1:9222/');
+  });
+
+  it('CAPACITY_CLAMP — size clamped to capacity (2 * 4 = 8); 9th acquire queues and times out', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222,ws://127.0.0.1:9223');
+    const pool = new BrowserPool({ size: 16, pagesPerProcess: 4, backend: 'obscura', acquireTimeoutMs: 30 });
+
+    expect(pool.stats().capacity).toBe(8);
+    expect(pool.stats().size).toBe(8); // clamped from 16 to 8
+
+    const acqs = await Promise.all([
+      pool.acquire(), pool.acquire(), pool.acquire(), pool.acquire(),
+      pool.acquire(), pool.acquire(), pool.acquire(), pool.acquire(),
+    ]);
+
+    // 9th acquire must queue and hit PoolAcquireTimeoutError
+    await expect(pool.acquire()).rejects.toBeInstanceOf(PoolAcquireTimeoutError);
+
+    for (const a of acqs) {
+      await pool.release(a.page);
+    }
+    await pool.drain();
+  });
+
+  it('CONNECT_FAIL_SKIP — endpoint a fails, acquire skips to live endpoint b; wrapped error when all fail', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222,ws://127.0.0.1:9223');
+    mocks.state.launchErrorsByEndpoint['ws://127.0.0.1:9222/'] = new Error('ECONNREFUSED 9222');
+
+    const pool = new BrowserPool({ size: 4, pagesPerProcess: 2, backend: 'obscura' });
+
+    // Acquire should skip 9222 and land on 9223
+    const acq = await pool.acquire();
+    expect(acq.endpoint).toBe('ws://127.0.0.1:9223/');
+    await pool.release(acq.page);
+
+    // Now fail both endpoints
+    mocks.state.launchErrorsByEndpoint['ws://127.0.0.1:9223/'] = new Error('ECONNREFUSED 9223');
+    // Drain existing browser on 9223 to force reconnect
+    await pool.drain();
+
+    const poolAllDead = new BrowserPool({ size: 4, pagesPerProcess: 2, backend: 'obscura' });
+    let thrownError = /** @type {any} */ (null);
+    try {
+      await poolAllDead.acquire();
+    } catch (err) {
+      thrownError = err;
+    }
+    expect(thrownError).toBeTruthy();
+    expect(thrownError.message).toMatch(/launch failed for backend 'obscura'/);
+    expect(thrownError.cause).toBeTruthy();
+    await poolAllDead.drain();
+  });
+
+  it('DRAIN_MID_CONNECT — drain() during in-flight connect disconnects browser and rejects with PoolDrainingError', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222');
+    const pool = new BrowserPool({ size: 2, backend: 'obscura' });
+
+    mocks.launchStealthBrowser.mockImplementationOnce(async (opts) => {
+      await sleep(30);
+      const b = mocks.makeFakeBrowser('obscura');
+      mocks.state.launches.push({ opts, browser: b });
+      return b;
+    });
+
+    const acqPromise = pool.acquire();
+    await sleep(5); // ensure launch is in-flight
+    const drainPromise = pool.drain();
+
+    await expect(acqPromise).rejects.toBeInstanceOf(PoolDrainingError);
+    await drainPromise;
+
+    // Disconnected, not orphaned
+    expect(mocks.state.teardowns.length).toBe(1);
+    expect(mocks.state.teardowns[0]._disconnected).toBe(true);
+  });
+
+  it('ISOLATED_PER_JOB — multiple jobs on same endpoint get distinct contexts; null context throws wrapped error', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222');
+    const pool = new BrowserPool({ size: 2, pagesPerProcess: 2, backend: 'obscura' });
+
+    const a = await pool.acquire();
+    const b = await pool.acquire();
+
+    expect(a.endpoint).toBe('ws://127.0.0.1:9222/');
+    expect(b.endpoint).toBe('ws://127.0.0.1:9222/');
+    expect(a.context).not.toBe(b.context);
+
+    await pool.release(a.page);
+    await pool.release(b.page);
+    await pool.drain();
+
+    // Context failure does not fall back to shared default context
+    const poolFail = new BrowserPool({ size: 1, backend: 'obscura' });
+    mocks.launchStealthBrowser.mockImplementationOnce(async (opts) => {
+      const fb = mocks.makeFakeBrowser('obscura');
+      fb.createBrowserContext = /** @type {any} */ (async () => null); // returns null
+      mocks.state.launches.push({ opts, browser: fb });
+      return fb;
+    });
+
+    await expect(poolFail.acquire()).rejects.toThrow(/does not support isolated contexts/);
+    await poolFail.drain();
+  });
+
+  it('SHARED_PIN — SharedContextPool on obscura pins endpoints[0] only', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222,ws://127.0.0.1:9223');
+    // ppp 4 → shared capacity = 1 process × 4 pages; size clamps to it
+    const pool = new SharedContextPool({ size: 4, pagesPerProcess: 4, backend: 'obscura' });
+    expect(pool.stats().capacity).toBe(4);
+
+    const [a, b, c] = await Promise.all([
+      pool.acquire(), pool.acquire(), pool.acquire(),
+    ]);
+
+    expect(a.endpoint).toBe('ws://127.0.0.1:9222/');
+    expect(b.endpoint).toBe('ws://127.0.0.1:9222/');
+    expect(c.endpoint).toBe('ws://127.0.0.1:9222/');
+    expect(a.context).toBeNull();
+    expect(b.context).toBeNull();
+    expect(c.context).toBeNull();
+
+    // Only 1 launch happened (pinned to endpoint 0)
+    expect(mocks.state.launches.length).toBe(1);
+    expect(mocks.state.launches[0].opts.wsEndpoint).toBe('ws://127.0.0.1:9222/');
+
+    await pool.release(a.page);
+    await pool.release(b.page);
+    await pool.release(c.page);
+    await pool.drain();
+  });
+
+  it('CONFIG_VALIDATION — pagesPerProcess fallback on invalid numbers; XACTIONS_BROWSER_PAGES_PER_PROCESS env; XACTIONS_BROWSER_CONTEXTS_PER_BROWSER clamped to [4,6]', () => {
+    // Obscura pagesPerProcess validation
+    const poolNeg = new BrowserPool({ backend: 'obscura', pagesPerProcess: -5 });
+    expect(/** @type {any} */ (poolNeg)._pagesPerProcess).toBe(3);
+
+    const poolZero = new BrowserPool({ backend: 'obscura', pagesPerProcess: 0 });
+    expect(/** @type {any} */ (poolZero)._pagesPerProcess).toBe(3);
+
+    const poolNaN = new BrowserPool({ backend: 'obscura', pagesPerProcess: NaN });
+    expect(/** @type {any} */ (poolNaN)._pagesPerProcess).toBe(3);
+
+    const poolValid = new BrowserPool({ backend: 'obscura', pagesPerProcess: 4 });
+    expect(/** @type {any} */ (poolValid)._pagesPerProcess).toBe(4);
+
+    // XACTIONS_BROWSER_PAGES_PER_PROCESS env path
+    vi.stubEnv('XACTIONS_BROWSER_PAGES_PER_PROCESS', '5');
+    const poolEnv = new BrowserPool({ backend: 'obscura' });
+    expect(/** @type {any} */ (poolEnv)._pagesPerProcess).toBe(5);
+
+    vi.stubEnv('XACTIONS_BROWSER_PAGES_PER_PROCESS', 'invalid');
+    const poolEnvBad = new BrowserPool({ backend: 'obscura' });
+    expect(/** @type {any} */ (poolEnvBad)._pagesPerProcess).toBe(3);
+
+    vi.stubEnv('XACTIONS_BROWSER_PAGES_PER_PROCESS', '-1');
+    const poolEnvNeg = new BrowserPool({ backend: 'obscura' });
+    expect(/** @type {any} */ (poolEnvNeg)._pagesPerProcess).toBe(3);
+
+    // options.pagesPerProcess wins over env
+    vi.stubEnv('XACTIONS_BROWSER_PAGES_PER_PROCESS', '9');
+    const poolOptWins = new BrowserPool({ backend: 'obscura', pagesPerProcess: 2 });
+    expect(/** @type {any} */ (poolOptWins)._pagesPerProcess).toBe(2);
+    vi.unstubAllEnvs();
+
+    // Chrome XACTIONS_BROWSER_CONTEXTS_PER_BROWSER clamping
+    vi.stubEnv('XACTIONS_BROWSER_CONTEXTS_PER_BROWSER', '10');
+    const poolClampHigh = new BrowserPool({ backend: 'chrome' });
+    expect(/** @type {any} */ (poolClampHigh)._contextsPerBrowser).toBe(6);
+
+    vi.stubEnv('XACTIONS_BROWSER_CONTEXTS_PER_BROWSER', '2');
+    const poolClampLow = new BrowserPool({ backend: 'chrome' });
+    expect(/** @type {any} */ (poolClampLow)._contextsPerBrowser).toBe(4);
+
+    vi.stubEnv('XACTIONS_BROWSER_CONTEXTS_PER_BROWSER', '5');
+    const poolInBand = new BrowserPool({ backend: 'chrome' });
+    expect(/** @type {any} */ (poolInBand)._contextsPerBrowser).toBe(5);
+  });
+
+  it('RELEASE_HEADROOM — release frees obscura endpoint headroom; re-acquire lands on freed endpoint', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222,ws://127.0.0.1:9223');
+    const pool = new BrowserPool({ size: 4, pagesPerProcess: 2, backend: 'obscura' });
+
+    const acqs = await Promise.all([
+      pool.acquire(), pool.acquire(), pool.acquire(), pool.acquire(),
+    ]);
+    expect(pool.stats().endpoints?.[0].pages).toBe(2);
+    expect(pool.stats().endpoints?.[1].pages).toBe(2);
+
+    // Release one lease on each endpoint → pages drop back to 1
+    const byEndpoint = new Map();
+    for (const a of acqs) {
+      if (!byEndpoint.has(a.endpoint)) byEndpoint.set(a.endpoint, a);
+    }
+    for (const a of byEndpoint.values()) {
+      await pool.release(a.page);
+    }
+    const st = pool.stats();
+    expect(st.endpoints?.[0].pages).toBe(1);
+    expect(st.endpoints?.[1].pages).toBe(1);
+
+    // Re-acquire succeeds immediately — headroom was actually freed
+    const again = await pool.acquire();
+    expect(again.endpoint).toBeTruthy();
+    expect(pool.stats().active).toBe(3);
+
+    for (const a of acqs) { await pool.release(a.page); }
+    await pool.release(again.page);
+    await pool.drain();
+  });
+
+  it('CONNECT_FAIL_LIVE_FULL — dead endpoint + saturated live endpoint → capacity error, not the connect error', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222,ws://127.0.0.1:9223');
+    mocks.state.launchErrorsByEndpoint['ws://127.0.0.1:9222/'] = new Error('ECONNREFUSED 9222');
+    const pool = new BrowserPool({ size: 4, pagesPerProcess: 2, backend: 'obscura' });
+
+    // Fill the live endpoint to its 2-page ceiling
+    const [a, b] = await Promise.all([pool.acquire(), pool.acquire()]);
+    expect(a.endpoint).toBe('ws://127.0.0.1:9223/');
+    expect(b.endpoint).toBe('ws://127.0.0.1:9223/');
+
+    // Third acquire: dead endpoint skipped, live endpoint full → capacity
+    // error naming the real condition, not the dead endpoint's connect error
+    await expect(pool.acquire()).rejects.toThrow(/at capacity/);
+
+    await pool.release(a.page);
+    await pool.release(b.page);
+    await pool.drain();
+  });
+
+  it('STATS_AFTER_DRAIN — stats().endpoints keeps fleet identity after drain', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222,ws://127.0.0.1:9223');
+    const pool = new BrowserPool({ size: 4, pagesPerProcess: 2, backend: 'obscura' });
+    const acq = await pool.acquire();
+    await pool.release(acq.page);
+    await pool.drain();
+
+    const st = pool.stats();
+    expect(st.endpoints).toHaveLength(2);
+    expect(st.endpoints?.[0].endpoint).toBe('ws://127.0.0.1:9222/');
+    expect(st.endpoints?.[1].endpoint).toBe('ws://127.0.0.1:9223/');
+    expect(st.capacity).toBe(4);
+    expect(st.draining).toBe(true);
+  });
+
+  it('SHARED_CAPACITY — SharedContextPool on obscura fleet clamps size to one process ceiling', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222,ws://127.0.0.1:9223');
+    const pool = new SharedContextPool({ size: 8, pagesPerProcess: 3, backend: 'obscura' });
+
+    // Pinned to endpoint[0]: live capacity is 1 process * 3 pages, not 2 * 3
+    expect(pool.stats().capacity).toBe(3);
+    expect(pool.stats().size).toBe(3);
+
+    const [a, b, c] = await Promise.all([
+      pool.acquire(), pool.acquire(), pool.acquire(),
+    ]);
+    expect(a.endpoint).toBe('ws://127.0.0.1:9222/');
+    expect(pool.stats().endpoints?.[0].pages).toBe(3);
+    expect(pool.stats().endpoints?.[1].pages).toBe(0);
+
+    await pool.release(a.page);
+    await pool.release(b.page);
+    await pool.release(c.page);
+    await pool.drain();
+  });
+
+  it('FALLBACK_PARSE — singular endpoint normalized like the list; whitespace treated as unset', async () => {
+    // Trailing-slash normalization applies to the singular fallback too
+    vi.stubEnv('OBSCURA_WS_ENDPOINT', 'ws://127.0.0.1:9222');
+    const pool = new BrowserPool({ backend: 'obscura' });
+    expect(pool.stats().endpoints?.[0].endpoint).toBe('ws://127.0.0.1:9222/');
+    await pool.drain();
+
+    // Whitespace-only → unset → falls through to the built-in default
+    vi.stubEnv('OBSCURA_WS_ENDPOINT', '   ');
+    const poolWs = new BrowserPool({ backend: 'obscura' });
+    expect(poolWs.stats().endpoints?.[0].endpoint).toBe('ws://127.0.0.1:9222');
+    await poolWs.drain();
+
+    // Malformed singular → loud throw, same as list entries
+    vi.stubEnv('OBSCURA_WS_ENDPOINT', 'not a url');
+    expect(() => new BrowserPool({ backend: 'obscura' })).toThrow(/malformed/);
+
+    // Non-ws protocol → loud throw
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'http://127.0.0.1:9222');
+    expect(() => new BrowserPool({ backend: 'obscura' })).toThrow(/ws:\/\/ or wss/);
+  });
+
+  it('OBSCURA_BIN — dev auto-spawn creates ceil(size/ppp) children and drain kills them', async () => {
+    vi.stubEnv('OBSCURA_BIN', '/fake/obscura');
+    vi.stubEnv('OBSCURA_PORT_BASE', '9500');
+    const pool = new BrowserPool({ size: 5, pagesPerProcess: 2, backend: 'obscura' });
+
+    // ceil(5 / 2) = 3 children on consecutive ports
+    expect(mocks.state.spawnedChildren).toHaveLength(3);
+    expect(mocks.state.spawnedChildren[0].args).toEqual(['serve', '--port', '9500']);
+    expect(mocks.state.spawnedChildren[2].args).toEqual(['serve', '--port', '9502']);
+    // Every child has an 'error' listener — an unexecutable binary must not
+    // crash the process with an unhandled error event
+    for (const child of mocks.state.spawnedChildren) {
+      expect(child.on).toHaveBeenCalledWith('error', expect.any(Function));
+    }
+    expect(pool.stats().endpoints).toHaveLength(3);
+
+    await pool.drain();
+    for (const child of mocks.state.spawnedChildren) {
+      expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+    }
   });
 });
