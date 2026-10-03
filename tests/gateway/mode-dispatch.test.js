@@ -1324,3 +1324,77 @@ describe('async job lifecycle — real operationsQueue events on real Operation 
     }
   });
 });
+
+// ─── Story 53.3 — pooled opt-in threading (AD-24 Rule 1) ─────────────────────
+
+import { resolvePooledFlag } from '../../api/services/jobQueue.js';
+
+describe('sanitizeOptions — pooled / poolSize hints (Story 53.3)', () => {
+  it('pooled coerces to boolean (true / "true" → true; anything else → false)', () => {
+    expect(sanitizeOptions({ pooled: true, query: 'x' }).pooled).toBe(true);
+    expect(sanitizeOptions({ pooled: 'true' }).pooled).toBe(true);
+    expect(sanitizeOptions({ pooled: 'yes' }).pooled).toBe(false);
+    expect(sanitizeOptions({ pooled: 1 }).pooled).toBe(false);
+  });
+
+  it('poolSize clamps to MAX_SCRAPE_CONCURRENCY (8) — clamped, never errored', () => {
+    expect(sanitizeOptions({ poolSize: 99 }).poolSize).toBe(8);
+    expect(sanitizeOptions({ poolSize: 3 }).poolSize).toBe(3);
+    expect(sanitizeOptions({ poolSize: 8.9 }).poolSize).toBe(8);
+  });
+
+  it('poolSize invalid (< 1, non-numeric) → key dropped, no throw', () => {
+    for (const v of [0, -3, 'abc', NaN, Infinity]) {
+      expect(sanitizeOptions({ poolSize: v })).not.toHaveProperty('poolSize');
+    }
+  });
+
+  it('pooled/poolSize survive flat + nested body.options merge (sync lane pass-through)', () => {
+    const out = sanitizeOptions({ options: { pooled: true, poolSize: 5 }, query: 'q' });
+    expect(out.pooled).toBe(true);
+    expect(out.poolSize).toBe(5);
+  });
+});
+
+describe('resolvePooledFlag — jobQueue processor opt-in (Story 53.3)', () => {
+  const origEnv = process.env.XACTIONS_BROWSER_POOL_SIZE;
+  afterEach(() => {
+    if (origEnv === undefined) delete process.env.XACTIONS_BROWSER_POOL_SIZE;
+    else process.env.XACTIONS_BROWSER_POOL_SIZE = origEnv;
+  });
+
+  it('ENV_OPTIN: env > 0 + no flag → options.pooled = true', () => {
+    process.env.XACTIONS_BROWSER_POOL_SIZE = '4';
+    const options = {};
+    resolvePooledFlag({}, options);
+    expect(options.pooled).toBe(true);
+  });
+
+  it('JOB_OPTIN: env unset + job.data.options.pooled → pooled = true', () => {
+    delete process.env.XACTIONS_BROWSER_POOL_SIZE;
+    const options = { pooled: true };
+    resolvePooledFlag({}, options);
+    expect(options.pooled).toBe(true);
+  });
+
+  it('OFF_DEFAULT: env unset + no flag → pooled absent (byte-identical)', () => {
+    delete process.env.XACTIONS_BROWSER_POOL_SIZE;
+    const options = {};
+    resolvePooledFlag({}, options);
+    expect(options).not.toHaveProperty('pooled');
+  });
+
+  it('EXPLICIT_OFF: env=4 + pooled:false in job options → pooled stays false', () => {
+    process.env.XACTIONS_BROWSER_POOL_SIZE = '4';
+    const options = { pooled: false };
+    resolvePooledFlag({}, options);
+    expect(options.pooled).toBe(false);
+  });
+
+  it('top-level job.data.pooled beats options.pooled', () => {
+    delete process.env.XACTIONS_BROWSER_POOL_SIZE;
+    const options = { pooled: true };
+    resolvePooledFlag({ pooled: false }, options);
+    expect(options.pooled).toBe(false);
+  });
+});

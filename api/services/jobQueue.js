@@ -98,6 +98,7 @@ const scrapeQueue = new Queue('operations-scrape', {
 // Test seam (repo mandate: injected seams, no vi.mock). Overrides the queue
 // object used ONLY by addJob/queueJob/getJob — processors stay bound to the
 // real queues so job execution semantics never change under test.
+/** @type {Record<string, unknown> | null} */
 let _queueOverride = null;
 /** @param {Record<string, unknown> | null} q */
 export function _setOperationsQueue(q) {
@@ -571,6 +572,11 @@ scrapeQueue.process('scrape', 2, async (job) => {
     }
   }
 
+  // Story 53.3 (AD-24 Rule 1): pooled opt-in threading — see
+  // resolvePooledFlag. Downstream launchStealthBrowser / PuppeteerAdapter
+  // read options.pooled (53.2).
+  resolvePooledFlag(job.data, options);
+
   const { scrape } = await import('../../src/scrapers/index.js');
   const consumerCtx = {
     consumerId: job.data.consumerId || 'internal',
@@ -584,6 +590,32 @@ scrapeQueue.process('scrape', 2, async (job) => {
 });
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Story 53.3 (AD-24 Rule 1) — resolve the pooled opt-in for one scrape job.
+ * The flag may arrive top-level (`job.data.pooled`) or inside job options
+ * (`job.data.options.pooled`) — an explicit boolean wins either direction
+ * (request-level `pooled:false` suppresses even when the infra-level env
+ * opt-in is set); absent → ambient `XACTIONS_BROWSER_POOL_SIZE` > 0 turns
+ * pooling on. Mutates `options.pooled` in place.
+ *
+ * Exported as a pure helper for unit tests (injected-seams mandate: the
+ * Bull processor body itself is not reachable without a live worker).
+ * @param {Record<string, unknown>} jobData
+ * @param {Record<string, unknown>} options
+ */
+export function resolvePooledFlag(jobData, options) {
+  const topLevel = jobData && jobData.pooled !== undefined ? jobData.pooled : undefined;
+  const jobPooled = topLevel !== undefined ? topLevel : options.pooled;
+  if (jobPooled === undefined) {
+    const envPoolSize = parseInt(process.env.XACTIONS_BROWSER_POOL_SIZE || '', 10);
+    if (Number.isFinite(envPoolSize) && envPoolSize > 0) {
+      options.pooled = true;
+    }
+  } else {
+    options.pooled = jobPooled === true;
+  }
+}
 
 /** Fire a best-effort POST to a callbackUrl with the job result
  * @param {string} url
@@ -601,6 +633,7 @@ function deliverCallback(url, payload) {
 
 // ── Job event handlers ──────────────────────────────────────────────────────
 
+/** @param {any} job */
 const onActive = async (job) => {
   console.log(`▶️  Job active: ${job.id} (${job.data.type || job.name})`);
   try {
@@ -620,6 +653,7 @@ const onActive = async (job) => {
   });
 };
 
+/** @param {any} job @param {number} progress */
 const onProgress = (job, progress) => {
   global.io?.to(`job:${job.data.operationId}`).emit('job:progress', {
     jobId: job.data.operationId,
@@ -627,6 +661,7 @@ const onProgress = (job, progress) => {
   });
 };
 
+/** @param {any} job @param {any} result */
 const onCompleted = async (job, result) => {
   console.log(`✅ Job completed: ${job.id}`);
 
@@ -668,6 +703,7 @@ const onCompleted = async (job, result) => {
   }
 };
 
+/** @param {any} job @param {unknown} err */
 const onFailed = async (job, err) => {
   console.error(`❌ Job failed: ${job?.id}`, err);
 
@@ -702,6 +738,7 @@ const onFailed = async (job, err) => {
   }
 };
 
+/** @param {any} job */
 const onStalled = (job) => {
   console.warn(`⚠️ Job stalled: ${job.id}`);
 };

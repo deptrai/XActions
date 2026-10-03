@@ -349,6 +349,7 @@ function queuedOutcome(operationId, envelope = {}) {
  * @returns {Record<string, unknown>}
  */
 export function sanitizeOptions(body) {
+  /** @type {Record<string, unknown>} */
   const opts = {};
   if (body && typeof body === 'object') {
     const nested = body.options;
@@ -372,6 +373,23 @@ export function sanitizeOptions(body) {
   }
   if (opts.proxy_rotate !== undefined) {
     opts.proxy_rotate = opts.proxy_rotate === true || opts.proxy_rotate === 'true';
+  }
+  // Story 53.3 (AD-24 Rule 1): `pooled` opts the job into the shared
+  // BrowserPool lane (options reach launchStealthBrowser/PuppeteerAdapter
+  // which read `options.pooled`). Boolean coercion mirrors proxy_rotate.
+  if (opts.pooled !== undefined) {
+    opts.pooled = opts.pooled === true || opts.pooled === 'true';
+  }
+  // Pool size hint — clamped, never errored (same convention as
+  // `concurrency`, spec-12-8 C-2). Propagated to the pool construction
+  // downstream; the shared per-backend pool owns the actual ceiling.
+  if (opts.poolSize !== undefined) {
+    const n = Number(opts.poolSize);
+    if (!Number.isFinite(n) || n < 1) {
+      delete opts.poolSize;
+    } else {
+      opts.poolSize = Math.min(Math.floor(n), MAX_SCRAPE_CONCURRENCY);
+    }
   }
   return opts;
 }
