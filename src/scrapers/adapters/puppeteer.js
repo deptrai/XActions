@@ -52,7 +52,7 @@ export class PuppeteerAdapter extends BaseAdapter {
    * @returns {Promise<AdapterBrowser>}
    */
   /**
-   * @param {LaunchOptions & { backend?: string, fallbackBackend?: string, wsEndpoint?: string, requiresAuth?: boolean, telemetryContext?: any, userDataDir?: string }} [options]
+   * @param {LaunchOptions & { backend?: string, fallbackBackend?: string, wsEndpoint?: string, requiresAuth?: boolean, telemetryContext?: any, userDataDir?: string, pooled?: boolean | import('../../scraping/stealthBrowser.js').BrowserPoolLike }} [options]
    * @returns {Promise<AdapterBrowser & { _backend?: string }>}
    */
   async launch(options = {}) {
@@ -68,6 +68,39 @@ export class PuppeteerAdapter extends BaseAdapter {
         message: 'obscura backend không hỗ trợ post-auth (React hydration chưa mount data-testid)',
         suggestedAction: 'dùng chrome backend',
       });
+    }
+
+    // Pooled path (Story 53.2): acquire a page/context lease from a BrowserPool
+    // instead of launching/connecting a new browser. Single-backend — no
+    // cross-backend fallback (pools are sharded per backend, AD-24 rule 3);
+    // acquire errors propagate.
+    if (options.pooled) {
+      const { getDefaultPool } = await import('../../scraping/stealthBrowser.js');
+      const pool = typeof options.pooled === 'object' && options.pooled !== null
+        ? options.pooled
+        : await getDefaultPool(primaryBackend, {
+            backend: primaryBackend,
+            fallbackBackend: 'none',
+            wsEndpoint,
+            proxy: options.proxy,
+            headless: options.headless,
+            userDataDir: options.userDataDir,
+            userAgent: options.userAgent,
+            requiresAuth,
+            telemetryContext: options.telemetryContext,
+          });
+      const lease = await pool.acquire();
+      if (options.telemetryContext && typeof options.telemetryContext.setBrowserBackend === 'function') {
+        options.telemetryContext.setBrowserBackend(lease.backend);
+      }
+      return {
+        _native: lease.context,
+        _adapter: this.name,
+        _backend: lease.backend,
+        _pooled: true,
+        _pool: pool,
+        _lease: lease,
+      };
     }
 
     /** @param {string} backend */
@@ -139,9 +172,14 @@ export class PuppeteerAdapter extends BaseAdapter {
    * @returns {Promise<AdapterPage>}
    */
   async newPage(browser, options = {}) {
-    const b = /** @type {AdapterBrowser & { _native: import('puppeteer').Browser & { __backend?: string }, _preserveProfile?: boolean, _backend?: string }} */ (browser);
+    const b = /** @type {AdapterBrowser & { _native: import('puppeteer').Browser & { __backend?: string }, _preserveProfile?: boolean, _backend?: string, _pooled?: boolean, _pool?: import('../../scraping/stealthBrowser.js').BrowserPoolLike, _lease?: import('../../scraping/stealthBrowser.js').PooledLease }} */ (browser);
     const nativeBrowser = b._native;
     const backend = b._backend || nativeBrowser?.__backend || 'chrome';
+    // Pooled handle (53.2): the lease page is already stealth-patched and
+    // configured by the pool — return it; never create a second page.
+    if (b._pooled && b._lease && b._lease.page) {
+      return { _native: b._lease.page, _adapter: this.name, _backend: backend };
+    }
     const preserveProfile = options.preserveProfile ?? b._preserveProfile ?? false;
     if (preserveProfile) {
       const pages = await nativeBrowser.pages();
@@ -283,6 +321,13 @@ export class PuppeteerAdapter extends BaseAdapter {
    */
   async closeBrowser(browser) {
     if (!browser) return;
+    // Pooled handle (53.2): release the lease — never close/disconnect the
+    // shared browser (release() is idempotent).
+    const pooled = /** @type {{ _pooled?: boolean, _pool?: import('../../scraping/stealthBrowser.js').BrowserPoolLike, _lease?: import('../../scraping/stealthBrowser.js').PooledLease }} */ (browser);
+    if (pooled._pooled && pooled._pool && pooled._lease) {
+      await pooled._pool.release(pooled._lease.page);
+      return;
+    }
     const nativeBrowser = /** @type {import('puppeteer').Browser & { __backend?: string, disconnect?: () => Promise<void> }} */ (browser._native || browser);
     const backend = browser._backend || nativeBrowser?.__backend;
     if (backend === 'obscura' && typeof nativeBrowser?.disconnect === 'function') {
@@ -321,7 +366,12 @@ export class PuppeteerAdapter extends BaseAdapter {
     const normalizedUrl = /^https?:\/\//i.test(String(cdpUrl).trim())
       ? String(cdpUrl).trim()
       : `http://${String(cdpUrl).trim().replace(/^\/+/, '')}`;
-    const url = new URL(normalizedUrl);
+    let url;
+    try {
+      url = new URL(normalizedUrl);
+    } catch {
+      throw new Error(`[CDP ERROR] Invalid Chrome DevTools endpoint: ${cdpUrl}`);
+    }
     const versionUrl = `${url.protocol}//${url.host}/json/version`;
 
     const response = await fetch(versionUrl, { signal: AbortSignal.timeout(5000) });

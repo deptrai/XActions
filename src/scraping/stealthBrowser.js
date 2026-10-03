@@ -13,6 +13,79 @@ import { globalFingerprintManager } from '../core/fingerprint-manager.js';
 import { PlatformError, ErrorTypes } from '../core/error-envelope.js';
 
 // ============================================================================
+// Default BrowserPool registry (Story 53.2)
+// ============================================================================
+
+/**
+ * Per-backend default pools, lazily created on the first `pooled` launch.
+ * Keyed by resolved backend ('chrome' | 'obscura') — sharded because the two
+ * backends have different lifecycles (child process vs CDP connect; AD-24 r3).
+ * @type {Map<string, any>}
+ */
+const _defaultPools = new Map();
+
+/** Default pool size: `XACTIONS_BROWSER_POOL_SIZE` when > 0, else 4 (explicit opt-in). */
+function _defaultPoolSize() {
+  const env = parseInt(process.env.XACTIONS_BROWSER_POOL_SIZE || '', 10);
+  return Number.isFinite(env) && env > 0 ? env : 4;
+}
+
+/**
+ * Get (or lazily create) the default BrowserPool for a backend.
+ * @param {string} backend — 'chrome' | 'obscura'
+ * @param {object} [poolOptions] — forwarded to `new BrowserPool(...)` only when
+ *   the pool is first created; ignored on subsequent calls for the same backend.
+ * @returns {Promise<import('./browserPool.js').BrowserPool>}
+ */
+export async function getDefaultPool(backend, poolOptions = {}) {
+  const key = backend || 'chrome';
+  // Store the in-flight creation promise — two concurrent cold-start launches
+  // must not construct two pools (the loser would leak un-registered).
+  let pending = _defaultPools.get(key);
+  if (!pending) {
+    pending = (async () => {
+      // Lazy import: browserPool.js statically imports this module (cycle).
+      const { BrowserPool } = await import('./browserPool.js');
+      return new BrowserPool({ size: _defaultPoolSize(), backend: key, ...poolOptions });
+    })();
+    _defaultPools.set(key, pending);
+    // If construction fails, clear so the next call retries instead of
+    // caching a rejected promise forever.
+    pending.catch(() => { if (_defaultPools.get(key) === pending) _defaultPools.delete(key); });
+  }
+  return pending;
+}
+
+/** Drain every default pool and clear the registry (tests / shutdown). */
+export async function resetDefaultPools() {
+  const pending = [..._defaultPools.values()];
+  _defaultPools.clear();
+  for (const p of pending) {
+    try { const pool = await p; await pool.drain(); } catch { /* best-effort */ }
+  }
+}
+
+/**
+ * Wrap a `BrowserPool.acquire()` lease into a browser-shaped pooled handle.
+ * Keeps every key existing callers read (`__backend`, `_backend`, `_native`,
+ * `_adapter`) so helpers work unmodified; `_pooled`/`_pool`/`_lease` are the
+ * escape hatch for teardown (release lease — never the shared browser).
+ * `_native` = the lease's isolated BrowserContext, so `native.newPage()` still
+ * lands inside the lease context, not the shared browser's default context.
+ */
+function _pooledHandle(pool, lease, { fingerprint } = {}) {
+  const handle = {
+    _native: lease.context,
+    _pooled: true,
+    _pool: pool,
+    _lease: lease,
+    __backend: lease.backend,
+  };
+  if (fingerprint) handle.__fingerprint = fingerprint;
+  return handle;
+}
+
+// ============================================================================
 // User-Agent Pool
 // ============================================================================
 
@@ -91,6 +164,35 @@ export async function launchStealthBrowser(options = {}) {
     } catch (err) {
       console.warn(`⚠️ [stealth] FingerprintManager.getForAccount failed: ${err?.message || err}`);
     }
+  }
+
+  // Pooled path (Story 53.2): acquire a page/context lease from a BrowserPool
+  // instead of launching a new browser. Single-backend — no cross-backend
+  // fallback (pools are sharded per backend, AD-24 rule 3); acquire errors
+  // propagate. The requiresAuth guard above already rejected obscura.
+  if (options.pooled) {
+    const pool = typeof options.pooled === 'object' && options.pooled !== null
+      ? options.pooled
+      : await getDefaultPool(primaryBackend, {
+          backend: primaryBackend,
+          fallbackBackend: 'none',
+          wsEndpoint,
+          proxy,
+          headless,
+          userDataDir,
+          userAgent,
+          fingerprint: fp || undefined,
+          fingerprintManager,
+          accountId,
+          platform,
+          requiresAuth,
+          telemetryContext,
+        });
+    const lease = await pool.acquire();
+    if (telemetryContext && typeof telemetryContext.setBrowserBackend === 'function') {
+      telemetryContext.setBrowserBackend(lease.backend);
+    }
+    return _pooledHandle(pool, lease, { fingerprint: fp });
   }
 
   const launchWithBackend = async (backend) => {
@@ -197,6 +299,13 @@ export async function launchStealthBrowser(options = {}) {
  */
 export async function closeStealthBrowser(browser) {
   if (!browser) return;
+  // Pooled handle (Story 53.2): release the lease — closes page + isolated
+  // context, never the shared browser. release() is idempotent (WeakMap
+  // lease), so a double close is a no-op.
+  if (browser._pooled && browser._pool && browser._lease) {
+    await browser._pool.release(browser._lease.page);
+    return;
+  }
   const native = browser._native || browser;
   const backend = browser._backend || native.__backend;
   if (backend === 'obscura' && typeof native.disconnect === 'function') {
@@ -210,6 +319,12 @@ export async function closeStealthBrowser(browser) {
  * Create a stealth-configured page with all patches applied
  */
 export async function createStealthPage(browser, options = {}) {
+  // Pooled handle (Story 53.2): the lease page was already stealth-patched by
+  // BrowserPool.acquire() — return it as-is. Per-call options (userAgent,
+  // fingerprint, …) are ignored here; configure them at pool level.
+  if (browser && browser._pooled && browser._lease && browser._lease.page) {
+    return browser._lease.page;
+  }
   const { proxy, userAgent, fingerprint, fingerprintManager, accountId, platform } = options;
   const nativeBrowser = browser?._native || browser;
   const page = await nativeBrowser.newPage();
@@ -394,7 +509,7 @@ export async function createStealthPage(browser, options = {}) {
 /**
  * Human-like click — moves mouse to element before clicking
  */
-export async function stealthClick(page, selector, options = {}) {
+export async function stealthClick(page, selector, _options = {}) {
   const element = await page.$(selector);
   if (!element) throw new Error(`Element not found: ${selector}`);
 
