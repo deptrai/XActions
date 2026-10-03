@@ -253,3 +253,9 @@
 ## Deferred from: code review of spec-20-5-pumpfun-native-social-crawler (2026-09-25)
 - Livechat protocol real-ws test — `src/scrapers/social/pumpfun/livechat.js` Socket.IO handshake/ack has no test against a real `ws` server; only an injected fake exercises the fallback. Add a local WebSocket protocol test using the project's real `ws` implementation.
 - Broaden `config/kol-wallets-seed.json` — currently a single wallet, so KOL-matching fallback coverage is near-empty when kolscan.io is down. User opted to expand the seed list (needs a curated KOL wallet set).
+
+## Deferred from: code review of story-53-1 (2026-10-03)
+
+- Missing `isConnected()` check trước khi cấp context — crash containment/respawn thuộc story 53.5, out of scope story 53.1
+- Không có idle browser reclaim — feature gap, không có trong spec AC story 53.1
+- `acquire()` thiếu per-job options (proxy/accountId override) — spec không yêu cầu, wiring concern cho 53.2/53.3
