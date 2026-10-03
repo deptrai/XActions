@@ -280,42 +280,42 @@ app.use(aiDetectorMiddleware);
 app.use(x402Middleware);
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'xactions-api', timestamp: new Date().toISOString() });
 });
 
 // SEO files - robots.txt, sitemap.xml, manifest.json
-app.get('/robots.txt', (req, res) => {
+app.get('/robots.txt', (_req, res) => {
   res.type('text/plain').sendFile(path.join(__dirname, '../public/robots.txt'));
 });
 
-app.get('/sitemap.xml', (req, res) => {
+app.get('/sitemap.xml', (_req, res) => {
   res.type('application/xml').sendFile(path.join(__dirname, '../public/sitemap.xml'));
 });
 
-app.get('/manifest.json', (req, res) => {
+app.get('/manifest.json', (_req, res) => {
   res.type('application/manifest+json').sendFile(path.join(__dirname, '../public/manifest.json'));
 });
 
 // LLM discovery files — https://llmstxt.org
-app.get('/llms.txt', (req, res) => {
+app.get('/llms.txt', (_req, res) => {
   res.type('text/plain').sendFile(path.join(__dirname, '../llms.txt'));
 });
 
-app.get('/llms-full.txt', (req, res) => {
+app.get('/llms-full.txt', (_req, res) => {
   res.type('text/plain').sendFile(path.join(__dirname, '../llms-full.txt'));
 });
 
 // x402 discovery endpoints — public, allow any origin so x402scan and agents can crawl
-app.get('/openapi.json', cors(openCors), (req, res) => {
+app.get('/openapi.json', cors(openCors), (_req, res) => {
   res.type('application/json').json(generateOpenAPISpec());
 });
 
-app.get('/.well-known/x402', cors(openCors), (req, res) => {
+app.get('/.well-known/x402', cors(openCors), (_req, res) => {
   res.type('application/json').json(generateX402WellKnown());
 });
 
@@ -342,24 +342,7 @@ app.use(express.static(path.join(__dirname, '../public'), {
   etag: true,
 }));
 
-// Serve dashboard static files with cache headers
-app.use('/dashboard', express.static(path.join(__dirname, '../dashboard')));
-app.use(express.static(path.join(__dirname, '../dashboard'), {
-  maxAge: '1h',
-  etag: true,          // Enable ETag for conditional requests
-  lastModified: true,
-  setHeaders: /** @type {(res: import('http').ServerResponse, filePath: string) => void} */ ((res, filePath) => {
-    if (filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-      return;
-    }
-
-    // Long cache for immutable assets (if any)
-    if (filePath.endsWith('.png') || filePath.endsWith('.jpg') || filePath.endsWith('.svg') || filePath.endsWith('.ico') || filePath.endsWith('.woff2')) {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    }
-  })
-}));
+// Legacy static dashboard files have been retired. All web traffic is routed via Next.js App Router (Story 48.10).
 
 // Branding middleware - injects "Powered by XActions" if no license
 app.use(brandingMiddleware());
@@ -450,182 +433,8 @@ app.get('/metrics/stream', async (_req, res) => {
   }
 });
 
-// Dashboard routes
-// '/' serves the main dashboard — login.html is at /login
-// Auth check happens client-side (config.js requireAuth)
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/index.html'));
-});
-
-app.get('/dashboard', (req, res) => {
-  res.redirect('/');
-});
-
-app.get('/pricing', (req, res) => {
-  res.redirect('/api/billing/plans');
-});
-
-app.get('/docs', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/docs/index.html'));
-});
-// Documentation sub-pages — serves 167 auto-generated SEO pages
-const docsBasePath = path.resolve(__dirname, '../dashboard/docs');
-
-/**
- * @param {string} filePath
- * @param {import('express').Response} res
- */
-function serveSafeDoc(filePath, res) {
-  const resolved = path.resolve(filePath);
-  if (!resolved.startsWith(docsBasePath)) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-  res.sendFile(resolved, (err) => {
-    if (err) {
-      res.status(404).sendFile(path.join(__dirname, '../dashboard/404.html'));
-    }
-  });
-}
-
-// 3-level paths: /docs/guides/developer/:slug
-app.get('/docs/:section/:subsection/:slug', (req, res) => {
-  const section = req.params.section.replace(/[^a-zA-Z0-9-]/g, '');
-  const subsection = req.params.subsection.replace(/[^a-zA-Z0-9-]/g, '');
-  const slug = req.params.slug.replace(/[^a-zA-Z0-9-_]/g, '');
-  serveSafeDoc(path.join(docsBasePath, section, subsection, `${slug}.html`), res);
-});
-// 2-level paths: /docs/guides/:slug, /docs/skills/:slug, /docs/tutorials/:slug, etc.
-app.get('/docs/:section/:slug', (req, res) => {
-  const section = req.params.section.replace(/[^a-zA-Z0-9-]/g, '');
-  const slug = req.params.slug.replace(/[^a-zA-Z0-9-_]/g, '');
-  serveSafeDoc(path.join(docsBasePath, section, `${slug}.html`), res);
-});
-
-// Flat docs: /docs/:slug (71 pages from docs/examples/*.md)
-app.get('/docs/:slug', (req, res) => {
-  const slug = req.params.slug.replace(/[^a-zA-Z0-9-]/g, '');
-  serveSafeDoc(path.join(docsBasePath, `${slug}.html`), res);
-});
-
-app.get('/features', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/features.html'));
-});
-
-app.get('/about', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/about.html'));
-});
-
-app.get('/faq', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/faq.html'));
-});
-
-// Story 40.1 / AD-20: Mount unified Streamable-HTTP MCP endpoint alongside dashboard HTML
+// Story 40.1 / AD-20: Mount unified Streamable-HTTP MCP endpoint
 setupMcpRoutes(app);
-
-
-
-app.get('/privacy', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/privacy.html'));
-});
-
-app.get('/terms', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/terms.html'));
-});
-
-
-
-app.get('/tutorials', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/tutorials.html'));
-});
-
-// Tutorials subdirectory
-app.get('/tutorials/:page', (req, res) => {
-  const page = req.params.page.replace(/[^a-zA-Z0-9-]/g, ''); // Sanitize
-  const filePath = path.join(__dirname, `../dashboard/tutorials/${page}.html`);
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      res.sendFile(path.join(__dirname, '../dashboard/404.html'));
-    }
-  });
-});
-
-app.get('/scripts', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/scripts/index.html'));
-});
-
-// Scripts subdirectory — individual script pages
-app.get('/scripts/:slug', (req, res) => {
-  const slug = req.params.slug.replace(/[^a-zA-Z0-9-]/g, '');
-  const filePath = path.join(__dirname, `../dashboard/scripts/${slug}.html`);
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      res.sendFile(path.join(__dirname, '../dashboard/404.html'));
-    }
-  });
-});
-
-
-
-
-
-
-
-
-
-
-// SEO-friendly thread URL: /thread/1234567890
-
-
-app.get('/analytics-dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/analytics-dashboard.html'));
-});
-
-
-
-app.get('/team', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/team.html'));
-});
-
-
-app.get('/pricing', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/pricing.html'));
-});
-
-app.get('/compare', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/compare.html'));
-});
-
-app.get('/contact', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/contact.html'));
-});
-
-app.get('/contributing', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/contributing.html'));
-});
-
-app.get('/examples', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/examples.html'));
-});
-
-
-app.get('/integrations', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/integrations.html'));
-});
-
-
-
-
-app.get('/use-cases', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/use-cases.html'));
-});
-
-app.get('/blog', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/blog.html'));
-});
-
-app.get('/changelog', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/changelog.html'));
-});
 
 
 
@@ -656,7 +465,15 @@ app.use(async (req, res, next) => {
   // (marketing pages are handled by routes above, so if we reach here it's an app route)
   try {
     const targetUrl = `${WEB_APP_URL}${req.originalUrl}`;
-    const proxyHeaders = { ...req.headers };
+    /** @type {Record<string, string>} */
+    const proxyHeaders = {};
+    for (const [key, val] of Object.entries(req.headers)) {
+      if (typeof val === 'string') {
+        proxyHeaders[key] = val;
+      } else if (Array.isArray(val)) {
+        proxyHeaders[key] = val.join(', ');
+      }
+    }
     // Set appropriate host for Next.js
     proxyHeaders.host = 'localhost:3000';
     delete proxyHeaders['content-length'];
@@ -682,7 +499,7 @@ app.use(async (req, res, next) => {
 
     const buffer = Buffer.from(await proxyRes.arrayBuffer());
     return res.send(buffer);
-  } catch (_err) {
+  } catch {
     // Next.js not running or unreachable — fall through to 404
     next();
   }

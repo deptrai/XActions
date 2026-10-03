@@ -20,10 +20,7 @@ import {
   scrapeTweets,
   searchTweets,
   scrapeThread,
-  scrapeLikes,
-  scrapeMedia,
   scrapeListMembers,
-  scrapeBookmarks,
   scrapeNotifications,
   scrapeTrending,
   scrapeSpaces,
@@ -56,6 +53,34 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const randomDelay = (min = 1000, max = 3000) =>
   sleep(min + Math.random() * (max - min));
 
+async function injectSavedCookies(pg) {
+  try {
+    const cookiePath = path.join(os.homedir(), '.xactions', 'cookies.json');
+    const raw = await fs.readFile(cookiePath, 'utf8');
+    const cookies = JSON.parse(raw);
+    if (Array.isArray(cookies) && cookies.length > 0) {
+      for (const c of cookies) {
+        if (!c.name || !c.value) continue;
+        let dom = '.x.com';
+        if (c.domain) {
+          dom = c.domain.startsWith('.') ? c.domain : `.${c.domain}`;
+        }
+        await pg.setCookie({
+          name: c.name,
+          value: c.value,
+          domain: dom,
+          path: c.path || '/',
+          httpOnly: Boolean(c.httpOnly),
+          secure: Boolean(c.secure),
+        });
+      }
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[XActions] Could not inject saved cookies:', msg);
+  }
+}
+
 /**
  * Ensure a browser/page pair is available, creating if needed.
  * Uses createBrowser/createPage from the canonical scrapers module.
@@ -69,8 +94,10 @@ async function ensureBrowser() {
     }
     browser = await createBrowser();
     page = await createPage(browser);
+    await injectSavedCookies(page);
   } else if (!page || (typeof page.isClosed === "function" && page.isClosed())) {
     page = await createPage(browser);
+    await injectSavedCookies(page);
   }
   return { browser, page };
 }
@@ -213,11 +240,11 @@ async function scrollCollect(pg, extractFn, { limit = 100, maxRetries = 10 } = {
   while (collected.size < limit && retries < maxRetries) {
     const items = await pg.evaluate(extractFn);
     const prev = collected.size;
-    items.forEach((item) => {
+    for (const item of items) {
       if (item._key) {
         collected.set(item._key, item);
       }
-    });
+    }
     if (collected.size === prev) retries++;
     else retries = 0;
 
@@ -594,19 +621,52 @@ export async function x_post_tweet({ text, dryRun = false }) {
     return { success: true, dryRun: true, message: 'Dry run: Tweet preview generated', text };
   }
   const { page: pg } = await ensureBrowser();
-  await pg.goto('https://x.com/compose/tweet', { waitUntil: 'networkidle2' });
-  await randomDelay();
+  await injectSavedCookies(pg);
 
-  const textbox = await pg.$('[data-testid="tweetTextarea_0"]');
-  if (textbox) {
-    await textbox.type(text, { delay: 50 });
-    await sleep(500);
-    if (await clickIfPresent(pg, '[data-testid="tweetButton"]')) {
-      await randomDelay();
-      return { success: true, message: 'Tweet posted successfully' };
+  let createdTweetId = null;
+  const onResponse = async (response) => {
+    if (response.url().includes('CreateTweet')) {
+      try {
+        const json = await response.json();
+        const restId = json?.data?.create_tweet?.tweet_results?.result?.rest_id;
+        if (restId) {
+          createdTweetId = restId;
+          console.log('[XActions] Captured tweet rest_id:', restId);
+        }
+      } catch (err) {
+        console.error('[XActions] Error parsing CreateTweet response:', err);
+      }
     }
+  };
+  pg.on('response', onResponse);
+
+  try {
+    await pg.goto('https://x.com/compose/tweet', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await sleep(2000);
+
+    const textbox = await pg.waitForSelector('[data-testid="tweetTextarea_0"]', { timeout: 15000 });
+    if (textbox) {
+      await textbox.click();
+      await sleep(300);
+      await textbox.type(text, { delay: 40 });
+      await sleep(1000);
+
+      const postBtn = (await pg.$('[data-testid="tweetButton"]')) || (await pg.$('[data-testid="tweetButtonInline"]'));
+      if (postBtn) {
+        await postBtn.click();
+        await sleep(4000);
+
+        let tweetUrl = 'https://x.com/epsiloncryptoai';
+        if (createdTweetId) {
+          tweetUrl = `https://x.com/epsiloncryptoai/status/${createdTweetId}`;
+        }
+        return { success: true, message: 'Tweet posted successfully', url: tweetUrl, tweetId: createdTweetId };
+      }
+    }
+    return { success: false, message: 'Could not post tweet' };
+  } finally {
+    pg.off('response', onResponse);
   }
-  return { success: false, message: 'Could not post tweet' };
 }
 
 export async function x_like({ url, tweetUrl }) {
@@ -726,7 +786,7 @@ export async function x_post_thread({ tweets }) {
   return { success: false, message: 'Could not post thread' };
 }
 
-export async function x_create_poll({ question, options, durationMinutes = 1440 }) {
+export async function x_create_poll({ question, options, _durationMinutes = 1440 }) {
   if (!options || options.length < 2 || options.length > 4) {
     return { success: false, message: 'Polls require 2–4 options' };
   }
@@ -922,12 +982,12 @@ export async function x_auto_like({ keywords = [], maxLikes = 20 }) {
 // 26–27. Discovery
 // ============================================================================
 
-export async function x_get_trends({ category, limit = 30 }) {
+export async function x_get_trends({ _category, limit = 30 }) {
   const { page: pg } = await ensureBrowser();
   return scrapeTrending(pg, { limit });
 }
 
-export async function x_get_explore({ category, limit = 30 }) {
+export async function x_get_explore({ _category, limit = 30 }) {
   const { page: pg } = await ensureBrowser();
   // Explore and trending share the same underlying page data
   return scrapeTrending(pg, { limit });
@@ -1172,7 +1232,7 @@ export async function x_get_list_members({ listUrl, limit = 100 }) {
 // 38–39. Spaces
 // ============================================================================
 
-export async function x_get_spaces({ filter = 'live', topic, limit = 20 }) {
+export async function x_get_spaces({ _filter = 'live', topic, limit = 20 }) {
   const { page: pg } = await ensureBrowser();
   const query = topic || 'twitter spaces';
   return scrapeSpaces(pg, query, { limit });
@@ -1217,13 +1277,13 @@ export async function x_get_analytics({ period = '28d' }) {
     const statEls = document.querySelectorAll(
       '[data-testid="analyticsMetric"], [class*="metric"]'
     );
-    statEls.forEach((el) => {
+    for (const el of statEls) {
       const label = el.querySelector('[class*="label"], small')?.textContent;
       const value = el.querySelector(
         '[class*="value"], strong, span:first-child'
       )?.textContent;
       if (label && value) metrics[label.trim()] = value.trim();
-    });
+    }
 
     // Fallback: regex extract from page text
     if (!Object.keys(metrics).length) {
@@ -1283,11 +1343,11 @@ export async function x_get_settings() {
 
   return pg.evaluate(() => {
     const items = {};
-    document.querySelectorAll('a[href*="/settings/"]').forEach((link) => {
+    for (const link of document.querySelectorAll('a[href*="/settings/"]')) {
       const label = link.querySelector('span')?.textContent;
       const value = link.querySelector('[dir="ltr"]')?.textContent;
       if (label) items[label.trim()] = value?.trim() || 'configured';
-    });
+    }
     return items;
   });
 }
@@ -1375,7 +1435,12 @@ export async function x_brand_monitor({ brand, limit = 50, sentiment = true }) {
     const text = (tweet.text || '').toLowerCase();
     const pos = posWords.filter((w) => text.includes(w)).length;
     const neg = negWords.filter((w) => text.includes(w)).length;
-    const label = pos > neg ? 'positive' : neg > pos ? 'negative' : 'neutral';
+    let label = 'neutral';
+    if (pos > neg) {
+      label = 'positive';
+    } else if (neg > pos) {
+      label = 'negative';
+    }
     return { ...tweet, sentiment: label };
   });
 
@@ -1476,7 +1541,7 @@ export async function x_publish_article({ title, body, publish = false }) {
 // 49. Creator Analytics
 // ============================================================================
 
-export async function x_creator_analytics({ period = '28d' }) {
+export async function x_creator_analytics({ _period = '28d' }) {
   const { page: pg } = await ensureBrowser();
   await pg.goto('https://x.com/i/monetization', { waitUntil: 'networkidle2' });
   await randomDelay(2000, 3000);
@@ -1502,7 +1567,7 @@ export async function x_creator_analytics({ period = '28d' }) {
 // HTTP Client Tools (no Puppeteer — faster, lightweight)
 // ============================================================================
 
-import { Scraper, SearchMode } from '../client/index.js';
+import { Scraper } from '../client/index.js';
 
 /**
  * Helper: create a Scraper instance with saved cookies if available.
@@ -1797,12 +1862,12 @@ export async function x_shadowban_check({ username } = {}) {
     report.tests.searchSuggestion.passed = mentions.length > 0 || report.tests.searchVisibility.passed;
   } catch {}
 
-  if (!report.tests.searchVisibility.passed && !report.tests.searchSuggestion.passed) {
-    report.status = "suspected_search_ban";
-  } else if (!report.tests.searchVisibility.passed) {
-    report.status = "partially_deboosted";
-  } else {
+  if (report.tests.searchVisibility.passed) {
     report.status = "clean";
+  } else if (!report.tests.searchSuggestion.passed) {
+    report.status = "suspected_search_ban";
+  } else {
+    report.status = "partially_deboosted";
   }
 
   return report;
@@ -1966,7 +2031,6 @@ export const toolMap = {
   // Browser & Page lifecycle helpers
   getPage,
   getBrowser,
-  closeBrowser,
   // Auth
   x_login,
   // Scraping (delegated to scrapers/index.js — single source of truth)
