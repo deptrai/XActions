@@ -37,10 +37,11 @@ ai
       const { scrapeTweets, createBrowser, createPage, loginWithCookie } = scrapers;
       const { analyzeVoice, summarizeVoiceProfile } = await import('../../ai/index.js');
       const browser = await createBrowser();
+      let tweets;
       try {
         const page = await createPage(browser);
         await loginWithCookie(page, token);
-        const tweets = await scrapeTweets(page, username, { limit: parseInt(options.limit) });
+        tweets = await scrapeTweets(page, username, { limit: parseInt(options.limit) });
       } finally {
         await browser.close().catch(() => {});
       }
@@ -103,10 +104,11 @@ ai
       const { scrapeTweets, createBrowser, createPage, loginWithCookie } = scrapers;
       const { analyzeVoice, generateTweet, generateThread } = await import('../../ai/index.js');
       const browser = await createBrowser();
+      let tweets;
       try {
         const page = await createPage(browser);
         await loginWithCookie(page, token);
-        const tweets = await scrapeTweets(page, options.voice, { limit: 100 });
+        tweets = await scrapeTweets(page, options.voice, { limit: 100 });
       } finally {
         await browser.close().catch(() => {});
       }
@@ -122,7 +124,7 @@ ai
         spinner.succeed('Thread generated!');
         console.log(chalk.bold(`\n🧵 Thread: ${topic}\n`));
         result.thread.forEach((t, i) => {
-          console.log(chalk.cyan(`  ${i + 1}/${result.thread.length}`) + ` ${t}`);
+          console.log(chalk.cyan(`  ${i + 1}/${result.thread.length}`) + ` ${t.text}`);
           console.log();
         });
       } else {
@@ -134,7 +136,8 @@ ai
         spinner.succeed('Tweets generated!');
         console.log(chalk.bold(`\n✍️  Generated Tweets: ${topic}\n`));
         result.tweets.forEach((t, i) => {
-          console.log(chalk.cyan(`  ${i + 1}.`) + ` ${t}`);
+          console.log(chalk.cyan(`  ${i + 1}.`) + ` ${t.text}`);
+          if (t.estimatedEngagement) console.log(chalk.gray(`     → ${t.estimatedEngagement}${t.reasoning ? ` — ${t.reasoning}` : ''}`));
           console.log();
         });
       }
@@ -176,10 +179,11 @@ ai
       const { scrapeTweets, createBrowser, createPage, loginWithCookie } = scrapers;
       const { analyzeVoice, rewriteTweet } = await import('../../ai/index.js');
       const browser = await createBrowser();
+      let tweets;
       try {
         const page = await createPage(browser);
         await loginWithCookie(page, token);
-        const tweets = await scrapeTweets(page, options.voice, { limit: 100 });
+        tweets = await scrapeTweets(page, options.voice, { limit: 100 });
       } finally {
         await browser.close().catch(() => {});
       }
@@ -235,10 +239,11 @@ ai
       const { scrapeTweets, createBrowser, createPage, loginWithCookie } = scrapers;
       const { analyzeVoice, generateWeek } = await import('../../ai/index.js');
       const browser = await createBrowser();
+      let tweets;
       try {
         const page = await createPage(browser);
         await loginWithCookie(page, token);
-        const tweets = await scrapeTweets(page, username, { limit: 100 });
+        tweets = await scrapeTweets(page, username, { limit: 100 });
       } finally {
         await browser.close().catch(() => {});
       }

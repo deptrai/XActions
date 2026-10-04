@@ -62,12 +62,15 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'xactions-api', timestamp: new Date().toISOString() });
 });
 
-// x402 discovery endpoints
-app.get('/openapi.json', (req, res) => {
+// x402 discovery endpoints — public scanner contract; allow any origin
+// (mirrors api/server.js openCors) so cross-origin discovery never fails
+// behind the production allowlist.
+const openCors = { origin: '*', methods: ['GET', 'OPTIONS'] };
+app.get('/openapi.json', cors(openCors), (req, res) => {
   res.type('application/json').json(generateSpec());
 });
 
-app.get('/.well-known/x402', (req, res) => {
+app.get('/.well-known/x402', cors(openCors), (req, res) => {
   res.type('application/json').json(generateWellKnown());
 });
 

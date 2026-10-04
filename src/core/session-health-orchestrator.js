@@ -63,6 +63,7 @@ export class SessionHealthOrchestrator {
    * @param {number} [options.baseCooldownMs]
    * @param {number} [options.maxCooldownMs]
    * @param {() => number} [options.now] - injectable clock for deterministic tests
+   * @param {number} [options.decayHalfLifeMs] - half-life for exponential decay of cumulative counters (default 30min; <=0 disables)
    */
   constructor(options = {}) {
     this._governor = options.governor || null;
@@ -71,6 +72,13 @@ export class SessionHealthOrchestrator {
     this._baseCooldownMs = options.baseCooldownMs ?? BASE_COOLDOWN_MS;
     this._maxCooldownMs = options.maxCooldownMs ?? MAX_COOLDOWN_MS;
     this._now = typeof options.now === 'function' ? options.now : () => Date.now();
+    // Time-based decay half-life for cumulative counters — stale rate-limit /
+    // bot-challenge / error counts fade exponentially so an idle-then-recovered
+    // account is not held sick forever by ancient signals. 0 disables decay.
+    /** @type {number} */
+    this._decayHalfLifeMs = typeof options.decayHalfLifeMs === 'number' && options.decayHalfLifeMs > 0
+      ? options.decayHalfLifeMs
+      : 30 * 60 * 1000;
     /** @type {Map<string, ReturnType<typeof freshMetrics>>} */
     this._metrics = new Map();
     /** @type {Map<string, CircuitBreakerState>} */
@@ -91,7 +99,36 @@ export class SessionHealthOrchestrator {
     const key = this._key(platform, accountId);
     let m = this._metrics.get(key);
     if (!m) { m = freshMetrics(); this._metrics.set(key, m); }
+    this._decay(m);
     return m;
+  }
+
+  /**
+   * Exponentially decay cumulative counters based on time elapsed since the
+   * last recorded event — stale rate-limit/challenge/error signals fade with
+   * half-life `decayHalfLifeMs` so long-lived processes recover gracefully.
+   * Counters stay fractional internally; scoring uses them directly.
+   * @param {ReturnType<typeof freshMetrics>} m
+   */
+  _decay(m) {
+    if (!this._decayHalfLifeMs || !m.lastEventAt) return;
+    const elapsed = this._now() - m.lastEventAt;
+    if (elapsed <= 0) return;
+    const factor = Math.pow(0.5, elapsed / this._decayHalfLifeMs);
+    // Skip when decay is negligible — avoids pointless float drift per call.
+    if (factor > 0.999) return;
+    m.rateLimits *= factor;
+    m.botChallenges *= factor;
+    m.totalErrors *= factor;
+    m.payloadIncomplete *= factor;
+    m.payloadComplete *= factor;
+    m.totalLatencyMs *= factor;
+    m.latencySamples *= factor;
+    // Snap decayed-to-dust counters to exactly 0 to avoid denormal residue.
+    for (const k of ['rateLimits', 'botChallenges', 'totalErrors', 'payloadIncomplete', 'payloadComplete', 'totalLatencyMs', 'latencySamples']) {
+      if (m[k] < 0.001) m[k] = 0;
+    }
+    m.lastEventAt = this._now();
   }
 
   /** @param {string} platform @param {string} accountId @returns {CircuitBreakerState} */

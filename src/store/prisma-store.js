@@ -221,6 +221,12 @@ export class PrismaStore extends AbstractStore {
         });
       }
 
+      // Yield to the event loop every 100 items — synchronous schema
+      // validation across large batches (500+) can marginally stall I/O.
+      if (shouldValidateSchema && i > 0 && i % 100 === 0) {
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+
       if (shouldValidateSchema) {
         const validation = metadataSchemaRegistry.validateMetadata(post.platform, post.category, post.metadata);
         if (!validation.valid) {

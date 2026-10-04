@@ -114,7 +114,12 @@ let _sharedBrain = null;
 function resolveBrain(injected) {
   if (injected) return injected;
   const envKey = process.env.TYPESAFE_API_KEY || '';
-  if (!_sharedBrain || _sharedBrain.apiKey !== envKey) {
+  const envEndpoint = process.env.TYPESAFE_API_ENDPOINT || '';
+  // Rebuild when apiKey OR endpoint differs from what the cached brain
+  // captured — a rotated key or re-pointed endpoint post-import must not
+  // leave the singleton frozen on stale credentials/target.
+  if (!_sharedBrain || _sharedBrain.apiKey !== envKey ||
+      (envEndpoint && _sharedBrain.endpoint !== envEndpoint)) {
     _sharedBrain = new JevBrain();
   }
   return _sharedBrain;

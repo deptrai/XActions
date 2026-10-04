@@ -197,8 +197,11 @@ export default {
 
     const api = await loadApiModules(env);
 
-    if (path === '/openapi.json') return json(api.generateSpec());
-    if (path === '/.well-known/x402') return json(api.generateWellKnown());
+    // Discovery endpoints are public x402 scanner contracts — allow any
+    // origin (mirrors api/server.js openCors) so cross-origin discovery works.
+    const discoveryCors = { 'access-control-allow-origin': '*' };
+    if (path === '/openapi.json') return json(api.generateSpec(), 200, discoveryCors);
+    if (path === '/.well-known/x402') return json(api.generateWellKnown(), 200, discoveryCors);
 
     if (path === '/api/health') {
       return json(

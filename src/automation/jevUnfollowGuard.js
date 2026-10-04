@@ -184,11 +184,14 @@ let _sharedBrain = null;
  */
 function resolveBrain(injected) {
   if (injected) return injected;
-  // Rebuild whenever the env key differs from what the cached brain captured —
-  // a post-import/dotenv key must not leave the feature degraded for life, and
-  // a rotated key must not stay frozen on the old credential either.
+  // Rebuild whenever the env key OR endpoint differs from what the cached
+  // brain captured — a post-import/dotenv key must not leave the feature
+  // degraded for life, a rotated key must not stay frozen on the old
+  // credential, and a re-pointed endpoint must not keep hitting the old one.
   const envKey = process.env.TYPESAFE_API_KEY || '';
-  if (!_sharedBrain || _sharedBrain.apiKey !== envKey) {
+  const envEndpoint = process.env.TYPESAFE_API_ENDPOINT || '';
+  if (!_sharedBrain || _sharedBrain.apiKey !== envKey ||
+      (envEndpoint && _sharedBrain.endpoint !== envEndpoint)) {
     _sharedBrain = new JevBrain();
   }
   return _sharedBrain;

@@ -176,9 +176,21 @@ export class JetstreamAdapter extends BasePushAdapter {
       url.searchParams.append('wantedCollections', wantedCollections);
     }
 
-    // Dids
-    if (this.options.wantedDids) {
-      const dids = Array.isArray(this.options.wantedDids) ? this.options.wantedDids : [this.options.wantedDids];
+    // Dids — explicit wantedDids, or convenience mapping: resolve
+    // options.username (bsky handle or did:…) → wantedDids filter.
+    let wantedDids = this.options.wantedDids;
+    if (!wantedDids && this.options.username) {
+      try {
+        const { createBlueskyClient } = await import('../../scrapers/social/bluesky/client.js');
+        const client = createBlueskyClient();
+        const resolved = await client.resolveHandle(String(this.options.username));
+        if (resolved) wantedDids = resolved;
+      } catch (err) {
+        console.warn(`⚠️ [${this.streamId}] Jetstream username→DID resolve failed for "${this.options.username}": ${err instanceof Error ? err.message : String(err)} — streaming unfiltered`);
+      }
+    }
+    if (wantedDids) {
+      const dids = Array.isArray(wantedDids) ? wantedDids : [wantedDids];
       for (const d of dids) {
         url.searchParams.append('wantedDids', d);
       }

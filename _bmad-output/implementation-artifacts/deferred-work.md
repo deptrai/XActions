@@ -40,7 +40,7 @@
 - [x] [Review][Defer] `src/scrapers/social/mastodon/index.js` barrel omits `createMastodonClient` and `createMastodonCrawler` — pre-existing factory pattern inconsistency across social barrels; defer to Epic 25 or later barrel standardization.
 
 ## Deferred from: code review 10-5-metadata-schema-contract-registry-for-consumers.md (2026-08-19)
-- Synchronous Validation in 500-item Loop [src/store/prisma-store.js] - Could marginally stall event loop
+- ~~Synchronous Validation in 500-item Loop [src/store/prisma-store.js] - Could marginally stall event loop~~ — RESOLVED (2026-10-05): `setImmediate` yield every 100 items in `storeBatch` validation loop.
 
 ## Deferred from: code review of 11-1-proxyippool-accountpool-sticky-round-robin.md (2026-08-19)
 
@@ -125,6 +125,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-27-2-sessionhealthorchestrator-continuous-health-score-circuit-br.md`
   summary: Time-based metric decay for long-lived processes in SessionHealthOrchestrator
   evidence: Stale rate-limit and bot-challenge counts remain cumulative indefinitely until a circuit break or manual wake occurs. Future enhancement should introduce half-life decay or rolling time-window.
+  status: RESOLVED (2026-10-05) — exponential half-life decay added (`decayHalfLifeMs` option, default 30min, <=0 disables); `_decay()` runs in `_metricsFor` and decays rateLimits/botChallenges/totalErrors/payload*/latency* by `0.5^(elapsed/halfLife)`. `consecutiveErrors` intentionally NOT decayed (streak semantics).
 
 ## Deferred from: code review of spec-27-3 (2026-09-13)
 
@@ -161,8 +162,8 @@
 
 ## Deferred from: code review of spec-29-1 (2026-09-16)
 
-- **Missing `Last-Event-ID` header on Mastodon SSE reconnect** — SSE resume is nice-to-have, not blocking; events still arrive on reconnect, just from latest position.
-- **`username` param ignored by JetstreamAdapter** — `options.wantedDids` is the intended API for DID filtering; `username` is for polling streams. Could add `username` → `wantedDids` mapping as convenience.
+- ~~**Missing `Last-Event-ID` header on Mastodon SSE reconnect**~~ — RESOLVED (2026-10-05): `connect()` now sends `Last-Event-ID` from `getCursor()` and `_handleSSEBlock` parses `id:` lines into `this._cursor` for Redis-persisted resume.
+- ~~**`username` param ignored by JetstreamAdapter**~~ — RESOLVED (2026-10-05): `buildUrl()` resolves `options.username` via `createBlueskyClient().resolveHandle` → `wantedDids` filter; on failure warns and falls back to unfiltered stream.
 - source_spec: `_bmad-output/implementation-artifacts/spec-29-2-outbound-webhook-dispatcher.md`
   summary: Consumer-loop HOL blocking during webhook retry backoff (spec forbids Bull)
   evidence: `deliverToSubscription` awaits 1s/2s/4s in the consume loop before XACK; fixing needs a delivery worker, not in this story.
@@ -223,6 +224,7 @@
   summary: `resolveBrain` rebuild chỉ trigger trên `apiKey` — `TYPESAFE_API_ENDPOINT`/model env đổi post-import không rebuild `_sharedBrain`.
   evidence: Convention mirror y hệt `jevUnfollowGuard.js:185-194`; sửa riêng `jevVariantJudge.js` làm diverge — fix phải xuyên cả hai guard modules.
   severity: low
+  status: RESOLVED (2026-10-05) — both `jevVariantJudge.js` and `jevUnfollowGuard.js` now rebuild `_sharedBrain` when apiKey OR `TYPESAFE_API_ENDPOINT` env changes (`envEndpoint && _sharedBrain.endpoint !== envEndpoint`). Model not env-driven (DEFAULT_MODEL hardcoded 'jev-latest') — not a rebuild trigger.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-42-9-jev-variant-judge.md`
   summary: Re-roll `callLLM` không timeout → tới (1+maxReroll) unbounded LLM calls per generation.
@@ -233,6 +235,7 @@
   summary: `src/cli/commands/ai.js:136` interpolate tweet objects trực tiếp (`${t}`) → in `[object Object]` cho mỗi generated tweet trong `ai generate`.
   evidence: Pre-existing — tweets luôn là objects trước cả Story 42.9; không liên quan diff. Fix: render `t.text`.
   severity: low
+  status: RESOLVED (2026-10-05) — render `t.text` + estimatedEngagement/reasoning. Also fixed real scope bug: `const tweets` inside inner try was used outside in 4 places → `let tweets` hoisted before try.
 
 ## Deferred from: code review of 46-2-zod-schemas-uniform-response-envelopes (review loop 1)
 
@@ -251,8 +254,8 @@
   evidence: `api/realtime/socketHandler.js:88` io.use chỉ đọc `socket.handshake.auth.token`; httpOnly cookie xa_bearer không reachable từ socket auth payload; sửa backend vi phạm spec boundary. Quyết định auth transport khi S1: extend io.use đọc cookie header (socket.handshake.headers.cookie) hoặc BFF token endpoint.
 
 ## Deferred from: code review of spec-20-5-pumpfun-native-social-crawler (2026-09-25)
-- Livechat protocol real-ws test — `src/scrapers/social/pumpfun/livechat.js` Socket.IO handshake/ack has no test against a real `ws` server; only an injected fake exercises the fallback. Add a local WebSocket protocol test using the project's real `ws` implementation.
-- Broaden `config/kol-wallets-seed.json` — currently a single wallet, so KOL-matching fallback coverage is near-empty when kolscan.io is down. User opted to expand the seed list (needs a curated KOL wallet set).
+- ~~Livechat protocol real-ws test — `src/scrapers/social/pumpfun/livechat.js` Socket.IO handshake/ack has no test against a real `ws` server~~ — RESOLVED (2026-10-05): `tests/scrapers/social/pumpfun/livechat.test.js` added — real `WebSocketServer` on ephemeral port mocks Engine.IO v4 handshake; 8/8 tests pass covering connect handshake, joinRoom `42<ackId>` packet + `43<ackId>` ack, EIO_PING→PONG, close() resolving pending acks, and authToken `40{token}` payload.
+- ~~Broaden `config/kol-wallets-seed.json`~~ — RESOLVED earlier (2026-10-04): seed expanded to 566 wallets (see `_comment` in file).
 
 ## Deferred from: code review of story-53-1 (2026-10-03)
 

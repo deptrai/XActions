@@ -79,6 +79,13 @@ export class MastodonSSEAdapter extends BasePushAdapter {
       headers.Authorization = `Bearer ${this.options.accessToken}`;
     }
 
+    // SSE resume: send Last-Event-ID so the server replays events missed
+    // during a reconnect gap instead of starting from the latest position.
+    const lastEventId = await this.getCursor();
+    if (lastEventId) {
+      headers['Last-Event-ID'] = String(lastEventId);
+    }
+
     console.log(`📡 [${this.streamId}] Connecting to Mastodon SSE: ${targetUrl}`);
 
     try {
@@ -181,6 +188,10 @@ export class MastodonSSEAdapter extends BasePushAdapter {
       }
       if (line.startsWith('event:')) {
         eventType = line.slice(6).trim();
+      } else if (line.startsWith('id:')) {
+        // Track the SSE event id for Last-Event-ID resume on reconnect.
+        const eventId = line.slice(3).trim();
+        if (eventId) this._cursor = eventId;
       } else if (line.startsWith('data:')) {
         dataStr += (dataStr ? '\n' : '') + line.slice(5).trim();
       }
