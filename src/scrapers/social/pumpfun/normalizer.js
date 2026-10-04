@@ -25,6 +25,17 @@ export function namespacedPumpfunId(externalId) {
 }
 
 /**
+ * @typedef {Object} RawCallout
+ * @property {string} [thesis]
+ * @property {string | number} [calloutTimestamp]
+ * @property {string | number} [calledOutAt]
+ * @property {string | number} [createdAt]
+ * @property {string | number} [timestamp]
+ * @property {number | string} [likes]
+ * @property {string} [mediaUrl]
+ */
+
+/**
  * Normalize a raw position's embedded callout into a thesis record.
  * Returns null when the position carries no thesis text.
  *
@@ -34,11 +45,12 @@ export function namespacedPumpfunId(externalId) {
  */
 export function normalizeThesis(position, kolWallets) {
   const p = position && typeof position === 'object' ? position : {};
-  const callout = p.callout && typeof p.callout === 'object' ? p.callout : null;
+  /** @type {RawCallout | null} */
+  const callout = p.callout && typeof p.callout === 'object' ? /** @type {any} */ (p.callout) : null;
   const content = callout && typeof callout.thesis === 'string' ? callout.thesis.trim() : '';
-  if (!content) return null;
+  if (!content || !callout) return null;
 
-  const wallet = p.walletAddress || p.user || null;
+  const wallet = typeof p.walletAddress === 'string' ? p.walletAddress : (typeof p.user === 'string' ? p.user : null);
   const isKol = wallet != null && kolWallets instanceof Set ? kolWallets.has(wallet) : false;
 
   const thesis = {
@@ -47,9 +59,9 @@ export function normalizeThesis(position, kolWallets) {
     content,
     // Prefer a real timestamp; `calledOutAtMcap` is market-cap data, not a time.
     timestamp: callout.calloutTimestamp
-      ? Date.parse(callout.calloutTimestamp)
+      ? Date.parse(String(callout.calloutTimestamp))
       : (callout.calledOutAt ?? callout.createdAt ?? callout.timestamp
-          ? Date.parse(callout.calledOutAt ?? callout.createdAt ?? callout.timestamp)
+          ? Date.parse(String(callout.calledOutAt ?? callout.createdAt ?? callout.timestamp))
           : null),
     holdings: Number(p.amountHeld) || 0,
     // Live API exposes USD PnL only — keep `pnlUsd` canonical and leave `pnlSol`
@@ -83,7 +95,7 @@ export function normalizeThesis(position, kolWallets) {
  */
 export function normalizeHolder(position, kolWallets) {
   const p = position && typeof position === 'object' ? position : {};
-  const wallet = p.walletAddress || p.user || null;
+  const wallet = typeof p.walletAddress === 'string' ? p.walletAddress : (typeof p.user === 'string' ? p.user : null);
   return {
     wallet,
     userName: p.userName || null,
