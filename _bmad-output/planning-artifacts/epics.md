@@ -4164,3 +4164,80 @@ All 5 stories can be implemented independently and in parallel since each target
 
 #### Story 53.6: Telemetry dims + spike verify gate
 - `emitRun` thêm `pooled`, `poolBackend`, `poolWaitMs` (gated `XACTIONS_BROWSER_BACKEND_METRICS=1`). Promote `browser-pool-spike.mjs` thành verify gate pre-release.
+
+
+## Epic 54: Token Sentiment Intelligence Layer
+
+> **Origin:** `jev-trading/_bmad-output/planning-artifacts/research/technical-crypto-social-sentiment-providers-2026-10-04/research.md` Recommendation #3 — "Giữ XActions MCP làm lớp ingestion dự phòng cho các tín hiệu provider không phủ". Gap analysis cross-referenced với `research/market-crypto-xactions-features-2026-09-26/research.md` §3c.
+>
+> **Positioning:** XActions KHÔNG replicate provider-grade bot filtering (Kaito Bittensor NLP, TheTie 7yr clean data — moat nhiều năm). Epic này build **coverage-gap metrics**: tín hiệu mà DexCheck/Cookie Pro không phủ — KOL watchlist riêng của jev, VN crypto Twitter, token quá nhỏ chưa được index. Buy baseline (DexCheck Free + Cookie $19.99/th), build coverage gap.
+>
+> **Dependency:** không phụ thuộc Epic 10–53 sequence (dùng `x_scrape`/`x_monitor_keyword`/Dexscreener crawler/ `historyStore` đã live). YÊU CẦU ingestion health gate: nếu X search trả `[]` liên tục (session cookie chết — precedent: jev `searchTwitter()` trả rỗng khi thiếu `XACTIONS_SESSION_COOKIE`), metrics phải flag `degraded: true` thay vì trả số ảo.
+
+### Story 54.1: TokenEntityExtractor — Cashtag, Contract & Name → Canonical Token ID
+As a **Crypto Intelligence Consumer (jev-trading / ChainLens)**,
+I want **a pure-JS extractor that parses `$TICKER` cashtags, Solana/EVM contract addresses, and token names from tweet text into canonical token entities**,
+So that **every downstream metric (mindshare, hype ratio, KOL ROI) counts mentions against the same resolved identity instead of raw strings**.
+
+**Acceptance Criteria:**
+* **Given** no token-level entity resolution exists (`src/mcp/entity-resolver.js` resolves *persons*, not tokens)
+* **When** implementing `src/analytics/tokenEntityExtractor.js`
+* **Then** it extracts: cashtags `$PEPE`, contract addresses (Solana base58 32–44 chars, EVM `0x[a-f0-9]{40}`), and bare token names against a configurable alias map
+* **And** each mention resolves to `{ canonicalId, chain?, contract?, symbol, confidence }` — symbol-only mentions get `confidence < 1` (collision-prone: `$PEPE` vs 10 clones)
+* **And** optional enrichment via existing `x_dexscreener_token_lookup`/`x_dexscreener_token_socials` maps contract ↔ symbol ↔ social links (cached, `historyStore`)
+* **And** pure function, zero I/O in core path — Dexscreener enrichment is a separate injectable resolver
+* **And** unit tests cover: multi-token tweets, fake cashtags, same-symbol-different-chain disambiguation
+
+### Story 54.2: TokenMentionPipeline — Normalized Per-Token Mention Stream
+As a **Crypto Intelligence Consumer**,
+I want **X search/monitor output run through TokenEntityExtractor and persisted as a per-token time series**,
+So that **mindshare and hype metrics have a clean, deduplicated, per-token event log to compute on**.
+
+**Acceptance Criteria:**
+* **Given** `x_monitor_keyword` + `x_scrape` already produce tweet results; `historyStore` persists snapshots
+* **When** implementing `src/analytics/tokenMentionPipeline.js`
+* **Then** each poll/scrape batch produces `TokenMention[]`: `{ tokenId, tweetId, author, followers, engagement, ts, sentimentScore, isProbableBot }`
+* **And** dedup by `tweetId` (same tweet never counted twice across polls)
+* **And** per-token daily rollups persisted: `mentions_24h`, `unique_authors_24h`, `weighted_engagement_24h` (rolling window, not calendar day)
+* **And** ingestion health flag: `degraded: true` + `consecutiveEmptyBatches` counter when X search returns `[]` — metrics downstream must NOT compute on degraded data
+* **And** watchlist configurable: `{ tokens: [{symbol, contract?, aliases[]}], queries: [...] }` — jev supplies its own KOL/token watchlist (coverage providers miss)
+
+### Story 54.3: Hype-vs-Liquidity & Unique-Source Authenticity Metrics
+As a **Crypto Intelligence Consumer**,
+I want **tweet-volume-per-liquidity ratio and unique-author normalization computed per token**,
+So that **raid-farm/manufactured hype is discounted to near-zero — the #1 failure mode for meme-coin signals (TheTie `hype_to_activity_ratio`, Santiment `log₁₀(unique_users)` pattern)**.
+
+**Acceptance Criteria:**
+* **Given** per-token rollups from Story 54.2 + Dexscreener liquidity/volume via existing `x_dexscreener_token_lookup`
+* **When** implementing `src/analytics/hypeAuthenticity.js`
+* **Then** compute per token: `hype_to_liquidity = mentions_24h / liquidity_usd` and `unique_sources_pct = unique_authors_24h / mentions_24h`
+* **And** compute `hype_score = (mentions_24h / avg_mentions_14d) × log10(unique_authors_24h)` — Santiment-style: hype driven by 1 author collapses to ~0
+* **And** expose `x_token_hype` MCP action (domain dispatcher per Epic 52) + REST `/api/analytics/token-hype`
+* **And** alert integration: emit `alerts.js` `anomaly` when `hype_to_liquidity` exceeds baseline by >3σ while `unique_sources_pct < 30%` (manufactured-hype signature)
+* **And** every response includes `degraded` passthrough from Story 54.2
+
+### Story 54.4: Token Mindshare Engine — Share-of-Voice % + Delta 24h/7d
+As a **Crypto Intelligence Consumer**,
+I want **each watched token's share of the total tracked conversation plus attention-velocity deltas**,
+So that **jev-trading gets Cookie-Pro-style `Mindshare %` and `Mindshare Delta` signals on its own watchlist — the exact metric Cookie sells at $19.99/month, computed on coverage providers can't see**.
+
+**Acceptance Criteria:**
+* **Given** normalized `TokenMention[]` stream from Story 54.2
+* **When** implementing `src/analytics/mindshare.js`
+* **Then** `mindshare_pct(token, window)` = weighted-mention volume of token ÷ total weighted volume across watchlist (weights: author followers percentile + engagement, configurable)
+* **And** `mindshare_delta(token, 24h)` and `mindshare_delta(token, 7d)` = current share minus trailing-baseline share
+* **And** `top_voices(token)` = top authors by weighted mentions — primitive Top Voices (Cookie parity)
+* **And** expose `x_token_mindshare` MCP action + `/api/analytics/mindshare` REST endpoint returning full watchlist ranking
+* **And** response schema matches a provider-compatible shape `{ token, mindsharePct, delta24h, delta7d, topVoices[], degraded }` so jev can hot-swap XActions↔Cookie as data source
+* **And** unit tests: synthetic 3-token corpus with known shares must reproduce expected %±1pt
+
+### Epic 54 — Success Metrics & Gate
+
+**Ship gate (1 tuần continuous data):** pipeline chạy liên tục 7 ngày trên watchlist ≥10 token; `degraded` time < 10%; mindshare ranking phản ánh đúng 1 sự kiện viral đã biết (manual spot-check).
+
+**Deferred (không thuộc epic này — mở lại khi ship gate đạt):**
+- **S5 KOL Callout Tracker** (ROI/hit-rate leaderboard qua `priceCorrelation` — DexCheck `kol-performance` parity): chỉ build sau khi ingestion chứng minh ổn định; cần `tokenId + callTimestamp` từ Story 54.1/54.2.
+- **S6 Narrative clustering** (Kaito Narrative Mindshare parity): needs `jevViralMiner`-style batch classify on mention corpus.
+- **S7 Telegram crawler** = D4 từ research 2026-09-26 (Tier-2, platform build 1–2 tuần): Santiment data (>400 TG chats, trễ 1–2s) củng cố giá trị nhưng không đổi effort estimate.
+
+**Total estimate:** 4 stories, ~1 sprint (6–10 dev-days, mostly glue on existing primitives).
