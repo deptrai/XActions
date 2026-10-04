@@ -35,6 +35,7 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
       const ctx = new TelemetryContext({
         scraperId: 'twitter-scraper',
         platform: 'twitter',
+        category: 'social',
         action: 'scrape_tweets',
         pooled: true,
         poolBackend: 'chrome',
@@ -54,6 +55,7 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
       const ctx = new TelemetryContext({
         scraperId: 'twitter-scraper',
         platform: 'twitter',
+        category: 'social',
         action: 'scrape_tweets',
         pooled: true,
         poolBackend: 'chrome',
@@ -72,6 +74,8 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
       const ctx = new TelemetryContext({
         scraperId: 'reddit-scraper',
         platform: 'reddit',
+        category: 'social',
+        action: 'scrape_posts',
       });
 
       ctx.setPoolTelemetry({
@@ -92,12 +96,60 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
       expect(payload.poolWaitMs).toBe(120);
     });
 
+    it('[P1] poolWaitMs NaN is dropped from payload (not emitted as NaN)', () => {
+      process.env.XACTIONS_BROWSER_BACKEND_METRICS = '1';
+
+      const ctx = new TelemetryContext({
+        scraperId: 's', platform: 'p',
+        category: 'social',
+        action: 'a',
+        pooled: true,
+        poolBackend: 'chrome',
+        poolWaitMs: /** @type {any} */ ('abc'),
+      });
+
+      const payload = ctx.toRunPayload({ isSuccess: true });
+      expect(payload.poolWaitMs).toBeUndefined();
+    });
+
+    it('[P1] poolWaitMs: 0 is preserved as 0 (not dropped)', () => {
+      process.env.XACTIONS_BROWSER_BACKEND_METRICS = '1';
+
+      const ctx = new TelemetryContext({
+        scraperId: 's', platform: 'p',
+        category: 'social',
+        action: 'a',
+        pooled: true,
+        poolBackend: 'chrome',
+        poolWaitMs: 0,
+      });
+
+      const payload = ctx.toRunPayload({ isSuccess: true });
+      expect(payload.poolWaitMs).toBe(0);
+    });
+
+    it('[P1] pooled: false is preserved as false (not dropped)', () => {
+      process.env.XACTIONS_BROWSER_BACKEND_METRICS = '1';
+
+      const ctx = new TelemetryContext({
+        scraperId: 's', platform: 'p',
+        category: 'social',
+        action: 'a',
+        pooled: false,
+      });
+
+      const payload = ctx.toRunPayload({ isSuccess: true });
+      expect(payload.pooled).toBe(false);
+    });
+
     it('[P1] toRunPayload runDetails overrides context-level pool dimensions', () => {
       process.env.XACTIONS_BROWSER_BACKEND_METRICS = '1';
 
       const ctx = new TelemetryContext({
         scraperId: 'test-scraper',
         platform: 'test',
+        category: 'social',
+        action: 'a',
         pooled: false,
         poolBackend: 'chrome',
         poolWaitMs: 10,
@@ -136,6 +188,22 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
       });
 
       expect(captured).toHaveLength(1);
+      expect(captured[0].browserBackend).toBeUndefined();
+      expect(captured[0].pooled).toBeUndefined();
+      expect(captured[0].poolBackend).toBeUndefined();
+      expect(captured[0].poolWaitMs).toBeUndefined();
+    });
+
+    it('[P0] strips pool dims when XACTIONS_BROWSER_BACKEND_METRICS=0 (truthy-string edge case)', () => {
+      process.env.XACTIONS_BROWSER_BACKEND_METRICS = '0';
+
+      const emitter = new TelemetryEmitter();
+      /** @type {any[]} */
+      const captured = [];
+      emitter.emit = (p) => { captured.push(p); return true; };
+
+      emitter.emitRun({ runId: 'r', browserBackend: 'chrome', pooled: true, poolBackend: 'chrome', poolWaitMs: 10 });
+
       expect(captured[0].browserBackend).toBeUndefined();
       expect(captured[0].pooled).toBeUndefined();
       expect(captured[0].poolBackend).toBeUndefined();
@@ -303,6 +371,34 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
       const res = evaluateGateConditions(sampleRuns);
       expect(res.pass).toBe(false);
       expect(res.reasons[0]).toContain('had 1 failed jobs out of 4');
+    });
+
+    it('[P1] fails when isolation probe returned an error object', () => {
+      const res = evaluateGateConditions([
+        { backend: 'chrome', mode: 'pool-isolated-context', jobs: 4,
+          isolation: { error: 'Navigation timeout' },
+          metrics: { succeeded: 4, failed: 0 } },
+      ]);
+      expect(res.pass).toBe(false);
+      expect(res.reasons[0]).toContain('isolation probe failed');
+    });
+
+    it('[P1] fails when isolatedContextLeak is undefined (not explicitly false)', () => {
+      const res = evaluateGateConditions([
+        { backend: 'chrome', mode: 'pool-isolated-context', jobs: 4,
+          isolation: {},
+          metrics: { succeeded: 4, failed: 0 } },
+      ]);
+      expect(res.pass).toBe(false);
+      expect(res.reasons[0]).toContain('expected false');
+    });
+
+    it('[P1] fails when run has no metrics field (malformed)', () => {
+      const res = evaluateGateConditions([
+        { backend: 'chrome', mode: 'pool-isolated-context', jobs: 4 },
+      ]);
+      expect(res.pass).toBe(false);
+      expect(res.reasons[0]).toContain('no metrics');
     });
 
     it('[P1] fails when runs array is empty', () => {

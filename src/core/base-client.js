@@ -137,7 +137,7 @@ export class AbstractApiClient {
    */
   requiresBrowser = false;
 
-  /** @type {'undici' | 'got'} */
+  /** @type {'undici' | 'got' | 'curl'} */
   client = 'undici';
 
   /** @type {Function | null} */
@@ -323,6 +323,7 @@ export class AbstractApiClient {
    * @param {Object} [options]
    * @param {('realtime' | 'bulk')} [options.pool] - Dual-pool partition (AD-20).
    * @param {string} [options.consumerId] - Consumer identity for observability (AD-20).
+   * @param {string} [options.tier]
    * @returns {string | Record<string, unknown> | null}
    */
   resolveProxy(accountId, requiresResidential = false, requiresAuth = this.requiresAuth, options = {}) {
@@ -353,7 +354,7 @@ export class AbstractApiClient {
           yieldFromBulk: pool === 'realtime',
         });
       } else if (typeof this.proxyPool.getNext === 'function') {
-        proxy = this.proxyPool.getNext(requiresResidential, tier);
+        proxy = this.proxyPool.getNext(requiresResidential);
       } else if (typeof this.proxyPool.getRotatingProxy === 'function') {
         proxy = this.proxyPool.getRotatingProxy(requiresResidential);
       } else if (typeof this.proxyPool.getRoundRobinProxy === 'function') {
@@ -403,7 +404,7 @@ export class AbstractApiClient {
     if (!proxy) return;
     // Rotating proxy gateways (e.g. SocksNode) rotate IP per connection.
     // Quarantining the gateway on a single transient node failure exhausts the pool.
-    const host = typeof proxy === 'string' ? proxy : (proxy.host || proxy.hostname || '');
+    const host = typeof proxy === 'string' ? proxy : (typeof proxy === 'object' && proxy !== null ? String(/** @type {any} */ (proxy).host || /** @type {any} */ (proxy).hostname || '') : '');
     if (host.includes('socksnode.com')) return;
     const provider = this.proxyProvider || this.proxyPool;
     if (provider && typeof provider.quarantine === 'function') {

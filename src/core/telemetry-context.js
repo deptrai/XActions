@@ -70,7 +70,9 @@ export class TelemetryContext {
     this.browserBackend = browserBackend;
     this.pooled = pooled !== undefined ? Boolean(pooled) : undefined;
     this.poolBackend = poolBackend;
-    this.poolWaitMs = poolWaitMs !== undefined && poolWaitMs !== null ? Math.max(0, Number(poolWaitMs)) : null;
+    this.poolWaitMs = poolWaitMs !== undefined && poolWaitMs !== null
+      ? (Number.isFinite(Number(poolWaitMs)) ? Math.max(0, Number(poolWaitMs)) : null)
+      : null;
 
     /** @type {TransportRequestRecord[]} */
     this.requests = [];
@@ -130,7 +132,7 @@ export class TelemetryContext {
         this.browserBackend = poolBackend;
       }
     }
-    if (poolWaitMs !== undefined && poolWaitMs !== null) {
+    if (poolWaitMs !== undefined && poolWaitMs !== null && Number.isFinite(Number(poolWaitMs))) {
       this.poolWaitMs = Math.max(0, Number(poolWaitMs));
     }
   }
@@ -240,7 +242,7 @@ export class TelemetryContext {
         payload.poolBackend = pBackend;
       }
       const waitMs = runDetails.poolWaitMs !== undefined ? runDetails.poolWaitMs : this.poolWaitMs;
-      if (waitMs !== undefined && waitMs !== null) {
+      if (waitMs !== undefined && waitMs !== null && Number.isFinite(Number(waitMs))) {
         payload.poolWaitMs = Math.max(0, Number(waitMs));
       }
     }

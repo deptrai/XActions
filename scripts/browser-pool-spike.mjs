@@ -32,7 +32,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { launchStealthBrowser, createStealthPage, closeStealthBrowser } from '../src/scraping/stealthBrowser.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -41,9 +41,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 export const IS_GATE = process.argv.includes('--gate') || process.env.VERIFY_GATE === '1';
-const BACKEND   = process.env.BACKEND || 'chrome';
-const MODE      = process.env.MODE || (IS_GATE ? 'pool-isolated-context' : 'all');            // launch-per-job | pool-shared-context | pool-isolated-context | all
-const JOBS      = Number(process.env.JOBS || (IS_GATE ? 4 : 8));        // total jobs to run
+const BACKEND   = process.env.BACKEND || (IS_GATE ? 'both' : 'chrome');
+// Gate mode always runs pool-isolated-context — the scenario whose isolation
+// guarantees the gate is actually verifying. MODE env is ignored under --gate.
+const MODE      = IS_GATE ? 'pool-isolated-context'
+                : (process.env.MODE || 'all');
+// JOBS > POOL_SIZE so backpressure / queue wait (poolWaitMs) is exercised.
+const JOBS      = Number(process.env.JOBS || (IS_GATE ? 8 : 8));        // total jobs to run
 const POOL_SIZE = Number(process.env.POOL_SIZE || 4);   // max concurrent pages in pool modes
 const PROXY     = process.env.PROXY_SERVER || undefined;
 
@@ -223,11 +227,20 @@ export function evaluateGateConditions(runs) {
       continue;
     }
 
-    if (r.isolation && r.isolation.isolatedContextLeak === true) {
-      reasons.push(`${id} failed isolation probe: isolatedContextLeak is true (cross-context state leak detected)`);
+    // Reject malformed runs — a run without metrics or isolation data cannot
+    // be positively verified, so it is a gate failure, not a silent pass.
+    if (!r.metrics) {
+      reasons.push(`${id} has no metrics — run result malformed, cannot verify`);
+      continue;
     }
 
-    if (r.metrics && Number(r.metrics.failed) > 0) {
+    if (r.isolation?.error) {
+      reasons.push(`${id} isolation probe failed: ${r.isolation.error}`);
+    } else if (r.mode === 'pool-isolated-context' && r.isolation?.isolatedContextLeak !== false) {
+      reasons.push(`${id} failed isolation probe: isolatedContextLeak is ${r.isolation?.isolatedContextLeak} (expected false)`);
+    }
+
+    if (Number(r.metrics.failed) > 0) {
       reasons.push(`${id} had ${r.metrics.failed} failed jobs out of ${r.jobs}`);
     }
   }
@@ -276,21 +289,24 @@ async function main() {
     const gate = evaluateGateConditions(allRuns);
     if (gate.pass) {
       console.log('\n🎉 [VERIFY GATE PASS] All BrowserPool release criteria met.');
-      process.exit(0);
+      process.exitCode = 0;
     } else {
       console.error('\n❌ [VERIFY GATE FAIL] BrowserPool release criteria failed:');
       for (const reason of gate.reasons) {
         console.error(`   - ${reason}`);
       }
-      process.exit(1);
+      process.exitCode = 1;
     }
   }
 }
 
-const isDirectExecution = process.argv[1] && (
-  process.argv[1].endsWith('browser-pool-spike.mjs') ||
-  process.argv[1].includes('browser-pool-spike')
-);
+const isDirectExecution = (() => {
+  try {
+    return import.meta.url === pathToFileURL(process.argv[1] ?? '').href;
+  } catch {
+    return false;
+  }
+})();
 
 if (isDirectExecution) {
   main().catch((err) => {

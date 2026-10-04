@@ -13,6 +13,8 @@ import os from 'node:os';
 import { TwitterCrawler } from './crawler.js';
 import { TwitterClient } from './client.js';
 import { actionNotAvailable } from '../../platforms.js';
+import { globalAccountPool } from '../../../core/account-pool.js';
+import { globalSessionManager } from '../../../core/session-manager.js';
 
 /** @type {Record<string, string>} */
 const TWITTER_ACTION_MAP = {
@@ -68,11 +70,11 @@ export default {
   aliases: ['twitter', 'x'],
 
   /**
-   * @param {Record<string, any>} options
+   * @param {Record<string, any>} _options
    * @param {Record<string, any>} ctx
    * @returns {string}
    */
-  mapAction(options, ctx) {
+  mapAction(_options, ctx) {
     const mappedAction = TWITTER_ACTION_MAP[ctx.action];
     if (!mappedAction) {
       const available = [...new Set(Object.values(TWITTER_ACTION_MAP))];
@@ -129,19 +131,32 @@ export default {
    * @returns {TwitterClient}
    */
   createClient(options) {
+    const hasProxyConfigured = Boolean(
+      options.proxy ||
+      options.proxyPool ||
+      options.proxyProvider ||
+      process.env.PROXY_URL ||
+      process.env.XACTIONS_PROXIES ||
+      process.env.HTTP_PROXY ||
+      process.env.HTTPS_PROXY
+    );
+    const requiresProxy = options.requiresProxy !== undefined
+      ? options.requiresProxy
+      : hasProxyConfigured;
+
     return new TwitterClient(/** @type {any} */ ({
       baseUrl: options.baseUrl,
       proxy: options.proxy,
       proxyPool: options.proxyPool,
       proxyProvider: options.proxyProvider,
       governor: options.governor,
-      accountPool: options.accountPool,
-      sessionManager: options.sessionManager,
+      accountPool: options.accountPool || globalAccountPool,
+      sessionManager: options.sessionManager || globalSessionManager,
       responseValidator: options.responseValidator,
       tokenRing: options.tokenRing,
       signerPool: options.signerPool,
       requiresAuth: options.requiresAuth,
-      requiresProxy: options.requiresProxy,
+      requiresProxy,
       timeout: options.timeout,
     }));
   },
@@ -157,8 +172,8 @@ export default {
       redisPublisher: options.redisPublisher,
       proxyPool: options.proxyPool,
       governor: options.governor,
-      accountPool: options.accountPool,
-      sessionManager: options.sessionManager,
+      accountPool: options.accountPool || globalAccountPool,
+      sessionManager: options.sessionManager || globalSessionManager,
       requiresAuth: options.requiresAuth,
     });
   },
@@ -203,6 +218,8 @@ export default {
     if (!accountId) {
       if (process.env.TWITTER_USERNAME) {
         accountId = process.env.TWITTER_USERNAME;
+      } else if (!options.accountId && globalAccountPool.hasAvailable('twitter')) {
+        accountId = null;
       } else {
         try {
           const configPath = path.join(os.homedir(), '.xactions', 'config.json');
@@ -212,7 +229,7 @@ export default {
           }
         } catch {}
       }
-      if (!accountId) accountId = 'twitter-guest';
+      if (!accountId && !globalAccountPool.hasAvailable('twitter')) accountId = 'twitter-guest';
     }
 
     return {

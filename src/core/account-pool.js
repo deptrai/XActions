@@ -6,7 +6,11 @@
  * @license MIT
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
+import { globalSessionManager } from './session-manager.js';
 
 /** @typedef {import('./types.js').AccountRecord} AccountRecord */
 
@@ -460,6 +464,64 @@ export class AccountPool {
 
     return proxy;
   }
+
+  /**
+   * Return credentials for an account (unredacted, for internal auth use).
+   * @param {string} accountId
+   * @param {string} [platform]
+   * @returns {Record<string, unknown> | null}
+   */
+  getCredentials(accountId, platform) {
+    const record = this.#resolveRecord(accountId, platform);
+    return record?.credentials ? { ...record.credentials } : null;
+  }
+}
+
+/**
+ * Load saved accounts and sessions from ~/.xactions/config.json into AccountPool & SessionManager.
+ * @param {AccountPool} [pool=globalAccountPool]
+ * @param {import('./session-manager.js').SessionManager} [sessionManager=globalSessionManager]
+ */
+export function loadSavedAccounts(pool = globalAccountPool, sessionManager = globalSessionManager) {
+  try {
+    const configPath = path.join(os.homedir(), '.xactions', 'config.json');
+    if (!fs.existsSync(configPath)) return;
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+
+    if (config.accountPool && typeof config.accountPool === 'object') {
+      for (const [platform, accounts] of Object.entries(config.accountPool)) {
+        if (!Array.isArray(accounts) || accounts.length === 0) continue;
+        const accountIds = [];
+        /** @type {Record<string, Record<string, unknown>>} */
+        const credentials = {};
+        for (const acc of accounts) {
+          const id = typeof acc === 'string' ? acc : acc.accountId;
+          if (!id) continue;
+          accountIds.push(id);
+          if (typeof acc === 'object') {
+            credentials[id] = acc;
+            if (sessionManager && acc.cookies) {
+              sessionManager.set(id, { accountId: id, cookies: acc.cookies, tokens: {} });
+            }
+          }
+        }
+        if (accountIds.length > 0) {
+          pool.registerAccounts(platform, accountIds, { credentials });
+        }
+      }
+    }
+
+    if (sessionManager && config.sessions && typeof config.sessions === 'object') {
+      for (const [id, s] of Object.entries(config.sessions)) {
+        if (s && s.cookies && !sessionManager.has(id)) {
+          sessionManager.set(id, { accountId: id, cookies: s.cookies, tokens: {} });
+        }
+      }
+    }
+  } catch {
+    // Non-fatal if config is invalid or inaccessible
+  }
 }
 
 export const globalAccountPool = new AccountPool();
+loadSavedAccounts(globalAccountPool, globalSessionManager);

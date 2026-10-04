@@ -259,3 +259,8 @@
 - Missing `isConnected()` check trước khi cấp context — crash containment/respawn thuộc story 53.5, out of scope story 53.1
 - Không có idle browser reclaim — feature gap, không có trong spec AC story 53.1
 - `acquire()` thiếu per-job options (proxy/accountId override) — spec không yêu cầu, wiring concern cho 53.2/53.3
+
+## Deferred from: code review of spec-53-6-telemetry-dims-pooled-poolbackend-poolwaitms-spike-gate.md (2026-10-04)
+
+- **Gate không xác minh telemetry dims được emit thực tế**: `evaluateGateConditions` chỉ check fatal/isolation/failed — không assert rằng `pooled`/`poolBackend`/`poolWaitMs` thực sự xuất hiện đúng trong payload khi `XACTIONS_BROWSER_BACKEND_METRICS=1`. Gate scope hiện tại là pool correctness; telemetry assertion ngoài scope, cần spec mới nếu muốn e2e verify dims.
+- **Spike script dùng `SpikeBrowserPool` local thay vì production `BrowserPool`**: `scripts/browser-pool-spike.mjs` test hành vi tạo BrowserContext của Chrome binary, không test `src/scraping/browserPool.js`. Đây là thiết kế spike cố ý từ Epic 53 — chuyển sang production pool là quyết định kiến trúc.

@@ -39,7 +39,6 @@ import {
 export { TWITTER_GRAPHQL_QUERY_IDS };
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import { isValidCategory } from '../../../core/types.js';
-import { defaultRedisStreamPublisher, isEnvTruthy, toIsoDate } from '../../../utils/redis-stream-publisher.js';
 import { gaussianDelay as baseGaussianDelay } from '../../../utils/gaussian-delay.js';
 import { tweetToPostItem } from './normalize-tweet.js';
 
@@ -728,8 +727,11 @@ export class TwitterCrawler extends AbstractCrawler {
    * @returns {Promise<Record<string, any>>}
    */
   async #resolveSession(session = {}) {
-    const accountId = session?.accountId || null;
-    const cookies = session?.cookies || (accountId && this.sessionManager?.get(accountId)?.cookies) || null;
+    let accountId = session?.accountId || null;
+    if (!accountId && this.accountPool) {
+      accountId = this.accountPool.getNextAvailable(this.name);
+    }
+    const cookies = session?.cookies || (accountId && this.sessionManager?.get(accountId)?.cookies) || (accountId && this.accountPool?.getCredentials?.(accountId, this.name)?.cookies) || null;
     await this.client.init(accountId && cookies ? { accountId, cookies } : {});
     return { accountId, cookies };
   }
@@ -1683,6 +1685,7 @@ export class TwitterCrawler extends AbstractCrawler {
    * @param {any} [session]
    */
   async profile(args = {}, session) {
+    const { accountId, cookies } = await this.#resolveSession(session);
     const username = resolveUsername(args.username || args.url || '');
     const variables = {
       screen_name: username,
@@ -1696,9 +1699,9 @@ export class TwitterCrawler extends AbstractCrawler {
       DEFAULT_FEATURES,
       undefined,
       {
-        accountId: session?.accountId || args.accountId,
-        requiresAuth: false,
-        cookies: session?.cookies,
+        accountId,
+        requiresAuth: Boolean(cookies),
+        cookies,
       }
     );
 
@@ -2068,7 +2071,7 @@ export class TwitterCrawler extends AbstractCrawler {
     // TODO: Add real SearchSpaces/LiveEventTimeline GraphQL queryId when discovered.
     // For now, use SearchTimeline as an auth fallback to demonstrate the action.
     const searchQuery = `${query} filter:spaces`;
-    const { rawQuery, product, searchType } = this.#buildRawQuery({ query: searchQuery, type: 'Latest' });
+    const { rawQuery, product, searchType: _searchType } = this.#buildRawQuery({ query: searchQuery, type: 'Latest' });
 
     const variables = {
       rawQuery,
@@ -2242,7 +2245,7 @@ export class TwitterCrawler extends AbstractCrawler {
    * @param {string|null} [params.accountId]
    * @returns {Promise<{ items: import('../../../core/types.js').PostItem[], cursor: string|null, hasMore: boolean }>}
    */
-  async #paginateUserMedia({ userId, limit = 20, cursor = null, type, username, accountId }) {
+  async #paginateUserMedia({ userId, limit = 20, cursor = null, type, username: _username, accountId }) {
     const maxPerRequest = 20;
     const seen = new Set();
     const allItems = [];
@@ -3097,7 +3100,6 @@ export class TwitterCrawler extends AbstractCrawler {
   async schedule(args, session) {
     const text = typeof args.text === 'string' ? args.text : '';
     const premium = Boolean(args.premium);
-    const sensitive = Boolean(args.sensitive);
     const dryRun = args.dryRun !== false;
     const mediaIds = Array.isArray(args.mediaIds) ? args.mediaIds : [];
 
