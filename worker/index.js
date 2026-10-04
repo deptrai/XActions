@@ -176,7 +176,12 @@ async function proxyToOrigin(request, url, env) {
 
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
+    let url;
+    try {
+      url = new URL(request.url);
+    } catch {
+      return new Response('Bad Request: malformed URL', { status: 400 });
+    }
     const path = url.pathname;
 
     // /thread/<id> renders the same client-side page as /thread. Rewrite to

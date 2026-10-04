@@ -104,7 +104,11 @@ export class CanaryHealer {
    */
   #loadConfig() {
     const raw = fs.readFileSync(this.#configPath, 'utf8');
-    return JSON.parse(raw);
+    try {
+      return JSON.parse(raw);
+    } catch (err) {
+      throw new Error(`Failed to parse canary config at ${this.#configPath}: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   /**
@@ -133,7 +137,14 @@ export class CanaryHealer {
    */
   #applyPatch(config, platform, targetName, newChain) {
     /** @type {Record<string, Array<CanaryTarget>>} */
-    const next = JSON.parse(JSON.stringify(config));
+    let next;
+    try {
+      next = JSON.parse(JSON.stringify(config));
+    } catch {
+      // Deep-clone of a JSON-origin config should never throw; fall back to
+      // a shallow copy so a non-serializable field doesn't kill the heal.
+      next = { ...config };
+    }
     const arr = next[platform] || [];
     const idx = arr.findIndex((t) => t && t.name === targetName);
     if (idx === -1) return next;

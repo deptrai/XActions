@@ -96,7 +96,12 @@ function isProxyConnectionError(err) {
 function triggerSignedFetch(arg1, arg2) {
   let url = typeof arg1 === 'string' ? arg1 : (typeof arg1 === 'object' && arg1 !== null && 'url' in arg1 && typeof arg1.url === 'string' ? arg1.url : '');
   let init = typeof arg1 === 'object' && arg1 !== null && 'init' in arg1 ? arg1.init : arg2;
-  const options = init ? (typeof init === 'string' ? JSON.parse(init) : init) : { credentials: 'include', mode: 'cors' };
+  let options;
+  try {
+    options = init ? (typeof init === 'string' ? JSON.parse(init) : init) : { credentials: 'include', mode: 'cors' };
+  } catch {
+    options = { credentials: 'include', mode: 'cors' };
+  }
   return fetch(url, options).then(
     async (res) => {
       try {
@@ -529,7 +534,16 @@ export class TikTokBrowserBridge {
    */
   async #executeSignUrl(url, options = {}, _depth = 0) {
     const { cookies } = options || {};
-    const parsedUrl = new URL(url);
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      throw new PlatformError({
+        code: 'XACT_4001',
+        type: ErrorTypes.INVALID_ARGS,
+        message: `Invalid sign URL: ${JSON.stringify(url)}`,
+      });
+    }
     const accountId = 'tiktok-guest';
 
     const adapter = await this.#resolveAdapter();
@@ -617,7 +631,12 @@ export class TikTokBrowserBridge {
 
     const onRequest = (/** @type {any} */ req) => {
       const reqUrl = req.url();
-      const reqPath = new URL(reqUrl).pathname;
+      let reqPath;
+      try {
+        reqPath = new URL(reqUrl).pathname;
+      } catch {
+        return; // malformed/chrome-internal URL — not the sign request
+      }
       if (reqPath === parsedUrl.pathname && reqUrl.includes(parsedUrl.searchParams.get('aid') || '1988')) {
         signedUrl = reqUrl;
       }

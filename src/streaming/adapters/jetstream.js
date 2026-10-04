@@ -164,7 +164,12 @@ export class JetstreamAdapter extends BasePushAdapter {
    * @returns {Promise<string>}
    */
   async buildUrl() {
-    const url = new URL(this.endpoint);
+    let url;
+    try {
+      url = new URL(this.endpoint);
+    } catch {
+      throw new Error(`[${this.streamId}] Invalid Jetstream endpoint: ${JSON.stringify(this.endpoint)}`);
+    }
 
     // Collections
     const wantedCollections = this.options.wantedCollections || ['app.bsky.feed.post'];

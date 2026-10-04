@@ -27,8 +27,11 @@ const mocks = vi.hoisted(() => {
       _contexts: 0,
       _alive: true,
       // Minimal EventEmitter surface — pool attaches 'disconnected'.
+      /** @param {string} event @param {Function} fn */
       on(event, fn) { (listeners[event] ||= new Set()).add(fn); return browser; },
+      /** @param {string} event @param {Function} fn */
       off(event, fn) { listeners[event]?.delete(fn); return browser; },
+      /** @param {string} event @param {...any} args */
       emit(event, ...args) { for (const fn of listeners[event] || []) fn(...args); return true; },
       isConnected() { return browser._alive; },
       /** Simulate a process crash: isConnected→false + fire 'disconnected'. */
@@ -120,7 +123,7 @@ describe('BrowserPool', () => {
     expect(pool.stats().active).toBe(1);
     expect(pool.stats().browsers).toBe(1);
     // fingerprint từ browser được propagate xuống createStealthPage
-    expect(acq.page.__stealthOpts.fingerprint?.userAgent).toBe('TEST-UA');
+    expect(/** @type {any} */ (acq.page).__stealthOpts.fingerprint?.userAgent).toBe('TEST-UA');
     await pool.release(acq.page);
     await pool.drain();
   });
@@ -174,9 +177,9 @@ describe('BrowserPool', () => {
     const b = await pool.acquire();
     expect(a.context).not.toBe(b.context);
     // Each page belongs to its own context (mock pages carry _ctx backref)
-    expect(a.page._ctx).toBe(a.context);
-    expect(b.page._ctx).toBe(b.context);
-    expect(a.page._ctx).not.toBe(b.page._ctx);
+    expect(/** @type {any} */ (a.page)._ctx).toBe(a.context);
+    expect(/** @type {any} */ (b.page)._ctx).toBe(b.context);
+    expect(/** @type {any} */ (a.page)._ctx).not.toBe(/** @type {any} */ (b.page)._ctx);
     // createBrowserContext called per acquire — distinct invocations
     const browser = mocks.state.launches[0].browser;
     expect(browser._contexts).toBe(2);
@@ -190,8 +193,8 @@ describe('BrowserPool', () => {
     const a = await pool.acquire();
     const browser = mocks.state.launches[0].browser;
     await pool.release(a.page);
-    expect(a.page._closed).toBe(true);
-    expect(a.context._closed).toBe(true);
+    expect(/** @type {any} */ (a.page)._closed).toBe(true);
+    expect(/** @type {any} */ (a.context)._closed).toBe(true);
     expect(browser._closed).toBeUndefined(); // browser NOT closed
     expect(pool.stats().active).toBe(0);
     // acquire tiếp được — browser vẫn phục vụ
@@ -254,7 +257,7 @@ describe('BrowserPool', () => {
 
   it('release() page không thuộc pool → no-op', async () => {
     const pool = new BrowserPool({ size: 1 });
-    await expect(pool.release({ close: async () => {} })).resolves.toBeUndefined();
+    await expect(pool.release(/** @type {any} */ ({ close: async () => {} }))).resolves.toBeUndefined();
     await pool.drain();
   });
 
@@ -352,7 +355,7 @@ describe('SharedContextPool (opt-in, public anon only)', () => {
     expect(a.context).toBeNull();
     expect(b.context).toBeNull();
     await pool.release(a.page);
-    expect(a.page._closed).toBe(true);
+    expect(/** @type {any} */ (a.page)._closed).toBe(true);
     await pool.release(b.page);
     await pool.drain();
     expect(mocks.state.teardowns.length).toBe(1);
@@ -830,7 +833,7 @@ describe('Story 53.5 — Crash containment: dead-browser detection, respawn', ()
     const stats = pool.stats();
     expect(stats.respawns).toBe(1);
     expect(stats.endpoints).toHaveLength(2); // fleet identity giữ
-    const entryA = stats.endpoints.find((e) => e.endpoint === 'ws://127.0.0.1:9222/');
+    const entryA = /** @type {any} */ (stats.endpoints).find((/** @type {any} */ e) => e.endpoint === 'ws://127.0.0.1:9222/');
     expect(entryA.pages).toBe(0); // contexts cleared
 
     await pool.release(acq.page);
@@ -861,10 +864,10 @@ describe('Story 53.5 — Crash containment: dead-browser detection, respawn', ()
     expect(acq.page).toBeTruthy();
     expect(pool.stats().respawns).toBe(1);
     // pending invariant: mark-dead reset + finally decrement không được để pending âm
-    const epA = pool.stats().endpoints.find((e) => e.endpoint === 'ws://127.0.0.1:9222/');
+    const epA = /** @type {any} */ (pool.stats().endpoints).find((/** @type {any} */ e) => e.endpoint === 'ws://127.0.0.1:9222/');
     expect(epA.pending).toBe(0);
     // acq mới nằm trên A (reconnect) hoặc B — không vượt trần pagesPerProcess
-    const epB = pool.stats().endpoints.find((e) => e.endpoint === 'ws://127.0.0.1:9223/');
+    const epB = /** @type {any} */ (pool.stats().endpoints).find((/** @type {any} */ e) => e.endpoint === 'ws://127.0.0.1:9223/');
     expect(epA.pages + epB.pages).toBe(1);
     expect(epA.pages).toBeLessThanOrEqual(4);
     await pool.release(acq.page);
@@ -886,7 +889,7 @@ describe('Story 53.5 — Crash containment: dead-browser detection, respawn', ()
     const acq = await pool.acquire();
     expect(acq.page).toBeTruthy();
     expect(pool.stats().respawns).toBe(1);
-    const epA = pool.stats().endpoints.find((e) => e.endpoint === 'ws://127.0.0.1:9222/');
+    const epA = /** @type {any} */ (pool.stats().endpoints).find((/** @type {any} */ e) => e.endpoint === 'ws://127.0.0.1:9222/');
     expect(epA.pending).toBe(0);
     await pool.release(acq.page);
     await pool.drain();
