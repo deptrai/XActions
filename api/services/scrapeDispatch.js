@@ -103,7 +103,22 @@ let _syncBudgetMs = SYNC_BUDGET_MS;
 let _scrapeImpl = null;
 /** @type {null | ((type: string, data: Record<string, unknown>, opts: Record<string, unknown>) => Promise<Record<string, unknown>>)} */
 let _enqueueImpl = null;
-/** @type {null | { create(data: Record<string, unknown>): Promise<Record<string, unknown>>, update(id: string, data: Record<string, unknown>): Promise<unknown> }} */
+/**
+ * @typedef {Object} OutcomeDescriptor
+ * @property {'json'} kind
+ * @property {number} status
+ * @property {Record<string, any>} body
+ * @property {Record<string, string>} [headers]
+ */
+
+/**
+ * @typedef {Object} ScraperRegistry
+ * @property {Record<string, any>} DESCRIPTORS
+ * @property {(platform: string, action: string, options?: Record<string, unknown>) => boolean} isSyncCapable
+ * @property {(platform: string, action: string, options?: Record<string, unknown>) => Promise<unknown>} scrape
+ */
+
+/** @type {null | { create(data: any): Promise<Record<string, unknown>>, update(id: string, data: Record<string, unknown>): Promise<unknown>, updateIfProcessing?(id: string, data: Record<string, unknown>): Promise<unknown> }} */
 let _operationStore = null;
 
 /** @param {number} ms */
@@ -122,7 +137,7 @@ export function _setEnqueueImpl(fn) {
   _enqueueImpl = typeof fn === 'function' ? fn : null;
 }
 
-/** @param {{ create(data: Record<string, unknown>): Promise<Record<string, unknown>>, update(id: string, data: Record<string, unknown>): Promise<unknown> } | null} store */
+/** @param {{ create(data: any): Promise<Record<string, unknown>>, update(id: string, data: Record<string, unknown>): Promise<unknown>, updateIfProcessing?(id: string, data: Record<string, unknown>): Promise<unknown> } | null} store */
 export function _setOperationStore(store) {
   _operationStore = store && typeof store.create === 'function' && typeof store.update === 'function' ? store : null;
 }
@@ -137,8 +152,9 @@ export function _resetDispatch() {
 
 // ── Lazy dependencies (dynamic import = codebase pattern + avoids cycles) ─────
 
+/** @returns {Promise<ScraperRegistry>} */
 async function getRegistry() {
-  return import('../../src/scrapers/index.js');
+  return /** @type {any} */ (import('../../src/scrapers/index.js'));
 }
 
 async function getScrapeFn() {
@@ -154,10 +170,10 @@ async function getEnqueueFn() {
 }
 
 const prismaOperationStore = {
-  /** @param {Record<string, unknown>} data */
+  /** @param {any} data */
   async create(data) {
     const { default: prisma } = await import('../lib/prisma.js');
-    return prisma.operation.create({ data });
+    return /** @type {Promise<Record<string, unknown>>} */ (prisma.operation.create({ data }));
   },
   /**
    * @param {string} id
@@ -187,8 +203,9 @@ async function getStore() {
 
 /**
  * @param {number} status
- * @param {Record<string, unknown>} body
+ * @param {Record<string, any>} body
  * @param {Record<string, string>} [headers]
+ * @returns {OutcomeDescriptor}
  */
 function jsonOutcome(status, body, headers) {
   return { kind: 'json', status, body, ...(headers ? { headers } : {}) };
@@ -199,6 +216,7 @@ function jsonOutcome(status, body, headers) {
  * a validation failure still carries the end-to-end trace id.
  * @param {string} message
  * @param {string} [requestId]
+ * @returns {OutcomeDescriptor}
  */
 function validationOutcome(message, requestId) {
   return jsonOutcome(400, errorBody({
@@ -217,6 +235,7 @@ function validationOutcome(message, requestId) {
  * Retryable: `retryable:true` + `retry_after_ms` + `Retry-After` header (C-10).
  * @param {string} [message]
  * @param {string} [requestId]
+ * @returns {OutcomeDescriptor}
  */
 function unavailableOutcome(message = 'scrape job could not be tracked — try again', requestId) {
   return jsonOutcome(503, errorBody({
@@ -237,8 +256,9 @@ function unavailableOutcome(message = 'scrape job could not be tracked — try a
  * Status from `err.statusCode` (4xx/5xx honoured); retryable field reflects
  * `isRetryableError(err)` — and a retryable error always carries
  * `retry_after_ms` (C-10) plus a `Retry-After` header.
- * @param {unknown} err
+ * @param {any} err
  * @param {string} [requestId]
+ * @returns {OutcomeDescriptor}
  */
 function scrapeErrorOutcome(err, requestId) {
   const status = typeof err?.statusCode === 'number' && err.statusCode >= 400 && err.statusCode < 600
@@ -258,14 +278,14 @@ function scrapeErrorOutcome(err, requestId) {
     retryable,
     retryAfterMs,
   });
-  return jsonOutcome(status, body, retryable ? retryAfterHeaders(body.error.retry_after_ms ?? RETRY_AFTER_DEFAULT_MS) : undefined);
+  return jsonOutcome(status, body, retryable ? retryAfterHeaders(/** @type {number} */ (body.error.retry_after_ms ?? RETRY_AFTER_DEFAULT_MS)) : undefined);
 }
 
 /**
  * Per-entry error object for batch results — full {code,kind,type,message}
  * shape plus `retryable` when derivable (entries are not HTTP responses, so
  * no `status`/`request_id` — the top-level envelope carries those).
- * @param {unknown} err
+ * @param {any} err
  * @param {string} [fallbackCode]
  */
 function entryError(err, fallbackCode = 'XACT_5000') {
@@ -302,6 +322,7 @@ function retryAfterHeaders(retryAfterMs) {
  * @param {string} operationId
  * @param {number} retryAfterMs
  * @param {{ metadata?: Record<string, unknown>, stream?: Record<string, unknown> }} [envelope]
+ * @returns {OutcomeDescriptor}
  */
 function degradedOutcome(reason, operationId, retryAfterMs, envelope = {}) {
   const ms = Number.isFinite(retryAfterMs) && retryAfterMs > 0 ? retryAfterMs : RETRY_AFTER_DEFAULT_MS;
@@ -323,6 +344,7 @@ function degradedOutcome(reason, operationId, retryAfterMs, envelope = {}) {
  * 202 accepted descriptor for caller-requested async — no degraded_reason.
  * @param {string} operationId
  * @param {{ metadata?: Record<string, unknown>, stream?: Record<string, unknown> }} [envelope]
+ * @returns {OutcomeDescriptor}
  */
 function queuedOutcome(operationId, envelope = {}) {
   return jsonOutcome(202, successEnvelope({
@@ -548,7 +570,7 @@ export function classifyDegrade(err) {
  * @param {unknown} bodyPlatform
  * @param {Record<string, Record<string, any>>} descriptors
  * @param {Record<string, string>} [platformAliases]
- * @returns {{ batch: false, platform: string } | { batch: true, targets: { raw: unknown, canonical: string | null }[] } | { error: Record<string, unknown> }}
+ * @returns {{ batch: false, platform: string } | { batch: true, targets: { raw: unknown, canonical: string | null }[] } | { error: OutcomeDescriptor }}
  */
 function resolveTargets(pathPlatform, bodyPlatform, descriptors, platformAliases = {}) {
   const raw = bodyPlatform === undefined ? pathPlatform : bodyPlatform;
@@ -738,8 +760,8 @@ export async function enqueueScrapeJob({ platform, action, options, userId, cons
  * the operationId arrives; settles after row-bind write immediately.
  *
  * @param {Promise<unknown>} scrapeP in-flight scrape promise
- * @param {{ create(data: Record<string, unknown>): Promise<Record<string, unknown>>, update(id: string, data: Record<string, unknown>): Promise<unknown>, updateIfProcessing?(id: string, data: Record<string, unknown>): Promise<unknown> }} store
- * @returns {{ settled: { ok: true, result: unknown } | { ok: false, error: unknown } | null, bindOperation(id: string, baseConfig?: string): Promise<void> }}
+ * @param {{ create(data: any): Promise<Record<string, unknown>>, update(id: string, data: Record<string, unknown>): Promise<unknown>, updateIfProcessing?(id: string, data: Record<string, unknown>): Promise<unknown> }} store
+ * @returns {{ settled: { ok: true, result: unknown } | { ok: false, error: unknown } | null, bindOperation(id: string, baseConfig?: string | null): Promise<void> }}
  */
 export function trackDetachedOperation(scrapeP, store) {
   /** @type {string | null} */
@@ -813,7 +835,7 @@ export function trackDetachedOperation(scrapeP, store) {
     get settled() { return settled; },
     /**
      * @param {string} id
-     * @param {string} [baseConfigJson] config JSON written at create — used for lastError merge
+     * @param {string | null} [baseConfigJson] config JSON written at create — used for lastError merge
      */
     async bindOperation(id, baseConfigJson) {
       operationId = id;
@@ -948,7 +970,8 @@ export async function runSyncWithCeiling({ run, platform, action, options, userI
 // ── Single-platform dispatch ──────────────────────────────────────────────────
 
 /**
- * @param {{ platform: string, action: string, options: Record<string, unknown>, requestedMode?: string, userId: string | null, consumerId: string | null, apiKeyRequired: boolean, callbackUrl?: string, accountIds?: string[], consumerCtx: Record<string, unknown>, dryRun: boolean, registry: Record<string, any>, requestId?: string, traceparent?: string }} args
+ * @param {{ platform: string, action: string, options: Record<string, unknown>, requestedMode?: string, userId: string | null, consumerId: string | null, apiKeyRequired: boolean, callbackUrl?: string, accountIds?: string[], consumerCtx: import('../../src/mcp/consumer-context.js').ConsumerContext, dryRun: boolean, registry: ScraperRegistry, requestId?: string, traceparent?: string }} args
+ * @returns {Promise<OutcomeDescriptor>}
  */
 async function dispatchSingle({ platform, action, options, requestedMode, userId, consumerId, apiKeyRequired, callbackUrl, accountIds, consumerCtx, dryRun, registry, requestId, traceparent }) {
   const startedAt = Date.now();
@@ -1087,7 +1110,7 @@ async function dispatchSingle({ platform, action, options, requestedMode, userId
 /**
  * Per-platform batch task — never throws (Promise.allSettled semantics).
  * @param {{ raw: unknown, canonical: string | null }} target
- * @param {{ action: string, options: Record<string, unknown>, requestedMode?: string, userId: string | null, consumerId: string | null, apiKeyRequired: boolean, callbackUrl?: string, accountIds?: string[], consumerCtx: Record<string, unknown>, registry: Record<string, any> }} shared
+ * @param {{ action: string, options: Record<string, unknown>, requestedMode?: string, userId: string | null, consumerId: string | null, apiKeyRequired: boolean, callbackUrl?: string, accountIds?: string[], consumerCtx: import('../../src/mcp/consumer-context.js').ConsumerContext, registry: ScraperRegistry, requestId?: string }} shared
  */
 async function dispatchEntry(target, shared) {
   const { action, options, requestedMode, userId, consumerId, apiKeyRequired, callbackUrl, accountIds, consumerCtx, registry, requestId } = shared;
@@ -1226,7 +1249,7 @@ async function dispatchEntry(target, shared) {
  * correlate the call, and `traceparent` lands in `metadata` when present.
  *
  * @param {{ pathPlatform: string, body: Record<string, unknown>, action: string, userId: string | null, accountIds?: string[], consumer?: Record<string, unknown> | null, requestId?: string, traceparent?: string }} args
- * @returns {Promise<{ kind: 'json', status: number, body: Record<string, unknown>, headers?: Record<string, string> }>}
+ * @returns {Promise<OutcomeDescriptor>}
  */
 export async function dispatch({ pathPlatform, body = {}, action, userId, accountIds, consumer, requestId, traceparent }) {
   const dispatchStartedAt = Date.now();
@@ -1262,7 +1285,7 @@ export async function dispatch({ pathPlatform, body = {}, action, userId, accoun
   // (array / 'all') are envelope-only.
   if (!resolved.batch) {
     const nestedOpts = body.options && typeof body.options === 'object' && !Array.isArray(body.options)
-      ? body.options
+      ? /** @type {Record<string, unknown>} */ (body.options)
       : {};
     for (const candidate of [body.platform, nestedOpts.platform]) {
       if (typeof candidate !== 'string') continue;
@@ -1275,9 +1298,10 @@ export async function dispatch({ pathPlatform, body = {}, action, userId, accoun
     }
   }
   const dryRun = Boolean(body.dryRun);
+  /** @type {import('../../src/mcp/consumer-context.js').ConsumerContext} */
   const consumerCtx = consumer && typeof consumer === 'object'
     ? {
-        consumerId: typeof consumer.consumerId === 'string' ? consumer.consumerId : 'internal',
+        consumerId: /** @type {'nowing' | 'chainlens' | 'internal'} */ (typeof consumer.consumerId === 'string' ? consumer.consumerId : 'internal'),
         apiKeyValid: consumer.apiKeyValid !== false,
         apiKeyRequired: consumer.source === 'serviceAuth',
       }
