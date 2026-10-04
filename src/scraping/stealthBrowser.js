@@ -189,8 +189,17 @@ export async function launchStealthBrowser(options = {}) {
           telemetryContext,
         });
     const lease = await pool.acquire();
-    if (telemetryContext && typeof telemetryContext.setBrowserBackend === 'function') {
-      telemetryContext.setBrowserBackend(lease.backend);
+    if (telemetryContext) {
+      if (typeof telemetryContext.setPoolTelemetry === 'function') {
+        telemetryContext.setPoolTelemetry({
+          pooled: true,
+          poolBackend: lease.backend,
+          poolWaitMs: lease.waitMs,
+        });
+      }
+      if (typeof telemetryContext.setBrowserBackend === 'function') {
+        telemetryContext.setBrowserBackend(lease.backend);
+      }
     }
     return _pooledHandle(pool, lease, { fingerprint: fp });
   }

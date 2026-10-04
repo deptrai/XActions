@@ -76,6 +76,7 @@
     "verify:jev": "node scripts/jev-verify/verify.mjs",
     "verify:jev:mock": "node scripts/jev-verify/verify.mjs --mock",
     "verify:x402": "node scripts/verify-x402.js",
+    "verify:browser-pool": "node scripts/browser-pool-spike.mjs --gate",
     "test:payment": "node scripts/test-x402-payment.js",
     "mutation": "stryker run",
     "mutation:unfollowback": "stryker run stryker.unfollowback.config.js",

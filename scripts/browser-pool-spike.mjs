@@ -40,9 +40,10 @@ const OUT_DIR = path.join(__dirname, 'browser-pool-spike-results');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ─── Config ──────────────────────────────────────────────────────────────────
+export const IS_GATE = process.argv.includes('--gate') || process.env.VERIFY_GATE === '1';
 const BACKEND   = process.env.BACKEND || 'chrome';
-const MODE      = process.env.MODE || 'all';            // launch-per-job | pool-shared-context | pool-isolated-context | all
-const JOBS      = Number(process.env.JOBS || 8);        // total jobs to run
+const MODE      = process.env.MODE || (IS_GATE ? 'pool-isolated-context' : 'all');            // launch-per-job | pool-shared-context | pool-isolated-context | all
+const JOBS      = Number(process.env.JOBS || (IS_GATE ? 4 : 8));        // total jobs to run
 const POOL_SIZE = Number(process.env.POOL_SIZE || 4);   // max concurrent pages in pool modes
 const PROXY     = process.env.PROXY_SERVER || undefined;
 
@@ -199,38 +200,101 @@ async function scenario(backend, mode) {
   return out;
 }
 
-// ─── Drive ────────────────────────────────────────────────────────────────────
-fs.mkdirSync(OUT_DIR, { recursive: true });
-const backends = BACKEND === 'both' ? ['chrome', 'obscura'] : [BACKEND];
-const modes = MODE === 'all'
-  ? ['launch-per-job', 'pool-shared-context', 'pool-isolated-context']
-  : [MODE];
+/**
+ * Evaluate whether the test runs satisfy the release verify gate criteria.
+ * Criteria (AD-24, Story 53.6):
+ * 1. No fatal crashes in any run.
+ * 2. In isolated context mode, zero state leak across contexts (isolatedContextLeak === false).
+ * 3. 100% of jobs succeed (failed === 0).
+ *
+ * @param {Array<Record<string, any>>} runs
+ * @returns {{ pass: boolean, reasons: string[] }}
+ */
+export function evaluateGateConditions(runs) {
+  const reasons = [];
+  if (!Array.isArray(runs) || runs.length === 0) {
+    return { pass: false, reasons: ['No runs were executed'] };
+  }
 
-const allRuns = [];
-for (const backend of backends) {
-  for (const mode of modes) {
-    // Skip obscura isolated-context if createBrowserContext unsupported — record, don't crash.
-    try {
-      console.log(`\n▶ backend=${backend} mode=${mode} jobs=${JOBS} pool=${POOL_SIZE}`);
-      const r = await scenario(backend, mode);
-      allRuns.push(r);
-      console.log(`   ✅ ${r.metrics.succeeded}/${r.jobs} ok | wall ${r.metrics.wallMs}ms | ΔRSS ${r.metrics.memDeltaMB}MB | nav p95 ${r.metrics.navMs?.p95 ?? '-'}ms | pageAcq p50 ${r.metrics.pageAcquireMs?.p50 ?? '-'}ms`);
-      if (r.isolation) console.log(`   isolation: sharedLeak=${r.isolation.sharedContextLeak} isolatedLeak=${r.isolation.isolatedContextLeak}`);
-    } catch (err) {
-      allRuns.push({ backend, mode, fatal: err.message });
-      console.log(`   ❌ FATAL ${err.message}`);
+  for (const r of runs) {
+    const id = `${r.backend}/${r.mode}`;
+    if (r.fatal) {
+      reasons.push(`${id} encountered fatal error: ${r.fatal}`);
+      continue;
+    }
+
+    if (r.isolation && r.isolation.isolatedContextLeak === true) {
+      reasons.push(`${id} failed isolation probe: isolatedContextLeak is true (cross-context state leak detected)`);
+    }
+
+    if (r.metrics && Number(r.metrics.failed) > 0) {
+      reasons.push(`${id} had ${r.metrics.failed} failed jobs out of ${r.jobs}`);
+    }
+  }
+
+  return { pass: reasons.length === 0, reasons };
+}
+
+// ─── Drive ────────────────────────────────────────────────────────────────────
+async function main() {
+  fs.mkdirSync(OUT_DIR, { recursive: true });
+  const backends = BACKEND === 'both' ? ['chrome', 'obscura'] : [BACKEND];
+  const modes = MODE === 'all'
+    ? ['launch-per-job', 'pool-shared-context', 'pool-isolated-context']
+    : [MODE];
+
+  const allRuns = [];
+  for (const backend of backends) {
+    for (const mode of modes) {
+      // Skip obscura isolated-context if createBrowserContext unsupported — record, don't crash.
+      try {
+        console.log(`\n▶ backend=${backend} mode=${mode} jobs=${JOBS} pool=${POOL_SIZE}`);
+        const r = await scenario(backend, mode);
+        allRuns.push(r);
+        console.log(`   ✅ ${r.metrics.succeeded}/${r.jobs} ok | wall ${r.metrics.wallMs}ms | ΔRSS ${r.metrics.memDeltaMB}MB | nav p95 ${r.metrics.navMs?.p95 ?? '-'}ms | pageAcq p50 ${r.metrics.pageAcquireMs?.p50 ?? '-'}ms`);
+        if (r.isolation) console.log(`   isolation: sharedLeak=${r.isolation.sharedContextLeak} isolatedLeak=${r.isolation.isolatedContextLeak}`);
+      } catch (err) {
+        allRuns.push({ backend, mode, fatal: err.message });
+        console.log(`   ❌ FATAL ${err.message}`);
+      }
+    }
+  }
+
+  const report = path.join(OUT_DIR, `pool-spike-${Date.now()}.json`);
+  fs.writeFileSync(report, JSON.stringify(allRuns, null, 2));
+  console.log(`\nReport → ${report}`);
+
+  // ─── Verdict summary (printed for quick read) ─────────────────────────────────
+  console.log('\n═══ Pool spike verdict ═══');
+  for (const r of allRuns) {
+    if (r.fatal) { console.log(`  ${r.backend}/${r.mode}: FATAL ${r.fatal}`); continue; }
+    const leak = r.isolation ? ` sharedLeak=${r.isolation.sharedContextLeak} isoLeak=${r.isolation.isolatedContextLeak}` : '';
+    console.log(`  ${r.backend}/${r.mode.padEnd(22)} ok=${r.metrics.succeeded}/${r.jobs} ΔRSS=${r.metrics.memDeltaMB}MB navP95=${r.metrics.navMs?.p95 ?? '-'}ms${leak}`);
+  }
+
+  if (IS_GATE) {
+    const gate = evaluateGateConditions(allRuns);
+    if (gate.pass) {
+      console.log('\n🎉 [VERIFY GATE PASS] All BrowserPool release criteria met.');
+      process.exit(0);
+    } else {
+      console.error('\n❌ [VERIFY GATE FAIL] BrowserPool release criteria failed:');
+      for (const reason of gate.reasons) {
+        console.error(`   - ${reason}`);
+      }
+      process.exit(1);
     }
   }
 }
 
-const report = path.join(OUT_DIR, `pool-spike-${Date.now()}.json`);
-fs.writeFileSync(report, JSON.stringify(allRuns, null, 2));
-console.log(`\nReport → ${report}`);
+const isDirectExecution = process.argv[1] && (
+  process.argv[1].endsWith('browser-pool-spike.mjs') ||
+  process.argv[1].includes('browser-pool-spike')
+);
 
-// ─── Verdict summary (printed for quick read) ─────────────────────────────────
-console.log('\n═══ Pool spike verdict ═══');
-for (const r of allRuns) {
-  if (r.fatal) { console.log(`  ${r.backend}/${r.mode}: FATAL ${r.fatal}`); continue; }
-  const leak = r.isolation ? ` sharedLeak=${r.isolation.sharedContextLeak} isoLeak=${r.isolation.isolatedContextLeak}` : '';
-  console.log(`  ${r.backend}/${r.mode.padEnd(22)} ok=${r.metrics.succeeded}/${r.jobs} ΔRSS=${r.metrics.memDeltaMB}MB navP95=${r.metrics.navMs?.p95 ?? '-'}ms${leak}`);
+if (isDirectExecution) {
+  main().catch((err) => {
+    console.error('Fatal error in browser-pool-spike:', err);
+    process.exit(1);
+  });
 }

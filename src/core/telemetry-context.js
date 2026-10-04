@@ -43,6 +43,9 @@ export class TelemetryContext {
    * @param {'production' | 'canary'} [params.source]
    * @param {number} [params.startedAt]
    * @param {string | null} [params.browserBackend]
+   * @param {boolean} [params.pooled]
+   * @param {string | null} [params.poolBackend]
+   * @param {number | null} [params.poolWaitMs]
    */
   constructor({
     runId = randomUUID(),
@@ -53,6 +56,9 @@ export class TelemetryContext {
     source = 'production',
     startedAt = Date.now(),
     browserBackend = null,
+    pooled,
+    poolBackend = null,
+    poolWaitMs = null,
   }) {
     this.runId = runId;
     this.scraperId = scraperId;
@@ -62,6 +68,9 @@ export class TelemetryContext {
     this.source = source;
     this.startedAt = startedAt;
     this.browserBackend = browserBackend;
+    this.pooled = pooled !== undefined ? Boolean(pooled) : undefined;
+    this.poolBackend = poolBackend;
+    this.poolWaitMs = poolWaitMs !== undefined && poolWaitMs !== null ? Math.max(0, Number(poolWaitMs)) : null;
 
     /** @type {TransportRequestRecord[]} */
     this.requests = [];
@@ -104,6 +113,26 @@ export class TelemetryContext {
    */
   setBrowserBackend(backend) {
     this.browserBackend = backend;
+  }
+
+  /**
+   * Set or update pool telemetry dimensions (Story 53.6).
+   * @param {object} [poolData]
+   * @param {boolean} [poolData.pooled]
+   * @param {string} [poolData.poolBackend]
+   * @param {number} [poolData.poolWaitMs]
+   */
+  setPoolTelemetry({ pooled = true, poolBackend, poolWaitMs } = {}) {
+    this.pooled = Boolean(pooled);
+    if (poolBackend !== undefined) {
+      this.poolBackend = poolBackend;
+      if (!this.browserBackend) {
+        this.browserBackend = poolBackend;
+      }
+    }
+    if (poolWaitMs !== undefined && poolWaitMs !== null) {
+      this.poolWaitMs = Math.max(0, Number(poolWaitMs));
+    }
   }
 
   /** @param {Partial<TransportRequestRecord>} [req] */
@@ -170,6 +199,9 @@ export class TelemetryContext {
    * @param {number} [runDetails.itemCount]
    * @param {string | null} [runDetails.errorName]
    * @param {string} [runDetails.browserBackend]
+   * @param {boolean} [runDetails.pooled]
+   * @param {string} [runDetails.poolBackend]
+   * @param {number} [runDetails.poolWaitMs]
    * @returns {Record<string, unknown>}
    */
   toRunPayload(runDetails = {}) {
@@ -198,6 +230,18 @@ export class TelemetryContext {
       const backend = runDetails.browserBackend || this.browserBackend;
       if (backend) {
         payload.browserBackend = backend;
+      }
+      const isPooled = runDetails.pooled !== undefined ? Boolean(runDetails.pooled) : this.pooled;
+      if (isPooled !== undefined && isPooled !== null) {
+        payload.pooled = Boolean(isPooled);
+      }
+      const pBackend = runDetails.poolBackend || this.poolBackend;
+      if (pBackend) {
+        payload.poolBackend = pBackend;
+      }
+      const waitMs = runDetails.poolWaitMs !== undefined ? runDetails.poolWaitMs : this.poolWaitMs;
+      if (waitMs !== undefined && waitMs !== null) {
+        payload.poolWaitMs = Math.max(0, Number(waitMs));
       }
     }
 

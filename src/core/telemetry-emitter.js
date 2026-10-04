@@ -193,6 +193,9 @@ export class TelemetryEmitter {
     const finalPayload = /** @type {Record<string, unknown>} */ ({ ...payload, type: 'telemetry:run' });
     if (process.env.XACTIONS_BROWSER_BACKEND_METRICS !== '1') {
       delete finalPayload.browserBackend;
+      delete finalPayload.pooled;
+      delete finalPayload.poolBackend;
+      delete finalPayload.poolWaitMs;
     }
     return this.emit(finalPayload);
   }

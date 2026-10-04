@@ -90,8 +90,17 @@ export class PuppeteerAdapter extends BaseAdapter {
             telemetryContext: options.telemetryContext,
           });
       const lease = await pool.acquire();
-      if (options.telemetryContext && typeof options.telemetryContext.setBrowserBackend === 'function') {
-        options.telemetryContext.setBrowserBackend(lease.backend);
+      if (options.telemetryContext) {
+        if (typeof options.telemetryContext.setPoolTelemetry === 'function') {
+          options.telemetryContext.setPoolTelemetry({
+            pooled: true,
+            poolBackend: lease.backend,
+            poolWaitMs: lease.waitMs,
+          });
+        }
+        if (typeof options.telemetryContext.setBrowserBackend === 'function') {
+          options.telemetryContext.setBrowserBackend(lease.backend);
+        }
       }
       return {
         _native: lease.context,
