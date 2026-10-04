@@ -65,8 +65,8 @@ export class GitHubCrawler extends AbstractCrawler {
    * Normalize a raw GitHub `/users/{u}` object into the field names the OSINT
    * `normalizeToProfileItems` mapper reads (username/name/avatar/profileUrl/
    * followers). GitHub uses `login`, `avatar_url`, `html_url`, `followers`.
-   * @param {Record<string, any>} u
-   * @returns {Record<string, any>}
+   * @param {Record<string, any> | null} u
+   * @returns {Record<string, any> | null}
    */
   #toProfile(u) {
     if (!u || typeof u !== 'object') return null;
@@ -97,7 +97,7 @@ export class GitHubCrawler extends AbstractCrawler {
    * @returns {Promise<{ profile: Record<string, any> | null }>}
    */
   async getProfile(args = {}) {
-    const username = args.username || args.handle || args.target;
+    const username = /** @type {string} */ (args.username || args.handle || args.target);
     const raw = await this.client.getUser(username);
     return { profile: this.#toProfile(raw) };
   }

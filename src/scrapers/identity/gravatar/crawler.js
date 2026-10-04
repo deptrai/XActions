@@ -66,7 +66,7 @@ export class GravatarCrawler extends AbstractCrawler {
    * `normalizeToProfileItems` mapper reads. Gravatar v3 returns
    * `display_name`, `avatar_url`, `profile_url`, `hash`, `location`,
    * `description`, `accounts[]` (verified linked accounts).
-   * @param {Record<string, any>} p
+   * @param {Record<string, any> | null} p
    * @returns {Record<string, any> | null}
    */
   #toProfile(p) {
@@ -97,7 +97,7 @@ export class GravatarCrawler extends AbstractCrawler {
    * @returns {Promise<{ profile: Record<string, any> | null }>}
    */
   async getProfile(args = {}) {
-    const email = args.email || args.query;
+    const email = /** @type {string} */ (args.email || args.query);
     const raw = await this.client.getProfileByEmail(email);
     return { profile: this.#toProfile(raw) };
   }

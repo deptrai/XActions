@@ -69,7 +69,7 @@ export class LivestreamApiClient {
       }
       if (res.status === 401) {
         throw new PlatformError({
-          type: ErrorTypes.AUTH_REQUIRED,
+          type: /** @type {any} */ (ErrorTypes).AUTH_REQUIRED,
           code: 'XACT_4010',
           message: `pump.fun API returned 401 Unauthorized for ${url}. Session may be invalid or expired.`,
           statusCode: 401,
@@ -90,7 +90,7 @@ export class LivestreamApiClient {
     } catch (err) {
       if (err instanceof PlatformError || err instanceof AuthSessionExpiredError) throw err;
       throw new PlatformError({
-        type: ErrorTypes.NETWORK,
+        type: /** @type {any} */ (ErrorTypes).NETWORK,
         code: 'XACT_5001',
         message: `pump.fun API network error on ${url}: ${err.message}`,
         statusCode: 0,

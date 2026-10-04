@@ -16,7 +16,9 @@ import { UniversalMediaPipeline, extractMedia } from './social/media-pipeline.js
  * @param {Object} [options={}] - Extraction options
  * @param {string} [options.platform] - Explicit platform name
  * @param {'highest' | 'lowest' | 'all'} [options.quality='highest'] - Quality preference
- * @returns {Promise<{ success: boolean, media: Array<any>, bestUrl: string | null }>}
+ * @param {any} [options.post] - Raw post object
+ * @param {any} [options.rawData] - Raw post data
+ * @returns {Promise<{ success: boolean, media: Array<any>, bestUrl: string | null, error?: string }>}
  */
 export async function downloadMedia(postUrl, options = {}) {
   if (!postUrl || typeof postUrl !== 'string') {

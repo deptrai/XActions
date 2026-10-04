@@ -13,8 +13,8 @@ const DEFAULT_INTERVAL_MS = 30 * 1000;
 
 export class LivestreamPoller {
   /**
-   * @param {Object} deps
-   * @param {import('./client.js').PumpFunClient} deps.client
+   * @param {Object} [deps]
+   * @param {import('./client.js').PumpFunClient} [deps.client]
    * @param {number} [deps.intervalMs]
    * @param {boolean} [deps.autoStart]
    */
@@ -90,6 +90,12 @@ export class LivestreamPoller {
   }
 }
 
+/**
+ * @param {Object} [deps]
+ * @param {import('./client.js').PumpFunClient} [deps.client]
+ * @param {number} [deps.intervalMs]
+ * @param {boolean} [deps.autoStart]
+ */
 export function createLivestreamPoller(deps = {}) {
   return new LivestreamPoller(deps);
 }

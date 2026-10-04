@@ -87,6 +87,7 @@ export function registerGovernorCommands(program) {
         const reason = options.reason || 'emergency_panic_stop';
         const baseUrl = resolveBaseUrl(options.url);
 
+        /** @type {any} */
         let result;
 
         try {
@@ -141,6 +142,7 @@ export function registerGovernorCommands(program) {
         const platform = platformArg || options.platform || 'all';
         const baseUrl = resolveBaseUrl(options.url);
 
+        /** @type {any} */
         let result;
 
         try {
@@ -213,7 +215,9 @@ export function registerGovernorCommands(program) {
         }
 
         if (toUpdate.length > 0) {
+          /** @type {any[]} */
           let updated = [];
+          /** @type {Record<string, any>} */
           let consumerQuotas = {};
 
           try {
@@ -223,8 +227,9 @@ export function registerGovernorCommands(program) {
               body: JSON.stringify({ priorities: toUpdate }),
             });
             if (remote.ok && remote.body) {
-              updated = remote.body.updated || [];
-              consumerQuotas = remote.body.consumerQuotas || {};
+              const body = /** @type {any} */ (remote.body);
+              updated = body.updated || [];
+              consumerQuotas = body.consumerQuotas || {};
             }
           } catch {
             // Fallback in-process
@@ -253,12 +258,14 @@ export function registerGovernorCommands(program) {
         }
 
         // View current priorities & quotas
+        /** @type {any} */
         let consumerQuotas;
 
         try {
           const remote = await fetchAdminJson(`${baseUrl}/api/governor/status`, { token: options.token });
-          if (remote.ok && remote.body?.status?.consumerQuotas) {
-            consumerQuotas = remote.body.status.consumerQuotas;
+          const body = /** @type {any} */ (remote.body);
+          if (remote.ok && body?.status?.consumerQuotas) {
+            consumerQuotas = body.status.consumerQuotas;
           }
         } catch {
           // Fallback

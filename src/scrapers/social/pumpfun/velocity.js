@@ -47,7 +47,7 @@ export function computeCommentVelocity(replies, nowMs = Date.now()) {
   const list = Array.isArray(replies) ? replies : [];
   const timestamps = list
     .map(replyTimestamp)
-    .filter((t) => typeof t === 'number' && Number.isFinite(t))
+    .filter(/** @type {(t: number | null) => t is number} */ ((t) => typeof t === 'number' && Number.isFinite(t)))
     .sort((a, b) => b - a); // newest first
 
   const sampleSize = timestamps.length;

@@ -49,7 +49,7 @@ function normalizeIcon(icon) {
 /**
  * Split a `links[]` entry into social vs website buckets. Dexscreener tags
  * entries with `type` ('twitter'|'telegram'|...) or `label` (freeform website).
- * @param {unknown[]} links
+ * @param {unknown} [links]
  * @returns {{ socials: {type: string, url: string}[], websites: {label?: string, url: string}[] }}
  */
 function splitLinks(links) {

@@ -138,7 +138,7 @@ export class DexscreenerClient extends AbstractApiClient {
 
   /**
    * Distributed token-bucket gate — per-egress-IP upstream budget.
-   * @param {Record<string, unknown>} [options]
+   * @param {{ proxy?: any, [key: string]: unknown }} [options]
    */
   async #consumeRateToken(options = {}) {
     if (!this.#tokenBucket || typeof this.#tokenBucket.consume !== 'function') return;
@@ -172,6 +172,7 @@ export class DexscreenerClient extends AbstractApiClient {
    */
   async #apiGet(url, options = {}) {
     await this.#consumeRateToken(options);
+    /** @type {any} */
     const response = await this.request('GET', url, { skipResponseValidation: true, ...options });
     const status = response?.status ?? 0;
 
@@ -247,7 +248,7 @@ export class DexscreenerClient extends AbstractApiClient {
    * @param {string} chainId
    * @param {string} tokenAddress
    * @param {Record<string, unknown>} [options]
-   * @returns {Promise<Record<string, unknown>[]>}
+   * @returns {Promise<{ orders: unknown[], boosts: unknown[] }>}
    */
   async getTokenOrders(chainId, tokenAddress, options = {}) {
     const chain = this.assertValidChainId(chainId);
