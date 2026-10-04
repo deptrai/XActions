@@ -190,6 +190,7 @@ export class TikTokBrowserBridge {
    * @param {ProxyResolverLike | null} [options.proxyPool]
    * @param {ProxyResolverLike | null} [options.proxyProvider]
    * @param {boolean} [options.requiresResidential=false]
+   * @param {((info: {accountId: string | null, hibernationMs: number, url: string, via: string | null, type: string, confidence: number}) => void) | null} [options.onBotChallenge]
    */
   constructor(options = {}) {
     this.baseUrl = options.baseUrl ? options.baseUrl.replace(/\/+$/, '') : 'https://www.tiktok.com';

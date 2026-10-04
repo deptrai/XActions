@@ -100,9 +100,10 @@ export class PumpFunLivechat {
 
     this._ready = new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('livechat connect timeout')), this.timeoutMs);
-      this._ws.on('message', (d) => this.#onMessage(d, resolve, timer));
-      this._ws.on('error', (e) => { clearTimeout(timer); reject(e); });
-      this._ws.on('close', () => {
+      const ws = /** @type {WebSocket} */ (this._ws);
+      ws.on('message', (d) => this.#onMessage(d, resolve, timer));
+      ws.on('error', (e) => { clearTimeout(timer); reject(e); });
+      ws.on('close', () => {
         // Reject all pending acks so callers never hang.
         for (const [, p] of this._pendingAcks) { clearTimeout(p.timer); p.resolve(null); }
         this._pendingAcks.clear();
@@ -171,7 +172,7 @@ export class PumpFunLivechat {
    * @returns {Promise<{ messageCount: number, durationMs: number }>}
    */
   async subscribeRoom(mint, options = {}) {
-    const durationMs = Math.max(1000, Math.min(Number.isFinite(options.durationMs) ? options.durationMs : 30_000, 300_000));
+    const durationMs = Math.max(1000, Math.min(Number.isFinite(options.durationMs) ? Number(options.durationMs) : 30_000, 300_000));
     let messageCount = 0;
     let stopped = false;
 
@@ -222,10 +223,12 @@ export class PumpFunLivechat {
    * @param {object} [opts]
    * @param {string} [opts.username]
    * @param {string} [opts.replyToId]
+   * @param {string} [opts.token]
    * @returns {Promise<object|null>} ack payload
    */
   async sendMessage(mint, text, opts = {}) {
     await this.connect();
+    /** @type {{ roomId: string, message: string, username?: string, replyToId?: string, token?: string }} */
     const payload = { roomId: mint, message: text };
     if (opts.username) payload.username = opts.username;
     if (opts.replyToId) payload.replyToId = opts.replyToId;
@@ -258,7 +261,7 @@ export class PumpFunLivechat {
         resolve(null);
       }, this.timeoutMs);
       this._pendingAcks.set(id, { resolve, timer });
-      try { this._ws.send(packet); } catch { clearTimeout(timer); this._pendingAcks.delete(id); resolve(null); }
+      try { /** @type {WebSocket} */ (this._ws).send(packet); } catch { clearTimeout(timer); this._pendingAcks.delete(id); resolve(null); }
     });
   }
 
@@ -276,13 +279,13 @@ export class PumpFunLivechat {
           token: this._authToken,
           deviceId: this._deviceId || `device-${Math.random().toString(36).slice(2)}`,
         };
-        this._ws.send(SIO_CONNECT + JSON.stringify(authPayload));
+        /** @type {WebSocket} */ (this._ws).send(SIO_CONNECT + JSON.stringify(authPayload));
       } else {
-        this._ws.send(SIO_CONNECT);
+        /** @type {WebSocket} */ (this._ws).send(SIO_CONNECT);
       }
       return;
     }
-    if (msg === EIO_PING) { this._ws.send(EIO_PONG); return; }
+    if (msg === EIO_PING) { /** @type {WebSocket} */ (this._ws).send(EIO_PONG); return; }
     if (msg.startsWith(SIO_CONNECT)) {
       clearTimeout(connectTimer);
       resolveConnect();

@@ -45,8 +45,12 @@ export const DEFAULT_WRITE_PLATFORMS = [
 ];
 
 /**
+ * @typedef {import('./content-transformer.js').TransformedPost & { mediaIds?: any[] }} DispatcherTransformedPost
+ */
+
+/**
  * Resolve target platforms array from input.
- * @param {string | string[]} platform
+ * @param {string | string[] | undefined} [platform]
  * @returns {string[]}
  */
 export function resolveTargetPlatforms(platform) {
@@ -183,7 +187,8 @@ export class UniversalActionDispatcher {
         const isPostAction = action === 'post' || action === 'publish';
 
         if (isPostAction && autoThread) {
-          const transformedPosts = ContentTransformer.transform(executionArgs, platform);
+          /** @type {DispatcherTransformedPost[]} */
+          const transformedPosts = ContentTransformer.transform(/** @type {any} */ (executionArgs), platform);
 
           if (transformedPosts.length > 1) {
             // Execute multi-part thread
@@ -191,12 +196,14 @@ export class UniversalActionDispatcher {
 
             // 1. Post Part 1
             const firstPost = transformedPosts[0];
-            const firstRes = await scrape(platform, 'post', {
+            const rawFirstRes = await scrape(platform, 'post', {
               ...executionArgs,
               text: firstPost.text,
               media: firstPost.media,
               mediaIds: firstPost.mediaIds,
             });
+            /** @type {Record<string, any>} */
+            const firstRes = rawFirstRes;
             threadResults.push(firstRes);
 
             // Extract reply tracking IDs per platform
@@ -235,7 +242,9 @@ export class UniversalActionDispatcher {
                 replyArgs.postId = prevThreadsId;
               }
 
-              const replyRes = await scrape(platform, 'reply', replyArgs);
+              const rawReplyRes = await scrape(platform, 'reply', replyArgs);
+              /** @type {Record<string, any>} */
+              const replyRes = rawReplyRes;
               threadResults.push(replyRes);
 
               // Update tracking ID for the next tweet in thread

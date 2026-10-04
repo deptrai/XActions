@@ -9,7 +9,15 @@ import { globalProxyPool } from '../proxy/proxy-pool.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from './error-envelope.js';
 import { globalDistributedTokenBucket } from './distributed-token-bucket.js';
 
-/** @typedef {import('./types.js').GovernorStatus} GovernorStatus */
+/** @typedef {import('./types.js').GovernorStatus & { panicStoppedPlatforms: string[] }} GovernorStatus */
+
+/**
+ * @typedef {Object} RedisClientLike
+ * @property {(pattern: string) => Promise<string[]>} [keys]
+ * @property {(key: string, value: string, mode?: string, duration?: number) => any} [set]
+ * @property {(key: string) => Promise<string | null>} [get]
+ * @property {(key: string) => any} [del]
+ */
 
 export class PlatformRateLimit {
   /** @type {string} */
@@ -90,9 +98,11 @@ export class AdaptiveRateGovernor {
   #panicStoppedPlatforms = new Set();
 
   /** Distributed token bucket for multi-process synchronized limits (Story 32.2). */
+  /** @type {import('./distributed-token-bucket.js').DistributedTokenBucket | null} */
   #distributedBucket = null;
 
   /** Redis client for distributed state synchronization (Story 32.2). */
+  /** @type {RedisClientLike | null} */
   #redis = null;
 
   /**
@@ -759,7 +769,7 @@ export class AdaptiveRateGovernor {
    * @param {Object} [options={}]
    * @param {number} [options.durationMs=3600000] - Default 1 hour
    * @param {string} [options.reason='emergency_panic_stop']
-   * @returns {{ success: boolean, platform: string, hibernatedCount: number }}
+   * @returns {{ success: boolean, platform: string, hibernatedCount: number, throttleLevel: string }}
    */
   panicStop(platform = 'all', options = {}) {
     const targetPlatform = platform.toLowerCase();

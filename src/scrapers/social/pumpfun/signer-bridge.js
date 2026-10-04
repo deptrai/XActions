@@ -102,7 +102,12 @@ export class PumpFunBrowserBridge {
       },
       updatedAt: Date.now(),
     };
-    globalSessionManager.set(sessionData.accountId, sessionData);
+    globalSessionManager.set(
+      sessionData.accountId,
+      /** @type {import('../../../core/types.js').LoginResult} */ (
+        /** @type {unknown} */ (sessionData)
+      )
+    );
     return sessionData;
   }
 }
