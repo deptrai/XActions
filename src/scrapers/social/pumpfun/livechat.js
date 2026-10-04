@@ -49,7 +49,9 @@ export class PumpFunLivechat {
    * @param {string} [options.url]        livechat ws base
    * @param {number} [options.timeoutMs]  per-operation timeout
    * @param {object} [options.headers]    extra ws headers (Origin spoof is default)
-   * @param {WebSocket} [options.webSocketImpl] injectable ws impl for tests
+   * @param {any} [options.webSocketImpl] injectable ws impl for tests
+   * @param {string | null} [options.authToken] auth_token for authenticated operations
+   * @param {string | null} [options.deviceId] device ID for auth handshake
    */
   constructor(options = {}) {
     this.url = options.url || PUMPFUN_LIVECHAT_WS;
@@ -113,9 +115,10 @@ export class PumpFunLivechat {
    * Join a coin's chat room. Required before getMessageHistory on some rooms.
    * @param {string} mint
    * @param {string} [username]
+   * @param {string} [authToken]
    * @returns {Promise<object|null>} join ack payload (roomConfig, flags)
    */
-  async joinRoom(mint, username, authToken) {
+  async joinRoom(mint, username = undefined, authToken = undefined) {
     await this.connect();
     const payload = { roomId: mint };
     if (username) payload.username = username;

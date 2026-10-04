@@ -50,7 +50,7 @@ export class PumpFunClient extends AbstractApiClient {
   /** @type {boolean} */
   requiresResidential = false;
 
-  /** @type {'undici' | 'got' | 'curl'} */
+  /** @type {'undici' | 'got'} */
   client = 'undici';
 
   /** @type {string} */
@@ -93,7 +93,7 @@ export class PumpFunClient extends AbstractApiClient {
     this.#tokenBucket = options.tokenBucket || globalDistributedTokenBucket;
     this.#reqPerMinute = Number.isFinite(options.reqPerMinute) ? Number(options.reqPerMinute) : 40;
     if (typeof options.transport === 'string' && options.transport) {
-      this.client = options.transport;
+      this.client = /** @type {'undici' | 'got'} */ (options.transport);
     }
     if (options.livechat) this.livechat = options.livechat;
   }

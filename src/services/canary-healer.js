@@ -43,41 +43,64 @@ async function isGhCliAvailable(execFn = execFileAsync) {
   }
 }
 
+/**
+ * @typedef {object} CanaryTarget
+ * @property {string} name
+ * @property {string} url
+ * @property {string[]} selectorChain
+ * @property {import('../../types/core.d.ts').ExpectedShape} expectedShape
+ */
+
+/**
+ * @typedef {object} DraftPrContext
+ * @property {string} platform
+ * @property {string} target
+ * @property {string} url
+ * @property {string[]} oldChain
+ * @property {string[]} newChain
+ * @property {import('../../types/core.d.ts').PatchCandidate[]} validatedCandidates
+ * @property {Record<string, Array<CanaryTarget>>} patchedConfig
+ */
+
+/**
+ * @typedef {object} InvestigationIssueContext
+ * @property {string} platform
+ * @property {string} target
+ * @property {string} url
+ * @property {number} candidateCount
+ * @property {Array<{ selector: string, reason: string }>} rejectionReasons
+ */
+
 export class CanaryHealer {
   /** @type {string} */
   #configPath;
 
-  /** @type {AutoSelectorFallback} */
+  /** @type {import('../../types/core.d.ts').AutoSelectorFallback} */
   #fallback;
 
-  /** @type {SelectorSandbox} */
+  /** @type {import('../../types/core.d.ts').SelectorSandbox} */
   #sandbox;
 
   /** @type {(cmd: string, args: string[]) => Promise<any>} */
   #exec;
 
-  /** @type {typeof console.log} */
+  /** @type {(...args: any[]) => void} */
   #log;
 
   /**
-   * @param {object} [options]
-   * @param {string} [options.configPath]
-   * @param {AutoSelectorFallback} [options.autoSelectorFallback]
-   * @param {SelectorSandbox} [options.selectorSandbox]
-   * @param {(cmd: string, args: string[]) => Promise<any>} [options.execFn] injected for tests
-   * @param {(...args: any[]) => void} [options.log]
+   * @param {import('../../types/core.d.ts').CanaryHealerOptions} [options]
    */
   constructor(options = {}) {
     this.#configPath = options.configPath || DEFAULT_CONFIG_PATH;
     this.#fallback = options.autoSelectorFallback || new AutoSelectorFallback(options.fallbackOptions || {});
-    this.#sandbox = options.selectorSandbox || new SelectorSandbox(options.sandboxOptions || {});
+    this.#sandbox = options.selectorSandbox || /** @type {import('../../types/core.d.ts').SelectorSandbox} */ (new SelectorSandbox(options.sandboxOptions || {}));
     this.#exec = options.execFn || execFileAsync;
     this.#log = options.log || ((...args) => console.log(...args));
   }
 
   /**
    * Load `canary-targets.json` config from disk.
-   * @returns {Record<string, Array<object>>}
+   * @returns {Record<string, Array<CanaryTarget>>}
    */
   #loadConfig() {
     const raw = fs.readFileSync(this.#configPath, 'utf8');
@@ -88,7 +111,7 @@ export class CanaryHealer {
    * Resolve a target entry from the config.
    * @param {string} platform
    * @param {string} targetName
-   * @returns {{ target: object | null, platformTargets: Array<object> | null }}
+   * @returns {{ target: CanaryTarget | null, platformTargets: Array<CanaryTarget> | null }}
    */
   #resolveTarget(platform, targetName) {
     const config = this.#loadConfig();
@@ -102,13 +125,14 @@ export class CanaryHealer {
 
   /**
    * Apply a patched selectorChain into a deep-cloned config object.
-   * @param {object} config
+   * @param {Record<string, Array<CanaryTarget>>} config
    * @param {string} platform
    * @param {string} targetName
    * @param {string[]} newChain
-   * @returns {object} Patched config (new object)
+   * @returns {Record<string, Array<CanaryTarget>>} Patched config (new object)
    */
   #applyPatch(config, platform, targetName, newChain) {
+    /** @type {Record<string, Array<CanaryTarget>>} */
     const next = JSON.parse(JSON.stringify(config));
     const arr = next[platform] || [];
     const idx = arr.findIndex((t) => t && t.name === targetName);
@@ -130,7 +154,7 @@ export class CanaryHealer {
    * Write a `.patch` file alongside instructions for manual application.
    * @param {string} patch
    * @param {string} outputPath
-   * @param {object} meta
+   * @param {{ platform: string, target: string, url: string }} meta
    * @returns {string} Absolute path written
    */
   #writePatchFile(patch, outputPath, meta) {
@@ -156,7 +180,7 @@ export class CanaryHealer {
 
   /**
    * Create a GitHub Draft PR containing the patch.
-   * @param {object} ctx
+   * @param {DraftPrContext} ctx
    * @returns {Promise<string>} PR URL
    */
   async #createDraftPr(ctx) {
@@ -204,7 +228,7 @@ export class CanaryHealer {
 
   /**
    * File a GitHub Issue when no valid replacement selectors are found.
-   * @param {object} ctx
+   * @param {InvestigationIssueContext} ctx
    * @returns {Promise<string>} Issue URL or empty string
    */
   async #createInvestigationIssue(ctx) {
@@ -234,6 +258,8 @@ export class CanaryHealer {
    * @param {boolean} [opts.preview]
    * @param {string} [opts.output]
    * @param {boolean} [opts.createIssue=true]
+   * @param {import('../../types/core.d.ts').AutoSelectorFallbackOptions} [opts.fallbackOpts]
+   * @param {import('../../types/core.d.ts').SelectorSandboxOptions} [opts.sandboxOpts]
    * @returns {Promise<import('../../types/core.d.ts').HealingResult>}
    */
   async heal(platform, targetName, opts = {}) {
@@ -245,6 +271,7 @@ export class CanaryHealer {
       throw new Error(`Unknown platform or target: ${platform}/${targetName}`);
     }
 
+    /** @type {string[]} */
     const oldChain = Array.isArray(target.selectorChain) ? target.selectorChain : [];
     const expectedShape = target.expectedShape || null;
     if (!expectedShape) {
@@ -253,7 +280,9 @@ export class CanaryHealer {
 
     // Step 1 — investigate
     const candidates = await this.#fallback.investigate(platform, target.url, expectedShape, opts.fallbackOpts || {});
+    /** @type {Array<{ selector: string, reason: string }>} */
     const rejectionReasons = [];
+    /** @type {import('../../types/core.d.ts').PatchCandidate[]} */
     const validated = [];
 
     // Step 2 — validate each candidate in sandbox
@@ -262,7 +291,10 @@ export class CanaryHealer {
       if (!sel) continue;
       const res = await this.#sandbox.validate(target.url, sel, expectedShape, opts.sandboxOpts || {});
       if (res.valid) {
-        validated.push({ ...c, extractedSample: res.extractedSample });
+        validated.push({
+          ...c,
+          extractedSample: /** @type {import('../../types/core.d.ts').SelectorSandboxResult['extractedSample']} */ (res.extractedSample),
+        });
       } else {
         rejectionReasons.push({ selector: sel, reason: res.error || 'unknown' });
       }
@@ -292,9 +324,9 @@ export class CanaryHealer {
       }
       return {
         ...baseResult,
-        status: 'no-candidates',
+        status: /** @type {import('../../types/core.d.ts').HealingStatus} */ ('no-candidates'),
         message: 'No valid replacement selectors found',
-        issueUrl,
+        issueUrl: issueUrl || undefined,
       };
     }
 
@@ -307,7 +339,7 @@ export class CanaryHealer {
     if (opts.preview) {
       return {
         ...baseResult,
-        status: 'preview',
+        status: /** @type {import('../../types/core.d.ts').HealingStatus} */ ('preview'),
         newChain,
         patch,
       };
@@ -317,7 +349,7 @@ export class CanaryHealer {
       const filePath = this.#writePatchFile(patch, opts.output, { platform, target: targetName, url: target.url });
       return {
         ...baseResult,
-        status: 'patch-file',
+        status: /** @type {import('../../types/core.d.ts').HealingStatus} */ ('patch-file'),
         newChain,
         patch,
         patchFile: filePath,
@@ -334,7 +366,7 @@ export class CanaryHealer {
       );
       return {
         ...baseResult,
-        status: 'patch-file',
+        status: /** @type {import('../../types/core.d.ts').HealingStatus} */ ('patch-file'),
         message: 'gh CLI not found — wrote patch file',
         newChain,
         patch,
@@ -354,7 +386,7 @@ export class CanaryHealer {
       });
       return {
         ...baseResult,
-        status: 'draft-pr',
+        status: /** @type {import('../../types/core.d.ts').HealingStatus} */ ('draft-pr'),
         newChain,
         patch,
         prUrl,
@@ -368,7 +400,7 @@ export class CanaryHealer {
       );
       return {
         ...baseResult,
-        status: 'patch-file',
+        status: /** @type {import('../../types/core.d.ts').HealingStatus} */ ('patch-file'),
         message: `gh pr create failed (${msg}) — wrote patch file`,
         newChain,
         patch,

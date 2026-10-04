@@ -64,6 +64,18 @@ export class PumpFunCrawler extends AbstractCrawler {
   /** @type {LivestreamPoller | null} */
   livestreamPoller;
 
+  /** @type {PumpFunAuth} */
+  auth;
+
+  /** @type {LivestreamApiClient} */
+  livestreamApi;
+
+  /** @type {PumpFunMedia} */
+  media;
+
+  /** @type {number[]} */
+  _replyTimestamps = [];
+
   /**
    * @param {Object} [deps]
    * @param {PumpFunClient} [deps.client]
@@ -79,6 +91,13 @@ export class PumpFunCrawler extends AbstractCrawler {
    * @param {number} [deps.livestreamIntervalMs]
    * @param {number} [deps.dedupWindowMs]
    * @param {boolean} [deps.requiresAuth]
+   * @param {string} [deps.transport]
+   * @param {any} [deps.redis]
+   * @param {Function} [deps.fetchFn]
+   * @param {PumpFunAuth} [deps.auth]
+   * @param {string} [deps.accountId]
+   * @param {LivestreamApiClient} [deps.livestreamApi]
+   * @param {PumpFunMedia} [deps.media]
    */
   constructor(deps = {}) {
     const { client: explicitClient, ...rest } = deps;
@@ -177,7 +196,8 @@ export class PumpFunCrawler extends AbstractCrawler {
       optionalArgs: [],
       outputType: '{ username, walletAddress, userId, isPumpUser, profileImage, followers, following }',
       example: { username: 'alice' },
-      handler: (args, session) => this.resolveUserWallet(args, session),
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) =>
+        this.resolveUserWallet(args, session),
     });
 
     // ── Action: fetch_platform_feed ──
@@ -190,7 +210,8 @@ export class PumpFunCrawler extends AbstractCrawler {
       optionalArgs: ['feedType', 'limit', 'offset', 'includeNsfw'],
       outputType: 'PumpFunFeedItem[]',
       example: { feedType: 'koth', limit: 20 },
-      handler: (args, session) => this.fetchPlatformFeed(args, session),
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) =>
+        this.fetchPlatformFeed(args, session),
     });
 
     // ── Action: stream_mint_chat ──
@@ -203,7 +224,8 @@ export class PumpFunCrawler extends AbstractCrawler {
       optionalArgs: ['mint', 'durationMs', 'onMessage', 'onReaction'],
       outputType: '{ messageCount, durationMs }',
       example: { mintAddress: '5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump', durationMs: 15000 },
-      handler: (args, session) => this.streamMintChat(args, session),
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) =>
+        this.streamMintChat(args, session),
     });
 
     // ── Action: fetch_my_profile (Auth) ──
@@ -216,7 +238,8 @@ export class PumpFunCrawler extends AbstractCrawler {
       optionalArgs: [],
       outputType: '{ username, walletAddress, userId, isPumpUser, followers, following }',
       example: {},
-      handler: (args, session) => this.fetchMyProfile(args, session),
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) =>
+        this.fetchMyProfile(args, session),
     });
 
     // ── Action: fetch_user_following (Auth) ──
@@ -229,7 +252,8 @@ export class PumpFunCrawler extends AbstractCrawler {
       optionalArgs: [],
       outputType: 'Array<Record<string, unknown>>',
       example: { userId: '4e6186fa-df15-44b5-aa56-b3a7657be44a' },
-      handler: (args, session) => this.fetchUserFollowing(args, session),
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) =>
+        this.fetchUserFollowing(args, session),
     });
 
     // ── Action: fetch_livestream_clips ──
@@ -242,7 +266,8 @@ export class PumpFunCrawler extends AbstractCrawler {
       optionalArgs: [],
       outputType: 'PumpFunLivestreamClip[]',
       example: { mintOrWallet: '5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump' },
-      handler: (args, session) => this.fetchLivestreamClips(args, session),
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) =>
+        this.fetchLivestreamClips(args, session),
     });
 
     // ── Action: post_mint_reply (Auth) ──
@@ -255,7 +280,8 @@ export class PumpFunCrawler extends AbstractCrawler {
       optionalArgs: ['replyToId', 'mediaUrl'],
       outputType: '{ commentId, timestamp, success }',
       example: { mintAddress: '5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump', text: 'Greetings!' },
-      handler: (args, session) => this.postMintReply(args, session),
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) =>
+        this.postMintReply(args, session),
     });
 
     // ── Action: fetch_mint_comments ──
@@ -268,7 +294,8 @@ export class PumpFunCrawler extends AbstractCrawler {
       optionalArgs: ['limit', 'before'],
       outputType: '{ comments: Array, count: number }',
       example: { mintAddress: '5b4n12eHotCTYxktAkKcD6xhakzoAnwZJJad8f8fpump', limit: 50 },
-      handler: (args, session) => this.fetchMintComments(args, session),
+      handler: (/** @type {Record<string, unknown>} */ args, /** @type {Record<string, unknown>} */ session) =>
+        this.fetchMintComments(args, session),
     });
   }
 
@@ -300,6 +327,7 @@ export class PumpFunCrawler extends AbstractCrawler {
       const proxy = this.proxyPool && typeof this.proxyPool.getStickyProxy === 'function'
         ? this.proxyPool.getStickyProxy(mint, this.client.requiresResidential, { pool: 'realtime' })
         : null;
+      /** @type {Record<string, unknown>} */
       const reqOpts = { proxy, accountId: session?.accountId || null, session };
       const replyLimit = Number.isFinite(args?.limit) ? Number(args.limit) : undefined;
       if (replyLimit) reqOpts.limit = replyLimit;
@@ -418,7 +446,7 @@ export class PumpFunCrawler extends AbstractCrawler {
         platform: this.platform,
       });
     }
-    const raw = await this.client.getUser(username, { session });
+    const raw = /** @type {Record<string, any> | null} */ (await this.client.getUser(username, { session }));
     if (!raw) return null;
     return {
       username: raw.username || username,
@@ -449,6 +477,7 @@ export class PumpFunCrawler extends AbstractCrawler {
       return (Array.isArray(list) ? list : []).slice(offset, offset + limit).map(normalizeFeedItem);
     }
 
+    /** @type {Record<string, { sort: string, order: string }>} */
     const sortMap = {
       koth: { sort: 'market_cap', order: 'DESC' },
       graduating: { sort: 'market_cap', order: 'DESC' },
@@ -467,7 +496,7 @@ export class PumpFunCrawler extends AbstractCrawler {
 
     if (feedType === 'graduating') {
       // Filter coins that are incomplete and close to graduation threshold
-      items = items.filter((c) => !c.complete && c.marketCapUsd >= 30_000);
+      items = items.filter((/** @type {Record<string, any>} */ c) => !c.complete && Number(c.marketCapUsd) >= 30_000);
     }
 
     return items;
@@ -482,7 +511,7 @@ export class PumpFunCrawler extends AbstractCrawler {
    *
    * @param {Record<string, unknown>} args
    * @param {Record<string, unknown>} [session]
-   * @returns {Promise<{ messageCount: number, durationMs: number }>}
+   * @returns {Promise<{ messageCount: number, durationMs: number, mint?: string, messages?: Array<any>, truncated?: boolean, [key: string]: unknown }>}
    */
   async streamMintChat(args, session = {}) {
     if (this.#activeStreams >= 5) {
@@ -500,8 +529,8 @@ export class PumpFunCrawler extends AbstractCrawler {
     const mint = this.#resolveMint(a);
     const durationMs = Number.isFinite(a.durationMs) ? Number(a.durationMs) : 30_000;
     const onMessage = typeof a.onMessage === 'function' ? a.onMessage : undefined;
-    const onReaction = typeof a.onReaction === 'function' ? a.onReaction : undefined;
-    const signal = a.signal || session?.signal;
+    const onReaction = typeof a.onReaction === 'function' ? /** @type {(reaction: any) => void} */ (a.onReaction) : undefined;
+    const signal = /** @type {AbortSignal | undefined} */ (a.signal || session?.signal);
 
     // Use dedicated stream instance if available on client, else create one
     let lc = this.client.livechat;
@@ -516,6 +545,7 @@ export class PumpFunCrawler extends AbstractCrawler {
     this.#activeStreams++;
     // Accumulate messages so HTTP callers (dashboard UI) receive the captured
     // batch — subscribeRoom alone only returns { messageCount, durationMs }.
+    /** @type {Array<any>} */
     const collected = [];
     const MAX_COLLECTED = 500;
     try {
@@ -563,7 +593,7 @@ export class PumpFunCrawler extends AbstractCrawler {
    * Fetch following list for a specific user.
    * @param {Record<string, unknown>} args
    * @param {Record<string, unknown>} [session]
-   * @returns {Promise<Array>}
+   * @returns {Promise<Array<any>>}
    */
   async fetchUserFollowing(args, session = {}) {
     const userId = String(args?.userId || session?.userId || '');
@@ -583,7 +613,7 @@ export class PumpFunCrawler extends AbstractCrawler {
    * Fetch livestream clips / video metadata for a mint or wallet.
    * @param {Record<string, unknown>} args
    * @param {Record<string, unknown>} [session]
-   * @returns {Promise<Array>}
+   * @returns {Promise<Array<any>>}
    */
   async fetchLivestreamClips(args, session = {}) {
     const mintOrWallet = String(args?.mintOrWallet || args?.mint || args?.wallet || '');
@@ -596,10 +626,10 @@ export class PumpFunCrawler extends AbstractCrawler {
         platform: this.platform,
       });
     }
-    const rawClips = await this.livestreamApi.getLivestreamClips(mintOrWallet);
+    const rawClips = /** @type {any} */ (await this.livestreamApi.getLivestreamClips(mintOrWallet));
     // Response shape: { clips: [...] } or bare array
     const clipList = Array.isArray(rawClips) ? rawClips : (rawClips?.clips || []);
-    return clipList.map((c) => this.media.normalizeClip(c));
+    return clipList.map((/** @type {any} */ c) => this.media.normalizeClip(c));
   }
 
   /**
@@ -612,7 +642,7 @@ export class PumpFunCrawler extends AbstractCrawler {
   async postMintReply(args, session = {}) {
     if (!this.auth.hasSession() || !this.auth.isValid()) {
       throw new PlatformError({
-        type: ErrorTypes.AUTH_REQUIRED,
+        type: ErrorTypes.AUTH_EXPIRED,
         code: 'XACT_4010',
         message: 'post_mint_reply requires an active pump.fun session',
         statusCode: 401,
@@ -637,7 +667,7 @@ export class PumpFunCrawler extends AbstractCrawler {
     // Simple in-memory counter for rate limiting (shared via SessionManager would be better for distributed)
     this._replyTimestamps = this._replyTimestamps || [];
     const now = Date.now();
-    this._replyTimestamps = this._replyTimestamps.filter(t => now - t < 60_000);
+    this._replyTimestamps = this._replyTimestamps.filter((/** @type {number} */ t) => now - t < 60_000);
     if (this._replyTimestamps.length >= 5) {
       throw new PlatformError({
         type: ErrorTypes.RATE_LIMIT,
@@ -652,15 +682,16 @@ export class PumpFunCrawler extends AbstractCrawler {
 
     // pump.fun comments use Socket.IO livechat sendMessage, not REST API.
     // Try REST first (in case endpoint exists), fallback to livechat.
+    /** @type {any} */
     let result;
     try {
       result = await this.livestreamApi.postMintReply(mint, text, {
-        replyToId: args.replyToId,
-        mediaUrl: args.mediaUrl,
+        replyToId: typeof args.replyToId === 'string' ? args.replyToId : undefined,
+        mediaUrl: typeof args.mediaUrl === 'string' ? args.mediaUrl : undefined,
       });
-    } catch (restErr) {
+    } catch {
       // REST endpoint doesn't exist — use livechat sendMessage instead
-      const session = globalSessionManager.get(this.auth.accountId);
+      const session = /** @type {Record<string, any> | undefined} */ (globalSessionManager.get(this.auth.accountId));
       const authToken = session?.jwt || null; // auth_token cookie value
       const deviceId = session?.deviceId || null;
       const lc = new PumpFunLivechat({
@@ -671,7 +702,7 @@ export class PumpFunCrawler extends AbstractCrawler {
       try {
         await lc.joinRoom(mint);
         result = await lc.sendMessage(mint, text, {
-          replyToId: args.replyToId,
+          replyToId: typeof args.replyToId === 'string' ? args.replyToId : undefined,
         });
       } finally {
         await lc.close();
@@ -694,7 +725,7 @@ export class PumpFunCrawler extends AbstractCrawler {
    * Standalone action — no auth required for reading.
    * @param {Record<string, unknown>} args
    * @param {Record<string, unknown>} [session]
-   * @returns {Promise<{ comments: Array, count: number, nextCursor: any }>}
+   * @returns {Promise<{ mint: string, comments: Array<any>, count: number, nextCursor?: any }>}
    */
   async fetchMintComments(args, session = {}) {
     const mint = this.#resolveMint(args || {});
