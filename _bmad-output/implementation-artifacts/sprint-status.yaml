@@ -24,7 +24,7 @@
 #   - done: Retrospective has been completed
 
 generated: "2026-08-27 06:00"
-last_updated: "10-03-2026 21:30"
+last_updated: "10-05-2026 04:05"
 project: XActions
 project_key: XACT
 tracking_system: file-system
@@ -145,21 +145,21 @@ development_status:
   20-1-multi-consumer-service-contract-x-scrape-x-actions: done
   20-2-universal-stream-publish-hook-snake-case-thin-event: done
   20-5-pumpfun-native-social-crawler: done
-  20-6-pumpfun-full-social-intelligence: done
-  20-7-pumpfun-authenticated-live-media: done
-  20-8-pumpfun-dashboard-frontend: done
+  20-6-pumpfun-full-social-intelligence-metadata-social-links-user: done
+  20-7-pumpfun-authenticated-live-media-browser-as-signer-session-b: done
+  20-8-pumpfun-dashboard-frontend-dashboard-page-platform-grid-navi: done
   epic-20-retrospective: optional
 
   epic-21: done
-  21-1-b2b-tender-company-registry-crawler-masothue-hosocongty: done
-  21-2-automotive-vehicles-market-crawler-oto-bonbanh-chototxe: done
+  21-1-b2b-tender-company-registry-crawler-mạng-đấu-thầu-masothue-h: done
   21-3-hosocongty-muasamcong-crawler-cloudflare-spa-fallback: done
+  21-2-automotive-vehicles-market-crawler-oto-com-vn-bonbanh-chợ-tố: done
   epic-21-retrospective: done
 
   epic-22: done
-  22-1-fnb-merchant-restaurant-directory-crawler-pasgo-foody-riviu: done
-  22-2-healthcare-clinics-pharmacy-network-crawler-medpro-youmed: done
-  22-3-legal-trademark-intellectual-property-crawler: done
+  22-1-f-b-merchant-restaurant-directory-crawler-pasgo-foody-riviu: done
+  22-2-healthcare-clinics-pharmacy-network-crawler-medpro-youmed-th: done
+  22-3-legal-trademark-intellectual-property-crawler-cục-sở-hữu-trí: done
   epic-22-retrospective: done
 
   epic-23: done
@@ -301,182 +301,99 @@ development_status:
   epic-43-retrospective: optional
 
   epic-44: done
-  44-1-jev-a2a-routing-a2a-intent-disambiguation-semantic-skill: done
+  44-1-jev-a2a-routing-a2a-intent-disambiguation-semantic-skill-rou: done
   44-2-jev-crm-sentiment-crm-semantic-sentiment-follower-tagging: done
-  44-3-jev-xspace-sentiment-xspace-real-time-non-blocking-sentimen: done
+  44-3-jev-xspace-sentiment-xspace-real-time-non-blocking-sentiment: done
   epic-44-retrospective: optional
 
   epic-45: done
-  # Epic 51 — Frontend Platform Suites (2026-09-30/10-01, 5 trang độc lập)
-  epic-51: done
-  51-1-dexscreener-suite: done
-  51-2-youtube-insights-suite: done
-  51-3-fediverse-social-deck: done
-  51-4-enterprise-vn-portal: done
-  51-5-jobs-vn-aggregator: done
-  45-1-jev-viral-miner-universal-corpus-scraping-jev-batch-classification: done
+  45-1-jev-viral-miner-universal-corpus-scraping-jev-batch-classifi: done
   45-2-jev-viral-stats-stats-aggregation-storage: done
   45-3-jev-content-intel-feed-stats-vào-content-generation: done
   45-4-jev-backtest-validate-predictions-vs-actual-performance: done
   45-5-jev-viral-dashboard-web-ui-for-universal-viral-dna-mining: done
+  epic-45-retrospective: optional
 
+  epic-46: done
+  46-1-tích-hợp-swagger-ui-endpoint-xuất-bản-openapi-3-1-json: done
+  46-2-khai-báo-zod-schemas-quy-chuẩn-response-envelopes: done
+  46-3-generator-sinh-typescript-api-client-xactions-api-client: done
+  46-4-rollout-zod-envelope-batch-social-user-facing: done
+  46-5-rollout-zod-envelope-batch-data-ops-admin: done
+  epic-46-retrospective: optional
 
-# Epic 46: OpenAPI 3.1 & Swagger Documentation
-epic-46:
-  status: done
-  stories:
-    - id: 46.1
-      name: Swagger UI & OpenAPI 3.1 JSON Endpoint
-      status: done
-    - id: 46.2
-      name: Zod Schemas & Uniform Response Envelopes
-      status: done
-    - id: 46.3
-      name: CLI Generator for TypeScript API Client
-      status: done
-    - id: 46.4
-      name: Contract Rollout — Social & User-Facing Mounts
-      status: done
-    - id: 46.5
-      name: Contract Rollout — Data, Ops & Admin Mounts
-      status: done
+  epic-47: done
+  47-1-khởi-tạo-dự-án-next-js-15-app-router-universal-layout: done
+  47-2-màn-hình-viral-dna-miner-dashboard-biểu-đồ-trực-quan-viral-m: done
+  47-3-màn-hình-follower-crm-quản-trị-khách-hàng-tiềm-năng-crm: done
+  47-4-màn-hình-ai-content-optimizer-playground-optimizer: done
+  47-5-màn-hình-cổng-tra-cứu-dữ-liệu-đa-ngành-universal-data-explor: done
+  epic-47-retrospective: optional
 
-# Epic 47: Next.js Modern Frontend Application
-epic-47:
-  status: done
-  stories:
-    - id: 47.1
-      name: Next.js 15 App Router Scaffold & Universal Layout
-      status: done
-    - id: 47.2
-      name: Viral DNA Miner Dashboard & Charts Screen
-      status: done
-    - id: 47.3
-      name: Follower CRM & Contact Intelligence Screen
-      status: done
-    - id: 47.4
-      name: AI Content Optimizer Playground Screen
-      status: done
-    - id: 47.5
-      name: Universal Data Explorer & Export Screen
-      status: done
+  epic-48: done
+  48-1-nền-tảng-api-bff-proxy-typed-client-session-transport: done
+  48-2-màn-hình-đăng-nhập-session-connect-login: done
+  48-3-nhóm-màn-ops-realtime-monitor-status-run-benchmark: done
+  48-4-màn-admin-console-admin-full-parity: done
+  48-5-fleet-account-manager-accounts-proxies-sessions: done
+  48-6-nhóm-màn-intelligence-osint-graph-analytics-price-correlatio: done
+  48-7-nhóm-màn-automation-workflows-automations-scheduler-calendar: done
+  48-8-nhóm-màn-content-media-thread-thread-composer-tweet-schedule: done
+  48-9-nhóm-màn-account-misc-facebook-unfollowers-mcp-extension-pla: done
+  48-10-decommission-gate-đóng-fr-125: done
+  epic-48-retrospective: optional
 
-# Epic 48: Web API Foundation (BFF) & Frontend Consolidation Wave 2
-epic-48:
-  status: done
-  stories:
-    - id: 48.1
-      name: Web API Foundation — BFF Proxy, Typed Client & Session Transport
-      status: done
-    - id: 48.2
-      name: Auth & Session UI (/login)
-      status: done
-    - id: 48.3
-      name: Ops & Realtime Screens (/monitor, /status, /run, /benchmark)
-      status: done
-    - id: 48.4
-      name: Admin Console Full Parity (/admin)
-      status: done
-    - id: 48.5
-      name: Fleet & Account Manager (/accounts, /proxies, /sessions)
-      status: done
-    - id: 48.6
-      name: Intelligence Screens (/osint, /graph, /analytics, /price-correlation)
-      status: done
-    - id: 48.7
-      name: Automation Screens (/workflows, /automations, /scheduler, /calendar, /a2a, /jev-test)
-      status: done
-    - id: 48.8
-      name: Content & Media Screens (/thread*, /video, /ai*, /playground)
-      status: done
-    - id: 48.9
-      name: Account & Misc Screens (/facebook, /unfollowers, /mcp, /extension, /platform, /agent, /security)
-      status: done
-    - id: 48.10
-      name: Decommission Gate — Legacy dashboard removal (FR-125 closure)
-      status: done
+  epic-49: done
+  49-1-quick-wins-route-order-cors-lockfile-session-hygiene: done
+  49-2-commenttreeextractor-concurrency-hardening-p1-deferred-2-lần: done
+  49-3-redis-backed-consumer-quota-multi-worker: done
+  49-4-webhook-delivery-worker-hol-blocking-fix: done
+  49-5-checkpoint-optimistic-locking-p2-sweep: done
+  epic-49-retrospective: optional
 
-# Epic 49: Platform Hardening Sweep
-epic-49:
-  status: done
-  stories:
-    - id: 49.1
-      name: Quick Wins — Route Order, CORS, Lockfile, Session Hygiene
-      status: done
-    - id: 49.2
-      name: CommentTreeExtractor Concurrency Hardening (P1)
-      status: done
-    - id: 49.3
-      name: Redis-Backed Consumer Quota (Multi-Worker)
-      status: done
-    - id: 49.4
-      name: Webhook Delivery Worker (HOL Blocking)
-      status: done
-    - id: 49.5
-      name: Checkpoint Optimistic Locking + P2 Sweep
-      status: done
+# migrated from nested block — source_spec: _bmad-output/specs/spec-xactions-public-scrape-gateway/SPEC.md; source_spine: _bmad-output/planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md
+  epic-50: done
+  50-1-service-auth-lane-bearer-consumer-derivation: done
+  50-2-sync-async-mode-dispatch-202-degrade-contract: done
+  50-3-unified-envelope-request-id-propagation-errorenvelope: done
+  50-4-per-consumer-rate-limit-bucket-anonymous-free-tier-x402-rout: done
+  50-5-self-discovery-get-api-actions-openapi-json-x_actions_list-p: done
+  50-6-pumpfun-fetch_coin_meta-lightweight-action: done
+  50-7-crypto-dexscreener-platform-descriptor: done
+  50-8-social-telegram-platform-descriptor-skeleton-transport-defer: done
+  50-9-reddit-search-e2e-validation-contract-test-migration-quickst: done
+  epic-50-retrospective: optional
 
-# Epic 50: Public Scrape Gateway — Unified Service Contract
-epic-50:
-  status: done
-  source_spec: _bmad-output/specs/spec-xactions-public-scrape-gateway/SPEC.md
-  source_spine: _bmad-output/planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md
-  stories:
-    story-50-1:
-      slug: service-auth-lane-bearer-consumer-derivation
-      status: done
-    story-50-2:
-      slug: sync-async-mode-dispatch-202-degrade
-      status: done
-    story-50-3:
-      slug: unified-envelope-request-id-error-envelope
-      status: done
-    story-50-4:
-      slug: per-consumer-quota-x402-observability-dashboard
-      status: done
-    story-50-5:
-      slug: self-discovery-api-actions-catalog-playground
-      status: done
-    story-50-6:
-      slug: pumpfun-fetch-coin-meta-action
-      status: done
-    story-50-7:
-      slug: crypto-dexscreener-descriptor
-      status: done
-    story-50-8:
-      slug: social-telegram-descriptor-skeleton
-      status: done
-    story-50-9:
-      slug: reddit-search-e2e-contract-test-migration-guide
-      status: done
+  epic-51: done
+  51-1-dex-token-liquidity-intelligence-suite-dexscreener: done
+  51-2-youtube-video-channel-insights-suite-youtube: done
+  51-3-decentralized-social-deck-fediverse: done
+  51-4-vietnam-b2b-diligence-procurement-portal-enterprise-vn: done
+  51-5-live-vietnam-it-tech-jobs-aggregator-jobs-vn-explorer-upgrad: done
+  epic-51-retrospective: optional
 
   epic-52: done
   52-1-domain-dispatcher-schemas-routing-facade: done
   52-2-dual-mode-runtime-engine-cli-flags: done
-  52-3-verification-test-suite-backward-compatibility: done
+  52-3-verification-test-suite-backward-compatibility-assurance: done
   epic-52-retrospective: optional
 
-# Epic 53: Browser Page Pool — Sharded, Backend-Aware (sprint-change 2026-10-02)
-epic-53:
-  status: in-progress
-  source_proposal: _bmad-output/planning-artifacts/sprint-change-proposal-2026-10-02-browser-page-pool.md
-  source_spike: _bmad-output/implementation-artifacts/spike-browser-page-pool.md
-  stories:
-    story-53-1:
-      slug: browserpool-core-acquire-release-drain-stats-isolated-contexts
-      status: done
-    story-53-2:
-      slug: adapter-stealthbrowser-pooled-opt-teardown-contract
-      status: backlog
-    story-53-3:
-      slug: jobqueue-scrape-processor-thread-pooled-bull-retry
-      status: backlog
-    story-53-4:
-      slug: obscura-pool-of-processes-shard-per-conn-page-ceiling
-      status: backlog
-    story-53-5:
-      slug: crash-containment-respawn-bull-requeue
-      status: backlog
-    story-53-6:
-      slug: telemetry-dims-pooled-poolbackend-poolwaitms-spike-gate
-      status: backlog
+# migrated from nested block — source_proposal: _bmad-output/planning-artifacts/sprint-change-proposal-2026-10-02-browser-page-pool.md; source_spike: _bmad-output/implementation-artifacts/spike-browser-page-pool.md
+  epic-53: in-progress
+  53-1-browserpool-core-acquire-release-drain-stats-isolated-contex: done
+  53-2-adapter-stealthbrowser-pooled-opt: backlog
+  53-3-jobqueue-scrape-processor-thread-pooled: backlog
+  53-4-obscura-pool-of-processes-shard-strategy: backlog
+  53-5-crash-containment-respawn-bull-re-queue: backlog
+  53-6-telemetry-dims-spike-verify-gate: backlog
+  epic-53-retrospective: optional
+
+  epic-54: backlog
+  54-0-ingestion-coverage-spike-x-search-dexscreener-validation-pre: backlog
+  54-1-tokenentityextractor-cashtag-contract-name-canonical-token-i: backlog
+  54-2-tokenmentionpipeline-normalized-per-token-mention-stream: backlog
+  54-3-hype-vs-liquidity-unique-source-authenticity-metrics: backlog
+  54-4-token-mindshare-engine-share-of-voice-delta-24h-7d: backlog
+  54-5-narrative-clustering-rotation-detection: backlog
+  54-6-telegram-crypto-channel-crawler: backlog
+  epic-54-retrospective: optional
