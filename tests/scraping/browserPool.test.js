@@ -18,11 +18,21 @@ const mocks = vi.hoisted(() => {
   };
   /** @param {string} [backend] */
   function makeFakeBrowser(backend) {
+    /** @type {Record<string, Set<Function>>} */
+    const listeners = {};
     /** @type {any} */
     const browser = {
       __backend: backend,
       __fingerprint: { userAgent: 'TEST-UA', locale: 'en-US' },
       _contexts: 0,
+      _alive: true,
+      // Minimal EventEmitter surface — pool attaches 'disconnected'.
+      on(event, fn) { (listeners[event] ||= new Set()).add(fn); return browser; },
+      off(event, fn) { listeners[event]?.delete(fn); return browser; },
+      emit(event, ...args) { for (const fn of listeners[event] || []) fn(...args); return true; },
+      isConnected() { return browser._alive; },
+      /** Simulate a process crash: isConnected→false + fire 'disconnected'. */
+      crash() { browser._alive = false; browser.emit('disconnected'); },
       async createBrowserContext() {
         const ctx = {
           _id: ++browser._contexts,
@@ -38,8 +48,8 @@ const mocks = vi.hoisted(() => {
       async newPage() {
         return { _ctx: null, _id: ++browser._contexts, _closed: false, async close() { this._closed = true; }, __backend: backend };
       },
-      async close() { browser._closed = true; },
-      async disconnect() { browser._disconnected = true; },
+      async close() { browser._closed = true; browser._alive = false; },
+      async disconnect() { browser._disconnected = true; browser._alive = false; },
     };
     return browser;
   }
@@ -723,5 +733,266 @@ describe('Story 53.4 — Obscura pool-of-processes shard strategy', () => {
     for (const child of mocks.state.spawnedChildren) {
       expect(child.kill).toHaveBeenCalledWith('SIGTERM');
     }
+  });
+});
+
+describe('Story 53.5 — Crash containment: dead-browser detection, respawn', () => {
+  beforeEach(() => {
+    mocks.state.launches.length = 0;
+    mocks.state.teardowns.length = 0;
+    mocks.state.launchError = null;
+    mocks.state.launchErrorsByEndpoint = {};
+    mocks.state.nextBackend = 'chrome';
+    mocks.state.spawnedChildren.length = 0;
+    vi.unstubAllEnvs();
+    vi.clearAllMocks();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  it('CHROME_CRASH_LAZY — browser fires disconnected → entry splice; acquire kế spawn browser mới', async () => {
+    const pool = new BrowserPool({ size: 4, backend: 'chrome' });
+    const acq = await pool.acquire();
+    expect(pool.stats().browsers).toBe(1);
+
+    mocks.state.launches[0].browser.crash();
+    expect(pool.stats().browsers).toBe(0);
+    expect(pool.stats().respawns).toBe(1);
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('dead browser'));
+
+    // Lease in-flight trên browser chết vẫn release sạch
+    await pool.release(acq.page);
+    expect(pool.stats().active).toBe(0);
+
+    const acq2 = await pool.acquire();
+    expect(acq2.page).toBeTruthy();
+    expect(pool.stats().browsers).toBe(1); // browser mới
+    expect(mocks.state.launches).toHaveLength(2);
+    await pool.release(acq2.page);
+    await pool.drain();
+  });
+
+  it('CHROME_CRASH_INFLIGHT — page trên browser crash: CDP reject tự nhiên, release free slot', async () => {
+    const pool = new BrowserPool({ size: 2, backend: 'chrome' });
+    const acq = await pool.acquire();
+    mocks.state.launches[0].browser.crash();
+
+    // Giả lập job throw do "Target closed" — release vẫn free slot
+    await pool.release(acq.page);
+    expect(pool.stats().active).toBe(0);
+    expect(pool.stats().respawns).toBe(1);
+
+    // Job retry (Bull) acquire trên browser mới
+    const acq2 = await pool.acquire();
+    expect(pool.stats().browsers).toBe(1);
+    await pool.release(acq2.page);
+    await pool.drain();
+  });
+
+  it('CHROME_CTX_THROW_DEAD — createBrowserContext throw trên dead browser → mark dead + retry spawn mới', async () => {
+    const pool = new BrowserPool({ size: 2, backend: 'chrome' });
+    const acq1 = await pool.acquire(); // browser[0] live
+    const b0 = mocks.state.launches[0].browser;
+    // Chết mà listener miss (isConnected false, không emit) → pre-scan/catch path
+    b0._alive = false;
+    b0.createBrowserContext = async () => { throw new Error('Target closed'); };
+
+    const acq2 = await pool.acquire(); // phải tự respawn + retry
+    expect(acq2.page).toBeTruthy();
+    expect(pool.stats().respawns).toBe(1);
+    expect(pool.stats().browsers).toBe(1); // b0 splice, browser mới
+    expect(mocks.state.launches).toHaveLength(2);
+    await pool.release(acq1.page);
+    await pool.release(acq2.page);
+    await pool.drain();
+  });
+
+  it('CHROME_CTX_THROW_ALIVE — createBrowserContext throw trên live browser → propagate, không mark dead', async () => {
+    const pool = new BrowserPool({ size: 2, backend: 'chrome' });
+    const acq1 = await pool.acquire();
+    const b0 = mocks.state.launches[0].browser;
+    b0.createBrowserContext = async () => { throw new Error('transient ctx error'); };
+
+    await expect(pool.acquire()).rejects.toThrow('transient ctx error');
+    expect(pool.stats().respawns).toBe(0);
+    expect(pool.stats().browsers).toBe(1); // entry còn nguyên
+    await pool.release(acq1.page);
+    await pool.drain();
+  });
+
+  it('OBSCURA_CONN_DROP — endpoint A disconnect → acquire kế rơi vào B hoặc reconnect A', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222,ws://127.0.0.1:9223');
+    const pool = new BrowserPool({ size: 4, pagesPerProcess: 4, backend: 'obscura' });
+    const acq = await pool.acquire();
+    expect(pool.stats().endpoints).toHaveLength(2);
+    const browserA = mocks.state.launches[0].browser;
+    browserA.crash();
+
+    const stats = pool.stats();
+    expect(stats.respawns).toBe(1);
+    expect(stats.endpoints).toHaveLength(2); // fleet identity giữ
+    const entryA = stats.endpoints.find((e) => e.endpoint === 'ws://127.0.0.1:9222/');
+    expect(entryA.pages).toBe(0); // contexts cleared
+
+    await pool.release(acq.page);
+
+    // Acquire kế: chọn entry còn sống hoặc reconnect A — phải thành công
+    const acq2 = await pool.acquire();
+    expect(acq2.page).toBeTruthy();
+    await pool.release(acq2.page);
+    await pool.drain();
+  });
+
+  it('OBSCURA_CTX_THROW_DEAD — ctx throw trên dead endpoint → mark + retry entry khác', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222,ws://127.0.0.1:9223');
+    const pool = new BrowserPool({ size: 4, pagesPerProcess: 4, backend: 'obscura' });
+    // Connect cả hai endpoints trước
+    const a1 = await pool.acquire();
+    const a2 = await pool.acquire();
+    await pool.release(a1.page);
+    await pool.release(a2.page);
+    expect(mocks.state.launches).toHaveLength(2);
+
+    // Endpoint A chết ngầm (listener miss) + ctx throw
+    const browserA = mocks.state.launches[0].browser;
+    browserA._alive = false;
+    browserA.createBrowserContext = async () => { throw new Error('Session closed'); };
+
+    const acq = await pool.acquire();
+    expect(acq.page).toBeTruthy();
+    expect(pool.stats().respawns).toBe(1);
+    // pending invariant: mark-dead reset + finally decrement không được để pending âm
+    const epA = pool.stats().endpoints.find((e) => e.endpoint === 'ws://127.0.0.1:9222/');
+    expect(epA.pending).toBe(0);
+    // acq mới nằm trên A (reconnect) hoặc B — không vượt trần pagesPerProcess
+    const epB = pool.stats().endpoints.find((e) => e.endpoint === 'ws://127.0.0.1:9223/');
+    expect(epA.pages + epB.pages).toBe(1);
+    expect(epA.pages).toBeLessThanOrEqual(4);
+    await pool.release(acq.page);
+    await pool.drain();
+  });
+
+  it('OBSCURA_CTX_NULL_DEAD — ctx trả null trên dead endpoint → mark + retry, pending không âm', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222,ws://127.0.0.1:9223');
+    const pool = new BrowserPool({ size: 4, pagesPerProcess: 4, backend: 'obscura' });
+    const a1 = await pool.acquire();
+    const a2 = await pool.acquire();
+    await pool.release(a1.page);
+    await pool.release(a2.page);
+
+    const browserA = mocks.state.launches[0].browser;
+    browserA._alive = false;
+    browserA.createBrowserContext = async () => null;
+
+    const acq = await pool.acquire();
+    expect(acq.page).toBeTruthy();
+    expect(pool.stats().respawns).toBe(1);
+    const epA = pool.stats().endpoints.find((e) => e.endpoint === 'ws://127.0.0.1:9222/');
+    expect(epA.pending).toBe(0);
+    await pool.release(acq.page);
+    await pool.drain();
+  });
+
+  it('DOUBLE_DISCONNECT_CHROME — listener fire nhiều lần trên chrome → respawns chỉ +1', async () => {
+    const pool = new BrowserPool({ size: 2, backend: 'chrome' });
+    const acq = await pool.acquire();
+    const b0 = mocks.state.launches[0].browser;
+    b0.crash();
+    b0.emit('disconnected'); // lần 2 — idempotent
+    expect(pool.stats().respawns).toBe(1);
+    expect(pool.stats().browsers).toBe(0);
+    await pool.release(acq.page);
+    await pool.drain();
+  });
+
+  it('SHARED_OBSCURA_CRASH — SharedContextPool trên obscura: conn drop → acquire kế reconnect', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222');
+    const pool = new SharedContextPool({ size: 2, backend: 'obscura' });
+    const acq = await pool.acquire();
+    expect(acq.context).toBeNull(); // shared mode
+    mocks.state.launches[0].browser.crash();
+    expect(pool.stats().respawns).toBe(1);
+    await pool.release(acq.page);
+
+    const acq2 = await pool.acquire();
+    expect(acq2.page).toBeTruthy();
+    expect(mocks.state.launches).toHaveLength(2); // reconnect endpoint
+    await pool.release(acq2.page);
+    await pool.drain();
+  });
+
+  it('OBSCURA_CTX_THROW_ALIVE — ctx throw trên live endpoint → wrapped error, không mark dead', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222');
+    const pool = new BrowserPool({ size: 2, pagesPerProcess: 4, backend: 'obscura' });
+    const a1 = await pool.acquire();
+    await pool.release(a1.page);
+
+    const browserA = mocks.state.launches[0].browser;
+    browserA.createBrowserContext = async () => { throw new Error('transient'); };
+
+    await expect(pool.acquire()).rejects.toThrow('transient');
+    expect(pool.stats().respawns).toBe(0);
+    await pool.drain();
+  });
+
+  it('DRAIN_VS_DISCONNECT — drain() đang chạy khi disconnected fires → không respawn', async () => {
+    const pool = new BrowserPool({ size: 2, backend: 'chrome' });
+    const acq = await pool.acquire();
+    const drainP = pool.drain();
+    // crash trong lúc drain → mark-dead chỉ clear, không đếm respawn
+    mocks.state.launches[0].browser.crash();
+    await pool.release(acq.page);
+    await drainP;
+    expect(pool.stats().respawns).toBe(0);
+  });
+
+  it('DOUBLE_DISCONNECT — listener fire 2 lần → respawns chỉ +1; stale browser không đụng entry mới', async () => {
+    vi.stubEnv('OBSCURA_WS_ENDPOINTS', 'ws://127.0.0.1:9222');
+    const pool = new BrowserPool({ size: 2, pagesPerProcess: 4, backend: 'obscura' });
+    const acq1 = await pool.acquire();
+    const b1 = mocks.state.launches[0].browser;
+    b1.crash();
+    b1.emit('disconnected'); // lần 2 — idempotent
+    expect(pool.stats().respawns).toBe(1);
+
+    // Acquire → reconnect → browser mới trên cùng endpoint slot
+    const acq2 = await pool.acquire();
+    expect(mocks.state.launches).toHaveLength(2);
+
+    // stale disconnect của b1 sau respawn — không được đụng b2
+    b1.emit('disconnected');
+    expect(pool.stats().respawns).toBe(1);
+    expect(acq2.context).toBeTruthy();
+    await pool.release(acq1.page);
+    await pool.release(acq2.page);
+    await pool.drain();
+  });
+
+  it('STARVATION_RECOVER — tất cả browser dead, waiter được wake sau release + respawn', async () => {
+    const pool = new BrowserPool({ size: 1, backend: 'chrome', acquireTimeoutMs: 5000 });
+    const acq = await pool.acquire();
+    const waiter = pool.acquire(); // queued — size 1
+    mocks.state.launches[0].browser.crash();
+    await pool.release(acq.page); // wake waiter → spawn mới
+    const acq2 = await waiter;
+    expect(acq2.page).toBeTruthy();
+    expect(pool.stats().browsers).toBe(1);
+    await pool.release(acq2.page);
+    await pool.drain();
+  });
+
+  it('SHARED_CRASH — SharedContextPool browser dead → re-launch qua acquire', async () => {
+    const pool = new SharedContextPool({ size: 2, backend: 'chrome' });
+    const acq = await pool.acquire();
+    expect(pool.stats().browsers).toBe(1);
+    mocks.state.launches[0].browser.crash();
+    expect(pool.stats().browsers).toBe(0);
+    expect(pool.stats().respawns).toBe(1);
+    await pool.release(acq.page);
+
+    const acq2 = await pool.acquire();
+    expect(acq2.context).toBeNull(); // shared mode
+    expect(pool.stats().browsers).toBe(1);
+    await pool.release(acq2.page);
+    await pool.drain();
   });
 });

@@ -237,6 +237,7 @@ export class BrowserPool {
     };
 
     this._active = 0;
+    this._respawnCount = 0;
     /** @type {Array<{resolve: Function, reject: Function, timer: any}>} */
     this._queue = [];
     this._draining = false;
@@ -388,6 +389,7 @@ export class BrowserPool {
       active: this._active,
       queued: this._queue.length,
       draining: this._draining,
+      respawns: this._respawnCount,
     };
     if (this._backend === 'obscura') {
       return {
@@ -409,6 +411,64 @@ export class BrowserPool {
   }
 
   // ── Internals ─────────────────────────────────────────────────────────────
+
+  /**
+   * Is this browser handle dead? `null` counts dead; `isConnected()` is only
+   * consulted when the shape exists — fake browsers/mocks missing it are
+   * never penalised.
+   * @param {any} browser
+   * @returns {boolean}
+   * @private
+   */
+  _isBrowserDead(browser) {
+    if (!browser) return true;
+    if (typeof browser.isConnected === 'function') return !browser.isConnected();
+    return false;
+  }
+
+  /**
+   * Mark an entry's browser dead: null the handle, clear contexts/pending,
+   * splice chrome entries (obscura keeps its endpoint slot for
+   * `stats().endpoints` identity), count one respawn, warn once. Idempotent —
+   * a second call is a no-op because `entry.browser` is already null. During
+   * `drain()` it only clears the entry — no respawn accounting.
+   * @param {{endpoint?: string, browser: any, contexts: Set<any>, pending: number}} entry
+   * @param {string} [reason]
+   * @private
+   */
+  _markBrowserDead(entry, reason = 'disconnected') {
+    if (!entry || !entry.browser) return;
+    entry.browser = null;
+    if (entry.contexts) entry.contexts.clear();
+    entry.pending = 0;
+    if (this._backend === 'chrome') {
+      const idx = this._browsers.indexOf(entry);
+      if (idx !== -1) this._browsers.splice(idx, 1);
+    }
+    if (this._draining) return; // drain owns teardown — no respawn accounting
+    this._respawnCount++;
+    console.warn(
+      `⚠️ [BrowserPool] dead browser (${this._backend}${entry.endpoint ? ` @ ${entry.endpoint}` : ''}): ${reason}`
+    );
+  }
+
+  /**
+   * Attach the crash-containment listener right after a launch/connect
+   * succeeds, before the entry owns the handle. The stale-browser guard
+   * (`entry.browser === browser`) keeps a late `disconnected` from a
+   * superseded handle from killing the replacement.
+   * @param {{endpoint?: string, browser: any, contexts: Set<any>, pending: number}} entry
+   * @param {any} browser
+   * @private
+   */
+  _attachDisconnectListener(entry, browser) {
+    if (typeof browser.on !== 'function') return; // fakes without EE — skip
+    browser.on('disconnected', () => {
+      if (entry.browser === browser) {
+        this._markBrowserDead(entry, 'disconnected');
+      }
+    });
+  }
 
   /**
    * Block until a slot frees (or drain/timeout). Grants the slot atomically:
@@ -466,6 +526,9 @@ export class BrowserPool {
         if (!entry) {
           throw new Error('BrowserPool: no obscura endpoints configured');
         }
+        if (entry.browser && this._isBrowserDead(entry.browser)) {
+          this._markBrowserDead(entry, 'pre-acquire scan');
+        }
         if (!entry.browser) {
           await this._ensureObscuraConnection(entry);
         }
@@ -484,32 +547,66 @@ export class BrowserPool {
     // Chrome path:
     // Find a browser below its context ceiling (contexts.size + pending
     // reservations so concurrent acquirers don't overshoot the ceiling).
-    let entry = this._browsers.find(
-      (e) => Boolean(e?.contexts && (e.contexts.size + (e.pending || 0)) < (this._contextsPerBrowser ?? 5))
-    );
-    if (!entry) {
-      entry = await this._spawnBrowser();
-    }
-    if (!entry) {
-      throw new Error(`BrowserPool: failed to obtain browser entry for backend '${this._backend}'`);
-    }
-
-    // Reserve a pending slot before the async createBrowserContext call so
-    // concurrent acquirers see the occupied slot immediately.
-    entry.pending = (entry.pending || 0) + 1;
-    try {
-      const context = typeof entry.browser.createBrowserContext === 'function'
-        ? await entry.browser.createBrowserContext()
-        : null;
-      if (!context) {
-        throw new Error(
-          `BrowserPool: browser for backend '${this._backend}' does not support isolated contexts (createBrowserContext unavailable or returned null)`
-        );
+    // Dead-entry handling is layered per Story 53.5: a pre-scan sweeps
+    // isConnected()===false handles, and a createBrowserContext throw on a
+    // dead browser marks it and retries the whole pick once — errors on a
+    // live browser propagate untouched.
+    let retried = false;
+    while (true) {
+      for (let i = this._browsers.length - 1; i >= 0; i--) {
+        if (this._isBrowserDead(this._browsers[i].browser)) {
+          this._markBrowserDead(this._browsers[i], 'pre-acquire scan');
+        }
       }
-      entry.contexts.add(context);
-      return { browser: entry.browser, context };
-    } finally {
-      entry.pending--;
+
+      let entry = this._browsers.find(
+        (e) => Boolean(e?.contexts && (e.contexts.size + (e.pending || 0)) < (this._contextsPerBrowser ?? 5))
+      );
+      if (!entry) {
+        entry = await this._spawnBrowser();
+      }
+      if (!entry) {
+        throw new Error(`BrowserPool: failed to obtain browser entry for backend '${this._backend}'`);
+      }
+
+      if (this._isBrowserDead(entry.browser)) {
+        this._markBrowserDead(entry, 'dead entry selected');
+        if (!retried) { retried = true; continue; }
+        throw new Error(`BrowserPool: failed to obtain a live browser entry for backend '${this._backend}'`);
+      }
+
+      // Reserve a pending slot before the async createBrowserContext call so
+      // concurrent acquirers see the occupied slot immediately.
+      entry.pending = (entry.pending || 0) + 1;
+      try {
+        let context = null;
+        try {
+          context = typeof entry.browser.createBrowserContext === 'function'
+            ? await entry.browser.createBrowserContext()
+            : null;
+        } catch (ctxErr) {
+          if (this._isBrowserDead(entry.browser)) {
+            this._markBrowserDead(entry, 'createBrowserContext threw on dead browser');
+            if (!retried) { retried = true; continue; }
+          }
+          throw ctxErr;
+        }
+        if (!context) {
+          if (this._isBrowserDead(entry.browser)) {
+            this._markBrowserDead(entry, 'createBrowserContext null on dead browser');
+            if (!retried) { retried = true; continue; }
+          }
+          throw new Error(
+            `BrowserPool: browser for backend '${this._backend}' does not support isolated contexts (createBrowserContext unavailable or returned null)`
+          );
+        }
+        entry.contexts.add(context);
+        return { browser: entry.browser, context };
+      } finally {
+        // _markBrowserDead may have already reset pending to 0 — clamp so
+        // the decrement can't push a kept entry negative.
+        entry.pending = Math.max(0, entry.pending - 1);
+      }
     }
   }
 
@@ -530,6 +627,11 @@ export class BrowserPool {
 
       for (const entry of this._browsers) {
         if (!entry || !entry.contexts || failedThisAcquire.has(entry)) continue;
+        if (this._isBrowserDead(entry.browser) && entry.browser) {
+          // Connected-then-died: reclaim the slot so headroom is honest and
+          // the lazy reconnect below gets a clean entry.
+          this._markBrowserDead(entry, 'pre-acquire scan');
+        }
         const headroom = this._pagesPerProcess - entry.contexts.size - (entry.pending || 0);
         if (headroom > maxHeadroom) {
           maxHeadroom = headroom;
@@ -558,10 +660,32 @@ export class BrowserPool {
           }
         }
 
-        const context = typeof bestEntry.browser.createBrowserContext === 'function'
-          ? await bestEntry.browser.createBrowserContext()
-          : null;
+        let context = null;
+        try {
+          context = typeof bestEntry.browser.createBrowserContext === 'function'
+            ? await bestEntry.browser.createBrowserContext()
+            : null;
+        } catch (ctxErr) {
+          // Dead-browser throw: mark + retry the next endpoint (this entry
+          // rejoins the pick next acquire via lazy reconnect). Alive-browser
+          // throw keeps the historical wrapped-error propagation.
+          if (this._isBrowserDead(bestEntry.browser)) {
+            this._markBrowserDead(bestEntry, 'createBrowserContext threw on dead browser');
+            failedThisAcquire.add(bestEntry);
+            lastError = ctxErr;
+            continue;
+          }
+          throw ctxErr;
+        }
         if (!context) {
+          if (this._isBrowserDead(bestEntry.browser)) {
+            this._markBrowserDead(bestEntry, 'createBrowserContext null on dead browser');
+            failedThisAcquire.add(bestEntry);
+            lastError = new Error(
+              `BrowserPool: isolated context creation failed on dead endpoint ${bestEntry.endpoint}`
+            );
+            continue;
+          }
           throw new Error(
             `BrowserPool: browser for backend '${this._backend}' does not support isolated contexts (createBrowserContext unavailable or returned null)`
           );
@@ -569,7 +693,10 @@ export class BrowserPool {
         bestEntry.contexts.add(context);
         return { browser: bestEntry.browser, context, endpoint: bestEntry.endpoint };
       } finally {
-        bestEntry.pending--;
+        // _markBrowserDead resets pending to 0 on kept obscura entries —
+        // clamp so the decrement can't leave pending negative (-1 is truthy
+        // and would inflate headroom by one page for the entry's lifetime).
+        bestEntry.pending = Math.max(0, bestEntry.pending - 1);
       }
     }
   }
@@ -614,6 +741,7 @@ export class BrowserPool {
 
       /** @type {any} */ (browser).__endpoint = entry.endpoint;
       /** @type {any} */ (browser).__backend = 'obscura';
+      this._attachDisconnectListener(entry, browser);
       entry.browser = browser;
       return entry;
     });
@@ -630,6 +758,11 @@ export class BrowserPool {
   _spawnBrowser() {
     const run = this._spawnLock.then(() => {
       if (this._draining) throw new PoolDrainingError();
+      for (let i = this._browsers.length - 1; i >= 0; i--) {
+        if (this._isBrowserDead(this._browsers[i].browser)) {
+          this._markBrowserDead(this._browsers[i], 'dead entry in spawn');
+        }
+      }
       const existing = this._browsers.find(
         (e) => Boolean(e?.contexts && (e.contexts.size + (e.pending || 0)) < (this._contextsPerBrowser ?? 5))
       );
@@ -656,7 +789,13 @@ export class BrowserPool {
    * @private
    */
   async _ensureBrowser(index) {
-    if (this._browsers[index]) return this._browsers[index];
+    if (this._browsers[index]) {
+      if (this._isBrowserDead(this._browsers[index].browser)) {
+        this._markBrowserDead(this._browsers[index], 'dead entry in _ensureBrowser');
+      } else {
+        return this._browsers[index];
+      }
+    }
     let browser;
     try {
       browser = await launchStealthBrowser(this._launchOptions);
@@ -682,7 +821,9 @@ export class BrowserPool {
       throw new PoolDrainingError();
     }
     /** @type {{endpoint?: string, browser: any, contexts: Set<any>, pending: number}} */
-    const entry = { browser, contexts: new Set(), pending: 0 };
+    const entry = { browser: null, contexts: new Set(), pending: 0 };
+    this._attachDisconnectListener(entry, browser);
+    entry.browser = browser;
     this._browsers.push(entry);
     return entry;
   }

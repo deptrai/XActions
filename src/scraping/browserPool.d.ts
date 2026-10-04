@@ -61,6 +61,8 @@ export interface PoolStats {
   capacity?: number;
   endpoints?: Array<{ endpoint: string; pages: number; pending: number }>;
   draining: boolean;
+  /** Dead-browser respawns since pool construction (Story 53.5). */
+  respawns?: number;
 }
 
 export class PoolDrainingError extends Error {}

@@ -77,6 +77,17 @@ When pooled scraping is enabled (`XACTIONS_BROWSER_POOL_SIZE > 0`), Obscura shar
 - **External ownership:** The Obscura fleet processes are managed by external supervisors/operators. On pool `drain()`, XActions issues `browser.disconnect()` to close CDP connections without terminating the external daemons (per AD-23).
 - **Dev auto-spawn exception:** If processes are spawned locally via `OBSCURA_BIN`, `drain()` automatically sends `SIGTERM` to clean up child processes.
 
+### Dead-Endpoint Containment & Respawn (Story 53.5)
+
+When a pooled browser dies mid-run (Chrome process crash or an `obscura serve` / CDP connection drop), the pool contains the failure instead of leaking capacity:
+
+- **Detection (3 layers):** a `disconnected` listener attached at connect time, an `isConnected()` pre-acquire scan, and classification of `createBrowserContext` throws on dead handles.
+- **Mark-dead:** the entry's `browser` is nulled and its `contexts`/`pending` cleared so ghost contexts stop consuming headroom. Chrome entries are spliced out of `_browsers`; Obscura endpoint slots are **kept** so `stats().endpoints` retains fleet identity.
+- **Lazy respawn:** no eager relaunch in the listener (avoids crash-loop storms). The next `acquire()` reconnects the Obscura endpoint via the existing `_spawnLock` seam, or spawns a fresh Chrome browser when no live entry has headroom.
+- **In-flight jobs:** jobs holding pages on the dead browser fail naturally through CDP rejects, `release()` still frees the slot, and Bull `attempts: 3` + exponential backoff re-queues the job — it lands on a live browser on retry.
+- **Observability:** `stats().respawns` counts mark-dead events; each also logs one `console.warn` line. During `drain()`, mark-dead only clears the entry — no respawn accounting.
+- **Out of scope:** `OBSCURA_BIN` spawned-child restarts are not attempted — external-fleet mode only reconnects the CDP endpoint.
+
 ## Verify
 
 ```bash
