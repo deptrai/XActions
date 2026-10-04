@@ -5,7 +5,7 @@ purpose: build-substrate
 altitude: epic
 paradigm: 'Hexagonal Analytics Layer — pure metric engines over a canonical token event log; ingestion adapters vary, identity+storage+degraded contract are fixed'
 scope: 'Epic 54 stories 54.0–54.6: token entity extraction, mention pipeline, hype/liquidity metrics, mindshare engine, narrative clustering, telegram crawler'
-status: draft
+status: final
 created: '2026-10-04'
 updated: '2026-10-04'
 binds: [Story 54.0, Story 54.1, Story 54.2, Story 54.3, Story 54.4, Story 54.5, Story 54.6]
@@ -69,7 +69,7 @@ flowchart LR
 
 - **Binds:** Stories 54.2–54.5 (all readers/writers of token data)
 - **Prevents:** historyStore (username-keyed SQLite-era API), ad-hoc Redis keys, and Prisma being chosen independently per story → three incompatible read paths
-- **Rule:** New models `Token`, `TokenMention`, `TokenMetricRollup` in `prisma/schema.prisma` (namespaced IDs, `metadata Json?` + GIN index per canonical spine). `TokenMention` = append-only event log, source of truth; `TokenMetricRollup` = rebuildable materialized cache for rolling windows (24h/7d/14d). `historyStore.js` is username-keyed account analytics — **not reused** for token data.
+- **Rule:** New models `Token`, `TokenMention`, `TokenMetricRollup` in `prisma/schema.prisma` (namespaced IDs, `metadata Json?` + GIN index per canonical spine). `TokenMention` = append-only-per-identity event log (see AD-4 upsert rule), source of truth; `TokenMetricRollup` = materialized cache for rolling windows (24h/7d/14d), updated **incrementally at ingest by the pipeline (single writer)**, with a `rebuildRollups()` repair script — never computed on-read, never written by metric engines. `historyStore.js` is username-keyed account analytics — **not reused** for token data.
 
 ### AD-3 — Degraded-data contract (one definition, all metrics)
 
@@ -81,7 +81,7 @@ flowchart LR
 
 - **Binds:** TokenMention dedup keys, PostItem ids, all platform producers
 - **Prevents:** telegram message id `123` colliding with tweet id `123` once 54.6 lands — retrofitting dedup keys across a live event log is a migration nobody wants
-- **Rule:** Dedup key = `(platform, platformId)` composite. Wire/storage form is prefixed: `x:<tweetId>`, `tg:<channelId>:<msgId>`. `TokenMention.source` carries `{platform, platformId, channelId?}`.
+- **Rule:** Dedup key = `(canonicalId, platform, platformId)` composite — scoped per token, so one tweet mentioning $PEPE+$WIF yields two rows (never cross-token dedup). Wire/storage form is prefixed: `x:<tweetId>`, `tg:<channelId>:<msgId>`. `TokenMention.source` carries `{platform, platformId, channelId?}`. **Re-observation rule:** first observation inserts; a later scrape of the same key upserts mutable fields in place (`engagement`, `lastSeenAt`) — the log is append-only *per identity*, never duplicates, never drops engagement updates.
 
 ### AD-5 — Token analytics endpoints are machine-consumer surfaces
 
@@ -93,7 +93,7 @@ flowchart LR
 
 - **Binds:** MCP exposure in Stories 54.3, 54.4, 54.5, 54.6
 - **Prevents:** new top-level `x_token_*`/`x_telegram_*` tools re-inflating the 224-tool surface Epic 52 just collapsed
-- **Rule:** Capabilities register as actions on existing domain dispatchers: `x_analytics{token_hype | mindshare | narratives}` for metrics; `x_scrape`/`x_crypto{telegram_channels | telegram_search}` for telegram (matching the platform-descriptor seam). No new top-level tool names.
+- **Rule:** Capabilities register as actions on existing domain dispatchers: `x_analytics{token_hype | mindshare | narratives}` for metrics; `x_scrape{telegram_channels | telegram_search}` for telegram — telegram is a *platform* descriptor registering under gateway AD-1 like dexscreener, not a crypto-domain action (`x_crypto` reserved for domain metrics). No new top-level tool names.
 
 ### AD-7 — Mindshare denominator is the watchlist corpus
 
@@ -123,7 +123,11 @@ flowchart LR
 | Analytics envelope | existing `{success, …}` analytics shape + `metadata.request_id`; NOT the gateway scrape envelope |
 | Degraded response | `{data, degraded, degradedSince, consecutiveEmptyBatches}` / `insufficientHistory` flag distinct |
 | MCP naming | dispatcher actions only: `x_analytics{token_hype\|mindshare\|narratives}` |
-| Watchlist | single TokenRegistry (DB); per-consumer = query filter |
+| Watchlist | single TokenRegistry (DB); per-consumer = query filter; mutations via REST admin endpoints under dual-auth (DB seed for bootstrap only) |
+| TokenMention fields | pipeline computes `sentimentScore` (lexicon) at ingest; `sentimentScoreLLM` separate nullable field, filled only by 54.5 batch — engines never re-score inline |
+| `engagement` field | `Json` = `{likes, retweets, replies, quotes}` verbatim from source; normalization (`log10(1+Σ)`) lives inside metric formulas |
+| Metric weights | defaults (0.5 mentions / 0.3 authors / 0.2 engagement) in shared config owned by `tokenRegistry`, overridable per call |
+| Dual-auth wiring | one composite middleware `anyAuth` (try `authenticate` → fallback `serviceAuth` → set `consumer_id`); never sequential `router.use(authenticate, serviceAuth)` — each lane rejects the other's requests |
 | Metric formulas | TheTie `hype_to_liquidity`, Santiment `log₁₀(unique_users)` normalization — fixed in epic text |
 
 ## Stack
