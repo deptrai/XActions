@@ -2,7 +2,7 @@
 title: 'Story 53.6 — Telemetry dims (pooled/poolBackend/poolWaitMs) + spike verify gate'
 type: 'feature'
 created: '2026-10-04'
-status: 'in-progress'
+status: 'done'
 review_loop_iteration: 0
 followup_review_recommended: false
 baseline_revision: '27aa9c45'
