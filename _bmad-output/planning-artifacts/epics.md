@@ -4231,13 +4231,56 @@ So that **jev-trading gets Cookie-Pro-style `Mindshare %` and `Mindshare Delta` 
 * **And** response schema matches a provider-compatible shape `{ token, mindsharePct, delta24h, delta7d, topVoices[], degraded }` so jev can hot-swap XActions↔Cookie as data source
 * **And** unit tests: synthetic 3-token corpus with known shares must reproduce expected %±1pt
 
+### Story 54.5: Narrative Clustering & Rotation Detection
+> **Phase:** Gated (Post-Ship-Gate) | **Gate:** Story 54.1–54.4 ship gate đạt (7 ngày data liên tục, `degraded` <10%)
+> **Parity:** Kaito Narrative Mindshare — luân chuyển narrative, phát hiện narrative mới nổi
+
+As a **Crypto Intelligence Consumer (jev-trading slow-lane)**,
+I want **mention corpus clustered into labeled narratives with per-narrative mindshare and rotation deltas**,
+So that **jev catches narrative rotation early (e.g. "AI agents → DeSci → memecoins") instead of chasing individual tokens**.
+
+**Acceptance Criteria:**
+* **Given** `TokenMention[]` corpus (Story 54.2) và `jevViralMiner`-style Jev batch classify infra (Story 45.x)
+* **When** implementing `src/analytics/narrativeTracker.js`
+* **Then** batch-cluster tweet text per time window (24h/7d) → narrative labels (AI-agent, L2, meme-dog, DeSci, RWA…, taxonomy configurable + auto-emerge new label khi cluster > threshold mà không match taxonomy)
+* **And** `narrative_mindshare(narrativeId, window)` = share of watchlist-level corpus thuộc narrative
+* **And** `narrative_delta(narrativeId, 24h|7d)` + `emerging_narratives()` list (cluster mới growth >3σ baseline)
+* **And** Jev batch classify (typed decision per tweet) với fallback: JevBrain degraded → keyword-taxonomy matching (deterministic, không block pipeline)
+* **And** token→narrative mapping: mỗi token watchlist gán narrative hiện tại → `token_mindshare` response thêm `narrativeId`, `narrativeDelta`
+* **And** expose `x_token_narratives` MCP action (Epic 52 domain dispatcher) + `/api/analytics/narratives`
+* **And** `degraded` passthrough từ 54.2 — narrative không compute khi ingestion degraded
+
+**Depends on:** Story 54.1–54.4 + JevBrain batch decision (Epic 42/45)
+
+### Story 54.6: Telegram Crypto Channel Crawler
+> **Phase:** Gated (Post-Ship-Gate) | **Gate:** Story 54.1–54.4 ship gate + Product Council approve (platform build lớn)
+> **Parity:** Santiment TG coverage (>400 crypto chats, 1–2s latency) — kênh crypto mạnh nhất mà provider nào cũng có
+> **Origin:** D4 từ `research/market-crypto-xactions-features-2026-09-26` Tier-2 (jev Epic 2 deferred specifically vì XActions thiếu)
+
+As a **Crypto Intelligence Consumer**,
+I want **public Telegram crypto channel/group messages scraped, normalized, and fed into TokenMentionPipeline**,
+So that **sentiment coverage extends to crypto's primary comms platform — where signals often break before X**.
+
+**Acceptance Criteria:**
+* **Given** no `TelegramCrawler` exists; `AbstractCrawler` + `AbstractApiClient` contract (Epic 10/13); channel list configurable
+* **When** implementing `src/scrapers/social/telegram/` crawler
+* **Then** 2 modes: **Bot API** (`getUpdates` cho channel bot là member — free, no key infra) + **MTProto user-client** (gramjs/telegram client cho public channels không cần bot — heavier, session file)
+* **And** normalize messages → `PostItem` shape (Epic 14 contract) → publish `stream:social:raw_posts` + feed `TokenMentionPipeline` (Story 54.2) với `platform: 'telegram'`
+* **And** channel registry: `{ channelId, handle, topicTags[], tier }` — jev supply curated crypto channel list; track join/leave + member_count delta
+* **And** rate governance qua `AdaptiveRateGovernor` (Epic 11) — TG strict hơn X về flood limits
+* **And** forward-chain: forwarded message giữ `forwardedFrom` để trace alpha origin (channel nào post trước)
+* **And** `x_telegram_channels` + `x_telegram_search` MCP actions; ingest health flag riêng (`tgDegraded`) tách khỏi X degraded
+
+**Depends on:** Story 54.1–54.2 (pipeline phải nhận non-X source); Epic 11 governor; Epic 13 crawler contract
+**Estimate:** 1–2 weeks (largest single build trong epic — MTProto session management + channel discovery)
+
 ### Epic 54 — Success Metrics & Gate
 
 **Ship gate (1 tuần continuous data):** pipeline chạy liên tục 7 ngày trên watchlist ≥10 token; `degraded` time < 10%; mindshare ranking phản ánh đúng 1 sự kiện viral đã biết (manual spot-check).
 
 **Deferred (không thuộc epic này — mở lại khi ship gate đạt):**
-- **S5 KOL Callout Tracker** (ROI/hit-rate leaderboard qua `priceCorrelation` — DexCheck `kol-performance` parity): chỉ build sau khi ingestion chứng minh ổn định; cần `tokenId + callTimestamp` từ Story 54.1/54.2.
-- **S6 Narrative clustering** (Kaito Narrative Mindshare parity): needs `jevViralMiner`-style batch classify on mention corpus.
-- **S7 Telegram crawler** = D4 từ research 2026-09-26 (Tier-2, platform build 1–2 tuần): Santiment data (>400 TG chats, trễ 1–2s) củng cố giá trị nhưng không đổi effort estimate.
+- **S5 KOL Callout Tracker** (ROI/hit-rate leaderboard qua `priceCorrelation` — DexCheck `kol-performance` parity): chỉ build sau khi ingestion chứng minh ổn định; cần `tokenId + callTimestamp` từ Story 54.1/54.2. Chưa spec thành story vì cần định nghĩa "call" detection contract trước (KOL tweet có phải buy-call không = classification problem riêng).
 
-**Total estimate:** 4 stories, ~1 sprint (6–10 dev-days, mostly glue on existing primitives).
+**Stories 54.5–54.6 (gated, Phase 2):** spec'd sẵn ở trên; chỉ schedule sau khi ship gate đạt + Product Council approve (54.6 là platform build 1–2 tuần).
+
+**Total estimate:** MVP 4 stories ~1 sprint (6–10 dev-days) | Phase-2 gated: 54.5 ~3–4d, 54.6 ~1–2 tuần.
