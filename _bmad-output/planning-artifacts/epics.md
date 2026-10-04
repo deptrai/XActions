@@ -4174,6 +4174,24 @@ All 5 stories can be implemented independently and in parallel since each target
 >
 > **Dependency:** không phụ thuộc Epic 10–53 sequence (dùng `x_scrape`/`x_monitor_keyword`/Dexscreener crawler/ `historyStore` đã live). YÊU CẦU ingestion health gate: nếu X search trả `[]` liên tục (session cookie chết — precedent: jev `searchTwitter()` trả rỗng khi thiếu `XACTIONS_SESSION_COOKIE`), metrics phải flag `degraded: true` thay vì trả số ảo.
 
+### Story 54.0: Ingestion Coverage Spike — X Search & Dexscreener Validation (PREREQUISITE)
+> **Phase:** MVP-blocking spike | **Estimate:** ~1 day | **Type:** measurement, not implementation
+
+As a **Crypto Intelligence Architect**,
+I want **live-probe verification that X search actually returns tweets for crypto queries (cashtags, contract addresses) and that Dexscreener has liquidity data for the watchlist**,
+So that **Stories 54.1–54.4 are built on verified coverage assumptions, not guesses — the #1 kill-risk for this epic**.
+
+**Acceptance Criteria:**
+* **Given** the risk that `x_search_tweets`/`x_scrape` may return sparse/empty results for contract-address or cashtag queries (precedent: jev `searchTwitter()` trả `[]` khi thiếu session)
+* **When** running the spike script against ≥10 sample queries: 3 cashtags (`$PEPE`...), 3 Solana contract addresses, 2 token names, 2 KOL-timeline reads
+* **Then** record per-query: result count, recency spread, unique authors, presence of `full_text` for entity extraction
+* **And** cross-check ≥5 watchlist tokens on `x_dexscreener_token_lookup`: `% có liquidity_usd`, `% có volume_24h` — nếu <50% thì 54.3 hype_to_liquidity phải redesign (fallback: normalize bằng unique_sources only)
+* **And** measure sustainable poll rate: queries/10min trước khi X search degrade/rate-limit — định nghĩa ceiling cho 54.2 poll cadence
+* **And** output: `implementation-artifacts/spike-54-coverage-report.md` với verdict GO/REDESIGN per story
+* **Decision fork:** nếu contract-address search mù → 54.2 đổi strategy sang "KOL timeline monitor + token extraction" thay vì global search; nếu cashtag coverage <30% token nhỏ → scope mindshare về "watched-token share" thay vì "global share"
+
+---
+
 ### Story 54.1: TokenEntityExtractor — Cashtag, Contract & Name → Canonical Token ID
 As a **Crypto Intelligence Consumer (jev-trading / ChainLens)**,
 I want **a pure-JS extractor that parses `$TICKER` cashtags, Solana/EVM contract addresses, and token names from tweet text into canonical token entities**,
@@ -4253,26 +4271,28 @@ So that **jev catches narrative rotation early (e.g. "AI agents → DeSci → me
 **Depends on:** Story 54.1–54.4 + JevBrain batch decision (Epic 42/45)
 
 ### Story 54.6: Telegram Crypto Channel Crawler
-> **Phase:** Gated (Post-Ship-Gate) | **Gate:** Story 54.1–54.4 ship gate + Product Council approve (platform build lớn)
+> **Phase:** Gated (Post-Ship-Gate) | **Gate:** Story 54.1–54.4 ship gate + Product Council approve
 > **Parity:** Santiment TG coverage (>400 crypto chats, 1–2s latency) — kênh crypto mạnh nhất mà provider nào cũng có
 > **Origin:** D4 từ `research/market-crypto-xactions-features-2026-09-26` Tier-2 (jev Epic 2 deferred specifically vì XActions thiếu)
+> **Architecture:** VERIFIED — `research/technical-telegram-channel-crawler-mmomarket-pattern-2026-10-04/research.md`. Copy production-proven relay pattern từ `mmomarket.org/apps/telegram-relay` (GramJS `telegram@2.26.22`, StringSession, done 2026-09-20). **Không dùng Bot API** — crypto channels không add bot lạ; MTProto user-client là primary.
 
 As a **Crypto Intelligence Consumer**,
-I want **public Telegram crypto channel/group messages scraped, normalized, and fed into TokenMentionPipeline**,
+I want **public Telegram crypto channel/group messages scraped via a standalone MTProto relay service, normalized, and fed into TokenMentionPipeline**,
 So that **sentiment coverage extends to crypto's primary comms platform — where signals often break before X**.
 
 **Acceptance Criteria:**
-* **Given** no `TelegramCrawler` exists; `AbstractCrawler` + `AbstractApiClient` contract (Epic 10/13); channel list configurable
-* **When** implementing `src/scrapers/social/telegram/` crawler
-* **Then** 2 modes: **Bot API** (`getUpdates` cho channel bot là member — free, no key infra) + **MTProto user-client** (gramjs/telegram client cho public channels không cần bot — heavier, session file)
-* **And** normalize messages → `PostItem` shape (Epic 14 contract) → publish `stream:social:raw_posts` + feed `TokenMentionPipeline` (Story 54.2) với `platform: 'telegram'`
-* **And** channel registry: `{ channelId, handle, topicTags[], tier }` — jev supply curated crypto channel list; track join/leave + member_count delta
-* **And** rate governance qua `AdaptiveRateGovernor` (Epic 11) — TG strict hơn X về flood limits
-* **And** forward-chain: forwarded message giữ `forwardedFrom` để trace alpha origin (channel nào post trước)
-* **And** `x_telegram_channels` + `x_telegram_search` MCP actions; ingest health flag riêng (`tgDegraded`) tách khỏi X degraded
+* **Given** mmomarket relay pattern verified (login.js CLI → StringSession → standalone HTTP service); `AbstractCrawler` contract (Epic 10/13)
+* **When** implementing `src/scrapers/social/telegram/` + standalone relay service (port riêng, internal-only)
+* **Then** relay = single `TelegramClient` (GramJS) giữ `TELEGRAM_SESSION` env; endpoints `/liveness`, `/health` (3-state: healthy/cooldown/permanently_unhealthy), `POST /channel/messages`, `POST /channel/subscribe`
+* **And** error taxonomy copy nguyên: `FLOOD_WAIT_N` → parse seconds → cooldownUntil + 5s buffer; terminal (`USER_DEACTIVATED*`, `AUTH_KEY_UNREGISTERED`, `SESSION_*`) → `SESSION_BANNED` permanently_unhealthy + alert; `isBusy` single-flight
+* **And** channel reading: `getMessages(entity, {limit, minId})` poll + `NewMessage` event handler realtime; `iterDialogs()` cho discovery; `GetFullChannel` cho `member_count`
+* **And** normalize → `PostItem` `{ platform:'telegram', id, author, text, ts, channelId, forwardFrom: msg.fwdFrom }` → `stream:social:raw_posts` + `TokenMentionPipeline` (54.2)
+* **And** channel registry `{ channelId, handle, topicTags[], tier, memberCount }` — jev supply curated list; join rate-limit respect (~50 channels/ngày)
+* **And** `x_telegram_channels` + `x_telegram_search` MCP actions; `tgDegraded` health flag riêng tách khỏi X degraded
+* **And** session ownership: dedicated phone/account (KHÔNG account chính); `TELEGRAM_SESSION` treated as password-grade secret
 
-**Depends on:** Story 54.1–54.2 (pipeline phải nhận non-X source); Epic 11 governor; Epic 13 crawler contract
-**Estimate:** 1–2 weeks (largest single build trong epic — MTProto session management + channel discovery)
+**Depends on:** Story 54.1–54.2; Epic 11 governor (flood cooldown feed); research doc `technical-telegram-channel-crawler-mmomarket-pattern-2026-10-04`
+**Estimate:** ~5–8 dev-days (giảm từ 1–2 tuần nhờ reuse mmomarket pattern — skeleton 0.5d, channel ops 1d, PostItem+pipeline 1–2d, realtime 1d, MCP/governor 1–2d, tests 1–2d)
 
 ### Epic 54 — Success Metrics & Gate
 
@@ -4283,4 +4303,4 @@ So that **sentiment coverage extends to crypto's primary comms platform — wher
 
 **Stories 54.5–54.6 (gated, Phase 2):** spec'd sẵn ở trên; chỉ schedule sau khi ship gate đạt + Product Council approve (54.6 là platform build 1–2 tuần).
 
-**Total estimate:** MVP 4 stories ~1 sprint (6–10 dev-days) | Phase-2 gated: 54.5 ~3–4d, 54.6 ~1–2 tuần.
+**Total estimate:** MVP 5 stories (incl. 54.0 spike) ~1 sprint (7–11 dev-days) | Phase-2 gated: 54.5 ~3–4d, 54.6 ~5–8d (post-mmomarket-pattern research).
