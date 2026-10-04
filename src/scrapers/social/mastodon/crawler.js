@@ -735,7 +735,7 @@ export class MastodonCrawler extends AbstractCrawler {
     let accountId = args.accountId || args.targetId || args.id;
 
     if (!accountId && (args.username || args.handle)) {
-      const profile = await this.profile(args);
+      const profile = await (/** @type {any} */ (this)).profile(args);
       accountId = profile?.profile?.externalId || profile?.profile?.authorId;
     }
 
@@ -774,7 +774,7 @@ export class MastodonCrawler extends AbstractCrawler {
     let accountId = args.accountId || args.targetId || args.id;
 
     if (!accountId && (args.username || args.handle)) {
-      const profile = await this.profile(args);
+      const profile = await (/** @type {any} */ (this)).profile(args);
       accountId = profile?.profile?.externalId || profile?.profile?.authorId;
     }
 

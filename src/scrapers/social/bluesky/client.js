@@ -305,8 +305,10 @@ export class BlueskyClient extends AbstractApiClient {
    *
    * @param {Object} args
    * @param {string} [args.uri] - at:// URI of the post
+   * @param {string} [args.postUri] - alias for uri
    * @param {string} [args.url] - bsky.app post URL (converted to at:// URI)
    * @param {string} [args.postUrl] - alias for url
+   * @param {string} [args.postId] - alias for url/post
    * @param {number} [args.depth=0] - reply depth (0 = post only)
    * @param {number} [args.parentHeight=0] - ancestor height
    * @returns {Promise<Record<string, any>>} - { thread: { post, replies? } }
@@ -336,7 +338,7 @@ export class BlueskyClient extends AbstractApiClient {
         code: 'XACT_4001',
         message: `getPostThread requires an at:// URI or bsky.app post URL, got: ${JSON.stringify(url || uri)}`,
         statusCode: 400,
-        suggestedAction: SuggestedActions.FIX_ARGS,
+        suggestedAction: /** @type {any} */ (SuggestedActions).FIX_ARGS,
         platform: 'bluesky',
       });
     }
@@ -433,7 +435,7 @@ export class BlueskyClient extends AbstractApiClient {
       });
     }
 
-    return await this.xrpc(
+    return /** @type {any} */ (await this.xrpc(
       'com.atproto.repo.createRecord',
       {},
       {
@@ -446,7 +448,7 @@ export class BlueskyClient extends AbstractApiClient {
         requiresAuth: true,
         skipResponseValidation: true,
       }
-    );
+    ));
   }
 
   /**

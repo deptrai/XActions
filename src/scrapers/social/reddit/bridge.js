@@ -80,6 +80,7 @@ export class RedditBrowserBridge {
    * @param {boolean} [options.requiresAuth=false]
    * @param {string} [options.fallbackBackend]
    * @param {string} [options.wsEndpoint]
+   * @param {((info: {accountId: string | null, hibernationMs: number, url: string, via: string | null, type: string, confidence: number}) => void) | null} [options.onBotChallenge]
    */
   constructor(options = {}) {
     this.baseUrl = String(options.baseUrl || 'https://www.reddit.com').replace(/\/+$/, '');

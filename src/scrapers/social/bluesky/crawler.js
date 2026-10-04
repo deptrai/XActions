@@ -780,7 +780,7 @@ export class BlueskyCrawler extends AbstractCrawler {
 
     if (!subject && (args.handle || args.username)) {
       const handle = args.handle || args.username;
-      const profile = await this.profile({ handle });
+      const profile = await (/** @type {any} */ (this)).profile({ handle });
       subject = profile?.profile?.externalId || profile?.profile?.authorId;
     }
 

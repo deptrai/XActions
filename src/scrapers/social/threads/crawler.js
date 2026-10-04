@@ -2303,7 +2303,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     throw new PlatformError({
-      type: ErrorTypes.UNSUPPORTED_ACTION,
+      type: /** @type {any} */ (ErrorTypes).UNSUPPORTED_ACTION,
       code: 'XACT_5001',
       message: 'Threads live posting requires official Meta Threads API token or browser-as-signer bridge',
       statusCode: 501,
@@ -2344,7 +2344,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     throw new PlatformError({
-      type: ErrorTypes.UNSUPPORTED_ACTION,
+      type: /** @type {any} */ (ErrorTypes).UNSUPPORTED_ACTION,
       code: 'XACT_5001',
       message: 'Threads live reply requires official Meta Threads API token or browser-as-signer bridge',
       statusCode: 501,
@@ -2382,7 +2382,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     throw new PlatformError({
-      type: ErrorTypes.UNSUPPORTED_ACTION,
+      type: /** @type {any} */ (ErrorTypes).UNSUPPORTED_ACTION,
       code: 'XACT_5001',
       message: 'Threads live like requires official Meta Threads API token or browser-as-signer bridge',
       statusCode: 501,
@@ -2420,7 +2420,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     throw new PlatformError({
-      type: ErrorTypes.UNSUPPORTED_ACTION,
+      type: /** @type {any} */ (ErrorTypes).UNSUPPORTED_ACTION,
       code: 'XACT_5001',
       message: 'Threads live repost requires official Meta Threads API token or browser-as-signer bridge',
       statusCode: 501,
@@ -2458,7 +2458,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     throw new PlatformError({
-      type: ErrorTypes.UNSUPPORTED_ACTION,
+      type: /** @type {any} */ (ErrorTypes).UNSUPPORTED_ACTION,
       code: 'XACT_5001',
       message: 'Threads live follow requires official Meta Threads API token or browser-as-signer bridge',
       statusCode: 501,
@@ -2496,7 +2496,7 @@ export class ThreadsCrawler extends AbstractCrawler {
     }
 
     throw new PlatformError({
-      type: ErrorTypes.UNSUPPORTED_ACTION,
+      type: /** @type {any} */ (ErrorTypes).UNSUPPORTED_ACTION,
       code: 'XACT_5001',
       message: 'Threads live unfollow requires official Meta Threads API token or browser-as-signer bridge',
       statusCode: 501,

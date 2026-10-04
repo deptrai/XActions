@@ -46,6 +46,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
    * @param {import('../../../proxy/proxy-pool.js').ProxyIpPool} [deps.proxyPool]
    * @param {string} [deps.apiKey]
    * @param {string} [deps.baseUrl]
+   * @param {InnerTubeClient} [deps.innertube]
    */
   constructor(deps = {}) {
     const client = deps.client || new YouTubeClient({
@@ -226,7 +227,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
     });
 
     // Story 33.4 — InnerTube advanced data (FR-115)
-    this.registerAction({
+    this.registerAction(/** @type {any} */ ({
       action: 'live_chat',
       description: 'Fetch live chat messages for a video (InnerTube, no API key)',
       schema: {
@@ -238,7 +239,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
         required: ['videoId'],
       },
       handler: (/** @type {Record<string, any>} */ args) => this.liveChat(args),
-    });
+    }));
 
     this.registerAction({
       action: 'livechat',
@@ -246,7 +247,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
       handler: (/** @type {Record<string, any>} */ args) => this.liveChat(args),
     });
 
-    this.registerAction({
+    this.registerAction(/** @type {any} */ ({
       action: 'shorts_analytics',
       description: 'Fetch Shorts engagement metrics (InnerTube, no API key)',
       schema: {
@@ -257,7 +258,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
         required: ['videoId'],
       },
       handler: (/** @type {Record<string, any>} */ args) => this.shortsAnalytics(args),
-    });
+    }));
 
     this.registerAction({
       action: 'shorts',
@@ -265,7 +266,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
       handler: (/** @type {Record<string, any>} */ args) => this.shortsAnalytics(args),
     });
 
-    this.registerAction({
+    this.registerAction(/** @type {any} */ ({
       action: 'subscriber_history',
       description: 'Fetch channel subscriber count snapshot (InnerTube, no API key)',
       schema: {
@@ -276,7 +277,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
         required: ['channelId'],
       },
       handler: (/** @type {Record<string, any>} */ args) => this.subscriberHistory(args),
-    });
+    }));
 
     this.registerAction({
       action: 'subscribers',
@@ -284,7 +285,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
       handler: (/** @type {Record<string, any>} */ args) => this.subscriberHistory(args),
     });
 
-    this.registerAction({
+    this.registerAction(/** @type {any} */ ({
       action: 'music_trending_vn',
       description: 'Fetch YouTube Music VN trending (InnerTube, no API key)',
       schema: {
@@ -294,7 +295,7 @@ export class YouTubeVNCrawler extends AbstractCrawler {
         },
       },
       handler: (/** @type {Record<string, any>} */ args) => this.musicTrendingVn(args),
-    });
+    }));
 
     this.registerAction({
       action: 'youtube_music_vn',

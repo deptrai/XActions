@@ -9,7 +9,9 @@
  * @license MIT
  */
 
-import { DESCRIPTORS } from '../index.js';
+import * as scrapers from '../index.js';
+
+const DESCRIPTORS = /** @type {Record<string, any>} */ (scrapers).DESCRIPTORS;
 
 const CANONICAL_PLATFORMS = [
   'twitter',
@@ -153,7 +155,7 @@ export async function executeActionListTool(options = {}) {
   }
 
   try {
-    /** @type {Record<string, unknown>[]} */
+    /** @type {Record<string, any>[]} */
     const allActions = [];
 
     for (const crawler of crawlers) {

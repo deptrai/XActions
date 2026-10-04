@@ -170,10 +170,10 @@ export class InnerTubeClient extends AbstractApiClient {
 
   /**
    * Fetch live chat messages for a video.
-   * @param {string} videoId — YouTube video ID
+   * @param {string} videoId - YouTube video ID
    * @param {Object} [options]
-   * @param {string} [options.continuation] — continuation token for next batch
-   * @param {number} [options.timeoutMs] — poll timeout
+   * @param {string} [options.continuation] - continuation token for next batch
+   * @param {number} [options.timeoutMs] - poll timeout
    * @returns {Promise<{messages: Array, continuation: string|null, timeoutMs: number}>}
    */
   async getLiveChat(videoId, options = {}) {

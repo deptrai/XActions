@@ -58,7 +58,7 @@ const ATOMIC_TOKEN_REGEX = /(?:https?:\/\/[^\s]+|@[a-zA-Z0-9_.-]+|#[^\s#]+)/g;
 
 /**
  * Normalize platform string to lowercase canonical name.
- * @param {string} platform
+ * @param {string} [platform]
  * @returns {string}
  */
 export function normalizePlatform(platform) {
@@ -273,6 +273,8 @@ export class ContentTransformer {
    * @param {string} platform - Target platform name
    * @param {Object} [options={}] - Transformation options
    * @param {boolean} [options.autoThread=true] - Whether to split into thread if too long
+   * @param {number} [options.maxChars] - Maximum characters per post
+   * @param {boolean} [options.numbering=true] - Whether to number thread parts
    * @returns {TransformedPost[]}
    */
   static transform(source = {}, platform = 'twitter', options = {}) {
