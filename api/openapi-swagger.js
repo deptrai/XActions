@@ -71,7 +71,7 @@ export const swaggerOptions = {
  * Mount BEFORE any `/docs/:slug` handlers and AFTER `/openapi.json` so the
  * spec endpoint resolves first.
  *
- * @param {import('express').Express} app
+ * @param {import('express').Application} app
  * @param {() => Record<string, unknown>} specThunk
  */
 export function mountSwaggerUi(app, specThunk) {

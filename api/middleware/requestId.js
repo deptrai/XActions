@@ -20,7 +20,14 @@
 import { generateRequestId, sanitizeRequestId } from '../services/gatewayEnvelope.js';
 
 /**
- * @param {import('express').Request} req
+ * @typedef {import('express').Request & {
+ *   requestId?: string,
+ *   traceparent?: string,
+ * }} GatewayRequest
+ */
+
+/**
+ * @param {GatewayRequest} req
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
@@ -28,14 +35,15 @@ export function requestId(req, res, next) {
   // Express `req.get` reads a header; fall back to raw headers for bare
   // {headers} req objects (middleware unit tests, non-Express callers).
   const get = typeof req.get === 'function'
-    ? (name) => req.get(name)
-    : (name) => req.headers?.[name];
+    ? (/** @type {string} */ name) => (/** @type {(header: string) => any} */ (req.get))(name)
+    : (/** @type {string} */ name) => req.headers?.[name];
 
-  req.requestId = sanitizeRequestId(get('x-request-id')) || generateRequestId();
+  const resolvedId = sanitizeRequestId(get('x-request-id')) || generateRequestId();
+  req.requestId = resolvedId;
 
   const traceparent = get('traceparent');
   req.traceparent = typeof traceparent === 'string' && traceparent ? traceparent : undefined;
 
-  res.setHeader('X-Request-Id', req.requestId);
+  res.setHeader('X-Request-Id', resolvedId);
   next();
 }

@@ -36,10 +36,11 @@ let isFull = false;
 
 /**
  * Record a gateway call in the ring buffer.
- * @param {GatewayCallRecord} record
+ * @param {Partial<GatewayCallRecord> & Record<string, any>} record
  */
 export function recordGatewayCall(record) {
   if (!record || typeof record !== 'object') return;
+  /** @type {GatewayCallRecord} */
   const entry = {
     timestamp: record.timestamp || Date.now(),
     requestId: record.requestId || 'unknown',
@@ -107,7 +108,7 @@ export function getCallTrace(requestId) {
 function calculatePercentiles(values) {
   if (values.length === 0) return { p50: 0, p95: 0, p99: 0 };
   const sorted = [...values].sort((a, b) => a - b);
-  const getP = (p) => {
+  const getP = (/** @type {number} */ p) => {
     const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * (p / 100)));
     return sorted[idx];
   };
@@ -153,8 +154,9 @@ export function getMetricsSummary() {
 
   for (const call of calls) {
     // Traffic split
-    if (call.consumerType && trafficSplit[call.consumerType] !== undefined) {
-      trafficSplit[call.consumerType]++;
+    const cType = /** @type {keyof typeof trafficSplit} */ (call.consumerType);
+    if (cType && trafficSplit[cType] !== undefined) {
+      trafficSplit[cType]++;
     } else {
       trafficSplit.anonymous++;
     }
@@ -187,8 +189,9 @@ export function getMetricsSummary() {
     }
 
     // Degrade reasons
-    if (call.degradedReason && degradeReasons[call.degradedReason] !== undefined) {
-      degradeReasons[call.degradedReason]++;
+    const dReason = /** @type {keyof typeof degradeReasons} */ (call.degradedReason);
+    if (dReason && degradeReasons[dReason] !== undefined) {
+      degradeReasons[dReason]++;
       totalDegraded++;
     }
   }

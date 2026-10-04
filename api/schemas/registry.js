@@ -40,6 +40,9 @@ const emittedOperationIds = new Set();
 
 const API_ERROR_REF = { $ref: '#/components/schemas/ApiError' };
 
+/**
+ * @param {string} description
+ */
 function apiErrorResponse(description) {
   return {
     description,
@@ -77,13 +80,13 @@ const pageInfoSchema = z.object({
  * @param {string} [opts.summary]
  * @param {string} [opts.description]
  * @param {string[]} [opts.tags]
- * @param {object} opts.schemas  { body?, query?, params?, headers?, response? }
+ * @param {object} [opts.schemas]  { body?, query?, params?, headers?, response? }
  *   `response` is the payload schema T — the canonical envelope is wrapped by
  *   the builder (`{success:true,data:T}`, or `data:T[]`+`page` when paginated).
  * @param {boolean} [opts.paginated]   wrap `response` as PaginatedResponse<T>
  * @param {number} [opts.statusCode]   success status (default 200)
  * @param {number[]} [opts.errors]     error statuses to document (default [400,500])
- * @param {Array<Record<string, string[]>>} opts.security  per-op security, always emitted
+ * @param {any[]} [opts.security]  per-op security, always emitted
  * @param {boolean} [opts.xTryItOut]   TryIt console extension
  * @param {Record<string, unknown>} [opts.xPaymentInfo]  x402 payment metadata
  * @param {Record<string, unknown>} [opts.xBazaar]       x-bazaar discovery metadata
@@ -143,15 +146,15 @@ export function registerPath({
   emittedOperationIds.add(opId);
 
   registry.registerPath({
-    method,
+    method: /** @type {any} */ (method),
     path,
     operationId: opId,
     ...(summary ? { summary } : {}),
     ...(description ? { description } : {}),
     ...(tags.length ? { tags } : {}),
     request,
-    responses,
-    security,
+    responses: /** @type {any} */ (responses),
+    security: /** @type {any} */ (security),
     ...(xTryItOut !== undefined ? { 'x-tryitout': xTryItOut } : {}),
     ...(xPaymentInfo ? { 'x-payment-info': xPaymentInfo } : {}),
     ...(xBazaar ? { 'x-bazaar': xBazaar } : {}),

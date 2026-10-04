@@ -123,15 +123,24 @@ export function _resetTokenBucket() {
 }
 
 /**
+ * @typedef {import('express').Request & {
+ *   consumer?: { consumerId?: string, source?: string, apiKeyValid?: boolean, tier?: string },
+ *   platform?: string,
+ *   requestId?: string,
+ * }} GatewayQuotaRequest
+ */
+
+/**
  * Extract caller IP safely from Express req.
  * @param {import('express').Request} req
  * @returns {string}
  */
 function getClientIp(req) {
+  const socket = /** @type {{ remoteAddress?: string } | undefined} */ (req.socket);
   return (
     req.ip ||
     req.headers['x-forwarded-for']?.toString().split(',')[0].trim() ||
-    req.socket?.remoteAddress ||
+    socket?.remoteAddress ||
     '127.0.0.1'
   );
 }
@@ -139,7 +148,7 @@ function getClientIp(req) {
 /**
  * Gateway Quota Enforcement Middleware.
  *
- * @param {import('express').Request} req
+ * @param {GatewayQuotaRequest} req
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
@@ -183,7 +192,9 @@ export async function gatewayQuota(req, res, next) {
     }
 
     // 3. Quota exhausted -> check if x402 payment header is present
-    const hasPaymentHeader = Boolean(req.headers['x-payment'] || req.headers['authorization']?.startsWith('X402 '));
+    const authHeader = req.headers['authorization'];
+    const authStr = typeof authHeader === 'string' ? authHeader : '';
+    const hasPaymentHeader = Boolean(req.headers['x-payment'] || authStr.startsWith('X402 '));
     if (hasPaymentHeader) {
       // Delegate to x402 payment lane if caller is ready to pay
       return next();

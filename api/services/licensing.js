@@ -273,7 +273,7 @@ function brandingMiddleware() {
     res.send = /** @type {(body: unknown) => import('express').Response} */ (/** @type {unknown} */ (async function(/** @type {unknown} */ body) {
       // Never touch non-HTML responses — a JSON payload containing '</body>'
       // in a string value would otherwise be corrupted.
-      const contentType = res.get('Content-Type');
+      const contentType = /** @type {any} */ (res).get('Content-Type');
       if (contentType && !String(contentType).includes('text/html')) {
         return originalSend.call(/** @type {import('express').Response} */ (this), body);
       }

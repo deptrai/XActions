@@ -113,7 +113,7 @@ export function normalizeData(result) {
  * both). `sync_capable` is single-dispatch only — batch top-level omits it
  * (per-entry `status` carries the truth).
  *
- * @param {{ requestId?: string, traceparent?: string, platform?: string, platforms?: string[], action?: string, consumerId?: string, durationMs?: number, syncCapable?: boolean, dryRun?: boolean }} args
+ * @param {{ requestId?: string, traceparent?: string, platform?: string, platforms?: string[], action?: string, consumerId?: string, durationMs?: number, syncCapable?: boolean, dryRun?: boolean }} [args]
  * @returns {Record<string, unknown>}
  */
 export function buildMetadata({ requestId, traceparent, platform, platforms, action, consumerId, durationMs, syncCapable, dryRun } = {}) {
@@ -231,7 +231,7 @@ export async function buildStreamBlock({ withCursor = false } = {}) {
     try {
       const cursor = await Promise.race([
         Promise.resolve().then(() => readStreamCursor(publisher)),
-        new Promise((resolve) => {
+        new Promise((/** @type {(value: null) => void} */ resolve) => {
           timer = setTimeout(() => resolve(null), STREAM_CURSOR_BUDGET_MS);
           if (typeof timer === 'object' && typeof timer.unref === 'function') timer.unref();
         }),
@@ -255,7 +255,7 @@ export async function buildStreamBlock({ withCursor = false } = {}) {
  * lane-specific fields (`operationId`/`statusUrl`/`degraded_reason`/
  * `retry_after_ms`/`result`/`results`/`operationIds`).
  *
- * @param {{ mode: string, metadata?: Record<string, unknown>, stream?: Record<string, unknown>, data?: unknown[], extra?: Record<string, unknown> }} args
+ * @param {{ mode?: string, metadata?: Record<string, unknown>, stream?: Record<string, unknown>, data?: unknown[], extra?: Record<string, unknown> }} [args]
  * @returns {Record<string, unknown>}
  */
 export function successEnvelope({ mode, metadata, stream, data, extra } = {}) {
@@ -281,7 +281,7 @@ export function successEnvelope({ mode, metadata, stream, data, extra } = {}) {
  * retryable, retry_after_ms?}}` — `retry_after_ms` is emitted IFF
  * `retryable:true` (C-10).
  *
- * @param {{ code?: string, type?: string, kind?: string, message?: string, status?: number, requestId?: string, retryable?: boolean, retryAfterMs?: number }} args
+ * @param {{ code?: string, type?: string, kind?: string, message?: string, status?: number, requestId?: string, retryable?: boolean, retryAfterMs?: number }} [args]
  * @returns {{ success: false, error: Record<string, unknown> }}
  */
 export function errorBody({ code, type, kind, message, status, requestId, retryable, retryAfterMs } = {}) {
@@ -292,7 +292,7 @@ export function errorBody({ code, type, kind, message, status, requestId, retrya
   };
   if (typeof type === 'string' && type) error.type = type;
   error.message = typeof message === 'string' && message ? message : 'Request failed';
-  error.status = Number.isInteger(status) && status >= 400 && status < 600 ? status : 500;
+  error.status = typeof status === 'number' && Number.isInteger(status) && status >= 400 && status < 600 ? status : 500;
   if (requestId) error.request_id = requestId;
   error.retryable = retryable === true;
   if (error.retryable) {

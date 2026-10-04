@@ -21,7 +21,7 @@ export const StartAgentBody = z.object({
 
 export const TriggerWorkflowBody = z.object({
   workflowId: nonEmptyId,
-  inputs: z.record(z.unknown()).optional(),
+  inputs: z.record(z.string(), z.unknown()).optional(),
   sessionCookie: z.string().optional(),
 });
 

@@ -147,6 +147,14 @@ function resolveConsumerFromBearer(token) {
   return { consumerId: 'internal', apiKeyValid: false, apiKeyRequired: true };
 }
 
+/**
+ * @typedef {import('express').Request & {
+ *   consumerHint?: string | null,
+ *   consumer?: { consumerId: string, apiKeyValid: boolean, source: string, tier?: string },
+ *   user?: any
+ * }} ServiceAuthRequest
+ */
+
 let _hintMismatchWarned = false;
 
 /**
@@ -155,7 +163,7 @@ let _hintMismatchWarned = false;
  * Sets `req.consumerHint` to normalized `X-Consumer-Id` header value (observability only).
  * On apiKeyValid:false → next(ApiError('XACT_4001', 401, 'Invalid Bearer token', undefined, 'auth')).
  *
- * @param {import('express').Request} req
+ * @param {ServiceAuthRequest} req
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
@@ -212,12 +220,13 @@ export function serviceAuth(req, res, next) {
  *
  * Implemented via Promise wrap so tests and Express async pipelines can await it.
  *
- * @param {import('express').Request} req
+ * @param {ServiceAuthRequest} req
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
+ * @returns {Promise<void>}
  */
 export async function eitherAuth(req, res, next) {
-  return new Promise((resolve) => {
+  return new Promise((/** @type {(value?: void) => void} */ resolve) => {
     let settled = false;
 
     const handleServiceFallback = (thrownErr) => {

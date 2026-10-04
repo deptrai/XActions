@@ -4295,6 +4295,11 @@ const HTTP_METHOD_KEYS = new Set(['get', 'put', 'post', 'delete', 'options', 'he
  *   (literal ops: always — they dual-read; generated ops: only when the op
  *   declares the `sessionCookie` security scheme)
  * - backfill a deterministic `operationId` when missing
+ *
+ * @param {any} op
+ * @param {string} method
+ * @param {string} path
+ * @param {{ literal?: boolean, spec?: any }} [opts]
  */
 function normalizeOperation(op, method, path, { literal = false, spec } = {}) {
   if (!op || typeof op !== 'object') return;
