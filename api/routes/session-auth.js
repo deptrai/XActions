@@ -2,6 +2,7 @@
 import prisma from '../lib/prisma.js';
 /**
  * @typedef {import('@prisma/client').User} User
+ * @typedef {import('express').Response & { sendData: (data: any, statusCode?: number) => any, sendPage?: (items: any, page?: any) => any }} EnvelopeResponse
  */
 import express from 'express';
 import crypto from 'crypto';
@@ -69,7 +70,7 @@ router.post('/save-session',
   const reqUser = /** @type {User} */ (req.user);
 
     try {
-      const { sessionCookie, username } = req.body;
+      const { sessionCookie, username } = /** @type {{ sessionCookie: string, username?: string }} */ (req.body);
 
       // Test the session cookie by attempting to authenticate
       const page = await browserAutomation.createPage(sessionCookie);
@@ -91,7 +92,7 @@ router.post('/save-session',
         }
       });
 
-      res.sendData({
+      /** @type {EnvelopeResponse} */ (res).sendData({
         message: 'Session saved successfully',
         authMethod: 'session'
       });
@@ -118,7 +119,7 @@ router.delete('/remove-session',
         }
       });
 
-      res.sendData({ message: 'Session removed successfully' });
+      /** @type {EnvelopeResponse} */ (res).sendData({ message: 'Session removed successfully' });
     } catch (error) {
       console.error('❌ Remove session error:', (error instanceof Error ? error.message : String(error)));
       throw new ApiError('INTERNAL', 500, 'Failed to remove session');
@@ -150,7 +151,7 @@ router.get('/auth-method',
       const hasOAuth = !!user.twitterAccessToken;
       const hasSession = !!user.sessionCookie;
 
-      res.sendData({
+      /** @type {EnvelopeResponse} */ (res).sendData({
         authMethod: user.authMethod,
         hasOAuth,
         hasSession,

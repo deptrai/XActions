@@ -195,10 +195,10 @@ export function bioPairKey(a, b) {
  * Score a pair of profiles; returns total score + which signals fired.
  * @param {Record<string, any>} a
  * @param {Record<string, any>} b
- * @param {Map<string, bigint>} [avatarHashMap] — pre-fetched avatar pHash map (url → hash)
- * @param {boolean} [phashEnabled] — resolved pHash kill-switch (default: env)
- * @param {number} [phashThreshold] — resolved Hamming threshold (default: env)
- * @param {Map<string, {score: number, confidence: number}>} [bioScoreMap] — pre-fetched
+ * @param {Map<string, bigint>} [avatarHashMap] - pre-fetched avatar pHash map (url -> hash)
+ * @param {boolean} [phashEnabled] - resolved pHash kill-switch (default: env)
+ * @param {number} [phashThreshold] - resolved Hamming threshold (default: env)
+ * @param {Map<string, {score: number, confidence: number}>} [bioScoreMap] - pre-fetched
  *        Jev bio scores keyed by bioPairKey (Story 42.5); only qualifying pairs present
  * @returns {{ score: number, signals: string[] }}
  */
@@ -288,10 +288,10 @@ function pickPrimary(members) {
  * Resolve a flat ProfileItem[] into identityClusters[].
  *
  * @param {Array<Record<string, any>>} profiles
- * @param {string} [query] — original lookup query (reserved; boosts nothing yet
+ * @param {string} [query] - original lookup query (reserved; boosts nothing yet
  *                          but kept for future query-anchored scoring).
- * @param {Map<string, bigint>} [avatarHashMap] — pre-fetched avatar pHash map (url → hash)
- * @param {Map<string, {score: number, confidence: number}>} [bioScoreMap] — pre-fetched
+ * @param {Map<string, bigint>} [avatarHashMap] - pre-fetched avatar pHash map (url -> hash)
+ * @param {Map<string, {score: number, confidence: number}>} [bioScoreMap] - pre-fetched
  *        Jev bio scores keyed by bioPairKey (Story 42.5); only qualifying pairs present
  * @returns {Array<{ clusterId: string, confidence: number, profiles: Array, matchedSignals: string[], primaryProfile: any }>}
  */
@@ -341,8 +341,12 @@ export function resolveIdentities(profiles, query, avatarHashMap, bioScoreMap) {
   const groups = new Map();
   for (let i = 0; i < n; i++) {
     const r = find(i);
-    if (!groups.has(r)) groups.set(r, []);
-    groups.get(r).push(i);
+    let listArr = groups.get(r);
+    if (!listArr) {
+      listArr = [];
+      groups.set(r, listArr);
+    }
+    listArr.push(i);
   }
 
   const clusters = [];
@@ -388,8 +392,9 @@ export function resolveIdentities(profiles, query, avatarHashMap, bioScoreMap) {
  *
  * @param {Array<Record<string, any>>} profiles
  * @param {object} [options]
- * @param {object} [options.httpClient] — HTTP client with .request(url, {signal})
- * @param {number} [options.timeoutMs=3000] — fetch timeout per avatar
+ * @param {object} [options.httpClient] - HTTP client with .request(url, {signal})
+ * @param {number} [options.timeoutMs=3000] - fetch timeout per avatar
+ * @param {number} [options.concurrency=8] - concurrency limit
  * @returns {Promise<Map<string, bigint>>}
  */
 export async function prefetchAvatarHashes(profiles, options = {}) {
@@ -408,8 +413,9 @@ export async function prefetchAvatarHashes(profiles, options = {}) {
 
   // Cap concurrency + per-fetch timeout so a slow CDN can't stall the tool.
   const { default: pLimit } = await import('p-limit');
-  const limit = pLimit(Number.isFinite(options.concurrency) ? options.concurrency : 8);
-  const perFetchTimeout = Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
+  const concurrency = typeof options.concurrency === 'number' && Number.isFinite(options.concurrency) ? options.concurrency : 8;
+  const limit = pLimit(concurrency);
+  const perFetchTimeout = typeof options.timeoutMs === 'number' && Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
     ? Math.min(options.timeoutMs, 3000)
     : 3000;
 

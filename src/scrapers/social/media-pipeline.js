@@ -27,7 +27,7 @@ import { parseMediaEntity } from './twitter/normalize-media.js';
 
 /**
  * @typedef {Object} MediaObject
- * @property {'photo' | 'video' | 'animated_gif' | 'audio' | 'carousel'} type
+ * @property {'photo' | 'video' | 'animated_gif' | 'audio' | 'carousel' | string} type
  * @property {string} url - Primary/best-quality direct download URL
  * @property {string} thumbnailUrl - Preview or poster image URL
  * @property {number|null} width
@@ -360,7 +360,9 @@ export class UniversalMediaPipeline {
    * @param {Object} params
    * @param {string} [params.platform] - Platform name (twitter, bluesky, mastodon, threads, facebook, tiktok)
    * @param {string} [params.postUrl] - URL of the post (optional, auto-detects platform if omitted)
+   * @param {string} [params.url]
    * @param {Record<string, any>} [params.post] - PostItem or raw payload
+   * @param {Record<string, any>} [params.rawData]
    * @param {Record<string, any>} [params.options]
    * @returns {Promise<MediaObject[]>}
    */
@@ -376,7 +378,7 @@ export class UniversalMediaPipeline {
           code: 'XACT_4001',
           type: ErrorTypes.INVALID_ARGS,
           message: `x_download_media requires a valid http(s) postUrl, got: ${JSON.stringify(postUrl)}`,
-          suggestedAction: SuggestedActions.FIX_ARGS,
+          suggestedAction: /** @type {any} */ (SuggestedActions).FIX_ARGS,
           platform,
         });
       }
@@ -403,6 +405,7 @@ export class UniversalMediaPipeline {
       const action = POST_DETAIL_ACTION[platform] || 'post_detail';
       try {
         const { scrape } = await import('../index.js');
+        /** @type {any} */
         const scraped = await scrape(platform, action, { url: postUrl, postUrl, postId: postUrl, tweetId: postUrl });
         // Prefer the raw node (carries `embed`/`media_attachments`) over the
         // normalized PostItem — the extractor reads platform-native media fields.
@@ -414,7 +417,7 @@ export class UniversalMediaPipeline {
           code: 'XACT_4001',
           type: ErrorTypes.INVALID_ARGS,
           message: `Failed to fetch post for media extraction on ${platform}: ${err?.message || err}`,
-          suggestedAction: SuggestedActions.FIX_ARGS,
+          suggestedAction: /** @type {any} */ (SuggestedActions).FIX_ARGS,
           platform,
           cause: err,
         });

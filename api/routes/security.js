@@ -23,8 +23,9 @@ router.get('/status', authenticateToken, async (req, res) => {
     // --- Session cookie / bearer presence (from authenticated request) ---
     const hasBearer = Boolean(req.headers.authorization);
     const hasSessionCookie = Boolean(req.headers['x-session-cookie']);
-    const user = req.user ? await prisma.user.findUnique({
-      where: { id: req.user.id },
+    const userId = /** @type {string | undefined} */ (/** @type {any} */ (req.user)?.id);
+    const user = userId ? await prisma.user.findUnique({
+      where: { id: userId },
       select: { authMethod: true, twitterUsername: true, sessionCookie: true, twitterAccessToken: true },
     }) : null;
 
@@ -62,7 +63,7 @@ router.get('/status', authenticateToken, async (req, res) => {
     // --- Webhook endpoints ---
     try {
       const configured = hasWebhooksConfigured();
-      const wh = getWebhookStatus();
+      const wh = /** @type {any} */ (getWebhookStatus());
       const failed = Number(wh?.delivery?.failed ?? 0);
       items.push({
         label: 'Webhook Endpoints',
@@ -70,7 +71,7 @@ router.get('/status', authenticateToken, async (req, res) => {
         detail: !configured
           ? 'No webhook endpoints configured'
           : failed > 0
-            ? `${failed} delivery failure(s), ${wh.delivery.successRate} success rate`
+            ? `${failed} delivery failure(s), ${wh?.delivery?.successRate} success rate`
             : 'All webhook endpoints healthy',
       });
     } catch {

@@ -81,6 +81,9 @@ export class PlatformError extends Error {
    * @param {Record<string, unknown>} [opts.details]
    * @param {boolean} [opts.isRetryable]
    * @param {unknown} [opts.cause]
+   * @param {any} [opts.availableActions]
+   * @param {any} [opts.missing]
+   * @param {any} [opts.example]
    */
   constructor(opts = {}) {
     super(opts.message || 'Platform error');

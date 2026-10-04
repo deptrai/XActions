@@ -17,10 +17,10 @@ const DEFAULT_ICP =
  *
  * Returns `null` when the plane is degraded — caller treats as "no signal".
  *
- * @param {{username?: string, bio?: string, recentTweets?: string[]}} profile
- * @param {string} icp — ICP description.
+ * @param {{username?: string, handle?: string, bio?: string, recentTweets?: string[]}} profile
+ * @param {string} icp - ICP description.
  * @param {Object} [options]
- * @param {JevBrain} [options.brain] — pre-built JevBrain.
+ * @param {JevBrain} [options.brain] - pre-built JevBrain.
  * @returns {Promise<{username: string, buyerIntent: string, intentConfidence: number, leadScore: number, scoreConfidence: number} | null>}
  */
 export async function scoreProfile(profile, icp = DEFAULT_ICP, { brain } = {}) {
@@ -70,11 +70,11 @@ export async function scoreProfile(profile, icp = DEFAULT_ICP, { brain } = {}) {
  * Batch-score a list of profiles against the ICP.
  * Sequential processing (Jev ~300ms/call) — rate-limit-friendly.
  *
- * @param {Array<{username?: string, bio?: string, recentTweets?: string[]}>} profiles
- * @param {string} [icp] — ICP description.
+ * @param {Array<{username?: string, handle?: string, bio?: string, recentTweets?: string[]}>} profiles
+ * @param {string} [icp] - ICP description.
  * @param {Object} [options]
  * @param {JevBrain} [options.brain]
- * @param {number} [options.leadScoreThreshold] — minimum score to count as qualified (default 2 = good_fit).
+ * @param {number} [options.leadScoreThreshold] - minimum score to count as qualified (default 2 = good_fit).
  * @returns {Promise<{qualified: Array, all: Array, stats: {total: number, qualified: number, avgScore: number, degraded: boolean}}>}
  */
 export async function scoreProfiles(profiles, icp = DEFAULT_ICP, { brain, leadScoreThreshold = 2 } = {}) {

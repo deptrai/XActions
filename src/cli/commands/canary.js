@@ -163,7 +163,7 @@ export function registerCanaryCommand(program) {
 
             if (res.status === 'preview') {
               console.log(chalk.bold(`\n📋 Preview patch for ${job.platform}/${job.target}:\n`));
-              process.stdout.write(res.patch);
+              process.stdout.write(String(res.patch));
             } else if (res.status === 'draft-pr') {
               console.log(chalk.green(`✅ Draft PR created for ${job.platform}/${job.target}: ${res.prUrl}`));
             } else if (res.status === 'patch-file') {

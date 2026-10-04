@@ -70,7 +70,7 @@ export function setupMcpRoutes(app) {
 
     // Existing session
     if (sessionId && sessions.has(sessionId)) {
-      const session = sessions.get(sessionId);
+      const session = /** @type {{ server: any, transport: StreamableHTTPServerTransport }} */ (sessions.get(sessionId));
       await runWithConsumerContext(consumer, () => session.transport.handleRequest(req, res, req.body));
       return;
     }
@@ -90,7 +90,7 @@ export function setupMcpRoutes(app) {
         }
       };
 
-      const server = createMcpServer();
+      const server = /** @type {any} */ (createMcpServer());
       await server.connect(transport);
       await runWithConsumerContext(consumer, () => transport.handleRequest(req, res, req.body));
       return;

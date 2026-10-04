@@ -624,7 +624,7 @@ router.post('/generate', async (req, res) => {
     if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
       return res.status(400).json({ success: false, error: 'prompt is required (non-empty string)' });
     }
-    const { callLLM } = await import('../../../src/ai/tweetGenerator.js');
+    const { callLLM } = /** @type {{ callLLM: (messages: any[], options?: any) => Promise<any> }} */ (/** @type {unknown} */ (await import('../../../src/ai/tweetGenerator.js')));
     const result = await callLLM(
       [{ role: 'user', content: prompt.trim() }],
       {

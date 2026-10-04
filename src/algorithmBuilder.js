@@ -864,6 +864,7 @@ async function runSession(page, persona, plan) {
 
           // Pick a tweet with decent engagement to comment on
           const goodTweets = collectedTweets.filter(t => t.likes > 5 && !t.isLiked);
+          /** @type {import('./types/xactions.js').VisibleTweet | null} */
           let target = goodTweets.length > 0
             ? goodTweets[Math.floor(Math.random() * Math.min(goodTweets.length, 5))]
             : collectedTweets[0];

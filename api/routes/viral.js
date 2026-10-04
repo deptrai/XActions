@@ -34,6 +34,10 @@ import {
   ViralSessionHeaders,
 } from '../schemas/viral.js';
 
+/**
+ * @typedef {import('express').Response & { sendData: (data: any, statusCode?: number) => any, sendPage?: (items: any, page?: any) => any }} EnvelopeResponse
+ */
+
 const router = express.Router();
 
 // In-memory job store (production: use Redis or DB)
@@ -77,7 +81,7 @@ const sessioned = (schemas) => [sessionCookieShim, requireSession, validate(sche
  * Trigger a viral mining job
  */
 router.post('/mine', ...sessioned({ body: ViralMineBody, headers: ViralSessionHeaders }), asyncHandler(async (req, res) => {
-  const { platform, niche, count } = req.body;
+  const { platform, niche, count } = /** @type {{ platform: string, niche: string, count: number }} */ (req.body);
 
   // Validate platform
   const supportedPlatforms = listPlatforms();
@@ -124,7 +128,7 @@ router.post('/mine', ...sessioned({ body: ViralMineBody, headers: ViralSessionHe
 
   // Queue for processing (integrate with jobQueue.js)
   try {
-    const { queueJob } = await import('../../services/jobQueue.js');
+    const { queueJob } = await import('../services/jobQueue.js');
     await queueJob({
       id: jobId,
       type: 'viral-mining',
@@ -159,7 +163,7 @@ router.post('/mine', ...sessioned({ body: ViralMineBody, headers: ViralSessionHe
     })();
   }
 
-  res.sendData({
+  /** @type {EnvelopeResponse} */ (res).sendData({
     jobId,
     status: 'queued',
     job: publicJob(job),
@@ -178,7 +182,7 @@ router.get('/mine/:jobId', ...sessioned({ params: ViralJobIdParams, headers: Vir
     throw new ApiError('JOB_NOT_FOUND', 404, `Job ${jobId} not found`);
   }
 
-  res.sendData({ job: publicJob(job) });
+  /** @type {EnvelopeResponse} */ (res).sendData({ job: publicJob(job) });
 }));
 
 /**
@@ -200,7 +204,7 @@ router.delete('/mine/:jobId', ...sessioned({ params: ViralJobIdParams, headers: 
   job.status = 'cancelled';
   job.cancelledAt = new Date().toISOString();
 
-  res.sendData({ job: publicJob(job) });
+  /** @type {EnvelopeResponse} */ (res).sendData({ job: publicJob(job) });
 }));
 
 /**
@@ -217,7 +221,7 @@ router.get('/stats/:platform/:niche', validate({ params: ViralStatsParams }), as
       throw new ApiError('STATS_NOT_FOUND', 404, `No viral stats found for ${platform}/${niche}`);
     }
 
-    res.sendData({
+    /** @type {EnvelopeResponse} */ (res).sendData({
       platform,
       niche,
       stats,
@@ -236,7 +240,7 @@ router.get('/stats', asyncHandler(async (req, res) => {
   try {
     const { listStats } = await import('../../src/analytics/viralStatsStore.js');
     const stats = await listStats();
-    res.sendData({ stats });
+    /** @type {EnvelopeResponse} */ (res).sendData({ stats });
   } catch (err) {
     throw new ApiError('STATS_LIST_FAILED', 500, err.message);
   }
@@ -275,7 +279,7 @@ router.post('/backtest', ...sessioned({ body: ViralBacktestBody, headers: ViralS
     }
   })();
 
-  res.sendData({
+  /** @type {EnvelopeResponse} */ (res).sendData({
     reportId,
     status: 'queued',
     report,
@@ -294,7 +298,7 @@ router.get('/backtest/:reportId', ...sessioned({ params: ViralReportIdParams, he
     throw new ApiError('REPORT_NOT_FOUND', 404, `Report ${reportId} not found`);
   }
 
-  res.sendData({ report });
+  /** @type {EnvelopeResponse} */ (res).sendData({ report });
 }));
 
 /**
@@ -305,7 +309,7 @@ router.get('/corpus/:platform/:niche', ...sessioned({ params: ViralStatsParams, 
   const { platform, niche } = req.params;
 
   // TODO: Stream file from data/viral-corpus/
-  res.sendData({
+  /** @type {EnvelopeResponse} */ (res).sendData({
     platform,
     niche,
     message: 'Corpus download — implement file streaming',
@@ -328,7 +332,7 @@ router.get('/platforms', (req, res) => {
     categorized[category].push(platform);
   }
 
-  res.sendData({
+  /** @type {EnvelopeResponse} */ (res).sendData({
     platforms: categorized,
     total: platforms.length,
   });

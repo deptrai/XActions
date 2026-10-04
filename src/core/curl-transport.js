@@ -73,11 +73,11 @@ export function createCurlTransport(platform = 'default') {
       const code = err?.code || '';
       if (code === 'ECONNRESET' || String(err?.message || '').includes('ECONNRESET')) {
         throw new PlatformError({
-          type: ErrorTypes.PROXY_DEAD,
+          type: /** @type {any} */ (ErrorTypes).PROXY_DEAD,
           code: 'XACT_5020',
           message: 'Proxy connection failed (curl)',
           statusCode: 503,
-          suggestedAction: SuggestedActions.RETRY,
+          suggestedAction: /** @type {any} */ (SuggestedActions).RETRY,
           platform,
         });
       }

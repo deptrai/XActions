@@ -23,9 +23,10 @@ import { calculateViralScore } from '../filters/jevFilter.js';
  * @property {number} days
  * @property {number} sampleSize
  * @property {Object} metrics - precision, recall, accuracyByHookType
- * @property {Object} platformBreakdown
+ * @property {Object} [platformBreakdown]
  * @property {string} summary
  * @property {string} generatedAt
+ * @property {string} [status]
  */
 
 /**
@@ -46,6 +47,7 @@ async function fetchOwnPosts(platform, days, options = {}) {
   // Check for local corpus files first to backtest offline
   try {
     const dir = 'data/viral-corpus';
+    /** @type {string[]} */
     const files = await fs.readdir(dir).catch(() => []);
     const matches = files.filter(f => f.includes(`-${platform}-`)).sort().reverse();
     for (const match of matches) {
@@ -102,7 +104,7 @@ async function fetchOwnPosts(platform, days, options = {}) {
  * @returns {Object} { precision, recall }
  */
 function calculateMetrics(predictions, actuals) {
-  const predIds = new Set(predictions.map(p => p.id));
+  const _predIds = new Set(predictions.map(p => p.id));
   const actualIds = new Set(actuals.map(p => p.id));
   
   const truePositives = predictions.filter(p => actualIds.has(p.id)).length;
@@ -145,7 +147,7 @@ function groupByHookType(posts) {
  */
 export async function runBacktest(params, options = {}) {
   const { platform, niche, days = 7 } = params;
-  const { session, viralThreshold = 0.7 } = options;
+  const { session: _session, viralThreshold = 0.7 } = options;
   
   const reportId = `backtest-${Date.now()}`;
   

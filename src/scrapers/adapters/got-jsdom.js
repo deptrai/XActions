@@ -20,16 +20,25 @@ export class GotJsdomAdapter extends BaseAdapter {
     return { available: true };
   }
 
-  async launch(options = {}) {
-    return {
+  /**
+   * @param {LaunchOptions} [_options]
+   * @returns {Promise<AdapterBrowser>}
+   */
+  async launch(_options = {}) {
+    return /** @type {any} */ ({
       close: async () => {},
-    };
+    });
   }
 
-  async newPage(browser, options = {}) {
+  /**
+   * @param {AdapterBrowser} _browser
+   * @param {NewPageOptions} [_options]
+   * @returns {Promise<AdapterPage>}
+   */
+  async newPage(_browser, _options = {}) {
     const pageCookies = [];
 
-    const pageObj = {
+    const pageObj = /** @type {AdapterPage & { _cookies: any[], _dom: import('jsdom').JSDOM | null, _url: string }} */ (/** @type {any} */ ({
       _cookies: pageCookies,
       _dom: null,
       _url: 'about:blank',
@@ -38,6 +47,10 @@ export class GotJsdomAdapter extends BaseAdapter {
         return this._url;
       },
 
+      /**
+       * @param {string} url
+       * @param {Record<string, any>} [navOptions]
+       */
       async goto(url, navOptions = {}) {
         this._url = url;
         const cookieHeader = this._cookies.map((c) => `${c.name}=${c.value}`).join('; ');
@@ -55,6 +68,10 @@ export class GotJsdomAdapter extends BaseAdapter {
         };
       },
 
+      /**
+       * @param {string|Function} fn
+       * @param {...any} args
+       */
       async evaluate(fn, ...args) {
         if (!this._dom) {
           throw new Error('No document loaded. Call goto() first.');
@@ -64,7 +81,7 @@ export class GotJsdomAdapter extends BaseAdapter {
         const previousDocument = globalThis.document;
 
         try {
-          globalThis.window = window;
+          globalThis.window = /** @type {any} */ (window);
           globalThis.document = window.document;
           if (typeof fn === 'function') {
             return await fn(...args);
@@ -96,7 +113,7 @@ export class GotJsdomAdapter extends BaseAdapter {
           this._dom = null;
         }
       },
-    };
+    }));
 
     return pageObj;
   }
@@ -105,7 +122,7 @@ export class GotJsdomAdapter extends BaseAdapter {
     return await page.goto(url, options);
   }
 
-  async scroll(page, options = {}) {
+  async scroll(_page, _options = {}) {
     // In JSDOM, scroll is a no-op
     return;
   }

@@ -45,8 +45,8 @@ router.get('/status', authenticateToken, requireAdmin, async (req, res) => {
  */
 router.post('/panic-stop', authenticateToken, requireAdmin, (req, res) => {
   try {
-    const platform = req.body?.platform || 'all';
-    const durationMs = req.body?.durationMs;
+    const platform = /** @type {string} */ (req.body?.platform || 'all');
+    const durationMs = /** @type {number | undefined} */ (req.body?.durationMs);
     const result = globalAdaptiveRateGovernor.panicStop(platform, { durationMs });
     res.json({
       success: true,
@@ -74,7 +74,7 @@ router.post('/panic-stop', authenticateToken, requireAdmin, (req, res) => {
  */
 router.post('/panic-resume', authenticateToken, requireAdmin, (req, res) => {
   try {
-    const platform = req.body?.platform || 'all';
+    const platform = /** @type {string} */ (req.body?.platform || 'all');
     const result = globalAdaptiveRateGovernor.resumePanic(platform);
     res.json({
       success: true,

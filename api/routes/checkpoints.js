@@ -29,6 +29,10 @@ import {
 } from '../../src/store/checkpoint-manager.js';
 import { CheckpointListQuery, CheckpointIdParams } from '../schemas/checkpoints.js';
 
+/**
+ * @typedef {import('express').Response & { sendData: (data: any, statusCode?: number) => any, sendPage: (items: any, page?: any) => any }} EnvelopeResponse
+ */
+
 const router = Router();
 
 // ── Opaque offset cursor (v2 pagination contract) ────────────────────────────
@@ -164,9 +168,9 @@ router.get('/', requireCheckpointManage, validate({ query: CheckpointListQuery }
   const { platform, targetType, targetKey, status, limit, offset, cursor, sortBy, order } = req.query;
 
   // Opaque cursor wins over a raw offset when present.
-  const effectiveOffset = cursor ? decodeOffsetCursor(cursor) : (offset ?? 0);
+  const effectiveOffset = cursor ? decodeOffsetCursor(/** @type {string} */ (cursor)) : (offset ?? 0);
 
-  const result = await listCheckpoints({
+  const result = /** @type {{ offset: number, checkpoints: any[], total: number, limit: number }} */ (await listCheckpoints({
     platform,
     targetType,
     targetKey,
@@ -176,13 +180,13 @@ router.get('/', requireCheckpointManage, validate({ query: CheckpointListQuery }
     sortBy,
     order,
     prisma,
-  });
+  }));
 
   const nextOffset = result.offset + result.checkpoints.length;
   const nextCursor =
     result.checkpoints.length > 0 && nextOffset < result.total ? encodeOffsetCursor(nextOffset) : null;
 
-  res.sendPage(result.checkpoints, {
+  /** @type {EnvelopeResponse} */ (res).sendPage(result.checkpoints, {
     cursor: nextCursor,
     limit: result.limit,
     total: result.total,
@@ -195,7 +199,7 @@ router.get('/', requireCheckpointManage, validate({ query: CheckpointListQuery }
  */
 router.get('/:id', requireCheckpointManage, validate({ params: CheckpointIdParams }), asyncHandler(async (req, res) => {
   const checkpoint = await getCheckpoint(req.params.id, { prisma });
-  res.sendData({ checkpoint });
+  /** @type {EnvelopeResponse} */ (res).sendData({ checkpoint });
 }));
 
 /**
@@ -204,7 +208,7 @@ router.get('/:id', requireCheckpointManage, validate({ params: CheckpointIdParam
  */
 router.post('/:id/resume', requireCheckpointManage, validate({ params: CheckpointIdParams }), asyncHandler(async (req, res) => {
   const checkpoint = await resumeCheckpoint(req.params.id, { prisma });
-  res.sendData({ checkpoint });
+  /** @type {EnvelopeResponse} */ (res).sendData({ checkpoint });
 }));
 
 /**
@@ -213,7 +217,7 @@ router.post('/:id/resume', requireCheckpointManage, validate({ params: Checkpoin
  */
 router.post('/:id/pause', requireCheckpointManage, validate({ params: CheckpointIdParams }), asyncHandler(async (req, res) => {
   const checkpoint = await pauseCheckpoint(req.params.id, { prisma });
-  res.sendData({ checkpoint });
+  /** @type {EnvelopeResponse} */ (res).sendData({ checkpoint });
 }));
 
 /**
@@ -222,7 +226,7 @@ router.post('/:id/pause', requireCheckpointManage, validate({ params: Checkpoint
  */
 router.post('/:id/retry', requireCheckpointManage, validate({ params: CheckpointIdParams }), asyncHandler(async (req, res) => {
   const checkpoint = await retryCheckpoint(req.params.id, { prisma });
-  res.sendData({ checkpoint });
+  /** @type {EnvelopeResponse} */ (res).sendData({ checkpoint });
 }));
 
 // Per-router error middleware removed in Story 46.2 — the global

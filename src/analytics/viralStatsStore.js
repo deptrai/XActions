@@ -62,6 +62,10 @@ export const ViralStatsSchema = z.object({
  */
 
 /**
+ * @typedef {import('./jevViralMiner.js').PostViralProfile} PostViralProfile
+ */
+
+/**
  * Calculate engagement score from metrics
  * @param {Object} metrics - { likes, shares, views, comments, applies, saves }
  * @returns {number}
@@ -89,13 +93,13 @@ function calculateViralThreshold(profiles) {
 /**
  * Aggregate profiles into ViralStats
  * @param {PostViralProfile[]} profiles
- * @param {string} platform
- * @param {string} niche
+ * @param {string|{platform: string, niche: string}} [platformArg]
+ * @param {string} [nicheArg]
  * @returns {ViralStats}
  */
 export function aggregateStats(profiles, platformArg, nicheArg) {
-  const platform = typeof platformArg === 'object' && platformArg ? platformArg.platform : platformArg;
-  const niche = typeof platformArg === 'object' && platformArg ? platformArg.niche : nicheArg;
+  const platform = /** @type {string} */ (typeof platformArg === 'object' && platformArg ? platformArg.platform : platformArg);
+  const niche = /** @type {string} */ (typeof platformArg === 'object' && platformArg ? platformArg.niche : nicheArg);
   const category = getPlatformCategory(platform);
   const viralThreshold = calculateViralThreshold(profiles);
   
@@ -192,8 +196,8 @@ export function aggregateStats(profiles, platformArg, nicheArg) {
 /**
  * Save viral stats to file
  * @param {ViralStats} stats
- * @param {string} platform
- * @param {string} niche
+ * @param {string} [platformArg]
+ * @param {string} [nicheArg]
  * @returns {Promise<string>} Output file path
  */
 export async function saveStats(stats, platformArg, nicheArg) {

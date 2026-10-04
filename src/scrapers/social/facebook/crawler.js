@@ -2484,6 +2484,7 @@ export class FacebookCrawler extends AbstractCrawler {
    *
    * @param {Object} args
    * @param {string} [args.url] - facebook.com post URL or numeric postId
+   * @param {string} [args.postUrl]
    * @param {string} [args.postId]
    * @param {Record<string, any>} [session={}]
    * @returns {Promise<{ post: import('../../../core/types.js').PostItem | null, posts: import('../../../core/types.js').PostItem[] }>}
@@ -2556,6 +2557,7 @@ export class FacebookCrawler extends AbstractCrawler {
         ? rawTarget
         : `${this.client.baseUrl}/permalink.php?story_fbid=${postExternalId}&id=4`;
       try {
+        /** @type {any} */
         const domRes = await this.client.scrapePostCommentsWithBrowser(postUrl, {
           cookies, accountId, limit: 1, baseUrl: this.client.baseUrl,
         });
@@ -2794,7 +2796,7 @@ export class FacebookCrawler extends AbstractCrawler {
         if (this.store && typeof this.store.storeCommentBatch === 'function') {
           try { await this.store.storeCommentBatch(domComments, { upsert: true }); } catch {}
         }
-        return { comments: domComments, pageInfo: { has_next_page: false, end_cursor: null }, note: null };
+        return { comments: domComments, pageInfo: { has_next_page: false, end_cursor: null }, note: undefined };
       }
       // If DOM fallback returned nothing, fall through to the GraphQL path
       // below (it will also likely fail for guests, but preserves the error).

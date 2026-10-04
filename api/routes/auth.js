@@ -8,6 +8,10 @@ import { validate } from '../middleware/validate.js';
 import { ApiError, asyncHandler } from '../middleware/envelope.js';
 import { RegisterBody, LoginBody, RefreshBody } from '../schemas/auth.js';
 
+/**
+ * @typedef {import('express').Response & { sendData: (data: any, statusCode?: number) => any, sendPage?: (items: any, page?: any) => any }} EnvelopeResponse
+ */
+
 const router = express.Router();
 
 /** Dev-only details bag for 500s — mirrors the previous register/login hint. */
@@ -26,7 +30,7 @@ router.post('/register',
   validate({ body: RegisterBody }),
   asyncHandler(async (req, res) => {
     try {
-      const { password, username, email } = req.body;
+      const { password, username, email } = /** @type {{ password: string, username: string, email?: string }} */ (req.body);
 
       // Check if username exists
       const existingUser = await prisma.user.findFirst({
@@ -51,7 +55,7 @@ router.post('/register',
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Create user with 0 credits (must follow or buy to get credits)
-      const user = await prisma.user.create({
+      const user = /** @type {any} */ (await prisma.user.create({
         data: {
           email: email || null,  // Email is optional
           username,
@@ -68,7 +72,7 @@ router.post('/register',
         include: {
           subscription: true
         }
-      });
+      }));
 
       // Generate JWT (use username if no email)
       const token = jwt.sign(
@@ -77,7 +81,7 @@ router.post('/register',
         { expiresIn: '7d' }
       );
 
-      res.sendData({
+      /** @type {EnvelopeResponse} */ (res).sendData({
         token,
         user: {
           id: user.id,
@@ -105,10 +109,10 @@ router.post('/login',
   validate({ body: LoginBody }),
   asyncHandler(async (req, res) => {
     try {
-      const { identifier, password } = req.body;
+      const { identifier, password } = /** @type {{ identifier: string, password: string }} */ (req.body);
 
       // Find user by email OR username
-      const user = await prisma.user.findFirst({
+      const user = /** @type {any} */ (await prisma.user.findFirst({
         where: {
           OR: [
             { email: identifier.toLowerCase() },
@@ -116,7 +120,7 @@ router.post('/login',
           ]
         },
         include: { subscription: true }
-      });
+      }));
 
       if (!user) {
         throw new ApiError('UNAUTHORIZED', 401, 'Invalid credentials');
@@ -140,7 +144,7 @@ router.post('/login',
         { expiresIn: '7d' }
       );
 
-      res.sendData({
+      /** @type {EnvelopeResponse} */ (res).sendData({
         token,
         user: {
           id: user.id,
@@ -169,7 +173,7 @@ router.post('/refresh',
   validate({ body: RefreshBody }),
   asyncHandler(async (req, res) => {
     try {
-      const { token } = req.body;
+      const { token } = /** @type {{ token: string }} */ (req.body);
 
       // Verify signature first, then validate the refresh window and payload.
       // ignoreExpiration allows recently-expired tokens to be refreshed.
@@ -209,7 +213,7 @@ router.post('/refresh',
         { expiresIn: '7d' }
       );
 
-      res.sendData({ token: newToken });
+      /** @type {EnvelopeResponse} */ (res).sendData({ token: newToken });
     } catch (error) {
       if (error instanceof ApiError) throw error;
       console.error('❌ Refresh token error:', error);

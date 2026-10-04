@@ -33,6 +33,7 @@
  * @property {string} browserFamily       - 'chrome'|'firefox'|'safari'
  * @property {string} osFamily            - 'windows'|'mac'|'linux'
  * @property {string} [region]            - bound proxy region (when known)
+ * @property {number} [noiseSeed]
  */
 
 import { browserFamilyFromUA, TlsProfileProvider } from './tls-profile-provider.js';

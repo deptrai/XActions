@@ -29,6 +29,7 @@ const WATCHLIST = [
 const CG_MARKET = 'https://api.coingecko.com/api/v3/coins/markets';
 
 /** In-memory cache — CoinGecko free tier rate-limits aggressively. */
+/** @type {{ at: number, payload: Record<string, any> | null }} */
 let cache = { at: 0, payload: null };
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 

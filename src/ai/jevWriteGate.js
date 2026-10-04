@@ -1,28 +1,28 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Jev Write-Path Gate (Story 43.2)
+// XActions - Jev Write-Path Gate (Story 43.2)
 // Semantic quality + safety gate before any public write.
 // by nichxbt
 
 import { JevBrain } from '../agents/jevBrain.js';
 
 /**
- * Semantic write-path gate — evaluates content quality + safety before posting.
+ * Semantic write-path gate - evaluates content quality + safety before posting.
  *
  * One `decide()` call with four questions:
- *   - `virality`  — Score 0-3: how likely this content will get engagement.
- *   - `clarity`   — Score 0-3: how clear and well-written the content is.
- *   - `onBrand`   — Score 0-3: how well it fits a professional/tech persona.
- *   - `toxic`     — Noul: probability this is harmful, offensive, or policy-violating.
+ *   - `virality`  - Score 0-3: how likely this content will get engagement.
+ *   - `clarity`   - Score 0-3: how clear and well-written the content is.
+ *   - `onBrand`   - Score 0-3: how well it fits a professional/tech persona.
+ *   - `toxic`     - Noul: probability this is harmful, offensive, or policy-violating.
  *
  * Verdict rules:
- *   - `toxic.noul >= 0.5` → `'block'` (absolute — never post toxic content)
+ *   - `toxic.noul >= 0.5` → `'block'` (absolute - never post toxic content)
  *   - avg(virality, clarity, onBrand) >= 2 → `'send'` (high quality, ship it)
- *   - otherwise → `'review'` (borderline — human or LLM review recommended)
- *   - degraded → `'review'` with all scores null (conservative — no signal)
+ *   - otherwise → `'review'` (borderline - human or LLM review recommended)
+ *   - degraded → `'review'` with all scores null (conservative - no signal)
  *
- * @param {string} content — text content to evaluate.
+ * @param {string} content - text content to evaluate.
  * @param {Object} [options]
- * @param {JevBrain} [options.brain] — pre-built JevBrain.
+ * @param {JevBrain} [options.brain] - pre-built JevBrain.
  * @returns {Promise<{verdict: 'send'|'block'|'review', scores: {virality:number, clarity:number, onBrand:number}|null, toxic: {noul:number}|null, degraded: boolean}>}
  */
 export async function writeGate(content, { brain } = {}) {
@@ -79,13 +79,13 @@ export async function writeGate(content, { brain } = {}) {
 }
 
 /**
- * Quick toxicity check — single Noul question, no quality scores.
+ * Quick toxicity check - single Noul question, no quality scores.
  * Used by xspace moderation and anywhere a lightweight safety check suffices.
  *
  * @param {string} text
  * @param {Object} [options]
  * @param {JevBrain} [options.brain]
- * @param {number} [options.threshold] — block if noul >= this (default 0.5).
+ * @param {number} [options.threshold] - block if noul >= this (default 0.5).
  * @returns {Promise<{blocked: boolean, noul: number, degraded: boolean}>}
  */
 export async function checkToxic(text, { brain, threshold = 0.5 } = {}) {

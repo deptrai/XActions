@@ -35,6 +35,8 @@ import path from 'path';
  * @property {number} scraped
  * @property {number} classified
  * @property {PostViralProfile[]} profiles
+ * @property {Object|null} [stats]
+ * @property {string|null} [statsPath]
  * @property {Object} cost - { estimated, actual, currency }
  * @property {string} outputPath
  * @property {number} durationMs
@@ -244,7 +246,7 @@ async function classifyPosts(posts, platform, options = {}) {
   }));
   
   // Batch decide with progress tracking
-  const results = await brain.batchDecide(requests, {
+  const results = await /** @type {any} */ (brain).batchDecide(requests, {
     concurrency,
     onProgress: (progress) => {
       if (onProgress && progress.completed % 100 === 0) {

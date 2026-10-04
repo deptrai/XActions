@@ -21,7 +21,7 @@ export class PumpFunAuth {
     this.accountId = `pumpfun:${accountId}`;
     // Env fallback — register once at construction if no session exists yet
     if (!globalSessionManager.has(this.accountId) && process.env.PUMPFUN_AUTH_TOKEN) {
-      globalSessionManager.set(this.accountId, {
+      globalSessionManager.set(this.accountId, /** @type {any} */ ({
         accountId: this.accountId,
         platform: 'pumpfun',
         jwt: process.env.PUMPFUN_AUTH_TOKEN,
@@ -32,16 +32,16 @@ export class PumpFunAuth {
         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36',
         source: 'env',
         updatedAt: Date.now(),
-      });
+      }));
     }
   }
 
   /**
    * Load session from globalSessionManager.
-   * @returns {Record<string, unknown> | null}
+   * @returns {Record<string, any> | null}
    */
   #getSession() {
-    return globalSessionManager.get(this.accountId);
+    return /** @type {Record<string, any> | null} */ (globalSessionManager.get(this.accountId) || null);
   }
 
   /**
@@ -63,7 +63,7 @@ export class PumpFunAuth {
 
     // Parse exp from JWT
     try {
-      const parts = s.jwt.split('.');
+      const parts = String(s.jwt).split('.');
       if (parts.length < 2) return false;
       const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
       if (payload.exp && Date.now() >= payload.exp * 1000) {
@@ -83,7 +83,7 @@ export class PumpFunAuth {
     const s = this.#getSession();
     if (!s || !s.jwt) {
       throw new AuthSessionExpiredError({
-        type: ErrorTypes.AUTH_REQUIRED,
+        type: ErrorTypes.AUTH_EXPIRED,
         code: 'XACT_4010',
         message: `No valid pump.fun session found for account "${this.accountId}". Please extract session via PumpFunBrowserBridge.`,
         statusCode: 401,
@@ -93,7 +93,7 @@ export class PumpFunAuth {
 
     if (!this.isValid()) {
       throw new AuthSessionExpiredError({
-        type: ErrorTypes.AUTH_REQUIRED,
+        type: ErrorTypes.AUTH_EXPIRED,
         code: 'XACT_4010',
         message: `Pump.fun session expired for account "${this.accountId}". Please re-authenticate via browser.`,
         statusCode: 401,
@@ -103,8 +103,8 @@ export class PumpFunAuth {
 
     return {
       authorization: `Bearer ${s.jwt}`,
-      cookie: s.cookies,
-      'user-agent': s.userAgent || '',
+      cookie: typeof s.cookies === 'string' ? s.cookies : '',
+      'user-agent': typeof s.userAgent === 'string' ? s.userAgent : '',
     };
   }
 }

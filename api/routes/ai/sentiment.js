@@ -117,7 +117,7 @@ router.post('/analyze', async (req, res) => {
     const startTime = Date.now();
     let analyzed;
     if (mode === 'jev') {
-      const { analyzeJevBatch } = await import('../../src/analytics/jevSentiment.js');
+      const { analyzeJevBatch } = await import('../../../src/analytics/jevSentiment.js');
       const batchRes = await analyzeJevBatch(items);
       analyzed = batchRes.map(b => ({
         text: b.text,

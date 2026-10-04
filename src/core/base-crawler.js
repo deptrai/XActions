@@ -25,7 +25,6 @@ import { toIsoDate, isEnvTruthy, defaultRedisStreamPublisher, computeIdempotency
 /** @typedef {import('./types.js').CommentItem} CommentItem */
 /** @typedef {import('./adaptive-governor.js').AdaptiveRateGovernor} AdaptiveRateGovernor */
 /** @typedef {import('./account-pool.js').AccountPool} AccountPool */
-/** @typedef {import('./base-client.js').AbstractApiClient} AbstractApiClient */
 /** @typedef {import('./base-store.js').AbstractStore} AbstractStore */
 /** @typedef {AbstractApiClient} ClientLike */
 /** @typedef {AbstractStore} StoreLike */
@@ -305,7 +304,7 @@ export class AbstractCrawler {
 
     if (effectiveContext?.dryRun || this._currentDryRun) return;
 
-    const publisher = this.store?.publisher || this.redisPublisher || defaultRedisStreamPublisher;
+    const publisher = /** @type {any} */ (this.store)?.publisher || this.redisPublisher || defaultRedisStreamPublisher;
     if (!publisher || typeof publisher.publish !== 'function') return;
 
     const hasWorkspaceId = effectiveContext?.workspaceId !== undefined && effectiveContext?.workspaceId !== null
@@ -326,14 +325,14 @@ export class AbstractCrawler {
       if (!item || typeof item !== 'object') continue;
 
       // Extract candidate identifiers for deduplication
-      const candidateIds = [
+      const candidateIds = /** @type {string[]} */ ([
         item.id ? String(item.id) : null,
         item.externalId ? String(item.externalId) : null,
         item.external_post_id ? String(item.external_post_id) : null,
         item.storageRef ? String(item.storageRef) : null,
         item.storage_ref ? String(item.storage_ref) : null,
         item.externalId ? `${this.name}:${item.externalId}` : null,
-      ].filter(Boolean);
+      ].filter(Boolean));
 
       const isAlreadyEmitted = candidateIds.some((id) => this._emittedItemIds.has(id));
       if (isAlreadyEmitted) {
@@ -431,7 +430,7 @@ export class AbstractCrawler {
     // Check for single-item keys (post, item, listing, product, job, company, profile)
     for (const key of ['post', 'item', 'listing', 'product', 'job', 'company', 'profile']) {
       if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
-        return [obj[key]];
+        return [/** @type {Record<string, unknown>} */ (obj[key])];
       }
     }
     return [obj];
@@ -788,7 +787,7 @@ export class AbstractCrawler {
       // (http for AbstractApiClient-based lightweight platforms, browser for
       // Puppeteer/CDP-backed stealth platforms) and how long the crawl took.
       if (result && typeof result === 'object' && !Array.isArray(result)) {
-        const baseClient = /** @type {AbstractApiClient} */ (this.client);
+        const baseClient = /** @type {any} */ (this.client);
         const resultObj = /** @type {Record<string, unknown>} */ (result);
         // Story 37.1 fix: classify by the declared requiresBrowser flag first
         // (browser signers override it to true on their AbstractApiClient subclass),
@@ -1103,7 +1102,7 @@ export class AbstractCrawler {
           try { this.healthOrchestrator.recordBotChallenge(this.name || 'default', accountId); } catch {}
         }
       }
-      return result;
+      return /** @type {any} */ (result);
     } catch {
       return fallback;
     }

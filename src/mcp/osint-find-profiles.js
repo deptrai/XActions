@@ -499,10 +499,34 @@ const DEFAULT_PLATFORMS = Object.keys(PROFILE_ACTION_MAP);
  */
 
 /**
+ * @typedef {Object} PlatformStatusEntry
+ * @property {string} platform
+ * @property {'ok'|'error'|'timeout'|'unsupported'|'skipped'|'account_sick'|'circuit_open'} status
+ * @property {number} durationMs
+ * @property {number} [count]
+ * @property {string} [reason]
+ * @property {Object} [error]
+ */
+
+/**
+ * @typedef {Object} SocialFindProfilesResult
+ * @property {boolean} success
+ * @property {string} query
+ * @property {QueryType} queryType
+ * @property {number} platformsQueried
+ * @property {number} platformsAttempted
+ * @property {number} totalProfiles
+ * @property {import('../core/types.js').ProfileItem[]} profiles
+ * @property {unknown[]} identityClusters
+ * @property {PlatformStatusEntry[]} platformStatus
+ * @property {number} durationMs
+ */
+
+/**
  * Execute the `x_social_find_profiles` tool.
  *
  * @param {SocialFindProfilesArgs} args
- * @returns {Promise<Record<string, unknown>>}
+ * @returns {Promise<SocialFindProfilesResult>}
  */
 export async function executeSocialFindProfiles(args) {
   const {
@@ -644,7 +668,7 @@ export async function executeSocialFindProfiles(args) {
 
   /** @type {import('../core/types.js').ProfileItem[]} */
   const profiles = [];
-  /** @type {Array<Record<string, unknown>>} */
+  /** @type {PlatformStatusEntry[]} */
   const platformStatus = [];
 
   settledResults.forEach((res, i) => {

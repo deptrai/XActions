@@ -276,9 +276,10 @@ export class JevChallengeDiagnoser {
     const verdict = typeof answer?.choice === 'string' ? answer.choice : null;
     const confidence = typeof answer?.confidence === 'number' ? answer.confidence : 0;
 
+    /** @type {'act' | 'review' | 'skip'} */
     let gate = 'skip';
     try {
-      gate = typeof brain.gate === 'function' ? brain.gate(answer, { action: 'pageStatus' }) : 'skip';
+      gate = typeof brain.gate === 'function' ? /** @type {'act' | 'review' | 'skip'} */ (brain.gate(answer, { action: 'pageStatus' })) : 'skip';
     } catch {
       gate = 'skip';
     }

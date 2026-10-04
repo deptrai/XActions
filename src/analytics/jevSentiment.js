@@ -90,8 +90,10 @@ export async function analyzeJevSentiment(text, options = {}) {
 
   // Handle degraded state -> Fallback to rule-based analysis
   if (decision.meta?.degraded) {
-    const { analyzeSentiment } = await import('./sentiment.js');
+    const { analyzeSentiment } = /** @type {any} */ (await import('./sentiment.js'));
+    /** @type {{ score: number, confidence: number }} */
     const fallback = await analyzeSentiment(text, { mode: 'rules' });
+    /** @type {'enthusiastic'|'positive'|'neutral'|'skeptical'|'hostile'} */
     let fallbackLabel = 'neutral';
     if (fallback.score >= 0.5) fallbackLabel = 'enthusiastic';
     else if (fallback.score > 0.05) fallbackLabel = 'positive';

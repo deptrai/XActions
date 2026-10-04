@@ -449,6 +449,7 @@ export async function resolveAccountCookie(userId, accountId, platform) {
  */
 router.post('/:platform/scrape', requestId, eitherAuth, gatewayQuota, async (req, res) => {
   const reqUser = /** @type {import('@prisma/client').User | undefined} */ (req.user);
+  const reqConsumer = /** @type {{ consumerId?: string, source?: string } | undefined} */ (req.consumer);
   const platform = /** @type {string} */ (req.platform || req.params.platform);
   const body = /** @type {Record<string, unknown>} */ (req.body ?? {});
   const action = /** @type {string | undefined} */ (body.action);
@@ -515,8 +516,8 @@ router.post('/:platform/scrape', requestId, eitherAuth, gatewayQuota, async (req
     recordGatewayCall({
       timestamp: Date.now(),
       requestId: reqId || 'unknown',
-      consumerId: req.consumer?.consumerId || 'anonymous',
-      consumerType: req.consumer?.source === 'serviceAuth' ? 'named' : (req.consumer?.source === 'userJWT' ? 'internal' : 'anonymous'),
+      consumerId: reqConsumer?.consumerId || 'anonymous',
+      consumerType: reqConsumer?.source === 'serviceAuth' ? 'named' : (reqConsumer?.source === 'userJWT' ? 'internal' : 'anonymous'),
       platform,
       action,
       mode: body.mode === 'sync' ? 'sync' : 'async',
@@ -543,19 +544,19 @@ router.post('/:platform/scrape', requestId, eitherAuth, gatewayQuota, async (req
       retryAfterMs,
     });
     if (retryable) {
-      res.setHeader('Retry-After', String(Math.max(1, Math.ceil((errBody.error.retry_after_ms ?? 2000) / 1000))));
+      res.setHeader('Retry-After', String(Math.max(1, Math.ceil((Number(errBody.error.retry_after_ms ?? 2000)) / 1000))));
     }
 
     recordGatewayCall({
       timestamp: Date.now(),
       requestId: reqId || 'unknown',
-      consumerId: req.consumer?.consumerId || 'anonymous',
+      consumerId: reqConsumer?.consumerId || 'anonymous',
       platform,
       action,
       mode: body.mode === 'sync' ? 'sync' : 'async',
       durationMs: Date.now() - startMs,
       status,
-      errorKind: errBody.error.kind,
+      errorKind: /** @type {string | undefined} */ (errBody.error.kind),
     });
 
     return res.status(status).json(errBody);

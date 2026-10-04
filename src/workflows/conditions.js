@@ -48,8 +48,8 @@ function getJevBrain() {
  * @returns {Promise<import('../types/xactions.js').ConditionEvaluation>}
  */
 async function evaluateJevCondition(jevConfig, context) {
-  const question = jevConfig.question;
-  const type = jevConfig.type || 'noul';
+  const question = /** @type {string|undefined} */ (jevConfig.question);
+  const type = /** @type {'choice'|'score'|'noul'} */ (jevConfig.type || 'noul');
   const threshold = jevConfig.threshold;
   const choices = jevConfig.choices;
 
@@ -68,7 +68,9 @@ async function evaluateJevCondition(jevConfig, context) {
   }
 
   const brain = getJevBrain();
+  /** @type {Record<string, import('../agents/jevBrain.js').JevQuestion>} */
   const questions = {};
+  /** @type {import('../agents/jevBrain.js').JevQuestion} */
   const questionDef = { type, instructions: question };
   if (type === 'choice' && choices && Array.isArray(choices)) {
     questionDef.criteria = Object.fromEntries(choices.map(c => [c, c]));
@@ -79,7 +81,7 @@ async function evaluateJevCondition(jevConfig, context) {
   }
   questions.answer = questionDef;
 
-  const decision = await brain.decide(state, questions);
+  const decision = await brain.decide(/** @type {string | Record<string, any> | any[]} */ (state), questions);
 
   if (decision.meta.degraded) {
     return { passed: false, details: `jev degraded: ${decision.meta.reason}` };

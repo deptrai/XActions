@@ -11,7 +11,7 @@
 import { AbstractApiClient } from '../../../core/base-client.js';
 import { FacebookPlatformResponseValidator } from './validator.js';
 import { FacebookBrowserBridge } from './signer-bridge.js';
-import { GraphQLReplayEngine, InMemoryReplayStore } from './graphql-replay.js';
+import { GraphQLReplayEngine, InMemoryReplayStore, GraphQLCaptureHook } from './graphql-replay.js';
 import { PreSignedTokenRing } from '../../../core/signer-pool.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import crypto from 'node:crypto';
@@ -135,6 +135,9 @@ export class FacebookClient extends AbstractApiClient {
 
   /** @type {string[]} */
   extraArgs = [];
+
+  /** @type {any} */
+  replayStore = null;
 
   /** @type {FacebookBrowserBridge | null} */
   #ownedBrowserBridge = null;
@@ -692,15 +695,16 @@ export class FacebookClient extends AbstractApiClient {
    * Falls back to browser re-capture via GraphQLCaptureHook when tokens are stale.
    * @param {string} docId
    * @param {Record<string, any>} variables
-   * @param {Record<string, any>} [options={}]
-   * @param {import('puppeteer').Page} [options.page] — browser page for re-capture on miss
-   * @param {boolean} [options.forceCapture] — bypass cache, always re-capture
+   * @param {Object} [options={}]
+   * @param {import('puppeteer').Page} [options.page] - browser page for re-capture on miss
+   * @param {boolean} [options.forceCapture] - bypass cache, always re-capture
    * @returns {Promise<{data: any, replayed: boolean, rotated: boolean}>}
    */
   async replayGraphQl(docId, variables = {}, options = {}) {
     if (!this.#replayEngine) {
       this.#replayEngine = new GraphQLReplayEngine({
         store: this.replayStore || new InMemoryReplayStore(),
+        captureHook: null,
         client: this,
       });
     }
@@ -821,7 +825,7 @@ export class FacebookClient extends AbstractApiClient {
    */
   async scrapeGroupPostsWithBrowser(groupId, options = {}) {
     this.#requireBridge();
-    return this.browserBridge.scrapeGroupPosts(groupId, options);
+    return (/** @type {FacebookBrowserBridge} */ (this.browserBridge)).scrapeGroupPosts(groupId, options);
   }
 
   /**
@@ -831,7 +835,7 @@ export class FacebookClient extends AbstractApiClient {
    */
   async scrapeMarketplaceWithBrowser(query, options = {}) {
     this.#requireBridge();
-    return this.browserBridge.scrapeMarketplaceListings(query, options);
+    return (/** @type {FacebookBrowserBridge} */ (this.browserBridge)).scrapeMarketplaceListings(query, options);
   }
 
   /**
@@ -842,10 +846,10 @@ export class FacebookClient extends AbstractApiClient {
    */
   async scrapeFollowListWithBrowser(handle, kind, options = {}) {
     this.#requireBridge();
-    return this.browserBridge.scrapeFollowList(handle, kind, options);
+    return (/** @type {FacebookBrowserBridge} */ (this.browserBridge)).scrapeFollowList(handle, kind, options);
   }
 
-  /** @private ensure bridge exists */
+  /** Ensure bridge exists */
   #requireBridge() {
     if (!this.browserBridge) {
       throw new PlatformError({

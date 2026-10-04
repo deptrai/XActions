@@ -218,12 +218,12 @@ export class GraphQLCaptureHook {
 
   /**
    * Get capture stats.
-   * @returns {{totalCaptured: number, storeSize: Promise<number>}}
+   * @returns {Promise<{totalCaptured: number, storeSize: number}>}
    */
   async getStats() {
     return {
       totalCaptured: this.#captured.size,
-      storeSize: await this.#store.size(),
+      storeSize: this.#store ? await this.#store.size() : 0,
     };
   }
 }
@@ -304,7 +304,7 @@ export class GraphQLReplayEngine {
 
   /**
    * Check if error indicates doc_id rotation.
-   * @param {Error} err
+   * @param {Error & { code?: string }} err
    * @returns {boolean}
    */
   #isRotationError(err) {

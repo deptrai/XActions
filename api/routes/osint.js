@@ -12,7 +12,7 @@ const router = express.Router();
  */
 router.post('/find-profiles', authenticateToken, async (req, res) => {
   try {
-    const { query, queryType, platforms, accountId, locale, timeoutMs } = req.body || {};
+    const { query, queryType, platforms, accountId, locale, timeoutMs } = /** @type {Record<string, any>} */ (req.body || {});
     
     if (!query || typeof query !== 'string' || !query.trim()) {
       return res.status(400).json({ error: 'query is required (non-empty string)' });

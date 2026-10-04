@@ -274,8 +274,11 @@ export class MastodonClient extends AbstractApiClient {
    *
    * @param {Object} args
    * @param {string|number} [args.statusId]
+   * @param {string|number} [args.id] - alias for statusId
    * @param {string} [args.url] - mastodon post URL
    * @param {string} [args.postUrl] - alias for url
+   * @param {string} [args.postId] - alias for url
+   * @param {string} [args.accessToken]
    * @param {string} [args.instance]
    * @returns {Promise<Record<string, any>>} - the status object
    */
@@ -302,7 +305,7 @@ export class MastodonClient extends AbstractApiClient {
         code: 'XACT_4001',
         message: `getStatus requires a numeric status ID or mastodon post URL, got: ${JSON.stringify(url || statusId)}`,
         statusCode: 400,
-        suggestedAction: SuggestedActions.FIX_ARGS,
+        suggestedAction: (/** @type {any} */ (SuggestedActions)).FIX_ARGS,
         platform: 'mastodon',
       });
     }
@@ -493,10 +496,14 @@ export class MastodonClient extends AbstractApiClient {
   /**
    * Post a new status (or reply) on Mastodon.
    * Endpoint: POST /api/v1/statuses
-   * @param {Object} args
-   * @param {string} args.status - Status text
+   * @param {Object} [args={}]
+   * @param {string} [args.status] - Status text
+   * @param {string} [args.text] - Alias for status
    * @param {string} [args.in_reply_to_id]
+   * @param {string} [args.inReplyToId] - Alias for in_reply_to_id
+   * @param {string} [args.replyToId] - Alias for in_reply_to_id
    * @param {string[]} [args.media_ids]
+   * @param {string[]} [args.mediaIds] - Alias for media_ids
    * @param {string} [args.visibility]
    * @param {string} [args.instance]
    * @returns {Promise<Record<string, any>>}
@@ -522,7 +529,7 @@ export class MastodonClient extends AbstractApiClient {
     };
 
     const url = this.buildUrl('/api/v1/statuses', {}, args.instance);
-    const res = await this.post(url, { json: body, requiresAuth: true });
+    const res = await (/** @type {any} */ (this)).post(url, { json: body, requiresAuth: true });
     return res?.data !== undefined ? res.data : res;
   }
 
@@ -547,7 +554,7 @@ export class MastodonClient extends AbstractApiClient {
     }
 
     const url = this.buildUrl(`/api/v1/statuses/${cleanId}/favourite`, {}, options.instance);
-    const res = await this.post(url, { requiresAuth: true });
+    const res = await (/** @type {any} */ (this)).post(url, { requiresAuth: true });
     return res?.data !== undefined ? res.data : res;
   }
 
@@ -572,7 +579,7 @@ export class MastodonClient extends AbstractApiClient {
     }
 
     const url = this.buildUrl(`/api/v1/statuses/${cleanId}/reblog`, {}, options.instance);
-    const res = await this.post(url, { requiresAuth: true });
+    const res = await (/** @type {any} */ (this)).post(url, { requiresAuth: true });
     return res?.data !== undefined ? res.data : res;
   }
 
@@ -597,7 +604,7 @@ export class MastodonClient extends AbstractApiClient {
     }
 
     const url = this.buildUrl(`/api/v1/accounts/${cleanId}/follow`, {}, options.instance);
-    const res = await this.post(url, { requiresAuth: true });
+    const res = await (/** @type {any} */ (this)).post(url, { requiresAuth: true });
     return res?.data !== undefined ? res.data : res;
   }
 
@@ -622,7 +629,7 @@ export class MastodonClient extends AbstractApiClient {
     }
 
     const url = this.buildUrl(`/api/v1/accounts/${cleanId}/unfollow`, {}, options.instance);
-    const res = await this.post(url, { requiresAuth: true });
+    const res = await (/** @type {any} */ (this)).post(url, { requiresAuth: true });
     return res?.data !== undefined ? res.data : res;
   }
 }

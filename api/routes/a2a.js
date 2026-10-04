@@ -50,7 +50,7 @@ function publishMessage(msg) {
  * Replays the recent buffer on connect, then pushes live messages.
  */
 router.get('/stream', (req, res) => {
-  res.writeHead(200, {
+  /** @type {any} */ (res).writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
@@ -64,7 +64,7 @@ router.get('/stream', (req, res) => {
   const heartbeat = setInterval(() => {
     try { res.write(`:hb\n\n`); } catch { /* closed */ }
   }, 25000);
-  req.on('close', () => {
+  /** @type {any} */ (req).on('close', () => {
     clearInterval(heartbeat);
     sseClients.delete(res);
   });

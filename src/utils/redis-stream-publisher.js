@@ -63,7 +63,7 @@ export function computeIdempotencyKey(item) {
     const rawBucket = item.timestamp_bucket || item.timestampBucket;
     const timestampBucket = rawBucket
       ? String(rawBucket)
-      : toIsoDate(item.crawled_at || item.crawledAt || item.time).slice(0, 13);
+      : toIsoDate(/** @type {any} */ (item.crawled_at || item.crawledAt || item.time)).slice(0, 13);
     const rawKey = `${platform}:${entityId}:${timestampBucket}`;
     return createHash('sha256').update(rawKey).digest('hex');
   } catch {

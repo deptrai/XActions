@@ -31,6 +31,7 @@ function computeLineDiff(aLines, bLines) {
     }
   }
 
+  /** @type {Array<{ type: 'equal'|'add'|'del', line: string, aIdx?: number, bIdx?: number }>} */
   const ops = [];
   let i = 0;
   let j = 0;
