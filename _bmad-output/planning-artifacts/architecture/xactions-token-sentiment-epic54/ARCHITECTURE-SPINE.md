@@ -172,13 +172,16 @@ src/mcp/server.js           # + actions on x_analytics / x_crypto dispatchers (A
 | Decision | Why it waits |
 | --- | --- |
 | `scope:'corpus'` global-share variant of mindshare | Spike 54.0 measures real cashtag coverage first; watchlist default stands meanwhile |
-| Poll cadence ceiling + governor integration for X-search polling | 54.0 spike output is the measurement; binding it now would be a guess |
-| TELEGRAM_SESSION ownership (dedicated SIM vs existing account) | Product Council gate on 54.6; security-relevant, needs a human call |
 | Relay ops/deploy story (Dockerfile, env wiring, secret management) | Lands with 54.6 implementation planning; mmomarket Dockerfile pattern is the template |
 | Per-consumer watchlist isolation | Single consumer today (jev → `internal` class); revisit on second consumer |
 | Backfill of historical mentions | Not feasible — X search window is ~7 days; accept `insufficientHistory` ramp |
 
-## Open Questions
+## Resolved Open Questions
 
-- **OQ-1** (from memlog): who owns the `TELEGRAM_SESSION` phone number — recommended dedicated SIM, decision belongs to Product Council at 54.6 gate.
-- **OQ-2**: does `x_monitor_keyword` rate-limit integration flow through `adaptive-governor.js` today, or does 54.2 poll cadence need its own budget line — spike 54.0 answers.
+### OQ-1 — Who owns `TELEGRAM_SESSION`?
+
+**Resolved: dedicated Telegram account on a dedicated real SIM/eSIM — an org-owned infra asset, not a person's account.** The relay's own error taxonomy treats sessions as expendable (`SESSION_BANNED` → `permanently_unhealthy` is a designed-in terminal state), so the backing account must be disposable — banning a personal number costs a whole social graph. The account registers as `SocialAccount{platform:'telegram'}` (health tracking free via `SocialAccountHealth`), binds a sticky residential proxy per account-pool convention, and the session string lives in env secrets like `XACTIONS_SESSION_COOKIE` does today. Re-login after a ban is an ops runbook item, not an incident. Virtual/VoIP numbers rejected (flagged fast for crypto-adjacent use).
+
+### OQ-2 — Does 54.2 need its own rate limiter?
+
+**Resolved: no — the governor seam is already wired end-to-end; the pipeline owns cadence, not enforcement.** `x_search_tweets` → twitter client → `base-client` already calls `governor.canConsumerRequest` (AD-20 quota, `internal` bypasses) + `canAccountRequest` (per-account gate) + `recordRateLimit`→hibernation + `recordBotChallenge`. What 54.2 must own is **poll scheduling** (interval per watchlist query) — the governor meters each request, it doesn't schedule them. Spike 54.0's measured ceiling writes back via `setPlatformLimit('twitter', {safeRequestsPerMinute})` — never hardcoded in pipeline constants. **Spike caveat:** the per-account gate only fires when `concreteAccountId` is set; verify whether search runs on the auth session or the guest path.
