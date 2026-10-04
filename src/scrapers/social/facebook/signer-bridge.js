@@ -308,6 +308,7 @@ function extractPagePostsFromDom(pageId, limit = 20) {
   const seen = new Set();
   const articles = document.querySelectorAll('div[role="article"], div[data-pagelet*="FeedUnit"], div[data-pagelet*="ProfileTimeline"]');
 
+  /** @type {(t?: string | null) => string} */
   const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
 
   for (const art of articles) {
@@ -327,6 +328,7 @@ function extractPagePostsFromDom(pageId, limit = 20) {
       const m = href.match(/(\/posts\/[0-9]+|\/permalink\/[0-9]+|pfbid[A-Za-z0-9_-]+|story_fbid=[0-9]+|\/videos\/[0-9]+|\/photo[^"'\s]*fbid=[0-9]+)/);
       if (m) { postUrl = href.startsWith('http') ? href : 'https://www.facebook.com' + href; break; }
     }
+    /** @type {string} */
     const externalId = postUrl
       ? (postUrl.match(/pfbid[A-Za-z0-9_-]+|[0-9]{6,}/)?.[0] || `${pageId}_${results.length}`)
       : `${pageId}_${results.length}`;
@@ -358,7 +360,9 @@ function extractPagePostsFromDom(pageId, limit = 20) {
 function extractCommentsFromDom(limit = 50) {
   const results = [];
   const seen = new Set();
+  /** @type {(t?: string | null) => string} */
   const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
+  /** @type {(t: string) => boolean} */
   const isNoise = (t) => /^(like|reply|share|view all|view more|most relevant|write a comment|top comments|all reactions|see more|follow|comments?|log in|forgotten account)\b/i.test(t) ||
     /^\d+[wsmhd]\s*$/i.test(t) || /^(like|comment|share)\.?$/i.test(t);
 
@@ -411,6 +415,7 @@ function extractCommentsFromDom(limit = 50) {
     // Stable ID from content hash so re-scrapes produce the same comment ids
     // (idempotent upserts). Falls back to index if hash is unavailable.
     const hashInput = (authorName || '') + '|' + bodyText.slice(0, 120);
+    /** @type {string} */
     let stableId = 'c_' + results.length;
     try {
       let h = 0;
@@ -437,6 +442,7 @@ function extractCommentsFromDom(limit = 50) {
 function extractGroupPostsFromDom(groupId, limit = 20) {
   const results = [];
   const seen = new Set();
+  /** @type {(t?: string | null) => string} */
   const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
   const articles = document.querySelectorAll('div[role="article"], div[data-pagelet*="GroupInlineFeed"], div[data-pagelet*="FeedUnit"]');
 
@@ -454,6 +460,7 @@ function extractGroupPostsFromDom(groupId, limit = 20) {
         postUrl = href.startsWith('http') ? href : 'https://www.facebook.com' + href; break;
       }
     }
+    /** @type {string} */
     const externalId = postUrl ? (postUrl.match(/pfbid[A-Za-z0-9_-]+|[0-9]{6,}/)?.[0] || `${groupId}_${results.length}`) : `${groupId}_${results.length}`;
     if (seen.has(externalId)) continue;
     seen.add(externalId);
@@ -476,6 +483,7 @@ function extractGroupPostsFromDom(groupId, limit = 20) {
 function extractMarketplaceFromDom(limit = 50) {
   const results = [];
   const seen = new Set();
+  /** @type {(t?: string | null) => string} */
   const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
   // Listings are links to /marketplace/item/<id> with price + title + location.
   const cards = document.querySelectorAll('a[href*="/marketplace/item/"]');
@@ -483,15 +491,16 @@ function extractMarketplaceFromDom(limit = 50) {
     if (results.length >= limit) break;
     const href = card.getAttribute('href') || '';
     const idM = href.match(/item\/(\d+)/);
+    /** @type {string} */
     const externalId = idM ? idM[1] : `mk_${results.length}`;
     if (seen.has(externalId)) continue;
     const text = clean(card.innerText || card.textContent);
     if (!text) continue;
     // Split into lines: [price, title, location] typically.
     const lines = text.split(/\s{2,}|\n/).map(clean).filter(Boolean);
-    const price = lines.find(l => /^[₫$€£]|^\d[\d,.]*\s*(₫|vnd|đ|USD)/i.test(l)) || null;
-    const title = lines.find(l => l !== price && !/^\d+\s*km|km away|·/.test(l) && l.length > 3) || null;
-    const location = lines.find(l => /,|\d+\s*km|Ho Chi Minh|Hanoi|Vietnam/i.test(l) && l !== title) || null;
+    const price = lines.find((/** @type {string} */ l) => /^[₫$€£]|^\d[\d,.]*\s*(₫|vnd|đ|USD)/i.test(l)) || null;
+    const title = lines.find((/** @type {string} */ l) => l !== price && !/^\d+\s*km|km away|·/.test(l) && l.length > 3) || null;
+    const location = lines.find((/** @type {string} */ l) => /,|\d+\s*km|Ho Chi Minh|Hanoi|Vietnam/i.test(l) && l !== title) || null;
     if (!title && !price) continue;
     seen.add(externalId);
     results.push({
@@ -509,13 +518,14 @@ function extractMarketplaceFromDom(limit = 50) {
 /**
  * Extract follower/following names from a loaded /followers or /following page.
  * Guests on clean IPs see a name list for public profiles.
- * @param {string} ownerHandle
+ * @param {string} [_ownerHandle]
  * @param {number} [limit=50]
  * @returns {Record<string, any>[]}
  */
-function extractFollowListFromDom(ownerHandle, limit = 50) {
+function extractFollowListFromDom(_ownerHandle, limit = 50) {
   const results = [];
   const seen = new Set();
+  /** @type {(t?: string | null) => string} */
   const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
   // Follower entries are list items / anchors to profile paths.
   const links = document.querySelectorAll('a[href]');
@@ -527,6 +537,7 @@ function extractFollowListFromDom(ownerHandle, limit = 50) {
     const name = clean(a.textContent);
     if (!name || name.length < 2 || name.length > 80) continue;
     if (/^(followers?|following|more|see all|log in|sign up|friends?|posts?|about|reels?|photos?|videos?|forgotten account|forgot account|create new account|find friends|help centre|help center)$/i.test(name)) continue;
+    /** @type {string | null} */
     let handle = href.replace(/^https?:\/\/(www\.)?facebook\.com\//, '').replace(/^\/+|\/+$/g, '');
     const idMatch = handle.match(/profile\.php\?id=(\d+)/);
     if (idMatch) {
@@ -637,6 +648,7 @@ export class FacebookBrowserBridge {
    * @param {ProxyResolverLike | null} [options.proxyProvider]
    * @param {string[]} [options.extraArgs]
    * @param {boolean} [options.requiresResidential=false]
+   * @param {((info: {accountId: string | null, hibernationMs: number, url: string, via: string | null, type: string, confidence: number}) => void) | null} [options.onBotChallenge]
    */
   constructor(options = {}) {
     this.baseUrl = options.baseUrl ? options.baseUrl.replace(/\/+$/, '') : 'https://www.facebook.com';
@@ -1281,6 +1293,7 @@ export class FacebookBrowserBridge {
    * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies]
    * @param {string} [options.accountId]
    * @param {number} [options.limit=20]
+   * @param {string} [options.baseUrl]
    * @param {number} [options.timeout]
    * @returns {Promise<{ posts: Record<string, any>[], pageInfo?: any, note?: string }>}
    */
@@ -1294,7 +1307,7 @@ export class FacebookBrowserBridge {
       });
     }
     const accountId = options.accountId || 'fb-guest';
-    const limit = Number.isFinite(options.limit) && options.limit > 0 ? Math.min(Math.floor(options.limit), 200) : 20;
+    const limit = Number.isFinite(options.limit) && /** @type {number} */ (options.limit) > 0 ? Math.min(Math.floor(/** @type {number} */ (options.limit)), 200) : 20;
     const timeout = options.timeout || 30000;
     const baseUrl = (this.#resolveProfileBaseUrl(options.baseUrl));
     const targetUrl = `${baseUrl}/${String(pageId).replace(/^\/+/, '')}`;
@@ -1314,7 +1327,7 @@ export class FacebookBrowserBridge {
       await adapter.scroll(page, { y: 1200 }).catch(() => {});
       await this.#sleep(1500);
 
-      const raw = /** @type {Record<string, any>[]} */ (await adapter.evaluate(page, extractPagePostsFromDom, String(pageId), limit));
+      const raw = /** @type {Record<string, any>[]} */ (await adapter.evaluate(page, /** @type {any} */ (extractPagePostsFromDom), String(pageId), limit));
       const posts = Array.isArray(raw) ? raw : [];
       return {
         posts,
@@ -1333,6 +1346,7 @@ export class FacebookBrowserBridge {
    * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies]
    * @param {string} [options.accountId]
    * @param {number} [options.limit=50]
+   * @param {string} [options.baseUrl]
    * @param {number} [options.timeout]
    * @returns {Promise<{ comments: Record<string, any>[], pageInfo?: any, note?: string }>}
    */
@@ -1346,7 +1360,7 @@ export class FacebookBrowserBridge {
       });
     }
     const accountId = options.accountId || 'fb-guest';
-    const limit = Number.isFinite(options.limit) && options.limit > 0 ? Math.min(Math.floor(options.limit), 2000) : 50;
+    const limit = Number.isFinite(options.limit) && /** @type {number} */ (options.limit) > 0 ? Math.min(Math.floor(/** @type {number} */ (options.limit)), 2000) : 50;
     const timeout = options.timeout || 30000;
     let targetUrl = postUrl.trim();
     if (!/^https?:\/\//i.test(targetUrl)) {
@@ -1368,7 +1382,7 @@ export class FacebookBrowserBridge {
       await adapter.scroll(page, { y: 800 }).catch(() => {});
       await this.#sleep(1000);
 
-      const raw = /** @type {Record<string, any>[]} */ (await adapter.evaluate(page, extractCommentsFromDom, limit));
+      const raw = /** @type {Record<string, any>[]} */ (await adapter.evaluate(page, /** @type {any} */ (extractCommentsFromDom), limit));
       const comments = Array.isArray(raw) ? raw : [];
       return {
         comments,
@@ -1383,10 +1397,14 @@ export class FacebookBrowserBridge {
   /**
    * Shared DOM-list scraper: open a URL, wait, scroll, run an extractor, return items.
    * @param {string} targetUrl
-   * @param {(…args:any[])=>Record<string,any>[]} extractorFn
+   * @param {(...args: any[]) => Record<string, any>[]} extractorFn
    * @param {any[]} extractorArgs
    * @param {string} itemKey - result field name (posts|listings|members)
    * @param {Object} [options]
+   * @param {string} [options.accountId]
+   * @param {number} [options.timeout]
+   * @param {number} [options.scrollY]
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies]
    * @returns {Promise<Record<string, any>>}
    */
   async #scrapeDomList(targetUrl, extractorFn, extractorArgs, itemKey, options = {}) {
@@ -1405,7 +1423,7 @@ export class FacebookBrowserBridge {
       await this.#sleep(2000);
       await adapter.scroll(page, { y: scrollY }).catch(() => {});
       await this.#sleep(1500);
-      const raw = /** @type {Record<string, any>[]} */ (await adapter.evaluate(page, extractorFn, ...extractorArgs));
+      const raw = /** @type {Record<string, any>[]} */ (await adapter.evaluate(page, /** @type {any} */ (extractorFn), ...extractorArgs));
       const items = Array.isArray(raw) ? raw : [];
       return { [itemKey]: items, pageInfo: { has_next_page: false, end_cursor: null }, note: items.length === 0 ? `No public ${itemKey} rendered for guest session` : undefined };
     } finally {
@@ -1417,16 +1435,21 @@ export class FacebookBrowserBridge {
    * Scrape a public group's feed via the browser bridge.
    * @param {string} groupId
    * @param {Object} [options]
+   * @param {number} [options.limit]
+   * @param {string} [options.baseUrl]
+   * @param {string} [options.accountId]
+   * @param {number} [options.timeout]
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies]
    * @returns {Promise<{ posts: Record<string, any>[], pageInfo?: any, note?: string }>}
    */
   async scrapeGroupPosts(groupId, options = {}) {
     if (!groupId) {
       throw new PlatformError({ code: 'XACT_4001', type: ErrorTypes.INVALID_ARGS, message: 'groupId is required', suggestedAction: SuggestedActions.USE_ACTIONS_LIST });
     }
-    const limit = Number.isFinite(options.limit) && options.limit > 0 ? Math.min(Math.floor(options.limit), 200) : 20;
+    const limit = Number.isFinite(options.limit) && /** @type {number} */ (options.limit) > 0 ? Math.min(Math.floor(/** @type {number} */ (options.limit)), 200) : 20;
     const baseUrl = this.#resolveProfileBaseUrl(options.baseUrl);
     const targetUrl = `${baseUrl}/groups/${String(groupId).replace(/^\/+|\/+$/g, '')}`;
-    return this.#scrapeDomList(targetUrl, extractGroupPostsFromDom, [String(groupId), limit], 'posts', options);
+    return /** @type {Promise<{ posts: Record<string, any>[], pageInfo?: any, note?: string }>} */ (this.#scrapeDomList(targetUrl, extractGroupPostsFromDom, [String(groupId), limit], 'posts', options));
   }
 
   /**
@@ -1434,30 +1457,41 @@ export class FacebookBrowserBridge {
    * @param {string} query
    * @param {Object} [options]
    * @param {string} [options.location]
+   * @param {number} [options.limit]
+   * @param {string} [options.baseUrl]
+   * @param {string} [options.accountId]
+   * @param {number} [options.timeout]
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies]
    * @returns {Promise<{ listings: Record<string, any>[], pageInfo?: any, note?: string }>}
    */
   async scrapeMarketplaceListings(query, options = {}) {
     if (!query) {
       throw new PlatformError({ code: 'XACT_4001', type: ErrorTypes.INVALID_ARGS, message: 'query is required', suggestedAction: SuggestedActions.USE_ACTIONS_LIST });
     }
-    const limit = Number.isFinite(options.limit) && options.limit > 0 ? Math.min(Math.floor(options.limit), 200) : 50;
+    const limit = Number.isFinite(options.limit) && /** @type {number} */ (options.limit) > 0 ? Math.min(Math.floor(/** @type {number} */ (options.limit)), 200) : 50;
     const baseUrl = this.#resolveProfileBaseUrl(options.baseUrl);
     const loc = (options.location || 'Ho Chi Minh City').toLowerCase().replace(/\s+/g, '');
     const targetUrl = `${baseUrl}/marketplace/${encodeURIComponent(loc)}/search?query=${encodeURIComponent(query)}`;
-    return this.#scrapeDomList(targetUrl, extractMarketplaceFromDom, [limit], 'listings', { ...options, scrollY: 1500 });
+    return /** @type {Promise<{ listings: Record<string, any>[], pageInfo?: any, note?: string }>} */ (this.#scrapeDomList(targetUrl, extractMarketplaceFromDom, [limit], 'listings', { ...options, scrollY: 1500 }));
   }
 
   /**
    * Scrape a public profile's followers list via the browser bridge.
    * @param {string} handle
+   * @param {string} [kind]
    * @param {Object} [options]
+   * @param {number} [options.limit]
+   * @param {string} [options.baseUrl]
+   * @param {string} [options.accountId]
+   * @param {number} [options.timeout]
+   * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [options.cookies]
    * @returns {Promise<{ members: Record<string, any>[], pageInfo?: any, note?: string }>}
    */
   async scrapeFollowList(handle, kind, options = {}) {
     if (!handle) {
       throw new PlatformError({ code: 'XACT_4001', type: ErrorTypes.INVALID_ARGS, message: 'handle is required', suggestedAction: SuggestedActions.USE_ACTIONS_LIST });
     }
-    const limit = Number.isFinite(options.limit) && options.limit > 0 ? Math.min(Math.floor(options.limit), 500) : 50;
+    const limit = Number.isFinite(options.limit) && /** @type {number} */ (options.limit) > 0 ? Math.min(Math.floor(/** @type {number} */ (options.limit)), 500) : 50;
     const baseUrl = this.#resolveProfileBaseUrl(options.baseUrl);
     const seg = kind === 'following' ? 'following' : 'followers';
     // For numeric-ID profiles (profile.php?id=N), use ?sk=followers/following
@@ -1468,7 +1502,7 @@ export class FacebookBrowserBridge {
     const targetUrl = cleanHandle.startsWith('profile.php')
       ? `${baseUrl}/${cleanHandle}&sk=${seg === 'followers' ? 'followers' : 'following'}`
       : `${baseUrl}/${cleanHandle}/${seg}`;
-    return this.#scrapeDomList(targetUrl, extractFollowListFromDom, [cleanHandle, limit], 'members', { ...options, scrollY: 1500 });
+    return /** @type {Promise<{ members: Record<string, any>[], pageInfo?: any, note?: string }>} */ (this.#scrapeDomList(targetUrl, extractFollowListFromDom, [cleanHandle, limit], 'members', { ...options, scrollY: 1500 }));
   }
 
   /**

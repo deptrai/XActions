@@ -33,6 +33,23 @@ export const PUMPFUN_API_BASE = 'https://frontend-api-v3.pump.fun';
 /** Base58 Solana address (32–44 chars, no 0/O/I/l). */
 export const SOLANA_MINT_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
+/**
+ * @typedef {Object} PumpFunClientCustomOptions
+ * @property {string} [baseUrl]
+ * @property {number} [dedupWindowMs]
+ * @property {import('../../../core/distributed-token-bucket.js').DistributedTokenBucket} [tokenBucket]
+ * @property {number} [reqPerMinute]
+ * @property {string} [transport]
+ * @property {PumpFunLivechat | null} [livechat]
+ * @property {any} [proxy]
+ *
+ * @typedef {PumpFunClientCustomOptions & Record<string, any>} PumpFunClientOptions
+ */
+
+/**
+ * @param {PumpFunClientOptions} [options]
+ * @returns {PumpFunClient}
+ */
 export function createPumpFunClient(options = {}) {
   return new PumpFunClient(options);
 }
@@ -57,9 +74,9 @@ export class PumpFunClient extends AbstractApiClient {
   baseUrl;
 
   /**
-   * In-flight request deduplication: mint → { promise, expiresAt }.
+   * In-flight request deduplication: mint → { promise, settledAt }.
    * Concurrent callers within the dedup window share one upstream round-trip.
-   * @type {Map<string, { promise: Promise<any>, expiresAt: number }>}
+   * @type {Map<string, { promise: Promise<any>, settledAt: number | null }>}
    */
   #inFlight = new Map();
 
@@ -86,8 +103,11 @@ export class PumpFunClient extends AbstractApiClient {
    */
   livechat = null;
 
+  /**
+   * @param {PumpFunClientOptions} [options]
+   */
   constructor(options = {}) {
-    super(options);
+    super(/** @type {any} */ (options));
     this.baseUrl = typeof options.baseUrl === 'string' && options.baseUrl ? options.baseUrl : PUMPFUN_API_BASE;
     this.#dedupWindowMs = Number.isFinite(options.dedupWindowMs) ? Number(options.dedupWindowMs) : 3000;
     this.#tokenBucket = options.tokenBucket || globalDistributedTokenBucket;
@@ -140,6 +160,7 @@ export class PumpFunClient extends AbstractApiClient {
       'accept': 'application/json',
       ...(options.headers || {}),
     };
+    /** @type {any} */
     let response;
     try {
       response = await this.request('GET', url, { skipResponseValidation: true, ...options });
@@ -170,9 +191,9 @@ export class PumpFunClient extends AbstractApiClient {
         const diag = await globalJevChallengeDiagnoser.diagnose({
           snippet,
           platform: this.platform,
-          accountId: options.accountId || null,
+          accountId: typeof options.accountId === 'string' ? options.accountId : null,
         });
-        this._lastJevDiag = diag;
+        this._lastJevDiag = diag ? { snippet: snippet || '', diag } : null;
       } catch {
         this._lastJevDiag = null;
       }
@@ -188,8 +209,9 @@ export class PumpFunClient extends AbstractApiClient {
    */
   async #consumeRateToken(options = {}) {
     if (!this.#tokenBucket || typeof this.#tokenBucket.consume !== 'function') return;
-    const proxyKey = options.proxy && (options.proxy.server || options.proxy.host || options.proxy)
-      ? String(options.proxy.server || options.proxy.host || options.proxy)
+    const proxy = /** @type {any} */ (options.proxy);
+    const proxyKey = proxy && (proxy.server || proxy.host || proxy)
+      ? String(proxy.server || proxy.host || proxy)
       : 'direct';
     const key = `pumpfun:${proxyKey}`;
     const res = await this.#tokenBucket.consume(key, 1, {
@@ -209,7 +231,7 @@ export class PumpFunClient extends AbstractApiClient {
   }
 
   /**
-   * @param {unknown} err
+   * @param {any} err
    * @returns {boolean}
    */
   #isTlsBlock(err) {
@@ -244,7 +266,7 @@ export class PumpFunClient extends AbstractApiClient {
     if (!this.#curlTransport) {
       this.#curlTransport = createCurlTransport(this.platform);
     }
-    const proxy = options.proxy ?? this.proxy ?? null;
+    const proxy = options.proxy ?? /** @type {any} */ (this).proxy ?? null;
     const res = await this.#curlTransport({
       method: 'GET',
       url,
@@ -259,7 +281,7 @@ export class PumpFunClient extends AbstractApiClient {
   }
 
   /**
-   * @param {{ status?: number, headers?: Record<string, unknown>, data?: any }} response
+   * @param {{ status?: number, headers?: Record<string, unknown>, data?: any }} [response]
    * @returns {RateLimitError}
    */
   #rateLimitError(response) {
@@ -353,7 +375,8 @@ export class PumpFunClient extends AbstractApiClient {
     } catch (err) {
       // Preserve real errors (rate-limit, auth, network) — don't mask a 429 as
       // "no comments". Only fall back to livechat for expected-missing/empty REST.
-      if (err && (err.code === 'XACT_4029' || err instanceof RateLimitError)) throw err;
+      const error = /** @type {any} */ (err);
+      if (error && (error.code === 'XACT_4029' || error instanceof RateLimitError)) throw error;
       // other REST failures → livechat fallback below.
     }
     return this.#getRepliesViaLivechat(mint, options);
@@ -369,11 +392,11 @@ export class PumpFunClient extends AbstractApiClient {
    */
   async #getRepliesViaLivechat(mint, options = {}) {
     const lc = this.livechat || (this.livechat = new PumpFunLivechat({
-      timeoutMs: Number.isFinite(options.livechatTimeoutMs) ? options.livechatTimeoutMs : 8000,
+      timeoutMs: Number.isFinite(options.livechatTimeoutMs) ? Number(options.livechatTimeoutMs) : 8000,
     }));
     const { messages } = await lc.getMessageHistory(mint, {
-      limit: Number.isFinite(options.limit) ? options.limit : 50,
-      ...(Number.isFinite(options.before) ? { before: options.before } : {}),
+      limit: Number.isFinite(options.limit) ? Number(options.limit) : 50,
+      ...(Number.isFinite(options.before) ? { before: Number(options.before) } : {}),
     });
     return messages.map((m) => ({
       ...m,
@@ -492,6 +515,10 @@ export class PumpFunClient extends AbstractApiClient {
     return result;
   }
 
+  /**
+   * @param {string} mint
+   * @returns {Promise<any>}
+   */
   async #getOnChainMetadata(mint) {
     try {
       const res = await fetch('https://api.mainnet-beta.solana.com', {
@@ -508,8 +535,8 @@ export class PumpFunClient extends AbstractApiClient {
       const info = json?.result?.value?.data?.parsed?.info;
       if (!info) return null;
 
-      const tokenMetadata = info.extensions?.find(e => e.extension === 'tokenMetadata')?.state;
-      const metadataPointer = info.extensions?.find(e => e.extension === 'metadataPointer')?.state;
+      const tokenMetadata = info.extensions?.find((/** @type {any} */ e) => e.extension === 'tokenMetadata')?.state;
+      const metadataPointer = info.extensions?.find((/** @type {any} */ e) => e.extension === 'metadataPointer')?.state;
 
       return {
         name: tokenMetadata?.name || '',
@@ -523,6 +550,10 @@ export class PumpFunClient extends AbstractApiClient {
     }
   }
 
+  /**
+   * @param {string} uri
+   * @returns {Promise<any>}
+   */
   async #getIpfsMetadata(uri) {
     if (!uri || !uri.startsWith('http')) return null;
     const gateways = [
@@ -549,6 +580,11 @@ export class PumpFunClient extends AbstractApiClient {
     return null;
   }
 
+  /**
+   * @param {{ offset?: number | string, limit?: number | string, sort?: string, order?: string, includeNsfw?: boolean }} [params]
+   * @param {Record<string, unknown>} [options]
+   * @returns {Promise<any[]>}
+   */
   async getCoinsFeed(params = {}, options = {}) {
     const q = new URLSearchParams();
     q.set('offset', String(params.offset || 0));
@@ -572,13 +608,16 @@ export class PumpFunClient extends AbstractApiClient {
     return Array.isArray(data) ? data : [];
   }
 
-  /** @type {Map<string, { value: any, expiresAt: number }>} */
   /** @type {boolean} — true once /replies/{mint} returns 404 (endpoint retired) */
   #repliesRetired = false;
 
   /** @type {Map<string, { value: any, expiresAt: number }>} */
   #ttlCache = new Map();
 
+  /**
+   * @param {string} key
+   * @returns {any}
+   */
   #cacheGet(key) {
     const entry = this.#ttlCache.get(key);
     if (!entry) return undefined;
@@ -589,6 +628,12 @@ export class PumpFunClient extends AbstractApiClient {
     return entry.value;
   }
 
+  /**
+   * @param {string} key
+   * @param {any} value
+   * @param {number} ttlMs
+   * @returns {void}
+   */
   #cacheSet(key, value, ttlMs) {
     // Keep cache bounded to 500 items max
     if (this.#ttlCache.size >= 500) {
@@ -614,7 +659,8 @@ export class PumpFunClient extends AbstractApiClient {
     if (existing && (existing.settledAt == null || existing.settledAt + this.#dedupWindowMs > now)) {
       return existing.promise;
     }
-    const entry = { promise: null, settledAt: null };
+    /** @type {{ promise: Promise<any>, settledAt: number | null }} */
+    const entry = { promise: /** @type {any} */ (null), settledAt: null };
     entry.promise = (async () => {
       try {
         return await fn();
@@ -632,8 +678,8 @@ export class PumpFunClient extends AbstractApiClient {
   /**
    * Fetch user profile by wallet address.
    * @param {string} usernameOrWallet — pump.fun username or Solana wallet
-   * @param {Object} [options]
-   * @returns {Promise<Object>} user profile
+   * @param {Record<string, unknown>} [options]
+   * @returns {Promise<any>} user profile
    */
   async getUser(usernameOrWallet, options = {}) {
     const url = `${this.baseUrl}/users/${encodeURIComponent(usernameOrWallet)}`;
