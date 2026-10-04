@@ -21,7 +21,7 @@ import { JevBrain } from '../agents/jevBrain.js';
  *
  * Degraded → `{intent:'unknown', toxic:0, priority:0, action:'review'}`.
  *
- * @param {{name?: string, lastMessage?: string, time?: string, unread?: boolean}} conv
+ * @param {{name?: string, username?: string, lastMessage?: string, time?: string, unread?: boolean}} conv
  * @param {Object} [options]
  * @param {JevBrain} [options.brain]
  * @returns {Promise<{name: string, lastMessage: string, time: string, unread: boolean, intent: string, intentConfidence: number, toxic: number, priority: number, priorityConfidence: number, action: 'reply'|'ignore'|'escalate'|'review'}>}
@@ -78,6 +78,7 @@ export async function triageConversation(conv, { brain } = {}) {
   const priorityConf = priority.confidence ?? 0;
 
   // Action mapping
+  /** @type {'reply'|'ignore'|'escalate'|'review'} */
   let action = 'review';
   if (toxic >= 0.5 || intentChoice === 'spam') {
     action = 'ignore';
@@ -102,7 +103,7 @@ export async function triageConversation(conv, { brain } = {}) {
  * Batch-triage a list of DM conversations.
  * Sequential processing (Jev ~300ms/conversation).
  *
- * @param {Array<{name?: string, lastMessage?: string, time?: string, unread?: boolean}>} conversations
+ * @param {Array<{name?: string, username?: string, lastMessage?: string, time?: string, unread?: boolean}>} conversations
  * @param {Object} [options]
  * @param {JevBrain} [options.brain]
  * @returns {Promise<{triaged: Array, stats: {total: number, reply: number, escalate: number, ignore: number, review: number, degraded: boolean}}>}

@@ -21,7 +21,7 @@ import omggif from 'omggif';
 /**
  * Detect image format from magic bytes.
  * @param {Buffer} buffer
- * @returns {'png'|'jpeg'|'gif'|null}
+ * @returns {'png'|'jpeg'|'gif'|'webp'|null}
  */
 function detectFormat(buffer) {
   if (!buffer || buffer.length < 12) return null;
@@ -110,7 +110,7 @@ let _webpInitFailed = false;
 
 /**
  * Lazily initialise and return the @jsquash/webp decode function.
- * @returns {Promise<((buf: Buffer|Uint8Array) => Promise<{data: Uint8ClampedArray, width: number, height: number}>) | null>}
+ * @returns {Promise<((buf: any) => Promise<{data: any, width: number, height: number}>) | null>}
  */
 async function getWebpDecoder() {
   if (_webpDecode) return _webpDecode;
@@ -125,7 +125,7 @@ async function getWebpDecoder() {
     const wasmModule = await WebAssembly.compile(await readFile(wasmPath));
     const decMod = await import('@jsquash/webp/decode.js');
     await decMod.init(wasmModule);
-    _webpDecode = decMod.default;
+    _webpDecode = /** @type {any} */ (decMod.default);
     return _webpDecode;
   } catch {
     _webpInitFailed = true;

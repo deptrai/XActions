@@ -15,12 +15,16 @@
  * @license Apache-2.0
  */
 
-import { scrape, DESCRIPTORS } from '../scrapers/index.js';
+import * as scrapersModule from '../scrapers/index.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
 import { normalizeVnPhone } from '../utils/vn-phone.js';
 import { globalAdaptiveRateGovernor } from '../core/adaptive-governor.js';
 import { resolveIdentities, prefetchAvatarHashes } from './entity-resolver.js';
 import { prefetchBioScores } from '../osint/jev-bio-matcher.js';
+
+const { scrape } = scrapersModule;
+/** @type {Record<string, any>} */
+const DESCRIPTORS = /** @type {any} */ (scrapersModule).DESCRIPTORS;
 
 // ---------------------------------------------------------------------------
 // Platform → action map for person lookup
@@ -191,7 +195,7 @@ function withTimeout(promise, ms, signal) {
   let timer;
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => {
-      const err = new Error(`⏱ platform timeout after ${ms}ms`);
+      const err = /** @type {Error & { code?: string }} */ (new Error(`⏱ platform timeout after ${ms}ms`));
       err.code = 'OSINT_TIMEOUT';
       reject(err);
     }, ms);
@@ -355,7 +359,7 @@ export function normalizeToProfileItems(platform, raw) {
     const avatar = r.avatar || r.authorAvatar || r.avatarUrl || r.profileImage || undefined;
     const externalId = r.externalId || r.id || r.userId || r.companyId || username || profileUrl || name;
     if (!username && !name && !profileUrl && !externalId) return null;
-    return {
+    return /** @type {import('../core/types.js').ProfileItem} */ ({
       id: `${platform}:${externalId ?? username ?? name ?? 'unknown'}`,
       platform,
       externalId: externalId != null ? String(externalId) : undefined,
@@ -371,7 +375,7 @@ export function normalizeToProfileItems(platform, raw) {
         : typeof r.following === 'number' ? r.following : undefined,
       metadata: { ...(r.metadata && typeof r.metadata === 'object' ? r.metadata : {}), raw: sanitizeRaw(r) },
       crawledAt: r.crawledAt instanceof Date ? r.crawledAt : now,
-    };
+    });
   };
 
   const pushFrom = (v) => {
@@ -452,7 +456,7 @@ export const PLATFORM_TIMEOUTS_MS = {
  * recovery decisions (backoff, retry with proxy, auth refresh).
  *
  * @param {any} err
- * @returns {{ code: string, message: string }}
+ * @returns {{ code: string, category: string, message: string }}
  */
 export function classifyPlatformError(err) {
   if (!err) return { code: 'SCRAPE_ERROR', category: 'SCRAPE_ERROR', message: 'Unknown error' };
@@ -483,9 +487,21 @@ const MAX_CONCURRENT_PLATFORMS = 4;
 const DEFAULT_PLATFORMS = Object.keys(PROFILE_ACTION_MAP);
 
 /**
+ * @typedef {Object} SocialFindProfilesArgs
+ * @property {string} query
+ * @property {string} [queryType]
+ * @property {string[]} [platforms]
+ * @property {string} [locale]
+ * @property {number} [timeoutMs]
+ * @property {string} [accountId]
+ * @property {string} [proxyUrl]
+ * @property {Record<string, unknown>} [context]
+ */
+
+/**
  * Execute the `x_social_find_profiles` tool.
  *
- * @param {Record<string, unknown>} args
+ * @param {SocialFindProfilesArgs} args
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function executeSocialFindProfiles(args) {
@@ -539,7 +555,7 @@ export async function executeSocialFindProfiles(args) {
     queryType = 'name';
   }
 
-  const callerTimeout = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : null;
+  const callerTimeout = typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : null;
 
   // Resolve target platform list (dedup + lowercase).
   const requested = Array.isArray(platforms) && platforms.length > 0
@@ -618,8 +634,12 @@ export async function executeSocialFindProfiles(args) {
   // Fan-out with a bounded concurrency pool: default queries hit up to 16
   // platforms, many Puppeteer-backed — cap in-flight dispatches to avoid
   // exhausting memory / file descriptors / platform rate limits.
+  /**
+   * @typedef {{ status: 'fulfilled', value: any } | { status: 'rejected', reason: any }} SettledResult
+   */
+  /** @type {SettledResult[]} */
   const settledResults = await runPool(targets, MAX_CONCURRENT_PLATFORMS, (p) =>
-    runOne(p).then((v) => ({ status: 'fulfilled', value: v })).catch((reason) => ({ status: 'rejected', reason }))
+    runOne(p).then((v) => (/** @type {SettledResult} */ ({ status: 'fulfilled', value: v }))).catch((reason) => (/** @type {SettledResult} */ ({ status: 'rejected', reason })))
   );
 
   /** @type {import('../core/types.js').ProfileItem[]} */

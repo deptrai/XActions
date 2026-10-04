@@ -154,22 +154,22 @@ function resolveBrain(injected) {
  *
  * @param {Array<Record<string, any>>} profiles
  * @param {object} [options]
- * @param {Map<string, bigint>} [options.avatarHashMap] — pre-fetched avatar
+ * @param {Map<string, bigint>} [options.avatarHashMap] - pre-fetched avatar
  *        pHash map; feeds the cheap scorePair estimate used for gating/ranking
- * @param {any} [options.brain] — injected JevBrain (tests fake at this IO
+ * @param {any} [options.brain] - injected JevBrain (tests fake at this IO
  *        boundary); lazy-constructed when omitted
- * @param {boolean} [options.phashEnabled] — resolved pHash kill-switch for the
+ * @param {boolean} [options.phashEnabled] - resolved pHash kill-switch for the
  *        cheap score (default: isAvatarPHashEnabled())
- * @param {number} [options.phashThreshold] — resolved Hamming threshold for the
+ * @param {number} [options.phashThreshold] - resolved Hamming threshold for the
  *        cheap score (default: getAvatarPHashThreshold())
- * @param {number} [options.timeoutMs] — caller's overall budget; the pre-pass
+ * @param {number} [options.timeoutMs] - caller's overall budget; the pre-pass
  *        stops scheduling new decide calls once the deadline passes
  * @returns {Promise<Map<string, {score: number, confidence: number}>>}
  */
 export async function prefetchBioScores(profiles, options = {}) {
   const map = new Map();
   const opts = options && typeof options === 'object' ? options : {};
-  const deadline = Number.isFinite(opts.timeoutMs) && opts.timeoutMs > 0
+  const deadline = typeof opts.timeoutMs === 'number' && Number.isFinite(opts.timeoutMs) && opts.timeoutMs > 0
     ? Date.now() + opts.timeoutMs
     : null;
 

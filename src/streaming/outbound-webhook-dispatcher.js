@@ -25,6 +25,7 @@ export const DELIVERY_LOGS_KEY = 'xactions:webhook:delivery_logs';
  *
  * @param {string | Record<string, unknown>} payload
  * @param {string} [secret]
+ * @param {number | string} [timestamp]
  * @returns {string}
  */
 export function createSignature(payload, secret, timestamp) {
@@ -589,6 +590,7 @@ export class OutboundWebhookDispatcher {
    * @param {Record<string, unknown>} payload
    * @param {Object} [options]
    * @param {boolean} [options.isReplay]
+   * @param {boolean} [options.skipDlq]
    * @param {Record<string, string>} [options.headers]
    * @returns {Promise<Record<string, unknown>>}
    */
@@ -881,6 +883,7 @@ export class OutboundWebhookDispatcher {
    * @param {Object} update
    * @param {boolean} update.success
    * @param {number} update.latencyMs
+   * @param {number} [update.attempts]
    */
   async #updateMetrics(subscriptionId, { success, latencyMs, attempts = 1 }) {
     const metricsKey = `${this.#metricsPrefix}${subscriptionId}`;
@@ -888,7 +891,7 @@ export class OutboundWebhookDispatcher {
     const attemptCount = Number.isFinite(Number(attempts)) && Number(attempts) > 0 ? Number(attempts) : 1;
 
     const client = await this.ensureClient();
-    if (client && typeof client.hIncrBy === 'function') {
+    if (client && typeof client.hIncrBy === 'function' && typeof client.hSet === 'function') {
       try {
         const newAttempts = await client.hIncrBy(metricsKey, 'totalAttempts', attemptCount);
         if (success) {
