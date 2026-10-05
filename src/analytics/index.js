@@ -20,3 +20,14 @@ export { saveAccountSnapshot, saveTweetSnapshot, saveDailyEngagement, getAccount
 export { startAutoSnapshot, stopAutoSnapshot, listActiveSnapshots, stopAllSnapshots } from './autoSnapshot.js';
 export { analyzeOverlap, multiOverlap, findSimilarAudience, getAudienceInsights } from './audienceOverlap.js';
 export { syncFollowers, tagContact, untagContact, addNote, scoreContact, autoScore, searchContacts, filterContacts, createSegment, getSegment, listSegments, bulkTag, getContactTimeline, exportSegment } from './followerCRM.js';
+
+// Token Intelligence (Story 54.1, Epic 54)
+export {
+  extractTokenEntities,
+  createDexscreenerTokenResolver,
+  enrichTokenEntities,
+  resolveWithEnrichment,
+  isValidSolanaAddress,
+  isValidEvmAddress,
+} from './tokenEntityExtractor.js';
+
