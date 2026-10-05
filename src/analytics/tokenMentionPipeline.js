@@ -26,7 +26,6 @@
  */
 
 import fs from 'fs';
-import path from 'path';
 import { extractTokenEntities } from './tokenEntityExtractor.js';
 import { analyzeSentiment } from './sentiment.js';
 import { getDatabase } from './historyStore.js';
@@ -59,10 +58,18 @@ const DEFAULT_WEIGHTS = { likes: 0.5, retweets: 0.3, replies: 0.2 };
  * exists. Returns null when absent — caller decides fail-fast vs no-op.
  * @returns {object|null}
  */
+function defaultWatchlistPath() {
+  try {
+    return new URL('../../config/token-watchlist.json', import.meta.url).pathname;
+  } catch {
+    return null;
+  }
+}
+
 function loadDefaultWatchlist() {
   try {
-    const p = path.join(process.cwd(), 'config', 'token-watchlist.json');
-    if (!fs.existsSync(p)) return null;
+    const p = defaultWatchlistPath();
+    if (!p || !fs.existsSync(p)) return null;
     return JSON.parse(fs.readFileSync(p, 'utf8'));
   } catch {
     return null;
@@ -122,6 +129,8 @@ function ensureSchema(db) {
     );
     CREATE INDEX IF NOT EXISTS idx_token_mentions_ts
       ON token_mentions (token_id, ts);
+    CREATE INDEX IF NOT EXISTS idx_token_mentions_ts_only
+      ON token_mentions (ts);
   `);
 }
 
@@ -137,8 +146,11 @@ function ensureSchema(db) {
  */
 function postsFromResponse(res) {
   if (!res || typeof res !== 'object') return [];
-  const posts = res.data?.posts ?? res.posts;
-  return Array.isArray(posts) ? posts : [];
+  const candidates = [res.data?.posts, res.data?.items, res.posts, res.items];
+  for (const c of candidates) {
+    if (Array.isArray(c)) return c;
+  }
+  return [];
 }
 
 /**
@@ -210,7 +222,9 @@ export function createTokenMentionPipeline(opts = {}) {
   const db = opts.db || getDatabase();
   const now = typeof opts.now === 'function' ? opts.now : () => Date.now();
 
-  const degradedThreshold = /** @type {number} */ (Number.isFinite(opts.degradedThreshold) ? opts.degradedThreshold : DEFAULT_DEGRADED_THRESHOLD);
+  const degradedThreshold = Number.isFinite(opts.degradedThreshold) && (opts.degradedThreshold ?? 0) >= 1
+    ? Math.floor(/** @type {number} */ (opts.degradedThreshold))
+    : DEFAULT_DEGRADED_THRESHOLD;
   const botFqThreshold = /** @type {number} */ (Number.isFinite(opts.botFollowerQualityThreshold) ? opts.botFollowerQualityThreshold : 0.1);
   const pollIntervalMs = Number.isFinite(opts.pollIntervalMs) ? opts.pollIntervalMs : DEFAULT_POLL_INTERVAL_MS;
   const pollLimit = Number.isFinite(opts.pollLimit) ? opts.pollLimit : DEFAULT_POLL_LIMIT;
@@ -221,7 +235,9 @@ export function createTokenMentionPipeline(opts = {}) {
   const aliasMap = buildAliasMap(watchlist);
   const queries = Array.isArray(watchlist.queries) && watchlist.queries.length
     ? watchlist.queries
-    : watchlist.tokens.map((/** @type {{symbol:string}} */ t) => `$${t.symbol}`);
+    : watchlist.tokens
+        .filter((/** @type {{symbol?:string}} */ t) => typeof t?.symbol === 'string' && t.symbol)
+        .map((/** @type {{symbol:string}} */ t) => `$${t.symbol}`);
 
   const upsertStmt = db.prepare(`
     INSERT INTO token_mentions
@@ -230,9 +246,9 @@ export function createTokenMentionPipeline(opts = {}) {
       (@token_id, @source_id, @platform, @author, @followers, @engagement, @ts, @sentiment, @is_bot, @first_seen, @last_seen)
     ON CONFLICT(token_id, source_id) DO UPDATE SET
       engagement = excluded.engagement,
-      sentiment  = excluded.sentiment,
-      is_bot     = excluded.is_bot,
-      followers  = excluded.followers,
+      sentiment  = COALESCE(excluded.sentiment, sentiment),
+      is_bot     = COALESCE(excluded.is_bot, is_bot),
+      followers  = COALESCE(excluded.followers, followers),
       last_seen  = excluded.last_seen
   `);
 
@@ -297,12 +313,16 @@ export function createTokenMentionPipeline(opts = {}) {
       if (!entities || entities.length === 0) { skipped++; continue; }
 
       const tweetId = post.externalId || post.metadata?.tweetId || post.id;
+      if (tweetId == null || tweetId === '') { skipped++; continue; }
       const sourceId = `x:${tweetId}`;
-      const ts = post.publishedAt ? new Date(post.publishedAt).getTime() : seenAt;
+      const rawTs = post.publishedAt ? new Date(post.publishedAt).getTime() : NaN;
+      const ts = Number.isFinite(rawTs) ? rawTs : seenAt;
       const engagement = engagementOf(post);
-      const sent = await sentimentFn(content).catch(() => ({ score: 0 }));
+      const sent = await Promise.resolve()
+        .then(() => sentimentFn(content))
+        .catch(() => ({ score: 0 }));
       const sentimentScore = Math.min(1, Math.max(0, Number(sent?.score) || 0));
-      const authorName = post.authorName || post.author?.username || null;
+      const authorName = post.authorName || null;
       const followers = Number.isFinite(post.author?.followers_count)
         ? post.author.followers_count
         : (Number.isFinite(post.author?.followers) ? post.author.followers : null);
@@ -338,7 +358,7 @@ export function createTokenMentionPipeline(opts = {}) {
     }
 
     health.totalMentions += mentions.length;
-    recordBatchEmptiness(false);
+    recordBatchEmptiness(mentions.length === 0 && list.length === 0);
     return { mentions, skipped };
   }
 
@@ -346,24 +366,43 @@ export function createTokenMentionPipeline(opts = {}) {
    * One poll cycle: scrape each watchlist query, merge PostItems, process.
    * Scrape throws count as an empty batch (fail-safe, SCRAPE_THROW row).
    */
+  let _polling = false;
   async function pollOnce() {
-    health.lastPollAt = new Date(now()).toISOString();
-    if (!_scrape) {
-      const mod = await import('../scrapers/index.js');
-      _scrape = mod.scrape;
-    }
-    const all = [];
+    if (_polling) return; // overlap guard — single-writer health contract
+    _polling = true;
     try {
-      for (const query of queries) {
-        const res = await _scrape('twitter', 'search', { query, limit: pollLimit });
-        all.push(...postsFromResponse(res));
+      health.lastPollAt = new Date(now()).toISOString();
+      if (!_scrape) {
+        const mod = await import('../scrapers/index.js');
+        _scrape = mod.scrape;
       }
-    } catch (err) {
-      console.error(`❌ TokenMentionPipeline poll error:`, err.message);
-      recordBatchEmptiness(true, err);
-      return;
+      const all = [];
+      const seenKeys = new Set();
+      let anyErr = null;
+      for (const query of queries) {
+        try {
+          const res = await _scrape('twitter', 'search', { query, limit: pollLimit });
+          for (const p of postsFromResponse(res)) {
+            const k = p?.externalId || p?.metadata?.tweetId || p?.id;
+            if (k == null || seenKeys.has(k)) continue;
+            seenKeys.add(k);
+            all.push(p);
+          }
+        } catch (err) {
+          anyErr = err;
+          console.error(`❌ TokenMentionPipeline query error (${query}):`, err.message);
+        }
+      }
+      try {
+        const res2 = await processBatch(all);
+        if (anyErr) health.lastError = String(anyErr.message || anyErr);
+        return res2;
+      } catch (err) {
+        recordBatchEmptiness(true, err);
+      }
+    } finally {
+      _polling = false;
     }
-    await processBatch(all);
   }
 
   /**
