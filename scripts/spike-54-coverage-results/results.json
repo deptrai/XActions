@@ -1,0 +1,361 @@
+{
+  "startedAt": "2026-10-05T01:38:25.083Z",
+  "auth": {
+    "cookiePresent": false,
+    "csrfPresent": false,
+    "path": "auth_session (~/.xactions/cookies.json fallback)"
+  },
+  "search": {
+    "queries": [
+      {
+        "type": "cashtag",
+        "query": "$PEPE",
+        "ok": true,
+        "error": null,
+        "count": 25,
+        "latencyMs": 1909,
+        "recency": {
+          "newest": "2026-10-05T01:36:44.000Z",
+          "oldest": "2026-10-04T23:59:05.000Z"
+        },
+        "uniqueAuthors": 25,
+        "hasFullText": true,
+        "authError": false
+      },
+      {
+        "type": "cashtag",
+        "query": "$WIF",
+        "ok": true,
+        "error": null,
+        "count": 20,
+        "latencyMs": 920,
+        "recency": {
+          "newest": "2026-10-05T01:26:24.000Z",
+          "oldest": "2026-10-04T21:39:12.000Z"
+        },
+        "uniqueAuthors": 20,
+        "hasFullText": true,
+        "authError": false
+      },
+      {
+        "type": "cashtag",
+        "query": "$BONK",
+        "ok": true,
+        "error": null,
+        "count": 25,
+        "latencyMs": 1596,
+        "recency": {
+          "newest": "2026-10-05T01:37:06.000Z",
+          "oldest": "2026-10-04T21:53:36.000Z"
+        },
+        "uniqueAuthors": 25,
+        "hasFullText": true,
+        "authError": false
+      },
+      {
+        "type": "contract",
+        "query": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+        "ok": true,
+        "error": null,
+        "count": 20,
+        "latencyMs": 717,
+        "recency": {
+          "newest": "2026-10-05T01:37:06.000Z",
+          "oldest": "2026-10-04T13:06:51.000Z"
+        },
+        "uniqueAuthors": 20,
+        "hasFullText": true,
+        "authError": false
+      },
+      {
+        "type": "contract",
+        "query": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
+        "ok": true,
+        "error": null,
+        "count": 20,
+        "latencyMs": 786,
+        "recency": {
+          "newest": "2026-10-05T00:47:18.000Z",
+          "oldest": "2026-10-04T04:31:47.000Z"
+        },
+        "uniqueAuthors": 20,
+        "hasFullText": true,
+        "authError": false
+      },
+      {
+        "type": "contract",
+        "query": "So11111111111111111111111111111111111111112",
+        "ok": true,
+        "error": null,
+        "count": 20,
+        "latencyMs": 792,
+        "recency": {
+          "newest": "2026-10-04T02:45:51.000Z",
+          "oldest": "2026-09-30T02:53:29.000Z"
+        },
+        "uniqueAuthors": 20,
+        "hasFullText": true,
+        "authError": false
+      },
+      {
+        "type": "tokenname",
+        "query": "Pepe coin",
+        "ok": true,
+        "error": null,
+        "count": 20,
+        "latencyMs": 977,
+        "recency": {
+          "newest": "2026-10-05T01:33:33.000Z",
+          "oldest": "2026-10-04T16:44:00.000Z"
+        },
+        "uniqueAuthors": 20,
+        "hasFullText": true,
+        "authError": false
+      },
+      {
+        "type": "tokenname",
+        "query": "dogwifhat",
+        "ok": true,
+        "error": null,
+        "count": 20,
+        "latencyMs": 986,
+        "recency": {
+          "newest": "2026-10-04T03:41:52.000Z",
+          "oldest": "2026-10-02T22:30:41.000Z"
+        },
+        "uniqueAuthors": 20,
+        "hasFullText": true,
+        "authError": false
+      },
+      {
+        "type": "kol_timeline",
+        "query": "from:VitalikButerin",
+        "note": "KOL timeline read",
+        "ok": true,
+        "error": null,
+        "count": 20,
+        "latencyMs": 831,
+        "recency": {
+          "newest": "2026-10-04T13:25:43.000Z",
+          "oldest": "2026-09-21T21:09:49.000Z"
+        },
+        "uniqueAuthors": 20,
+        "hasFullText": true,
+        "authError": false
+      },
+      {
+        "type": "kol_timeline",
+        "query": "from:aeyakovenko",
+        "note": "KOL timeline read (Solana)",
+        "ok": true,
+        "error": null,
+        "count": 0,
+        "latencyMs": 754,
+        "recency": null,
+        "uniqueAuthors": 0,
+        "hasFullText": false,
+        "authError": false
+      }
+    ],
+    "summary": {
+      "total": 10,
+      "ok": 10,
+      "nonEmpty": 9,
+      "cashtagHitRate": 1,
+      "contractHitRate": 1,
+      "tokennameHitRate": 1,
+      "kolHitRate": 0.5,
+      "authErrors": 0
+    }
+  },
+  "dexscreener": {
+    "tokens": [
+      {
+        "label": "BONK",
+        "chain": "solana",
+        "contract": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+        "ok": true,
+        "error": null,
+        "hasLiquidity": true,
+        "hasVolume24h": true,
+        "liquidityUsd": 445449.37,
+        "volume24h": 404968.13,
+        "latencyMs": 433,
+        "pairCount": 30
+      },
+      {
+        "label": "WIF",
+        "chain": "solana",
+        "contract": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
+        "ok": true,
+        "error": null,
+        "hasLiquidity": true,
+        "hasVolume24h": true,
+        "liquidityUsd": 6974456.43,
+        "volume24h": 387848.14,
+        "latencyMs": 113,
+        "pairCount": 30
+      },
+      {
+        "label": "WSOL",
+        "chain": "solana",
+        "contract": "So11111111111111111111111111111111111111112",
+        "ok": true,
+        "error": null,
+        "hasLiquidity": true,
+        "hasVolume24h": true,
+        "liquidityUsd": 30580506.4,
+        "volume24h": 69704820.19,
+        "latencyMs": 69,
+        "pairCount": 30
+      },
+      {
+        "label": "POPCAT",
+        "chain": "solana",
+        "contract": "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr",
+        "ok": true,
+        "error": null,
+        "hasLiquidity": true,
+        "hasVolume24h": true,
+        "liquidityUsd": 4189223.32,
+        "volume24h": 206946.98,
+        "latencyMs": 172,
+        "pairCount": 30
+      },
+      {
+        "label": "MEW",
+        "chain": "solana",
+        "contract": "MEW1gQWJ3nEXg2qgERiKu7FAFj79PHvQVREQUzScPP5",
+        "ok": true,
+        "error": null,
+        "hasLiquidity": true,
+        "hasVolume24h": true,
+        "liquidityUsd": 10881571.61,
+        "volume24h": 247456.87,
+        "latencyMs": 63,
+        "pairCount": 26
+      }
+    ],
+    "summary": {
+      "total": 5,
+      "ok": 5,
+      "pctLiquidity": 1,
+      "pctVolume24h": 1
+    }
+  },
+  "ceiling": {
+    "samples": [
+      {
+        "n": 1,
+        "t": 1791163784111,
+        "ok": true,
+        "count": 5,
+        "latencyMs": 1047,
+        "error": null
+      },
+      {
+        "n": 2,
+        "t": 1791163790159,
+        "ok": true,
+        "count": 5,
+        "latencyMs": 641,
+        "error": null
+      },
+      {
+        "n": 3,
+        "t": 1791163795801,
+        "ok": true,
+        "count": 5,
+        "latencyMs": 643,
+        "error": null
+      },
+      {
+        "n": 4,
+        "t": 1791163801445,
+        "ok": true,
+        "count": 5,
+        "latencyMs": 595,
+        "error": null
+      },
+      {
+        "n": 5,
+        "t": 1791163807041,
+        "ok": true,
+        "count": 5,
+        "latencyMs": 573,
+        "error": null
+      },
+      {
+        "n": 6,
+        "t": 1791163812615,
+        "ok": true,
+        "count": 5,
+        "latencyMs": 600,
+        "error": null
+      },
+      {
+        "n": 7,
+        "t": 1791163818215,
+        "ok": true,
+        "count": 5,
+        "latencyMs": 601,
+        "error": null
+      },
+      {
+        "n": 8,
+        "t": 1791163823817,
+        "ok": true,
+        "count": 5,
+        "latencyMs": 595,
+        "error": null
+      },
+      {
+        "n": 9,
+        "t": 1791163829413,
+        "ok": true,
+        "count": 5,
+        "latencyMs": 597,
+        "error": null
+      },
+      {
+        "n": 10,
+        "t": 1791163835011,
+        "ok": true,
+        "count": 5,
+        "latencyMs": 568,
+        "error": null
+      },
+      {
+        "n": 11,
+        "t": 1791163840581,
+        "ok": true,
+        "count": 5,
+        "latencyMs": 615,
+        "error": null
+      },
+      {
+        "n": 12,
+        "t": 1791163846197,
+        "ok": true,
+        "count": 5,
+        "latencyMs": 631,
+        "error": null
+      }
+    ],
+    "ceiling": {
+      "queriesSent": 12,
+      "elapsedMs": 67718,
+      "queriesPer10Min": 106.3,
+      "degraded": false,
+      "note": "Sustainable rate = sent count before first degrade; conservative ceiling = min(this, governor platform limit)"
+    },
+    "degradedAt": null
+  },
+  "verdicts": {
+    "54.1": "GO — search returns data for ≥50% of probe queries",
+    "54.2": "GO — global search path viable",
+    "54.3": "GO — 100% of watchlist has liquidity_usd",
+    "54.4": "GO — cashtag coverage 1.00 supports watchlist-share mindshare",
+    "ceiling": "Poll ceiling ≈ 106.3 queries/10min (sent 12, degraded=false) — feed to setPlatformLimit('twitter')"
+  }
+}
