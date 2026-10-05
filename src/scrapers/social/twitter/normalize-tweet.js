@@ -86,11 +86,14 @@ export function tweetToPostItem(rawTweet, context = {}) {
 
   // Additive enrichment — only set when the raw data supports them.
   // jev-trading reads these fields verbatim; absence is a signal, not an error.
-  if (accountAgeDays !== undefined || followerQuality !== undefined || isNewAccount !== undefined) {
+  if (accountAgeDays !== undefined || followerQuality !== undefined || isNewAccount !== undefined
+      || followersCount !== undefined || author.verified !== undefined) {
     post.author = {
       ...(accountAgeDays !== undefined ? { account_age_days: accountAgeDays } : {}),
       ...(followerQuality !== undefined ? { follower_quality: followerQuality } : {}),
       ...(isNewAccount !== undefined ? { is_new_account: isNewAccount } : {}),
+      ...(followersCount !== undefined ? { followers_count: followersCount } : {}),
+      ...(author.verified !== undefined ? { verified: isVerified } : {}),
     };
   }
   if (engagementVelocity !== undefined) {

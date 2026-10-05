@@ -22,6 +22,7 @@ export {
   isValidSolanaAddress,
   isValidEvmAddress,
 } from './tokenEntityExtractor.js';
+export { createTokenMentionPipeline } from './tokenMentionPipeline.js';
 
 // Competitive features (09-A, 09-B, 09-C)
 export { saveAccountSnapshot, saveTweetSnapshot, saveDailyEngagement, getAccountHistory, getTweetHistory, getGrowthRate, compareAccounts, exportHistory } from './historyStore.js';

@@ -1,0 +1,24 @@
+{
+  "name": "default-token-watchlist",
+  "description": "Example token watchlist for TokenMentionPipeline (Story 54.2). Caller may inject its own.",
+  "tokens": [
+    {
+      "symbol": "BONK",
+      "contract": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pP",
+      "chain": "solana",
+      "aliases": ["bonk", "bonkcoin"]
+    },
+    {
+      "symbol": "PEPE",
+      "contract": "0x6982508145454Ce325dDbE47a25d4ec3d2311933",
+      "chain": "ethereum",
+      "aliases": ["pepe", "pepecoin"]
+    },
+    {
+      "symbol": "WIF",
+      "chain": "solana",
+      "aliases": ["dogwifhat", "wifcoin"]
+    }
+  ],
+  "queries": ["$BONK OR bonk", "$PEPE OR pepe", "$WIF OR dogwifhat"]
+}
