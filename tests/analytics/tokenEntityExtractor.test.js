@@ -386,6 +386,54 @@ describe('resolveWithEnrichment', () => {
     expect(out).toHaveLength(1);
     expect(out[0].canonicalId).toBe('token:sym:BONK');
   });
+
+  it('builds a dexscreener resolver from the { scrape } shorthand', async () => {
+    const scrape = makeScrape(new Map([[`token_lookup:solana:${SOL_CONTRACT}`, DEX_HIT]]));
+    const out = await resolveWithEnrichment(`contract ${SOL_CONTRACT}`, { scrape });
+    expect(out[0].enriched).toBe(true);
+    expect(out[0].symbol).toBe('BONK');
+  });
+
+  it('treats a throwing injected resolver as a miss — never propagates', async () => {
+    const entities = extractTokenEntities(`contract ${SOL_CONTRACT}`);
+    const throwing = async () => { throw new Error('boom'); };
+    const out = await enrichTokenEntities(entities, throwing);
+    expect(out[0].enriched).toBeUndefined();
+    expect(out[0].contract).toBe(SOL_CONTRACT);
+  });
+});
+
+describe('pass-2 review patches', () => {
+  it('does not extract a Solana contract out of a malformed 0x<41+hex> run', () => {
+    const text = `ape 0x6982508145454Ce325dDbE47a25d4ec3d2311933aa now`;
+    const entities = extractTokenEntities(text);
+    expect(entities.filter((e) => e.mentionType === 'contract')).toHaveLength(0);
+  });
+
+  it('zero-liquidity pairs still resolve to first pair, not a miss', async () => {
+    const zeroHit = { data: { pairs: [{ base_symbol: 'BONK', chain_id: 'solana', liquidity_usd: 0, pair_address: 'p1' }] } };
+    const scrape = makeScrape(new Map([[`token_lookup:solana:${SOL_CONTRACT}`, zeroHit]]));
+    const resolver = createDexscreenerTokenResolver({ scrape });
+    const result = await resolver({ tokenAddress: SOL_CONTRACT, chainId: 'solana' });
+    expect(result).not.toBeNull();
+    expect(result.symbol).toBe('BONK');
+  });
+
+  it('empty-string alias key is ignored instead of flooding entities', () => {
+    const entities = extractTokenEntities('nothing here', { aliasMap: { '': 'BOOM' } });
+    expect(entities).toHaveLength(0);
+  });
+
+  it('non-object elements pass through enrichTokenEntities untouched', async () => {
+    const resolver = async () => ({ symbol: 'X' });
+    const out = await enrichTokenEntities([null, 'str', 7], resolver);
+    expect(out).toEqual([null, 'str', 7]);
+  });
+
+  it('non-string alias symbol is coerced, not TypeError', () => {
+    const entities = extractTokenEntities('bonk time', { aliasMap: { bonk: { symbol: 123 } } });
+    expect(entities[0].canonicalId).toBe('token:sym:123');
+  });
 });
 
 // ============================================================================

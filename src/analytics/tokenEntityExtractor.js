@@ -66,7 +66,11 @@ const SOLANA_CANDIDATE_REGEX = new RegExp(
 );
 
 /** EVM candidate: `0x`/`0X` + exactly 40 hex chars. */
-const EVM_CANDIDATE_REGEX = /(?<![\w])(0[xX][0-9a-fA-F]{40})(?![0-9a-zA-Z])/g;
+const EVM_CANDIDATE_REGEX = /(?<![\w])(0[xX][0-9a-fA-F]{40})(?!\w)/g;
+
+/** Malformed EVM-ish runs (`0x` + >=32 hex chars) — forbidden zone so their
+ * hex body is not re-parsed as a Solana contract (INVALID_ADDR). */
+const EVM_FORBIDDEN_REGEX = /(?<![\w])0[xX][0-9a-fA-F]{32,}(?!\w)/g;
 
 /**
  * Token-context keywords - presence within ±CONTEXT_WINDOW chars of a bare
@@ -74,7 +78,7 @@ const EVM_CANDIDATE_REGEX = /(?<![\w])(0[xX][0-9a-fA-F]{40})(?![0-9a-zA-Z])/g;
  * EVM chain inference (settled decision #3).
  */
 const TOKEN_CONTEXT_REGEX =
-  /\b(contract|ca|token|tokens|mint|address|pump|launch|launchpad|airdrop|dex|screener|pair|pairs|liquidity|mcap|sol|solana|bsc|bnb|binance|polygon|matic|arbitrum|arb|base|avax|avalanche|eth|ethereum)\b/i;
+  /\b(contract|token|mint|address|pump|launch|launchpad|airdrop|dex|screener|liquidity|mcap|solana|bsc|bnb|binance|polygon|matic|arbitrum|avalanche|ethereum)\b|\bca\s*[:=]|\bsol\s*[:=]|\bbase\s+chain\b/i;
 
 /** Positional context radius for confidence boost / chain inference. */
 const CONTEXT_WINDOW = 100;
@@ -146,6 +150,22 @@ function hasTokenContext(window) {
 }
 
 /**
+ * Collect index ranges that must never yield a Solana candidate: valid EVM
+ * matches plus malformed `0x<32+ hex>` runs (their hex body is pure base58).
+ * @param {string} text
+ * @returns {Array<[number, number]>}
+ */
+function forbiddenEvmSpans(text) {
+  /** @type {Array<[number, number]>} */
+  const spans = [];
+  EVM_FORBIDDEN_REGEX.lastIndex = 0;
+  for (const m of text.matchAll(EVM_FORBIDDEN_REGEX)) {
+    spans.push([m.index, m.index + m[0].length]);
+  }
+  return spans;
+}
+
+/**
  * Infer EVM chain from context keywords near the address (decision #3).
  * @param {string} window
  * @param {string} fallback
@@ -210,6 +230,7 @@ function partitionAliasMap(aliasMap) {
   // Longest-key-first so 'dogwifhat' wins over 'wif'.
   const keys = Object.keys(aliasMap).sort((a, b) => b.length - a.length);
   for (const key of keys) {
+    if (!key || !key.trim()) continue; // empty key regex would match everywhere
     const value = normalizeAliasValue(aliasMap[key], key);
     if (isValidSolanaAddress(key)) {
       solanaContracts.set(key, value);
@@ -255,7 +276,7 @@ function aliasIdentity(value) {
     }
     // invalid contract -> fall through to symbol-only
   }
-  const symbol = (value.symbol || '').toUpperCase();
+  const symbol = String(value.symbol ?? '').toUpperCase();
   return {
     canonicalId: `token:sym:${symbol}`,
     confidence: 0.6,
@@ -338,8 +359,9 @@ export function extractTokenEntities(text, options) {
   const { nameAliases, solanaContracts, evmContracts } = partitionAliasMap(opts.aliasMap);
 
   // ---- EVM contract addresses -------------------------------------------------
-  /** Spans covered by EVM matches — Solana candidates inside are hex bodies. */
-  const evmSpans = [];
+  /** Forbidden spans: valid EVM matches + malformed `0x<32+hex>` runs whose
+   * hex body would otherwise re-parse as a Solana contract (INVALID_ADDR). */
+  const evmSpans = forbiddenEvmSpans(text);
   EVM_CANDIDATE_REGEX.lastIndex = 0;
   for (const match of text.matchAll(EVM_CANDIDATE_REGEX)) {
     const raw = match[0];
@@ -451,7 +473,7 @@ export function createDexscreenerTokenResolver(deps) {
     const chainId = args?.chainId || args?.chain;
     if (!tokenAddress) return null;
 
-    const cacheKey = `${chainId || ''}:${tokenAddress}`;
+    const cacheKey = `${chainId || ''}:${/^0x/i.test(String(tokenAddress)) ? String(tokenAddress).toLowerCase() : tokenAddress}`;
     if (cache && typeof cache.has === 'function' && cache.has(cacheKey)) {
       return cache.get(cacheKey);
     }
@@ -462,7 +484,7 @@ export function createDexscreenerTokenResolver(deps) {
       const best = Array.isArray(pairs)
         ? pairs.reduce(
             (a, p) => ((p?.liquidity_usd ?? 0) > (a?.liquidity_usd ?? 0) ? p : a),
-            null
+            pairs[0] ?? null
           )
         : null;
       if (!best) return null; // miss - not cached
@@ -518,14 +540,19 @@ export async function enrichTokenEntities(entities, resolver) {
   const out = [];
   for (const entity of entities) {
     if (!entity || typeof entity !== 'object' || !entity.contract) {
-      out.push({ ...entity });
+      out.push(entity && typeof entity === 'object' ? { ...entity } : entity);
       continue;
     }
-    const result = await resolver({
-      chainId: entity.chain,
-      tokenAddress: entity.contract,
-      contract: entity.contract,
-    });
+    let result;
+    try {
+      result = await resolver({
+        chainId: entity.chain,
+        tokenAddress: entity.contract,
+        contract: entity.contract,
+      });
+    } catch {
+      result = null; // injected resolver throw = miss, never propagates
+    }
     if (!result) {
       out.push({ ...entity });
       continue;
