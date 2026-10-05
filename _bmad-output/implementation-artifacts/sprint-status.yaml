@@ -390,7 +390,7 @@ development_status:
 
   epic-54: in-progress
   54-0-ingestion-coverage-spike-x-search-dexscreener-validation-pre: done
-  54-1-tokenentityextractor-cashtag-contract-name-canonical-token-i: backlog
+  54-1-tokenentityextractor-cashtag-contract-name-canonical-token-i: done
   54-2-tokenmentionpipeline-normalized-per-token-mention-stream: backlog
   54-3-hype-vs-liquidity-unique-source-authenticity-metrics: backlog
   54-4-token-mindshare-engine-share-of-voice-delta-24h-7d: backlog
