@@ -3,7 +3,7 @@
 # project: XActions
 # project_key: XACT
 # tracking_system: file-system
-# story_location: /Users/luisphan/Documents/GitHub/XActions/_bmad-output/implementation-artifacts
+# story_location: _bmad-output/implementation-artifacts
 
 # STATUS DEFINITIONS:
 # ==================
@@ -23,22 +23,24 @@
 #   - optional: Can be completed but not required
 #   - done: Retrospective has been completed
 
+---
 generated: "2026-08-27 06:00"
 last_updated: "05-10-2026 08:39"
 project: XActions
 project_key: XACT
 tracking_system: file-system
-story_location: 
+story_location:
   /Users/luisphan/Documents/GitHub/XActions/_bmad-output/implementation-artifacts
 
 development_status:
   # --- Epic 6: Facebook Anti-Detection & Bot Countermeasures ---
-  # NOTE 2026-09-05: Epic 6 is legacy scope from epics-1-9-legacy.md. Stories 6.1-6.4
-  # are the only items tracked in this sprint; they are done. Stories 6.5-6.17 are
-  # Facebook Puppeteer-specific capabilities that are partially implemented in
-  # src/scrapers/facebook/ but are superseded by Epic 11 (resilient proxy/governor)
-  # and the hybrid crawler architecture. They are not tracked in the Epics 10-20
-  # roadmap and will be revisited under Epic 20 decommission.
+  # NOTE 2026-09-05: Epic 6 is legacy scope from epics-1-9-legacy.md.
+  # Stories 6.1-6.4 are the only items tracked in this sprint; they are done.
+  # Stories 6.5-6.17 are Facebook Puppeteer-specific capabilities that are
+  # partially implemented in src/scrapers/facebook/ but are superseded by
+  # Epic 11 (resilient proxy/governor) and the hybrid crawler architecture.
+  # They are not tracked in the Epics 10-20 roadmap and will be revisited
+  # under Epic 20 decommission.
   epic-10: done
   10-1-core-domain-interfaces-error-hierarchy-definition: done
   10-2-prisma-post-comment-relational-schema-migration: done
@@ -351,7 +353,13 @@ development_status:
   49-5-checkpoint-optimistic-locking-p2-sweep: done
   epic-49-retrospective: optional
 
-# migrated from nested block — source_spec: _bmad-output/specs/spec-xactions-public-scrape-gateway/SPEC.md; source_spine: _bmad-output/planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md
+  # migrated from nested block —
+  #   source_spec:
+  #     _bmad-output/specs/spec-xactions-public-scrape-gateway/SPEC.md
+  #   source_spine:
+  #     _bmad-output/planning-artifacts/architecture/
+  #     architecture-xactions-public-scrape-gateway-2026-09-26/
+  #     ARCHITECTURE-SPINE.md
   epic-50: done
   50-1-service-auth-lane-bearer-consumer-derivation: done
   50-2-sync-async-mode-dispatch-202-degrade-contract: done
@@ -378,7 +386,12 @@ development_status:
   52-3-verification-test-suite-backward-compatibility-assurance: done
   epic-52-retrospective: optional
 
-# migrated from nested block — source_proposal: _bmad-output/planning-artifacts/sprint-change-proposal-2026-10-02-browser-page-pool.md; source_spike: _bmad-output/implementation-artifacts/spike-browser-page-pool.md
+  # migrated from nested block —
+  #   source_proposal:
+  #     _bmad-output/planning-artifacts/
+  #     sprint-change-proposal-2026-10-02-browser-page-pool.md
+  #   source_spike:
+  #     _bmad-output/implementation-artifacts/spike-browser-page-pool.md
   epic-53: in-progress
   53-1-browserpool-core-acquire-release-drain-stats-isolated-contex: done
   53-2-adapter-stealthbrowser-pooled-opt: backlog

@@ -481,12 +481,13 @@ export function createDexscreenerTokenResolver(deps) {
     try {
       const res = await scrape('dexscreener', 'token_lookup', { chainId, tokenAddress });
       const pairs = res?.data?.pairs ?? res?.pairs ?? [];
-      const best = Array.isArray(pairs)
-        ? pairs.reduce(
-            (a, p) => ((p?.liquidity_usd ?? 0) > (a?.liquidity_usd ?? 0) ? p : a),
-            pairs[0] ?? null
-          )
-        : null;
+      let best = null;
+      if (Array.isArray(pairs) && pairs.length > 0) {
+        best = pairs[0];
+        for (const p of pairs) {
+          if ((p?.liquidity_usd ?? 0) > (best?.liquidity_usd ?? 0)) best = p;
+        }
+      }
       if (!best) return null; // miss - not cached
 
       const result = {
