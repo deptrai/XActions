@@ -8,6 +8,7 @@ export { startAutoSnapshot, stopAutoSnapshot, listActiveSnapshots, stopAllSnapsh
 export { analyzeOverlap, multiOverlap, findSimilarAudience, getAudienceInsights } from './audienceOverlap.js';
 export { createTokenMentionPipeline } from './tokenMentionPipeline.js';
 export { createHypeAuthenticity, getDefaultHypeAuthenticity, HYPE_ALERT_MONITOR_ID } from './hypeAuthenticity.js';
+export { createMindshareEngine, getDefaultMindshare } from './mindshare.js';
 export { syncFollowers, tagContact, untagContact, addNote, scoreContact, autoScore, searchContacts, filterContacts, createSegment, getSegment, listSegments, bulkTag, getContactTimeline, exportSegment } from './followerCRM.js';
 declare const _default: unknown;
 export default _default;

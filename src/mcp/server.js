@@ -3793,9 +3793,9 @@ const DOMAIN_TOOLS = [
           enum: [
             'account', 'post', 'sentiment', 'reputation', 'buzzwords',
             'voice', 'growth', 'competitor', 'audience_overlap', 'graph_analyze',
-            'token_hype',
+            'token_hype', 'token_mindshare',
           ],
-          description: 'Analytics action to perform: account, post, sentiment, reputation, buzzwords, voice, growth, competitor, audience_overlap, graph_analyze, token_hype',
+          description: 'Analytics action to perform: account, post, sentiment, reputation, buzzwords, voice, growth, competitor, audience_overlap, graph_analyze, token_hype, token_mindshare',
         },
         username: { type: 'string', description: 'Twitter username to analyze (without @)' },
         url: { type: 'string', description: 'Post or tweet URL for post analytics' },
@@ -3813,8 +3813,8 @@ const DOMAIN_TOOLS = [
         username1: { type: 'string', description: 'First username for audience overlap' },
         username2: { type: 'string', description: 'Second username for audience overlap' },
         graphId: { type: 'string', description: 'Graph ID for graph analysis' },
-        tokenId: { type: 'string', description: 'Canonical token id (token:{chain}:{contract} or token:sym:{SYMBOL}) for token_hype filter' },
-        hours: { type: 'number', description: 'Metric window in hours for token_hype (default: 24)' },
+        tokenId: { type: 'string', description: 'Canonical token id (token:{chain}:{contract} or token:sym:{SYMBOL}) for token_hype or token_mindshare filter' },
+        hours: { type: 'number', description: 'Metric window in hours for token_hype or token_mindshare (default: 24)' },
         dryRun: { type: 'boolean', description: 'Preview mode without persisting' },
       },
       required: ['action'],
@@ -4248,6 +4248,10 @@ const DOMAIN_DISPATCH_MAP = {
       targetTool: 'x_token_hype',
       requiredArgs: [],
     },
+    token_mindshare: {
+      targetTool: 'x_token_mindshare',
+      requiredArgs: [],
+    },
   },
 
   x_system: {
@@ -4584,7 +4588,7 @@ async function executeTool(name, args) {
   }
 
   // Handle analytics/sentiment tools directly
-  if (name === 'x_analyze_sentiment' || name === 'x_monitor_reputation' || name === 'x_reputation_report' || name === 'x_analytics_buzzwords' || name === 'x_token_hype') {
+  if (name === 'x_analyze_sentiment' || name === 'x_monitor_reputation' || name === 'x_reputation_report' || name === 'x_analytics_buzzwords' || name === 'x_token_hype' || name === 'x_token_mindshare') {
     return await executeAnalyticsTool(name, args);
   }
 
@@ -6821,6 +6825,28 @@ async function executeAnalyticsTool(name, args) {
       const tokenId = typeof args.tokenId === 'string' ? args.tokenId : undefined;
       const result = await hype.computeWithAlerts(tokenId, { hours });
       return { tokens: result.tokens, degraded: result.degraded, alerts: result.alerts, ...(result.warning ? { warning: result.warning } : {}) };
+    }
+
+    case 'x_token_mindshare': {
+      // Story 54.4 — token mindshare engine: share-of-voice % + delta 24h/7d.
+      const mindshare = analytics.getDefaultMindshare();
+      const hours = Number.isFinite(Number(args.hours)) && Number(args.hours) > 0
+        ? Number(args.hours)
+        : undefined;
+      const tokenId = typeof args.tokenId === 'string' && args.tokenId.trim()
+        ? args.tokenId.trim()
+        : undefined;
+      const result = await mindshare.computeMindshare(tokenId, { hours });
+      return {
+        tokens: result.tokens,
+        degraded: result.degraded,
+        scope: result.scope,
+        windowHours: result.windowHours,
+        consecutiveEmptyBatches: result.consecutiveEmptyBatches,
+        degradedSince: result.degradedSince,
+        generatedAt: result.generatedAt,
+        ...(result.warning ? { warning: result.warning } : {}),
+      };
     }
 
     default:

@@ -24,6 +24,7 @@ export {
 } from './tokenEntityExtractor.js';
 export { createTokenMentionPipeline } from './tokenMentionPipeline.js';
 export { createHypeAuthenticity, getDefaultHypeAuthenticity, HYPE_ALERT_MONITOR_ID } from './hypeAuthenticity.js';
+export { createMindshareEngine, getDefaultMindshare } from './mindshare.js';
 
 // Competitive features (09-A, 09-B, 09-C)
 export { saveAccountSnapshot, saveTweetSnapshot, saveDailyEngagement, getAccountHistory, getTweetHistory, getGrowthRate, compareAccounts, exportHistory } from './historyStore.js';

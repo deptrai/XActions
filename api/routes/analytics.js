@@ -22,7 +22,6 @@ import {
   analyzeSentiment,
   analyzeBatch,
   createMonitor,
-  stopMonitor,
   getMonitor,
   getMonitorHistory,
   listMonitors,
@@ -58,7 +57,7 @@ router.get('/token-hype', eitherAuth, async (req, res) => {
       : undefined;
     // ?tokenId=a&tokenId=b parses as an array — guard before it hits sqlite
     const tokenId = typeof req.query.tokenId === 'string' ? req.query.tokenId : undefined;
-    const hype = getDefaultHypeAuthenticity(); // shared instance keeps resolver cache warm
+    const hype = /** @type {import('../../src/analytics/hypeAuthenticity.js').HypeEngine} */ (getDefaultHypeAuthenticity()); // shared instance keeps resolver cache warm
     const result = await hype.computeWithAlerts(tokenId, { hours });
     return res.json({
       tokens: result.tokens,
@@ -71,6 +70,47 @@ router.get('/token-hype', eitherAuth, async (req, res) => {
     return res.status(500).json({ error: (err instanceof Error ? err.message : String(err)) });
   }
 });
+
+/**
+ * GET /api/analytics/token-mindshare (also aliased as /mindshare)
+ * Watchlist-scope Share-of-Voice % + Delta 24h/7d + Top Voices.
+ *
+ * Query: ?tokenId=token:{chain}:{contract} (optional filter)
+ *        &hours=N (active window, default 24)
+ * Auth: eitherAuth — user JWT (dashboard) OR Bearer service key (jev).
+ */
+const handleTokenMindshare = async (
+  /** @type {import('express').Request} */ req,
+  /** @type {import('express').Response} */ res
+) => {
+  try {
+    const { getDefaultMindshare } = await import('../../src/analytics/mindshare.js');
+    const hours = Number.isFinite(Number(req.query.hours)) && Number(req.query.hours) > 0
+      ? Number(req.query.hours)
+      : undefined;
+    // ?tokenId=a&tokenId=b parses as an array — guard before it hits sqlite; empty/whitespace treated as no filter
+    const tokenId = typeof req.query.tokenId === 'string' && req.query.tokenId.trim()
+      ? req.query.tokenId.trim()
+      : undefined;
+    const mindshare = getDefaultMindshare();
+    const result = /** @type {any} */ (await mindshare.computeMindshare(tokenId, { hours }));
+    return res.json({
+      scope: result.scope,
+      tokens: result.tokens,
+      degraded: result.degraded,
+      degradedSince: result.degradedSince,
+      windowHours: result.windowHours,
+      consecutiveEmptyBatches: result.consecutiveEmptyBatches,
+      generatedAt: result.generatedAt,
+      ...(result.warning ? { warning: result.warning } : {}),
+    });
+  } catch (err) {
+    console.error('❌ token-mindshare error:', (err instanceof Error ? err.message : String(err)));
+    return res.status(500).json({ error: (err instanceof Error ? err.message : String(err)) });
+  }
+};
+router.get('/token-mindshare', eitherAuth, handleTokenMindshare);
+router.get('/mindshare', eitherAuth, handleTokenMindshare);
 
 // Require authentication for all analytics routes
 router.use(authenticate);
@@ -246,7 +286,7 @@ router.post('/monitor', async (req, res) => {
  * GET /api/analytics/monitor
  * List all active monitors
  */
-router.get('/monitor', (req, res) => {
+router.get('/monitor', (_req, res) => {
   const monitors = /** @type {Array<Record<string, unknown> & { id: string; target: string }>} */ (listMonitors());
   return res.json({ monitors, count: monitors.length });
 });
