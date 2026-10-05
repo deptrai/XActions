@@ -17,6 +17,7 @@
 import express from 'express';
 import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
+import { eitherAuth } from '../middleware/serviceAuth.js';
 import {
   analyzeSentiment,
   analyzeBatch,
@@ -32,6 +33,44 @@ import {
 } from '../../src/analytics/index.js';
 
 const router = express.Router();
+
+// ============================================================================
+// Token Hype Authenticity (Story 54.3) — dual-auth lane
+// ============================================================================
+// Mounted BEFORE `router.use(authenticate)` so machine consumers (jev) reach
+// it via Bearer service key; user-JWT still accepted (AD-5, eitherAuth).
+// Spec: GET /api/analytics/token-hype?tokenId=&hours= → 200 {tokens:[...]}.
+// ============================================================================
+
+/**
+ * GET /api/analytics/token-hype
+ * Hype-vs-liquidity & unique-source authenticity metrics per token.
+ *
+ * Query: ?tokenId=token:{chain}:{contract} (optional filter)
+ *        &hours=N (metric window, default 24)
+ * Auth: eitherAuth — user JWT (dashboard) OR Bearer service key (jev).
+ */
+router.get('/token-hype', eitherAuth, async (req, res) => {
+  try {
+    const { getDefaultHypeAuthenticity } = await import('../../src/analytics/hypeAuthenticity.js');
+    const hours = Number.isFinite(Number(req.query.hours)) && Number(req.query.hours) > 0
+      ? Number(req.query.hours)
+      : undefined;
+    // ?tokenId=a&tokenId=b parses as an array — guard before it hits sqlite
+    const tokenId = typeof req.query.tokenId === 'string' ? req.query.tokenId : undefined;
+    const hype = getDefaultHypeAuthenticity(); // shared instance keeps resolver cache warm
+    const result = await hype.computeWithAlerts(tokenId, { hours });
+    return res.json({
+      tokens: result.tokens,
+      degraded: result.degraded,
+      alerts: result.alerts,
+      ...(result.warning ? { warning: result.warning } : {}),
+    });
+  } catch (err) {
+    console.error('❌ token-hype error:', (err instanceof Error ? err.message : String(err)));
+    return res.status(500).json({ error: (err instanceof Error ? err.message : String(err)) });
+  }
+});
 
 // Require authentication for all analytics routes
 router.use(authenticate);

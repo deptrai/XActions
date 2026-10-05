@@ -3793,8 +3793,9 @@ const DOMAIN_TOOLS = [
           enum: [
             'account', 'post', 'sentiment', 'reputation', 'buzzwords',
             'voice', 'growth', 'competitor', 'audience_overlap', 'graph_analyze',
+            'token_hype',
           ],
-          description: 'Analytics action to perform: account, post, sentiment, reputation, buzzwords, voice, growth, competitor, audience_overlap, graph_analyze',
+          description: 'Analytics action to perform: account, post, sentiment, reputation, buzzwords, voice, growth, competitor, audience_overlap, graph_analyze, token_hype',
         },
         username: { type: 'string', description: 'Twitter username to analyze (without @)' },
         url: { type: 'string', description: 'Post or tweet URL for post analytics' },
@@ -3812,6 +3813,8 @@ const DOMAIN_TOOLS = [
         username1: { type: 'string', description: 'First username for audience overlap' },
         username2: { type: 'string', description: 'Second username for audience overlap' },
         graphId: { type: 'string', description: 'Graph ID for graph analysis' },
+        tokenId: { type: 'string', description: 'Canonical token id (token:{chain}:{contract} or token:sym:{SYMBOL}) for token_hype filter' },
+        hours: { type: 'number', description: 'Metric window in hours for token_hype (default: 24)' },
         dryRun: { type: 'boolean', description: 'Preview mode without persisting' },
       },
       required: ['action'],
@@ -4241,6 +4244,10 @@ const DOMAIN_DISPATCH_MAP = {
       targetTool: 'x_graph_analyze',
       requiredArgs: ['graphId'],
     },
+    token_hype: {
+      targetTool: 'x_token_hype',
+      requiredArgs: [],
+    },
   },
 
   x_system: {
@@ -4577,7 +4584,7 @@ async function executeTool(name, args) {
   }
 
   // Handle analytics/sentiment tools directly
-  if (name === 'x_analyze_sentiment' || name === 'x_monitor_reputation' || name === 'x_reputation_report' || name === 'x_analytics_buzzwords') {
+  if (name === 'x_analyze_sentiment' || name === 'x_monitor_reputation' || name === 'x_reputation_report' || name === 'x_analytics_buzzwords' || name === 'x_token_hype') {
     return await executeAnalyticsTool(name, args);
   }
 
@@ -6800,6 +6807,20 @@ async function executeAnalyticsTool(name, args) {
         lang: args.lang,
         removeStopwords: args.removeStopwords,
       });
+    }
+
+    case 'x_token_hype': {
+      // Story 54.3 — hype-vs-liquidity & unique-source authenticity metrics.
+      // Default instance: analytics.db + Dexscreener resolver (scrape seam) +
+      // alerts.js anomaly sink. computeWithAlerts runs the full pass so
+      // manufactured-hype signatures fire exactly one anomaly per token.
+      const hype = analytics.getDefaultHypeAuthenticity();
+      const hours = Number.isFinite(Number(args.hours)) && Number(args.hours) > 0
+        ? Number(args.hours)
+        : undefined;
+      const tokenId = typeof args.tokenId === 'string' ? args.tokenId : undefined;
+      const result = await hype.computeWithAlerts(tokenId, { hours });
+      return { tokens: result.tokens, degraded: result.degraded, alerts: result.alerts, ...(result.warning ? { warning: result.warning } : {}) };
     }
 
     default:

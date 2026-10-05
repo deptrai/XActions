@@ -42,11 +42,12 @@ const alertHistory = [];
  * @returns {Alert[]} - Generated alerts
  */
 export function checkAlerts(monitor, newPoints) {
+  /** @type {Alert[]} */
   const alerts = [];
 
   if (!newPoints || newPoints.length === 0) return alerts;
 
-  const config = monitor.alertConfig || {};
+  const config = /** @type {any} */ (monitor).alertConfig || {};
 
   // 1. Sentiment threshold alert
   const thresholdAlert = _checkSentimentThreshold(monitor, newPoints, config);
@@ -78,14 +79,19 @@ export function checkAlerts(monitor, newPoints) {
 // Alert condition checks
 // ============================================================================
 
+/**
+ * @param {any} monitor
+ * @param {{score:number, label:string, text:string}[]} newPoints
+ * @param {any} config
+ */
 function _checkSentimentThreshold(monitor, newPoints, config) {
   const threshold = config.sentimentThreshold ?? -0.3;
 
   // Compute average of new points
-  const avgScore = newPoints.reduce((sum, p) => sum + p.score, 0) / newPoints.length;
+  const avgScore = newPoints.reduce((/** @type {number} */ sum, /** @type {{score:number}} */ p) => sum + p.score, 0) / newPoints.length;
 
   if (avgScore < threshold) {
-    const negativeCount = newPoints.filter(p => p.label === 'negative').length;
+    const negativeCount = newPoints.filter((/** @type {{label:string}} */ p) => p.label === 'negative').length;
 
     return _createAlert({
       type: 'sentiment_threshold',
@@ -98,7 +104,7 @@ function _checkSentimentThreshold(monitor, newPoints, config) {
         threshold,
         negativeCount,
         totalCount: newPoints.length,
-        worstTweet: newPoints.reduce((w, p) => p.score < w.score ? p : w, newPoints[0]),
+        worstTweet: newPoints.reduce((/** @type {{score:number}} */ w, /** @type {{score:number}} */ p) => p.score < w.score ? p : w, newPoints[0]),
       },
     });
   }
@@ -106,6 +112,11 @@ function _checkSentimentThreshold(monitor, newPoints, config) {
   return null;
 }
 
+/**
+ * @param {any} monitor
+ * @param {{score:number}[]} newPoints
+ * @param {any} config
+ */
 function _checkVolumeSpike(monitor, newPoints, config) {
   const multiplier = config.volumeMultiplier ?? 3;
   const history = monitor.history || [];
@@ -135,20 +146,24 @@ function _checkVolumeSpike(monitor, newPoints, config) {
   return null;
 }
 
+/**
+ * @param {any} monitor
+ * @param {{score:number}[]} newPoints
+ */
 function _checkAnomaly(monitor, newPoints) {
-  const history = monitor.history || [];
+  const history = /** @type {{score:number}[]} */ (monitor.history || []);
   if (history.length < 30) return null; // Need baseline
 
   // Recent baseline: average of last 30 entries before these new ones
   const baseline = history.slice(-30 - newPoints.length, -newPoints.length || undefined);
   if (baseline.length < 10) return null;
 
-  const baselineAvg = baseline.reduce((s, p) => s + p.score, 0) / baseline.length;
-  const newAvg = newPoints.reduce((s, p) => s + p.score, 0) / newPoints.length;
+  const baselineAvg = baseline.reduce((/** @type {number} */ s, /** @type {{score:number}} */ p) => s + p.score, 0) / baseline.length;
+  const newAvg = newPoints.reduce((/** @type {number} */ s, /** @type {{score:number}} */ p) => s + p.score, 0) / newPoints.length;
 
   // Standard deviation of baseline
   const baselineStd = Math.sqrt(
-    baseline.reduce((s, p) => s + Math.pow(p.score - baselineAvg, 2), 0) / baseline.length
+    baseline.reduce((/** @type {number} */ s, /** @type {{score:number}} */ p) => s + Math.pow(p.score - baselineAvg, 2), 0) / baseline.length
   );
 
   // Anomaly: new average is more than 2 standard deviations below baseline
@@ -177,6 +192,9 @@ function _checkAnomaly(monitor, newPoints) {
 // Alert creation and delivery
 // ============================================================================
 
+/**
+ * @param {{type:string, severity:string, message:string, monitorId:string, target:string, data:object}} fields
+ */
 function _createAlert({ type, severity, message, monitorId, target, data }) {
   return {
     id: `alert_${alertIdCounter++}_${Date.now()}`,
@@ -190,6 +208,10 @@ function _createAlert({ type, severity, message, monitorId, target, data }) {
   };
 }
 
+/**
+ * @param {Alert} alert
+ * @param {any} config
+ */
 async function _deliverAlert(alert, config) {
   // Console delivery (always)
   const icon = alert.severity === 'critical' ? '🚨' : alert.severity === 'warning' ? '⚠️' : 'ℹ️';
@@ -207,7 +229,7 @@ async function _deliverAlert(alert, config) {
         }),
       });
     } catch (err) {
-      console.error(`❌ Webhook delivery failed: ${err.message}`);
+      console.error(`❌ Webhook delivery failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -226,17 +248,54 @@ async function _deliverAlert(alert, config) {
  * @param {number} [options.limit=50]
  * @returns {Alert[]}
  */
+// ============================================================================
+// Hype anomaly alerts (Story 54.3 — additive seam, no refactor of internals)
+// ============================================================================
+
+/**
+ * Emit a hype-authenticity anomaly alert. Reuses `_createAlert` +
+ * `_deliverAlert` + `alertHistory` (cap 1000 unchanged) so downstream
+ * consumers (`getAlerts({type:'anomaly'})`) see it alongside monitor alerts.
+ * Caller sets `monitorId` (sentinel 'token-hype' per spec Design Note 3).
+ *
+ * @param {{type?:string, severity:string, message:string, monitorId?:string, target?:string, data?:object}} alert
+ * @param {object} [config] - optional delivery config (webhookUrl)
+ * @returns {Alert} the stored alert
+ */
+export function emitHypeAnomalyAlert(alert, config = {}) {
+  const created = _createAlert({
+    type: alert?.type || 'anomaly',
+    severity: alert?.severity || 'warning',
+    message: alert?.message || 'Hype anomaly detected',
+    monitorId: alert?.monitorId || 'token-hype',
+    target: alert?.target || (/** @type {any} */ (alert?.data)?.tokenId) || 'unknown',
+    data: alert?.data || {},
+  });
+  _deliverAlert(created, config);
+  alertHistory.push(created);
+  if (alertHistory.length > 1000) {
+    alertHistory.splice(0, alertHistory.length - 1000);
+  }
+  return created;
+}
+
 export function getAlerts(options = {}) {
+  /** @type {Alert[]} */
   let alerts = [...alertHistory];
 
-  if (options.monitorId) {
-    alerts = alerts.filter(a => a.monitorId === options.monitorId);
+  const opts = /** @type {{monitorId?:string, severity?:string, type?:string, limit?:number}} */ (options);
+
+  if (opts.monitorId) {
+    alerts = alerts.filter(a => a.monitorId === opts.monitorId);
   }
-  if (options.severity) {
-    alerts = alerts.filter(a => a.severity === options.severity);
+  if (opts.severity) {
+    alerts = alerts.filter(a => a.severity === opts.severity);
+  }
+  if (opts.type) {
+    alerts = alerts.filter(a => a.type === opts.type);
   }
 
-  const limit = options.limit || 50;
+  const limit = opts.limit || 50;
   return alerts.slice(-limit);
 }
 
@@ -251,4 +310,5 @@ export default {
   checkAlerts,
   getAlerts,
   clearAlerts,
+  emitHypeAnomalyAlert,
 };

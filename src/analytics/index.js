@@ -10,7 +10,7 @@
 
 export { analyzeSentiment, analyzeBatch, aggregateResults } from './sentiment.js';
 export { createMonitor, stopMonitor, getMonitor, getMonitorHistory, listMonitors, removeMonitor, stopAll } from './reputation.js';
-export { checkAlerts, getAlerts, clearAlerts } from './alerts.js';
+export { checkAlerts, getAlerts, clearAlerts, emitHypeAnomalyAlert } from './alerts.js';
 export { generateReport } from './reports.js';
 export { analyzeTweetPriceCorrelation, alignTweetsWithPrices, computeCorrelationStats, fetchCoinGeckoPrices, fetchGeckoTerminalPrices } from './priceCorrelation.js';
 export { extractKeywordFrequency } from './word-frequency.js';
@@ -23,6 +23,7 @@ export {
   isValidEvmAddress,
 } from './tokenEntityExtractor.js';
 export { createTokenMentionPipeline } from './tokenMentionPipeline.js';
+export { createHypeAuthenticity, getDefaultHypeAuthenticity, HYPE_ALERT_MONITOR_ID } from './hypeAuthenticity.js';
 
 // Competitive features (09-A, 09-B, 09-C)
 export { saveAccountSnapshot, saveTweetSnapshot, saveDailyEngagement, getAccountHistory, getTweetHistory, getGrowthRate, compareAccounts, exportHistory } from './historyStore.js';
