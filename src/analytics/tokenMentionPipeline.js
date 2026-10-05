@@ -103,6 +103,74 @@ function buildAliasMap(watchlist) {
   return map;
 }
 
+/**
+ * Map `SYMBOL` (uppercase) -> canonical `token:{chain}:{contract}` id for
+ * watchlist entries that carry a contract. Uses the SAME canonical grammar
+ * as hypeAuthenticity `canonicalIdFor` (AD-1): EVM contract ids lowercase,
+ * Solana verbatim. Contract-less entries (e.g. WIF) keep `token:sym:*`.
+ *
+ * Why: the extractor deliberately never merges `token:sym:X` into contract
+ * identity (it is pure-text and cannot know the watchlist). The pipeline IS
+ * watchlist-aware, so cashtag mentions of a listed contract-token are
+ * canonicalized here — otherwise downstream metrics (54.3 hype/liquidity)
+ * see the watchlist row and the mention rows as two disjoint tokens and
+ * `manufactured_hype` alerts can never fire.
+ * @param {object} watchlist
+ * @returns {Map<string, string>}
+ */
+function buildSymCanonicalMap(watchlist) {
+  /** @type {Map<string,string>} */
+  const map = new Map();
+  for (const token of watchlist?.tokens || []) {
+    if (!token || !token.symbol || !token.contract || !token.chain) continue;
+    const contract = /^0x/i.test(String(token.contract))
+      ? String(token.contract).toLowerCase()
+      : String(token.contract);
+    map.set(String(token.symbol).toUpperCase(), `token:${token.chain}:${contract}`);
+  }
+  return map;
+}
+
+/**
+ * One-time, idempotent migration: rewrite stored `token:sym:{SYMBOL}` rows
+ * to their canonical ids when the watchlist now maps the symbol to a
+ * contract. Conflicts on (token_id, source_id) merge keeping the earliest
+ * first_seen and latest engagement — same semantics as the ingest upsert.
+ * Runs inside a transaction at construction; cheap no-op when no sym rows.
+ * @param {object} db
+ * @param {Map<string,string>} symToCanonical
+ */
+function backfillSymCanonical(db, symToCanonical) {
+  if (!symToCanonical || symToCanonical.size === 0) return;
+  let migrated = 0;
+  const sel = db.prepare('SELECT * FROM token_mentions WHERE token_id = ?');
+  const ins = db.prepare(`
+    INSERT INTO token_mentions
+      (token_id, source_id, platform, author, followers, engagement, ts, sentiment, is_bot, first_seen, last_seen)
+    VALUES
+      (@token_id, @source_id, @platform, @author, @followers, @engagement, @ts, @sentiment, @is_bot, @first_seen, @last_seen)
+    ON CONFLICT(token_id, source_id) DO UPDATE SET
+      engagement = excluded.engagement,
+      sentiment  = COALESCE(excluded.sentiment, sentiment),
+      is_bot     = COALESCE(excluded.is_bot, is_bot),
+      followers  = COALESCE(excluded.followers, followers),
+      first_seen = MIN(first_seen, excluded.first_seen),
+      last_seen  = MAX(last_seen, excluded.last_seen)
+  `);
+  const del = db.prepare('DELETE FROM token_mentions WHERE token_id = ?');
+  const tx = db.transaction(() => {
+    for (const [sym, canonicalId] of symToCanonical) {
+      const symId = `token:sym:${sym}`;
+      const rows = sel.all(symId);
+      for (const row of rows) ins.run({ ...row, token_id: canonicalId });
+      if (rows.length) del.run(symId);
+      migrated += rows.length;
+    }
+  });
+  tx();
+  if (migrated) console.log(`🔁 TokenMentionPipeline backfilled ${migrated} token:sym:* rows to canonical ids`);
+}
+
 // ============================================================================
 // Schema (additive, shared analytics.db — NOT username-keyed historyStore tables)
 // ============================================================================
@@ -233,6 +301,8 @@ export function createTokenMentionPipeline(opts = {}) {
   ensureSchema(db);
 
   const aliasMap = buildAliasMap(watchlist);
+  const symToCanonical = buildSymCanonicalMap(watchlist);
+  backfillSymCanonical(db, symToCanonical);
   const queries = Array.isArray(watchlist.queries) && watchlist.queries.length
     ? watchlist.queries
     : watchlist.tokens
@@ -306,6 +376,7 @@ export function createTokenMentionPipeline(opts = {}) {
     const mentions = [];
     let skipped = 0;
     const seenAt = now();
+    const batchSeen = new Set(); // post-canonicalization (token_id|source_id) dedup
 
     for (const post of list) {
       const content = typeof post?.content === 'string' ? post.content : '';
@@ -329,8 +400,21 @@ export function createTokenMentionPipeline(opts = {}) {
       const bot = isProbableBot(post.author, botFqThreshold);
 
       for (const entity of entities) {
+        // Canonicalize sym mentions of listed contract-tokens so mentions
+        // land on the same token_id the metrics layer uses (see
+        // buildSymCanonicalMap). E.g. "$BONK" -> token:solana:DezXAZ…
+        let tokenId = entity.canonicalId;
+        if (tokenId.startsWith('token:sym:')) {
+          const canonical = symToCanonical.get(tokenId.slice('token:sym:'.length));
+          if (canonical) tokenId = canonical;
+        }
+        // A tweet containing both "$BONK" and the raw contract resolves to
+        // the same (token_id, source_id) — count it once.
+        const dedupKey = `${tokenId}|${sourceId}`;
+        if (batchSeen.has(dedupKey)) continue;
+        batchSeen.add(dedupKey);
         const mention = {
-          tokenId: entity.canonicalId,
+          tokenId,
           sourceId,
           platform: 'twitter',
           author: authorName,

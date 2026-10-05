@@ -96,7 +96,7 @@ describe('processBatch — HAPPY_PATH', () => {
     const pipe = makePipeline();
     const { mentions } = await pipe.processBatch([makePost()]);
     expect(mentions.length).toBeGreaterThanOrEqual(1);
-    const m = mentions.find((/** @type {Mention} */ x) => x.tokenId === 'token:sym:BONK');
+    const m = mentions.find((/** @type {Mention} */ x) => x.tokenId === `token:solana:${SOL_CONTRACT}`);
     expect(m).toBeDefined();
     expect(m.sourceId).toBe('x:1');
     expect(m.platform).toBe('twitter');
@@ -156,8 +156,17 @@ describe('processBatch — MULTI_TOKEN_TWEET', () => {
       makePost({ content: `$BONK and ${EVM_CONTRACT} both mooning` }),
     ]);
     const ids = new Set(mentions.map((/** @type {Mention} */ m) => m.tokenId));
-    expect(ids.has('token:sym:BONK')).toBe(true);
+    expect(ids.has(`token:solana:${SOL_CONTRACT}`)).toBe(true);
     expect(ids.has(`token:ethereum:${EVM_CONTRACT.toLowerCase()}`)).toBe(true);
+  });
+
+  it('cashtag + raw contract of the same watchlist token count once', async () => {
+    const pipe = makePipeline();
+    const { mentions } = await pipe.processBatch([
+      makePost({ content: `$BONK pumping ${SOL_CONTRACT} lfg` }),
+    ]);
+    const bonk = mentions.filter((/** @type {Mention} */ m) => m.tokenId === `token:solana:${SOL_CONTRACT}`);
+    expect(bonk.length).toBe(1); // dedup on (token_id, source_id) post-canonicalization
   });
 });
 
@@ -255,7 +264,7 @@ describe('getRollups — ROLLUP_WINDOW', () => {
       makePost({ externalId: 'old', publishedAt: new Date('2026-10-04T10:00:00Z') }), // t-26h
       makePost({ externalId: 'new', publishedAt: new Date('2026-10-05T11:00:00Z') }), // t-1h
     ]);
-    const rollups = /** @type {{mentions_24h:number}[]} */ (pipe.getRollups('token:sym:BONK'));
+    const rollups = /** @type {{mentions_24h:number}[]} */ (pipe.getRollups(`token:solana:${SOL_CONTRACT}`));
     expect(rollups[0].mentions_24h).toBe(1);
   });
 });
@@ -264,15 +273,36 @@ describe('getRollups — ROLLUP_WINDOW', () => {
 // SYM_ONLY_TOKEN
 // ============================================================================
 
-describe('processBatch — SYM_ONLY_TOKEN', () => {
-  it('token:sym:PEPE never merges into contract identity', async () => {
+describe('processBatch — SYM_CANONICALIZATION', () => {
+  it('cashtag of a contract-bearing watchlist token canonicalizes to token:{chain}:{contract}', async () => {
     const pipe = makePipeline();
     const { mentions } = await pipe.processBatch([
       makePost({ content: '$PEPE pumping rn' }),
     ]);
-    // $PEPE cashtag → token:sym:PEPE only (cashtag never auto-resolves to a contract)
-    expect(mentions.some((/** @type {Mention} */ m) => m.tokenId === 'token:sym:PEPE')).toBe(true);
-    expect(mentions.some((/** @type {Mention} */ m) => m.tokenId === `token:ethereum:${EVM_CONTRACT.toLowerCase()}`)).toBe(false);
+    // Watchlist-aware rewrite: $PEPE is a listed token WITH a contract → canonical
+    expect(mentions.some((/** @type {Mention} */ m) => m.tokenId === `token:ethereum:${EVM_CONTRACT.toLowerCase()}`)).toBe(true);
+    expect(mentions.some((/** @type {Mention} */ m) => m.tokenId === 'token:sym:PEPE')).toBe(false);
+  });
+
+  it('token:sym:WIF stays sym — watchlist entry has no contract', async () => {
+    const pipe = makePipeline();
+    const { mentions } = await pipe.processBatch([
+      makePost({ content: '$WIF dipping' }),
+    ]);
+    expect(mentions.some((/** @type {Mention} */ m) => m.tokenId === 'token:sym:WIF')).toBe(true);
+  });
+
+  it('backfill migrates pre-existing token:sym:* rows to canonical ids', async () => {
+    const db = makeDb();
+    // Seed a sym row BEFORE the pipeline exists (pre-canonicalization data)
+    const pipe0 = makePipeline({ db, watchlist: { tokens: [{ symbol: 'BONK', chain: 'solana' }], queries: [] } });
+    await pipe0.processBatch([makePost({ content: '$BONK old row' })]);
+    expect(db.prepare(`SELECT COUNT(*) c FROM token_mentions WHERE token_id = 'token:sym:BONK'`).get().c).toBe(1);
+
+    // New pipeline with a contract-bearing watchlist → constructor backfills
+    makePipeline({ db });
+    expect(db.prepare(`SELECT COUNT(*) c FROM token_mentions WHERE token_id = 'token:sym:BONK'`).get().c).toBe(0);
+    expect(db.prepare(`SELECT COUNT(*) c FROM token_mentions WHERE token_id = 'token:solana:${SOL_CONTRACT}'`).get().c).toBe(1);
   });
 });
 
@@ -346,7 +376,7 @@ describe('getRollups — coverage', () => {
     await pipe.processBatch([
       makePost({ externalId: 'w', likesCount: 100, repostsCount: 10, repliesCount: 10 }),
     ]);
-    const r = /** @type {{weighted_engagement_24h:number}} */ (pipe.getRollups('token:sym:BONK')[0]);
+    const r = /** @type {{weighted_engagement_24h:number}} */ (pipe.getRollups(`token:solana:${SOL_CONTRACT}`)[0]);
     expect(r.weighted_engagement_24h).toBeCloseTo(100 * 0.5 + 10 * 0.3 + 10 * 0.2);
   });
 });
@@ -418,7 +448,7 @@ describe('pass-1 review patches', () => {
       makePost({ publishedAt: 'garbage-date' }),
     ]);
     expect(Number.isFinite(mentions[0].ts)).toBe(true);
-    expect(pipe.getRollups('token:sym:BONK')[0].mentions_24h).toBeGreaterThanOrEqual(1);
+    expect(pipe.getRollups(`token:solana:${SOL_CONTRACT}`)[0].mentions_24h).toBeGreaterThanOrEqual(1);
   });
 
   it('sync-throwing sentimentFn degrades to score 0 — batch completes', async () => {
