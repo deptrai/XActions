@@ -188,6 +188,7 @@ function ensureSchema(db) {
       author      TEXT,
       followers   INTEGER,
       engagement  TEXT,
+      content     TEXT,
       ts          INTEGER,
       sentiment   REAL,
       is_bot      INTEGER DEFAULT 0,
@@ -309,18 +310,59 @@ export function createTokenMentionPipeline(opts = {}) {
         .filter((/** @type {{symbol?:string}} */ t) => typeof t?.symbol === 'string' && t.symbol)
         .map((/** @type {{symbol:string}} */ t) => `$${t.symbol}`);
 
-  const upsertStmt = db.prepare(`
-    INSERT INTO token_mentions
-      (token_id, source_id, platform, author, followers, engagement, ts, sentiment, is_bot, first_seen, last_seen)
-    VALUES
-      (@token_id, @source_id, @platform, @author, @followers, @engagement, @ts, @sentiment, @is_bot, @first_seen, @last_seen)
-    ON CONFLICT(token_id, source_id) DO UPDATE SET
-      engagement = excluded.engagement,
-      sentiment  = COALESCE(excluded.sentiment, sentiment),
-      is_bot     = COALESCE(excluded.is_bot, is_bot),
-      followers  = COALESCE(excluded.followers, followers),
-      last_seen  = excluded.last_seen
-  `);
+  let upsertStmtWithContent = null;
+  let upsertStmtWithoutContent = null;
+  /** @type {boolean|null} */
+  let hasContentCol = null;
+
+  /**
+   * @param {Record<string, unknown>} params
+   * @param {string|null} contentVal
+   */
+  function runUpsert(params, contentVal) {
+    if (hasContentCol !== true) {
+      try {
+        const cols = /** @type {Array<{name: string}>} */ (db.prepare('PRAGMA table_info(token_mentions)').all());
+        hasContentCol = cols.some((c) => c.name === 'content');
+      } catch {
+        hasContentCol = false;
+      }
+    }
+    if (hasContentCol) {
+      if (!upsertStmtWithContent) {
+        upsertStmtWithContent = db.prepare(`
+          INSERT INTO token_mentions
+            (token_id, source_id, platform, author, followers, engagement, ts, sentiment, is_bot, first_seen, last_seen, content)
+          VALUES
+            (@token_id, @source_id, @platform, @author, @followers, @engagement, @ts, @sentiment, @is_bot, @first_seen, @last_seen, @content)
+          ON CONFLICT(token_id, source_id) DO UPDATE SET
+            engagement = excluded.engagement,
+            sentiment  = COALESCE(excluded.sentiment, sentiment),
+            is_bot     = COALESCE(excluded.is_bot, is_bot),
+            followers  = COALESCE(excluded.followers, followers),
+            last_seen  = excluded.last_seen,
+            content    = COALESCE(excluded.content, content)
+        `);
+      }
+      upsertStmtWithContent.run({ ...params, content: contentVal });
+    } else {
+      if (!upsertStmtWithoutContent) {
+        upsertStmtWithoutContent = db.prepare(`
+          INSERT INTO token_mentions
+            (token_id, source_id, platform, author, followers, engagement, ts, sentiment, is_bot, first_seen, last_seen)
+          VALUES
+            (@token_id, @source_id, @platform, @author, @followers, @engagement, @ts, @sentiment, @is_bot, @first_seen, @last_seen)
+          ON CONFLICT(token_id, source_id) DO UPDATE SET
+            engagement = excluded.engagement,
+            sentiment  = COALESCE(excluded.sentiment, sentiment),
+            is_bot     = COALESCE(excluded.is_bot, is_bot),
+            followers  = COALESCE(excluded.followers, followers),
+            last_seen  = excluded.last_seen
+        `);
+      }
+      upsertStmtWithoutContent.run(params);
+    }
+  }
 
   // ---- health state (single-writer) -----------------------------------------
   /** @type {{degraded:boolean, degradedSince:(string|null), consecutiveEmptyBatches:number, lastError:(string|null), lastPollAt:(string|null), totalBatches:number, totalMentions:number}} */
@@ -413,6 +455,9 @@ export function createTokenMentionPipeline(opts = {}) {
         const dedupKey = `${tokenId}|${sourceId}`;
         if (batchSeen.has(dedupKey)) continue;
         batchSeen.add(dedupKey);
+        const truncatedContent = typeof content === 'string' && content.length > 0
+          ? content.slice(0, 2000)
+          : null;
         const mention = {
           tokenId,
           sourceId,
@@ -423,8 +468,9 @@ export function createTokenMentionPipeline(opts = {}) {
           ts,
           sentimentScore,
           isProbableBot: bot,
+          content: truncatedContent,
         };
-        upsertStmt.run({
+        runUpsert({
           token_id: mention.tokenId,
           source_id: mention.sourceId,
           platform: mention.platform,
@@ -436,7 +482,7 @@ export function createTokenMentionPipeline(opts = {}) {
           is_bot: mention.isProbableBot ? 1 : 0,
           first_seen: seenAt,
           last_seen: seenAt,
-        });
+        }, truncatedContent);
         mentions.push(mention);
       }
     }

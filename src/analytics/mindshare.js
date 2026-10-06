@@ -27,13 +27,13 @@ const DEFAULT_TOP_N = 10;
 const DEFAULT_MIN_BASELINE_DAYS = 3;
 
 /** Default engagement weights reused from tokenMentionPipeline.js. */
-const DEFAULT_WEIGHTS = Object.freeze({ likes: 0.5, retweets: 0.3, replies: 0.2 });
+export const DEFAULT_WEIGHTS = Object.freeze({ likes: 0.5, retweets: 0.3, replies: 0.2 });
 
 /**
  * Default follower bands for weighting (Design Note 3):
  * <1k -> 1, 1k–10k -> 1.5, 10k–100k -> 2, >100k -> 3.
  */
-const DEFAULT_FOLLOWER_BANDS = Object.freeze([
+export const DEFAULT_FOLLOWER_BANDS = Object.freeze([
   { max: 1000, weight: 1 },
   { max: 10000, weight: 1.5 },
   { max: 100000, weight: 2 },
@@ -86,7 +86,7 @@ function canonicalIdFor(token) {
  * @param {ReadonlyArray<{ max: number, weight: number }>} bands
  * @returns {number}
  */
-function followerWeight(followers, bands) {
+export function followerWeight(followers, bands) {
   const f = Number(followers);
   if (!Number.isFinite(f) || f < 0) return bands[0].weight;
   for (const band of bands) {
@@ -100,7 +100,7 @@ function followerWeight(followers, bands) {
  * @param {{ likes?: number, retweets?: number, replies?: number }} weights
  * @returns {number}
  */
-function engagementScore(engagementRaw, weights) {
+export function engagementScore(engagementRaw, weights) {
   if (!engagementRaw) return 0;
   let eng = engagementRaw;
   if (typeof eng === 'string') {
@@ -131,7 +131,7 @@ function engagementScore(engagementRaw, weights) {
  * @param {{ likes?: number, retweets?: number, replies?: number }} weights
  * @returns {number}
  */
-function computeRowWeight(row, followerBands, weights) {
+export function computeRowWeight(row, followerBands, weights) {
   const fw = followerWeight(row.followers, followerBands);
   const es = engagementScore(row.engagement, weights);
   return fw + es;
@@ -153,6 +153,7 @@ function computeRowWeight(row, followerBands, weights) {
  * @param {number} [options.minBaselineDays=3] - minimum distinct days required in 7d baseline
  * @param {ReadonlyArray<{ max: number, weight: number }>} [options.followerBands]
  * @param {{ likes?: number, retweets?: number, replies?: number }} [options.weights]
+ * @param {Function} [options.narrativesFn] - optional narrative resolver returning Map<lowercaseTokenId,{narrativeId,narrativeDelta}>
  */
 export function createMindshareEngine(options = {}) {
   const getDb = () => options.db || getDatabase();
@@ -165,6 +166,8 @@ export function createMindshareEngine(options = {}) {
     ? options.followerBands
     : DEFAULT_FOLLOWER_BANDS;
   const weights = options.weights || DEFAULT_WEIGHTS;
+  // Factory-level narrative resolver seam (computeMindshare's `options` param shadows `options` in closure scope)
+  const factoryNarrativesFn = typeof options.narrativesFn === 'function' ? options.narrativesFn : null;
 
   function getEngineConfig() {
     return {
@@ -261,6 +264,8 @@ export function createMindshareEngine(options = {}) {
  * @property {MindshareTopVoice[]} topVoices
  * @property {boolean} degraded
  * @property {boolean} [insufficientHistory]
+ * @property {string} [narrativeId]
+ * @property {number|null} [narrativeDelta]
  */
 
 /**
@@ -281,10 +286,11 @@ export function createMindshareEngine(options = {}) {
  * @param {string} [tokenId] - canonical token id filter (undefined for all)
  * @param {object} [options]
  * @param {number} [options.hours=24] - active window in hours
+ * @param {Function} [options.narrativesFn] - optional narrative resolver function
  * @returns {Promise<MindshareComputeResult>}
  */
   async function computeMindshare(tokenId, options = {}) {
-    const opts = options || {};
+    const opts = /** @type {any} */ (options || {});
     const hoursRaw = Number(opts.hours);
     const hours = Number.isFinite(hoursRaw) && hoursRaw > 0 ? hoursRaw : DEFAULT_WINDOW_HOURS;
     const activeWindowMs = hours * HOUR_MS;
@@ -407,6 +413,7 @@ export function createMindshareEngine(options = {}) {
       const totalCurr7dVol = curr7d.totalVolume;
       const totalPrev7dVol = prev7d.totalVolume;
 
+      /** @type {MindshareTokenItem[]} */
       const tokenResults = [];
 
       for (const id of targetTokens) {
@@ -471,6 +478,38 @@ export function createMindshareEngine(options = {}) {
         });
       }
 
+      // --- 7. Merge narrative mappings if narrativesFn is provided or resolvable ---
+      let narrativesMap = null;
+      try {
+        const fetchNarratives = typeof opts.narrativesFn === 'function'
+          ? opts.narrativesFn
+          : (factoryNarrativesFn
+              ? factoryNarrativesFn
+              : async () => {
+                  try {
+                    const { getDefaultNarrativeTracker } = await import('./narrativeTracker.js');
+                    return await getDefaultNarrativeTracker().tokenNarratives({ hours });
+                  } catch {
+                    return null;
+                  }
+                });
+        narrativesMap = await fetchNarratives();
+      } catch {
+        narrativesMap = null;
+      }
+
+      if (narrativesMap instanceof Map || (narrativesMap && typeof narrativesMap.get === 'function')) {
+        for (const tok of tokenResults) {
+          const mapping = narrativesMap.get(String(tok.token).trim().toLowerCase());
+          if (mapping && mapping.narrativeId) {
+            tok.narrativeId = mapping.narrativeId;
+            if (mapping.narrativeDelta !== undefined && mapping.narrativeDelta !== null) {
+              tok.narrativeDelta = mapping.narrativeDelta;
+            }
+          }
+        }
+      }
+
       return {
         tokens: tokenResults,
         degraded: isDegraded,
@@ -481,7 +520,7 @@ export function createMindshareEngine(options = {}) {
         generatedAt: new Date(t).toISOString(),
       };
     } catch (err) {
-      if (err && String(err.message).includes('no such table')) {
+      if (err && typeof err === 'object' && 'message' in err && String(/** @type {any} */ (err).message).includes('no such table')) {
         return {
           tokens: [],
           degraded: isDegraded,

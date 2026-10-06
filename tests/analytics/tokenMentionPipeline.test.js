@@ -17,6 +17,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import assert from 'node:assert/strict';
 import Database from 'better-sqlite3';
 import { createTokenMentionPipeline } from '../../src/analytics/tokenMentionPipeline.js';
 import { tweetToPostItem } from '../../src/scrapers/social/twitter/normalize-tweet.js';
@@ -142,6 +143,24 @@ describe('processBatch — DEDUP_REPOLL', () => {
     expect(row.first_seen).toBeLessThan(row.last_seen); // first_seen preserved
     const rollups = /** @type {{mentions_24h:number}[]} */ (pipe2.getRollups(row.token_id));
     expect(rollups[0].mentions_24h).toBe(1); // still counts once
+  });
+});
+
+// ============================================================================
+// MULTI_TOKEN_TWEET
+// ============================================================================
+
+describe('processBatch — CONTENT_COLUMN (54.5)', () => {
+  it('ensureSchema creates token_mentions with content column on fresh DB; content is persisted', async () => {
+    const db = makeDb();
+    const pipe = makePipeline({ db });
+    const { mentions } = await pipe.processBatch([makePost({ content: 'bonk is pumping' })]);
+    expect(mentions.length).toBeGreaterThan(0);
+    const cols = /** @type {Array<{name:string}>} */ (db.prepare("PRAGMA table_info(token_mentions)").all()).map((c) => c.name);
+    expect(cols).toContain('content');
+    const row = db.prepare('SELECT content FROM token_mentions LIMIT 1').get();
+    assert(row);
+    expect(/** @type {{content:string}} */ (row).content).toBe('bonk is pumping');
   });
 });
 
@@ -297,12 +316,12 @@ describe('processBatch — SYM_CANONICALIZATION', () => {
     // Seed a sym row BEFORE the pipeline exists (pre-canonicalization data)
     const pipe0 = makePipeline({ db, watchlist: { tokens: [{ symbol: 'BONK', chain: 'solana' }], queries: [] } });
     await pipe0.processBatch([makePost({ content: '$BONK old row' })]);
-    expect(db.prepare(`SELECT COUNT(*) c FROM token_mentions WHERE token_id = 'token:sym:BONK'`).get().c).toBe(1);
+    expect(/** @type {{c:number}} */ (db.prepare(`SELECT COUNT(*) c FROM token_mentions WHERE token_id = 'token:sym:BONK'`).get()).c).toBe(1);
 
     // New pipeline with a contract-bearing watchlist → constructor backfills
     makePipeline({ db });
-    expect(db.prepare(`SELECT COUNT(*) c FROM token_mentions WHERE token_id = 'token:sym:BONK'`).get().c).toBe(0);
-    expect(db.prepare(`SELECT COUNT(*) c FROM token_mentions WHERE token_id = 'token:solana:${SOL_CONTRACT}'`).get().c).toBe(1);
+    expect(/** @type {{c:number}} */ (db.prepare(`SELECT COUNT(*) c FROM token_mentions WHERE token_id = 'token:sym:BONK'`).get()).c).toBe(0);
+    expect(/** @type {{c:number}} */ (db.prepare(`SELECT COUNT(*) c FROM token_mentions WHERE token_id = 'token:solana:${SOL_CONTRACT}'`).get()).c).toBe(1);
   });
 });
 

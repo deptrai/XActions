@@ -500,4 +500,40 @@ describe('Story 54.4: Token Mindshare Engine (Unit)', () => {
     expect(res.scope).toBe('watchlist');
     expect(typeof res.generatedAt).toBe('string');
   });
+
+  it('NARRATIVE_MERGE: narrativesFn result is merged case-insensitively onto token rows', async () => {
+    const db = makeDb();
+    // BONK_ID canonical id keeps original case (Base58 contract, uppercase in watchlist)
+    seedMention(db, { tokenId: BONK_ID, ts: NOW - 1 * HOUR });
+    const engine = createMindshareEngine({
+      db,
+      watchlist: WATCHLIST,
+      now: () => NOW,
+      // narrativesFn returns Map keyed by LOWERCASE id (as tokenNarratives does)
+      narrativesFn: async () => new Map([
+        [BONK_ID.toLowerCase(), { narrativeId: 'meme-dog', narrativeDelta: 5.2 }],
+      ]),
+    });
+    const res = await engine.computeMindshare();
+    const bonk = res.tokens.find((t) => t.token === BONK_ID);
+    assert(bonk);
+    expect(bonk.narrativeId).toBe('meme-dog');
+    expect(bonk.narrativeDelta).toBeCloseTo(5.2, 5);
+    // tokens without mapping omit the fields
+    const wif = res.tokens.find((t) => t.token === WIF_ID);
+    if (wif) {
+      expect(wif.narrativeId).toBeUndefined();
+      expect(wif.narrativeDelta).toBeUndefined();
+    }
+  });
+
+  it('NARRATIVE_MERGE_DEFAULT: lazy fallback resolves narrativeTracker without ReferenceError', async () => {
+    const db = makeDb();
+    seedMention(db, { tokenId: BONK_ID, ts: NOW - 1 * HOUR });
+    // No narrativesFn → exercises the lazy default import path (was broken by `optsFactory` ReferenceError)
+    const engine = createMindshareEngine({ db, watchlist: WATCHLIST, now: () => NOW });
+    const res = await engine.computeMindshare();
+    expect(Array.isArray(res.tokens)).toBe(true);
+    expect(res.scope).toBe('watchlist');
+  });
 });

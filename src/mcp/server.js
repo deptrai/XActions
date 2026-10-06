@@ -3793,9 +3793,9 @@ const DOMAIN_TOOLS = [
           enum: [
             'account', 'post', 'sentiment', 'reputation', 'buzzwords',
             'voice', 'growth', 'competitor', 'audience_overlap', 'graph_analyze',
-            'token_hype', 'token_mindshare',
+            'token_hype', 'token_mindshare', 'token_narratives',
           ],
-          description: 'Analytics action to perform: account, post, sentiment, reputation, buzzwords, voice, growth, competitor, audience_overlap, graph_analyze, token_hype, token_mindshare',
+          description: 'Analytics action to perform: account, post, sentiment, reputation, buzzwords, voice, growth, competitor, audience_overlap, graph_analyze, token_hype, token_mindshare, token_narratives',
         },
         username: { type: 'string', description: 'Twitter username to analyze (without @)' },
         url: { type: 'string', description: 'Post or tweet URL for post analytics' },
@@ -4252,6 +4252,10 @@ const DOMAIN_DISPATCH_MAP = {
       targetTool: 'x_token_mindshare',
       requiredArgs: [],
     },
+    token_narratives: {
+      targetTool: 'x_token_narratives',
+      requiredArgs: [],
+    },
   },
 
   x_system: {
@@ -4588,7 +4592,7 @@ async function executeTool(name, args) {
   }
 
   // Handle analytics/sentiment tools directly
-  if (name === 'x_analyze_sentiment' || name === 'x_monitor_reputation' || name === 'x_reputation_report' || name === 'x_analytics_buzzwords' || name === 'x_token_hype' || name === 'x_token_mindshare') {
+  if (name === 'x_analyze_sentiment' || name === 'x_monitor_reputation' || name === 'x_reputation_report' || name === 'x_analytics_buzzwords' || name === 'x_token_hype' || name === 'x_token_mindshare' || name === 'x_token_narratives') {
     return await executeAnalyticsTool(name, args);
   }
 
@@ -6845,6 +6849,25 @@ async function executeAnalyticsTool(name, args) {
         consecutiveEmptyBatches: result.consecutiveEmptyBatches,
         degradedSince: result.degradedSince,
         generatedAt: result.generatedAt,
+        ...(result.warning ? { warning: result.warning } : {}),
+      };
+    }
+
+    case 'x_token_narratives': {
+      // Story 54.5 — crypto narrative clustering & rotation detection
+      const tracker = analytics.getDefaultNarrativeTracker();
+      const hours = Number.isFinite(Number(args.hours)) && Number(args.hours) > 0
+        ? Number(args.hours)
+        : undefined;
+      const result = await tracker.computeNarratives({ hours });
+      return {
+        scope: result.scope,
+        narratives: result.narratives,
+        degraded: result.degraded,
+        windowHours: result.windowHours,
+        generatedAt: result.generatedAt,
+        ...(result.consecutiveEmptyBatches !== undefined ? { consecutiveEmptyBatches: result.consecutiveEmptyBatches } : {}),
+        ...(result.degradedSince !== undefined ? { degradedSince: result.degradedSince } : {}),
         ...(result.warning ? { warning: result.warning } : {}),
       };
     }

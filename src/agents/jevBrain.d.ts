@@ -57,16 +57,21 @@ export class JevBrain {
   timeoutMs: number;
   confidenceThresholds: Record<string, number>;
   dailyBudgetUsd: number;
-  fallbackLLM: any;
+  fallbackLLM: unknown;
   onUsage: ((model: string, inputTokens: number, outputTokens: number) => void) | null;
 
   constructor(config?: JevConfig);
 
   decide(
-    state: string | Record<string, any> | any[],
-    questions: Record<string, JevQuestion>,
+    state: string | Record<string, unknown> | unknown[],
+    questions: Record<string, JevQuestion> | unknown[],
     options?: { model?: string; timeoutMs?: number }
   ): Promise<JevDecisionResult>;
+
+  batchDecide(
+    requests: Array<{ state: unknown; questions: unknown }>,
+    options?: { concurrency?: number; timeoutMs?: number; onProgress?: (p: unknown) => void }
+  ): Promise<unknown[]>;
 
   gate(
     answer?: { confidence?: number; noul?: number },

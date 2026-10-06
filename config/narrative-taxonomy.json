@@ -1,0 +1,42 @@
+[
+  {
+    "id": "ai-agent",
+    "label": "AI Agents",
+    "keywords": ["ai agent", "ai agents", "autonomous agent", "gpt", "llm", "neural", "virtuals", "eliza", "agentic"]
+  },
+  {
+    "id": "meme-dog",
+    "label": "Meme & Dog Coins",
+    "keywords": ["meme", "memecoin", "memecoins", "doge", "shib", "bonk", "wif", "pepe", "dog", "cat"]
+  },
+  {
+    "id": "desci",
+    "label": "DeSci",
+    "keywords": ["desci", "decentralized science", "biotech", "longevity", "vita", "research", "pharma"]
+  },
+  {
+    "id": "rwa",
+    "label": "Real World Assets (RWA)",
+    "keywords": ["rwa", "real world assets", "treasury", "treasuries", "tokenization", "real estate", "private credit", "ondo"]
+  },
+  {
+    "id": "l2-scaling",
+    "label": "L2 & Scaling",
+    "keywords": ["l2", "layer 2", "rollup", "rollups", "zk", "zk-rollup", "arbitrum", "optimism", "base", "blast"]
+  },
+  {
+    "id": "defi",
+    "label": "DeFi",
+    "keywords": ["defi", "dex", "yield", "staking", "restaking", "liquidity", "lending", "borrowing", "amm", "swap"]
+  },
+  {
+    "id": "nft-gaming",
+    "label": "NFT & Gaming",
+    "keywords": ["nft", "nfts", "gaming", "gamefi", "metaverse", "play to earn", "p2e"]
+  },
+  {
+    "id": "depin",
+    "label": "DePIN",
+    "keywords": ["depin", "decentralized physical infrastructure", "hardware", "compute", "storage", "render", "helium", "io.net"]
+  }
+]

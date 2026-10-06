@@ -112,6 +112,42 @@ const handleTokenMindshare = async (
 router.get('/token-mindshare', eitherAuth, handleTokenMindshare);
 router.get('/mindshare', eitherAuth, handleTokenMindshare);
 
+/**
+ * GET /api/analytics/narratives (also aliased as /token-narratives)
+ * Story 54.5: Crypto narrative clustering, mindshare trends, 3-sigma rotation detection.
+ *
+ * Query: ?hours=N (active window in hours, default 24)
+ * Auth: eitherAuth — user JWT (dashboard) OR Bearer service key (jev).
+ */
+const handleNarratives = async (
+  /** @type {import('express').Request} */ req,
+  /** @type {import('express').Response} */ res
+) => {
+  try {
+    const { getDefaultNarrativeTracker } = await import('../../src/analytics/narrativeTracker.js');
+    const hours = Number.isFinite(Number(req.query.hours)) && Number(req.query.hours) > 0
+      ? Number(req.query.hours)
+      : undefined;
+    const tracker = getDefaultNarrativeTracker();
+    const result = /** @type {any} */ (await tracker.computeNarratives({ hours }));
+    return res.json({
+      scope: result.scope,
+      narratives: result.narratives,
+      degraded: result.degraded,
+      windowHours: result.windowHours,
+      generatedAt: result.generatedAt,
+      ...(result.consecutiveEmptyBatches !== undefined ? { consecutiveEmptyBatches: result.consecutiveEmptyBatches } : {}),
+      ...(result.degradedSince !== undefined ? { degradedSince: result.degradedSince } : {}),
+      ...(result.warning ? { warning: result.warning } : {}),
+    });
+  } catch (err) {
+    console.error('❌ narratives error:', (err instanceof Error ? err.message : String(err)));
+    return res.status(500).json({ error: (err instanceof Error ? err.message : String(err)) });
+  }
+};
+router.get('/narratives', eitherAuth, handleNarratives);
+router.get('/token-narratives', eitherAuth, handleNarratives);
+
 // Require authentication for all analytics routes
 router.use(authenticate);
 
