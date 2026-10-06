@@ -12,6 +12,7 @@ import { AbstractApiClient } from '../../../core/base-client.js';
 import { FacebookPlatformResponseValidator } from './validator.js';
 import { FacebookBrowserBridge } from './signer-bridge.js';
 import { GraphQLReplayEngine, InMemoryReplayStore, GraphQLCaptureHook } from './graphql-replay.js';
+import { noteDocIdFailure } from './doc-id-store.js';
 import { PreSignedTokenRing } from '../../../core/signer-pool.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
 import crypto from 'node:crypto';
@@ -629,6 +630,11 @@ export class FacebookClient extends AbstractApiClient {
       }
 
       console.warn(`⚠️ [FACEBOOK WARNING] Facebook doc_id may be rotated or query failed for ${docId}: ${primaryError.message}`);
+      try {
+        // Bookkeeping only: bump failCount in the doc_id store and (opt-in)
+        // schedule a headless re-capture. Must never break the request flow.
+        noteDocIdFailure(docId);
+      } catch { /* ignore */ }
       throw new PlatformError({
         code: 'XACT_5000',
         type: ErrorTypes.INTERNAL,

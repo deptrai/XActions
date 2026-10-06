@@ -63,6 +63,7 @@ import { registerToolsCommand } from './commands/tools.js';
 import { registerCanaryCommand } from './commands/canary.js';
 import { registerOsintCommand } from './commands/osint.js';
 import { registerProxyBudgetCommand } from './commands/proxy-budget.js';
+import { registerFbCommand } from './commands/fb.js';
 import { renderRootHelp } from './help-groups.js';
 
 const program = new Command();
@@ -136,6 +137,7 @@ registerToolsCommand(program);
 registerCanaryCommand(program);
 registerOsintCommand(program);
 registerProxyBudgetCommand(program);
+registerFbCommand(program);
 
 // ============================================================================
 // Parse and Run

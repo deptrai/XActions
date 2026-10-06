@@ -122,7 +122,7 @@ export class RedisReplayStore {
  * @class
  */
 export class GraphQLCaptureHook {
-  /** @type {Map<string, {docId: string, tokens: Object, variables: Object, url: string, capturedAt: number}>} */
+  /** @type {Map<string, {docId: string, tokens: Object, variables: Object, friendlyName: string, url: string, capturedAt: number}>} */
   #captured = new Map();
   /** @type {InMemoryReplayStore|RedisReplayStore|null} */
   #store = null;
@@ -214,6 +214,14 @@ export class GraphQLCaptureHook {
    */
   getCapturedDocIds() {
     return [...this.#captured.keys()];
+  }
+
+  /**
+   * Get all captured entries (doc_id + tokens + friendly name + variables).
+   * @returns {Array<{docId: string, tokens: Object, variables: Object, friendlyName: string, url: string, capturedAt: number}>}
+   */
+  getCapturedEntries() {
+    return [...this.#captured.values()];
   }
 
   /**

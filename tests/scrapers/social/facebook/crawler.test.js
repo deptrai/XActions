@@ -102,12 +102,15 @@ describe('Story 13.3 — FacebookCrawler Hybrid Scraper Contract', () => {
           }
 
           // Page Feed Mock (with nested comet_sections)
-          if (variables.pageId) {
+          // Accept both the legacy `pageId` and the real persisted-query
+          // variable shape (`id` + feedLocation TIMELINE) sent by pagePosts().
+          const pageKey = variables.pageId || variables.id;
+          if (pageKey) {
             res.writeHead(200, { 'content-type': 'application/json' });
             res.end(JSON.stringify({
               data: {
                 page: {
-                  id: variables.pageId,
+                  id: pageKey,
                   timeline_feed: {
                     edges: [
                       {

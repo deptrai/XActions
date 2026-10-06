@@ -11,6 +11,7 @@
 import { AbstractCrawler } from '../../../core/base-crawler.js';
 import { FacebookClient } from './client.js';
 import { PlatformError, ErrorTypes, SuggestedActions } from '../../../core/error-envelope.js';
+import { loadStoredDocIdsSync } from './doc-id-store.js';
 import { CommentTreeExtractor } from '../comment-tree.js';
 import {
   normalizeFacebookProfile,
@@ -299,7 +300,10 @@ export class FacebookCrawler extends AbstractCrawler {
     this.redisPublisher = deps.redisPublisher || null;
     this.docIds = {
       ...DEFAULT_FB_DOC_IDS,
-      ...(deps.docIds || {}),
+      // No explicit override -> fall back to the persisted capture store
+      // (~/.xactions/facebook-docids.json, refreshed by `xactions fb capture-docids`
+      // or the automatic headless re-capture when Facebook rotates doc_ids).
+      ...(deps.docIds || loadStoredDocIdsSync()),
     };
 
     if (deps.docIds?.COMMENT_ROOTS && !deps.docIds?.GROUP_COMMENT_ROOTS) {
@@ -1390,10 +1394,32 @@ export class FacebookCrawler extends AbstractCrawler {
     const accountId = session?.accountId;
     const cookies = this.#resolveCookies(session);
 
+    // Variable shape must match the captured persisted query
+    // (ProfileCometTimelineFeedRefetchQuery - see the variablesSample in
+    // ~/.xactions/facebook-docids.json). The Relay __relay_internal__pv__
+    // provider flags are omitted; the server accepts the core fields.
     const variables = {
-      pageId: args.pageId,
-      count: this.#normalizeCount(args?.count),
+      id: args.pageId,
+      count: this.#normalizeCount(args?.count) ?? 2,
       cursor: args?.cursor || null,
+      afterTime: null,
+      beforeTime: null,
+      feedLocation: 'TIMELINE',
+      feedbackSource: 0,
+      focusCommentID: null,
+      memorializedSplitTimeFilter: null,
+      omitPinnedPost: true,
+      postedBy: null,
+      privacy: null,
+      privacySelectorRenderLocation: 'COMET_STREAM',
+      referringStoryRenderLocation: null,
+      renderLocation: 'timeline',
+      run_with_continuation_key: false,
+      scale: 2,
+      stream_count: 1,
+      taggedInOnly: null,
+      trackingCode: null,
+      useDefaultActor: false,
     };
 
     const docId = this.docIds.PAGE_FEED;
@@ -1404,7 +1430,7 @@ export class FacebookCrawler extends AbstractCrawler {
         cookies,
         requiresAuth: session?.requiresAuth,
       });
-    } catch (err) {
+    } catch {
       // Allow fallback to SSR
     }
 

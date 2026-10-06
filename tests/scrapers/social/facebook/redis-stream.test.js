@@ -79,7 +79,9 @@ describe('Story 14.3: FacebookCrawler Checkpoint & Redis Stream Emission', () =>
             return;
           }
 
-          if (variables.pageId) {
+          // Accept both the legacy `pageId` and the real persisted-query
+          // variable shape (`id`) sent by pagePosts().
+          if (variables.pageId || variables.id) {
             res.writeHead(200, { 'content-type': 'application/json' });
             res.end(
               JSON.stringify({
