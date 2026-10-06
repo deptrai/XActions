@@ -407,6 +407,6 @@ development_status:
   54-2-tokenmentionpipeline-normalized-per-token-mention-stream: done
   54-3-hype-vs-liquidity-unique-source-authenticity-metrics: done
   54-4-token-mindshare-engine-share-of-voice-delta-24h-7d: done
-  54-5-narrative-clustering-rotation-detection: backlog
+  54-5-narrative-clustering-rotation-detection: done
   54-6-telegram-crypto-channel-crawler: backlog
   epic-54-retrospective: optional
