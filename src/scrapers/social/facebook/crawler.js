@@ -37,29 +37,6 @@ import { buildMarketplaceSearchUrl, resolveMarketplaceLocation } from './normali
 const FORBIDDEN_COOKIE_CHARS = /[;,"\\]/g;
 
 /**
- * Parse a truthy environment variable value.
- * @param {string | undefined} value
- * @returns {boolean}
- */
-function isEnvTruthy(value) {
-  if (typeof value !== 'string') return false;
-  return /^(true|1|yes)$/i.test(value.trim());
-}
-
-/**
- * Normalize a value to a Date and return an ISO string.
- * @param {Date | string | number | undefined} value
- * @returns {string}
- */
-function toIsoDate(value) {
-  if (value instanceof Date) return value.toISOString();
-  if (typeof value === 'string' || typeof value === 'number') {
-    const d = new Date(value);
-    if (!isNaN(d.getTime())) return d.toISOString();
-  }
-  return new Date().toISOString();
-}
-
 /**
  * Percent-encode only characters that are illegal inside a Cookie header value.
  * @param {unknown} value
@@ -120,7 +97,12 @@ export function resolveTargetKey(input) {
 
   if (/^https?:\/\//i.test(handle)) {
     assertFacebookUrl(handle, 'profile url');
-    const url = new URL(handle);
+    let url;
+    try {
+      url = new URL(handle);
+    } catch {
+      throw new PlatformError({ code: 'XACT_4001', type: ErrorTypes.INVALID_ARGS, message: `Malformed URL: ${handle}`, suggestedAction: SuggestedActions.USE_ACTIONS_LIST });
+    }
     const idMatch = url.search.match(/[?&]id=(\d+)/);
     if (idMatch) return `profile.php?id=${idMatch[1]}`;
 
@@ -186,7 +168,12 @@ export function resolveGroupId(input) {
   if (/^(?:https?:)?\/\//i.test(trimmed)) {
     const fullUrl = trimmed.startsWith('//') ? `https:${trimmed}` : trimmed;
     assertFacebookUrl(fullUrl, 'group url');
-    const url = new URL(fullUrl);
+    let url;
+    try {
+      url = new URL(fullUrl);
+    } catch {
+      throw new PlatformError({ code: 'XACT_4001', type: ErrorTypes.INVALID_ARGS, message: `Malformed URL: ${fullUrl}`, suggestedAction: SuggestedActions.USE_ACTIONS_LIST });
+    }
     const match = url.pathname.match(/\/groups\/([^/?#]+)/);
     if (!match) {
       throw new PlatformError({
@@ -879,7 +866,12 @@ export class FacebookCrawler extends AbstractCrawler {
     if (rawTarget.includes('://') || rawTarget.startsWith('//')) {
       const fullUrl = rawTarget.startsWith('//') ? `https:${rawTarget}` : rawTarget;
       assertFacebookUrl(fullUrl, 'post url');
-      const parsed = new URL(fullUrl);
+      let parsed;
+      try {
+        parsed = new URL(fullUrl);
+      } catch {
+        throw new PlatformError({ code: 'XACT_4001', type: ErrorTypes.INVALID_ARGS, message: `Malformed URL: ${fullUrl}`, suggestedAction: SuggestedActions.USE_ACTIONS_LIST });
+      }
       const hasStoryParam = parsed.searchParams.get('story_fbid') || parsed.searchParams.get('fbid') || parsed.searchParams.get('id');
       const isPlausiblePost =
         parsed.pathname.includes('/posts/') ||
@@ -922,7 +914,12 @@ export class FacebookCrawler extends AbstractCrawler {
     if (rawTarget.includes('://') || rawTarget.startsWith('//')) {
       const fullUrl = rawTarget.startsWith('//') ? `https:${rawTarget}` : rawTarget;
       assertFacebookUrl(fullUrl, 'group post url');
-      const parsed = new URL(fullUrl);
+      let parsed;
+      try {
+        parsed = new URL(fullUrl);
+      } catch {
+        throw new PlatformError({ code: 'XACT_4001', type: ErrorTypes.INVALID_ARGS, message: `Malformed URL: ${fullUrl}`, suggestedAction: SuggestedActions.USE_ACTIONS_LIST });
+      }
       if (!parsed.pathname.startsWith('/groups/')) {
         throw new PlatformError({
           code: 'XACT_4001',
@@ -1463,6 +1460,7 @@ export class FacebookCrawler extends AbstractCrawler {
         if (html) {
           const textMatches = Array.from(html.matchAll(/"message":\{"text":"([^"]+)"/g));
           const seen = new Set();
+          const unescJsonUrl = (s) => s.replace(/\\\//g, '/').replace(/\\u0025/g, '%').replace(/\\u0026/g, '&');
           for (let i = 0; i < textMatches.length && posts.length < variables.count; i++) {
             const rawText = textMatches[i][1];
             // Decode unicode escape sequences in JSON string
@@ -1473,17 +1471,47 @@ export class FacebookCrawler extends AbstractCrawler {
             if (!text || seen.has(text) || text.length < 5) continue;
             seen.add(text);
 
-            const postId = `${args.pageId}_post_${i + 1}`;
+            // Enrich from the JSON blob surrounding this story's message:
+            // permalink_url → real postUrl/externalId; creation_time|publish_time
+            // → publishedAt; profile_picture.uri → authorAvatar. Window is ±15k
+            // chars around the match — the story node embeds all of these.
+            const mIdx = textMatches[i].index ?? 0;
+            const winBefore = html.slice(Math.max(0, mIdx - 15000), mIdx);
+            const winAround = html.slice(Math.max(0, mIdx - 15000), mIdx + 15000);
+
+            let postUrl = `https://www.facebook.com/${args.pageId}`;
+            let externalId = `${args.pageId}_post_${i + 1}`;
+            const permalinks = Array.from(winAround.matchAll(/permalink_url\\?":\\?"([^"]+)\\?"/g));
+            if (permalinks.length > 0) {
+              postUrl = unescJsonUrl(permalinks[0][1]);
+              const idm = postUrl.match(/pfbid[\w]+/) || postUrl.match(/posts\/(\d+)/) || postUrl.match(/videos\/(\d+)/);
+              if (idm) externalId = idm[0].replace(/^posts\//, '').replace(/^videos\//, '');
+            }
+
+            let publishedAt = null;
+            const times = Array.from(winAround.matchAll(/(?:creation|publish)_time\\?":(\d{9,11})/g));
+            if (times.length > 0) {
+              const ts = parseInt(times[0][1], 10);
+              if (Number.isFinite(ts) && ts > 0) publishedAt = new Date(ts * 1000);
+            }
+
+            let authorAvatar = null;
+            const pfps = Array.from(winBefore.matchAll(/profile_picture.{0,300}?uri\\?":\\?"([^"]+)\\?"/g));
+            if (pfps.length > 0) authorAvatar = unescJsonUrl(pfps[pfps.length - 1][1]);
+
             /** @type {import('../../../core/types.js').PostItem} */
             const item = {
-              id: `facebook:${postId}`,
+              id: `facebook:${externalId}`,
               platform: 'facebook',
-              externalId: postId,
+              externalId,
               content: text,
               authorId: String(args.pageId),
               authorName: String(args.pageId),
+              authorUrl: `https://www.facebook.com/${args.pageId}`,
+              authorAvatar,
               crawledAt: new Date(),
-              postUrl: `https://www.facebook.com/${args.pageId}`,
+              publishedAt,
+              postUrl,
               likesCount: 0,
               repostsCount: 0,
               repliesCount: 0,
