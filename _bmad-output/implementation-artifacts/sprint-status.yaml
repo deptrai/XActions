@@ -370,6 +370,7 @@ development_status:
   50-7-crypto-dexscreener-platform-descriptor: done
   50-8-social-telegram-platform-descriptor-skeleton-transport-defer: done
   50-9-reddit-search-e2e-validation-contract-test-migration-quickst: done
+  50-10-facebook-guest-scrape-lane-auth-guest-flag-public-action-gate: done
   epic-50-retrospective: optional
 
   epic-51: done

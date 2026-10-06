@@ -391,6 +391,7 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
     const authCookie = /** @type {Record<string, unknown> | undefined} */ (body.authCookie);
     const browserOptions = /** @type {Record<string, unknown> | undefined} */ (body.browserOptions);
     const accountIds = /** @type {unknown[] | undefined} */ (body.accountIds);
+    const auth = /** @type {string | undefined} */ (body.auth);
 
     /** @type {string} */
     let trimmedQuery = '';
@@ -401,6 +402,17 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
         ok: false,
         error: `action must be one of: ${VALID_ACTIONS.join(', ')}`,
       });
+    }
+
+    // auth mode: 'auto' (default) resolves a cookie/account as before;
+    // 'guest' forces the anonymous public-scrape lane (no cookie, no auto-pick).
+    if (auth !== undefined && auth !== null && auth !== 'auto' && auth !== 'guest') {
+      return res.status(400).json({ ok: false, error: "auth must be 'auto' or 'guest'" });
+    }
+    // Every scrape action here is a public read, so guest is always permitted.
+    // auth:'guest' must not target an action outside the public set (defensive).
+    if (auth === 'guest' && !PUBLIC_SCRAPE_ACTIONS.includes(action)) {
+      return res.status(400).json({ ok: false, error: `action '${action}' requires authentication`, code: 'FB_REQUIRES_AUTH' });
     }
 
     if (['profile', 'posts', 'followers', 'following', 'group-members', 'group_members', 'post_comments', 'get_comments', 'comments', 'group_posts', 'group_comments', 'group_search'].includes(action) && !url?.trim()) {
@@ -516,9 +528,12 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
     }
 
     // Resolve the session: raw cookie, stored accountId/accountIds, auto-pick a live one, or public no-auth.
+    // auth==='guest' bypasses resolution entirely -> guaranteed anonymous DOM lane.
     let resolved;
     try {
-      resolved = await resolveScrapeCookie(reqUser.id, authCookie ?? {}, accountIds, action);
+      resolved = auth === 'guest'
+        ? { label: 'guest', cookie: null }
+        : await resolveScrapeCookie(reqUser.id, authCookie ?? {}, accountIds, action);
     } catch (e) {
       const err = /** @type {Error & Record<string, unknown>} */ (e);
       const code = err.code;
@@ -556,6 +571,7 @@ router.post('/scrape', async (/** @type {import('express').Request} */ req, /** 
 
     const options = {
       userId: reqUser.id,
+      ...(auth !== undefined && auth !== null ? { auth } : {}),
       ...(Object.keys(mergedBrowserOptions).length ? { browserOptions: mergedBrowserOptions } : {}),
       // Pass all cookie fields for full session auth (never log values).
       // Public actions may have a null authCookie and run as guest.
@@ -884,7 +900,7 @@ router.post('/automate', async (/** @type {import('express').Request} */ req, /*
           headless: isHeadless,
           method: 'direct-messenger-url',
         });
-      } catch (runError) {
+      } catch {
         return res.status(500).json({ ok: false, error: 'Share link by UID failed. See server logs.' });
       }
     }

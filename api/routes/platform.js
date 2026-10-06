@@ -50,6 +50,14 @@ const VALID_PLATFORMS = [
 /** @type {Record<string, string>} */
 export const PLATFORM_ALIASES = { 'tiktok-shop': 'tiktokshop', 'pump': 'pumpfun', 'pump.fun': 'pumpfun', 'dex': 'dexscreener', 'dexscreen': 'dexscreener', 'tg': 'telegram' };
 
+// Story 50.10 — facebook actions runnable without a session (public reads).
+// Keep in sync with PUBLIC_SCRAPE_ACTIONS in api/routes/facebook.js and the
+// crawler descriptors carrying requiresAuth:false.
+const FB_GUEST_ACTIONS = new Set([
+  'profile', 'posts', 'page_posts', 'group_posts', 'group_search', 'group_members', 'group-members',
+  'followers', 'following', 'search', 'marketplace', 'post_comments', 'get_comments', 'comments', 'group_comments', 'post_detail',
+]);
+
 /**
  * @param {string} platform
  * @returns {string | null}
@@ -140,12 +148,12 @@ function validatePlatformAccount(platform, body) {
       return 'password is required';
     }
   } else if (platform === 'mastodon') {
-    const { instance, accessToken } = body;
+    const { instance } = body;
     if (!instance || typeof instance !== 'string' || instance.trim().length === 0) {
       return 'instance is required';
     }
   } else if (platform === 'threads') {
-    const { auth_token, userId } = body;
+    const { auth_token } = body;
     if (!auth_token || typeof auth_token !== 'string' || auth_token.trim().length === 0) {
       return 'auth_token is required';
     }
@@ -179,12 +187,12 @@ function validatePlatformAccount(platform, body) {
 }
 
 /**
- * @param {string} platform
+ * @param {string} _platform
  * @param {Record<string, unknown>} body
  * @returns {Record<string, unknown>}
  */
-function buildCookie(platform, body) {
-  const { label, ...rest } = body;
+function buildCookie(_platform, body) {
+  const { label: _label, ...rest } = body;
   // Strip proxy if present; store it separately if needed
   const cookie = { ...rest };
   return cookie;
@@ -462,6 +470,33 @@ router.post('/:platform/scrape', requestId, eitherAuth, gatewayQuota, async (req
       type: 'validation',
       kind: 'validation',
       message: 'action is required',
+      status: 400,
+      requestId: reqId,
+      retryable: false,
+    }));
+  }
+
+  // Story 50.10 — auth mode: 'auto' (default) resolves a cookie/account as
+  // before; 'guest' forces the anonymous public-scrape lane (facebook only).
+  const auth = /** @type {string | undefined} */ (body.auth);
+  if (auth !== undefined && auth !== null && auth !== 'auto' && auth !== 'guest') {
+    return res.status(400).json(errorBody({
+      code: 'VALIDATION_FAILED',
+      type: 'validation',
+      kind: 'validation',
+      message: "auth must be 'auto' or 'guest'",
+      status: 400,
+      requestId: reqId,
+      retryable: false,
+    }));
+  }
+  const isGuest = auth === 'guest';
+  if (isGuest && platform === 'facebook' && !FB_GUEST_ACTIONS.has(action)) {
+    return res.status(400).json(errorBody({
+      code: 'FB_REQUIRES_AUTH',
+      type: 'auth',
+      kind: 'auth',
+      message: `action '${action}' requires authentication`,
       status: 400,
       requestId: reqId,
       retryable: false,

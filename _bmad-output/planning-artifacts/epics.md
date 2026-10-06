@@ -3922,6 +3922,34 @@ So that **my `searchReddit()` stops returning `[]` and I upgrade in <30 minutes 
 
 ---
 
+### Story 50.10: Facebook Guest/Public Scrape Lane — Explicit Surfacing
+
+As a **consumer (anonymous free-tier / jev)**,
+I want **`POST /api/platform/facebook/scrape` and `POST /api/facebook/scrape` to accept `auth:'guest'` that forces the existing fb-guest DOM lane — never touching the account pool**,
+So that **I can scrape public Facebook content (posts, comments, groups, marketplace) with zero cookies and zero risk of silently consuming a stored account**.
+
+**Context (course-corrected 2026-10-06):** Probes confirmed every pure-HTTP cookieless method is dead on facebook.com 2026 (plugins/post.php→400, plugins/page.php→JS-shell only, oembed→needs app token, social-bot UA→React hydration shell with no og: tags). The ONLY viable cookieless path is browser DOM render — which XActions already implements via `fb-guest`. This story surfaces that lane explicitly rather than building a new scraper. See `_bmad-output/planning-artifacts/sprint-change-proposal-2026-10-06-fb-guest-lane.md`.
+
+**Acceptance Criteria:**
+
+**Given** the guest lane must be explicit and provable
+**When** a caller sends `auth:'guest'`
+**Then**:
+- `POST /api/facebook/scrape {action:'posts', url, auth:'guest'}` → bypasses `resolveScrapeCookie` entirely; no account auto-pick; `authCookie`/`accountIds` stripped; runs fb-guest DOM path → `200` with `PostItem[]`
+- `POST /api/platform/facebook/scrape {action:'<public action>', auth:'guest'}` (no `accountIds`) → forwards `auth:'guest'`, returns `PostItem[]`; anonymous bucket applies (Story 50.4)
+- `auth:'bogus'` → `400 { ok:false, error:"auth must be 'auto' or 'guest'" }` on both routes
+- `auth:'guest'` + auth-required action (`like`, `comment`, `post`, `share`, `join_group`, `friend_request`, messenger, warmup) → `400 { code:'FB_REQUIRES_AUTH' }` at the platform gateway; no account auto-pick
+- Anonymous caller + auth-required action → `FB_REQUIRES_AUTH` / `401`, never a silent stored-account pick (AD-20 dual-pool isolation)
+
+**Contract tests** (`tests/scrapers/social/facebook/guest-lane.contract.test.js`):
+- Every crawler action descriptor with `requiresAuth:false` is guest-eligible; every `requiresAuth:true` action rejects when no `accountId` and no pool account
+- Service `run('posts',{url, auth:'guest'})` does NOT call `resolveFacebookAuth`; session has no `accountId`
+- Route-level: `{auth:'guest'}`→guest path; `{auth:'bogus'}`→400; auth-required+guest→`400 FB_REQUIRES_AUTH`
+
+**And** `GET /api/actions` (Story 50.5) lists guest-eligible FB actions with `requiresAuth:false`.
+
+---
+
 ### Epic 50 — Story Dependency Map
 
 ```

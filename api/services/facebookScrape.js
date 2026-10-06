@@ -49,22 +49,31 @@ function bucketSearchResults(results) {
  * @returns {Promise<Record<string, unknown>>} Scraper result (array or object depending on action).
  */
 export async function run(action, args = {}) {
+  const auth = /** @type {string | undefined} */ (args.auth);
+  const isGuest = auth === 'guest';
   const authCookie = /** @type {Record<string, unknown> | null} */ (args.authCookie);
   const userId = /** @type {string | undefined} */ (args.userId);
   const browserOptions = /** @type {Record<string, unknown> | undefined} */ (args.browserOptions);
   const rest = /** @type {Record<string, unknown>} */ ({});
   for (const [k, v] of Object.entries(args)) {
-    if (!['authCookie', 'userId', 'browserOptions'].includes(k)) {
+    if (!['authCookie', 'userId', 'browserOptions', 'auth'].includes(k)) {
       rest[k] = v;
     }
+  }
+  // guest lane: never resolve authCookie or auto-pick a stored account.
+  if (isGuest) {
+    delete rest.accountIds;
+    delete rest.accountId;
   }
 
   // Resolve authCookie to { c_user, xs } via FacebookAuthResolver.
   // Public actions can omit authCookie entirely and run as guest.
+  // auth==='guest' forces the guest DOM path: skip resolution so no cookie leaks in.
   /** @type {{ c_user?: string, xs?: string }} */
-  const resolved = authCookie && typeof authCookie === 'object'
-    ? await resolveFacebookAuth(authCookie, userId)
-    : { c_user: undefined, xs: undefined };
+  let resolved = /** @type {{ c_user?: string, xs?: string }} */ ({ c_user: undefined, xs: undefined });
+  if (!isGuest && authCookie && typeof authCookie === 'object') {
+    resolved = await resolveFacebookAuth(authCookie, userId);
+  }
 
   const browserOpts = /** @type {Record<string, unknown>} */ (browserOptions || {});
   const client = createFacebookClient(browserOpts);
@@ -107,11 +116,11 @@ export async function run(action, args = {}) {
  *
  * @param {import('../../src/types/xactions.js').XActionsOptions} baseArgs - Base scrape args (authCookie, browserOptions, etc.)
  * @param {Record<string, unknown>} rest - Action-specific params (query, location, limit, etc.)
- * @param {string} [userId] - User ID for account resolution.
+ * @param {string} [_userId] - User ID for account resolution (unused; kept for call-site signature).
  * @param {Record<string, unknown>} [browserOptions] - Browser options.
  * @returns {Promise<Record<string, unknown>>}
  */
-export async function runSearchAllParallel(baseArgs = {}, rest = {}, userId, browserOptions) {
+export async function runSearchAllParallel(baseArgs = {}, rest = {}, _userId, browserOptions) {
   const query = /** @type {string} */ (rest.query ?? baseArgs.query ?? '');
   const location = /** @type {string | undefined} */ (rest.location ?? baseArgs.location);
   const limit = /** @type {number | undefined} */ (rest.limit ?? baseArgs.limit);
