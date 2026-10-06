@@ -45,6 +45,6 @@ stored account. Default `auth: "auto"` preserves prior behaviour.
 
 ## Notes / follow-ups
 
-- Requires working proxies — guest lane still goes through `globalProxyPool`; without proxies `Proxy pool exhausted` (XACT_5030). Enable `XACTIONS_PROXIES` in `.env`.
-- `posts` via SSR returns `dataQuality.score:80` `degraded` — missing `publishedAt`, `authorAvatar`, `mediaUrls`. Possible follow-up story if those fields are needed.
+- Requires working proxies — guest lane still goes through `globalProxyPool`; without proxies `Proxy pool exhausted` (XACT_5030). `.env` now has both SocksNode residential entries enabled: `XACTIONS_PROXIES` (rotating global) + `PROXY_URL` (sticky country-vn failover) → pool = 2 healthy endpoints.
+- SSR post extraction enriched (commit `c780ec3f`): `permalink_url`→real `postUrl`+`pfbid` externalId, `creation_time`/`publish_time`→`publishedAt`, `profile_picture.uri`→`authorAvatar` when in window. `dataQuality.score` 80→85; still `degraded` for missing `title`, `mediaUrls`, `viewsCount` (media not reliably extractable from SSR JSON).
 - `api/routes/platform (1).js` is an unmounted dead duplicate — do not edit it.
