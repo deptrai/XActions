@@ -392,13 +392,13 @@ development_status:
   #     sprint-change-proposal-2026-10-02-browser-page-pool.md
   #   source_spike:
   #     _bmad-output/implementation-artifacts/spike-browser-page-pool.md
-  epic-53: in-progress
+  epic-53: done
   53-1-browserpool-core-acquire-release-drain-stats-isolated-contex: done
-  53-2-adapter-stealthbrowser-pooled-opt: backlog
-  53-3-jobqueue-scrape-processor-thread-pooled: backlog
-  53-4-obscura-pool-of-processes-shard-strategy: backlog
-  53-5-crash-containment-respawn-bull-re-queue: backlog
-  53-6-telemetry-dims-spike-verify-gate: backlog
+  53-2-adapter-stealthbrowser-pooled-opt: done
+  53-3-jobqueue-scrape-processor-thread-pooled: done
+  53-4-obscura-pool-of-processes-shard-strategy: done
+  53-5-crash-containment-respawn-bull-re-queue: done
+  53-6-telemetry-dims-spike-verify-gate: done
   epic-53-retrospective: optional
 
   epic-54: in-progress
