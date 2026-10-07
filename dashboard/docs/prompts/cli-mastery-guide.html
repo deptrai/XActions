@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tutorial: XActions CLI Mastery — Command Line Power User Guide — XActions Docs</title>
+<meta name="description" content="You are my CLI tool expert. I want to master the XActions command-line interface for maximum productivity.">
+<meta name="keywords" content="xactions, twitter automation, x automation, free, open source, cli, mastery, guide, tutorial:, command, line, power, user, claude prompt library">
+<meta name="author" content="nich (@nichxbt)">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="color-scheme" content="light dark">
+
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tutorial: XActions CLI Mastery — Command Line Power User Guide — XActions">
+<meta property="og:description" content="You are my CLI tool expert. I want to master the XActions command-line interface for maximum productivity.">
+<meta property="og:url" content="https://xactions.app/docs/prompts/cli-mastery-guide">
+<meta property="og:image" content="https://xactions.app/og-docs.png">
+<meta property="og:site_name" content="XActions">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@nichxbt">
+<meta name="twitter:title" content="Tutorial: XActions CLI Mastery — Command Line Power User Guide — XActions">
+<meta name="twitter:description" content="You are my CLI tool expert. I want to master the XActions command-line interface for maximum productivity.">
+<meta name="twitter:image" content="https://xactions.app/og-docs.png">
+
+<link rel="canonical" href="https://xactions.app/docs/prompts/cli-mastery-guide">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="stylesheet" href="/docs/assets/docs.css">
+
+<script>
+/* Applied before first paint so a dark-theme reader never sees a white flash. */
+(function(){try{var t=localStorage.getItem('xactions-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Tutorial: XActions CLI Mastery — Command Line Power User Guide — XActions Docs",
+  "description": "You are my CLI tool expert. I want to master the XActions command-line interface for maximum productivity.",
+  "url": "https://xactions.app/docs/prompts/cli-mastery-guide",
+  "image": "https://xactions.app/og-docs.png",
+  "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
+  "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+  "isAccessibleForFree": true,
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "mainEntityOfPage": "https://xactions.app/docs/prompts/cli-mastery-guide",
+  "articleSection": "Claude Prompt Library",
+  "keywords": "xactions, twitter automation, x automation, free, open source, cli, mastery, guide, tutorial:, command, line, power, user, claude prompt library"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://xactions.app/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Claude Prompt Library", "item": "https://xactions.app/docs" },
+    { "@type": "ListItem", "position": 4, "name": "Tutorial: XActions CLI Mastery — Command Line Power User Guide", "item": "https://xactions.app/docs/prompts/cli-mastery-guide" }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <button class="icon-btn menu-toggle" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button>
+  <a class="topbar__brand" href="/">⚡ XActions</a>
+  <div class="topbar__spacer"></div>
+  <button class="search-trigger" data-search-trigger aria-label="Search documentation">
+    <span aria-hidden="true">🔍</span><span class="search-trigger__label">Search docs</span><kbd>⌘K</kbd>
+  </button>
+  <nav class="topbar__nav" aria-label="Main">
+    <a class="topbar__link" href="/docs" aria-current="page">Docs</a>
+    <a class="topbar__link" href="/tutorials">Tutorials</a>
+    <a class="topbar__link" href="/examples">Examples</a>
+    <a class="topbar__link" href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+  <button class="icon-btn" data-theme-toggle aria-label="Switch theme">☾</button>
+</header>
+
+<div class="scrim" data-scrim></div>
+
+<div class="layout">
+  <aside class="sidebar" aria-label="Documentation sections">
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Guides &amp; Reference</div>
+      <a class="sidebar__link" href="/docs/guides/scheduler">⏰ Scheduler &amp; Webhook Triggers</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-api-reference">A2A API Reference — XActions</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-protocol">A2A Protocol — XActions</a>
+      <a class="sidebar__link" href="/docs/guides/portability">Account Portability — Export, Migrate &amp; Diff</a>
+      <a class="sidebar__link" href="/docs/guides/algorithm-builder">Algorithm Builder — 24/7 Niche Growth Automation</a>
+      <a class="sidebar__link" href="/docs">+ 65 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Tutorials</div>
+      <a class="sidebar__link" href="/docs/learn/your-first-scrape">Tutorial 01 — Your first scrape</a>
+      <a class="sidebar__link" href="/docs/learn/mcp-with-claude">Tutorial 02 — Claude that can use X</a>
+      <a class="sidebar__link" href="/docs/learn/clean-up-your-following">Tutorial 03 — Clean up your following list</a>
+      <a class="sidebar__link" href="/docs/learn/build-a-brand-monitor">Tutorial 04 — Build a brand monitor</a>
+      <a class="sidebar__link" href="/docs/learn/readme">Tutorials</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Developer Guides</div>
+      <a class="sidebar__link" href="/docs/guides/developer/contributing-features">Adding New Features</a>
+      <a class="sidebar__link" href="/docs/guides/developer/agent-troubleshooting">Agent Troubleshooting Guide</a>
+      <a class="sidebar__link" href="/docs/guides/developer/browser-script-patterns">Browser Script Patterns</a>
+      <a class="sidebar__link" href="/docs/guides/developer/selectors">X/Twitter DOM Selectors Reference</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Architecture</div>
+      <a class="sidebar__link" href="/docs/architecture/http-scraper">HTTP-Based Scraper — Architecture &amp; Implementation Plan</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Browser Automation</div>
+      <a class="sidebar__link" href="/docs/automation/advanced-techniques">Advanced Automation Techniques</a>
+      <a class="sidebar__link" href="/docs/automation/getting-started-browser">Getting Started with Browser Automation</a>
+      <a class="sidebar__link" href="/docs/automation/actions-reference">XActions Actions Library Reference (`actions.js`)</a>
+      <a class="sidebar__link" href="/docs/automation/scripts-reference">XActions Automation Scripts — Complete Reference</a>
+      <a class="sidebar__link" href="/docs/automation/core-reference">XActions Core Module Reference (`core.js`)</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Research &amp; Architecture</div>
+      <a class="sidebar__link" href="/docs/research/llm-powered-thought-leader">24/7 LLM-Powered Thought Leadership Agent — Architecture &amp; Implementation Guide</a>
+      <a class="sidebar__link" href="/docs/research/algorithm-cultivation">Algorithmic Feed Cultivation: A Technical Research Paper on Automated Thought Leadership via Platform Signal Training</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Case Studies</div>
+      <a class="sidebar__link" href="/docs/case-studies/robust-dom-extraction">Robust DOM Extraction: A Case Study in Browser Automation Resilience</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Agent Skills</div>
+      <a class="sidebar__link" href="/docs/skills/account-backup">Account Backup &amp; Data Export</a>
+      <a class="sidebar__link" href="/docs/skills/account-tools">Account Tools (Miscellaneous)</a>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation">Algorithm Cultivation &amp; Thought Leadership</a>
+      <a class="sidebar__link" href="/docs/skills/analytics-insights">Analytics &amp; Insights</a>
+      <a class="sidebar__link" href="/docs/skills/articles-longform">Articles &amp; Longform</a>
+      <a class="sidebar__link" href="/docs">+ 44 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Skill References</div>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation-algorithm-internals">Algorithm Internals &amp; Architecture</a>
+      <a class="sidebar__link" href="/docs/skills/analytics-insights-script-configs">Analytics Script Configs</a>
+      <a class="sidebar__link" href="/docs/skills/blocking-muting-management-script-details">Blocking &amp; Muting Script Details</a>
+      <a class="sidebar__link" href="/docs/skills/algorithm-cultivation-browser-scripts">Browser Scripts Reference</a>
+      <a class="sidebar__link" href="/docs/skills/content-posting-script-configs">Content Posting Script Configs</a>
+      <a class="sidebar__link" href="/docs">+ 4 more…</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Claude Prompt Library</div>
+      <a class="sidebar__link" href="/docs/prompts/mcp-setup-and-first-commands">Tutorial: Setting Up XActions MCP Server with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/unfollow-non-followers-cleanup">Tutorial: Unfollow Non-Followers &amp; Follower Cleanup with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/growth-automation-suite">Tutorial: Growth Automation Suite — Grow Your X Account on Autopilot</a>
+      <a class="sidebar__link" href="/docs/prompts/scraping-research-analysis">Tutorial: Tweet Scraping, Profile Analysis &amp; Research with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/content-posting-threads-scheduling">Tutorial: Content Posting, Threads, Polls &amp; Scheduling with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/analytics-competitor-intelligence">Tutorial: Engagement Analytics, Best Time to Post &amp; Competitor Intelligence</a>
+      <a class="sidebar__link" href="/docs/prompts/auto-liker-auto-commenter">Tutorial: Auto-Liker &amp; Auto-Commenter — Engagement Automation with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/blocking-muting-spam-protection">Tutorial: Mass Block, Unblock, Mute &amp; Spam Protection with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/dm-management-automation">Tutorial: DM Management, Export &amp; Automation with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/communities-lists-spaces">Tutorial: Community Management, Lists &amp; Spaces with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/profile-backup-settings">Tutorial: Profile Management, Backup &amp; Account Settings with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/bookmark-management-export">Tutorial: Bookmark Management, Export &amp; Organization with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/content-cleanup-unlike-clear">Tutorial: Content Cleanup — Unlike All, Clear Reposts, Delete Tweets with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/brand-monitoring-business-tools">Tutorial: Brand Monitoring, Business Tools &amp; Customer Service with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/cli-mastery-guide" aria-current="page">Tutorial: XActions CLI Mastery — Command Line Power User Guide</a>
+      <a class="sidebar__link" href="/docs/prompts/browser-automation-framework">Tutorial: The Complete XActions Browser Automation Framework</a>
+      <a class="sidebar__link" href="/docs/prompts/video-download-thread-media">Tutorial: Video Downloading, Thread Unrolling &amp; Media Export with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/grok-ai-sentiment-analysis">Tutorial: Grok AI Integration &amp; Sentiment Analysis with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/customer-service-bot">Tutorial: Customer Service Bot with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/session-logging-safety">Tutorial: Session Logging, Quota Tracking &amp; Safety with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/workflows-account-portability">Tutorial: Workflow Automation &amp; Account Portability with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/advanced-power-user-playbook">Tutorial: Advanced Multi-Feature Combos &amp; Power User Playbook</a>
+      <a class="sidebar__link" href="/docs/prompts/autonomous-space-agent">Tutorial: Autonomous AI Voice Agent in X Spaces with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/readme">XActions Claude Tutorial Prompts</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Project Info</div>
+      <a class="sidebar__link" href="/docs/project/contributing">Contributing to XActions</a>
+      <a class="sidebar__link" href="/docs/project/changelog">Changelog</a>
+      <a class="sidebar__link" href="/docs/project/roadmap">XActions Roadmap</a>
+      <a class="sidebar__link" href="/docs/project/security">Security Policy</a>
+      <a class="sidebar__link" href="/docs/project/code_of_conduct">Contributor Covenant Code of Conduct</a>
+      <a class="sidebar__link" href="/docs/project/readme">Quick start</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Extensions &amp; Plugins</div>
+      <a class="sidebar__link" href="/docs/extras/scripts">Chrome DevTools Console Scripts</a>
+      <a class="sidebar__link" href="/docs/extras/examples">Examples</a>
+      <a class="sidebar__link" href="/docs/extras/integrations-n8n">n8n-nodes-xactions</a>
+      <a class="sidebar__link" href="/docs/extras/extension">XActions Browser Extension</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-excel">XActions Excel Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-google-sheets">XActions Google Sheets Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-template">xactions-plugin-example</a>
+    </div>
+    <div class="sidebar__group">
+      <div class="sidebar__heading">Launch &amp; Releases</div>
+      <a class="sidebar__link" href="/docs/launch/v310-launch-content">XActions v3.1.0 — Launch Content</a>
+    </div>
+  </aside>
+
+  <main class="content" id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="https://xactions.app">Home</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Docs</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Claude Prompt Library</a> <span aria-hidden="true">›</span> <span>Tutorial: XActions CLI Mastery — Command Line Power User Guide</span>
+    </nav>
+
+    <span class="eyebrow">🤖 Claude Prompt Library</span>
+
+    <article class="prose">
+<h1 id="tutorial-xactions-cli-mastery--command-line-power-user-guide">Tutorial: XActions CLI Mastery — Command Line Power User Guide</h1>
+<p>You are my CLI tool expert. I want to master the XActions command-line interface for maximum productivity. Walk me through every command, every flag, and every workflow. I want to be able to do everything from my terminal.</p>
+<h2 id="context">Context</h2>
+<p>I&#39;m using XActions (<a target="_blank" rel="noopener noreferrer" href="https://github.com/nirholas/XActions">https://github.com/nirholas/XActions</a>), an open-source X/Twitter toolkit with a full CLI (<code>xactions</code> command) powered by Commander.js. The CLI uses Puppeteer headless Chrome for scraping and supports JSON/CSV output.</p>
+<h2 id="what-i-need-you-to-do">What I Need You To Do</h2>
+<h3 id="part-1-installation-amp-setup">Part 1: Installation &amp; Setup</h3>
+<ol>
+<li><p><strong>Install globally:</strong></p>
+<pre><code class="language-bash">npm install -g xactions
+</code></pre>
+<p>Or use locally:</p>
+<pre><code class="language-bash">npx xactions [command]
+</code></pre>
+</li>
+<li><p><strong>Login — get your auth token first:</strong></p>
+<pre><code class="language-bash">xactions login
+</code></pre>
+<p>This opens an interactive prompt for your auth_token cookie.</p>
+<p><strong>How to get your auth_token:</strong></p>
+<ul>
+<li>Open x.com → F12 → Application → Cookies → auth_token</li>
+<li>Copy the value</li>
+</ul>
+<p>The token is stored in <code>~/.xactions/config.json</code></p>
+</li>
+<li><p><strong>Verify login:</strong></p>
+<pre><code class="language-bash">xactions profile YOUR_USERNAME
+</code></pre>
+<p>Should show your profile data.</p>
+</li>
+<li><p><strong>Logout:</strong></p>
+<pre><code class="language-bash">xactions logout
+</code></pre>
+</li>
+</ol>
+<h3 id="part-2-profile-scraping">Part 2: Profile Scraping</h3>
+<pre><code class="language-bash">xactions profile USERNAME
+</code></pre>
+<p><strong>Options:</strong></p>
+<ul>
+<li><code>--format json|csv</code> — Output format (default: pretty print)</li>
+<li><code>--output filename</code> — Save to file instead of stdout</li>
+</ul>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash"># Pretty print to terminal
+xactions profile elonmusk
+
+# Save as JSON
+xactions profile elonmusk --format json --output elon.json
+
+# Quick check your own account  
+xactions profile myusername
+</code></pre>
+<p><strong>Output includes:</strong></p>
+<ul>
+<li>Display name, username, bio</li>
+<li>Location, website, join date</li>
+<li>Followers, following, tweet count</li>
+<li>Account verification status</li>
+</ul>
+<h3 id="part-3-follower-amp-following-scraping">Part 3: Follower &amp; Following Scraping</h3>
+<p><strong>Scrape followers:</strong></p>
+<pre><code class="language-bash">xactions followers USERNAME [--limit N] [--format json|csv] [--output file]
+</code></pre>
+<p><strong>Scrape following:</strong></p>
+<pre><code class="language-bash">xactions following USERNAME [--limit N] [--format json|csv] [--output file]
+</code></pre>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash"># Get first 200 followers as CSV
+xactions followers myusername --limit 200 --format csv --output my-followers.csv
+
+# Get following list as JSON
+xactions following myusername --limit 500 --format json --output my-following.json
+
+# Pipe to other tools
+xactions followers elonmusk --limit 50 --format json | jq &#39;.[].username&#39;
+</code></pre>
+<p><strong>Output per user:</strong></p>
+<ul>
+<li>Username</li>
+<li>Display name</li>
+<li>Bio  </li>
+<li>Follows you back (Y/N)</li>
+</ul>
+<h3 id="part-4-find-non-followers">Part 4: Find Non-Followers</h3>
+<p>The killer feature:</p>
+<pre><code class="language-bash">xactions non-followers USERNAME
+</code></pre>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash"># Find who doesn&#39;t follow back
+xactions non-followers myusername
+
+# Save to file for batch unfollowing
+xactions non-followers myusername --format json --output unfollowers.json
+
+# Get CSV for spreadsheet analysis
+xactions non-followers myusername --format csv --output unfollowers.csv
+
+# Count them
+xactions non-followers myusername --format json | jq &#39;. | length&#39;
+</code></pre>
+<h3 id="part-5-tweet-scraping">Part 5: Tweet Scraping</h3>
+<pre><code class="language-bash">xactions tweets USERNAME [--limit N] [--format json|csv] [--output file]
+</code></pre>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash"># Get last 100 tweets
+xactions tweets myusername --limit 100 --format json --output my-tweets.json
+
+# Analyze posting frequency
+xactions tweets myusername --limit 200 --format json | jq &#39;.[].timestamp&#39;
+
+# Find most liked tweets
+xactions tweets myusername --limit 100 --format json | jq &#39;sort_by(-.likes) | .[:5]&#39;
+
+# Get tweets as CSV for spreadsheet
+xactions tweets competitor1 --limit 50 --format csv --output comp-tweets.csv
+</code></pre>
+<h3 id="part-6-tweet-search">Part 6: Tweet Search</h3>
+<p>Powerful tweet search from the command line:</p>
+<pre><code class="language-bash">xactions search &quot;QUERY&quot; [--limit N] [--format json|csv] [--output file]
+</code></pre>
+<p><strong>Search operators:</strong></p>
+<pre><code class="language-bash"># Basic keyword search
+xactions search &quot;machine learning&quot;
+
+# From a specific user
+xactions search &quot;from:elonmusk AI&quot;
+
+# Trending topic
+xactions search &quot;#buildinpublic&quot; --limit 50
+
+# Advanced operators
+xactions search &quot;\&quot;startup funding\&quot; min_faves:100 -filter:replies lang:en&quot;
+
+# Mentions
+xactions search &quot;@myusername&quot; --limit 200
+
+# Date range (if supported upstream)
+xactions search &quot;AI startups since:2026-01-01&quot;
+</code></pre>
+<h3 id="part-7-hashtag-analysis">Part 7: Hashtag Analysis</h3>
+<pre><code class="language-bash">xactions hashtag &quot;HASHTAG&quot; [--limit N] [--format json|csv] [--output file]
+</code></pre>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash"># Scrape tweets with hashtag
+xactions hashtag &quot;web3&quot; --limit 100 --format json
+
+# Multiple hashtags (run separately)
+xactions hashtag &quot;AI&quot; --limit 50 --output ai-tweets.json
+xactions hashtag &quot;machinelearning&quot; --limit 50 --output ml-tweets.json
+
+# Combine and analyze  
+cat ai-tweets.json ml-tweets.json | jq -s &#39;flatten | sort_by(-.likes)&#39;
+</code></pre>
+<h3 id="part-8-thread-scraping">Part 8: Thread Scraping</h3>
+<pre><code class="language-bash">xactions thread &quot;TWEET_URL&quot; [--format json|markdown|text] [--output file]
+</code></pre>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash"># Unroll a thread to terminal
+xactions thread &quot;https://x.com/user/status/123456&quot;
+
+# Save as markdown (great for note-taking)
+xactions thread &quot;https://x.com/user/status/123456&quot; --format markdown --output thread.md
+
+# Save as JSON with metadata
+xactions thread &quot;https://x.com/user/status/123456&quot; --format json --output thread.json
+</code></pre>
+<h3 id="part-9-media-scraping">Part 9: Media Scraping</h3>
+<pre><code class="language-bash">xactions media USERNAME [--limit N] [--format json] [--output file]
+</code></pre>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash"># Get all media URLs from a profile
+xactions media photographer1 --limit 100 --format json --output media.json
+
+# Extract just the URLs
+xactions media photographer1 --format json | jq &#39;.[].urls[]&#39;
+</code></pre>
+<h3 id="part-10-account-info">Part 10: Account Info</h3>
+<pre><code class="language-bash">xactions info
+</code></pre>
+<p>Shows your logged-in account info and XActions version.</p>
+<h3 id="part-11-mcp-server-launch">Part 11: MCP Server Launch</h3>
+<pre><code class="language-bash">npx xactions-mcp
+</code></pre>
+<p>Starts the MCP server for Claude Desktop integration. Usually run via Claude Desktop config, not directly.</p>
+<h3 id="part-12-advanced-cli-workflows">Part 12: Advanced CLI Workflows</h3>
+<p>Now let&#39;s combine commands for powerful workflows:</p>
+<h4 id="workflow-1-find-and-export-non-followers-for-cleanup">Workflow 1: Find and Export Non-Followers for Cleanup</h4>
+<pre><code class="language-bash"># Step 1: Find non-followers
+xactions non-followers myusername --format json --output nonfollowers.json
+
+# Step 2: Count them
+cat nonfollowers.json | jq &#39;. | length&#39;
+
+# Step 3: Extract just usernames for bulk operations
+cat nonfollowers.json | jq -r &#39;.[].username&#39; &gt; usernames-to-unfollow.txt
+
+# Step 4: Review the list
+head -20 usernames-to-unfollow.txt
+</code></pre>
+<h4 id="workflow-2-competitor-analysis-report">Workflow 2: Competitor Analysis Report</h4>
+<pre><code class="language-bash"># Scrape profiles
+for user in competitor1 competitor2 competitor3; do
+  xactions profile $user --format json --output &quot;profiles/$user.json&quot;
+done
+
+# Scrape their tweets
+for user in competitor1 competitor2 competitor3; do
+  xactions tweets $user --limit 50 --format csv --output &quot;tweets/$user.csv&quot;
+done
+
+# Combine data for analysis
+cat profiles/*.json | jq -s &#39;.&#39;
+</code></pre>
+<h4 id="workflow-3-niche-research">Workflow 3: Niche Research</h4>
+<pre><code class="language-bash"># Search multiple keywords
+for kw in &quot;ai startup&quot; &quot;machine learning&quot; &quot;deep learning&quot;; do
+  xactions search &quot;$kw&quot; --limit 30 --format json --output &quot;research/$(echo $kw | tr &#39; &#39; &#39;-&#39;).json&quot;
+done
+
+# Find top voices across all searches
+cat research/*.json | jq -s &#39;flatten | group_by(.author) | map({author: .[0].author, count: length, totalLikes: (map(.likes) | add)}) | sort_by(-.totalLikes) | .[:20]&#39;
+</code></pre>
+<h4 id="workflow-4-daily-metrics-tracking">Workflow 4: Daily Metrics Tracking</h4>
+<pre><code class="language-bash"># Create a script: daily-metrics.sh
+#!/bin/bash
+DATE=$(date +%Y-%m-%d)
+
+# Snapshot followers
+xactions followers myusername --limit 1000 --format json --output &quot;snapshots/$DATE-followers.json&quot;
+
+# Snapshot following  
+xactions following myusername --limit 1000 --format json --output &quot;snapshots/$DATE-following.json&quot;
+
+# Count
+echo &quot;$DATE: $(cat snapshots/$DATE-followers.json | jq &#39;. | length&#39;) followers, $(cat snapshots/$DATE-following.json | jq &#39;. | length&#39;) following&quot;
+
+# Compare with yesterday
+YESTERDAY=$(date -d &quot;yesterday&quot; +%Y-%m-%d 2&gt;/dev/null || date -v-1d +%Y-%m-%d)
+if [ -f &quot;snapshots/$YESTERDAY-followers.json&quot; ]; then
+  TODAY_COUNT=$(cat snapshots/$DATE-followers.json | jq &#39;. | length&#39;)
+  YESTERDAY_COUNT=$(cat snapshots/$YESTERDAY-followers.json | jq &#39;. | length&#39;)
+  echo &quot;Change: $(($TODAY_COUNT - $YESTERDAY_COUNT)) followers&quot;
+fi
+</code></pre>
+<h4 id="workflow-5-content-performance-report">Workflow 5: Content Performance Report</h4>
+<pre><code class="language-bash"># Get tweets and sort by engagement
+xactions tweets myusername --limit 100 --format json | \
+  jq &#39;sort_by(-((.likes // 0) + (.retweets // 0) + (.replies // 0))) | 
+  .[:10] | 
+  .[] | 
+  {text: .text[:80], likes, retweets, replies, url}&#39;
+</code></pre>
+<h3 id="part-13-environment-variables">Part 13: Environment Variables</h3>
+<p>Configure XActions via environment variables:</p>
+<pre><code class="language-bash"># Session cookie (alternative to login command)
+export XACTIONS_SESSION_COOKIE=&quot;your_auth_token_here&quot;
+
+# MCP mode
+export XACTIONS_MODE=&quot;local&quot;           # local (Puppeteer) or remote (API)
+export XACTIONS_API_URL=&quot;https://api.xactions.app&quot;
+
+# Puppeteer settings  
+export PUPPETEER_HEADLESS=&quot;true&quot;       # Run headless (default) or visible
+</code></pre>
+<h3 id="part-14-piping-amp-integration">Part 14: Piping &amp; Integration</h3>
+<p>XActions CLI plays well with Unix tools:</p>
+<pre><code class="language-bash"># Count followers
+xactions followers me --format json | jq &#39;. | length&#39;
+
+# Get only usernames  
+xactions following me --format json | jq -r &#39;.[].username&#39;
+
+# Filter by criteria
+xactions followers me --format json | jq &#39;[.[] | select(.bio | test(&quot;developer|engineer&quot;; &quot;i&quot;))]&#39;
+
+# Export to CSV for Excel
+xactions tweets me --limit 200 --format csv &gt; my-tweets.csv
+
+# Combine with grep
+xactions search &quot;my brand&quot; --format json | jq -r &#39;.[].text&#39; | grep -i &quot;complaint&quot;
+</code></pre>
+<h3 id="part-15-troubleshooting-cli">Part 15: Troubleshooting CLI</h3>
+<p>Common issues and fixes:</p>
+<ol>
+<li><p><strong>&quot;Command not found&quot;</strong></p>
+<pre><code class="language-bash">npm install -g xactions
+# or use: npx xactions
+</code></pre>
+</li>
+<li><p><strong>&quot;Not logged in&quot;</strong></p>
+<pre><code class="language-bash">xactions login
+# Enter your auth_token
+</code></pre>
+</li>
+<li><p><strong>&quot;Scraping returns empty&quot;</strong></p>
+<ul>
+<li>Cookie may have expired: <code>xactions login</code> with new token</li>
+<li>Account might be private</li>
+<li>Rate limited: wait and try again</li>
+</ul>
+</li>
+<li><p><strong>&quot;Puppeteer errors&quot;</strong></p>
+<pre><code class="language-bash"># Install Chromium dependencies
+npx puppeteer install
+</code></pre>
+</li>
+<li><p><strong>Slow performance</strong></p>
+<ul>
+<li>Reduce <code>--limit</code> for faster results</li>
+<li>Puppeteer needs to render pages, so large scrapes take time</li>
+<li>Consider running overnight for big exports</li>
+</ul>
+</li>
+</ol>
+<h2 id="my-cli-goals">My CLI Goals</h2>
+<p>(Replace before pasting)</p>
+<ul>
+<li>Am I comfortable with the command line? Beginner/Intermediate/Advanced</li>
+<li>What do I mainly want to do? Scraping / Analysis / Automation</li>
+<li>Do I want to build automated scripts? Yes/No</li>
+<li>Preferred output format: JSON / CSV / Pretty print</li>
+</ul>
+<p>Start with Part 1 — help me install and log in, then walk me through my first commands.</p>
+
+    </article>
+
+    <div class="page-meta">
+      <span>2 min read</span>
+      <a href="https://github.com/nirholas/XActions/edit/main/tutorials/claude-prompts/15-cli-mastery-guide.md" target="_blank" rel="noopener">Edit this page</a>
+      <a href="https://github.com/nirholas/XActions/issues/new?title=Docs%3A%20Tutorial%3A%20XActions%20CLI%20Mastery%20%E2%80%94%20Command%20Line%20Power%20User%20Guide" target="_blank" rel="noopener">Report a problem</a>
+    </div>
+
+    <nav class="page-nav" aria-label="Previous and next">
+      <a class="page-nav__link" href="/docs/prompts/brand-monitoring-business-tools"><span class="page-nav__dir">← Previous</span><span class="page-nav__title">Tutorial: Brand Monitoring, Business Tools &amp; Customer Service with Claude</span></a>
+      <a class="page-nav__link page-nav__link--next" href="/docs/prompts/browser-automation-framework"><span class="page-nav__dir">Next →</span><span class="page-nav__title">Tutorial: The Complete XActions Browser Automation Framework</span></a>
+    </nav>
+
+    <div class="callout">
+      <h3>⚡ Free and open source</h3>
+      <p>No API keys, no monthly fees, no signup. Star the repo if it saved you a subscription.</p>
+      <a class="btn" href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </main>
+
+  <aside class="toc" data-toc aria-label="On this page">
+    <div class="toc__heading">On this page</div>
+  </aside>
+</div>
+
+<dialog class="search-dialog" data-search-dialog aria-label="Search documentation">
+  <input class="search-dialog__input" data-search-input type="search" placeholder="Search the documentation…" aria-label="Search query" autocomplete="off" spellcheck="false">
+  <div class="search-dialog__results" data-search-results role="listbox" aria-label="Search results"></div>
+  <div class="search-dialog__footer">
+    <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+    <span><kbd>↵</kbd> open</span>
+    <span><kbd>esc</kbd> close</span>
+  </div>
+</dialog>
+
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div>
+      <h4>XActions</h4>
+      <p>Free, open-source X/Twitter automation.</p>
+      <p>Built by <a href="https://x.com/nichxbt" target="_blank" rel="noopener">@nichxbt</a></p>
+    </div>
+    <div>
+      <h4>Learn</h4>
+      <a href="/docs/learn/your-first-scrape">Your first scrape</a>
+      <a href="/docs/learn/mcp-with-claude">MCP with Claude</a>
+      <a href="/examples">Examples</a>
+      <a href="/docs/guides/troubleshooting">Troubleshooting</a>
+    </div>
+    <div>
+      <h4>Reference</h4>
+      <a href="/docs/guides/cli-reference">CLI</a>
+      <a href="/docs/guides/api-reference">API</a>
+      <a href="/docs/guides/mcp-setup">MCP server</a>
+      <a href="/docs/guides/browser-scripts">Browser scripts</a>
+    </div>
+    <div>
+      <h4>Project</h4>
+      <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">GitHub</a>
+      <a href="/docs/project/contributing">Contributing</a>
+      <a href="/docs/project/changelog">Changelog</a>
+      <a href="/docs/project/security">Security</a>
+    </div>
+  </div>
+  <div class="site-footer__bottom">
+    <p>© 2024–2026 XActions. Apache-2.0 licensed. No API fees.</p>
+  </div>
+</footer>
+
+<script src="/docs/assets/docs.js" defer></script>
+</body>
+</html>

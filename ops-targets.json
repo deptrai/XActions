@@ -1,0 +1,17 @@
+{
+  "environments": {
+    "local": {
+      "http": [
+        { "name": "api-health", "url": "http://localhost:3001/health" },
+        { "name": "api-health-v1", "url": "http://localhost:3001/api/health" },
+        { "name": "ai-health", "url": "http://localhost:3001/api/ai/health" },
+        { "name": "llm-clipproxy", "url": "https://clipproxy.chainlens.net" }
+      ],
+      "env": ["DATABASE_URL", "ANTHROPIC_API_KEY"],
+      "env_files": [".env"],
+      "files": [
+        { "name": "x-session", "path": "data/session.json", "max_age_days": 7 }
+      ]
+    }
+  }
+}
