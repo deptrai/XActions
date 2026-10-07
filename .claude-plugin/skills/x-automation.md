@@ -1,11 +1,11 @@
 # X/Twitter Automation Skill
 <!-- by nichxbt -->
 
-You have access to the XActions MCP server which provides 68 tools for automating X/Twitter. The server uses Puppeteer browser automation — no API keys or fees required.
+You have access to the Medirus MCP server which provides 68 tools for automating X/Twitter. The server uses Puppeteer browser automation — no API keys or fees required.
 
 ## Authentication
 
-Before using any tools, authenticate with `x_login` using the user's `auth_token` cookie from x.com (DevTools → Application → Cookies → `auth_token`). The environment variable `XACTIONS_SESSION_COOKIE` can also be set.
+Before using any tools, authenticate with `x_login` using the user's `auth_token` cookie from x.com (DevTools → Application → Cookies → `auth_token`). The environment variable `MEDIRUS_SESSION_COOKIE` can also be set.
 
 ## Core Tools
 

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation - Follow Likers & Commenters
+// Medirus Automation - Follow Likers & Commenters
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -12,12 +12,12 @@
 // 3. Configure and run
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, SELECTORS } = window.XActions.Core;
+  const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, SELECTORS } = window.Medirus.Core;
 
   // ============================================
   // CONFIGURATION
@@ -279,7 +279,7 @@
   const run = async () => {
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  💬 XActions - Follow Likers & Engagers                  ║
+║  💬 Medirus - Follow Likers & Engagers                  ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Mode: ${CONFIG.MODE.padEnd(15)}                               ║
 ║  Max per post: ${String(CONFIG.MAX_FOLLOWS_PER_POST).padEnd(5)}                                ║
@@ -352,7 +352,7 @@
     log('Stopping engager follow...', 'warning');
   };
 
-  window.XActions.Engager = {
+  window.Medirus.Engager = {
     state: () => state,
     tracked: () => tracked,
     config: CONFIG,

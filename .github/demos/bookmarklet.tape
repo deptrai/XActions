@@ -1,4 +1,4 @@
-# XActions - Bookmarklet Demo
+# Medirus - Bookmarklet Demo
 # Run with: vhs bookmarklet.tape
 
 Output bookmarklet.gif
@@ -13,7 +13,7 @@ Set Padding 20
 Set Framerate 30
 
 # Title
-Type "# 🔖 XActions One-Click Bookmarklets"
+Type "# 🔖 Medirus One-Click Bookmarklets"
 Enter
 Sleep 500ms
 Enter
@@ -52,6 +52,6 @@ Type@50ms "
 Enter
 Sleep 2s
 
-Type "# Visit: xactions.app/run for bookmarklets"
+Type "# Visit: medirus.online/run for bookmarklets"
 Enter
 Sleep 2s

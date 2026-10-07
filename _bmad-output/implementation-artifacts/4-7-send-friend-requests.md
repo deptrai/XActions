@@ -8,11 +8,11 @@ Status: done
 
 <!-- Code review CLEAN — no actionable patches. Held at in-progress pending live-DOM verification of Add Friend / pending / already-friend selectors. -->
 
-<!-- Epic 4 (Facebook Growth Automation, Cluster 2 — MEDIUM-HIGH risk). Source: epics.md#Story 4.7 + PRD prd-XActions-2026-06-10-epic4 FR-21. HIGHEST account-risk story in Epic 4. -->
+<!-- Epic 4 (Facebook Growth Automation, Cluster 2 — MEDIUM-HIGH risk). Source: epics.md#Story 4.7 + PRD prd-Medirus-2026-06-10-epic4 FR-21. HIGHEST account-risk story in Epic 4. -->
 
 ## Story
 
-As a growth hacker using XActions,
+As a growth hacker using Medirus,
 I want to send friend requests by UID list, suggestions, or location filter,
 so that I can build a targeted network with conservative rate limits.
 
@@ -144,7 +144,7 @@ Pattern: clone `joinFacebookGroups` (4.4) — same `runGuardedBatch` routing, sa
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 4.7: Send friend requests automatically]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md#FR-21, §4.3 Cluster 2, §7 NFR-6/NFR-7/NFR-8/NFR-10, §8 SM-C3]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-10-epic4/prd.md#FR-21, §4.3 Cluster 2, §7 NFR-6/NFR-7/NFR-8/NFR-10, §8 SM-C3]
 - [Source: api/services/facebookAutomation.js#joinFacebookGroups (clone template), #GROUP_ACTION_DELAY_FLOOR_MS (pattern), #assertFacebookUrl]
 - [Source: _bmad-output/implementation-artifacts/4-4-join-groups.md (delay floor + capture-Map + NaN guard + dry-run-no-browser), 4-6-scrape-group-members.md (NFR-11 normalizer)]
 

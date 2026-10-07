@@ -13,7 +13,7 @@ context: []
 
 ## Intent
 
-**Problem:** XActions hiện chỉ hibernate account *reactive* (khi gặp 429/403/challenge) — một account đang chết dần (nhiều lỗi, latency cao, payload rỗng) vẫn ở trong rotation cho tới khi gây hại, và không có cơ chế tự phục hồi kiểm soát.
+**Problem:** Medirus hiện chỉ hibernate account *reactive* (khi gặp 429/403/challenge) — một account đang chết dần (nhiều lỗi, latency cao, payload rỗng) vẫn ở trong rotation cho tới khi gây hại, và không có cơ chế tự phục hồi kiểm soát.
 
 **Approach:** Thêm `SessionHealthOrchestrator` trong `src/core/` — tính health score liên tục `[0,100]` per `platform:accountId` từ 6 tín hiệu (consecutive errors, rate-limit freq, bot-challenge freq, avg latency, payload completeness, proxy health). Dưới `30` → mở circuit breaker → `sick` + loại khỏi rotation (gọi `AccountPool.markUnavailable`/`AdaptiveRateGovernor.hibernateAccount`). Sau cooldown → `half-open` → gửi recovery probe (read-only `profile`, fresh proxy); probe thành công + payload đủ → đóng breaker, fail → `sick` + exponential backoff. `governor.getStatus()` expose `healthScores` + `circuitBreakerStates`; `dashboard/admin.html` thêm cột Health (green/yellow/red) + action wake/probe.
 

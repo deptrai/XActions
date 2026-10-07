@@ -20,12 +20,12 @@ const rootDir = resolve(__dirname, '..', '..');
 const webDir = resolve(rootDir, 'apps', 'web');
 
 describe('Story 47.1 — Next.js 15 App Router & Layout Scaffold', () => {
-  it('apps/web package.json specifies next 15 and @xactions/api-client dependency', () => {
+  it('apps/web package.json specifies next 15 and @medirus/api-client dependency', () => {
     const pkgPath = resolve(webDir, 'package.json');
     expect(existsSync(pkgPath)).toBe(true);
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
     expect(pkg.dependencies.next).toMatch(/\^15/);
-    expect(pkg.dependencies['@xactions/api-client']).toBeTruthy();
+    expect(pkg.dependencies['@medirus/api-client']).toBeTruthy();
     expect(pkg.dependencies['lucide-react']).toBeTruthy();
   });
 

@@ -19,7 +19,7 @@ context:
 
 ## Intent
 
-**Problem:** XActions hiện có module Mastodon cũ (`src/scrapers/mastodon/index.js`) sử dụng `fetch` trực tiếp, không tích hợp `AbstractApiClient`, không qua `ProxyIpPool`, không có `AdaptiveRateGovernor` rate limiting, và không dùng `ActionRegistry`/`CrawlerCommand` chuẩn của Universal Scraping Engine. Story 23.3 đã được đánh dấu `done` nhưng thực tế **chỉ tạo ra client wrapper cũ trong `src/scrapers/mastodon/index.js`**, chứ chưa có `MastodonClient extends AbstractApiClient` chuẩn trong `src/scrapers/social/mastodon/`. Dù validator (`MastodonPlatformResponseValidator`) đã hoàn thành ở Story 23.5, hệ thống vẫn thiếu client/crawler hybrid chuẩn.
+**Problem:** Medirus hiện có module Mastodon cũ (`src/scrapers/mastodon/index.js`) sử dụng `fetch` trực tiếp, không tích hợp `AbstractApiClient`, không qua `ProxyIpPool`, không có `AdaptiveRateGovernor` rate limiting, và không dùng `ActionRegistry`/`CrawlerCommand` chuẩn của Universal Scraping Engine. Story 23.3 đã được đánh dấu `done` nhưng thực tế **chỉ tạo ra client wrapper cũ trong `src/scrapers/mastodon/index.js`**, chứ chưa có `MastodonClient extends AbstractApiClient` chuẩn trong `src/scrapers/social/mastodon/`. Dù validator (`MastodonPlatformResponseValidator`) đã hoàn thành ở Story 23.5, hệ thống vẫn thiếu client/crawler hybrid chuẩn.
 
 **Scope Note:** Story 23.4 hấp thụ phần còn thiếu của Story 23.3 — triển khai `MastodonClient` kế thừa `AbstractApiClient` trong `src/scrapers/social/mastodon/client.js`. Đây là công việc nội bộ cần thiết để hoàn thiện Epic 23, không tạo ra duplicate vì `src/scrapers/mastodon/index.js` vẫn là legacy wrapper cũ.
 

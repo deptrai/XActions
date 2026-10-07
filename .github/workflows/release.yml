@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# XActions — Automated GitHub Releases
+# Medirus — Automated GitHub Releases
 # Creates a GitHub Release with changelog on version tag push
 # by nichxbt
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -77,7 +77,7 @@ jobs:
           echo "" >> RELEASE_NOTES.md
           echo "### Install" >> RELEASE_NOTES.md
           echo '```bash' >> RELEASE_NOTES.md
-          echo "npm install xactions@${{ steps.version.outputs.VERSION }}" >> RELEASE_NOTES.md
+          echo "npm install medirus@${{ steps.version.outputs.VERSION }}" >> RELEASE_NOTES.md
           echo '```' >> RELEASE_NOTES.md
 
       - name: Create GitHub Release

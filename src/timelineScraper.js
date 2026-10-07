@@ -341,7 +341,7 @@
       return;
     }
 
-    const name = filename || `xactions-timeline-${getTimestamp()}`;
+    const name = filename || `medirus-timeline-${getTimestamp()}`;
 
     if (format === 'json') {
       const blob = new Blob([JSON.stringify(tweets, null, 2)], { type: 'application/json' });
@@ -519,13 +519,13 @@
       bestHours,
     };
 
-    console.log('\n✅ Stats analysis complete. Access via window.XActions.timelineScraper.lastStats');
+    console.log('\n✅ Stats analysis complete. Access via window.Medirus.timelineScraper.lastStats');
     return stats;
   };
 
   // ── Expose API ─────────────────────────────────────────────
-  window.XActions = window.XActions || {};
-  window.XActions.timelineScraper = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.timelineScraper = {
     scrapeForYou,
     scrapeFollowing,
     scrapeProfile,
@@ -549,17 +549,17 @@
           console.error('❌ Unknown type. Use: forYou, following, profile, likes, media');
           return [];
       }
-      window.XActions.timelineScraper.lastResults = tweets;
+      window.Medirus.timelineScraper.lastResults = tweets;
       return tweets;
     },
   };
 
   // ── Menu ───────────────────────────────────────────────────
   console.log('╔════════════════════════════════════════════════════════════╗');
-  console.log('║  📋 TIMELINE SCRAPER — XActions by nichxbt                  ║');
+  console.log('║  📋 TIMELINE SCRAPER — Medirus by nichxbt                  ║');
   console.log('╚════════════════════════════════════════════════════════════╝');
   console.log('');
-  console.log('📌 Available commands (via window.XActions.timelineScraper):');
+  console.log('📌 Available commands (via window.Medirus.timelineScraper):');
   console.log('');
   console.log('   🏠 scrapeForYou(max)       — Scrape "For You" timeline');
   console.log('   👥 scrapeFollowing(max)     — Scrape "Following" timeline');
@@ -571,10 +571,10 @@
   console.log('   🚀 run(type, max)           — Quick run (forYou/following/profile/likes/media)');
   console.log('');
   console.log('💡 Examples:');
-  console.log('   const t = await XActions.timelineScraper.scrapeForYou(50)');
-  console.log('   XActions.timelineScraper.exportData(t, "csv")');
-  console.log('   XActions.timelineScraper.analyzeTimeline(t)');
-  console.log('   const t = await XActions.timelineScraper.run("following", 200)');
+  console.log('   const t = await Medirus.timelineScraper.scrapeForYou(50)');
+  console.log('   Medirus.timelineScraper.exportData(t, "csv")');
+  console.log('   Medirus.timelineScraper.analyzeTimeline(t)');
+  console.log('   const t = await Medirus.timelineScraper.run("following", 200)');
   console.log('');
   console.log('✅ Timeline Scraper loaded. Ready to use.');
 })();

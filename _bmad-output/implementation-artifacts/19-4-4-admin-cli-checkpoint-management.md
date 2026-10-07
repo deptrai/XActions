@@ -17,7 +17,7 @@ Status: ready-for-dev
 
 ## ⚠️ Critical Constraints / Architecture Variance
 
-1. **Extend Existing `xactions admin checkpoints` Group** — Story 19.4 already created `checkpoints list` in `src/cli/commands/admin.js`. This story adds `resume`, `pause`, and `retry` subcommands under `xactions admin checkpoints`, plus an alias group `xactions admin checkpoint <list|resume|pause|retry>` (singular alias matching the established pattern in 19.4.2 and 19.4.3).
+1. **Extend Existing `medirus admin checkpoints` Group** — Story 19.4 already created `checkpoints list` in `src/cli/commands/admin.js`. This story adds `resume`, `pause`, and `retry` subcommands under `medirus admin checkpoints`, plus an alias group `medirus admin checkpoint <list|resume|pause|retry>` (singular alias matching the established pattern in 19.4.2 and 19.4.3).
 2. **Regression Prevention on Description**:
    - `tests/cli/admin-unified.test.js:262` tests `expect(checkpointsHelp).not.toMatch(/resume|pause|retry/i);`.
    - The description of the command group MUST NOT contain the words `resume`, `pause`, or `retry`.
@@ -43,7 +43,7 @@ Status: ready-for-dev
 ## Story
 
 As an **Internal Automation Operator**,  
-I want **the commands `xactions admin checkpoints resume <checkpointId>`, `pause <checkpointId>`, and `retry <checkpointId>` (along with `xactions admin checkpoint ...` aliases)**,  
+I want **the commands `medirus admin checkpoints resume <checkpointId>`, `pause <checkpointId>`, and `retry <checkpointId>` (along with `medirus admin checkpoint ...` aliases)**,  
 so that **I can inspect, pause, resume, and retry crawl pipelines from the terminal when an ingestion task stalls, encounters rate limits, or fails**.
 
 ---
@@ -52,8 +52,8 @@ so that **I can inspect, pause, resume, and retry crawl pipelines from the termi
 
 ### AC-1: CLI Command Registration & Help Contract
 
-- **Given** the `xactions admin` command group
-- **When** the operator runs `xactions admin checkpoints --help` or `xactions admin checkpoint --help`
+- **Given** the `medirus admin` command group
+- **When** the operator runs `medirus admin checkpoints --help` or `medirus admin checkpoint --help`
 - **Then** the output lists:
   - `list`: List crawl checkpoints with filtering and pagination
   - `resume <checkpointId>`: Resume a paused, failed, or stalled checkpoint
@@ -64,7 +64,7 @@ so that **I can inspect, pause, resume, and retry crawl pipelines from the termi
 ### AC-2: Resume Checkpoint via REST or In-Process Manager
 
 - **Given** a paused, stalled, or failed checkpoint ID
-- **When** the operator runs `xactions admin checkpoints resume <checkpointId>` (or `admin checkpoint resume ...`)
+- **When** the operator runs `medirus admin checkpoints resume <checkpointId>` (or `admin checkpoint resume ...`)
 - **Then** the command attempts `POST /api/checkpoints/:id/resume` with Bearer token
 - **And** on success, prints a confirmation showing the checkpoint ID, target key, and new status (`running`)
 - **And** if `--json` is passed, outputs `{ success: true, data: { checkpoint: { ... } } }`
@@ -73,7 +73,7 @@ so that **I can inspect, pause, resume, and retry crawl pipelines from the termi
 ### AC-3: Pause Checkpoint via REST or In-Process Manager
 
 - **Given** an active or running checkpoint ID
-- **When** the operator runs `xactions admin checkpoints pause <checkpointId>` (or `admin checkpoint pause ...`)
+- **When** the operator runs `medirus admin checkpoints pause <checkpointId>` (or `admin checkpoint pause ...`)
 - **Then** the command attempts `POST /api/checkpoints/:id/pause` with Bearer token
 - **And** on success, prints a confirmation showing the checkpoint ID and updated status (`paused`)
 - **And** if `--json` is passed, outputs `{ success: true, data: { checkpoint: { ... } } }`
@@ -82,7 +82,7 @@ so that **I can inspect, pause, resume, and retry crawl pipelines from the termi
 ### AC-4: Retry Checkpoint via REST or In-Process Manager
 
 - **Given** a failed checkpoint ID
-- **When** the operator runs `xactions admin checkpoints retry <checkpointId>` (or `admin checkpoint retry ...`)
+- **When** the operator runs `medirus admin checkpoints retry <checkpointId>` (or `admin checkpoint retry ...`)
 - **Then** the command attempts `POST /api/checkpoints/:id/retry` with Bearer token
 - **And** on success, prints a confirmation showing the checkpoint ID and reset status (`running`)
 - **And** if `--json` is passed, outputs `{ success: true, data: { checkpoint: { ... } } }`
@@ -186,7 +186,7 @@ registerCheckpointSubcommands(checkpointCmd);
 ## Testing Plan
 
 1. **Unit & CLI Verification (`tests/cli/admin-checkpoints.test.js`)**:
-   - Verify `xactions admin checkpoints --help` and `xactions admin checkpoint --help` list `list`, `resume`, `pause`, and `retry`.
+   - Verify `medirus admin checkpoints --help` and `medirus admin checkpoint --help` list `list`, `resume`, `pause`, and `retry`.
    - Test in-process fallback for `pause`, `resume`, and `retry` on real/seeded checkpoint records.
    - Test `--json` flag formats valid JSON output for all actions.
    - Test error handling when an unknown checkpoint ID is provided.

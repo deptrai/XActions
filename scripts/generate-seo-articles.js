@@ -1,7 +1,7 @@
 import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
-const OUT = '/workspaces/XActions/docs/seo-articles';
+const OUT = '/workspaces/Medirus/docs/seo-articles';
 mkdirSync(OUT, { recursive: true });
 
 const articles = [

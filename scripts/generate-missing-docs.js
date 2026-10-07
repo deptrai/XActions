@@ -230,7 +230,7 @@ function extractScriptInfo(filePath) {
     }
 
     // Check for CLI/MCP variants
-    const hasCLI = content.includes('xactions') || content.includes('CLI');
+    const hasCLI = content.includes('medirus') || content.includes('CLI');
     const hasMCP = content.includes('MCP') || content.includes('mcp');
 
     return { configLines, hasCLI, hasMCP, content };
@@ -370,14 +370,14 @@ ${tutorialSteps}
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 \`\`\`bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 \`\`\`
 
 ---
@@ -411,7 +411,7 @@ ${getRelatedLinks(slug, meta.cat)}
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)
 `;
 
   return doc;

@@ -1,4 +1,4 @@
-// XActions Extension — Popup Controller
+// Medirus Extension — Popup Controller
 // Manages UI state, settings, communication with background/content scripts
 // by nichxbt
 
@@ -510,7 +510,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `xactions-settings-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-settings-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
       showToast('Settings exported', 'success');
@@ -518,7 +518,7 @@
 
     // Reset
     DOM.btnResetAll.addEventListener('click', async () => {
-      if (!confirm('This will delete ALL XActions data and settings. Continue?')) return;
+      if (!confirm('This will delete ALL Medirus data and settings. Continue?')) return;
       await chrome.storage.local.clear();
       showToast('All data reset', 'warning');
       setTimeout(() => location.reload(), 500);

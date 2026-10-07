@@ -1,10 +1,10 @@
 # Tutorial: Community Management, Lists & Spaces with Claude
 
-You are my X/Twitter community management expert. I want to use XActions to manage my X communities, organize my following with lists, and discover Twitter Spaces. Help me build and curate my network.
+You are my X/Twitter community management expert. I want to use Medirus to manage my X communities, organize my following with lists, and discover Twitter Spaces. Help me build and curate my network.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with community, list, and Spaces management features — via MCP tools and browser console scripts.
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with community, list, and Spaces management features — via MCP tools and browser console scripts.
 
 ## What I Need You To Do
 
@@ -156,7 +156,7 @@ Use Spaces tools to find live conversations:
 For programmatic usage, the `spacesManager` module:
 
 ```javascript
-import { spacesManager } from 'xactions';
+import { spacesManager } from 'medirus';
 
 // Available functions:
 // - Find live and scheduled Spaces

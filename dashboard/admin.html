@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XActions Admin</title>
+  <title>Medirus Admin</title>
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -788,7 +788,7 @@
   <header class="header">
     <h1>
       <span aria-hidden="true">⚡</span>
-      XActions Admin
+      Medirus Admin
       <span style="font-weight: 400; font-size: 1rem; color: var(--text-secondary);">Live Sessions</span>
     </h1>
     <a href="/dashboard" style="color: var(--accent); text-decoration: none;">← Back to Dashboard</a>
@@ -992,7 +992,7 @@
         </div>
         <div>
           <label for="alert-email-recipients" style="display: block; font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 6px;">Email Notification Recipients</label>
-          <input type="text" id="alert-email-recipients" placeholder="ops@xactions.app, alerts@company.com" style="width: 100%; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 10px 14px; border-radius: 8px;">
+          <input type="text" id="alert-email-recipients" placeholder="ops@medirus.online, alerts@company.com" style="width: 100%; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 10px 14px; border-radius: 8px;">
         </div>
       </div>
       <div style="display: flex; gap: 12px; flex-wrap: wrap;">
@@ -1386,7 +1386,7 @@
     };
 
     function getAuthToken() {
-      return localStorage.getItem('authToken') || localStorage.getItem('xactions_token') || '';
+      return localStorage.getItem('authToken') || localStorage.getItem('medirus_token') || '';
     }
 
     function startCheckpointRefresh() {

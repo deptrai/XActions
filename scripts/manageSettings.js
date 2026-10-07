@@ -8,7 +8,7 @@
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   const run = async () => {
-    console.log('⚙️ XActions Settings Auditor');
+    console.log('⚙️ Medirus Settings Auditor');
     console.log('============================');
 
     const settings = {

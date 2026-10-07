@@ -1,6 +1,6 @@
-# Mutation Gate Reference — XActions
+# Mutation Gate Reference — Medirus
 
-> Authority document for `bmad-xactions-mutation-gate`. The 6 anti-patterns, Stryker setup, and CI gate live here.
+> Authority document for `bmad-medirus-mutation-gate`. The 6 anti-patterns, Stryker setup, and CI gate live here.
 
 ## Stryker Setup (already configured)
 
@@ -33,7 +33,7 @@ npx stryker run stryker.{module}.config.js    # custom module
 
 ## The 6 Anti-Pattern Checklist
 
-| # | Anti-Pattern | Mutant signal | Real bug if lapsed (XActions) | Test description that kills it |
+| # | Anti-Pattern | Mutant signal | Real bug if lapsed (Medirus) | Test description that kills it |
 |---|--------------|---------------|-------------------------------|--------------------------------|
 | 1 | Mirror Test | `ObjectLiteral` return survived, `StringLiteral` survived | Scraper returns wrong fields, CLI output shape broken, MCP tool response malformed | "should return exactly fields X, Y, Z" + "should not return field W" |
 | 2 | Over-Mocking / Under-Testing | `BlockStatement` catch survived, error branch `NoCoverage` | Rate-limit hit crashes automation, session expiry unhandled, Puppeteer launch failure unhandled | "should handle {real service failure} and still {graceful behavior}" — test against REAL failure state, not mock |
@@ -42,7 +42,7 @@ npx stryker run stryker.{module}.config.js    # custom module
 | 5 | Error Msg Not Asserted | `StringLiteral` in throw → `""` survived | User can't diagnose session expiry, rate-limit, or selector failure | "should throw {ErrorType} with message containing {key phrase}" |
 | 6 | Real-Service Not Executed | `sql\`\`` survived, `page.$()` survived, `fetch(...)` survived | Prod query/automation fails or returns wrong data | Integration test "should execute real {Puppeteer/HTTP/DB} and return {expected}" |
 
-## XActions P0 Modules (gate applies)
+## Medirus P0 Modules (gate applies)
 
 | Module | P0 area | Config | Why P0 |
 |--------|---------|--------|--------|

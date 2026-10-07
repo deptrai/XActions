@@ -51,7 +51,7 @@ Scope cụ thể:
 - `_bmad-output/planning-artifacts/epics.md` — Epic 13, Story 13.9 [dòng 607-619]
 - `_bmad-output/planning-artifacts/prd-facebook-epics-5-6-2026-08-21.md` — FR-23..FR-27 (Messenger Port), FR-32..FR-34 (Share-Link-UID v2), FR-53 (Velocity Limits), NFR-5..NFR-10 [dòng 68-107, 162-185]
 - `_bmad-output/planning-artifacts/facebook-messenger-port-plan.md` — P1..P10 port plan, REUSE-FIRST, `runGuardedBatch`, selectors UNVERIFIED, `MWChatBusinessCTAAdsSenderMutation` doc_id [dòng 1-109]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 (Tiered Signer), AD-2 (AbstractCrawler/ActionRegistry), AD-3 (Proxy Strategy/Action-Level Auth), AD-4 (Namespaced Storage), AD-9 (Anti-Bot Validation), AD-11 (CrawlerCommand), AD-13 (Adaptive Governor), AD-14 (Error Envelope), AD-18 (Metadata Schema)
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 (Tiered Signer), AD-2 (AbstractCrawler/ActionRegistry), AD-3 (Proxy Strategy/Action-Level Auth), AD-4 (Namespaced Storage), AD-9 (Anti-Bot Validation), AD-11 (CrawlerCommand), AD-13 (Adaptive Governor), AD-14 (Error Envelope), AD-18 (Metadata Schema)
 - `_bmad-output/implementation-artifacts/13-3-refactor-facebook-scraper-to-hybrid-architecture.md` — `FacebookClient`, `FacebookCrawler`, `DEFAULT_FB_DOC_IDS`, token cache
 - `_bmad-output/implementation-artifacts/13-4-facebook-browser-as-signer-bridge.md` — `FacebookBrowserBridge`, Playwright default, token extraction
 - `_bmad-output/implementation-artifacts/13-5-facebook-hybrid-profile-followers-group-members.md` — `resolveTargetKey`, `resolveGroupId`, `saveCheckpoint`, `requiresAuth` derivation
@@ -262,7 +262,7 @@ Scope cụ thể:
   - Upstream rate limit 429 / GraphQL code 368 → `XACT_4290` / `suggestedAction: 'rotate_proxy'` (hoặc `rotate_account` nếu proxy pool cạn)
   - Account hibernation / governor hibernation → `XACT_4291` / `suggestedAction: 'rotate_account'`
   - Proxy hết → `XACT_5030` / `suggestedAction: 'wait'`
-  - Invalid args → `XACT_4001` / `suggestedAction: 'use_x_actions_list'`
+  - Invalid args → `XACT_4001` / `suggestedAction: 'use_medirus_list'`
 - **And** KHÔNG throw panic khi doc_id rotated hoặc DOM selector thất bại; ghi `note` và thử fallback path / doc_id tiếp theo
 
 ### AC-12: Deprecation markers

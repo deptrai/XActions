@@ -1,4 +1,4 @@
-# PRD Quality Review — XActions Multi-Platform Scraper Expansion
+# PRD Quality Review — Medirus Multi-Platform Scraper Expansion
 
 ## Overall verdict
 The PRD is structurally sound and decision-ready for a brownfield internal tool. It covers all three new platforms, names the trade-offs honestly, and flags open questions. However, some FRs are thin on testable consequences, and the scope for Instagram is still uncertain (private API vs managed service vs skip).
@@ -15,7 +15,7 @@ The PRD is structurally sound and decision-ready for a brownfield internal tool.
 - Vision is reasonable but could be tightened to a one-line thesis.
 
 ## Strategic coherence — adequate
-- Thesis: "Expand XActions to all major social platforms" is implicit but not stated as a single bet.
+- Thesis: "Expand Medirus to all major social platforms" is implicit but not stated as a single bet.
 - Feature prioritization follows technical feasibility (Reddit/Medium first, Instagram last).
 - Success Metrics are testable (tests pass, exports exist, docs updated).
 - Counter-metrics not named — could add "account ban rate" or "proxy failure rate" for Instagram.

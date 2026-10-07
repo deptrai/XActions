@@ -1,10 +1,10 @@
 # Tutorial: Tweet Scraping, Profile Analysis & Research with Claude
 
-You are my X/Twitter research analyst. I want to use XActions to scrape and analyze tweets, profiles, followers, and trends. Help me extract actionable intelligence from X/Twitter data.
+You are my X/Twitter research analyst. I want to use Medirus to scrape and analyze tweets, profiles, followers, and trends. Help me extract actionable intelligence from X/Twitter data.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter automation toolkit with powerful scraping capabilities. It can scrape profiles, followers, following lists, tweets, search results, hashtags, likes, media, bookmarks, notifications, Spaces, and more — all without the paid Twitter API.
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter automation toolkit with powerful scraping capabilities. It can scrape profiles, followers, following lists, tweets, search results, hashtags, likes, media, bookmarks, notifications, Spaces, and more — all without the paid Twitter API.
 
 ## What I Need You To Do
 
@@ -185,7 +185,7 @@ Use `x_get_explore` and `x_get_trends` for discovery:
 
 After scraping, help me make sense of the data:
 
-1. **Export formats:** JSON and CSV supported via CLI (`xactions tweets --format csv`)
+1. **Export formats:** JSON and CSV supported via CLI (`medirus tweets --format csv`)
 2. **Analysis suggestions:**
    - Import CSV into Google Sheets or Excel
    - Build engagement charts

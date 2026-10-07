@@ -170,14 +170,14 @@
 
   const getSessionState = (key) => {
     try {
-      return JSON.parse(sessionStorage.getItem(`xactions_adcampaign_${key}`) || 'null');
+      return JSON.parse(sessionStorage.getItem(`medirus_adcampaign_${key}`) || 'null');
     } catch {
       return null;
     }
   };
 
   const setSessionState = (key, value) => {
-    sessionStorage.setItem(`xactions_adcampaign_${key}`, JSON.stringify(value));
+    sessionStorage.setItem(`medirus_adcampaign_${key}`, JSON.stringify(value));
   };
 
   // ══════════════════════════════════════════════════════════
@@ -211,7 +211,7 @@
 
   const createCampaign = async (options = {}) => {
     const {
-      name = `XActions Campaign ${Date.now()}`,
+      name = `Medirus Campaign ${Date.now()}`,
       objective = 'engagement',
       dailyBudget = CONFIG.defaultBudget.daily,
       totalBudget = CONFIG.defaultBudget.total,
@@ -937,7 +937,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `xactions_campaign_report_${Date.now()}.csv`;
+        a.download = `medirus_campaign_report_${Date.now()}.csv`;
         a.click();
         URL.revokeObjectURL(url);
         log('✅', 'CSV report downloaded');
@@ -1189,8 +1189,8 @@
   // 🖥️  EXPOSE API & LOG MENU
   // ══════════════════════════════════════════════════════════
 
-  window.XActions = window.XActions || {};
-  window.XActions.adCampaignManager = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.adCampaignManager = {
     // 1. Navigation
     navigateToAds,
 
@@ -1240,14 +1240,14 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  📢  XActions Ad Campaign Manager — by nichxbt              ║
+║  📢  Medirus Ad Campaign Manager — by nichxbt              ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
 ║  🧭  Navigate to Ads Manager                                ║
-║     XActions.adCampaignManager.navigateToAds()               ║
+║     Medirus.adCampaignManager.navigateToAds()               ║
 ║                                                              ║
 ║  📝  Create Campaign                                         ║
-║     XActions.adCampaignManager.createCampaign({              ║
+║     Medirus.adCampaignManager.createCampaign({              ║
 ║       name: 'My Campaign',                                   ║
 ║       objective: 'engagement',  // followers|video_views|... ║
 ║       dailyBudget: 20, totalBudget: 500,                     ║
@@ -1255,55 +1255,55 @@
 ║     })                                                       ║
 ║                                                              ║
 ║  📊  List / Manage Campaigns                                 ║
-║     XActions.adCampaignManager.listCampaigns()               ║
-║     XActions.adCampaignManager.pauseCampaign(0)              ║
-║     XActions.adCampaignManager.resumeCampaign(0)             ║
-║     XActions.adCampaignManager.editCampaign(0, { ... })      ║
+║     Medirus.adCampaignManager.listCampaigns()               ║
+║     Medirus.adCampaignManager.pauseCampaign(0)              ║
+║     Medirus.adCampaignManager.resumeCampaign(0)             ║
+║     Medirus.adCampaignManager.editCampaign(0, { ... })      ║
 ║                                                              ║
 ║  🎨  Ad Creative Management                                  ║
-║     XActions.adCampaignManager.manageCreatives({             ║
+║     Medirus.adCampaignManager.manageCreatives({             ║
 ║       action: 'list' | 'create' | 'remove',                 ║
 ║       text: '...', headline: '...', mediaType: 'image'      ║
 ║     })                                                       ║
 ║                                                              ║
 ║  🎯  Audience Targeting                                      ║
-║     XActions.adCampaignManager.configureTargeting({          ║
+║     Medirus.adCampaignManager.configureTargeting({          ║
 ║       locations: ['US','UK'], interests: ['technology'],     ║
 ║       keywords: ['AI'], ageMin: 18, ageMax: 45,             ║
 ║       gender: 'all', lookalike: 'source_audience'            ║
 ║     })                                                       ║
 ║                                                              ║
 ║  💰  Budget / Bid Management                                 ║
-║     XActions.adCampaignManager.setBudget({                   ║
+║     Medirus.adCampaignManager.setBudget({                   ║
 ║       dailyBudget: 50, totalBudget: 1000,                    ║
 ║       bidStrategy: 'auto', bidAmount: 0.50                   ║
 ║     })                                                       ║
 ║                                                              ║
 ║  📍  Conversion Tracking                                     ║
-║     XActions.adCampaignManager.setupConversionTracking({     ║
+║     Medirus.adCampaignManager.setupConversionTracking({     ║
 ║       pixelAction: 'generate', eventName: 'purchase'         ║
 ║     })                                                       ║
 ║                                                              ║
 ║  📈  Campaign Analytics                                      ║
-║     XActions.adCampaignManager.getCampaignAnalytics()        ║
-║     XActions.adCampaignManager.getCampaignAnalytics({        ║
+║     Medirus.adCampaignManager.getCampaignAnalytics()        ║
+║     Medirus.adCampaignManager.getCampaignAnalytics({        ║
 ║       campaignIndex: 0, exportCsv: true                      ║
 ║     })                                                       ║
 ║                                                              ║
 ║  🚀  Quick Promote a Post                                    ║
-║     XActions.adCampaignManager.promotePost({                 ║
+║     Medirus.adCampaignManager.promotePost({                 ║
 ║       tweetUrl: 'https://x.com/.../status/123',             ║
 ║       budget: 25, duration: 7                                ║
 ║     })                                                       ║
 ║                                                              ║
 ║  🎪  Campaign Types (shortcuts)                              ║
-║     XActions.adCampaignManager.createFollowerCampaign()      ║
-║     XActions.adCampaignManager.createEngagementCampaign()    ║
-║     XActions.adCampaignManager.createVideoViewsCampaign()    ║
-║     XActions.adCampaignManager.createWebsiteTrafficCampaign()║
+║     Medirus.adCampaignManager.createFollowerCampaign()      ║
+║     Medirus.adCampaignManager.createEngagementCampaign()    ║
+║     Medirus.adCampaignManager.createVideoViewsCampaign()    ║
+║     Medirus.adCampaignManager.createWebsiteTrafficCampaign()║
 ║                                                              ║
 ║  🧪  A/B Test Creatives                                      ║
-║     XActions.adCampaignManager.setupABTest({                 ║
+║     Medirus.adCampaignManager.setupABTest({                 ║
 ║       variantA: { text: 'Try our product!' },                ║
 ║       variantB: { text: 'Discover something new!' },         ║
 ║       splitPercentage: 50, metric: 'ctr', duration: 7        ║
@@ -1312,5 +1312,5 @@
 ╚══════════════════════════════════════════════════════════════╝
   `);
 
-  log('✅', 'Ad Campaign Manager loaded! Access via XActions.adCampaignManager');
+  log('✅', 'Ad Campaign Manager loaded! Access via Medirus.adCampaignManager');
 })();

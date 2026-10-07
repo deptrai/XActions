@@ -1,9 +1,9 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * E2E smoke test for Epic 19 admin CLI commands with real data.
- * Runs the XActions Express API server in-process so singletons
+ * Runs the Medirus Express API server in-process so singletons
  * (proxy pool, account pool, stream alerts) are shared with the REST layer.
- * Then executes the real `xactions` CLI against http://localhost:3001.
+ * Then executes the real `medirus` CLI against http://localhost:3001.
  *
  * @author nich (@nichxbt)
  * @license MIT
@@ -17,13 +17,13 @@ import { globalProxyPool } from '../src/proxy/proxy-pool.js';
 import { globalAccountPool } from '../src/core/account-pool.js';
 
 const BASE_URL = 'http://localhost:3001';
-const ADMIN_EMAIL = 'e2e_admin@xactions.test';
+const ADMIN_EMAIL = 'e2e_admin@medirus.test';
 const ADMIN_USERNAME = 'e2e_admin';
 const ADMIN_PASSWORD = 'e2e-password';
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-for-local-development';
 
 /**
- * Run the XActions CLI with a timeout. The CLI sometimes keeps the event loop
+ * Run the Medirus CLI with a timeout. The CLI sometimes keeps the event loop
  * alive after printing output (e.g., loaded modules with background timers), so
  * we resolve as soon as stdout/stderr close or the timeout expires.
  *
@@ -153,7 +153,7 @@ async function main() {
   let failCount = 0;
 
   for (const cmd of commands) {
-    console.log(`\n▶️  xactions ${cmd}`);
+    console.log(`\n▶️  medirus ${cmd}`);
     const result = await runCli(cmd);
     if (result.ok) {
       try {

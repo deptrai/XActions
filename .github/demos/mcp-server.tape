@@ -1,4 +1,4 @@
-# XActions - MCP Server Demo
+# Medirus - MCP Server Demo
 # Run with: vhs mcp-server.tape
 
 Output mcp-server.gif
@@ -13,7 +13,7 @@ Set Padding 20
 Set Framerate 30
 
 # Title
-Type "# 🤖 XActions MCP Server - For Claude & AI Agents"
+Type "# 🤖 Medirus MCP Server - For Claude & AI Agents"
 Enter
 Sleep 500ms
 Enter
@@ -28,9 +28,9 @@ Sleep 500ms
 
 Type@30ms '{
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["xactions", "mcp", "--stdio"]
+      "args": ["medirus", "mcp", "--stdio"]
     }
   }
 }'
@@ -39,11 +39,11 @@ Sleep 2s
 Enter
 
 # Start MCP server
-Type "npx xactions mcp --stdio"
+Type "npx medirus mcp --stdio"
 Enter
 Sleep 1s
 
-Type@50ms "🤖 XActions MCP Server v1.0.0"
+Type@50ms "🤖 Medirus MCP Server v1.0.0"
 Enter
 Type@50ms "📡 Listening on stdio..."
 Enter

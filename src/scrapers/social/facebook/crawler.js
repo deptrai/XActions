@@ -288,7 +288,7 @@ export class FacebookCrawler extends AbstractCrawler {
     this.docIds = {
       ...DEFAULT_FB_DOC_IDS,
       // No explicit override -> fall back to the persisted capture store
-      // (~/.xactions/facebook-docids.json, refreshed by `xactions fb capture-docids`
+      // (~/.medirus/facebook-docids.json, refreshed by `medirus fb capture-docids`
       // or the automatic headless re-capture when Facebook rotates doc_ids).
       ...(deps.docIds || loadStoredDocIdsSync()),
     };
@@ -619,7 +619,7 @@ export class FacebookCrawler extends AbstractCrawler {
       description: 'Create a post on timeline or Facebook group(s)',
       requiredArgs: ['text'],
       optionalArgs: ['mediaUrls', 'groupUrl', 'groupUrls', 'groupIds', 'profileUrl', 'profileUrls', 'dryRun', 'delayMin', 'delayMax', 'maxBatch'],
-      example: { text: 'Hello Facebook from XActions Hybrid Crawler!' },
+      example: { text: 'Hello Facebook from Medirus Hybrid Crawler!' },
       outputType: '{ results: { targetUrl: string, postId?: string, error?: string }[], dryRun: boolean }',
       requiresAuth: true,
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.post(args, session),
@@ -1393,7 +1393,7 @@ export class FacebookCrawler extends AbstractCrawler {
 
     // Variable shape must match the captured persisted query
     // (ProfileCometTimelineFeedRefetchQuery - see the variablesSample in
-    // ~/.xactions/facebook-docids.json). The Relay __relay_internal__pv__
+    // ~/.medirus/facebook-docids.json). The Relay __relay_internal__pv__
     // provider flags are omitted; the server accepts the core fields.
     const variables = {
       id: args.pageId,

@@ -8,7 +8,7 @@ intent: validate
 
 ## Target
 
-- **Spine:** `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`
+- **Spine:** `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`
 - **Commits evaluated:**
   - `dc8a3ed` (main) — `docs(planning): remediate 5 critical implementation readiness issues`
   - `9ebc9c4` (backup branch `pre-reset-readiness-2026-08-21`) — `docs: canonicalize architecture and add UX remediation mapping`
@@ -70,7 +70,7 @@ The `dc8a3ed` architecture changes are a sound post-reset re-expression of `9ebc
    - **Verdict:** Correct. Closes F2 operational gap.
 
 3. **AD-7 — MCP HTTP/SSE Daemon + Redis Stream**
-   - Added Rule 5: Startup & Operational UX (`xactions daemon start/status/stop`, dashboard tile).
+   - Added Rule 5: Startup & Operational UX (`medirus daemon start/status/stop`, dashboard tile).
    - **Verdict:** Correct. Closes F1.
 
 4. **AD-8 — Multi-Domain Expansion Blueprint**

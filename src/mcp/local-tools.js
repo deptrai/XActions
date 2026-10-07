@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Local Tools (Puppeteer-based)
+ * Medirus Local Tools (Puppeteer-based)
  * Free mode — all scraping delegated to canonical scrapers (single source of truth).
  * Action tools (follow, like, post, etc.) implemented directly via Puppeteer.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  */
 
@@ -55,7 +55,7 @@ const randomDelay = (min = 1000, max = 3000) =>
 
 async function injectSavedCookies(pg) {
   try {
-    const cookiePath = path.join(os.homedir(), '.xactions', 'cookies.json');
+    const cookiePath = path.join(os.homedir(), '.medirus', 'cookies.json');
     const raw = await fs.readFile(cookiePath, 'utf8');
     const cookies = JSON.parse(raw);
     if (Array.isArray(cookies) && cookies.length > 0) {
@@ -77,7 +77,7 @@ async function injectSavedCookies(pg) {
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('[XActions] Could not inject saved cookies:', msg);
+    console.error('[Medirus] Could not inject saved cookies:', msg);
   }
 }
 
@@ -143,8 +143,8 @@ async function ensureHttpScraper() {
   const { Scraper } = await import('../client/index.js');
   httpScraper = new Scraper();
 
-  const authToken = process.env.XACTIONS_SESSION_COOKIE;
-  const csrfToken = process.env.XACTIONS_CSRF_TOKEN;
+  const authToken = process.env.MEDIRUS_SESSION_COOKIE;
+  const csrfToken = process.env.MEDIRUS_CSRF_TOKEN;
   if (authToken) {
     const parts = [`auth_token=${authToken}`];
     if (csrfToken) parts.push(`ct0=${csrfToken}`);
@@ -631,10 +631,10 @@ export async function x_post_tweet({ text, dryRun = false }) {
         const restId = json?.data?.create_tweet?.tweet_results?.result?.rest_id;
         if (restId) {
           createdTweetId = restId;
-          console.log('[XActions] Captured tweet rest_id:', restId);
+          console.log('[Medirus] Captured tweet rest_id:', restId);
         }
       } catch (err) {
-        console.error('[XActions] Error parsing CreateTweet response:', err);
+        console.error('[Medirus] Error parsing CreateTweet response:', err);
       }
     }
   };
@@ -1574,7 +1574,7 @@ import { Scraper } from '../client/index.js';
  */
 async function getClientScraper() {
   const scraper = new Scraper();
-  const cookiePath = path.join(os.homedir(), '.xactions', 'cookies.json');
+  const cookiePath = path.join(os.homedir(), '.medirus', 'cookies.json');
   try {
     await fs.access(cookiePath);
     await scraper.loadCookies(cookiePath);
@@ -1705,7 +1705,7 @@ export async function x_list_platforms() {
         name: 'twitter',
         displayName: 'X / Twitter',
         aliases: ['x'],
-        auth: 'session cookie (auth_token) or XACTIONS_SESSION_COOKIE env',
+        auth: 'session cookie (auth_token) or MEDIRUS_SESSION_COOKIE env',
         capabilities: [
           'profile', 'followers', 'following', 'tweets', 'search', 'thread',
           'follow', 'unfollow', 'post', 'like', 'retweet', 'reply', 'bookmark',
@@ -1815,7 +1815,7 @@ export async function x_list_platforms() {
 // ============================================================================
 
 export async function x_shadowban_check({ username } = {}) {
-  const targetUser = username || process.env.XACTIONS_DEFAULT_USERNAME;
+  const targetUser = username || process.env.MEDIRUS_DEFAULT_USERNAME;
   if (!targetUser) {
     throw new Error("username is required for x_shadowban_check");
   }
@@ -1874,7 +1874,7 @@ export async function x_shadowban_check({ username } = {}) {
 }
 
 export async function x_backup_account({ username, limit = 50 } = {}) {
-  const targetUser = username || process.env.XACTIONS_DEFAULT_USERNAME;
+  const targetUser = username || process.env.MEDIRUS_DEFAULT_USERNAME;
   if (!targetUser) {
     throw new Error("username is required for x_backup_account");
   }
@@ -1888,7 +1888,7 @@ export async function x_backup_account({ username, limit = 50 } = {}) {
     meta: {
       username: cleanUser,
       backedUpAt: new Date().toISOString(),
-      source: "XActions MCP Account Backup",
+      source: "Medirus MCP Account Backup",
       version: "2.0.0",
     },
     profile,

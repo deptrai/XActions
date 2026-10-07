@@ -7,24 +7,24 @@ supersededBy: _bmad-output/planning-artifacts/epics-full.md
 note: "Nội dung FR-55..FR-63 đã được hợp nhất vào epics-full.md; FR-62 deferred. Giữ lại để tham khảo lịch sử."
 epic: 7
 prd_ref:
-  - prd-XActions-2026-06-08
-  - prd-XActions-2026-06-10-epic4
+  - prd-Medirus-2026-06-08
+  - prd-Medirus-2026-06-10-epic4
 note: Nội dung FR-55..63 đã được cập nhật trong epics-full.md; FR-62 deferred. Giữ lại để tham khảo lịch sử.
 ---
 
 # PRD: Epic 7 — Facebook Advanced Scraping & Multi-Account Parallel Execution
 
-*Mở rộng năng lực scrape Facebook của XActions để phục vụ lead generation và market research, với multi-type search, comments, group content, và multi-account parallel execution.*
+*Mở rộng năng lực scrape Facebook của Medirus để phục vụ lead generation và market research, với multi-type search, comments, group content, và multi-account parallel execution.*
 
 ## 0. Mục Đích Tài Liệu
 
-PRD này là phần tiếp theo của `prd-XActions-2026-06-08` (Epics 1–3: scrape, automate, CLI/MCP/REST/Persistence) và `prd-XActions-2026-06-10-epic4` (Epic 4: growth automation). Epic 7 bổ sung các tính năng **đọc nâng cao** cho Facebook: search đa loại, comments, group posts/comments, kết hợp với **quản lý account pool** và **chạy song song** để tăng throughput. FR tiếp tục từ FR-54 (→ FR-55..FR-63). NFR tiếp tục từ NFR-9 (→ NFR-10..NFR-15).
+PRD này là phần tiếp theo của `prd-Medirus-2026-06-08` (Epics 1–3: scrape, automate, CLI/MCP/REST/Persistence) và `prd-Medirus-2026-06-10-epic4` (Epic 4: growth automation). Epic 7 bổ sung các tính năng **đọc nâng cao** cho Facebook: search đa loại, comments, group posts/comments, kết hợp với **quản lý account pool** và **chạy song song** để tăng throughput. FR tiếp tục từ FR-54 (→ FR-55..FR-63). NFR tiếp tục từ NFR-9 (→ NFR-10..NFR-15).
 
-Tài liệu này **không** đề cập UI; UI được defer sang phase sau. Dữ liệu scrape **không được lưu** trong XActions; XActions chỉ trả JSON để hệ thống downstream tự lưu.
+Tài liệu này **không** đề cập UI; UI được defer sang phase sau. Dữ liệu scrape **không được lưu** trong Medirus; Medirus chỉ trả JSON để hệ thống downstream tự lưu.
 
 ## 1. Vision
 
-XActions đã có khả năng scrape Facebook cơ bản (profile, posts, followers, search posts, group members, marketplace). Epic 7 đưa XActions lên mức **lead-generation ready**:
+Medirus đã có khả năng scrape Facebook cơ bản (profile, posts, followers, search posts, group members, marketplace). Epic 7 đưa Medirus lên mức **lead-generation ready**:
 
 - Tìm kiếm đồng thời posts, people, pages, groups.
 - Thu thập comments của post để hiểu engagement và sentiment.
@@ -47,7 +47,7 @@ Giá trị cốt lõi: người dùng growth/marketing có thể thu thập dữ
 
 - Người cần Facebook Ads/Business automation — ngoài phạm vi.
 - Người cần gửi tin nhắn hàng loạt (bulk DM) — ngoài phạm vi.
-- Người cần lưu trữ/scoring dữ liệu trong XActions — ngoài phạm vi; chỉ trả JSON.
+- Người cần lưu trữ/scoring dữ liệu trong Medirus — ngoài phạm vi; chỉ trả JSON.
 
 ### 2.3 Key User Journeys
 
@@ -208,7 +208,7 @@ API và MCP cùng gọi `facebookScrapeService`. Realizes UJ-7.1..UJ-7.4.
 ## 5. Non-Goals (Explicit)
 
 - Không xây UI cho Epic 7 — defer sang phase sau.
-- Không lưu trữ dữ liệu scrape trong XActions — chỉ trả JSON.
+- Không lưu trữ dữ liệu scrape trong Medirus — chỉ trả JSON.
 - Không tự động hóa ghi (like/comment/post) trong Epic 7 — chỉ đọc.
 - Không xây Facebook Ads / Business automation.
 - Không scrape PII nhạy cảm (số điện thoại, email) — strip nếu lộ.
@@ -235,7 +235,7 @@ API và MCP cùng gọi `facebookScrapeService`. Realizes UJ-7.1..UJ-7.4.
 
 ## 7. Cross-Cutting NFRs
 
-- **NFR-10:** Không lưu trữ — XActions chỉ trả JSON, không ghi database với kết quả scrape.
+- **NFR-10:** Không lưu trữ — Medirus chỉ trả JSON, không ghi database với kết quả scrape.
 - **NFR-11:** Health check nhanh — < 2 giây, không mở browser.
 - **NFR-12:** Concurrency cap — mặc định 4, tối đa 8 browsers đồng thời.
 - **NFR-13:** Privacy — cookie/token values không bao giờ log hay echo.

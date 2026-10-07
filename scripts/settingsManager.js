@@ -48,7 +48,7 @@
     };
 
     console.log(`   📄 Found ${links.length} settings sections, ${switches.length} toggles`);
-    download(settings, `xactions-settings-${new Date().toISOString().slice(0, 10)}.json`);
+    download(settings, `medirus-settings-${new Date().toISOString().slice(0, 10)}.json`);
     console.log('✅ Settings exported');
   };
 
@@ -91,7 +91,7 @@
   };
 
   const run = async () => {
-    console.log('⚙️ SETTINGS MANAGER — XActions by nichxbt\n');
+    console.log('⚙️ SETTINGS MANAGER — Medirus by nichxbt\n');
 
     if (!window.location.href.includes('/settings')) {
       console.error('❌ Navigate to x.com/settings first!');

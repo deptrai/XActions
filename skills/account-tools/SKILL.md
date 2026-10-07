@@ -25,30 +25,30 @@ Browser console scripts for account utility tasks on X/Twitter.
 ## accountMisc.js — Available Functions
 
 ```js
-XActions.accountMisc.viewJoinDate('username')       // Scrape join date from profile
-XActions.accountMisc.viewLoginHistory()             // View active sessions (device, location, IP)
-XActions.accountMisc.viewConnectedAccounts()        // View linked external accounts (Google, Apple)
-XActions.accountMisc.appealSuspension()             // Navigate to account appeal/support page
-XActions.accountMisc.exportAccountSummary()         // Export account data as JSON
-XActions.accountMisc.accountAgeCalculator('user')   // Calculate account age in days/months/years
+Medirus.accountMisc.viewJoinDate('username')       // Scrape join date from profile
+Medirus.accountMisc.viewLoginHistory()             // View active sessions (device, location, IP)
+Medirus.accountMisc.viewConnectedAccounts()        // View linked external accounts (Google, Apple)
+Medirus.accountMisc.appealSuspension()             // Navigate to account appeal/support page
+Medirus.accountMisc.exportAccountSummary()         // Export account data as JSON
+Medirus.accountMisc.accountAgeCalculator('user')   // Calculate account age in days/months/years
 ```
 
 ## qrCodeSharing.js — Usage
 
 ```js
 // Generates a QR code for any X profile or tweet URL
-XActions.qr.generateProfile('username')   // QR code for @username's profile
-XActions.qr.generateTweet('tweetUrl')     // QR code for a specific tweet
-XActions.qr.download()                     // Download as PNG
+Medirus.qr.generateProfile('username')   // QR code for @username's profile
+Medirus.qr.generateTweet('tweetUrl')     // QR code for a specific tweet
+Medirus.qr.download()                     // Download as PNG
 ```
 
 ## shareEmbed.js — Usage
 
 ```js
 // On a tweet page:
-XActions.share.copyLink()               // Copy tweet URL to clipboard
-XActions.share.getEmbedCode()           // Get HTML embed code for the tweet
-XActions.share.openShare()              // Open X's native share menu
+Medirus.share.copyLink()               // Copy tweet URL to clipboard
+Medirus.share.getEmbedCode()           // Get HTML embed code for the tweet
+Medirus.share.openShare()              // Open X's native share menu
 ```
 
 ## uploadContacts.js — Usage

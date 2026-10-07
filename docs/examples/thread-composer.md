@@ -64,20 +64,20 @@ This script provides the following capabilities:
  *
  * 1. Open x.com in browser
  * 2. Paste in DevTools Console
- * 3. Use window.XActions commands:
+ * 3. Use window.Medirus commands:
  *
- *   XActions.thread([
+ *   Medirus.thread([
  *     "First tweet of my thread 🧵",
  *     "Second tweet with more context...",
  *     "Third tweet — the conclusion!",
  *   ])
  *
- *   XActions.preview()        // See the thread with char counts
- *   XActions.publish()        // Post the thread (dryRun by default)
- *   XActions.saveDraft('name') // Save to localStorage
- *   XActions.loadDraft('name') // Load from localStorage
- *   XActions.listDrafts()      // See all saved drafts
- *   XActions.deleteDraft('name')
+ *   Medirus.preview()        // See the thread with char counts
+ *   Medirus.publish()        // Post the thread (dryRun by default)
+ *   Medirus.saveDraft('name') // Save to localStorage
+ *   Medirus.loadDraft('name') // Load from localStorage
+ *   Medirus.listDrafts()      // See all saved drafts
+ *   Medirus.deleteDraft('name')
  * ============================================================
  */
 (() => {
@@ -91,7 +91,7 @@ This script provides the following capabilities:
     maxChars: 280,
   };
 
-  const STORAGE_PREFIX = 'xactions_thread_draft_';
+  const STORAGE_PREFIX = 'medirus_thread_draft_';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const gaussian = (a, b) => Math.floor(a + ((Math.random() + Math.random()) / 2) * (b - a));
 
@@ -108,11 +108,11 @@ This script provides the following capabilities:
   let aborted = false;
 
   // ── Thread management ──────────────────────────────────────
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
-  window.XActions.thread = (tweets) => {
+  window.Medirus.thread = (tweets) => {
     if (!Array.isArray(tweets) || tweets.length === 0) {
-      console.log('❌ Usage: XActions.thread(["tweet1", "tweet2", ...])');
+      console.log('❌ Usage: Medirus.thread(["tweet1", "tweet2", ...])');
       return;
     }
 
@@ -136,12 +136,12 @@ This script provides the following capabilities:
     });
 
     console.log(`✅ Thread loaded: ${currentThread.length} tweets.`);
-    window.XActions.preview();
+    window.Medirus.preview();
   };
 
-  window.XActions.preview = () => {
+  window.Medirus.preview = () => {
     if (currentThread.length === 0) {
-      console.log('📭 No thread loaded. Use XActions.thread([...])');
+      console.log('📭 No thread loaded. Use Medirus.thread([...])');
       return;
     }
 
@@ -174,9 +174,9 @@ This script provides the following capabilities:
     console.log(`\n📊 ${currentThread.length} tweets | ${totalChars} total chars | ~${Math.ceil(totalChars / 200)} min read`);
   };
 
-  window.XActions.publish = async () => {
+  window.Medirus.publish = async () => {
     if (currentThread.length === 0) {
-      console.log('❌ No thread loaded. Use XActions.thread([...]) first.');
+      console.log('❌ No thread loaded. Use Medirus.thread([...]) first.');
       return;
     }
 
@@ -262,11 +262,11 @@ This script provides the following capabilities:
     }
   };
 
-  window.XActions.abort = () => { aborted = true; console.log('🛑 Aborting...'); };
+  window.Medirus.abort = () => { aborted = true; console.log('🛑 Aborting...'); };
 
   // ── Draft Management ───────────────────────────────────────
-  window.XActions.saveDraft = (name) => {
-    if (!name) { console.log('❌ Usage: XActions.saveDraft("myThread")'); return; }
+  window.Medirus.saveDraft = (name) => {
+    if (!name) { console.log('❌ Usage: Medirus.saveDraft("myThread")'); return; }
     if (currentThread.length === 0) { console.log('❌ No thread loaded.'); return; }
 
     const draft = {
@@ -278,8 +278,8 @@ This script provides the following capabilities:
     console.log(`💾 Draft "${name}" saved (${currentThread.length} tweets).`);
   };
 
-  window.XActions.loadDraft = (name) => {
-    if (!name) { console.log('❌ Usage: XActions.loadDraft("myThread")'); return; }
+  window.Medirus.loadDraft = (name) => {
+    if (!name) { console.log('❌ Usage: Medirus.loadDraft("myThread")'); return; }
 
     const raw = localStorage.getItem(STORAGE_PREFIX + name);
     if (!raw) { console.log(`❌ Draft "${name}" not found.`); return; }
@@ -288,13 +288,13 @@ This script provides the following capabilities:
       const draft = JSON.parse(raw);
       currentThread = draft.tweets;
       console.log(`📂 Loaded draft "${name}" (${currentThread.length} tweets, saved ${draft.savedAt}).`);
-      window.XActions.preview();
+      window.Medirus.preview();
     } catch {
       console.log('❌ Failed to parse draft.');
     }
   };
 
-  window.XActions.listDrafts = () => {
+  window.Medirus.listDrafts = () => {
     const keys = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -318,8 +318,8 @@ This script provides the following capabilities:
     }
   };
 
-  window.XActions.deleteDraft = (name) => {
-    if (!name) { console.log('❌ Usage: XActions.deleteDraft("myThread")'); return; }
+  window.Medirus.deleteDraft = (name) => {
+    if (!name) { console.log('❌ Usage: Medirus.deleteDraft("myThread")'); return; }
     if (!localStorage.getItem(STORAGE_PREFIX + name)) {
       console.log(`❌ Draft "${name}" not found.`);
       return;
@@ -328,14 +328,14 @@ This script provides the following capabilities:
     console.log(`🗑️ Draft "${name}" deleted.`);
   };
 
-  window.XActions.exportThread = () => {
+  window.Medirus.exportThread = () => {
     if (currentThread.length === 0) {
       console.log('❌ No thread loaded.');
       return;
     }
     const blob = new Blob([JSON.stringify({ tweets: currentThread, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `xactions-thread-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-thread-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     console.log('📥 Thread exported.');
   };
@@ -347,15 +347,15 @@ This script provides the following capabilities:
   console.log('║  by nichxbt — v1.0' + ' '.repeat(W - 21) + '║');
   console.log('╚' + '═'.repeat(W) + '╝');
   console.log('\n📋 Commands:');
-  console.log('  XActions.thread(["tweet1", "tweet2", ...])');
-  console.log('  XActions.preview()');
-  console.log('  XActions.publish()');
-  console.log('  XActions.saveDraft("name")');
-  console.log('  XActions.loadDraft("name")');
-  console.log('  XActions.listDrafts()');
-  console.log('  XActions.deleteDraft("name")');
-  console.log('  XActions.exportThread()');
-  console.log('\n💡 Tip: Start with XActions.thread([...]) then XActions.preview()');
+  console.log('  Medirus.thread(["tweet1", "tweet2", ...])');
+  console.log('  Medirus.preview()');
+  console.log('  Medirus.publish()');
+  console.log('  Medirus.saveDraft("name")');
+  console.log('  Medirus.loadDraft("name")');
+  console.log('  Medirus.listDrafts()');
+  console.log('  Medirus.deleteDraft("name")');
+  console.log('  Medirus.exportThread()');
+  console.log('\n💡 Tip: Start with Medirus.thread([...]) then Medirus.preview()');
 
 })();
 
@@ -417,14 +417,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -462,4 +462,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

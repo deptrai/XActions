@@ -9,11 +9,11 @@
  * tell which script had built the page they were on.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 
-export const SITE_URL = 'https://xactions.app';
+export const SITE_URL = 'https://medirus.online';
 export const REPO_URL = 'https://github.com/nirholas/XActions';
 
 /**
@@ -50,14 +50,14 @@ export function renderPage({
   description,
   urlPath,
   body,
-  keywords = 'xactions, twitter automation, x automation, open source, free',
+  keywords = 'medirus, twitter automation, x automation, open source, free',
   navCurrent = '',
   ogImage = `${SITE_URL}/og-docs.png`,
   schema = '',
   bodyClass = '',
 }) {
   const canonical = `${SITE_URL}${urlPath}`;
-  const pageTitle = `${title} — XActions`;
+  const pageTitle = `${title} — Medirus`;
   const desc = description.slice(0, 158);
 
   /**
@@ -88,7 +88,7 @@ export function renderPage({
 <meta property="og:description" content="${escapeHtml(desc)}">
 <meta property="og:url" content="${canonical}">
 <meta property="og:image" content="${ogImage}">
-<meta property="og:site_name" content="XActions">
+<meta property="og:site_name" content="Medirus">
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@nichxbt">
@@ -103,7 +103,7 @@ export function renderPage({
 
 <script>
 /* Applied before first paint so a dark-theme reader never sees a white flash. */
-(function(){try{var t=localStorage.getItem('xactions-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+(function(){try{var t=localStorage.getItem('medirus-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
 </script>
 ${schema}
 </head>
@@ -112,7 +112,7 @@ ${schema}
 
 <header class="topbar">
   <button class="icon-btn menu-toggle" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button>
-  <a class="topbar__brand" href="/">⚡ XActions</a>
+  <a class="topbar__brand" href="/">⚡ Medirus</a>
   <div class="topbar__spacer"></div>
   <button class="search-trigger" data-search-trigger aria-label="Search documentation">
     <span aria-hidden="true">🔍</span><span class="search-trigger__label">Search docs</span><kbd>⌘K</kbd>
@@ -143,7 +143,7 @@ ${body}
 <footer class="site-footer">
   <div class="site-footer__inner">
     <div>
-      <h4>XActions</h4>
+      <h4>Medirus</h4>
       <p>Free, open-source X/Twitter automation.</p>
       <p>Built by <a href="https://x.com/nichxbt" target="_blank" rel="noopener">@nichxbt</a></p>
     </div>
@@ -170,7 +170,7 @@ ${body}
     </div>
   </div>
   <div class="site-footer__bottom">
-    <p>© 2024–2026 XActions. Apache-2.0 licensed. No API fees.</p>
+    <p>© 2024–2026 Medirus. Apache-2.0 licensed. No API fees.</p>
   </div>
 </footer>
 

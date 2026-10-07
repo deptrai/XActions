@@ -198,7 +198,7 @@
   // ── Main ──
   const run = async () => {
     console.log('═══════════════════════════════════════');
-    console.log('🔤 XActions — Text Formatting Helper');
+    console.log('🔤 Medirus — Text Formatting Helper');
     console.log('═══════════════════════════════════════');
 
     if (!CONFIG.text) {

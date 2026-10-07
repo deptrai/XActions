@@ -32,7 +32,7 @@ const SELECTORS = {
 /**
  * Get all bookmarks
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function getBookmarks(page, options = {}) {

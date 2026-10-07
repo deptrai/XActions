@@ -1,8 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Query Translator
+ * Medirus Query Translator
  *
- * One query, expressed in every interface XActions ships.
+ * One query, expressed in every interface Medirus ships.
  *
  * The gap between "I tried the demo" and "I installed it" is usually a person
  * not knowing which of four entry points they want or what the equivalent
@@ -21,7 +21,7 @@
  */
 
 /** Default origin for the generated HTTP examples. */
-export const DEFAULT_API_BASE = 'https://xactions.app';
+export const DEFAULT_API_BASE = 'https://medirus.online';
 
 /**
  * The queries the playground can run, and the shape of their inputs.
@@ -213,13 +213,13 @@ export function queryFromSearch(search) {
 function cliSnippet(query) {
   switch (query.kind) {
     case 'profile':
-      return `npx xactions profile ${query.username}`;
+      return `npx medirus profile ${query.username}`;
     case 'timeline':
-      return `npx xactions tweets ${query.username} --limit ${query.limit}`;
+      return `npx medirus tweets ${query.username} --limit ${query.limit}`;
     case 'report':
-      return `npx xactions analyze ${query.username} --limit ${query.limit}`;
+      return `npx medirus analyze ${query.username} --limit ${query.limit}`;
     case 'compare':
-      return `npx xactions analyze ${query.users.join(' ')} --limit ${query.limit}`;
+      return `npx medirus analyze ${query.users.join(' ')} --limit ${query.limit}`;
     default:
       return '';
   }
@@ -230,7 +230,7 @@ function cliSnippet(query) {
  * @returns {string}
  */
 function nodeSnippet(query) {
-  const header = "import { Scraper } from 'xactions/client';\n\nconst scraper = new Scraper();\n";
+  const header = "import { Scraper } from 'medirus/client';\n\nconst scraper = new Scraper();\n";
 
   switch (query.kind) {
     case 'profile':
@@ -247,8 +247,8 @@ for await (const tweet of scraper.getTweets('${query.username}', ${query.limit})
 }`;
 
     case 'report':
-      return `import { Scraper } from 'xactions/client';
-import { buildAccountReport } from 'xactions/analysis';
+      return `import { Scraper } from 'medirus/client';
+import { buildAccountReport } from 'medirus/analysis';
 
 const scraper = new Scraper();
 
@@ -267,8 +267,8 @@ for (const signal of report.signals) {
 }`;
 
     case 'compare':
-      return `import { Scraper } from 'xactions/client';
-import { buildAccountReport, compareReports } from 'xactions/analysis';
+      return `import { Scraper } from 'medirus/client';
+import { buildAccountReport, compareReports } from 'medirus/analysis';
 
 const scraper = new Scraper();
 const usernames = ${JSON.stringify(query.users)};
@@ -344,7 +344,7 @@ function mcpToolCall(query) {
 }
 
 /**
- * Translate a resolved query into every interface XActions offers.
+ * Translate a resolved query into every interface Medirus offers.
  *
  * @param {object} query - Output of resolveQuery
  * @param {object} [options]
@@ -365,7 +365,7 @@ export function translateQuery(query, { apiBase = DEFAULT_API_BASE } = {}) {
       label: 'Node.js',
       lang: 'javascript',
       code: nodeSnippet(query),
-      note: 'npm install xactions. The same client the CLI and the MCP server use.',
+      note: 'npm install medirus. The same client the CLI and the MCP server use.',
     },
     {
       id: 'http',
@@ -379,7 +379,7 @@ export function translateQuery(query, { apiBase = DEFAULT_API_BASE } = {}) {
       label: 'AI agent',
       lang: 'text',
       code: mcpSnippet(query),
-      note: 'Say this to Claude, Cursor or any MCP client with the XActions server connected.',
+      note: 'Say this to Claude, Cursor or any MCP client with the Medirus server connected.',
     },
     {
       id: 'tool',

@@ -28,7 +28,7 @@
 
   const pageType = isFollowers ? 'followers' : 'following';
   const targetUser = path.split('/')[1].toLowerCase();
-  const storageKey = `xactions_continuous_${targetUser}_${pageType}`;
+  const storageKey = `medirus_continuous_${targetUser}_${pageType}`;
 
   if (CONFIG.enableNotifications && 'Notification' in window) {
     Notification.requestPermission();
@@ -132,13 +132,13 @@
 
   console.log(`\n🔭 CONTINUOUS MONITOR — @${targetUser}'s ${pageType} — by nichxbt`);
   console.log(`   Interval: every ${CONFIG.checkIntervalMinutes} min | Keep this tab open!`);
-  console.log('   Run stopXActionsMonitor() to stop.\n');
+  console.log('   Run stopMedirusMonitor() to stop.\n');
 
   runCheck();
 
   const intervalId = setInterval(runCheck, CONFIG.checkIntervalMinutes * 60 * 1000);
 
-  window.stopXActionsMonitor = () => {
+  window.stopMedirusMonitor = () => {
     clearInterval(intervalId);
     console.log('\n🛑 Monitoring stopped.');
   };

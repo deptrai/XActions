@@ -78,7 +78,7 @@ Browser console script that unlikes every post in your Likes tab. Supports keywo
 
 ### Controls
 
-- `window.XActions.pause()` / `.resume()` / `.abort()` / `.status()`
+- `window.Medirus.pause()` / `.resume()` / `.abort()` / `.status()`
 
 ## DOM Selectors
 

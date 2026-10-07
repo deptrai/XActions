@@ -10,7 +10,7 @@ reviewed_by: [John-PM, Winston-Architect, Murat-TestArchitect]
 # Sprint Change Proposal v2
 
 **Date:** 2026-09-08  
-**Project:** XActions  
+**Project:** Medirus  
 **Triggering issue:** Sau khi phân tích chiến lược với Mary (BMad Analyst), Luisphan quyết định ưu tiên xây dựng **Benchmark tiêu chuẩn đo lường độ ổn định, chất lượng, độ nhiễu, chi phí** của tất cả scraper trước khi phát triển thêm tính năng mới. Đây là điều kiện tiên quyết để đảm bảo Nowing nhận được dữ liệu đáng tin cậy.
 
 **Post-review updates:** Incorporated feedback from PM (John), Architect (Winston), and Test Architect (Murat). See `_bmad-output/planning-artifacts/review-epic34-synthesis-2026-09-08.md`.
@@ -20,10 +20,10 @@ reviewed_by: [John-PM, Winston-Architect, Murat-TestArchitect]
 ## Section 1 — Issue Summary
 
 ### Problem statement
-1. **Không thể tối ưu những gì chưa đo được:** XActions có 15+ platform scrapers nhưng không có hệ thống định lượng nào để đánh giá sức khỏe từng scraper.
+1. **Không thể tối ưu những gì chưa đo được:** Medirus có 15+ platform scrapers nhưng không có hệ thống định lượng nào để đánh giá sức khỏe từng scraper.
 2. **Silent degradation:** Scraper có thể trả về rỗng hoặc dữ liệu lỗi mà không ai biết (selector drift, False 200 OK, checkpoint).
 3. **Chi phí ẩn:** Không có cách nào biết scraper nào đang "đốt" proxy bandwidth hoặc tài khoản một cách lãng phí.
-4. **Nowing phụ thuộc vào dữ liệu XActions:** Nếu scraper hỏng mà không phát hiện, Nowing CRM sẽ nhận "rác" hoặc thiếu lead.
+4. **Nowing phụ thuộc vào dữ liệu Medirus:** Nếu scraper hỏng mà không phát hiện, Nowing CRM sẽ nhận "rác" hoặc thiếu lead.
 
 ### Decision from Luisphan (2026-09-08)
 - **Tier C scrapers:** Chỉ cảnh báo operator, **không** tự động ngắt Nowing ingestion (human-in-the-loop).
@@ -36,7 +36,7 @@ reviewed_by: [John-PM, Winston-Architect, Murat-TestArchitect]
 
 ### New Epic: Epic 34 — Scraper Benchmark & Reliability Suite
 
-**Mục tiêu:** Xây dựng hệ thống đo lường 4-trục (Stability, Quality, Noise, Cost) để chấm điểm sức khỏe mọi scraper trong XActions.
+**Mục tiêu:** Xây dựng hệ thống đo lường 4-trục (Stability, Quality, Noise, Cost) để chấm điểm sức khỏe mọi scraper trong Medirus.
 
 **Spec reference:** `_bmad-output/specs/spec-scraper-benchmark/SPEC.md` + `metrics-catalog.md`
 
@@ -48,7 +48,7 @@ reviewed_by: [John-PM, Winston-Architect, Murat-TestArchitect]
 | **34.2** | Production Telemetry Hooks in AbstractCrawler | Thêm telemetry emission vào `AbstractCrawler.start()`, `BaseApiClient.request()` — fire-and-forget `setImmediate`, in-memory buffer, batch flush to Redis | Epic 10.1, Epic 11.3 | MVP |
 | **34.3** | Platform-Specific Validators & False-200 Detection | Mở rộng `AbstractPlatformResponseValidator` để detect Cloudflare/Arkose/login-wall/empty-page cho từng platform | Epic 11.6, per-platform scrapers | Hardening |
 | **34.4** | Benchmark Scoring Engine | Cron job tính Health Score (0-100) theo công thức weighted 4-pillar + **hard knock-out gates** (True Success <80% OR Field Fill <85% → cap Tier C); classify Tier A/B/C | 34.1, 34.2, 34.3 | MVP |
-| **34.5** | Operator Scorecard CLI & Dashboard | CLI `xactions benchmark` (list, run, history, platform detail); dashboard health matrix trong `dashboard/admin.html` | 34.4, Epic 19 | MVP |
+| **34.5** | Operator Scorecard CLI & Dashboard | CLI `medirus benchmark` (list, run, history, platform detail); dashboard health matrix trong `dashboard/admin.html` | 34.4, Epic 19 | MVP |
 | **34.6** | Nowing Integration: Health Flag in Stream Events | Thêm `benchmark_health: "A" | "B" | "C"` + `benchmark_alert: boolean` vào thin event payload gửi Nowing; Nowing có thể filter hoặc flag theo tier | 34.4, Epic 14.3 | MVP |
 | **34.7** | Synthetic Canary Probe Scheduler | Scheduled canary probes (hourly) với fixed test URLs per platform; ghi vào `ScraperCanaryRun`; đảm bảo low-volume scrapers có data points | 34.1 | Hardening |
 | **34.8** | Active Alerting & Re-qualification Workflow | Slack/Telegram/Webhook push notifications; re-qualification rules (N consecutive clean runs → promote tier) | 34.4, 34.5 | Hardening |
@@ -59,7 +59,7 @@ reviewed_by: [John-PM, Winston-Architect, Murat-TestArchitect]
 |----|-------|-------|
 | **FR-98** | Scraper Benchmark Telemetry | Hệ thống phải emit structured telemetry cho mọi scrape run: true_success, latency_ms, field_fill_rate, schema_valid, proxy_bytes, duplicate_flag, contact_valid |
 | **FR-99** | Benchmark Scoring Engine | Cron job tính Health Score per scraper per platform theo công thức weighted 4-pillar + hard knock-out gates; lưu vào `ScraperHealthScore` |
-| **FR-100** | Operator Benchmark CLI & Dashboard | `xactions benchmark` command và dashboard view hiển thị Tier A/B/C, trend, drill-down metrics |
+| **FR-100** | Operator Benchmark CLI & Dashboard | `medirus benchmark` command và dashboard view hiển thị Tier A/B/C, trend, drill-down metrics |
 | **FR-101** | Nowing Health Flag & Alert | Thin event payload thêm `benchmark_health` + `benchmark_alert`; Nowing consume flag để filter/alert |
 | **FR-102** | Synthetic Canary Probes | Scheduled hourly probes trên fixed URLs per platform; lưu `ScraperCanaryRun` |
 | **FR-103** | Active Alerting & Re-qualification | Push notifications (Slack/Telegram/Webhook); re-qualification workflow (N clean runs → promote) |

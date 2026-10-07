@@ -10,7 +10,7 @@ Status: done
 
 ## Story
 
-As an AI agent using the XActions MCP server,
+As an AI agent using the Medirus MCP server,
 I want to call Facebook scrape and automate actions with the same schema as other platforms,
 so that I don't need platform-specific handling.
 
@@ -102,7 +102,7 @@ The automate tool returns the in-memory guardrail result. Prisma Operation persi
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 3.2]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md#FR-11, ADR-007, SM-2, NFR3]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-08/prd.md#FR-11, ADR-007, SM-2, NFR3]
 - [Source: src/mcp/server.js — tool defs + executeTool dispatch (line ~2228)]
 - [Source: src/scrapers/index.js — unified scrape() dispatcher, facebook registered]
 - [Source: api/services/facebookAutomation.js — likeFacebookPosts/commentOnFacebookPosts/createFacebookPost]

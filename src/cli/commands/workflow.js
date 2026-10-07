@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions workflow` — manage and run automation workflows.
+ * `medirus workflow` — manage and run automation workflows.
  *
  * @author nich (@nichxbt)
  * @license MIT
@@ -128,7 +128,7 @@ export function registerWorkflowCommand(program) {
 
         if (list.length === 0) {
           console.log(chalk.gray('\n  No workflows found.'));
-          console.log(chalk.gray('  Create one with: xactions workflow create -f workflow.json\n'));
+          console.log(chalk.gray('  Create one with: medirus workflow create -f workflow.json\n'));
           return;
         }
 

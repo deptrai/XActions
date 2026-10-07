@@ -1,6 +1,6 @@
 # Test Automation Summary — Comprehensive FE & BE E2E Test Suite
 
-**Project:** XActions  
+**Project:** Medirus  
 **QA Engine:** Vitest 4.x / Supertest / Real Live Scraper Dispatcher / Stealth Browser  
 **Status:** All 12 comprehensive E2E test suites PASSED (100% green, 107/107 tests)
 

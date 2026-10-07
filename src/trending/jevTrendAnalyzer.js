@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions - Jev Trend Analyzer (Story 42.6)
+// Medirus - Jev Trend Analyzer (Story 42.6)
 // Semantic classification + brand safety + opportunity scoring for trending topics.
 // by nichxbt
 

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Google Sheets Plugin — xactions-plugin-google-sheets
+ * Medirus Google Sheets Plugin — medirus-plugin-google-sheets
  *
  * Export any scraped X/Twitter data directly to Google Sheets.
  * Supports: followers, following, tweets, likes, lists, bookmarks, search results.
@@ -11,7 +11,7 @@
  *   3. API key for read-only public sheets (GOOGLE_API_KEY)
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  */
 
@@ -102,11 +102,11 @@ async function getSheetsClient() {
 
 /**
  * Normalize scraped data into a flat array of objects.
- * Handles the various shapes returned by XActions scrapers.
+ * Handles the various shapes returned by Medirus scrapers.
  */
 function normalizeData(data) {
   if (Array.isArray(data)) return data;
-  // Common wrapper shapes from XActions scrapers
+  // Common wrapper shapes from Medirus scrapers
   const arrayKeys = [
     'followers', 'following', 'tweets', 'likes', 'members',
     'bookmarks', 'messages', 'notifications', 'likers',
@@ -300,7 +300,7 @@ async function readFromGoogleSheets(options = {}) {
  * @returns {Promise<Object>} { spreadsheetId, url, title }
  */
 async function createSpreadsheet(options = {}) {
-  const { title = 'XActions Export', sheetNames = ['Sheet1'] } = options;
+  const { title = 'Medirus Export', sheetNames = ['Sheet1'] } = options;
 
   const { sheets } = await getSheetsClient();
 
@@ -325,7 +325,7 @@ async function createSpreadsheet(options = {}) {
 // Plugin Definition
 // ============================================================================
 
-export const name = 'xactions-plugin-google-sheets';
+export const name = 'medirus-plugin-google-sheets';
 export const version = '1.0.0';
 export const description = 'Export scraped X/Twitter data directly to Google Sheets';
 
@@ -414,7 +414,7 @@ export const tools = [
       properties: {
         title: {
           type: 'string',
-          description: 'Spreadsheet title (default: "XActions Export")',
+          description: 'Spreadsheet title (default: "Medirus Export")',
         },
         sheetNames: {
           type: 'array',
@@ -434,7 +434,7 @@ export const tools = [
 ];
 
 /**
- * Express route handlers (mounted under /api/plugins/xactions-plugin-google-sheets/)
+ * Express route handlers (mounted under /api/plugins/medirus-plugin-google-sheets/)
  */
 export const routes = [
   {
@@ -491,10 +491,10 @@ export const routes = [
  */
 export const hooks = {
   onLoad() {
-    console.log('📊 xactions-plugin-google-sheets loaded');
+    console.log('📊 medirus-plugin-google-sheets loaded');
   },
   onUnload() {
-    console.log('📊 xactions-plugin-google-sheets unloaded');
+    console.log('📊 medirus-plugin-google-sheets unloaded');
   },
 };
 

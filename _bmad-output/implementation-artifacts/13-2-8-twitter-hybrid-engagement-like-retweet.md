@@ -70,7 +70,7 @@ Legacy functions `likeTweet`, `unlikeTweet`, `retweet`, `unretweet` trong `src/c
 
 - `_bmad-output/planning-artifacts/epics.md` — Story 13.2.8 [dòng 527-537]
 - `_bmad-output/planning-artifacts/prd.md` — FR-71, NFR-11/12/13/16 [dòng 79, 114-120]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-3 [dòng 142-163], AD-11 [dòng 233-243], AD-13 [dòng 250-260], AD-14 [dòng 272-283]
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-3 [dòng 142-163], AD-11 [dòng 233-243], AD-13 [dòng 250-260], AD-14 [dòng 272-283]
 - `_bmad-output/implementation-artifacts/13-2-refactor-twitter-scraper-to-hybrid-architecture.md` — nền tảng Story 13.2
 - `_bmad-output/implementation-artifacts/13-2-1-twitter-hybrid-profile-relationships.md` — `ProfileItem`, `PostItem`, `PlatformError`
 - `_bmad-output/implementation-artifacts/13-2-6-twitter-hybrid-content-composition-post-reply-quote.md` — write pattern, dry-run gate, delay floor, telemetry, validation

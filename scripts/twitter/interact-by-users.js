@@ -107,11 +107,11 @@ var CONFIG = {
   // Storage
   const storage = {
     get: (key) => {
-      try { return JSON.parse(localStorage.getItem(`xactions_interact_${key}`) || 'null'); }
+      try { return JSON.parse(localStorage.getItem(`medirus_interact_${key}`) || 'null'); }
       catch { return null; }
     },
     set: (key, value) => {
-      localStorage.setItem(`xactions_interact_${key}`, JSON.stringify(value));
+      localStorage.setItem(`medirus_interact_${key}`, JSON.stringify(value));
     }
   };
   
@@ -142,9 +142,9 @@ var CONFIG = {
     stats: { likes: 0, retweets: 0, replies: 0, follows: 0 },
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.InteractUsers = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.InteractUsers = {
     config: CONFIG,
     state,
     history,
@@ -272,7 +272,7 @@ var CONFIG = {
       console.log('📋 For each user, open their profile and run:');
       CONFIG.targetUsers.forEach((username, i) => {
         console.log(`   ${i + 1}. https://x.com/${username}`);
-        console.log(`      Then: XActions.InteractUsers.interactWith("${username}")`);
+        console.log(`      Then: Medirus.InteractUsers.interactWith("${username}")`);
       });
       console.log('');
       console.log('💡 Re-paste this script after each page navigation.');
@@ -331,19 +331,19 @@ var CONFIG = {
       console.log('');
       console.log('📋 INTERACT BY USERS COMMANDS:');
       console.log('');
-      console.log('   XActions.InteractUsers.addUser("username")');
-      console.log('   XActions.InteractUsers.removeUser("username")');
-      console.log('   XActions.InteractUsers.interactWith("username")');
-      console.log('   XActions.InteractUsers.interactAll()');
-      console.log('   XActions.InteractUsers.stop()');
-      console.log('   XActions.InteractUsers.stats()');
-      console.log('   XActions.InteractUsers.showHistory()');
+      console.log('   Medirus.InteractUsers.addUser("username")');
+      console.log('   Medirus.InteractUsers.removeUser("username")');
+      console.log('   Medirus.InteractUsers.interactWith("username")');
+      console.log('   Medirus.InteractUsers.interactAll()');
+      console.log('   Medirus.InteractUsers.stop()');
+      console.log('   Medirus.InteractUsers.stats()');
+      console.log('   Medirus.InteractUsers.showHistory()');
       console.log('');
     }
   };
   
   console.log('✅ Interact By Users loaded!');
   console.log(`📋 Target users: ${CONFIG.targetUsers.length}`);
-  console.log('   Run XActions.InteractUsers.help() for commands.');
+  console.log('   Run Medirus.InteractUsers.help() for commands.');
   console.log('');
 })();

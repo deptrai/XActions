@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Audience Overlap Analyzer — Free X/Twitter Script | XActions</title>
+  <title>Audience Overlap Analyzer — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Compare the follower lists of two X/Twitter">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, audience, overlap, analytics">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, audience, overlap, analytics">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Audience Overlap Analyzer — XActions">
+  <meta property="og:title" content="Audience Overlap Analyzer — Medirus">
   <meta property="og:description" content="Compare the follower lists of two X/Twitter">
-  <meta property="og:url" content="https://xactions.app/scripts/audience-overlap">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/audience-overlap">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Audience Overlap Analyzer — XActions">
+  <meta name="twitter:title" content="Audience Overlap Analyzer — Medirus">
   <meta name="twitter:description" content="Compare the follower lists of two X/Twitter">
 
-  <link rel="canonical" href="https://xactions.app/scripts/audience-overlap">
+  <link rel="canonical" href="https://medirus.online/scripts/audience-overlap">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Audience Overlap Analyzer — Free X/Twitter Script | XActions",
+    "headline": "Audience Overlap Analyzer — Free X/Twitter Script | Medirus",
     "description": "Compare the follower lists of two X/Twitter",
-    "url": "https://xactions.app/scripts/audience-overlap",
+    "url": "https://medirus.online/scripts/audience-overlap",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Analytics",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, audience, overlap, analytics"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, audience, overlap, analytics"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Analytics", "item": "https://xactions.app/scripts#analytics" },
-      { "@type": "ListItem", "position": 4, "name": "Audience Overlap Analyzer", "item": "https://xactions.app/scripts/audience-overlap" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Analytics", "item": "https://medirus.online/scripts#analytics" },
+      { "@type": "ListItem", "position": 4, "name": "Audience Overlap Analyzer", "item": "https://medirus.online/scripts/audience-overlap" }
     ]
   }
   </script>
@@ -136,8 +136,8 @@
         <h2>How to Use</h2>
         <ol class="usage-steps"><li>Go to: x.com/ACCOUNT_A/followers</li>
 <li>Paste script — it will scrape Account A's followers</li>
-<li>Run: XActions.switchTo('ACCOUNT_B')</li>
-<li>Run: XActions.compare() → see overlap analysis</li></ol>
+<li>Run: Medirus.switchTo('ACCOUNT_B')</li>
+<li>Run: Medirus.compare() → see overlap analysis</li></ol>
         
 
         
@@ -190,12 +190,12 @@
  *
  * 1. Go to: x.com/ACCOUNT_A/followers
  * 2. Paste script — it will scrape Account A's followers
- * 3. Run: XActions.switchTo('ACCOUNT_B')
+ * 3. Run: Medirus.switchTo('ACCOUNT_B')
  *    → navigates to Account B's followers and scrapes
- * 4. Run: XActions.compare() → see overlap analysis
+ * 4. Run: Medirus.compare() → see overlap analysis
  *
  * Or use the quick method:
- *   XActions.analyze('accountA', 'accountB')
+ *   Medirus.analyze('accountA', 'accountB')
  * ============================================================
  */
 (() =&gt; {
@@ -257,7 +257,7 @@
   // ── Compare two datasets ───────────────────────────────────
   const compareDatasets = () =&gt; {
     if (!datasets.a || !datasets.b) {
-      console.log('❌ Need both datasets. Use XActions.analyze(&quot;accountA&quot;, &quot;accountB&quot;) or scrape each individually.');
+      console.log('❌ Need both datasets. Use Medirus.analyze(&quot;accountA&quot;, &quot;accountB&quot;) or scrape each individually.');
       return;
     }
 
@@ -376,18 +376,18 @@
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-overlap-${datasets.a.account}-vs-${datasets.b.account}.json`;
+      a.download = `medirus-overlap-${datasets.a.account}-vs-${datasets.b.account}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Overlap analysis exported.');
     }
   };
 
   // ── Controls ───────────────────────────────────────────────
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
-  window.XActions.analyze = async (accountA, accountB) =&gt; {
+  window.Medirus.analyze = async (accountA, accountB) =&gt; {
     if (!accountA || !accountB) {
-      console.log('❌ Usage: XActions.analyze(&quot;accountA&quot;, &quot;accountB&quot;)');
+      console.log('❌ Usage: Medirus.analyze(&quot;accountA&quot;, &quot;accountB&quot;)');
       return;
     }
 
@@ -414,9 +414,9 @@
     compareDatasets();
   };
 
-  window.XActions.scrapeHere = async (label) =&gt; {
+  window.Medirus.scrapeHere = async (label) =&gt; {
     if (label !== 'a' &amp;&amp; label !== 'b') {
-      console.log('❌ Usage: XActions.scrapeHere(&quot;a&quot;) or XActions.scrapeHere(&quot;b&quot;)');
+      console.log('❌ Usage: Medirus.scrapeHere(&quot;a&quot;) or Medirus.scrapeHere(&quot;b&quot;)');
       return;
     }
     const match = window.location.href.match(/x\.com\/([A-Za-z0-9_]+)\/followers/);
@@ -425,11 +425,11 @@
     datasets[label] = { account, followers: await scrapeFollowers(label.toUpperCase()) };
     console.log(`  ✅ @${account}: ${datasets[label].followers.size} followers scraped.`);
     if (datasets.a &amp;&amp; datasets.b) {
-      console.log('  Both datasets ready! Run: XActions.compare()');
+      console.log('  Both datasets ready! Run: Medirus.compare()');
     }
   };
 
-  window.XActions.compare = compareDatasets;
+  window.Medirus.compare = compareDatasets;
 
   // ── Init ───────────────────────────────────────────────────
   console.log('╔════════════════════════════════════════════════════╗');
@@ -437,18 +437,18 @@
   console.log('║  by nichxbt — v1.0                                ║');
   console.log('╚════════════════════════════════════════════════════╝');
   console.log('\n📋 Quick method:');
-  console.log('  XActions.analyze(&quot;accountA&quot;, &quot;accountB&quot;)');
+  console.log('  Medirus.analyze(&quot;accountA&quot;, &quot;accountB&quot;)');
   console.log('\n📋 Manual method:');
-  console.log('  1. Go to x.com/accountA/followers → XActions.scrapeHere(&quot;a&quot;)');
-  console.log('  2. Go to x.com/accountB/followers → XActions.scrapeHere(&quot;b&quot;)');
-  console.log('  3. XActions.compare()');
+  console.log('  1. Go to x.com/accountA/followers → Medirus.scrapeHere(&quot;a&quot;)');
+  console.log('  2. Go to x.com/accountB/followers → Medirus.scrapeHere(&quot;b&quot;)');
+  console.log('  3. Medirus.compare()');
 })();
 </code></pre>
           </div>
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

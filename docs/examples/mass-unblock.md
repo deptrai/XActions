@@ -65,7 +65,7 @@ This script provides the following capabilities:
  * 3. Paste and run
  *
  * 🎮 CONTROLS:
- *   window.XActions.pause()  / .resume() / .abort() / .status()
+ *   window.Medirus.pause()  / .resume() / .abort() / .status()
  * ============================================================
  */
 (() => {
@@ -104,7 +104,7 @@ This script provides the following capabilities:
   const processedUsers = new Set();
   const keepSet = new Set(CONFIG.keepBlocked.map(u => u.toLowerCase().replace(/^@/, '')));
 
-  window.XActions = {
+  window.Medirus = {
     pause()  { paused = true;  console.log('⏸️ Paused.'); },
     resume() { paused = false; console.log('▶️ Resumed.'); },
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
@@ -216,7 +216,7 @@ This script provides the following capabilities:
     if (CONFIG.exportOnComplete && unblockedLog.length > 0) {
       const blob = new Blob([JSON.stringify({ summary: { unblocked, skipped, errors }, accounts: unblockedLog }, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-unblocked-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-unblocked-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Results exported.');
     }
@@ -288,14 +288,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -331,4 +331,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

@@ -23,7 +23,7 @@
  * fails on any regression.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 
@@ -93,9 +93,9 @@ const MCP_TOOL_COUNT = countMcpTools();
  *
  * Docs that invent a plausible-sounding command are worse than docs with a
  * dead link: the reader assumes they typed it wrong. This catches
- * `xactions unfollow --non-followers` when no `unfollow` command exists.
+ * `medirus unfollow --non-followers` when no `unfollow` command exists.
  *
- * Subcommands (`xactions client profile`, `xactions agent setup`) are included
+ * Subcommands (`medirus client profile`, `medirus agent setup`) are included
  * by name, so a nested command is never reported as missing.
  *
  * Both src/cli/index.js and every module under src/cli/commands/ are scanned.
@@ -312,13 +312,13 @@ for (const file of files) {
   }
 
   // -- 4. Version claims --------------------------------------------------
-  // Only flag explicit product-version claims ("XActions v3.1.0"), not every
+  // Only flag explicit product-version claims ("Medirus v3.1.0"), not every
   // semver in a changelog or a dependency range. Release notes and launch
-  // posts are historical records: "XActions v3.1.0" in one of those is correct
+  // posts are historical records: "Medirus v3.1.0" in one of those is correct
   // forever and must not be rewritten.
   const historical = /(^|\/)(CHANGELOG|ROADMAP)\.md$|(^|\/)(launch|releases|changelog)\//i.test(rel);
 
-  for (const match of historical ? [] : content.matchAll(/XActions\s+v(\d+\.\d+\.\d+)/g)) {
+  for (const match of historical ? [] : content.matchAll(/Medirus\s+v(\d+\.\d+\.\d+)/g)) {
     if (match[1] === PKG_VERSION) continue;
     const line = lines.findIndex((l) => l.includes(match[0])) + 1;
     staleVersions.push({ file: rel, line, claimed: match[1] });
@@ -326,21 +326,21 @@ for (const file of files) {
 
   // -- 6. CLI commands ----------------------------------------------------
   // Only look at commands written as commands: inside a fenced block, inside
-  // backticks, or on a `$`-prefixed shell line. "the xactions package" in a
+  // backticks, or on a `$`-prefixed shell line. "the medirus package" in a
   // sentence is prose, not an instruction someone will type.
   // prompts/ describes commands a build should create, not ones that exist.
   if (CLI_COMMANDS && !isBuildPrompt) {
     const invocations = [
       ...content.matchAll(/```(?:bash|sh|shell|console)?\n([\s\S]*?)```/g),
-    ].flatMap((block) => [...block[1].matchAll(/(?:^|\n|\$\s*)(?:npx\s+)?xactions\s+([a-z][\w-]*)/g)]);
+    ].flatMap((block) => [...block[1].matchAll(/(?:^|\n|\$\s*)(?:npx\s+)?medirus\s+([a-z][\w-]*)/g)]);
 
-    const inlined = [...content.matchAll(/`(?:npx\s+)?xactions\s+([a-z][\w-]*)[^`]*`/g)];
+    const inlined = [...content.matchAll(/`(?:npx\s+)?medirus\s+([a-z][\w-]*)[^`]*`/g)];
 
     for (const match of [...invocations, ...inlined]) {
       const command = match[1];
       if (CLI_COMMANDS.has(command)) continue;
 
-      const line = lines.findIndex((l) => l.includes(`xactions ${command}`)) + 1;
+      const line = lines.findIndex((l) => l.includes(`medirus ${command}`)) + 1;
       unknownCommands.push({ file: rel, line, command });
     }
   }
@@ -400,7 +400,7 @@ function report(title, findings, format) {
   return unique.length;
 }
 
-console.log(`\nDocumentation audit — ${files.length} markdown files, XActions v${PKG_VERSION}\n`);
+console.log(`\nDocumentation audit — ${files.length} markdown files, Medirus v${PKG_VERSION}\n`);
 
 const counts = [
   report('relative links resolve', deadLinks, (f) => f.target),
@@ -412,7 +412,7 @@ const counts = [
     staleToolCounts,
     (f) => `claims ${f.claimed} tools`,
   ),
-  report('documented CLI commands exist', unknownCommands, (f) => `xactions ${f.command}`),
+  report('documented CLI commands exist', unknownCommands, (f) => `medirus ${f.command}`),
 ];
 
 const failedCategories = counts.filter((n) => n > 0).length;

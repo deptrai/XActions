@@ -25,7 +25,7 @@
   };
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  const STORAGE_KEY = 'xactions_analytics';
+  const STORAGE_KEY = 'medirus_analytics';
 
   const SELECTORS = {
     analyticsLink: 'a[href="/i/account_analytics"]',
@@ -283,7 +283,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `xactions_analytics_${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `medirus_analytics_${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -294,7 +294,7 @@
 
   const run = async () => {
     console.log('═══════════════════════════════════════════');
-    console.log('📊 XActions — View Analytics');
+    console.log('📊 Medirus — View Analytics');
     console.log('═══════════════════════════════════════════\n');
 
     console.log('💡 Note: Full analytics require X Premium subscription.\n');

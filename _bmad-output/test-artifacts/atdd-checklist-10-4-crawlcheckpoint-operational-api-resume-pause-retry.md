@@ -36,7 +36,7 @@ generatedTestFiles:
 | **Service State Transition Guards** | Illegal transition validation (`XACT_4002`), 404 not found (`XACT_4041`) | P0 | `tests/store/checkpoint-manager.test.js` |
 | **API Authentication & Authorization** | 401 unauth, 403 non-admin, 200 admin, 200 A2A `checkpoint:manage` | P0 | `tests/api/checkpoints-routes.test.js` |
 | **API Endpoints & Envelope Contracts** | `GET /`, `GET /:id`, `POST /:id/resume`, `POST /:id/pause`, `POST /:id/retry` | P1 | `tests/api/checkpoints-routes.test.js` |
-| **CLI Commands** | `xactions checkpoints list`, `show`, `resume`, `pause`, `retry` | P1 | `tests/cli/checkpoints-cli.test.js` (or inline integration) |
+| **CLI Commands** | `medirus checkpoints list`, `show`, `resume`, `pause`, `retry` | P1 | `tests/cli/checkpoints-cli.test.js` (or inline integration) |
 
 ---
 

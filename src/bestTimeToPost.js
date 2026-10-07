@@ -37,7 +37,7 @@
   const HOURS = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
 
   const run = async () => {
-    console.log('⏰ BEST TIME TO POST - XActions by nichxbt');
+    console.log('⏰ BEST TIME TO POST - Medirus by nichxbt');
 
     const username = window.location.pathname.replace('/', '').split('/')[0];
     if (!username || ['home', 'explore', 'notifications', 'messages', 'i'].includes(username)) {
@@ -171,7 +171,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `xactions-best-time-${username}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-best-time-${username}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       console.log('\n📥 Report downloaded as JSON');
     }

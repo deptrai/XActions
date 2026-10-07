@@ -30,7 +30,7 @@
   };
 
   const run = async () => {
-    console.log('📌 PIN TWEET MANAGER — XActions by nichxbt');
+    console.log('📌 PIN TWEET MANAGER — Medirus by nichxbt');
 
     const pathMatch = window.location.pathname.match(/^\/([A-Za-z0-9_]+)/);
     if (!pathMatch || ['home', 'explore', 'notifications', 'messages', 'i', 'search', 'settings'].includes(pathMatch[1])) {

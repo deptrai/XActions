@@ -112,7 +112,7 @@ export default function LoginPage() {
                 disabled={isLoading || success}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="operator@xactions.app"
+                placeholder="operator@medirus.online"
                 className="w-full pl-9 pr-3.5 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-60"
               />
             </div>

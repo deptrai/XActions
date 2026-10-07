@@ -29,7 +29,7 @@ import {
   initializeBackend,
 } from '../../src/mcp/server.js';
 
-const DB_PATH = path.join(os.homedir(), '.xactions', 'analytics.db');
+const DB_PATH = path.join(os.homedir(), '.medirus', 'analytics.db');
 
 /** Ensure token_mentions exists in the real analytics.db (schema mirrors 54.2).
  * @param {import('better-sqlite3').Database} db
@@ -59,7 +59,7 @@ function ensureSchema(db) {
 
 describe('Story 54.3: x_analytics token_hype dispatch', () => {
   beforeAll(async () => {
-    process.env.XACTIONS_MODE = 'local';
+    process.env.MEDIRUS_MODE = 'local';
     await initializeBackend();
 
     // Seed the real analytics.db with one mention row for BONK so the

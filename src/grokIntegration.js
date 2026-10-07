@@ -32,7 +32,7 @@ const SELECTORS = {
  * Send a query to Grok AI
  * @param {import('puppeteer').Page} page
  * @param {string} query - The question/prompt for Grok
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function queryGrok(page, query, options = {}) {

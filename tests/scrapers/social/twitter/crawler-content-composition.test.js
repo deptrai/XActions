@@ -139,14 +139,14 @@ describe('Story 13.2.6 — Twitter Hybrid Content Composition (Post, Reply, Quot
     const { crawler } = buildCrawler();
     const result = await crawler.start({
       action: 'post',
-      args: { text: 'Hello XActions', dryRun: false },
+      args: { text: 'Hello Medirus', dryRun: false },
       session: { accountId: 'twitter-write-user' },
     });
 
     expect(result).toHaveProperty('tweet');
     expect(result.tweet.id).toBe('twitter:new-tweet-123');
     expect(result.tweet.platform).toBe('twitter');
-    expect(result.tweet.content).toBe('Hello XActions');
+    expect(result.tweet.content).toBe('Hello Medirus');
     expect(result.tweet.metadata).toMatchObject({ sourceMethod: 'post', tweetId: 'new-tweet-123' });
 
     expect(receivedRequests).toHaveLength(1);

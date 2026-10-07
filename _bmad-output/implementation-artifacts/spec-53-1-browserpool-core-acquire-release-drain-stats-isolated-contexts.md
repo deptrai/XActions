@@ -15,7 +15,7 @@ context: []
 
 **Problem:** Scrape jobs hiện launch một browser process riêng mỗi job (~300–500MB Chrome), kẹt concurrency ở 2 và chặn mục tiêu RAM/tốc độ (NFR-11/12). Cần một pool chia sẻ browser phục vụ N job qua page/context — nhưng nền (core pool) phải đúng isolation contract trước khi adapter/jobQueue được nối vào (53.2+).
 
-**Approach:** Tạo `src/scraping/browserPool.js` — class `BrowserPool` per-backend với `acquire()` trả page trong **isolated `browserContext`** mặc định, `release()` chỉ đóng context/page (không đụng browser), FIFO queue khi cạn slot, `drain()`, `stats()`. Kèm `SharedContextPool` opt-in tường minh cho anonymous public scraping. Opt-in toàn bộ qua `XACTIONS_BROWSER_POOL_SIZE` (default 0 = không dùng).
+**Approach:** Tạo `src/scraping/browserPool.js` — class `BrowserPool` per-backend với `acquire()` trả page trong **isolated `browserContext`** mặc định, `release()` chỉ đóng context/page (không đụng browser), FIFO queue khi cạn slot, `drain()`, `stats()`. Kèm `SharedContextPool` opt-in tường minh cho anonymous public scraping. Opt-in toàn bộ qua `MEDIRUS_BROWSER_POOL_SIZE` (default 0 = không dùng).
 
 ## Boundaries & Constraints
 
@@ -66,7 +66,7 @@ context: []
 - [x] `src/scraping/browserPool.d.ts` — type stub theo convention (`stealthBrowser.d.ts`, `paginationEngine.d.ts` tồn tại)
 
 **Acceptance Criteria:**
-- Given `XACTIONS_BROWSER_POOL_SIZE=0` (hoặc không set), when code path hiện có chạy, then không file nào import browserPool — zero behavior change.
+- Given `MEDIRUS_BROWSER_POOL_SIZE=0` (hoặc không set), when code path hiện có chạy, then không file nào import browserPool — zero behavior change.
 - Given pool size N, when N+1 acquire đồng thời, then acquire thứ N+1 block cho tới khi có release, và slot được trao theo thứ tự FIFO.
 - Given `release(page)`, when gọi xong, then shared browser vẫn sống và acquire tiếp được (Q5).
 - Given 2 isolated context, when job A ghi cookie/localStorage, then job B không đọc được (Q1, spike-verified).

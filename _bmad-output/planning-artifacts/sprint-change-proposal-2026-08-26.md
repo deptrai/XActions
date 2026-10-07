@@ -37,8 +37,8 @@ Dự án đang ở **Epic 13 — High-Throughput Hybrid Scraping Engine**. Story
 | `api/routes/proxies.js` | `/api/proxies/status/add/next/sticky/quarantine` + account endpoints. [Source] |
 | `api/routes/streams.js` | `/api/streams` CRUD, stats, history. [Source] |
 | `api/routes/governor.js` | `GET /governor/status`. [Source] |
-| `src/cli/commands/checkpoints.js` | `xactions checkpoints list/show/resume/pause/retry`. [Source] |
-| `src/cli/commands/stream.js` | `xactions stream start/stop/list/history/pause/resume/status/stop-all`. [Source] |
+| `src/cli/commands/checkpoints.js` | `medirus checkpoints list/show/resume/pause/retry`. [Source] |
+| `src/cli/commands/stream.js` | `medirus stream start/stop/list/history/pause/resume/status/stop-all`. [Source] |
 
 ---
 
@@ -59,7 +59,7 @@ Dự án đang ở **Epic 13 — High-Throughput Hybrid Scraping Engine**. Story
 | Story | Độ cần thiết | Overlap với cũ | Ghi chú |
 |-------|--------------|-----------------|---------|
 | **14.1** Comment tree | Cần | Thấp | `src/scrapers/facebook/comments.js` và `src/scrapers/twitter/http/thread.js` có thread/comment logic riêng lẻ, không thống nhất. 14.1 là feature mới (topological sort). |
-| **14.2** MCP Daemon HTTP/SSE | Cần nhưng **phải tích hợp** | **Trung bình–Cao** | `src/mcp/server.js` đã chạy HTTP transport trên port 3001, có health, x402, tools. Thiếu 3-Layer JSON Envelope, action discovery (`x_actions_list`), auto-artifact. |
+| **14.2** MCP Daemon HTTP/SSE | Cần nhưng **phải tích hợp** | **Trung bình–Cao** | `src/mcp/server.js` đã chạy HTTP transport trên port 3001, có health, x402, tools. Thiếu 3-Layer JSON Envelope, action discovery (`medirus_list`), auto-artifact. |
 | **14.3** Redis Stream | Cần | Thấp | `src/streaming/index.js` dùng Socket.IO cho real-time tweet streams; 14.3 là Redis Stream `stream:social:raw_posts` cho Nowing. Khác hẳn. |
 
 **Impact:** 14.2 không nên tạo một daemon process mới. Nên mở rộng `src/mcp/server.js` đã có.
@@ -71,7 +71,7 @@ Dự án đang ở **Epic 13 — High-Throughput Hybrid Scraping Engine**. Story
 | **15.1** Threads | Cần | **Cao** | `src/scrapers/threads/index.js` Puppeteer-based đã có profile/posts/search. 15.1 sẽ thay bằng HTTP GraphQL. |
 | **15.2** TikTok | Cần | Không | Chưa có TikTok scraper. |
 | **16.1–16.2** Shopee, TikTok Shop | Cần | Không | Chưa có. |
-| **17.1–17.2** Chợ Tốt, Batdongsan | Cần | Không trong XActions | Có thể Nowing repo có legacy, nhưng XActions repo chưa có. |
+| **17.1–17.2** Chợ Tốt, Batdongsan | Cần | Không trong Medirus | Có thể Nowing repo có legacy, nhưng Medirus repo chưa có. |
 | **18.1–18.2** TopCV, VietnamWorks | Cần | Không | Chưa có. |
 | **18.3** LinkedIn CDP | Cần | Không | `epics.md` ghi blocked vì 12.2, nhưng 12.2 đã done. Cần update. |
 
@@ -82,9 +82,9 @@ Dự án đang ở **Epic 13 — High-Throughput Hybrid Scraping Engine**. Story
 | **19.1** Dashboard Jobs & Checkpoints | Cần nhưng **đã có nền tảng** | Cao | API checkpoints đã có; dashboard cần page mới. |
 | **19.2** Dashboard Proxies & Accounts | Cần nhưng **đã có nền tảng** | Cao | `api/routes/proxies.js` + `GET /governor/status` đã có; cần dashboard view. |
 | **19.3** Dashboard Stream Metrics | Cần nhưng **đã có nền tảng** | Cao | `api/routes/streams.js` `/stats` đã có; cần dashboard view. |
-| **19.4** Admin CLI — Governor/Proxies/Accounts | **Thấp/Trùng lặp** | Rất cao | `xactions stream list/status` và API proxy/governor đã có. Nhưng chưa có command `xactions admin ...`. Có thể gộp. |
-| **19.5** Admin CLI — Checkpoints | **Thấp/Trùng lặp** | Rất cao | `xactions checkpoints ...` đã tồn tại. Story này có thể bị duplicate. |
-| **19.6** Admin CLI — Stream Metrics | **Thấp/Trùng lặp** | Rất cao | `xactions stream ...` đã tồn tại. Có thể duplicate. |
+| **19.4** Admin CLI — Governor/Proxies/Accounts | **Thấp/Trùng lặp** | Rất cao | `medirus stream list/status` và API proxy/governor đã có. Nhưng chưa có command `medirus admin ...`. Có thể gộp. |
+| **19.5** Admin CLI — Checkpoints | **Thấp/Trùng lặp** | Rất cao | `medirus checkpoints ...` đã tồn tại. Story này có thể bị duplicate. |
+| **19.6** Admin CLI — Stream Metrics | **Thấp/Trùng lặp** | Rất cao | `medirus stream ...` đã tồn tại. Có thể duplicate. |
 | **19.7** Admin REST API | Cần nhưng **đã có nền tảng** | Cao | Các `/api/proxies`, `/api/checkpoints`, `/governor/status`, `/api/streams` đã có. Cần đổi namespace `/admin/*` hoặc gộp. |
 | **19.8** Admin MCP Tools | Cần | Trung bình | MCP server đã có tools, nhưng thiếu admin tools (`x_admin_*`). |
 
@@ -94,12 +94,12 @@ Dự án đang ở **Epic 13 — High-Throughput Hybrid Scraping Engine**. Story
 
 | Story | Độ cần thiết | Ghi chú |
 |-------|--------------|---------|
-| **20.1** Shadow-run adapter | Cần | Nhưng target là Nowing repo (`/Users/luisphan/Documents/GitHub/nowing`), không phải XActions. Cần theo dõi ở sprint Nowing. |
-| **20.2** Legacy decommissioning | Cần | Nên mở rộng scope để xoá cả legacy XActions (`src/client/`, `src/scrapers/twitter/http/`, `src/scrapers/facebook/`, `src/scrapers/threads/`) sau khi hybrid crawler đạt parity. |
+| **20.1** Shadow-run adapter | Cần | Nhưng target là Nowing repo (`/Users/luisphan/Documents/GitHub/nowing`), không phải Medirus. Cần theo dõi ở sprint Nowing. |
+| **20.2** Legacy decommissioning | Cần | Nên mở rộng scope để xoá cả legacy Medirus (`src/client/`, `src/scrapers/twitter/http/`, `src/scrapers/facebook/`, `src/scrapers/threads/`) sau khi hybrid crawler đạt parity. |
 
 ### 3.6 Epic 21–22 (B2B, Automotive, F&B, Healthcare, Legal)
 
-- **Tất cả đều cần**, không có overlap trong XActions.
+- **Tất cả đều cần**, không có overlap trong Medirus.
 - Cần ưu tiên theo nhu cầu Nowing / người dùng.
 
 ---
@@ -185,9 +185,9 @@ Lý do:
 
 ```markdown
 * **Given** `src/mcp/server.js` đã có HTTP transport trên port 3001
-* **When** bổ sung 3-Layer JSON Envelope, `x_actions_list`, và auto-artifact cho responses >100 records
+* **When** bổ sung 3-Layer JSON Envelope, `medirus_list`, và auto-artifact cho responses >100 records
 * **Then** MCP server trả về `{ success, platform, meta, data, summary, error? }`
-* **And** `x_actions_list` gọi `AbstractCrawler.listActions()`
+* **And** `medirus_list` gọi `AbstractCrawler.listActions()`
 * **And** `/health` endpoint vẫn hoạt động, không tạo daemon process riêng
 ```
 
@@ -202,15 +202,15 @@ Lý do:
 
 - **Giữ lại** 19.1, 19.2, 19.3 (Dashboard views) — cần UI pages.
 - **Gộp** 19.4, 19.5, 19.6 thành **một story** `19-4-admin-cli-unified` với các command:
-  - `xactions admin status`
-  - `xactions admin proxies list/quarantine/release`
-  - `xactions admin accounts list/wake/rotate`
-  - `xactions admin checkpoints list/resume/pause/retry`
-  - `xactions admin stream metrics/alerts/test`
+  - `medirus admin status`
+  - `medirus admin proxies list/quarantine/release`
+  - `medirus admin accounts list/wake/rotate`
+  - `medirus admin checkpoints list/resume/pause/retry`
+  - `medirus admin stream metrics/alerts/test`
 - **Giữ** 19.7 nhưng scope là "tạo namespace `/admin/*` wrap các route `/api/proxies`, `/api/checkpoints`, `/governor/status`, `/api/streams`" — không viết lại business logic.
 - **Giữ** 19.8 (admin MCP tools) — cần thêm tools mới.
 
-**Rationale:** `src/cli/commands/checkpoints.js` và `src/cli/commands/stream.js` đã có phần lớn command. Tạo `xactions admin` chỉ là alias/nhóm lại.
+**Rationale:** `src/cli/commands/checkpoints.js` và `src/cli/commands/stream.js` đã có phần lớn command. Tạo `medirus admin` chỉ là alias/nhóm lại.
 
 ---
 
@@ -230,11 +230,11 @@ Lý do:
 
 ```markdown
 * **When** xóa các thư mục legacy trong Nowing repo (`shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`, `linkedin/`, v.v.)
-* **And** xóa các file legacy trong XActions repo (`src/client/Scraper.js`, `src/scrapers/twitter/http/`, `src/scrapers/twitter/index.js`, `src/scrapers/facebook/`, `src/scrapers/threads/index.js`)
-* **Then** CI tests pass, Nowing Docker image < 500MB, XActions bundle size giảm đáng kể
+* **And** xóa các file legacy trong Medirus repo (`src/client/Scraper.js`, `src/scrapers/twitter/http/`, `src/scrapers/twitter/index.js`, `src/scrapers/facebook/`, `src/scrapers/threads/index.js`)
+* **Then** CI tests pass, Nowing Docker image < 500MB, Medirus bundle size giảm đáng kể
 ```
 
-**Rationale:** Các implementation cũ trong XActions cũng cần được decommission sau khi hybrid crawlers thay thế.
+**Rationale:** Các implementation cũ trong Medirus cũng cần được decommission sau khi hybrid crawlers thay thế.
 
 ---
 
@@ -315,7 +315,7 @@ Lý do:
 | 18.1–18.3 | Có | Không | Update dependency, 18.3 unblocked |
 | 19.1–19.8 | Có nhưng **cần gộp** | Cao — API/CLI đã có | Gộp 19.4–19.6, điều chỉnh 19.7 |
 | 20.1 | Có (Nowing repo) | Không | Theo dõi ở Nowing |
-| 20.2 | Có | Không | Mở rộng scope xoá cả legacy XActions |
+| 20.2 | Có | Không | Mở rộng scope xoá cả legacy Medirus |
 | 21.1–21.2 | Có | Không | Giữ nguyên |
 | 22.1–22.3 | Có | Không | Giữ nguyên |
 

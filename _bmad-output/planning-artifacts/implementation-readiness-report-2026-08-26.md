@@ -15,11 +15,11 @@ selectedDocuments:
       - _bmad-output/planning-artifacts/prd-canonicalization-addendum-2026-08-21.md
       - _bmad-output/planning-artifacts/prd-facebook-epics-5-6-2026-08-21.md
   architecture:
-    primary: _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
+    primary: _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
     supplemental:
-      - _bmad-output/planning-artifacts/architecture/xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md
-      - _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/EPIC10-DECISION-LOG-2026-08-18.md
-      - _bmad-output/planning-artifacts/research/technical-mediacrawler-architecture-for-xactions-research-2026-08-18.md
+      - _bmad-output/planning-artifacts/architecture/medirus-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md
+      - _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/EPIC10-DECISION-LOG-2026-08-18.md
+      - _bmad-output/planning-artifacts/research/technical-mediacrawler-architecture-for-medirus-research-2026-08-18.md
   epics:
     primary: _bmad-output/planning-artifacts/epics.md
     supplemental:
@@ -36,7 +36,7 @@ selectedDocuments:
 # Implementation Readiness Assessment Report
 
 **Date:** 2026-08-26
-**Project:** XActions
+**Project:** Medirus
 
 ## 1. Document Discovery
 
@@ -50,27 +50,27 @@ selectedDocuments:
 - `prd-facebook-epics-5-6-2026-08-21.md` (9,446 bytes) — PRD cho Epics 5, 5b, 6.
 
 **Archive (older):**
-- `archive/prds/prd-XActions-2026-06-08/prd.md`
-- `archive/prds/prd-XActions-2026-06-10-epic4/prd.md`
-- `archive/prds/prd-XActions-2026-08-14-epic7/prd.md`
-- `archive/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md`
+- `archive/prds/prd-Medirus-2026-06-08/prd.md`
+- `archive/prds/prd-Medirus-2026-06-10-epic4/prd.md`
+- `archive/prds/prd-Medirus-2026-08-14-epic7/prd.md`
+- `archive/prds/prd-Medirus-2026-08-18-universal-scraping-engine/prd.md`
 
 ### 1.2. Architecture Documents
 
 **Primary:**
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (41,964 bytes, 2026-08-26 17:52) — kiến trúc active.
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (41,964 bytes, 2026-08-26 17:52) — kiến trúc active.
 
 **Supplemental:**
-- `architecture/xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` (16,804 bytes, 2026-08-26 17:52) — `superseded` bởi hybrid spine.
-- `architecture/xactions-hybrid-scraping-spine/EPIC10-DECISION-LOG-2026-08-18.md` — decision log.
-- `research/technical-mediacrawler-architecture-for-xactions-research-2026-08-18.md` — nghiên cứu tham khảo.
+- `architecture/medirus-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` (16,804 bytes, 2026-08-26 17:52) — `superseded` bởi hybrid spine.
+- `architecture/medirus-hybrid-scraping-spine/EPIC10-DECISION-LOG-2026-08-18.md` — decision log.
+- `research/technical-mediacrawler-architecture-for-medirus-research-2026-08-18.md` — nghiên cứu tham khảo.
 
 **Related review/remediation files (not primary):**
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-EPIC10-PM-REVIEW-2026-08-18.md`
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-EPIC10-REVIEW-2026-08-18.md`
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UPDATE-GATE-2026-08-18.md`
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md`
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-EPIC10-PM-REVIEW-2026-08-18.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-EPIC10-REVIEW-2026-08-18.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UPDATE-GATE-2026-08-18.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md`
 - `archive/architecture-brownfield-2026-08-20.md`
 
 ### 1.3. Epics & Stories Documents
@@ -99,7 +99,7 @@ selectedDocuments:
 | Issue | Resolution |
 | --- | --- |
 | `epics.md` vs `backlog-epics-21-22.md` (cùng Epic 21–22) | `epics.md` là primary; `backlog-epics-21-22.md` là supplemental/archive. |
-| `xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` vs `xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` | Hybrid spine là active; gateway spine là `superseded` supplemental. |
+| `medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` vs `medirus-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` | Hybrid spine là active; gateway spine là `superseded` supplemental. |
 | Multiple older PRDs in `archive/prds/` | Không dùng làm primary; chỉ tham khảo nếu cần trace lịch sử. |
 
 ## 2. PRD Analysis
@@ -134,10 +134,10 @@ selectedDocuments:
 | FR-81 | Cào tin tuyển dụng IT và cấp cao trên VietnamWorks qua API public. |
 | FR-82 | Cào thông tin nhân sự và bài đăng tuyển dụng trên LinkedIn qua CDP Remote Attach 9222. |
 | FR-83 | Phát luồng sự kiện tinh gọn (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 20000`). |
-| FR-84 | Nâng cấp adapter bên Nowing kết nối sang XActions MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend. |
-| FR-85 | Cung cấp giao diện vận hành nội bộ (web dashboard + CLI `xactions admin`) để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. Auth dùng internal admin API key hoặc A2A token, không phải multi-tenant SaaS auth. |
-| FR-86 | Mỗi platform/category phải publish JSON Schema hoặc TypeScript type cho `Post.metadata`; consumer có thể lấy schema qua API `GET /schemas/:platform/:category`, MCP tool `x_schema_get`, và CLI `xactions schema get`. `PrismaStore` validate `metadata` against schema khi ghi. |
-| FR-87 | Dữ liệu raw crawl (bản gốc thu thập) lưu trong XActions với TTL 30 ngày; dữ liệu lead/processed output đẩy sang Nowing được giữ vĩnh viễn. Lịch sử checkpoints và audit logs giữ 90 ngày. |
+| FR-84 | Nâng cấp adapter bên Nowing kết nối sang Medirus MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend. |
+| FR-85 | Cung cấp giao diện vận hành nội bộ (web dashboard + CLI `medirus admin`) để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. Auth dùng internal admin API key hoặc A2A token, không phải multi-tenant SaaS auth. |
+| FR-86 | Mỗi platform/category phải publish JSON Schema hoặc TypeScript type cho `Post.metadata`; consumer có thể lấy schema qua API `GET /schemas/:platform/:category`, MCP tool `x_schema_get`, và CLI `medirus schema get`. `PrismaStore` validate `metadata` against schema khi ghi. |
+| FR-87 | Dữ liệu raw crawl (bản gốc thu thập) lưu trong Medirus với TTL 30 ngày; dữ liệu lead/processed output đẩy sang Nowing được giữ vĩnh viễn. Lịch sử checkpoints và audit logs giữ 90 ngày. |
 | FR-88 | Cào theo mô hình 3 tầng: (1) full seed, (2) delta/gap fill theo `publishedAt`/`lastCrawledAt`, (3) on-demand refresh; loại bỏ 100% duplication và tiết kiệm 90% chi phí proxy so với full re-crawl. |
 
 **Total Universal FRs: 25 (FR-64..FR-88, including sub-labels).**
@@ -237,7 +237,7 @@ selectedDocuments:
 
 #### 2.3.2. Data Retention Policy (from `prd.md` §5)
 
-- Raw crawl data: 30-day TTL in XActions.
+- Raw crawl data: 30-day TTL in Medirus.
 - Lead/processed output pushed to Nowing: permanent.
 - Checkpoints and audit logs: 90 days.
 
@@ -371,7 +371,7 @@ No missing FRs or NFRs for the canonical Epics 10–20 scope. All requirements f
 | `ux/DESIGN.md` | `_bmad-output/planning-artifacts/ux/DESIGN.md` | ✅ final | Design system tokens, components, mockups for operator dashboard, CLI output, multi-platform flows. |
 | `ux/EXPERIENCE.md` | `_bmad-output/planning-artifacts/ux/EXPERIENCE.md` | ⚠️ draft (frontmatter says `status: draft`) | Covers legacy unified dashboard (X/Twitter + Facebook). Does not include new platforms (Shopee, Batdongsan, TopCV, VietnamWorks, LinkedIn, TikTok, Threads). |
 | `ux/EXPERIENCE-UNIVERSAL-2026-08-21.md` | `_bmad-output/planning-artifacts/ux/EXPERIENCE-UNIVERSAL-2026-08-21.md` | ✅ final | Extends EXPERIENCE.md with operator, AI/MCP, CLI, CDP, and multi-platform new-user flows. |
-| Architecture-UX Remediation | `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` | ✅ approved | Maps 10 UX findings (F1–F10) to specific stories and acceptance criteria. |
+| Architecture-UX Remediation | `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` | ✅ approved | Maps 10 UX findings (F1–F10) to specific stories and acceptance criteria. |
 
 ### 4.2. UX ↔ PRD Alignment
 
@@ -392,11 +392,11 @@ No missing FRs or NFRs for the canonical Epics 10–20 scope. All requirements f
 
 | Architecture Decision / Rule | UX Need | Alignment |
 | --- | --- | --- |
-| AD-7 / MCP HTTP/SSE Daemon (`xactions daemon start|status|stop`, `GET /health`) | Operator needs to see daemon state and manage lifecycle | ✅ Aligned. `DESIGN.md` M1 and `ARCHITECTURE-UX-REMEDIATION` F1 cover dashboard tile and CLI commands. |
+| AD-7 / MCP HTTP/SSE Daemon (`medirus daemon start|status|stop`, `GET /health`) | Operator needs to see daemon state and manage lifecycle | ✅ Aligned. `DESIGN.md` M1 and `ARCHITECTURE-UX-REMEDIATION` F1 cover dashboard tile and CLI commands. |
 | AD-10 / Checkpoint API (`GET /checkpoints`, resume/pause/retry) | Operator needs checkpoint table with inline actions | ✅ Aligned. `DESIGN.md` M2, `EXPERIENCE-UNIVERSAL` O2, `ARCHITECTURE-UX-REMEDIATION` F4. |
 | AD-11 / `AbstractCrawler.listActions()` & schema registry | AI agent / user needs action discovery and schema preview | ✅ Aligned. `DESIGN.md` Schema Viewer, `EXPERIENCE-UNIVERSAL` A1/N1, `ARCHITECTURE-UX-REMEDIATION` F5. |
 | AD-9 / Standardized Error Envelope with `suggestedAction` | UX requires actionable errors (inline, no modal) | ✅ Aligned. `DESIGN.md` Result Panel variants; `ARCHITECTURE-UX-REMEDIATION` F6. |
-| AD-13 / Governor Status API (`GET /governor/status`, `xactions status`) | Admin dashboard and CLI need live proxy/metrics/hibernation data | ✅ Aligned. `DESIGN.md` M1/M3, `EXPERIENCE-UNIVERSAL` O1/C3, `ARCHITECTURE-UX-REMEDIATION` F3. |
+| AD-13 / Governor Status API (`GET /governor/status`, `medirus status`) | Admin dashboard and CLI need live proxy/metrics/hibernation data | ✅ Aligned. `DESIGN.md` M1/M3, `EXPERIENCE-UNIVERSAL` O1/C3, `ARCHITECTURE-UX-REMEDIATION` F3. |
 | AD-5 / Terminal QR Login with timeout and polling | TTY QR display and non-TTY fallback | ⚠️ Partial. `EXPERIENCE-UNIVERSAL` C1/C2 cover both; architecture mentions QR/CDP/cookie shape but does not detail non-TTY flow. |
 
 ### 4.4. UX Warnings
@@ -404,7 +404,7 @@ No missing FRs or NFRs for the canonical Epics 10–20 scope. All requirements f
 | # | Warning | Severity | Recommended Action |
 | --- | --- | --- | --- |
 | W1 | `EXPERIENCE.md` is still `draft` and only covers Facebook/X. It does not reflect the multi-platform scope (Epics 10–20). | Medium | Either promote `EXPERIENCE-UNIVERSAL-2026-08-21.md` to canonical experience doc or update `EXPERIENCE.md` to include all platforms and admin flows. |
-| W2 | CLI wireframes for `xactions admin` are not yet detailed; README explicitly states they should be added under Epic 19 as stories are implemented. | Medium | Create CLI command wireframes for Epic 19 (proxy/account/checkpoint/stream management) before implementation starts. |
+| W2 | CLI wireframes for `medirus admin` are not yet detailed; README explicitly states they should be added under Epic 19 as stories are implemented. | Medium | Create CLI command wireframes for Epic 19 (proxy/account/checkpoint/stream management) before implementation starts. |
 | W3 | UX for individual new platform pages (Shopee, Batdongsan, TopCV, VietnamWorks, LinkedIn, TikTok, Threads) is absent beyond the multi-platform selector mockup. | Medium | Add per-platform action cards / result panels to `EXPERIENCE.md` or a new `EXPERIENCE-<platform>.md`. |
 | W4 | Non-TTY QR login (Flow C2) is described in UX but not explicitly in PRD or architecture. It requires `--qr-url`, webhook/push, and CI-friendly behavior. | Low | Add AC to Story 12.1 for non-TTY mode and ensure `AbstractLogin` contract supports URL-based confirmation. |
 
@@ -496,7 +496,7 @@ None. All critical issues from the previous assessment are resolved.
 ### 6.3. High-Priority Recommendations (Parallel with Implementation)
 
 1. **Resolve remaining UX gaps before the first UI/CLI implementation sprint:**
-   - Add CLI wireframes for `xactions admin` commands.
+   - Add CLI wireframes for `medirus admin` commands.
    - Define per-platform page UX for Shopee, Batdongsan, TopCV, VietnamWorks, LinkedIn, TikTok, Threads.
    - Add dashboard mockups for Bluesky/Mastodon optional-auth and instance override fields.
 2. **Consider splitting Story 19.8** (account + checkpoint REST) into two stories for stricter separation.

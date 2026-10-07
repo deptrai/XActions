@@ -1,8 +1,8 @@
-# XActions REST API Reference
+# Medirus REST API Reference
 
-> Complete reference for the XActions Express.js API server. 175+ endpoints for Twitter automation, scraping, analytics, AI agents, and more.
+> Complete reference for the Medirus Express.js API server. 175+ endpoints for Twitter automation, scraping, analytics, AI agents, and more.
 
-**Base URL:** `http://localhost:3001` (development) | `https://api.xactions.app` (production)
+**Base URL:** `http://localhost:3001` (development) | `https://api.medirus.online` (production)
 
 ---
 
@@ -107,7 +107,7 @@ GET /api/health
 
 **Response:**
 ```json
-{ "status": "ok", "service": "xactions-api", "timestamp": "2026-02-25T..." }
+{ "status": "ok", "service": "medirus-api", "timestamp": "2026-02-25T..." }
 ```
 
 ---
@@ -125,12 +125,12 @@ GET /api/profile/:username
 {
   "username": "nichxbt",
   "name": "nich",
-  "bio": "Building XActions",
+  "bio": "Building Medirus",
   "followers": 25000,
   "following": 1200,
   "verified": true,
   "location": "Internet",
-  "website": "https://xactions.app"
+  "website": "https://medirus.online"
 }
 ```
 
@@ -158,7 +158,7 @@ Content-Type: application/json
 POST /api/posting/tweet
 Content-Type: application/json
 
-{ "text": "Hello from XActions! ⚡" }
+{ "text": "Hello from Medirus! ⚡" }
 ```
 
 ### Post a Thread
@@ -169,7 +169,7 @@ Content-Type: application/json
 
 {
   "tweets": [
-    "Thread about XActions 🧵",
+    "Thread about Medirus 🧵",
     "1/ It's free and open source",
     "2/ Works with Claude, Cursor, GPT",
     "3/ No Twitter API fees"
@@ -185,7 +185,7 @@ Content-Type: application/json
 
 {
   "question": "Best automation tool?",
-  "options": ["XActions", "Manual", "Twitter API"],
+  "options": ["Medirus", "Manual", "Twitter API"],
   "duration": { "days": 1 }
 }
 ```
@@ -260,7 +260,7 @@ GET /api/engagement/analytics
 ### Search Tweets
 
 ```http
-GET /api/discovery/search?q=xactions&limit=50&filter=latest
+GET /api/discovery/search?q=medirus&limit=50&filter=latest
 ```
 
 ### Get Trending Topics
@@ -287,7 +287,7 @@ Content-Type: application/json
 
 {
   "username": "targetuser",
-  "message": "Hey! Checking out XActions?"
+  "message": "Hey! Checking out Medirus?"
 }
 ```
 
@@ -730,7 +730,7 @@ POST /api/automations/stop-all
 POST /api/analytics/sentiment
 Content-Type: application/json
 
-{ "text": "XActions is amazing! Best tool ever 🔥" }
+{ "text": "Medirus is amazing! Best tool ever 🔥" }
 ```
 
 **Response:**
@@ -947,7 +947,7 @@ DELETE /api/datasets/:name               # Delete
 Multi-channel notification hub (Email, Slack, Discord, Telegram).
 
 ```http
-POST /api/notifications/send    { "message": "Alert!", "title": "XActions", "severity": "info" }
+POST /api/notifications/send    { "message": "Alert!", "title": "Medirus", "severity": "info" }
 POST /api/notifications/test/:channel   # channel: email, slack, discord, telegram
 POST /api/notifications/configure       # Interactive config
 ```
@@ -1025,7 +1025,7 @@ POST /api/ai/scrape/following    { "username": "nichxbt", "limit": 100 }
 POST /api/ai/scrape/tweets       { "username": "nichxbt", "limit": 50 }
 POST /api/ai/scrape/thread       { "url": "https://x.com/..." }
 POST /api/ai/scrape/search       { "query": "AI agents", "limit": 50 }
-POST /api/ai/scrape/hashtag      { "hashtag": "xactions" }
+POST /api/ai/scrape/hashtag      { "hashtag": "medirus" }
 POST /api/ai/scrape/media        { "username": "nichxbt" }
 ```
 
@@ -1178,7 +1178,7 @@ socket.on('alert:sentiment-shift', (data) => { /* sentiment change */ });
 | `SESSION_SECRET` | No | — | Session cookie secret |
 | `REDIS_HOST` | No | `localhost` | Redis for streaming/queues |
 | `REDIS_PORT` | No | `6379` | Redis port |
-| `XACTIONS_SESSION_COOKIE` | No | — | Default X auth token |
+| `MEDIRUS_SESSION_COOKIE` | No | — | Default X auth token |
 | `OPENROUTER_API_KEY` | No | — | For AI writer/optimizer |
 | `X402_PAY_TO_ADDRESS` | No | — | Wallet for micropayments |
 | `FRONTEND_URL` | No | — | CORS allowed origin |

@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QR Code Sharing — Free X/Twitter Script | XActions</title>
+  <title>QR Code Sharing — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="QR Code Profile Sharing on X - by nichxbt">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, code, sharing, account management">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, code, sharing, account management">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="QR Code Sharing — XActions">
+  <meta property="og:title" content="QR Code Sharing — Medirus">
   <meta property="og:description" content="QR Code Profile Sharing on X - by nichxbt">
-  <meta property="og:url" content="https://xactions.app/scripts/qr-code-sharing">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/qr-code-sharing">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="QR Code Sharing — XActions">
+  <meta name="twitter:title" content="QR Code Sharing — Medirus">
   <meta name="twitter:description" content="QR Code Profile Sharing on X - by nichxbt">
 
-  <link rel="canonical" href="https://xactions.app/scripts/qr-code-sharing">
+  <link rel="canonical" href="https://medirus.online/scripts/qr-code-sharing">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "QR Code Sharing — Free X/Twitter Script | XActions",
+    "headline": "QR Code Sharing — Free X/Twitter Script | Medirus",
     "description": "QR Code Profile Sharing on X - by nichxbt",
-    "url": "https://xactions.app/scripts/qr-code-sharing",
+    "url": "https://medirus.online/scripts/qr-code-sharing",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Account Management",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, code, sharing, account management"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, code, sharing, account management"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Account Management", "item": "https://xactions.app/scripts#account-management" },
-      { "@type": "ListItem", "position": 4, "name": "QR Code Sharing", "item": "https://xactions.app/scripts/qr-code-sharing" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Account Management", "item": "https://medirus.online/scripts#account-management" },
+      { "@type": "ListItem", "position": 4, "name": "QR Code Sharing", "item": "https://medirus.online/scripts/qr-code-sharing" }
     ]
   }
   </script>
@@ -198,7 +198,7 @@
   };
 
   const run = async () =&gt; {
-    console.log('📱 QR CODE SHARING - XActions by nichxbt');
+    console.log('📱 QR CODE SHARING - Medirus by nichxbt');
 
     let username = CONFIG.username;
     if (!username) {
@@ -228,14 +228,14 @@
 
     // Create a floating overlay with the QR code
     const overlay = document.createElement('div');
-    overlay.id = 'xactions-qr-overlay';
+    overlay.id = 'medirus-qr-overlay';
     overlay.innerHTML = `
       &lt;div style=&quot;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:pointer;&quot;&gt;
         &lt;div style=&quot;background:white;border-radius:16px;padding:32px;text-align:center;max-width:400px;&quot;&gt;
           &lt;h2 style=&quot;margin:0 0 8px 0;font-size:20px;color:#000;&quot;&gt;@${username}&lt;/h2&gt;
           &lt;p style=&quot;margin:0 0 16px 0;color:#666;font-size:14px;&quot;&gt;Scan to visit profile&lt;/p&gt;
           &lt;img src=&quot;${qrUrl}&quot; alt=&quot;QR Code&quot; style=&quot;width:${CONFIG.size}px;height:${CONFIG.size}px;border:2px solid #eee;border-radius:8px;&quot;&gt;
-          &lt;p style=&quot;margin:16px 0 0 0;color:#999;font-size:12px;&quot;&gt;Click anywhere to close • XActions by nichxbt&lt;/p&gt;
+          &lt;p style=&quot;margin:16px 0 0 0;color:#999;font-size:12px;&quot;&gt;Click anywhere to close • Medirus by nichxbt&lt;/p&gt;
         &lt;/div&gt;
       &lt;/div&gt;
     `;
@@ -266,7 +266,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -276,7 +276,7 @@
     <aside class="sidebar-right">
       <div class="sidebar-card">
         <h3>📱 Account Management</h3>
-        <a href="/scripts/account-settings">⚙️ Account Settings - XActions</a>
+        <a href="/scripts/account-settings">⚙️ Account Settings - Medirus</a>
 <a href="/scripts/backup-account">💾 Backup Account</a>
 <a href="/scripts/delegate-access">🔑 Delegate Access</a>
 <a href="/scripts/download-account-data">📥 Download Account Data</a>

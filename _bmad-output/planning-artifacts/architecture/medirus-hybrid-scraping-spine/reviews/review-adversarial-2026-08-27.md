@@ -1,6 +1,6 @@
 # Adversarial Architecture Review: Action-Level Granular Authentication & Proxy Strategy
 
-**Review Target:** `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (as amended on 2026-08-27)  
+**Review Target:** `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (as amended on 2026-08-27)  
 **Reference Proposal:** `_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-27.md`  
 **Reviewer Lens:** ADVERSARIAL — Systematic Failure Mode & Multi-Unit Incompatibility Analysis  
 **Date:** 2026-08-27  
@@ -116,7 +116,7 @@ The 2026-08-27 amendment updated `AbstractCrawler.start()` but left `AbstractApi
 ### Attack Vector 4 (HIGH): Orthogonal Proxy Dimension Collision — Dual-Pool Partitioning (AD-20) vs Action-Level Proxy Rotation (AD-3 3b)
 
 #### Concrete Scenario
-A background batch worker in Nowing triggers a mass crawl of 5,000 Facebook Marketplace listings (`requiresAuth: false`) by calling the XActions MCP HTTP daemon (`http://xactions:3001/mcp`).
+A background batch worker in Nowing triggers a mass crawl of 5,000 Facebook Marketplace listings (`requiresAuth: false`) by calling the Medirus MCP HTTP daemon (`http://medirus:3001/mcp`).
 - **Team A (Proxy Pool Dev)** implements AD-20 Rule 1: *"Realtime Pool (30% proxy capacity) dành cho MCP on-demand queries từ Nowing và ChainLens."* Because the request arrived via the MCP daemon endpoint, Team A routes all proxy allocations into the **Realtime Pool**.
 - **Team B (Facebook Scraper Dev)** implements AD-3 Rule 3b: `marketplace` has `actionRequiresAuth === false`, so it requests a **Rotating Residential Proxy** per request (`rotatePerRequest = true`).
 - The 5,000-listing background scrape fires rotating requests through the 30% Realtime Pool, instantly exhausting all healthy realtime proxies.

@@ -69,7 +69,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  ✅ XActions — Mass Unblock                                  ║
+║  ✅ Medirus — Mass Unblock                                  ║
 ║  Unblock multiple users                                      ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unblocked           ║' : '║  🔴 LIVE MODE - Accounts WILL be unblocked                  ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -227,7 +227,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unblocked    
   console.log('═'.repeat(60));
 
   // Save log
-  const storageKey = 'xactions_unblock_log';
+  const storageKey = 'medirus_unblock_log';
   const log = {
     timestamp: new Date().toISOString(),
     // Record the accounts actually unblocked; slicing the candidate list

@@ -169,6 +169,6 @@ export function buildGeneratedDocument() {
   const generator = new OpenApiGeneratorV31(registry.definitions);
   return generator.generateDocument({
     openapi: '3.1.0',
-    info: { title: 'XActions API', version: '2.0.0' },
+    info: { title: 'Medirus API', version: '2.0.0' },
   });
 }

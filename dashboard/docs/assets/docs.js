@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions documentation runtime.
+ * Medirus documentation runtime.
  *
  * Progressive enhancement only: every page is complete and readable with this
  * file blocked. Nothing here is required to read a doc, which matters because
@@ -25,7 +25,7 @@
   // The inline script in <head> has already applied the stored theme to avoid
   // a flash of the wrong colours. This only wires the toggle.
 
-  const STORAGE_KEY = 'xactions-theme';
+  const STORAGE_KEY = 'medirus-theme';
 
   /**
    * Resolve the theme currently rendered, whether it came from storage or the

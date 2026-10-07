@@ -2,14 +2,14 @@
 
 **Date:** 2026-09-09  
 **Architect:** Winston (bmad-agent-architect)  
-**Project:** XActions  
+**Project:** Medirus  
 **Status:** Draft — awaiting implementation approval
 
 ---
 
 ## 1. Executive Summary
 
-Khi **Nowing** gọi API scrape sang XActions mà không truyền `cursor`, hệ thống hiện tại **không tự động nạp `lastCursor` từ `CrawlCheckpoint`**. Điều này dẫn đến việc các crawler phải cào lại từ đầu, tốn kém proxy request và thời gian xử lý mặc dù database đã có dữ liệu cũ (`skipDuplicates: true`).
+Khi **Nowing** gọi API scrape sang Medirus mà không truyền `cursor`, hệ thống hiện tại **không tự động nạp `lastCursor` từ `CrawlCheckpoint`**. Điều này dẫn đến việc các crawler phải cào lại từ đầu, tốn kém proxy request và thời gian xử lý mặc dù database đã có dữ liệu cũ (`skipDuplicates: true`).
 
 Đề xuất này triển khai **hai lớp cải tiến** ở lớp cha `AbstractCrawler` để áp dụng **universal** cho tất cả crawler kế thừa:
 
@@ -21,7 +21,7 @@ Khi **Nowing** gọi API scrape sang XActions mà không truyền `cursor`, hệ
 ## 2. Goals & Non-Goals
 
 ### Goals
-- Khi Nowing gọi `POST /api/platform/:platform/scrape` không có `cursor`, XActions tự động resume từ checkpoint cũ nếu có.
+- Khi Nowing gọi `POST /api/platform/:platform/scrape` không có `cursor`, Medirus tự động resume từ checkpoint cũ nếu có.
 - Giảm số lượng network request thừa cho các job scrape định kỳ.
 - Áp dụng được cho **tất cả crawler kế thừa `AbstractCrawler`** mà không cần sửa từng crawler con (trừ việc đăng ký `checkpointResolver` nếu cần).
 - Không phá vỡ Epic 34 (benchmark) hoặc bất kỳ epic nào đang chạy.
@@ -222,7 +222,7 @@ const targetKey = [
 ### 5.4. Store — `src/store/index.js` (defaultStore)
 - Đảm bảo `defaultStore` (StoreWithRedis) delegate đúng các method mới.
 
-### 5.5. Types — `src/core/types.js` hoặc `types/xactions.d.ts`
+### 5.5. Types — `src/core/types.js` hoặc `types/medirus.d.ts`
 - Bổ sung `ActionDescriptor.checkpointResolver` typedef.
 - Bổ sung `CrawlerCommand.resumeFromCheckpoint`.
 

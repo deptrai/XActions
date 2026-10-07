@@ -1,6 +1,6 @@
 # Like Posts -- Tutorial
 
-> Step-by-step guide to liking posts on X using XActions browser scripts.
+> Step-by-step guide to liking posts on X using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -169,7 +169,7 @@ window.stopAutoLiker();
 - **Use `keywords` mode on search pages** for the most targeted results. Navigate to `x.com/search?q=your+topic` first.
 - **Set `minLikes: 5`** to avoid liking low-quality posts with no engagement.
 - **Enable `skipReplies: true`** to focus on original tweets only.
-- **Liked history** is stored in sessionStorage under `xactions_liked`. This is cleared when you close the tab.
+- **Liked history** is stored in sessionStorage under `medirus_liked`. This is cleared when you close the tab.
 - **The auto-liker** (with core.js) has built-in rate limiting that tracks likes per day. It stops automatically before hitting X's daily limit.
 - **`ALSO_RETWEET: true`** in the auto-liker will repost tweets as well as liking them.
 

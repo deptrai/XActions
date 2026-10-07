@@ -53,8 +53,8 @@ const mockX402Middleware = (req, res, next) => {
       price: '$0.001',
       network: 'eip155:84532',
       payTo: '0xTestAddress',
-      humanAlternative: 'Use free browser scripts at https://xactions.app/features',
-      docs: 'https://xactions.app/docs/ai-api',
+      humanAlternative: 'Use free browser scripts at https://medirus.online/features',
+      docs: 'https://medirus.online/docs/ai-api',
     });
   }
   
@@ -150,7 +150,7 @@ function createTestApp() {
   // Health check (free)
   app.get('/api/ai/health', (req, res) => {
     res.json({
-      service: 'XActions AI API',
+      service: 'Medirus AI API',
       x402: {
         enabled: true,
         version: 2,
@@ -165,8 +165,8 @@ function createTestApp() {
         'action:unfollow-non-followers': '$0.05',
         'action:detect-unfollowers': '$0.02',
       },
-      docs: 'https://xactions.app/docs/ai-api',
-      humanAccess: 'Free browser scripts at https://xactions.app/features',
+      docs: 'https://medirus.online/docs/ai-api',
+      humanAccess: 'Free browser scripts at https://medirus.online/features',
     });
   });
   
@@ -245,8 +245,8 @@ describe('x402 AI API', () => {
       expect(res.body.price).toBeDefined();
       expect(res.body.network).toBe('eip155:84532');
       expect(res.body.payTo).toBe('0xTestAddress');
-      expect(res.body.humanAlternative).toContain('xactions.app');
-      expect(res.body.docs).toContain('xactions.app');
+      expect(res.body.humanAlternative).toContain('medirus.online');
+      expect(res.body.docs).toContain('medirus.online');
     });
     
     it('includes PAYMENT-REQUIRED header with base64-encoded requirements', async () => {
@@ -409,14 +409,14 @@ describe('x402 AI API', () => {
     it('includes documentation links', async () => {
       const res = await request(app).get('/api/ai/health');
       
-      expect(res.body.docs).toContain('xactions.app');
+      expect(res.body.docs).toContain('medirus.online');
       expect(res.body.humanAccess).toBeDefined();
     });
     
     it('returns service name', async () => {
       const res = await request(app).get('/api/ai/health');
       
-      expect(res.body.service).toBe('XActions AI API');
+      expect(res.body.service).toBe('Medirus AI API');
     });
   });
   
@@ -606,7 +606,7 @@ describe('Payment header encoding', () => {
     const requirements = {
       x402Version: 2,
       description: 'Test with "quotes" and special chars: éàü',
-      resource: 'https://api.xactions.app/api/ai/scrape/profile?foo=bar&baz=qux',
+      resource: 'https://api.medirus.online/api/ai/scrape/profile?foo=bar&baz=qux',
     };
     
     const encoded = Buffer.from(JSON.stringify(requirements)).toString('base64');

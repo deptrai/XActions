@@ -178,7 +178,7 @@
         optimalSlots: slots.slice(0, CONFIG.topSlots).map(s => ({ day: DAYS[s.dayOfWeek], hour: s.hour, score: Math.round(s.adjustedScore * 100), avgEng: Math.round(s.avgEng), tweets: s.count })),
         dayRanking: dayRank.map(d => ({ day: d.day, avgEng: Math.round(d.avg), tweets: d.count })),
         totalTweets: tweets.length, analyzedAt: new Date().toISOString(),
-      }, `xactions-schedule-optimizer-${new Date().toISOString().slice(0, 10)}.json`);
+      }, `medirus-schedule-optimizer-${new Date().toISOString().slice(0, 10)}.json`);
       console.log('\n📥 Schedule exported as JSON.');
     }
   };

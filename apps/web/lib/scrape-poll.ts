@@ -13,7 +13,7 @@
  * and restored by `_resetPollSeams`.
  */
 
-import type { ApiErrorPayload, ApiResult } from '@xactions/api-client';
+import type { ApiErrorPayload, ApiResult } from '@medirus/api-client';
 import { api } from './api';
 
 /** 202 async accept body emitted by the mode-dispatch gateway (Story 50.2). */

@@ -5,7 +5,7 @@ import prisma from '../lib/prisma.js';
  * @typedef {import('@prisma/client').User} User
  */
 /**
- * XActions Unfollower Tracking API Routes
+ * Medirus Unfollower Tracking API Routes
  * 
  * POST /api/unfollowers/scan       — trigger a follower scan (Bull job)
  * GET  /api/unfollowers/history     — get scan history (last 30 scans)

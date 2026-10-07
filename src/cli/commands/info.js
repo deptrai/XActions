@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions info` and `xactions status`.
+ * `medirus info` and `medirus status`.
  *
  * @author nich (@nichxbt)
  * @license MIT
@@ -17,10 +17,10 @@ import { printGovernorStatus } from '../shared.js';
 export function registerInfoCommands(program) {
   program
     .command('info')
-    .description('Show XActions information')
+    .description('Show Medirus information')
     .action(() => {
       console.log(`
-${chalk.bold.cyan('⚡ XActions')} ${chalk.gray('v3.0.0')}
+${chalk.bold.cyan('⚡ Medirus')} ${chalk.gray('v3.0.0')}
 
 ${chalk.bold('The Complete X/Twitter Automation Toolkit')}
 
@@ -35,11 +35,11 @@ ${chalk.cyan('Author:')}
   nich (@nichxbt) - https://github.com/nirholas
 
 ${chalk.cyan('Links:')}
-  Website:  https://xactions.app
+  Website:  https://medirus.online
   GitHub:   https://github.com/nirholas/xactions
-  Docs:     https://xactions.app/docs
+  Docs:     https://medirus.online/docs
 
-${chalk.yellow('Run "xactions --help" for all commands')}
+${chalk.yellow('Run "medirus --help" for all commands')}
 `);
     });
 

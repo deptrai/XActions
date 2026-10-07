@@ -29,7 +29,7 @@
   };
 
   const run = async () => {
-    console.log('🎙️ SPACES MANAGER — XActions by nichxbt\n');
+    console.log('🎙️ SPACES MANAGER — Medirus by nichxbt\n');
     console.log(`📊 Scraping up to ${CONFIG.maxSpaces} Spaces...\n`);
 
     const spaces = new Map();
@@ -110,7 +110,7 @@
       const date = new Date().toISOString().slice(0, 10);
       download(
         { exportedAt: new Date().toISOString(), total: all.length, live: live.length, scheduled: scheduled.length, spaces: all },
-        `xactions-spaces-${date}.json`
+        `medirus-spaces-${date}.json`
       );
     }
 

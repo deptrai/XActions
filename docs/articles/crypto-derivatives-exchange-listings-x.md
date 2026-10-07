@@ -52,7 +52,7 @@ This guide shows you how to build an automated derivatives listing tracker that 
 ## Stream Setup
 
 ```js
-import { TwitterStream } from 'xactions';
+import { TwitterStream } from 'medirus';
 
 const LISTING_KEYWORDS = [
   'perpetual', 'perpetuals', 'futures listing', 'now listed',
@@ -70,7 +70,7 @@ const EXCHANGE_ACCOUNTS = [
 ];
 
 const stream = new TwitterStream({
-  sessionCookie: process.env.XACTIONS_SESSION_COOKIE,
+  sessionCookie: process.env.MEDIRUS_SESSION_COOKIE,
 });
 
 await stream.start({

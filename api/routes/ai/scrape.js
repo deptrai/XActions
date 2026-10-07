@@ -46,7 +46,7 @@ router.use(async (req, res, next) => {
       code: 'E_SESSION_MISSING',
       message: 'X/Twitter session cookie is required for scraping',
       hint: 'Include sessionCookie in request body or X-Session-Cookie header',
-      docs: 'https://xactions.app/docs/ai-api#authentication',
+      docs: 'https://medirus.online/docs/ai-api#authentication',
       example: {
         body: { sessionCookie: 'your_auth_token_here', username: 'elonmusk' },
         header: { 'X-Session-Cookie': 'your_auth_token_here' },

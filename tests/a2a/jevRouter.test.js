@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — A2A Jev Semantic Router Tests (Story 44.1)
+// Medirus — A2A Jev Semantic Router Tests (Story 44.1)
 // by nichxbt
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -47,10 +47,10 @@ describe('A2A Jev Router (Story 44.1)', () => {
 
     it('returns direct match when only 1 candidate matches', async () => {
       const candidates = [
-        { id: 'xactions.x_get_profile', name: 'Profile Lookup', description: 'Fetch profile' },
+        { id: 'medirus.x_get_profile', name: 'Profile Lookup', description: 'Fetch profile' },
       ];
       const res = await routeTaskIntent('profile query', { candidateSkills: candidates });
-      expect(res.skillId).toBe('xactions.x_get_profile');
+      expect(res.skillId).toBe('medirus.x_get_profile');
       expect(res.source).toBe('direct');
       expect(res.confidence).toBe(1.0);
       expect(mockFetch).not.toHaveBeenCalled();
@@ -58,9 +58,9 @@ describe('A2A Jev Router (Story 44.1)', () => {
 
     it('disambiguates between multiple skills using Jev Choice with high confidence', async () => {
       const candidates = [
-        { id: 'xactions.x_get_profile', name: 'Get Profile', description: 'Fetch user profile' },
-        { id: 'xactions.x_get_tweets', name: 'Get Tweets', description: 'Fetch recent tweets from account' },
-        { id: 'xactions.x_search_tweets', name: 'Search Tweets', description: 'Search global tweets' },
+        { id: 'medirus.x_get_profile', name: 'Get Profile', description: 'Fetch user profile' },
+        { id: 'medirus.x_get_tweets', name: 'Get Tweets', description: 'Fetch recent tweets from account' },
+        { id: 'medirus.x_search_tweets', name: 'Search Tweets', description: 'Search global tweets' },
       ];
 
       mockFetch.mockResolvedValueOnce(mockJevSuccess('x_get_tweets', 0.92));
@@ -71,7 +71,7 @@ describe('A2A Jev Router (Story 44.1)', () => {
         brain,
       });
 
-      expect(res.skillId).toBe('xactions.x_get_tweets');
+      expect(res.skillId).toBe('medirus.x_get_tweets');
       expect(res.confidence).toBe(0.92);
       expect(res.disambiguationNeeded).toBe(false);
       expect(res.source).toBe('jev');
@@ -80,8 +80,8 @@ describe('A2A Jev Router (Story 44.1)', () => {
 
     it('flags disambiguationNeeded when confidence is below threshold', async () => {
       const candidates = [
-        { id: 'xactions.x_get_profile', name: 'Get Profile', description: 'Fetch user profile' },
-        { id: 'xactions.x_get_tweets', name: 'Get Tweets', description: 'Fetch recent tweets from account' },
+        { id: 'medirus.x_get_profile', name: 'Get Profile', description: 'Fetch user profile' },
+        { id: 'medirus.x_get_tweets', name: 'Get Tweets', description: 'Fetch recent tweets from account' },
       ];
 
       mockFetch.mockResolvedValueOnce(mockJevSuccess('x_get_tweets', 0.55)); // below 0.70 threshold
@@ -100,8 +100,8 @@ describe('A2A Jev Router (Story 44.1)', () => {
 
     it('flags disambiguationNeeded when Jev returns "unclear"', async () => {
       const candidates = [
-        { id: 'xactions.x_get_profile', name: 'Get Profile', description: 'Fetch user profile' },
-        { id: 'xactions.x_get_tweets', name: 'Get Tweets', description: 'Fetch recent tweets from account' },
+        { id: 'medirus.x_get_profile', name: 'Get Profile', description: 'Fetch user profile' },
+        { id: 'medirus.x_get_tweets', name: 'Get Tweets', description: 'Fetch recent tweets from account' },
       ];
 
       mockFetch.mockResolvedValueOnce(mockJevSuccess('unclear', 0.85));
@@ -118,8 +118,8 @@ describe('A2A Jev Router (Story 44.1)', () => {
 
     it('gracefully degrades when Jev plane is degraded (no key / error)', async () => {
       const candidates = [
-        { id: 'xactions.x_get_profile', name: 'Get Profile', description: 'Fetch user profile' },
-        { id: 'xactions.x_get_tweets', name: 'Get Tweets', description: 'Fetch recent tweets' },
+        { id: 'medirus.x_get_profile', name: 'Get Profile', description: 'Fetch user profile' },
+        { id: 'medirus.x_get_tweets', name: 'Get Tweets', description: 'Fetch recent tweets' },
       ];
 
       const prevKey = process.env.TYPESAFE_API_KEY;
@@ -135,7 +135,7 @@ describe('A2A Jev Router (Story 44.1)', () => {
 
       expect(res.degraded).toBe(true);
       expect(res.source).toBe('fallback');
-      expect(res.skillId).toBe('xactions.x_get_profile'); // falls back to first candidate
+      expect(res.skillId).toBe('medirus.x_get_profile'); // falls back to first candidate
     });
   });
 

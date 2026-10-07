@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Workflow Store
+ * Medirus Workflow Store
  * Persistence layer for workflow definitions and execution logs
  *
  * Supports two backends:
  * - Prisma/PostgreSQL (when DATABASE_URL is set)
- * - JSON files (fallback, stores in ~/.xactions/workflows/)
+ * - JSON files (fallback, stores in ~/.medirus/workflows/)
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @license MIT
@@ -19,15 +19,15 @@ import os from 'os';
 import crypto from 'crypto';
 
 /**
- * @typedef {import('../types/xactions.js').WorkflowStore} WorkflowStore
+ * @typedef {import('../types/medirus.js').WorkflowStore} WorkflowStore
  */
 
 // ============================================================================
 // Config
 // ============================================================================
 
-const WORKFLOWS_DIR = path.join(os.homedir(), '.xactions', 'workflows');
-const RUNS_DIR = path.join(os.homedir(), '.xactions', 'workflow-runs');
+const WORKFLOWS_DIR = path.join(os.homedir(), '.medirus', 'workflows');
+const RUNS_DIR = path.join(os.homedir(), '.medirus', 'workflow-runs');
 
 // ============================================================================
 // JSON File Store (fallback)

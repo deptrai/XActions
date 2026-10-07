@@ -1,8 +1,8 @@
 ---
 title: "Creator Revenue Sharing & Subscriptions — Tutorial"
-description: "Set up creator subscriptions, configure tiers, manage subscribers, and enroll in ad revenue sharing on X/Twitter using XActions."
-keywords: ["x creator subscriptions", "twitter revenue sharing", "creator monetization x", "twitter ads revenue", "xactions creator revenue"]
-canonical: "https://xactions.app/examples/creator-revenue"
+description: "Set up creator subscriptions, configure tiers, manage subscribers, and enroll in ad revenue sharing on X/Twitter using Medirus."
+keywords: ["x creator subscriptions", "twitter revenue sharing", "creator monetization x", "twitter ads revenue", "medirus creator revenue"]
+canonical: "https://medirus.online/examples/creator-revenue"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
@@ -60,7 +60,7 @@ const CONFIG = {
 
 ```javascript
 (() => {
-  console.log('💰 CREATOR REVENUE - XActions by nichxbt\n');
+  console.log('💰 CREATOR REVENUE - Medirus by nichxbt\n');
 
   // Check Premium status
   const isVerified = !!document.querySelector('[data-testid="icon-verified"]');
@@ -242,7 +242,7 @@ console.log(eligibility);
 ### Expected Console Output
 
 ```
-💰 CREATOR REVENUE - XActions by nichxbt
+💰 CREATOR REVENUE - Medirus by nichxbt
 
 ✅ Verified badge detected — Premium requirement likely met.
 
@@ -330,5 +330,5 @@ console.log(eligibility);
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

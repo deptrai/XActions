@@ -1,14 +1,14 @@
-# xactions-plugin-example
+# medirus-plugin-example
 
-> Example XActions plugin — use as a template for building your own.
+> Example Medirus plugin — use as a template for building your own.
 
 ## What It Does
 
-This plugin demonstrates all the extension points available in the XActions plugin system:
+This plugin demonstrates all the extension points available in the Medirus plugin system:
 
 - **Scraper**: `scrapeTrendingTopics` — scrapes trending topics from X/Twitter Explore
 - **MCP Tool**: `x_get_trending_topics` — exposes the scraper to AI agents (Claude, GPT)
-- **API Route**: `GET /api/plugins/xactions-plugin-example/trending`
+- **API Route**: `GET /api/plugins/medirus-plugin-example/trending`
 - **Browser Action**: `getTrending` — paste-and-run script for the console
 - **Lifecycle Hooks**: `onLoad`, `onUnload`, `beforeAction`, `afterAction`
 
@@ -17,18 +17,18 @@ This plugin demonstrates all the extension points available in the XActions plug
 ### 1. Create a new npm package
 
 ```bash
-mkdir xactions-plugin-myplugin
-cd xactions-plugin-myplugin
+mkdir medirus-plugin-myplugin
+cd medirus-plugin-myplugin
 npm init -y
 ```
 
 ### 2. Set the package name
 
-Name it `xactions-plugin-*` or scope it as `@xactions/*`:
+Name it `medirus-plugin-*` or scope it as `@medirus/*`:
 
 ```json
 {
-  "name": "xactions-plugin-myplugin",
+  "name": "medirus-plugin-myplugin",
   "type": "module",
   "main": "index.js"
 }
@@ -39,7 +39,7 @@ Name it `xactions-plugin-*` or scope it as `@xactions/*`:
 ```javascript
 // index.js
 export default {
-  name: 'xactions-plugin-myplugin',
+  name: 'medirus-plugin-myplugin',
   version: '1.0.0',
   description: 'My custom plugin',
 
@@ -90,20 +90,20 @@ export default {
 };
 ```
 
-### 4. Install into XActions
+### 4. Install into Medirus
 
 ```bash
 # From npm
-xactions plugin install xactions-plugin-myplugin
+medirus plugin install medirus-plugin-myplugin
 
 # Or from a local directory
-xactions plugin install ./path/to/plugin
+medirus plugin install ./path/to/plugin
 ```
 
 ### 5. Verify
 
 ```bash
-xactions plugin list
+medirus plugin list
 ```
 
 ## Plugin Interface Reference

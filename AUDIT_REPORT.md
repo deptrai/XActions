@@ -1,4 +1,4 @@
-# XActions Comprehensive Quality & Coverage Audit
+# Medirus Comprehensive Quality & Coverage Audit
 
 **Date:** February 24, 2026  
 **Auditor:** GitHub Copilot (Claude Opus 4.6)  
@@ -160,7 +160,7 @@ Score 8+: 0 files (0%)        — No production-grade scripts
 | 11 | growth-automation | 385 | ⚠️ Partial | **5** | References scripts/twitter scripts not src/ |
 | 12 | spaces-live | 384 | ✅ Good | **6** | Covers scrape, create, schedule |
 | 13 | discovery-explore | 382 | ✅ Good | **6** | Search, trends, topics |
-| 14 | xactions-mcp-server | 382 | ✅ Good | **6** | MCP integration docs |
+| 14 | medirus-mcp-server | 382 | ✅ Good | **6** | MCP integration docs |
 | 15 | lists-management | 352 | ✅ Good | **6** | Create, add, export |
 | 16 | grok-ai | 344 | ✅ Good | **6** | Query, image gen, summarize |
 | 17 | creator-monetization | 342 | ✅ Good | **5** | Light on examples |
@@ -172,7 +172,7 @@ Score 8+: 0 files (0%)        — No production-grade scripts
 | 23 | bookmarks-management | 304 | ✅ Good | **5** | Organize, export, clear |
 | 24 | articles-longform | 298 | ✅ Good | **5** | Publish, draft, list articles |
 | 25 | unfollow-management | 263 | ✅ 4/4 scripts | **6** | Concise and accurate |
-| 26 | xactions-cli | 234 | ⚠️ Thin | **4** | Missing CLI command examples |
+| 26 | medirus-cli | 234 | ⚠️ Thin | **4** | Missing CLI command examples |
 | 27 | community-management | 176 | ⚠️ Only covers leave | **4** | Missing joinCommunities coverage |
 
 ### SKILL.md Issues
@@ -180,7 +180,7 @@ Score 8+: 0 files (0%)        — No production-grade scripts
 1. **Duplicate skills**: `content-posting` and `posting-content` cover the same topic
 2. **community-management** only documents `leaveAllCommunities.js` — missing `joinCommunities.js`
 3. **twitter-scraping** doesn't enumerate all scraper modules in `src/scrapers/`
-4. **xactions-cli** is very thin at 234 words with no command examples
+4. **medirus-cli** is very thin at 234 words with no command examples
 5. **growth-automation** references `scripts/twitter/` files but skill docs should map to `src/` modules
 
 ---
@@ -351,7 +351,7 @@ Score 8+: 0 files (0%)        — No production-grade scripts
 ### 8. `leaveAllCommunities.js` — Score: 5/10
 
 **Issues:**
-- Uses `sessionStorage` key `xactions_left_ids` but SKILL.md says `xactions_left_communities` — documentation mismatch
+- Uses `sessionStorage` key `medirus_left_ids` but SKILL.md says `medirus_left_communities` — documentation mismatch
 - Recursive `run()` without depth limit — could stack overflow
 - No configurable limit on communities to leave
 - No dry-run mode
@@ -409,7 +409,7 @@ Score 8+: 0 files (0%)        — No production-grade scripts
      || document.querySelector('button[role="button"] svg[viewBox*="like"]');
    ```
 
-10. **Add pause/resume to all long-running scripts** — Store progress in sessionStorage, allow `window.stopXActions()` and restart to resume.
+10. **Add pause/resume to all long-running scripts** — Store progress in sessionStorage, allow `window.stopMedirus()` and restart to resume.
 
 11. **Consolidate duplicate skills** — Merge `content-posting` and `posting-content` SKILL.md files.
 

@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# XActions — Docker Compose (Full Stack)
+# Medirus — Docker Compose (Full Stack)
 # Runs: API + Worker + PostgreSQL + Redis
 # Usage: docker compose up -d
 # by nichxbt
@@ -13,15 +13,15 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: xactions
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-xactions_dev_password}
-      POSTGRES_DB: xactions
+      POSTGRES_USER: medirus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medirus_dev_password}
+      POSTGRES_DB: medirus
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U xactions"]
+      test: ["CMD-SHELL", "pg_isready -U medirus"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -44,7 +44,7 @@ services:
       retries: 5
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # XActions API Server
+  # Medirus API Server
   # ─────────────────────────────────────────────────────────────────────────────
   api:
     build:
@@ -56,7 +56,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://xactions:${POSTGRES_PASSWORD:-xactions_dev_password}@postgres:5432/xactions?schema=public
+      DATABASE_URL: postgresql://medirus:${POSTGRES_PASSWORD:-medirus_dev_password}@postgres:5432/medirus?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
@@ -79,7 +79,7 @@ services:
       retries: 3
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # XActions Background Worker (Job Queue Processor)
+  # Medirus Background Worker (Job Queue Processor)
   # ─────────────────────────────────────────────────────────────────────────────
   worker:
     build:
@@ -88,7 +88,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://xactions:${POSTGRES_PASSWORD:-xactions_dev_password}@postgres:5432/xactions?schema=public
+      DATABASE_URL: postgresql://medirus:${POSTGRES_PASSWORD:-medirus_dev_password}@postgres:5432/medirus?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}

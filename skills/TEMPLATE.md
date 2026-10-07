@@ -15,7 +15,7 @@ Brief description of the skill — what it does and when to use it.
 
 | Goal | Solution |
 |------|----------|
-| Do X | `path/to/script.js` or `xactions <command>` |
+| Do X | `path/to/script.js` or `medirus <command>` |
 | Do Y | `path/to/other.js` |
 
 ## Implementation Details
@@ -36,7 +36,7 @@ If applicable, explain which page to navigate to and how to paste/run the script
 ### CLI Usage
 
 ```bash
-xactions command <args>
+medirus command <args>
 ```
 
 ### MCP Tool Usage

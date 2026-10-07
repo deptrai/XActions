@@ -26,7 +26,7 @@
   };
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  const STORAGE_KEY = 'xactions_timeline';
+  const STORAGE_KEY = 'medirus_timeline';
 
   const SELECTORS = {
     tabList: '[data-testid="ScrollSnap-List"] a',
@@ -281,7 +281,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `xactions_timeline_${timeline}_${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `medirus_timeline_${timeline}_${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -292,7 +292,7 @@
 
   const run = async () => {
     console.log('═══════════════════════════════════════════');
-    console.log('📰 XActions — Timeline Viewer');
+    console.log('📰 Medirus — Timeline Viewer');
     console.log('═══════════════════════════════════════════\n');
 
     // Check we're on the home page

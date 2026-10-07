@@ -1,6 +1,6 @@
 # SEO & Knowledge Panel Documentation
 
-> Complete guide to getting XActions recognized as an entity in Google's Knowledge Graph and optimizing search visibility.
+> Complete guide to getting Medirus recognized as an entity in Google's Knowledge Graph and optimizing search visibility.
 
 ---
 

@@ -42,7 +42,7 @@ describe('Story 12.2 — CLI Auth Command with Chrome Launch Helper (tests/cli/a
         },
       });
 
-      program.parse(['node', 'xactions', 'auth', '--launch-chrome']);
+      program.parse(['node', 'medirus', 'auth', '--launch-chrome']);
 
       expect(capturedOptions).toBeDefined();
       expect(capturedOptions.launchChrome).toBe(true);
@@ -61,7 +61,7 @@ describe('Story 12.2 — CLI Auth Command with Chrome Launch Helper (tests/cli/a
 
       program.parse([
         'node',
-        'xactions',
+        'medirus',
         'auth',
         '--launch-chrome',
         '--port',
@@ -87,7 +87,7 @@ describe('Story 12.2 — CLI Auth Command with Chrome Launch Helper (tests/cli/a
 
       program.parse([
         'node',
-        'xactions',
+        'medirus',
         'auth',
         '--launch-chrome',
         '--account-id',

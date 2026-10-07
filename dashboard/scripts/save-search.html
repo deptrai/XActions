@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Save Searches — Free X/Twitter Script | XActions</title>
+  <title>Save Searches — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Save the current search query, list saved searches,">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, save, search, discovery">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, save, search, discovery">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Save Searches — XActions">
+  <meta property="og:title" content="Save Searches — Medirus">
   <meta property="og:description" content="Save the current search query, list saved searches,">
-  <meta property="og:url" content="https://xactions.app/scripts/save-search">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/save-search">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Save Searches — XActions">
+  <meta name="twitter:title" content="Save Searches — Medirus">
   <meta name="twitter:description" content="Save the current search query, list saved searches,">
 
-  <link rel="canonical" href="https://xactions.app/scripts/save-search">
+  <link rel="canonical" href="https://medirus.online/scripts/save-search">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Save Searches — Free X/Twitter Script | XActions",
+    "headline": "Save Searches — Free X/Twitter Script | Medirus",
     "description": "Save the current search query, list saved searches,",
-    "url": "https://xactions.app/scripts/save-search",
+    "url": "https://medirus.online/scripts/save-search",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Discovery",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, save, search, discovery"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, save, search, discovery"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Discovery", "item": "https://xactions.app/scripts#discovery" },
-      { "@type": "ListItem", "position": 4, "name": "Save Searches", "item": "https://xactions.app/scripts/save-search" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Discovery", "item": "https://medirus.online/scripts#discovery" },
+      { "@type": "ListItem", "position": 4, "name": "Save Searches", "item": "https://medirus.online/scripts/save-search" }
     ]
   }
   </script>
@@ -165,7 +165,7 @@
 
     // ── Search Query ─────────────────────────────────────────
     query: '',                       // The search query to save/run
-    // e.g. 'xactions OR &quot;twitter automation&quot; -is:retweet'
+    // e.g. 'medirus OR &quot;twitter automation&quot; -is:retweet'
 
     // ── Delete ───────────────────────────────────────────────
     deleteQuery: '',                 // Query text of the saved search to delete
@@ -222,7 +222,7 @@
 
     // ── Search Query ─────────────────────────────────────────
     query: '',                       // The search query to save/run
-    // e.g. 'xactions OR &quot;twitter automation&quot; -is:retweet'
+    // e.g. 'medirus OR &quot;twitter automation&quot; -is:retweet'
 
     // ── Delete ───────────────────────────────────────────────
     deleteQuery: '',                 // Query text of the saved search to delete
@@ -479,7 +479,7 @@
     console.log(`📋 Action: ${CONFIG.action}`);
     if (CONFIG.query) console.log(`📋 Query: &quot;${CONFIG.query}&quot;`);
 
-    const sessionKey = 'xactions_saveSearch';
+    const sessionKey = 'medirus_saveSearch';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     const actions = {
@@ -519,7 +519,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

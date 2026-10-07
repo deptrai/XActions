@@ -42,14 +42,14 @@ Also monitor key mining journalists and analysts who break pool news:
 ## Setting Up the Monitor
 
 ```js
-import { TwitterStream } from 'xactions';
+import { TwitterStream } from 'medirus';
 import { createClient } from 'redis';
 
 const redis = createClient({ url: process.env.REDIS_URL });
 await redis.connect();
 
 const stream = new TwitterStream({
-  sessionCookie: process.env.XACTIONS_SESSION_COOKIE,
+  sessionCookie: process.env.MEDIRUS_SESSION_COOKIE,
 });
 
 const MINING_KEYWORDS = [
@@ -201,12 +201,12 @@ For pools that don't tweet consistently, supplement the stream with periodic scr
 
 ```js
 import cron from 'node-cron';
-import { scrapeProfile } from 'xactions';
+import { scrapeProfile } from 'medirus';
 
 cron.schedule('*/15 * * * *', async () => {
   for (const account of POOL_ACCOUNTS) {
     const profile = await scrapeProfile(account, {
-      sessionCookie: process.env.XACTIONS_SESSION_COOKIE
+      sessionCookie: process.env.MEDIRUS_SESSION_COOKIE
     });
 
     const latestTweet = profile.tweets[0];

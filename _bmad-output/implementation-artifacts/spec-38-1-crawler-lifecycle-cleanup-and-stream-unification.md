@@ -28,7 +28,7 @@ deferred: []
 - Ensure `AbstractCrawler` is the single authoritative manager for stream emission to Redis Streams.
 - Maintain a session/command-scoped `Set<string>` in `AbstractCrawler` to guarantee zero-duplicate event emission across all execution modes.
 - Preserve backward compatibility for direct method callers (e.g. `crawler.groupPosts()`) by exposing `emitStreamBatch(items, context)`.
-- Support `XACTIONS_TEST_FAST_DELAYS=1` to ensure all unit and integration tests run in under 1.5 seconds.
+- Support `MEDIRUS_TEST_FAST_DELAYS=1` to ensure all unit and integration tests run in under 1.5 seconds.
 - Ensure all 100% of existing crawler tests and stream tests pass without regressions.
 
 **Never:**

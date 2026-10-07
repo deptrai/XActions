@@ -15,7 +15,7 @@ Create a GitHub Actions CI workflow that runs ESLint and Prettier checks on ever
 ## File: `.github/workflows/lint.yml`
 
 ```yaml
-# .github/workflows/lint.yml — XActions lint & format CI
+# .github/workflows/lint.yml — Medirus lint & format CI
 # by nichxbt
 name: Lint & Format
 

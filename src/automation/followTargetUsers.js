@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation - Follow Followers/Following of Target Users
+// Medirus Automation - Follow Followers/Following of Target Users
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -13,12 +13,12 @@
 // 4. Run and let it work!
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, SELECTORS, extractUserFromCell } = window.XActions.Core;
+  const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, SELECTORS, extractUserFromCell } = window.Medirus.Core;
 
   // ============================================
   // CONFIGURATION
@@ -298,7 +298,7 @@
   const run = async () => {
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  👥 XActions - Follow Target's ${CONFIG.LIST_TYPE.padEnd(10)}              ║
+║  👥 Medirus - Follow Target's ${CONFIG.LIST_TYPE.padEnd(10)}              ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Targets: ${String(CONFIG.TARGET_ACCOUNTS.length).padEnd(5)} accounts                            ║
 ║  List type: ${CONFIG.LIST_TYPE.padEnd(12)}                             ║
@@ -346,7 +346,7 @@
     log('Stopping target follow...', 'warning');
   };
 
-  window.XActions.TargetFollow = {
+  window.Medirus.TargetFollow = {
     state: () => state,
     tracked: () => tracked,
     config: CONFIG,

@@ -1,18 +1,18 @@
 ---
 stepsCompleted: [1, 2, 3, 4]
 inputDocuments:
-  - 'planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
-  - 'planning-artifacts/research/technical-mediacrawler-architecture-for-xactions-research-2026-08-18.md'
+  - 'planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
+  - 'planning-artifacts/research/technical-mediacrawler-architecture-for-medirus-research-2026-08-18.md'
   - 'planning-artifacts/archive/epics-1-9-legacy.md'
   - 'prisma/schema.prisma'
-  - '../nowing/_bmad-output/planning-artifacts/architecture/architecture-xactions-social-integration-2026-08-15/ARCHITECTURE-SPINE.md'
+  - '../nowing/_bmad-output/planning-artifacts/architecture/architecture-medirus-social-integration-2026-08-15/ARCHITECTURE-SPINE.md'
 ---
 
-# XActions Universal Hybrid Scraping & Automation Engine — Epic Breakdown (Epics 10–20)
+# Medirus Universal Hybrid Scraping & Automation Engine — Epic Breakdown (Epics 10–20)
 
 ## Overview
 
-Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ thống **XActions Universal Hybrid Scraping & Automation Microservice** (tiếp nối Epics 1–9 trong `archive/epics-1-9-legacy.md`). Hệ thống được thiết kế theo chuẩn **Hexagonal Architecture + Tiered Hybrid Signer Engine + Dual-Channel Microservice Daemon + Adaptive Rate Limiter**, hợp nhất 100% cơ sở dữ liệu trên **PostgreSQL (Prisma ORM với JSONB GIN Indexes)** và đóng vai trò là Scraping Engine toàn năng cho hệ sinh thái **Nowing (AI Lead & Research Hub)** cũng như nền tảng SaaS/CLI/AI MCP độc lập.
+Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ thống **Medirus Universal Hybrid Scraping & Automation Microservice** (tiếp nối Epics 1–9 trong `archive/epics-1-9-legacy.md`). Hệ thống được thiết kế theo chuẩn **Hexagonal Architecture + Tiered Hybrid Signer Engine + Dual-Channel Microservice Daemon + Adaptive Rate Limiter**, hợp nhất 100% cơ sở dữ liệu trên **PostgreSQL (Prisma ORM với JSONB GIN Indexes)** và đóng vai trò là Scraping Engine toàn năng cho hệ sinh thái **Nowing (AI Lead & Research Hub)** cũng như nền tảng SaaS/CLI/AI MCP độc lập.
 
 ## Backlog Status & Legacy Code Overlap (Audit 2026-08-21)
 
@@ -30,12 +30,12 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 | 13.2 | `src/scrapers/twitter/index.js`, `src/scrapers/twitter/http/`, `src/client/Scraper.js`, `src/scrapers/index.js` | `TwitterCrawler extends AbstractCrawler` in `src/scrapers/social/twitter/` |
 | 13.3 | `src/scrapers/facebook/index.js`, `src/scrapers/facebook/graphql.js` | `FacebookCrawler extends AbstractCrawler` in `src/scrapers/social/facebook/` |
 | 14.1 | `src/scrapers/twitter/http/thread.js` (conversation/thread) | topological sort + Prisma batch save by depth |
-| 14.2 | `package.json` `mcp:daemon`, `src/mcp/server.js` `startHttpTransport()` (port 3001) | 3-layer JSON envelope, `x_crawl_*`, `x_actions_list`, artifact export |
+| 14.2 | `package.json` `mcp:daemon`, `src/mcp/server.js` `startHttpTransport()` (port 3001) | 3-layer JSON envelope, `x_crawl_*`, `medirus_list`, artifact export |
 | 14.3 | `src/streaming/streamManager.js` (Redis/Bull/Socket.IO) | `stream:social:raw_posts` thin events, metrics endpoint, alerts |
 | 15.1 | `src/scrapers/threads/index.js` (Puppeteer) | `ThreadsCrawler extends AbstractCrawler` in `src/scrapers/social/threads/` |
 | 19.1–19.3 | `/api/checkpoints`, `/api/proxies`, `/api/streams` routes exist | dashboard views in `dashboard/admin.html` |
-| 19.5 | `xactions checkpoints list/show/resume/pause/retry` | done |
-| 19.6 | `xactions stream start/stop/list/history/pause/resume` | Nowing `stream:social:raw_posts` metrics + alerts |
+| 19.5 | `medirus checkpoints list/show/resume/pause/retry` | done |
+| 19.6 | `medirus stream start/stop/list/history/pause/resume` | Nowing `stream:social:raw_posts` metrics + alerts |
 | 19.7 | `/api/proxies`, `/api/streams`, `/api/checkpoints` | mount under `/admin/*` with admin auth |
 
 ### New / No Code in Repo
@@ -47,7 +47,7 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 | 17.x | Chotot, Batdongsan | legacy lives in Nowing repo |
 | 18.1–18.2 | TopCV, VietnamWorks | no code |
 | 18.3 | LinkedIn via CDP | blocked by 12.2 |
-| 19.4, 19.8 | `xactions admin` CLI, `x_admin_*` MCP tools | no code |
+| 19.4, 19.8 | `medirus admin` CLI, `x_admin_*` MCP tools | no code |
 
 ### Decommission Plan (Epic 20.1)
 After new hybrid crawlers (Epics 13–18) are stable, the following legacy modules will be removed:
@@ -115,7 +115,7 @@ After new hybrid crawlers (Epics 13–18) are stable, the following legacy modul
 * **FR82 (LinkedIn Lead & Job Scraper):** Cào thông tin ứng viên, công ty và bài đăng tuyển dụng trên LinkedIn qua CDP Attach Port 9222.
 * **FR83 (Nowing Thin Event Stream Ingest):** Phát luồng dữ liệu cào dạng Thin Event Pointers (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 1000000` hoặc `MINID` theo thời gian, configurable) cho Nowing AI Hub.
 * **FR84 (Nowing Scrapers Cutover & Decommissioning):** Nâng cấp adapter Nowing sang Daemon MCP HTTP/SSE (Port 3001) và dọn dẹp, loại bỏ toàn bộ 20+ scraper cũ cùng browser dependencies khỏi Nowing backend. (Epic 20)
-* **FR85 (Internal Operator Dashboard & Admin CLI):** Cung cấp dashboard nội bộ và CLI `xactions admin` để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. (Epic 19)
+* **FR85 (Internal Operator Dashboard & Admin CLI):** Cung cấp dashboard nội bộ và CLI `medirus admin` để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. (Epic 19)
 * **FR86 (Metadata Schema Contract for Consumers):** Mỗi platform/category publish JSON Schema cho `Post.metadata` và API/CLI/MCP discovery. (Story 10.5)
 * **FR87 (Data Retention Policy):** Dữ liệu raw crawl TTL 30 ngày; leads/processed output vĩnh viễn; checkpoints/audit logs 90 ngày. (Story 10.2, Epic 19)
 * **FR88 (3-Tier Incremental Gap-Filling):** Cào theo mô hình full seed → delta/gap fill → on-demand refresh; 0% duplication; 90% proxy cost saving. (Epic 10, 11)
@@ -134,7 +134,7 @@ After new hybrid crawlers (Epics 13–18) are stable, the following legacy modul
 * **NFR15 (Clean Architecture & Extensibility):** Tách biệt 100% giữa Core domain contracts và Implementation adapters; việc thêm nền tảng mới không làm thay đổi core logic.
 * **NFR16 (License & Backward Compatibility):** 100% mã nguồn tuân thủ giấy phép tự do (MIT / Apache 2.0); giữ nguyên khả năng tương thích ngược với CLI `unfollowx` và toàn bộ 80+ MCP tools hiện có.
 * **NFR17 (Operational Observability):** Hệ thống expose real-time metrics qua `GET /governor/status`, `GET /metrics/stream`, dashboard SSE/polling 5–30s, và alert khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`.
-* **NFR18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
+* **NFR18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong Medirus phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
 
 ---
 
@@ -148,7 +148,7 @@ I want **định nghĩa các abstract class `AbstractCrawler`, `AbstractApiClien
 So that **tôi có thể thêm nền tảng mới (Shopee, LinkedIn, v.v.) mà không vi phạm core logic, và AI agent / operator nhận được actionable errors khi gặp sự cố**.
 
 **Acceptance Criteria:**
-* **Given** repo XActions ở trạng thái sau architecture r3
+* **Given** repo Medirus ở trạng thái sau architecture r3
 * **When** kiểm tra `package.json` và `src/core/`
 * **Then** `got-scraping`, `qrcode-terminal`, `socks-proxy-agent`, và `undici` phải có trong `dependencies` (hoặc xác nhận đã có)
 * **And** thư mục `src/core/` là 100% Pure ESM, no external npm dependencies
@@ -181,7 +181,7 @@ So that **toàn bộ dữ liệu cào đa ngành được lưu trữ tập trung
 **Acceptance Criteria:**
 
 #### Post model
-* **Given** file `prisma/schema.prisma` của dự án XActions
+* **Given** file `prisma/schema.prisma` của dự án Medirus
 * **When** định nghĩa model `Post` với `id` Namespaced `${platform}:${externalId}`, `platform`, `externalId`, `category`, `authorId`, `authorName`, `content`, `mediaUrls String[]`, `likesCount`, `repostsCount`, `repliesCount`, `viewsCount`, `metadata Json?`, `publishedAt`, `crawledAt`
 * **Then** `@@unique([platform, externalId])` tồn tại trên `Post` và migration sinh ra hợp lệ
 
@@ -230,7 +230,7 @@ So that **tôi có thể quản lý tiến độ crawl khi container restart ho�
 * **When** triển khai `src/api/checkpoints.js` và `src/cli/commands/checkpoints.js`
 * **Then** có endpoint `GET /checkpoints`, `GET /checkpoints/:id`, `POST /checkpoints/:id/resume`, `POST /checkpoints/:id/pause`, `POST /checkpoints/:id/retry`
 * **And** các thao tác resume/pause/retry yêu cầu operator đã xác thực với quyền `checkpoint:manage` (hoặc admin tương đương)
-* **And** CLI `xactions checkpoints list/show/resume/pause/retry` hoạt động
+* **And** CLI `medirus checkpoints list/show/resume/pause/retry` hoạt động
 * **And** `CrawlCheckpoint.status` chuyển đổi đúng giữa `running`, `paused`, `failed`, `completed`, `stalled`.
 
 ### Story 10.5: Metadata Schema Contract & Registry for Consumers
@@ -244,7 +244,7 @@ So that **consumer biết trước field nào tồn tại và kiểu dữ liệu
 * **Then** hệ thống hỗ trợ đăng ký JSON Schema từ file `schemas/<platform>/<category>.json` (hoặc TypeScript type)
 * **And** ít nhất 2 pilot schema được publish: `schemas/twitter/social.json` và `schemas/shopee/ecom.json`
 * **And** API `GET /schemas`, `GET /schemas/:platform/:category` trả về JSON Schema
-* **And** MCP tool `x_schema_get` và CLI `xactions schema get <platform> <category>` hoạt động
+* **And** MCP tool `x_schema_get` và CLI `medirus schema get <platform> <category>` hoạt động
 * **And** `PrismaStore` validate `metadata` against schema khi ghi, trả `invalid_args` error nếu mismatch; các schema ngoài pilot có thể được thêm trong epic chuyên biệt sau.
 
 ---
@@ -325,7 +325,7 @@ So that **hệ thống không bị quá tải khi Proxy xoay không kịp và tr
 * **And** cho auth-required platforms: mỗi tài khoản có token bucket `safeRequestsPerMinute`; tự động đưa tài khoản vào Hibernation 15–30 phút khi gặp Captcha/WAF; `AccountPool` tự động chuyển sang tài khoản tiếp theo khi account hiện tại đạt giới hạn hoặc hibernation
 * **And** cho no-auth platforms: tốc độ giới hạn theo proxy/IP, không cần hibernation account; nếu IP bị ban, quarantine và rotate proxy
 * **And** hãm tốc độ cào khi hàng đợi Redis Stream `stream:social:raw_posts` vượt quá 10,000 unread messages (Consumer Lag Backpressure)
-* **And** cung cấp `GET /governor/status` và CLI `xactions status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
+* **And** cung cấp `GET /governor/status` và CLI `medirus status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 
 ### Story 11.5: End-to-End Request Pipeline (Two-Mode IP Strategy)
 As a **Reliability Engineer**,
@@ -419,7 +419,7 @@ So that **tôi có thể dùng app điện thoại quét mã đăng nhập tức
 
 ### Story 12.2: CDP Remote Attach Mode with Launch Helper & Gaussian Jitter
 As a **Power User**,
-I want **kết nối XActions trực tiếp vào Chrome thật của tôi qua cổng 9222 với helper tự mở Chrome và độ trễ ngẫu nhiên Gaussian**,
+I want **kết nối Medirus trực tiếp vào Chrome thật của tôi qua cổng 9222 với helper tự mở Chrome và độ trễ ngẫu nhiên Gaussian**,
 So that **hệ thống sử dụng nguyên vẹn profile và fingerprint thật của tôi để cào LinkedIn/TopCV mà không bị phát hiện automation**.
 
 **Acceptance Criteria:**
@@ -431,7 +431,7 @@ So that **hệ thống sử dụng nguyên vẹn profile và fingerprint thật 
 ### Story 12.3: Multi-Browser Path Resolution & Advanced Anti-Automation Flags
 As a **Power User / Automation Engineer**,
 I want **`src/core/cdp-launcher.js` tự động nhận diện Microsoft Edge, Brave, Chromium Canary, Snap Chromium trên Windows, macOS, Linux kèm các cờ bypass anti-bot**,
-So that **XActions có thể khởi chạy và kết nối CDP thành công trên mọi máy trạm của người dùng mà không bị WAF phát hiện automation control**.
+So that **Medirus có thể khởi chạy và kết nối CDP thành công trên mọi máy trạm của người dùng mà không bị WAF phát hiện automation control**.
 
 **Acceptance Criteria:**
 * **Given** môi trường hệ điều hành Windows, macOS hoặc Linux
@@ -630,7 +630,7 @@ So that **tôi có thể tự động hóa list curation mà không cần browse
 * **And (Scope & Deprecation Marker)** gắn `@deprecated` cho list helpers trong `src/client/Scraper.js`; cập nhật `docs/deprecation-plan.md`.
 
 ### Story 13.2.12: Twitter Hybrid Integration & Caller Migration
-As a **XActions Platform Engineer**,
+As a **Medirus Platform Engineer**,
 I want **`scrape('twitter'|'x', ...)`, MCP/CLI tools và `src/client/Scraper.js` chuyển sang dùng `TwitterCrawler`/`TwitterClient` mới**,
 So that **người dùng cuối và các service không còn phụ thuộc legacy Twitter modules**.
 
@@ -665,7 +665,7 @@ So that **token extraction is resilient to Facebook DOM/script changes, supports
 **Acceptance Criteria:**
 * **Given** `FacebookClient` accepts `signerPool`, `tokenRing`, `cdpUrl`, and `adapterName`
 * **When** `ensureTokens()` is called with a browser bridge configured
-* **Then** it attaches or launches Chrome (Playwright by default, Puppeteer via `XACTIONS_SCRAPER_ADAPTER`) using CDP, navigates to `https://www.facebook.com/`, and extracts tokens via `page.evaluate()`
+* **Then** it attaches or launches Chrome (Playwright by default, Puppeteer via `MEDIRUS_SCRAPER_ADAPTER`) using CDP, navigates to `https://www.facebook.com/`, and extracts tokens via `page.evaluate()`
 * **And** it caches tokens with a 5-minute TTL and supports refresh 30 seconds before expiry
 * **And** `requestGraphQl()` builds the GraphQL body using tokens from the signer bridge
 * **And** it falls back to HTTP-only regex extraction when `signerPool`/`cdpUrl` is not configured
@@ -743,7 +743,7 @@ So that **các hành động tương tác được quản lý bởi `FacebookCli
 * **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `shareLinkByUid.js`, `messengerQueue.js`, `messengerShare.js`, `graphqlSend.js` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
 
 ### Story 13.10: Facebook Hybrid Integration & Caller Migration
-As a **XActions Platform Engineer**,
+As a **Medirus Platform Engineer**,
 I want **`scrape('facebook', ...)` public API, MCP/CLI tools, và `api/services/*` chuyển sang sử dụng `FacebookCrawler`/`FacebookClient` mới**,
 So that **người dùng cuối và các service nội bộ không còn phụ thuộc `src/scrapers/facebook/` legacy**.
 
@@ -754,7 +754,7 @@ So that **người dùng cuối và các service nội bộ không còn phụ th
 * **And** `package.json` exports thêm `./scrapers/social` hoặc `./scrapers/facebook` để consumer truy cập `FacebookClient`/`FacebookCrawler`
 * **And** `api/services/facebookScrape.js`, `facebookAutomation.js`, `facebookAccountPool.js`, `facebookHealth.js` được refactor để gọi `FacebookCrawler.start()` / `FacebookClient` thay vì các hàm legacy
 * **And** `api/routes/facebook.js` validation vẫn chấp nhận cùng action set; response shape không đổi với consumer
-* **And** action discovery qua `FacebookCrawler.listActions()`, MCP `x_actions_list` và CLI `xactions actions --platform facebook` trả về `requiresAuth` đã phân giải cho từng action (additive, không break consumer hiện có).
+* **And** action discovery qua `FacebookCrawler.listActions()`, MCP `medirus_list` và CLI `medirus actions --platform facebook` trả về `requiresAuth` đã phân giải cho từng action (additive, không break consumer hiện có).
 * **And** toàn bộ test `tests/scrapers/facebook-index.test.js`, `tests/scrapers/facebook-*.test.js` chuyển sang test `FacebookCrawler` tương ứng hoặc được đánh dấu `@deprecated`
 * **And (Scope & Deprecation Marker)** `src/scrapers/facebook/` được đánh dấu `@deprecated` toàn bộ; `docs/deprecation-plan.md` status tracker cập nhật sang `deprecated-planned` và ghi rõ dependency vào Story 13.10.
 
@@ -776,7 +776,7 @@ So that **tôi nắm bắt trọn vẹn ngữ cảnh tranh luận mà không b�
 
 ### Story 14.2: MCP Tool Exporters & Daemon HTTP/SSE Server
 As an **AI Agent (Claude / Antigravity / Cursor)**,
-I want **XActions MCP Server chạy thường trực dạng Daemon HTTP/SSE (Port 3001) trả về 3-Layer JSON Envelope và tự động xuất File Artifact khi dữ liệu >100 records**,
+I want **Medirus MCP Server chạy thường trực dạng Daemon HTTP/SSE (Port 3001) trả về 3-Layer JSON Envelope và tự động xuất File Artifact khi dữ liệu >100 records**,
 So that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà không phải spawn subprocess `node`**.
 
 **Acceptance Criteria:**
@@ -795,7 +795,7 @@ So that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 
 #### Action discovery
 * **Given** `AbstractCrawler.listActions()` đã tồn tại
-* **When** gọi tool `x_actions_list`
+* **When** gọi tool `medirus_list`
 * **Then** trả về `ActionDescriptor[]` với `{ action, description, requiredArgs, optionalArgs, example, outputType, requiresAuth }`.
 
 #### Error envelope
@@ -804,14 +804,14 @@ So that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 * **Then** error envelope chuẩn hóa: `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`.
 
 #### CLI daemon commands & legacy mapping
-* **Given** CLI `xactions` và legacy `unfollowx`
-* **When** gọi `xactions daemon status/start/stop`
+* **Given** CLI `medirus` và legacy `unfollowx`
+* **When** gọi `medirus daemon status/start/stop`
 * **Then** CLI quản lý vòng đời daemon MCP
-* **And** legacy CLI commands `unfollowx` được map vào `CrawlerCommand` hoặc trả error `suggestedAction: 'use_x_actions_list'`.
+* **And** legacy CLI commands `unfollowx` được map vào `CrawlerCommand` hoặc trả error `suggestedAction: 'use_medirus_list'`.
 
 ### Story 14.3: Realtime Thin Event Redis Stream for Nowing AI Lead Hub
 As a **Nowing Platform Orchestrator**,
-I want **dữ liệu cào từ XActions được phát tức thì dưới dạng Thin Event Pointer vào Redis Stream `stream:social:raw_posts`**,
+I want **dữ liệu cào từ Medirus được phát tức thì dưới dạng Thin Event Pointer vào Redis Stream `stream:social:raw_posts`**,
 So that **Nowing backend có thể chạy background NLP Intent Extractor theo thời gian thực mà không làm tràn bộ nhớ Redis**.
 
 **Acceptance Criteria:**
@@ -833,7 +833,7 @@ So that **tôi nhận được ngay bảng phân tích Top từ khóa/hashtag th
 * **When** gọi `extractKeywordFrequency(items, { minLength, topN, lang, removeStopwords })`
 * **Then** hệ thống thực hiện tokenize, lọc stopwords đa ngôn ngữ (hỗ trợ Tiếng Việt & Tiếng Anh từ `src/analytics/stopwords/`)
 * **And** tính toán phân phối tần suất N-gram (Unigram, Bigram) và trích xuất danh sách Hashtags
-* **And** cung cấp MCP tool `x_analytics_buzzwords` và CLI `xactions analytics buzzwords` trả về Top N keywords/hashtags có số lần xuất hiện cao nhất
+* **And** cung cấp MCP tool `x_analytics_buzzwords` và CLI `medirus analytics buzzwords` trả về Top N keywords/hashtags có số lần xuất hiện cao nhất
 * **And** tích hợp tùy chọn `includeBuzzwords: true` trong `AbstractCrawler` output summary.
 
 ---
@@ -893,7 +893,7 @@ So that **crawler không phụ thuộc HTML parsing dễ vỡ và đạt through
 * **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` ghi rõ `search` và `comments` đã harden.
 
 ### Story 15.1.4: Threads Hybrid Integration & Package Exports
-As a **XActions Platform Engineer**,
+As a **Medirus Platform Engineer**,
 I want **`scrape('threads', ...)`, MCP/CLI tools và các caller cũ chuyển sang `ThreadsCrawler`/`ThreadsClient` mới**,
 So that **người dùng cuối không còn phụ thuộc `src/scrapers/threads/` legacy**.
 
@@ -1059,69 +1059,69 @@ So that **tôi phát hiện sớm khi Nowing consumer chậm hoặc stream bị 
 
 ### Story 19.4: Admin CLI — Unified Command Group
 As an **Internal Automation Operator**,
-I want **một nhóm lệnh CLI `xactions admin` tổng hợp để vận hành hệ thống từ terminal**,
+I want **một nhóm lệnh CLI `medirus admin` tổng hợp để vận hành hệ thống từ terminal**,
 So that **tôi có thể tra cứu governor status, quản lý proxy/account/checkpoint, và xem stream metrics mà không cần mở dashboard**.
 
 **Acceptance Criteria:**
-* **Given** `xactions admin` command group
-* **When** chạy `xactions admin --help`
+* **Given** `medirus admin` command group
+* **When** chạy `medirus admin --help`
 * **Then** liệt kê các sub-commands: `status`, `proxies`, `accounts`, `checkpoints`, `stream`
 * **And** tất cả commands yêu cầu permission `admin` hoặc `checkpoint:manage` (cho checkpoint-only).
 
 ### Story 19.4.1: Admin CLI — Status
 As an **Internal Automation Operator**,
-I want **lệnh `xactions admin status` hiển thị tổng quan governor, proxy pool, và hibernating accounts**,
+I want **lệnh `medirus admin status` hiển thị tổng quan governor, proxy pool, và hibernating accounts**,
 So that **tôi nắm nhanh tình trạng hệ thống từ terminal**.
 
 **Acceptance Criteria:**
-* **Given** `xactions admin` group
-* **When** chạy `xactions admin status`
+* **Given** `medirus admin` group
+* **When** chạy `medirus admin status`
 * **Then** in ra `healthyProxyCount / totalProxyCount`, `currentReqPerSecond`, `redisConsumerLag`, `throttleLevel`, danh sách `hibernatingAccounts`.
 
 ### Story 19.4.2: Admin CLI — Proxy Management
 As an **Internal Automation Operator**,
-I want **lệnh `xactions admin proxies ...` để liệt kê, cách ly và bỏ cách ly proxy**,
+I want **lệnh `medirus admin proxies ...` để liệt kê, cách ly và bỏ cách ly proxy**,
 So that **tôi có thể kiểm soát proxy pool từ CLI khi phát hiện IP bị chặn hoặc cần bảo trì**.
 
 **Acceptance Criteria:**
-* **Given** `xactions admin` group
-* **When** chạy `xactions admin proxies list`
+* **Given** `medirus admin` group
+* **When** chạy `medirus admin proxies list`
 * **Then** liệt kê proxy với trạng thái `healthy` / `quarantined` / `expiryAt`
-* **And** `xactions admin proxy quarantine <proxyKey>` và `xactions admin proxy release <proxyKey>` cách ly / bỏ cách ly proxy thủ công.
+* **And** `medirus admin proxy quarantine <proxyKey>` và `medirus admin proxy release <proxyKey>` cách ly / bỏ cách ly proxy thủ công.
 
 ### Story 19.4.3: Admin CLI — Account Management
 As an **Internal Automation Operator**,
-I want **lệnh `xactions admin accounts ...` để liệt kê, đánh thức, và xoay account đang hibernation**,
+I want **lệnh `medirus admin accounts ...` để liệt kê, đánh thức, và xoay account đang hibernation**,
 So that **tôi quản lý vòng đời tài khoản auth-required mà không cần restart crawler**.
 
 **Acceptance Criteria:**
-* **Given** `xactions admin` group
-* **When** chạy `xactions admin accounts list --platform <platform>`
+* **Given** `medirus admin` group
+* **When** chạy `medirus admin accounts list --platform <platform>`
 * **Then** liệt kê account, `velocity`, `hibernatingUntil`, `assignedProxy`
-* **And** `xactions admin account wake <accountId>` đánh thức account từ hibernation
-* **And** `xactions admin account rotate <accountId> <platform>` đổi account khác trong `AccountPool`.
+* **And** `medirus admin account wake <accountId>` đánh thức account từ hibernation
+* **And** `medirus admin account rotate <accountId> <platform>` đổi account khác trong `AccountPool`.
 
 ### Story 19.4.4: Admin CLI — Checkpoint Management
 As an **Internal Automation Operator**,
-I want **lệnh `xactions admin checkpoints ...` để liệt kê, resume, pause, và retry checkpoint**,
+I want **lệnh `medirus admin checkpoints ...` để liệt kê, resume, pause, và retry checkpoint**,
 So that **tôi điều khiển pipeline cào từ terminal khi một target bị lỗi**.
 
 **Acceptance Criteria:**
-* **Given** `xactions admin` group
-* **When** chạy `xactions admin checkpoints list/resume/pause/retry`
+* **Given** `medirus admin` group
+* **When** chạy `medirus admin checkpoints list/resume/pause/retry`
 * **Then** gọi `api/routes/checkpoints.js` tương ứng và cập nhật trạng thái `CrawlCheckpoint`.
 
 ### Story 19.4.5: Admin CLI — Stream Metrics & Alerts
 As an **Internal Automation Operator**,
-I want **lệnh `xactions admin stream ...` để xem metrics và kích hoạt test alert**,
+I want **lệnh `medirus admin stream ...` để xem metrics và kích hoạt test alert**,
 So that **tôi phát hiện khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s` từ CLI**.
 
 **Acceptance Criteria:**
-* **Given** `xactions admin` group
-* **When** chạy `xactions admin stream metrics/alerts/test`
+* **Given** `medirus admin` group
+* **When** chạy `medirus admin stream metrics/alerts/test`
 * **Then** hiển thị stream metrics và kích hoạt test alert.
 
-> **Note:** Các lệnh `xactions checkpoints ...` và `xactions stream ...` hiện có (`src/cli/commands/checkpoints.js`, `src/cli/commands/stream.js`) sẽ được giữ lại dưới dạng alias hoặc redirect đến `xactions admin ...` trong quá trình chuyển đổi, và bị xoá ở Epic 20.2.
+> **Note:** Các lệnh `medirus checkpoints ...` và `medirus stream ...` hiện có (`src/cli/commands/checkpoints.js`, `src/cli/commands/stream.js`) sẽ được giữ lại dưới dạng alias hoặc redirect đến `medirus admin ...` trong quá trình chuyển đổi, và bị xoá ở Epic 20.2.
 
 > **Note:** Story 19.4 đã được tách thành 5 sub-stories 19.4.1–19.4.5. Các vị trí 19.5 và 19.6 không còn được sử dụng; NFR traceability đã được cập nhật để tham chiếu 19.4.5 thay vì 19.6.
 
@@ -1177,16 +1177,16 @@ So that **Claude/Cursor/Antigravity có thể hỏi "tình trạng proxy pool th
 
 ## Epic 20: Nowing Cutover & Legacy Scraper Decommissioning
 
-### Story 20.1: Nowing Shadow-Run Adapter over XActions Daemon
+### Story 20.1: Nowing Shadow-Run Adapter over Medirus Daemon
 As a **Nowing Integration Lead**,
-I want **nâng cấp adapter `nowing_backend/app/proprietary/platforms/xactions/adapter.py` để gọi XActions MCP Daemon HTTP/SSE (Port 3001) qua HTTP Keep-Alive Connection Pool**,
-So that **Nowing bắt đầu nhận dữ liệu từ XActions song song với scraper cũ để so sánh (shadow run) trước khi thay thế hoàn toàn**.
+I want **nâng cấp adapter `nowing_backend/app/proprietary/platforms/medirus/adapter.py` để gọi Medirus MCP Daemon HTTP/SSE (Port 3001) qua HTTP Keep-Alive Connection Pool**,
+So that **Nowing bắt đầu nhận dữ liệu từ Medirus song song với scraper cũ để so sánh (shadow run) trước khi thay thế hoàn toàn**.
 
 **Pre-condition:** Epics 13–18 (crawler Social, Ecom, BĐS, Tuyển dụng) đã ổn định.
 
 **Acceptance Criteria:**
 * **Given** repository Nowing tại `/Users/luisphan/Documents/GitHub/nowing`
-* **When** cập nhật `adapter.py` gọi sang `http://xactions-service:3001`
+* **When** cập nhật `adapter.py` gọi sang `http://medirus-service:3001`
 * **Then** Nowing nhận đủ 100% dữ liệu qua kiểm thử đối soát (Shadow Run) trong môi trường staging
 * **And** adapter ghi log diff (field-level) giữa dữ liệu cũ và mới cho từng platform
 
@@ -1200,10 +1200,10 @@ So that **codebase không còn chứa code cũ đã được thay thế, giảm 
 **Acceptance Criteria:**
 * **Given** shadow-run đạt ≥ 99% field parity trong 7 ngày liên tiếp
 * **When** xóa các thư mục legacy trong Nowing repo (`shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`, `linkedin/`, v.v.)
-* **And** xóa các file/thư mục legacy trong XActions repo (`src/client/Scraper.js`, `src/scrapers/twitter/http/`, `src/scrapers/twitter/index.js`, `src/scrapers/facebook/`, `src/scrapers/threads/index.js`)
+* **And** xóa các file/thư mục legacy trong Medirus repo (`src/client/Scraper.js`, `src/scrapers/twitter/http/`, `src/scrapers/twitter/index.js`, `src/scrapers/facebook/`, `src/scrapers/threads/index.js`)
 * **Then** CI tests pass, Nowing Docker image < 500MB
 * **And** gỡ bỏ `selenium`, `playwright-python`, Chromium binaries khỏi Dockerfile Nowing
-* **And** XActions bundle size và dependency count giảm đáng kể
+* **And** Medirus bundle size và dependency count giảm đáng kể
 
 ---
 
@@ -1216,7 +1216,7 @@ So that **codebase không còn chứa code cũ đã được thay thế, giảm 
 
 ## Phase 4 Extension — Epics 23–26: Universal AbstractCrawler Migration
 
-> **Scope:** hoàn thiện kiến trúc `AbstractCrawler` cho toàn bộ XActions (Bluesky, Mastodon, utility scripts, adapters, dispatcher, legacy decommission).
+> **Scope:** hoàn thiện kiến trúc `AbstractCrawler` cho toàn bộ Medirus (Bluesky, Mastodon, utility scripts, adapters, dispatcher, legacy decommission).
 
 
 ## Cross-Epic Dependency Map
@@ -1311,7 +1311,7 @@ So that **crawler biết phân biệt lỗi mạng, rate-limit, auth failure, v�
 * **And** cả hai trả về `SuggestedActions` phù hợp (`ROTATE_PROXY`, `WAIT`, `RELOGIN`, `SKIP`)
 
 ### Story 23.6: Bluesky & Mastodon Integration & Caller Migration
-As a **XActions Platform Engineer**,  
+As a **Medirus Platform Engineer**,  
 I want **`scrape('bluesky'|'mastodon', ...)` và tất cả caller chuyển sang `BlueskyCrawler`/`MastodonCrawler` mới**,  
 So that **người dùng cuối không còn phụ thuộc `src/scrapers/bluesky/index.js` và `src/scrapers/mastodon/index.js` cũ**.
 
@@ -1356,7 +1356,7 @@ So that **tôi có thể gọi chúng từ CLI/MCP thay vì dán script vào con
 * **Then** `TwitterCrawler` thêm các action: `download_video({ tweetId, quality })`, `export_bookmarks({ username, limit })`, `unroll_thread({ tweetId })`
 * **And** mỗi action trả về `PostItem[]` hoặc `Buffer`/`ReadableStream` cho download
 * **And** legacy file được gắn `@deprecated` với ghi chú thay thế
-* **And** CLI/MCP expose `xactions download video <tweetId>` và `xactions export bookmarks <username>`
+* **And** CLI/MCP expose `medirus download video <tweetId>` và `medirus export bookmarks <username>`
 
 ### Story 24.3: Adapter Layer Consolidation
 As a **Platform Scraper Developer**,  
@@ -1391,7 +1391,7 @@ So that **`src/scrapers/` chỉ còn `social/` dispatcher và platform crawlers*
 > **Epic grouping note:** This is the *glue* epic. It makes `scrape(platform, action, args)` the single entry point for all internal and external callers.
 
 ### Story 25.1: Universal `scrape()` Dispatcher
-As a **XActions Platform Engineer**,  
+As a **Medirus Platform Engineer**,  
 I want **`src/scrapers/index.js` trở thành một thin dispatcher duy nhất cho mọi platform**,  
 So that **không còn logic scraper nào nằm ngoài `src/scrapers/social/<platform>/`**.
 
@@ -1421,7 +1421,7 @@ So that **tôi import một kiến trúc ổn định dù tên file legacy đã 
 * **And** `npm run typecheck` pass
 
 ### Story 25.3: MCP / CLI / API Caller Migration
-As a **XActions Platform Engineer**,  
+As a **Medirus Platform Engineer**,  
 I want **tất cả MCP tools, CLI commands, và API routes gọi `scrape()` hoặc `CrawlerCommand` thay vì import scraper cụ thể**,  
 So that **không còn coupling trực tiếp với legacy modules**.
 
@@ -1507,7 +1507,7 @@ So that **decommission không gây regression cho consumer cũ**.
 ### Story 26.2: Final Legacy Removal
 As a **Codebase Maintainer**,  
 I want **xoá toàn bộ legacy scraper modules sau khi parity đạt**,  
-So that **XActions chỉ còn một kiến trúc `AbstractCrawler` duy nhất**.
+So that **Medirus chỉ còn một kiến trúc `AbstractCrawler` duy nhất**.
 
 **Acceptance Criteria:**
 * **Given** parity ≥ 99% và tag backup đã tạo
@@ -1570,7 +1570,7 @@ So that **XActions chỉ còn một kiến trúc `AbstractCrawler` duy nhất**.
 ### Story 27.1: FingerprintManager — TLS/JA4 Spoofing & Geo-Consistent Profiles
 As a **Scraping Reliability Engineer**,  
 I want **a `FingerprintManager` that rotates per-session fingerprints and binds them to a geo-consistent proxy region**,  
-So that **platforms cannot detect XActions via TLS/JA4 signatures, inconsistent timezone/locale, or proxy-UA mismatches**.
+So that **platforms cannot detect Medirus via TLS/JA4 signatures, inconsistent timezone/locale, or proxy-UA mismatches**.
 
 **Acceptance Criteria:**
 * **Given** `src/agents/antiDetection.js` and `src/scraping/stealthBrowser.js` already generate UA/viewport/WebGL
@@ -1656,7 +1656,7 @@ So that **I can recover from DOM drift without manually inspecting every UI chan
 * **Then** it fetches a live snapshot of the page (via Puppeteer or HTTP)
 * **And** it searches the DOM for elements whose text/attributes/children structurally match the expected output shape (e.g., tweet text, like count)
 * **And** it returns a ranked list of candidate selectors with confidence scores
-* **And** the tool is CLI-accessible: `xactions tools suggest-selector --platform twitter --url https://x.com/elonmusk`
+* **And** the tool is CLI-accessible: `medirus tools suggest-selector --platform twitter --url https://x.com/elonmusk`
 
 ---
 
@@ -1667,7 +1667,7 @@ So that **I can recover from DOM drift without manually inspecting every UI chan
 ### Story 29.1: Jetstream/SSE/CDC Adapters for Push-Based Social Streams
 As a **Real-Time Data Consumer**,  
 I want **adapters for Bluesky Jetstream, Mastodon SSE, and generic CDC sources**,  
-So that **XActions can receive events in real time instead of polling every N seconds**.
+So that **Medirus can receive events in real time instead of polling every N seconds**.
 
 **Acceptance Criteria:**
 * **Given** `src/streaming/streamManager.js` already polls tweets/followers/mentions via Bull queue
@@ -1680,7 +1680,7 @@ So that **XActions can receive events in real time instead of polling every N se
 * **And** stream types are extended to include `jetstream`, `mastodon_sse`, `cdc`
 
 ### Story 29.2: Outbound Webhook Dispatcher with HMAC Signing & Retry
-As a **XActions Operator**,  
+As a **Medirus Operator**,  
 I want **an outbound webhook dispatcher that signs and retries delivery to subscriber endpoints**,  
 So that **Nowing and external consumers can subscribe to real-time events reliably**.
 
@@ -1689,13 +1689,13 @@ So that **Nowing and external consumers can subscribe to real-time events reliab
 * **When** implementing `src/streaming/outbound-webhook-dispatcher.js`
 * **Then** it consumes `ThinEvent` from Redis Stream or Bull queue
 * **And** it supports webhook registration with `url`, `events[]`, `secret`, `active` status
-* **And** it signs each POST body with `X-XActions-Signature` (HMAC-SHA256)
+* **And** it signs each POST body with `X-Medirus-Signature` (HMAC-SHA256)
 * **And** it retries with exponential backoff (3 attempts) and moves permanent failures to a dead-letter queue
 * **And** delivery metrics (attempts, latency, success/failure) are persisted
 * **And** API routes `/api/admin/webhooks/subscriptions` and `/api/admin/webhooks/delivery-logs` are added
 
 ### Story 29.3: Stream Replay & Missed-Event Recovery
-As a **XActions Consumer**,  
+As a **Medirus Consumer**,  
 I want **the ability to replay events from a specific time window or cursor**,  
 So that **my downstream system can recover from downtime without losing data**.
 
@@ -1769,7 +1769,7 @@ So that **I can download and archive multi-platform content with consistent meta
 > **Epic grouping note:** This epic upgrades existing rate governance from in-memory, backend-only metrics into a visible, controllable, distributed queue system.
 
 ### Story 32.1: RateBudgetDashboard — Visual Quota Allocator & Panic Stop
-As a **XActions Operator**,  
+As a **Medirus Operator**,  
 I want **a dashboard that shows live quota usage, drag-drop priority queues, and a panic stop button**,  
 So that **I can manage platform risk visually during spikes or incidents**.
 
@@ -1784,7 +1784,7 @@ So that **I can manage platform risk visually during spikes or incidents**.
 
 ### Story 32.2: DistributedTokenBucket — Redis-Backed Quota with Header Parsing
 As a **Scraping Platform Engineer**,  
-I want **per-consumer and per-account rate limits synchronized across multiple XActions instances**,  
+I want **per-consumer and per-account rate limits synchronized across multiple Medirus instances**,  
 So that **horizontal scaling does not break the existing quota model**.
 
 **Acceptance Criteria:**
@@ -1837,7 +1837,7 @@ So that **Nowing AI can monitor trending VN YouTube channels, video comments, an
 
 ## Revised Epic Priority & Execution Order (Vietnam Market Pivot — 2026-09-05)
 
-> **Rationale:** XActions serves Nowing AI Lead Hub for the Vietnam market. VN-specific platforms (Epic 21–22, 33) deliver direct business value immediately. Infrastructure hardening (Epic 27–32) follows once VN crawlers are stable.
+> **Rationale:** Medirus serves Nowing AI Lead Hub for the Vietnam market. VN-specific platforms (Epic 21–22, 33) deliver direct business value immediately. Infrastructure hardening (Epic 27–32) follows once VN crawlers are stable.
 
 ```
 Phase A — Vietnam Core (NEXT):
@@ -1910,7 +1910,7 @@ Phase D — Finalization:
 
 ## Business Context
 
-Nowing (B2B Lead Hub) depends on XActions để scrape 15+ nền tảng. Không có benchmark suite, không thể đo lường khách quan:
+Nowing (B2B Lead Hub) depends on Medirus để scrape 15+ nền tảng. Không có benchmark suite, không thể đo lường khách quan:
 - **Stability**: scraper nào thất bại âm thầm (False 200, login wall, Cloudflare)?
 - **Quality**: scraper nào trả về dữ liệu thiếu hoặc sai schema?
 - **Noise**: scraper nào sinh duplicate, spam, lead sai?
@@ -1978,7 +1978,7 @@ Nowing cần **Health Score (0-100)** và **Tier (A/B/C)** cho mỗi scraper đ�
 
 - Spec: `_bmad-output/specs/spec-scraper-benchmark/SPEC.md`
 - Metrics Catalog: `_bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md`
-- Architecture Spine: `_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md`
+- Architecture Spine: `_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md`
 - Change Proposal: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-09-08-benchmark-v2.md`
 - Review Synthesis: `_bmad-output/planning-artifacts/review-epic34-synthesis-2026-09-08.md`
 - Backlog File: `_bmad-output/planning-artifacts/backlog-epic-34.md`

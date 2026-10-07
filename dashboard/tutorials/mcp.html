@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MCP Server for Twitter — AI Agent Setup Guide | XActions</title>
-  <meta name="description" content="Set up XActions MCP server for AI agents. Connect Claude Desktop, GPT, Cursor to automate X/Twitter. Free, open-source Model Context Protocol server.">
-  <meta name="keywords" content="mcp server twitter, model context protocol, claude desktop twitter, ai twitter automation, gpt twitter bot, mcp server setup, ai agent twitter, cursor twitter, llm twitter integration, xactions mcp">
+  <title>MCP Server for Twitter — AI Agent Setup Guide | Medirus</title>
+  <meta name="description" content="Set up Medirus MCP server for AI agents. Connect Claude Desktop, GPT, Cursor to automate X/Twitter. Free, open-source Model Context Protocol server.">
+  <meta name="keywords" content="mcp server twitter, model context protocol, claude desktop twitter, ai twitter automation, gpt twitter bot, mcp server setup, ai agent twitter, cursor twitter, llm twitter integration, medirus mcp">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
   <meta property="og:title" content="MCP Server for Twitter — Connect AI Agents to X">
   <meta property="og:description" content="Free MCP server for Twitter. Connect Claude, GPT, Cursor to automate X/Twitter with AI agents.">
-  <meta property="og:url" content="https://xactions.app/tutorials/mcp">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-mcp.png">
+  <meta property="og:url" content="https://medirus.online/tutorials/mcp">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-mcp.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:locale" content="en_US">
@@ -22,11 +22,11 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
   <meta name="twitter:creator" content="@nichxbt">
-  <meta name="twitter:title" content="MCP Server for Twitter | XActions">
+  <meta name="twitter:title" content="MCP Server for Twitter | Medirus">
   <meta name="twitter:description" content="Free MCP server. Connect Claude, GPT, Cursor to automate Twitter with AI.">
-  <meta name="twitter:image" content="https://xactions.app/og-mcp.png">
+  <meta name="twitter:image" content="https://medirus.online/og-mcp.png">
 
-  <link rel="canonical" href="https://xactions.app/tutorials/mcp">
+  <link rel="canonical" href="https://medirus.online/tutorials/mcp">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
   <link rel="manifest" href="/manifest.json">
 
@@ -34,15 +34,15 @@
   {
     "@context": "https://schema.org",
     "@type": "HowTo",
-    "name": "How to Set Up XActions MCP Server for AI Agents",
-    "description": "Connect Claude Desktop, GPT, or Cursor to X/Twitter automation via the XActions MCP server",
+    "name": "How to Set Up Medirus MCP Server for AI Agents",
+    "description": "Connect Claude Desktop, GPT, or Cursor to X/Twitter automation via the Medirus MCP server",
     "step": [
-      { "@type": "HowToStep", "name": "Install XActions", "text": "Run: npm install -g xactions" },
-      { "@type": "HowToStep", "name": "Start MCP Server", "text": "Run: xactions mcp start" },
+      { "@type": "HowToStep", "name": "Install Medirus", "text": "Run: npm install -g medirus" },
+      { "@type": "HowToStep", "name": "Start MCP Server", "text": "Run: medirus mcp start" },
       { "@type": "HowToStep", "name": "Configure AI Client", "text": "Add the MCP server URL to Claude Desktop or your AI client config" },
       { "@type": "HowToStep", "name": "Start Automating", "text": "Ask your AI agent to perform X/Twitter actions through natural language" }
     ],
-    "tool": { "@type": "HowToTool", "name": "XActions MCP Server" },
+    "tool": { "@type": "HowToTool", "name": "Medirus MCP Server" },
     "totalTime": "PT10M"
   }
   </script>
@@ -51,9 +51,9 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Tutorials", "item": "https://xactions.app/tutorials" },
-      { "@type": "ListItem", "position": 3, "name": "MCP Server", "item": "https://xactions.app/tutorials/mcp" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Tutorials", "item": "https://medirus.online/tutorials" },
+      { "@type": "ListItem", "position": 3, "name": "MCP Server", "item": "https://medirus.online/tutorials/mcp" }
     ]
   }
   </script>
@@ -181,7 +181,7 @@
         <section class="section" id="what-is-mcp">
           <h2 class="section-title">🔌 What is MCP?</h2>
           <p style="color: var(--text-secondary); margin-bottom: 16px;">
-            <strong>Model Context Protocol (MCP)</strong> is a standard that allows AI assistants to use external tools. XActions provides an MCP server that lets Claude, GPT, and other AI agents automate X/Twitter tasks.
+            <strong>Model Context Protocol (MCP)</strong> is a standard that allows AI assistants to use external tools. Medirus provides an MCP server that lets Claude, GPT, and other AI agents automate X/Twitter tasks.
           </p>
 
           <div class="info-box">
@@ -195,13 +195,13 @@
           <h2 class="section-title">🖥️ Setup with Claude Desktop</h2>
           
           <div class="step">
-            <h4>Step 1: Install XActions globally</h4>
+            <h4>Step 1: Install Medirus globally</h4>
             <div class="code-block">
               <div class="code-header">
                 <span>Terminal</span>
                 <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
               </div>
-              <pre><code>npm install -g xactions</code></pre>
+              <pre><code>npm install -g medirus</code></pre>
             </div>
           </div>
 
@@ -224,8 +224,8 @@
           </div>
 
           <div class="step">
-            <h4>Step 3: Add XActions MCP server to config</h4>
-            <p>Edit the config file and add the XActions server:</p>
+            <h4>Step 3: Add Medirus MCP server to config</h4>
+            <p>Edit the config file and add the Medirus server:</p>
             <div class="code-block">
               <div class="code-header">
                 <span>claude_desktop_config.json</span>
@@ -233,9 +233,9 @@
               </div>
               <pre><code>{
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["xactions-mcp"],
+      "args": ["medirus-mcp"],
       "env": {
         "X_AUTH_TOKEN": "your_auth_token_here"
       }
@@ -258,7 +258,7 @@
 
           <div class="step">
             <h4>Step 5: Restart Claude Desktop</h4>
-            <p>Quit and reopen Claude Desktop. You should now see XActions tools available!</p>
+            <p>Quit and reopen Claude Desktop. You should now see Medirus tools available!</p>
           </div>
         </section>
 
@@ -266,7 +266,7 @@
         <section class="section" id="available-tools">
           <h2 class="section-title">🛠️ Available MCP Tools</h2>
           <p style="color: var(--text-secondary); margin-bottom: 16px;">
-            The XActions MCP server provides these tools to AI agents:
+            The Medirus MCP server provides these tools to AI agents:
           </p>
 
           <div class="tool-grid">
@@ -362,22 +362,22 @@ then follow them if they have over 1000 followers"</code></pre>
               <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
             </div>
             <pre><code># Install globally
-npm install -g xactions
+npm install -g medirus
 
 # Login (saves session)
-xactions login
+medirus login
 
 # Scrape followers
-xactions followers elonmusk --limit 100 --output followers.json
+medirus followers elonmusk --limit 100 --output followers.json
 
 # Get non-followers
-xactions non-followers YOUR_USERNAME --output non-followers.json
+medirus non-followers YOUR_USERNAME --output non-followers.json
 
 # Unfollow non-followers
-xactions unfollow non-followers.json
+medirus unfollow non-followers.json
 
 # Search tweets
-xactions search "AI agents" --limit 50</code></pre>
+medirus search "AI agents" --limit 50</code></pre>
           </div>
         </section>
 

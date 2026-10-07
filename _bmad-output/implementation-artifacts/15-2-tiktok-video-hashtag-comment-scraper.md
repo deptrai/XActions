@@ -134,7 +134,7 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 
 ### AC-8: Tests are real-API red-phase and no-mock
 
-- **Given** the XActions no-mock testing policy
+- **Given** the Medirus no-mock testing policy
 - **When** running `vitest run tests/scrapers/social/tiktok/`
 - **Then** all tests hit real TikTok Web API endpoints or the worker signer in a real browser page
 - **And** tests cover: signer produces non-empty `a_bogus` and `msToken`, `search`/`search_videos` returns valid `PostItem[]`, `hashtag_feed` returns `PostItem[]`, `post_detail`/`video_detail` returns a `PostItem`, and `get_post_comments`/`video_comments` returns `CommentItem[]` with correct `depth`
@@ -227,7 +227,7 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 - **Framework:** Vitest 4.x, no mocks.
 - **Timeouts:** 30s per test, 30s for hooks (or longer for real signer warm-up if needed).
 - **Real data requirement:** Red-phase tests should use a known trending hashtag/keyword (e.g., `fyp`, `viral`, `vietnam`) and a known public video ID. Do not hard-code a private video.
-- **Proxy requirement:** Real residential proxy from `~/.xactions/proxy-config.json` or `ProxyIpPool` is required for tests to pass against TikTok WAF.
+- **Proxy requirement:** Real residential proxy from `~/.medirus/proxy-config.json` or `ProxyIpPool` is required for tests to pass against TikTok WAF.
 - **CI consideration:** Mark signer-dependent tests with `test.skip` during initial red-phase if the signing script is not yet captured, but do not fake the signing output.
 
 ### Project Structure Notes
@@ -247,7 +247,7 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 
 - [Source: `_bmad-output/planning-artifacts/epics.md` — Epic 15, Story 15.2, lines 839-849]
 - [Source: `_bmad-output/planning-artifacts/prd.md` — FR-75, lines 88]
-- [Source: `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1, AD-3, AD-8, AD-9, AD-11, AD-12, AD-13, AD-14]
+- [Source: `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1, AD-3, AD-8, AD-9, AD-11, AD-12, AD-13, AD-14]
 - [Source: `src/core/signer-pool.js` — `PreSignedTokenRing`, `SignerWorkerPagePool`]
 - [Source: `src/scrapers/social/threads/` — reference platform adapter pattern]
 - [Source: `src/scrapers/index.js` — unified dispatcher]
@@ -262,7 +262,7 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 
 ### Debug Log References
 
-- Worktree: `/Users/luisphan/Documents/GitHub/XActions/.claude/worktrees/test-threads-live-verification`
+- Worktree: `/Users/luisphan/Documents/GitHub/Medirus/.claude/worktrees/test-threads-live-verification`
 - Baseline commit: `0a907989ba7d800983711e207b928339eb4ef5b9`
 - Story creation context engine: BMAD `bmad-create-story` skill (template-driven)
 
@@ -355,4 +355,4 @@ So that **tôi có thể phân tích xu hướng video mà không lưu phải d�
 - 2026-08-29 — Implemented all non-capture tasks: client, crawler, normalizer, validator, index, dispatcher wiring, package exports, and red-phase ATDD tests. Marked ready-for-review.
 - 2026-08-29 — Applied second-pass review patches: fixed default export, dispatcher wiring, schema comment/post split, package export, validator empty-list handling, cookie preservation, per-layer cursor tracking, and added caller-migration tests. All 16 TikTok tests pass; TikTok-specific TypeScript is clean.
 - 2026-09-11 — Completed Third-Pass Adversarial Hardening: bot challenge false-positive fix, `isFalse200` implementation, page tab leak prevention, profile directory cleanup in `close()`, `createTikTokCrawler` factory injection, and photo carousel JSON schema support.
-- 2026-09-11 — Completed Fourth-Pass Browser Pilot & Live UI Hardening: resolved `ERR_TUNNEL_CONNECTION_FAILED` via automatic proxy quarantine/fallback, implemented in-page payload capture to bypass TikTok TLS zero-byte blocks, fixed interactive checkpoint auto-resume race conditions, and verified 36 live video cards rendering cleanly on the XActions dashboard. Unit tests (37/37) and E2E tests (5/5) pass. Status confirmed `done`.
+- 2026-09-11 — Completed Fourth-Pass Browser Pilot & Live UI Hardening: resolved `ERR_TUNNEL_CONNECTION_FAILED` via automatic proxy quarantine/fallback, implemented in-page payload capture to bypass TikTok TLS zero-byte blocks, fixed interactive checkpoint auto-resume race conditions, and verified 36 live video cards rendering cleanly on the Medirus dashboard. Unit tests (37/37) and E2E tests (5/5) pass. Status confirmed `done`.

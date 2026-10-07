@@ -37,7 +37,7 @@
 // DevTools tab throws "already been declared" instead of re-running.
 var CONFIG = {
   // Storage key prefix
-  storagePrefix: 'xactions_multi_',
+  storagePrefix: 'medirus_multi_',
   
   // Auto-detect current logged-in account
   autoDetect: true
@@ -94,16 +94,16 @@ var CONFIG = {
     return null;
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Accounts = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Accounts = {
     
     // Get all accounts
     getAll: () => storage.get(KEYS.accounts) || [],
     
     // Add account (just stores the username for tracking)
     add: (username, notes = '') => {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       const cleanUsername = username.replace('@', '').toLowerCase();
       
       if (accounts.find(a => a.username === cleanUsername)) {
@@ -132,7 +132,7 @@ var CONFIG = {
     
     // Remove account
     remove: (username) => {
-      let accounts = window.XActions.Accounts.getAll();
+      let accounts = window.Medirus.Accounts.getAll();
       const cleanUsername = username.replace('@', '').toLowerCase();
       const before = accounts.length;
       
@@ -150,7 +150,7 @@ var CONFIG = {
     
     // Update account status
     setStatus: (username, status) => {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       const cleanUsername = username.replace('@', '').toLowerCase();
       const account = accounts.find(a => a.username === cleanUsername);
       
@@ -167,7 +167,7 @@ var CONFIG = {
     
     // Mark account as used
     markUsed: (username) => {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       const cleanUsername = username?.replace('@', '').toLowerCase();
       const account = accounts.find(a => a.username === cleanUsername);
       
@@ -182,14 +182,14 @@ var CONFIG = {
     current: () => {
       const detected = getCurrentUsername();
       if (detected) {
-        window.XActions.Accounts.markUsed(detected);
+        window.Medirus.Accounts.markUsed(detected);
       }
       return detected || storage.get(KEYS.current);
     },
     
     // Get next account to use (for rotation)
     next: () => {
-      const accounts = window.XActions.Accounts.getAll().filter(a => a.status === 'active');
+      const accounts = window.Medirus.Accounts.getAll().filter(a => a.status === 'active');
       
       if (accounts.length === 0) {
         console.warn('⚠️ No active accounts available.');
@@ -208,7 +208,7 @@ var CONFIG = {
     
     // Update stats for current account
     updateStats: (statType, increment = 1) => {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       const current = getCurrentUsername();
       const account = accounts.find(a => a.username === current);
       
@@ -220,7 +220,7 @@ var CONFIG = {
     
     // List all accounts
     list: () => {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       const current = getCurrentUsername();
       
       console.log('');
@@ -230,7 +230,7 @@ var CONFIG = {
       
       if (accounts.length === 0) {
         console.log('No accounts added yet.');
-        console.log('Use: XActions.Accounts.add("username")');
+        console.log('Use: Medirus.Accounts.add("username")');
       } else {
         accounts.forEach((a, i) => {
           const lastUsed = a.lastUsed ? new Date(a.lastUsed).toLocaleString() : 'Never';
@@ -254,7 +254,7 @@ var CONFIG = {
     
     // Show stats for all accounts
     stats: () => {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       
       console.log('');
       console.log('📊 ACCOUNT STATISTICS:');
@@ -300,7 +300,7 @@ var CONFIG = {
     
     // Export accounts (without sensitive data)
     export: () => {
-      const accounts = window.XActions.Accounts.getAll().map(a => ({
+      const accounts = window.Medirus.Accounts.getAll().map(a => ({
         username: a.username,
         notes: a.notes,
         status: a.status,
@@ -323,7 +323,7 @@ var CONFIG = {
     import: (jsonString) => {
       try {
         const imported = JSON.parse(jsonString);
-        const accounts = window.XActions.Accounts.getAll();
+        const accounts = window.Medirus.Accounts.getAll();
         
         imported.forEach(a => {
           if (!accounts.find(existing => existing.username === a.username)) {
@@ -347,17 +347,17 @@ var CONFIG = {
       console.log('');
       console.log('📋 MULTI-ACCOUNT COMMANDS:');
       console.log('');
-      console.log('   XActions.Accounts.add("username")  - Add account');
-      console.log('   XActions.Accounts.remove("user")   - Remove account');
-      console.log('   XActions.Accounts.list()           - List all accounts');
-      console.log('   XActions.Accounts.current()        - Get current account');
-      console.log('   XActions.Accounts.next()           - Get next in rotation');
-      console.log('   XActions.Accounts.switch()         - Open account switcher');
-      console.log('   XActions.Accounts.stats()          - Show all stats');
-      console.log('   XActions.Accounts.setStatus("u","s") - Set status');
-      console.log('   XActions.Accounts.export()         - Export account list');
-      console.log('   XActions.Accounts.import(json)     - Import accounts');
-      console.log('   XActions.Accounts.clear()          - Clear all data');
+      console.log('   Medirus.Accounts.add("username")  - Add account');
+      console.log('   Medirus.Accounts.remove("user")   - Remove account');
+      console.log('   Medirus.Accounts.list()           - List all accounts');
+      console.log('   Medirus.Accounts.current()        - Get current account');
+      console.log('   Medirus.Accounts.next()           - Get next in rotation');
+      console.log('   Medirus.Accounts.switch()         - Open account switcher');
+      console.log('   Medirus.Accounts.stats()          - Show all stats');
+      console.log('   Medirus.Accounts.setStatus("u","s") - Set status');
+      console.log('   Medirus.Accounts.export()         - Export account list');
+      console.log('   Medirus.Accounts.import(json)     - Import accounts');
+      console.log('   Medirus.Accounts.clear()          - Clear all data');
       console.log('');
       console.log('📊 STATUS VALUES: active, paused, limited, suspended');
       console.log('');
@@ -368,18 +368,18 @@ var CONFIG = {
   if (CONFIG.autoDetect) {
     const current = getCurrentUsername();
     if (current) {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       if (!accounts.find(a => a.username === current)) {
         console.log(`🔍 Detected current account: @${current}`);
-        console.log('   Run XActions.Accounts.add("' + current + '") to track it.');
+        console.log('   Run Medirus.Accounts.add("' + current + '") to track it.');
       } else {
-        window.XActions.Accounts.markUsed(current);
+        window.Medirus.Accounts.markUsed(current);
         console.log(`👤 Current account: @${current}`);
       }
     }
   }
   
   console.log('✅ Multi-Account Manager loaded!');
-  console.log('   Run XActions.Accounts.help() for commands.');
+  console.log('   Run Medirus.Accounts.help() for commands.');
   console.log('');
 })();

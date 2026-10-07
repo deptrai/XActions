@@ -14,7 +14,7 @@ Status: done
 
 ## Story
 
-As a developer using XActions,
+As a developer using Medirus,
 I want a Facebook adapter module registered in the platform dispatcher with login support,
 so that I have a working foundation to build scrape functions on.
 
@@ -127,7 +127,7 @@ Profile/post selectors are NOT needed in this story (no scrape functions yet). `
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 1.1]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md#FR-5, FR-10, NFR3]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-08/prd.md#FR-5, FR-10, NFR3]
 - [Source: _bmad-output/planning-artifacts/architecture.md#Addendum A.3 Wiring, A.5 ADR-006]
 - [Source: src/scrapers/threads/index.js — clone template]
 - [Source: src/scrapers/index.js — dispatcher, lines 38-41/102-110/199-211]
@@ -179,7 +179,7 @@ sonnet-4.6
 - [x] [Review][Defer] `--disable-web-security` disables SOP [src/scrapers/facebook/index.js:41] — deferred, pre-existing pattern across all adapters (threads/twitter); address cross-cutting.
 - [x] [Review][Defer] Login success never verified — invalid cookie → silent unauthenticated session [src/scrapers/facebook/index.js:91] — deferred, beyond AC2 scope; siblings behave the same.
 - [x] [Review][Defer] `page.goto` networkidle2/30s timeout has no try/catch → browser leak on throw [src/scrapers/facebook/index.js:91] — deferred, consistent with siblings; tied to dispatcher cleanup.
-- [x] [Review][Defer] `page.__xactions_browser` set after `loginWithCookie` may throw → leak [src/scrapers/index.js:219] — deferred, pre-existing dispatcher bug affecting all puppeteer platforms.
+- [x] [Review][Defer] `page.__medirus_browser` set after `loginWithCookie` may throw → leak [src/scrapers/index.js:219] — deferred, pre-existing dispatcher bug affecting all puppeteer platforms.
 - [x] [Review][Defer] `xs` cookie has no `sameSite` attribute [src/scrapers/facebook/index.js:82-88] — deferred, minor hardening; siblings same.
 - [x] [Review][Defer] `needsPuppeteer` test is indirect (registry-membership proxy) [tests/scrapers/facebook.test.js:75] — deferred, proxy acceptable; array is a local const, not exported.
 

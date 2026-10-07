@@ -1,6 +1,6 @@
 # Track 05 — AsyncGenerator Pagination
 
-> Competitors (the-convocation/twitter-scraper, agent-twitter-client) use `AsyncGenerator<T>` for cursor-based iteration. XActions' Puppeteer scraper hardcodes limits with browser scrolling. This track builds real cursor-based pagination that works with the programmatic HTTP client.
+> Competitors (the-convocation/twitter-scraper, agent-twitter-client) use `AsyncGenerator<T>` for cursor-based iteration. Medirus' Puppeteer scraper hardcodes limits with browser scrolling. This track builds real cursor-based pagination that works with the programmatic HTTP client.
 
 ---
 
@@ -27,7 +27,7 @@ instructions[] → TimelineAddEntries → entries[] → last entry with entryId 
 ```
 Create src/client/pagination/Paginator.js.
 
-This is the core async generator that drives all cursor-based pagination in XActions.
+This is the core async generator that drives all cursor-based pagination in Medirus.
 
 class Paginator<T> {
   constructor(options: {

@@ -1,12 +1,12 @@
 # Configuration
 
-XActions is configured in four places, and which ones you need depends entirely
+Medirus is configured in four places, and which ones you need depends entirely
 on which surface you use.
 
 | Surface | Configuration needed |
 |---------|----------------------|
 | Browser console scripts | None. Edit the `CONFIG` block in the script. |
-| CLI | `~/.xactions/config.json`, written by `xactions login`. |
+| CLI | `~/.medirus/config.json`, written by `medirus login`. |
 | Node.js library | Cookies passed in code, or `X_AUTH_TOKEN` / `X_CSRF_TOKEN`. |
 | MCP server | Environment block in your AI client's MCP config. |
 | Self-hosted API and dashboard | `.env`. |
@@ -36,10 +36,10 @@ This is the single most common configuration mistake.
 ### CLI
 
 ```bash
-npx xactions login
+npx medirus login
 ```
 
-Prompts for both and writes `~/.xactions/config.json`:
+Prompts for both and writes `~/.medirus/config.json`:
 
 ```json
 {
@@ -48,7 +48,7 @@ Prompts for both and writes `~/.xactions/config.json`:
 }
 ```
 
-`xactions logout` removes it.
+`medirus logout` removes it.
 
 ### Library and examples
 
@@ -60,7 +60,7 @@ export X_CSRF_TOKEN=...
 or in code:
 
 ```js
-import { Scraper } from 'xactions/client';
+import { Scraper } from 'medirus/client';
 
 const scraper = new Scraper();
 await scraper.setCookies(`auth_token=${authToken}; ct0=${csrfToken}`);
@@ -82,12 +82,12 @@ Set them in the `env` block of your AI client's MCP configuration, not in a
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions-mcp"],
+      "args": ["-y", "medirus-mcp"],
       "env": {
-        "XACTIONS_SESSION_COOKIE": "your_auth_token",
-        "XACTIONS_CSRF_TOKEN": "your_ct0"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token",
+        "MEDIRUS_CSRF_TOKEN": "your_ct0"
       }
     }
   }
@@ -145,11 +145,11 @@ scripts.
 
 | Variable | Notes |
 |----------|-------|
-| `XACTIONS_SESSION_COOKIE` | `auth_token` value. |
-| `XACTIONS_CSRF_TOKEN` | `ct0` value. |
-| `XACTIONS_MODE` | `local` (Puppeteer, free) or `remote` (hosted API). |
-| `XACTIONS_API_URL` | Endpoint used in `remote` mode. |
-| `XACTIONS_SCRAPER_ADAPTER` | `puppeteer` (default), `playwright`, or `http`. |
+| `MEDIRUS_SESSION_COOKIE` | `auth_token` value. |
+| `MEDIRUS_CSRF_TOKEN` | `ct0` value. |
+| `MEDIRUS_MODE` | `local` (Puppeteer, free) or `remote` (hosted API). |
+| `MEDIRUS_API_URL` | Endpoint used in `remote` mode. |
+| `MEDIRUS_SCRAPER_ADAPTER` | `puppeteer` (default), `playwright`, or `http`. |
 
 ### Puppeteer
 
@@ -218,7 +218,7 @@ Copy [`config/agent-config.example.json`](../config/agent-config.example.json)
 to `data/agent-config.json` and edit, or run the wizard:
 
 ```bash
-npx xactions agent setup
+npx medirus agent setup
 ```
 
 ---

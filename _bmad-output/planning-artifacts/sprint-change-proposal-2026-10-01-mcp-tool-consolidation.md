@@ -1,7 +1,7 @@
 # Sprint Change Proposal: MCP Domain Dispatchers & Tool Surface Optimization
 
 **Date:** 2026-10-01  
-**Project:** XActions (XACT)  
+**Project:** Medirus (XACT)  
 **Author:** Winston (System Architect)  
 **Status:** Approved  
 **Scope Classification:** Moderate (Backlog & Architecture Update)  
@@ -11,7 +11,7 @@
 ## 1. Issue Summary
 
 ### 1.1 Problem Statement
-Tệp `src/mcp/server.js` hiện đang đăng ký tĩnh **224 MCP tools** riêng lẻ trong mảng `TOOLS`. Khi kết nối XActions MCP vào các AI client hiện đại như Claude Code CLI, Cursor, hoặc Claude Desktop, cấu trúc này gây ra 3 vấn đề nghiêm trọng:
+Tệp `src/mcp/server.js` hiện đang đăng ký tĩnh **224 MCP tools** riêng lẻ trong mảng `TOOLS`. Khi kết nối Medirus MCP vào các AI client hiện đại như Claude Code CLI, Cursor, hoặc Claude Desktop, cấu trúc này gây ra 3 vấn đề nghiêm trọng:
 1. **Token Bloat (Tốn ngữ cảnh khổng lồ):** Khai báo schema của 224 tools tiêu tốn từ **45.000 đến 55.000 tokens** cho mỗi turn hội thoại. Điều này chiếm tới 25–50% context window của model trước cả khi người dùng gửi prompt.
 2. **Tool Dropping (Vượt ngưỡng trần của Claude Code CLI):** Claude Code CLI và Anthropic API có ngưỡng trần an toàn (~116–128 tools active đồng thời). Khi vượt quá, client sẽ tự động drop công cụ hoặc báo lỗi `unknown tool` / `tool not available`.
 3. **Selection Degradation (Suy giảm độ chính xác của LLM):** 27 tool `x_get_*`, 21 tool `x_facebook_*`, 15 tool crypto... làm LLM dễ bị nhầm lẫn tham số hoặc chọn sai công cụ.
@@ -104,7 +104,7 @@ Tệp `src/mcp/server.js` hiện đang đăng ký tĩnh **224 MCP tools** riêng
 
 ```markdown
 ### Epic 52: MCP Tool Surface Consolidation & Context Optimization
-*Tái cấu trúc bề mặt công cụ MCP của XActions từ 224 tools tĩnh thành 10 Domain Dispatchers, tối ưu hóa triệt để context window và đảm bảo tương thích 100% với Claude Code CLI.*
+*Tái cấu trúc bề mặt công cụ MCP của Medirus từ 224 tools tĩnh thành 10 Domain Dispatchers, tối ưu hóa triệt để context window và đảm bảo tương thích 100% với Claude Code CLI.*
 
 #### Story 52.1: Domain Dispatcher Schemas & Routing Facade
 - Định nghĩa mảng `DOMAIN_TOOLS` gồm 10 tools với schema chuẩn mực.

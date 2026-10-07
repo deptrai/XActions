@@ -67,9 +67,9 @@ This script provides the following capabilities:
  *   2. Paste and run → analyzes visible timeline
  *
  * MODE 2 — Manage content queue:
- *   window.XActions.addTweet({ text: '...', scheduledFor: '2026-02-25T14:00' })
- *   window.XActions.viewQueue()
- *   window.XActions.clearQueue()
+ *   window.Medirus.addTweet({ text: '...', scheduledFor: '2026-02-25T14:00' })
+ *   window.Medirus.viewQueue()
+ *   window.Medirus.clearQueue()
  * ============================================================
  */
 (() => {
@@ -81,7 +81,7 @@ This script provides the following capabilities:
     scrollDelay: 2000,
   };
 
-  const STORAGE_KEY = 'xactions_content_calendar';
+  const STORAGE_KEY = 'medirus_content_calendar';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -328,11 +328,11 @@ This script provides the following capabilities:
   };
 
   // ── Controls ───────────────────────────────────────────────
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
-  window.XActions.addTweet = (item) => {
+  window.Medirus.addTweet = (item) => {
     if (!item || !item.text) {
-      console.log('❌ Usage: XActions.addTweet({ text: "...", scheduledFor: "2026-02-25T14:00", tags: ["thread"] })');
+      console.log('❌ Usage: Medirus.addTweet({ text: "...", scheduledFor: "2026-02-25T14:00", tags: ["thread"] })');
       return;
     }
     const queue = loadQueue();
@@ -348,10 +348,10 @@ This script provides the following capabilities:
     console.log(`✅ Added to queue (${queue.length} total). Scheduled: ${item.scheduledFor || 'unscheduled'}`);
   };
 
-  window.XActions.viewQueue = () => {
+  window.Medirus.viewQueue = () => {
     const queue = loadQueue();
     if (queue.length === 0) {
-      console.log('📭 Queue is empty. Use XActions.addTweet({ text: "..." }) to add.');
+      console.log('📭 Queue is empty. Use Medirus.addTweet({ text: "..." }) to add.');
       return;
     }
 
@@ -371,16 +371,16 @@ This script provides the following capabilities:
     }
   };
 
-  window.XActions.clearQueue = () => {
+  window.Medirus.clearQueue = () => {
     localStorage.removeItem(STORAGE_KEY);
     console.log('🗑️ Queue cleared.');
   };
 
-  window.XActions.exportQueue = () => {
+  window.Medirus.exportQueue = () => {
     const queue = loadQueue();
     const blob = new Blob([JSON.stringify(queue, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `xactions-content-queue-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-content-queue-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     console.log(`📥 Exported ${queue.length} items.`);
   };
@@ -394,7 +394,7 @@ This script provides the following capabilities:
     console.log('╚' + '═'.repeat(W) + '╝');
 
     if (CONFIG.mode === 'queue') {
-      window.XActions.viewQueue();
+      window.Medirus.viewQueue();
       return;
     }
 
@@ -429,8 +429,8 @@ This script provides the following capabilities:
       console.log('  💡 You\'re posting a LOT. Quality > quantity — focus on high-engagement times.');
     }
 
-    console.log('  💡 Use XActions.addTweet({ text: "...", scheduledFor: "..." }) to plan ahead.');
-    console.log('  💡 Use XActions.viewQueue() to see your content queue.\n');
+    console.log('  💡 Use Medirus.addTweet({ text: "...", scheduledFor: "..." }) to plan ahead.');
+    console.log('  💡 Use Medirus.viewQueue() to see your content queue.\n');
 
     // Export
     const data = {
@@ -447,7 +447,7 @@ This script provides the following capabilities:
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `xactions-content-calendar-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-content-calendar-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     console.log('📥 Analysis exported.');
   };
@@ -511,14 +511,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -556,4 +556,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

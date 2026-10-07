@@ -82,7 +82,7 @@ export async function getProfile(page, username) {
  * @param {import('puppeteer').Page} page
  * @param {string} username
  * @param {string} sort - 'latest' or 'most_liked'
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>[]>} Sorted posts
  */
 export async function filterPosts(page, username, sort = 'latest', options = {}) {
@@ -138,7 +138,7 @@ export async function filterPosts(page, username, sort = 'latest', options = {})
 /**
  * Update profile fields
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').ProfileUpdates} updates - Fields to update { name, bio, location, website }
+ * @param {import('./types/medirus.js').ProfileUpdates} updates - Fields to update { name, bio, location, website }
  * @returns {Promise<Record<string, unknown>>} Update result
  */
 export async function updateProfile(page, updates = {}) {

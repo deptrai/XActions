@@ -61,7 +61,7 @@ const SELECTORS = {
  * Post a tweet
  * @param {import('puppeteer').Page} page
  * @param {string} text - Tweet text
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>} Post result
  */
 export async function postTweet(page, text, options = {}) {
@@ -118,7 +118,7 @@ export async function postTweet(page, text, options = {}) {
 /**
  * Post a thread (multiple linked tweets)
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').ThreadItem[]} tweets - Array of tweet texts or { text, media } objects
+ * @param {import('./types/medirus.js').ThreadItem[]} tweets - Array of tweet texts or { text, media } objects
  * @returns {Promise<Record<string, unknown>>} Thread result
  */
 export async function postThread(page, tweets) {
@@ -176,7 +176,7 @@ export async function postThread(page, tweets) {
  * @param {import('puppeteer').Page} page
  * @param {string} question - Poll question
  * @param {string[]} choices - 2-4 poll options
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>} Poll result
  */
 export async function createPoll(page, question, choices, options = {}) {

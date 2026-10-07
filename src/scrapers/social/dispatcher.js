@@ -90,7 +90,7 @@ export function resolvePlatformCredentials(platform, options = {}) {
     case 'twitter':
     case 'x':
       return {
-        cookies: explicit.cookies || options.cookies || process.env.TWITTER_COOKIES || process.env.XACTIONS_SESSION_COOKIE,
+        cookies: explicit.cookies || options.cookies || process.env.TWITTER_COOKIES || process.env.MEDIRUS_SESSION_COOKIE,
         authToken: explicit.authToken || options.authToken || process.env.TWITTER_AUTH_TOKEN,
         ct0: explicit.ct0 || options.ct0 || process.env.TWITTER_CT0,
         ...explicit,

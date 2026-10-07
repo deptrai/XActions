@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================
- * 🛠️ XActions Core Utilities
+ * 🛠️ Medirus Core Utilities
  * ============================================================
  * 
- * Shared infrastructure for all XActions browser console scripts.
- * Paste this FIRST before running any XActions script, OR scripts
+ * Shared infrastructure for all Medirus browser console scripts.
+ * Paste this FIRST before running any Medirus script, OR scripts
  * that include these utilities inline will work standalone.
  * 
  * This module provides:
@@ -27,7 +27,7 @@
  * @license MIT
  */
 
-window.XActionsUtils = (() => {
+window.MedirusUtils = (() => {
   'use strict';
 
   // ==========================================================================
@@ -35,7 +35,7 @@ window.XActionsUtils = (() => {
   // ==========================================================================
 
   const VERSION = '2.0.0';
-  const STORAGE_PREFIX = 'xactions_';
+  const STORAGE_PREFIX = 'medirus_';
 
   // ==========================================================================
   // Selector Fallback Chains
@@ -292,7 +292,7 @@ window.XActionsUtils = (() => {
 
   function pause() {
     _paused = true;
-    console.log('⏸️  PAUSED — call XActionsUtils.resume() to continue');
+    console.log('⏸️  PAUSED — call MedirusUtils.resume() to continue');
   }
 
   function resume() {

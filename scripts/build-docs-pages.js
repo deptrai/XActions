@@ -17,7 +17,7 @@ const ROOT = path.join(__dirname, '..');
 
 const DOCS_DIR = path.join(ROOT, 'docs', 'examples');
 const OUT_DIR = path.join(ROOT, 'dashboard', 'docs');
-const SITE_URL = 'https://xactions.app';
+const SITE_URL = 'https://medirus.online';
 
 // Category mappings for structured data and navigation
 const CATEGORIES = {
@@ -199,7 +199,7 @@ function extractDescription(markdown) {
 }
 
 function buildKeywords(slug, title, category) {
-  const base = ['xactions', 'twitter automation', 'x automation', 'free'];
+  const base = ['medirus', 'twitter automation', 'x automation', 'free'];
   const fromSlug = slug.split('-').filter(w => w.length > 2);
   const fromTitle = title.toLowerCase().split(/\s+/).filter(w => w.length > 3 && !['with', 'from', 'your', 'this', 'that', 'what'].includes(w));
   const keywords = [...new Set([...base, ...fromSlug, ...fromTitle, category.toLowerCase(), `${slug.replace(/-/g, ' ')} twitter`, `twitter ${slug.replace(/-/g, ' ')}`])];
@@ -210,9 +210,9 @@ function generateHTML(slug, markdown) {
   const info = CATEGORIES[slug] || { cat: 'Tools', icon: '⚡', priority: 0.6 };
   const rawTitle = extractTitle(markdown) || slugToTitle(slug);
   const title = rawTitle.replace(/^X\/Twitter\s*/i, '').trim();
-  const description = extractDescription(markdown) || `${title} — Free X/Twitter automation tool. No API keys, no fees. Open-source browser script by XActions.`;
+  const description = extractDescription(markdown) || `${title} — Free X/Twitter automation tool. No API keys, no fees. Open-source browser script by Medirus.`;
   const keywords = buildKeywords(slug, title, info.cat);
-  const pageTitle = `${title} — Free X/Twitter ${info.cat} Tool | XActions`;
+  const pageTitle = `${title} — Free X/Twitter ${info.cat} Tool | Medirus`;
   const canonicalUrl = `${SITE_URL}/docs/${slug}`;
   const seoDescription = description.length > 160 ? description.slice(0, 157) + '...' : description;
 
@@ -236,10 +236,10 @@ function generateHTML(slug, markdown) {
 
   <!-- Open Graph -->
   <meta property="og:type" content="article">
-  <meta property="og:title" content="${escapeHtml(title)} — XActions">
+  <meta property="og:title" content="${escapeHtml(title)} — Medirus">
   <meta property="og:description" content="${escapeHtml(seoDescription)}">
   <meta property="og:url" content="${canonicalUrl}">
-  <meta property="og:site_name" content="XActions">
+  <meta property="og:site_name" content="Medirus">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
@@ -260,7 +260,7 @@ function generateHTML(slug, markdown) {
     "description": ${JSON.stringify(seoDescription)},
     "url": "${canonicalUrl}",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "${SITE_URL}" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "${SITE_URL}" },
     "datePublished": "2026-02-24",
     "dateModified": "2026-02-24",
     "mainEntityOfPage": "${canonicalUrl}",
@@ -290,10 +290,10 @@ function generateHTML(slug, markdown) {
     "step": [
       { "@type": "HowToStep", "name": "Open x.com", "text": "Navigate to x.com in your browser and log in to your account." },
       { "@type": "HowToStep", "name": "Open DevTools Console", "text": "Press F12 or Ctrl+Shift+J to open the browser developer console." },
-      { "@type": "HowToStep", "name": "Paste the script", "text": "Copy the XActions ${escapeHtml(title)} script and paste it into the console." },
+      { "@type": "HowToStep", "name": "Paste the script", "text": "Copy the Medirus ${escapeHtml(title)} script and paste it into the console." },
       { "@type": "HowToStep", "name": "Run and monitor", "text": "Press Enter to run. The script shows real-time progress with emoji logs." }
     ],
-    "tool": { "@type": "HowToTool", "name": "XActions" },
+    "tool": { "@type": "HowToTool", "name": "Medirus" },
     "totalTime": "PT2M"
   }
   </script>
@@ -401,7 +401,7 @@ function generateHTML(slug, markdown) {
   <div class="layout">
     <!-- Sidebar -->
     <aside class="sidebar">
-      <div class="logo"><a href="/">⚡ XActions</a></div>
+      <div class="logo"><a href="/">⚡ Medirus</a></div>
       <nav>
         <a href="/features" class="nav-item"><span class="nav-icon">⚡</span><span>All Scripts</span></a>
         <a href="/tutorials" class="nav-item"><span class="nav-icon">📚</span><span>Tutorials</span></a>
@@ -429,7 +429,7 @@ function generateHTML(slug, markdown) {
 
         <div class="cta-box">
           <h3>⚡ Ready to try ${escapeHtml(title)}?</h3>
-          <p>XActions is 100% free and open-source. No API keys, no fees, no signup.</p>
+          <p>Medirus is 100% free and open-source. No API keys, no fees, no signup.</p>
           <a href="/features">Browse All Scripts</a>
         </div>
       </article>
@@ -457,7 +457,7 @@ function generateHTML(slug, markdown) {
   <footer class="site-footer">
     <div class="footer-content">
       <div class="footer-section">
-        <h4>XActions</h4>
+        <h4>Medirus</h4>
         <p>100% Free & Open Source X/Twitter Automation</p>
         <p>Created by <a href="https://x.com/nichxbt" rel="noopener">@nichxbt</a></p>
       </div>
@@ -487,7 +487,7 @@ function generateHTML(slug, markdown) {
       </div>
     </div>
     <div class="footer-bottom">
-      <p>© 2024-2026 XActions. MIT License. No API fees. No limits.</p>
+      <p>© 2024-2026 Medirus. MIT License. No API fees. No limits.</p>
     </div>
   </footer>
 </body>
@@ -611,9 +611,9 @@ async function build() {
       // Use frontmatter title/desc or fall back to extraction
       const rawTitle = fmTitle || extractTitle(markdown) || slugToTitle(slug);
       const title = rawTitle.replace(/^X\/Twitter\s*/i, '').trim();
-      const description = fmDesc || extractDescription(markdown) || `${title} — Step-by-step tutorial for XActions.`;
+      const description = fmDesc || extractDescription(markdown) || `${title} — Step-by-step tutorial for Medirus.`;
       const keywords = buildKeywords(slug, title, info.cat);
-      const pageTitle = `${title} | XActions Tutorial`;
+      const pageTitle = `${title} | Medirus Tutorial`;
       const canonicalUrl = `${SITE_URL}/docs/step-by-step/${slug}`;
       const seoDescription = description.length > 160 ? description.slice(0, 157) + '...' : description;
 
@@ -660,7 +660,7 @@ async function build() {
 
   // Generate sitemap entries
   const sitemapXml = sitemapEntries.map(e => `  <url>
-    <loc>https://xactions.app${e.urlPath}</loc>
+    <loc>https://medirus.online${e.urlPath}</loc>
     <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>${e.priority}</priority>

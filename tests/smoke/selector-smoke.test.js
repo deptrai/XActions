@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { createBrowser, createPage, loginWithCookie } from '../../src/scrapers/facebook/index.js';
 
-const X_COOKIE = process.env.X_SESSION_COOKIE || process.env.XACTIONS_SESSION_COOKIE;
+const X_COOKIE = process.env.X_SESSION_COOKIE || process.env.MEDIRUS_SESSION_COOKIE;
 const FB_C_USER = process.env.FB_C_USER;
 const FB_XS = process.env.FB_XS;
 

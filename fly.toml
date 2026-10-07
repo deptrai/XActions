@@ -1,11 +1,11 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# XActions — Fly.io Configuration
+# Medirus — Fly.io Configuration
 # Free tier: 3 shared-cpu VMs, 256MB RAM, 3GB storage
 # Deploy: fly launch --no-deploy && fly deploy
 # by nichxbt
 # ═══════════════════════════════════════════════════════════════════════════════
 
-app = 'xactions'
+app = 'medirus'
 primary_region = 'iad'
 
 [build]
@@ -49,8 +49,8 @@ primary_region = 'iad'
 #   fly secrets set DATABASE_URL="postgresql://..." JWT_SECRET="..." REDIS_HOST="..."
 #
 # Fly Postgres (free):
-#   fly postgres create --name xactions-db
-#   fly postgres attach xactions-db
+#   fly postgres create --name medirus-db
+#   fly postgres attach medirus-db
 #
 # Fly Redis (Upstash, free tier):
-#   fly redis create --name xactions-redis
+#   fly redis create --name medirus-redis

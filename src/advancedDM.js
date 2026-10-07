@@ -6,7 +6,7 @@
 // 1. Go to https://x.com/messages (or open a DM conversation)
 // 2. Open DevTools Console (F12)
 // 3. Paste and run this script
-// 4. Use window.XActions.advancedDM.<function>() to call features
+// 4. Use window.Medirus.advancedDM.<function>() to call features
 //
 // Features:
 //   sendMedia(filePath)         - Send photo/video/GIF via the media button
@@ -993,10 +993,10 @@
   };
 
   // ─────────────────────────────────────────────────────────
-  // Expose on window.XActions.advancedDM
+  // Expose on window.Medirus.advancedDM
   // ─────────────────────────────────────────────────────────
-  window.XActions = window.XActions || {};
-  window.XActions.advancedDM = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.advancedDM = {
     sendMedia,
     sendGIF,
     sendVoiceMessage,
@@ -1019,7 +1019,7 @@
   // ─────────────────────────────────────────────────────────
   const W = 62;
   console.log('╔' + '═'.repeat(W) + '╗');
-  console.log('║  💬 ADVANCED DM FEATURES — XActions' + ' '.repeat(W - 38) + '║');
+  console.log('║  💬 ADVANCED DM FEATURES — Medirus' + ' '.repeat(W - 38) + '║');
   console.log('║  by nichxbt — v1.0' + ' '.repeat(W - 21) + '║');
   console.log('╠' + '═'.repeat(W) + '╣');
   console.log('║  📎 Media & Content' + ' '.repeat(W - 21) + '║');
@@ -1048,6 +1048,6 @@
   console.log('║    removeGroupMember("username")' + ' '.repeat(W - 33) + '║');
   console.log('╚' + '═'.repeat(W) + '╝');
   console.log('');
-  console.log('💡 Usage: window.XActions.advancedDM.sendGIF("thumbs up")');
+  console.log('💡 Usage: window.Medirus.advancedDM.sendGIF("thumbs up")');
   console.log('💡 Open a DM conversation first, then call a function.');
 })();

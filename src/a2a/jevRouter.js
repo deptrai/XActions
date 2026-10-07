@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions A2A — Semantic Intent Router via Jev
+ * Medirus A2A — Semantic Intent Router via Jev
  * Disambiguates complex or natural-language task requests to select the best skill.
  *
  * @author nich (@nichxbt)
@@ -116,7 +116,7 @@ export async function routeTaskIntent(query, options = {}) {
   const criteria = {};
   for (const c of candidates) {
     // Create compact, descriptive summary for criteria
-    const cleanId = c.id.replace(/^xactions\./, '');
+    const cleanId = c.id.replace(/^medirus\./, '');
     criteria[cleanId] = (c.description || c.name || cleanId).slice(0, 80);
   }
   criteria.unclear = 'None of the above or intent is too vague';
@@ -161,7 +161,7 @@ export async function routeTaskIntent(query, options = {}) {
 
   // Match choice back to actual candidate skill ID
   const matched = candidates.find(
-    (c) => c.id.replace(/^xactions\./, '') === choice || c.id === choice
+    (c) => c.id.replace(/^medirus\./, '') === choice || c.id === choice
   );
 
   return {

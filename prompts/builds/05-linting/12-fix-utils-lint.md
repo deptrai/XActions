@@ -44,7 +44,7 @@ head -20 src/utils/core.js
 
 Expected structure:
 ```js
-// XActions Core — by nichxbt
+// Medirus Core — by nichxbt
 (function() {
   'use strict';
   // ... browser utility functions ...

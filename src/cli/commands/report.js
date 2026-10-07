@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions report` - a quantified read on any public account.
+ * `medirus report` - a quantified read on any public account.
  *
  * Uses the same analyser as the web playground and the `x_account_report` MCP
  * tool, so a number printed here is the same number rendered there. Needs no
@@ -240,7 +240,7 @@ export function registerReportCommand(program) {
         spinner.fail(chalk.red(error.message));
         if (error.code === 'AUTH_REQUIRED') {
           console.log(chalk.gray('\n  X restricted this read to logged-in sessions.'));
-          console.log(chalk.gray('  Run `xactions connect` to use your own session.\n'));
+          console.log(chalk.gray('  Run `medirus connect` to use your own session.\n'));
         }
         process.exitCode = 1;
       }

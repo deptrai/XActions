@@ -8,7 +8,7 @@ import {
   AlertTriangle, Download, Check, Filter, Banknote, Clock,
   Sparkles, X, ChevronDown, SlidersHorizontal, Layers, LayoutGrid, Columns3,
 } from 'lucide-react';
-import type { ApiResult } from '@xactions/api-client';
+import type { ApiResult } from '@medirus/api-client';
 import { api } from '@/lib/api';
 import { formatSalary, generateJobsCsv, escapeCsv } from '@/lib/jobs-format';
 import type { NormalizedJob, PlatformName } from '@/lib/jobs-format';
@@ -481,7 +481,7 @@ function JobsVnInner() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `xactions-jobs-vn-export.csv`);
+    link.setAttribute('download', `medirus-jobs-vn-export.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

@@ -25,7 +25,7 @@ Build a capture→cache→replay engine so Facebook (and eventually universal) G
 - FR-112 (GraphQL Replay Engine — conditional)
 
 ## Story
-As an XActions operator, I want to capture `doc_id` + auth tokens from a Puppeteer session and replay GraphQL calls via `undici`/`got-scraping` with a replay cache, so that read scraping avoids holding browser tabs and runs 10–50x faster than DOM scroll.
+As an Medirus operator, I want to capture `doc_id` + auth tokens from a Puppeteer session and replay GraphQL calls via `undici`/`got-scraping` with a replay cache, so that read scraping avoids holding browser tabs and runs 10–50x faster than DOM scroll.
 
 ## Scope Sketch (to be refined on activation)
 - Puppeteer request interceptor: capture `api/graphql` POST bodies → extract `doc_id`, `fb_dtsg`, `lsd`, `__dyn`, `__csr`, `fb_api_req_friendly_name`.

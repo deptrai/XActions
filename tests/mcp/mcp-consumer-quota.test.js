@@ -86,13 +86,13 @@ describe('Story 11.9 — MCP HTTP consumer identification & multi-consumer quota
   beforeAll(async () => {
     savedEnv = {
       PORT: process.env.PORT,
-      XACTIONS_MCP_API_KEY: process.env.XACTIONS_MCP_API_KEY,
-      XACTIONS_API_TOKEN: process.env.XACTIONS_API_TOKEN,
-      XACTIONS_MODE: process.env.XACTIONS_MODE,
+      MEDIRUS_MCP_API_KEY: process.env.MEDIRUS_MCP_API_KEY,
+      MEDIRUS_API_TOKEN: process.env.MEDIRUS_API_TOKEN,
+      MEDIRUS_MODE: process.env.MEDIRUS_MODE,
     };
-    delete process.env.XACTIONS_MCP_API_KEY;
-    delete process.env.XACTIONS_API_TOKEN;
-    process.env.XACTIONS_MODE = 'local';
+    delete process.env.MEDIRUS_MCP_API_KEY;
+    delete process.env.MEDIRUS_API_TOKEN;
+    process.env.MEDIRUS_MODE = 'local';
     process.env.PORT = '0';
 
     vi.resetModules();
@@ -112,12 +112,12 @@ describe('Story 11.9 — MCP HTTP consumer identification & multi-consumer quota
     }
     if (savedEnv.PORT === undefined) delete process.env.PORT;
     else process.env.PORT = savedEnv.PORT;
-    if (savedEnv.XACTIONS_MCP_API_KEY === undefined) delete process.env.XACTIONS_MCP_API_KEY;
-    else process.env.XACTIONS_MCP_API_KEY = savedEnv.XACTIONS_MCP_API_KEY;
-    if (savedEnv.XACTIONS_API_TOKEN === undefined) delete process.env.XACTIONS_API_TOKEN;
-    else process.env.XACTIONS_API_TOKEN = savedEnv.XACTIONS_API_TOKEN;
-    if (savedEnv.XACTIONS_MODE === undefined) delete process.env.XACTIONS_MODE;
-    else process.env.XACTIONS_MODE = savedEnv.XACTIONS_MODE;
+    if (savedEnv.MEDIRUS_MCP_API_KEY === undefined) delete process.env.MEDIRUS_MCP_API_KEY;
+    else process.env.MEDIRUS_MCP_API_KEY = savedEnv.MEDIRUS_MCP_API_KEY;
+    if (savedEnv.MEDIRUS_API_TOKEN === undefined) delete process.env.MEDIRUS_API_TOKEN;
+    else process.env.MEDIRUS_API_TOKEN = savedEnv.MEDIRUS_API_TOKEN;
+    if (savedEnv.MEDIRUS_MODE === undefined) delete process.env.MEDIRUS_MODE;
+    else process.env.MEDIRUS_MODE = savedEnv.MEDIRUS_MODE;
   });
 
   /**
@@ -146,8 +146,8 @@ describe('Story 11.9 — MCP HTTP consumer identification & multi-consumer quota
     expect(envelope.success).not.toBe(false);
   });
 
-  test('AC-2: invalid Bearer token with XACTIONS_MCP_API_KEY configured returns 401 XACT_4010', async () => {
-    process.env.XACTIONS_MCP_API_KEY = 'test-secret-key-ad20';
+  test('AC-2: invalid Bearer token with MEDIRUS_MCP_API_KEY configured returns 401 XACT_4010', async () => {
+    process.env.MEDIRUS_MCP_API_KEY = 'test-secret-key-ad20';
     try {
       const res = await postJson(
         `${baseUrl}/mcp`,
@@ -175,7 +175,7 @@ describe('Story 11.9 — MCP HTTP consumer identification & multi-consumer quota
       );
       expect(ok.status).toBe(200);
     } finally {
-      delete process.env.XACTIONS_MCP_API_KEY;
+      delete process.env.MEDIRUS_MCP_API_KEY;
     }
   });
 

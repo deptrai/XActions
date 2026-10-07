@@ -1,15 +1,15 @@
 ---
 title: "Upload Contacts — Tutorial"
-description: "Navigate to the contact upload page on X/Twitter and trigger the contact sync flow using XActions. No API needed."
-keywords: ["upload contacts twitter", "sync contacts x", "twitter find friends contacts", "xactions upload contacts", "twitter contact sync script"]
-canonical: "https://xactions.app/examples/upload-contacts"
+description: "Navigate to the contact upload page on X/Twitter and trigger the contact sync flow using Medirus. No API needed."
+keywords: ["upload contacts twitter", "sync contacts x", "twitter find friends contacts", "medirus upload contacts", "twitter contact sync script"]
+canonical: "https://medirus.online/examples/upload-contacts"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Upload Contacts — Tutorial
 
-> Step-by-step guide to navigating the contact upload flow, syncing contacts, and disconnecting synced contacts on X/Twitter using XActions.
+> Step-by-step guide to navigating the contact upload flow, syncing contacts, and disconnecting synced contacts on X/Twitter using Medirus.
 
 **Works on:** Browser Console
 **Difficulty:** Beginner
@@ -80,7 +80,7 @@ This is the safest first step. It simply takes you to the page where you can upl
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   const run = async () => {
-    console.log('📇 UPLOAD CONTACTS - XActions by nichxbt');
+    console.log('📇 UPLOAD CONTACTS - Medirus by nichxbt');
     console.log(`📋 Action: ${CONFIG.action}`);
 
     if (CONFIG.dryRun) {
@@ -136,7 +136,7 @@ After navigating to the contacts page, run this to trigger the actual upload:
   };
 
   const run = async () => {
-    console.log('📇 UPLOAD CONTACTS - XActions by nichxbt');
+    console.log('📇 UPLOAD CONTACTS - Medirus by nichxbt');
     console.log('📋 Action: upload');
 
     // Look for the upload/sync contacts button
@@ -202,7 +202,7 @@ To remove previously synced contacts from X:
   };
 
   const run = async () => {
-    console.log('📇 DISCONNECT CONTACTS - XActions by nichxbt');
+    console.log('📇 DISCONNECT CONTACTS - Medirus by nichxbt');
 
     // Navigate to contacts dashboard
     window.location.href = 'https://x.com/settings/contacts_dashboard';
@@ -303,5 +303,5 @@ To remove previously synced contacts from X:
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

@@ -29,7 +29,7 @@ Edit and manage your X/Twitter profile — update bio, avatar, header, filter po
 ## 📦 Node.js Module
 
 ```javascript
-import { getProfile, updateProfile, uploadAvatar } from 'xactions';
+import { getProfile, updateProfile, uploadAvatar } from 'medirus';
 
 // Get profile info
 const profile = await getProfile(page, 'nichxbt');
@@ -39,7 +39,7 @@ await updateProfile(page, {
   name: 'New Display Name',
   bio: 'Building tools for the X ecosystem 🚀',
   location: 'Worldwide',
-  website: 'https://xactions.app',
+  website: 'https://medirus.online',
 });
 
 // Upload new avatar

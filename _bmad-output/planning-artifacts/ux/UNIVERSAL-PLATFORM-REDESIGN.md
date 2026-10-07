@@ -31,7 +31,7 @@ The current mockup suffers from:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  ⚡ XActions                                                        │
+│  ⚡ Medirus                                                        │
 ├────────┬────────────────────────────────────────────────────────────┤
 │        │  [Platform badge] Platform Automation   [🛡️ Dry-run]      │
 │        │  Account: [▼ Sang-Test    ] [+ Add]  🟢 Active · 2m ago    │

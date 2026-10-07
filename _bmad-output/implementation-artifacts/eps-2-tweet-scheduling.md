@@ -22,13 +22,13 @@ Status: done
 
 ## Story
 
-As a growth marketer using XActions,
+As a growth marketer using Medirus,
 I want to schedule tweets (and threads) to publish at a specific datetime with a queue view, recurring support, and timezone awareness,
 so that I can maintain a consistent posting cadence without being online at peak hours — without paying for X Premium's native scheduling.
 
 ## Context — what this story builds
 
-XActions already has a robust **Facebook** scheduler (`api/services/facebookScheduler.js` + `scheduleFacebookPost` in `api/services/facebookAutomation.js`) that persists to the `Schedule` Prisma model, runs a 1-minute node-cron tick, enforces ≤5 executed/hour/user (NFR-9/NFR10) with jitter deferral, atomically claims rows (pending→running), sweeps stale `running` rows on startup, and emits PII-free Socket.IO operation events. The `Schedule` model already exists but is Facebook-scoped (`facebookAccountId`).
+Medirus already has a robust **Facebook** scheduler (`api/services/facebookScheduler.js` + `scheduleFacebookPost` in `api/services/facebookAutomation.js`) that persists to the `Schedule` Prisma model, runs a 1-minute node-cron tick, enforces ≤5 executed/hour/user (NFR-9/NFR10) with jitter deferral, atomically claims rows (pending→running), sweeps stale `running` rows on startup, and emits PII-free Socket.IO operation events. The `Schedule` model already exists but is Facebook-scoped (`facebookAccountId`).
 
 This story mirrors that proven pattern for **Twitter/X** tweets and threads, reusing the same `Schedule` table via a new `platform` discriminator, and reusing the existing `postTweet` / `postThread` browser automation in `src/postComposer.js` for execution. It also wires up the CLI, MCP, REST API, and dashboard surfaces that the issue scope requires.
 
@@ -76,10 +76,10 @@ This story mirrors that proven pattern for **Twitter/X** tweets and threads, reu
 21. `PATCH /api/tweet-schedule/reorder` — accept `[{ id, queueOrder }]` and persist the new order (drag & drop queue view).
 22. All routes require auth (`req.user.id`); never trust a body `userId`.
 
-**AC7 — CLI (`xactions schedule ...`)**
-23. `xactions schedule create --content "..." --at <ISO> [--thread t2,t3] [--tz Europe/London] [--recur "0 9 * * *"] [--dry-run false]` — calls `scheduleTweet` (uses the stored session cookie / config user).
-24. `xactions schedule list [--status pending]` — prints a table.
-25. `xactions schedule cancel <id>` — cancels.
+**AC7 — CLI (`medirus schedule ...`)**
+23. `medirus schedule create --content "..." --at <ISO> [--thread t2,t3] [--tz Europe/London] [--recur "0 9 * * *"] [--dry-run false]` — calls `scheduleTweet` (uses the stored session cookie / config user).
+24. `medirus schedule list [--status pending]` — prints a table.
+25. `medirus schedule cancel <id>` — cancels.
 
 **AC8 — MCP tool `x_schedule`**
 26. Add `x_schedule` tool (DB-only, dry-run default) to `src/mcp/server.js` mirroring `x_facebook_schedule_post`. Deprecate (but keep) the old browser-only `x_schedule_post`.

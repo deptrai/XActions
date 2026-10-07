@@ -29,7 +29,7 @@ Browser console scripts for blocking, unblocking, muting, and managing unwanted 
 ### massBlock.js
 Blocks a list of usernames by navigating to each profile and clicking Block. Configurable delay between blocks. Tracks progress and exports block list.
 
-**Controls:** `window.XActions.pause()`, `.resume()`, `.abort()`
+**Controls:** `window.Medirus.pause()`, `.resume()`, `.abort()`
 
 ### massUnblock.js
 Navigates to blocked accounts page and clicks Unblock on each. Scrolls for more. Progress tracking with auto JSON export.
@@ -56,7 +56,7 @@ Bulk-adds words/phrases to X's muted words list. Navigates to settings and adds 
 ### removeFollowers.js
 Removes followers using the block-then-immediately-unblock method. They stop following you without being permanently blocked. Processes one-by-one with safety delays.
 
-**Controls:** `window.XActions.pause()`, `.resume()`, `.abort()`
+**Controls:** `window.Medirus.pause()`, `.resume()`, `.abort()`
 
 ## DOM Selectors
 

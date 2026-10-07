@@ -1,6 +1,6 @@
 # Adversarial-Divergence Review — ROUND 2 (re-check after revision)
 
-**Subject:** `ARCHITECTURE-SPINE.md` (xactions-api-contract-epic46), updated 2026-09-24
+**Subject:** `ARCHITECTURE-SPINE.md` (medirus-api-contract-epic46), updated 2026-09-24
 **Prior round:** `review-adversarial-divergence.md` — FAIL, 9 surviving pairs (3 fatal)
 **Method:** same lens — construct two units one level down (Stories 46.1/46.2/46.3, Epic 47 consumer) that obey every AD to the letter yet build incompatibly. Verify each round-1 finding against the revised text; then re-run the pair-construction pass on the *new* clauses the revision added.
 
@@ -66,7 +66,7 @@ Fix (unchanged, now covering both defects): type the union on `error.code` (stab
 
 ### F9 — workspaces pinned, package manager not → **CLOSED enough; one residual note**
 
-AD-8 now adds the install-audit gate: "bắt buộc install-audit step (verify `packages/xactions-mcp` + phantom deps trước khi commit lockfile)" and all scripts are `npm run …`. npm is effectively pinned. Residual note only: `pnpm-lock.yaml` still sits beside `package-lock.json` in the repo root — a pnpm-invoking contributor still silently loses `workspaces`. One clause ("package manager = npm; `pnpm-lock.yaml` removed in the workspaces PR") makes it airtight. Low.
+AD-8 now adds the install-audit gate: "bắt buộc install-audit step (verify `packages/medirus-mcp` + phantom deps trước khi commit lockfile)" and all scripts are `npm run …`. npm is effectively pinned. Residual note only: `pnpm-lock.yaml` still sits beside `package-lock.json` in the repo root — a pnpm-invoking contributor still silently loses `workspaces`. One clause ("package manager = npm; `pnpm-lock.yaml` removed in the workspaces PR") makes it airtight. Low.
 
 ### Round-1 minor observations
 

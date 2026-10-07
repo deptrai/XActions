@@ -1,6 +1,6 @@
 // by nichxbt
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
-// XActions — Facebook Automation Guardrail Tests: runGuardedBatch
+// Medirus — Facebook Automation Guardrail Tests: runGuardedBatch
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {

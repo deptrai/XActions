@@ -1,4 +1,4 @@
-# XActions Demo Recordings
+# Medirus Demo Recordings
 
 Animated terminal demos for documentation and README.
 

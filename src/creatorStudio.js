@@ -33,7 +33,7 @@ const SELECTORS = {
 /**
  * Get account analytics
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function getAccountAnalytics(page, options = {}) {
@@ -134,7 +134,7 @@ export async function getRevenue(page) {
 /**
  * Get subscriber list
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function getSubscribers(page, options = {}) {

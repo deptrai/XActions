@@ -232,7 +232,7 @@
   // ── Main ──
   const run = async () => {
     console.log('═══════════════════════════════════════');
-    console.log('❤️  XActions — Like Posts');
+    console.log('❤️  Medirus — Like Posts');
     console.log('═══════════════════════════════════════');
 
     if (CONFIG.mode === 'urls') {
@@ -251,15 +251,15 @@
 
     // Save tracking data
     if (CONFIG.trackLiked) {
-      const history = JSON.parse(sessionStorage.getItem('xactions_liked') || '[]');
+      const history = JSON.parse(sessionStorage.getItem('medirus_liked') || '[]');
       history.push({
         timestamp: new Date().toISOString(),
         mode: CONFIG.mode,
         count: liked,
         posts: likedPosts,
       });
-      sessionStorage.setItem('xactions_liked', JSON.stringify(history));
-      console.log('💾 Saved to sessionStorage (key: "xactions_liked")');
+      sessionStorage.setItem('medirus_liked', JSON.stringify(history));
+      console.log('💾 Saved to sessionStorage (key: "medirus_liked")');
     }
 
     if (likedPosts.length > 0) {

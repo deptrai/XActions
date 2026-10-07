@@ -27,9 +27,9 @@ Update your X/Twitter display name, bio, location, and website from the browser 
 ```javascript
 const CONFIG = {
   displayName: 'nichxbt',
-  bio: '⚡ Building XActions — the complete X automation toolkit. Open source.',
+  bio: '⚡ Building Medirus — the complete X automation toolkit. Open source.',
   location: 'San Francisco, CA',
-  website: 'https://xactions.app',
+  website: 'https://medirus.online',
 };
 ```
 

@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 📅 Schedule Post - XActions
+ * 📅 Schedule Post - Medirus
  * ============================================
  *
  * @name         schedule-post
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to x.com/compose/post
@@ -33,7 +33,7 @@
   // ============================================
   const CONFIG = {
     // The text to schedule.
-    text: 'Scheduled with XActions 📅',
+    text: 'Scheduled with Medirus 📅',
 
     // When to post, as a local date/time. Format: "YYYY-MM-DDTHH:MM" (24-hour).
     // Must be in the future. Example: "2026-08-01T09:00".
@@ -127,9 +127,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📅 SCHEDULE POST - XActions                             ║
+║  📅 SCHEDULE POST - Medirus                             ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

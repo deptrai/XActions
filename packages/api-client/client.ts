@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions typed API client — Story 46.3 (Epic 46).
+ * Medirus typed API client — Story 46.3 (Epic 46).
  *
  * Thin fetch wrapper around the OpenAPI 3.1 spec. Generated method stubs are
  * emitted per-operationId; the core `request` method is hand-written and
@@ -13,7 +13,7 @@
  *
  * Helper: `isPaymentRequired(res)` narrows failure to PaymentRequiredPayload.
  *
- * @module @xactions/api-client
+ * @module @medirus/api-client
  */
 
 export interface ApiErrorPayload {
@@ -47,8 +47,8 @@ export function isPaymentRequired(res: ApiResult<unknown>): res is ApiPaymentReq
   return !res.ok && res.status === 402;
 }
 
-export interface XActionsClientOptions {
-  /** Base URL — defaults to https://xactions.app (production) or http://localhost:3001 when NODE_ENV=development */
+export interface MedirusClientOptions {
+  /** Base URL — defaults to https://medirus.online (production) or http://localhost:3001 when NODE_ENV=development */
   baseUrl?: string;
   /** bearerAuth — JWT for user-facing routes */
   bearerToken?: string;
@@ -66,7 +66,7 @@ export interface XActionsClientOptions {
   extraHeaders?: Record<string, string>;
 }
 
-export class XActionsClient {
+export class MedirusClient {
   baseUrl: string;
   bearerToken?: string;
   sessionCookie?: string;
@@ -76,12 +76,12 @@ export class XActionsClient {
   extraHeaders: Record<string, string>;
   private _fetch: typeof fetch;
 
-  constructor(opts: XActionsClientOptions = {}) {
+  constructor(opts: MedirusClientOptions = {}) {
     const rawUrl =
       opts.baseUrl ??
       (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development'
         ? 'http://localhost:3001'
-        : 'https://xactions.app');
+        : 'https://medirus.online');
     this.baseUrl = rawUrl.replace(/\/+$/, '');
     this.bearerToken = opts.bearerToken;
     this.sessionCookie = opts.sessionCookie;

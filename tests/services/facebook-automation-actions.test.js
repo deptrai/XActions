@@ -1,6 +1,6 @@
 // by nichxbt
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
-// XActions — Facebook Automation Guardrail Tests: likeFacebookPosts, commentOnFacebookPosts, createFacebookPost
+// Medirus — Facebook Automation Guardrail Tests: likeFacebookPosts, commentOnFacebookPosts, createFacebookPost
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
@@ -273,7 +273,7 @@ describe('createFacebookPost', () => {
     it('returns preview without calling createPostFn', async () => {
       const fakePage = {};
       const createPostFnSpy = vi.fn();
-      const content = 'Hello from XActions!';
+      const content = 'Hello from Medirus!';
 
       const result = await createFacebookPost(fakePage, content, { createPostFn: createPostFnSpy });
 

@@ -15,10 +15,10 @@ selectedDocuments:
       - _bmad-output/planning-artifacts/prd-canonicalization-addendum-2026-08-21.md
       - _bmad-output/planning-artifacts/FUTURE-WORK.md
   architecture:
-    primary: _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
+    primary: _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
     supplemental:
-      - _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md
-      - _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UPDATE-GATE-2026-08-18-R3.md
+      - _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md
+      - _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UPDATE-GATE-2026-08-18-R3.md
   epics:
     primary: _bmad-output/planning-artifacts/epics.md
     supplemental:
@@ -35,7 +35,7 @@ selectedDocuments:
 # Implementation Readiness Assessment Report
 
 **Date:** 2026-08-26 (r4 re-run)
-**Project:** XActions
+**Project:** Medirus
 **Assessor:** BMM `bmad-check-implementation-readiness` skill
 **Scope:** Phase 4 (Epics 10–20) + Phase 4 extension (Epics 23–26), bao gồm Bluesky/Mastodon, utility/adapters consolidation, dispatcher unification và legacy decommission.
 
@@ -50,7 +50,7 @@ selectedDocuments:
 | Loại | File canonical | Kích thước | Cập nhật | Ghi chú |
 |------|----------------|-----------|----------|---------|
 | PRD | `_bmad-output/planning-artifacts/prd.md` | 21,787 bytes | 2026-08-26 19:44 | Bao gồm Epics 10–20 và 23–26 |
-| Architecture | `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` | 45,048 bytes | 2026-08-26 19:33 | R3 final; bao gồm Bluesky/Mastodon và AD-21 |
+| Architecture | `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` | 45,048 bytes | 2026-08-26 19:33 | R3 final; bao gồm Bluesky/Mastodon và AD-21 |
 | Epics | `_bmad-output/planning-artifacts/epics.md` | 109,115 bytes | 2026-08-26 19:44 | Epic 10–20 + Phase 4 extension 23–26 |
 | UX index | `_bmad-output/planning-artifacts/ux/README.md` | 1,563 bytes | 2026-08-26 22:04 | Canonical pointer cho UX |
 | UX design | `_bmad-output/planning-artifacts/ux/DESIGN.md` | 16,496 bytes | 2026-08-26 22:04 | Design system tokens & mockups |
@@ -111,7 +111,7 @@ PRD `prd.md` liệt kê đầy đủ 31 FR (kể cả `FR-66B`):
 | FR-90 | Mastodon REST API scraper | Epic 23 | Traced |
 | FR-91 | Utility scripts & adapters consolidation | Epic 24 | Traced |
 | FR-92 | Unified dispatcher & backward compatibility | Epic 25 | Traced |
-| FR-93 | Legacy decommission (XActions) | Epic 26 | Traced |
+| FR-93 | Legacy decommission (Medirus) | Epic 26 | Traced |
 
 ### 2.2. Non-Functional Requirements (NFR-11 ➔ NFR-18)
 
@@ -225,25 +225,25 @@ PRD `prd.md` (cùng addendum) đã đầy đủ và rõ ràng cho scope Phase 4 
 
 ### 4.1. Tài liệu UX
 
-- `ux/README.md` là canonical pointer (`status: final`, cập nhật 2026-08-26 22:04); dòng 24 chỉ rõ `EXPERIENCE.md` chứa wireframes `xactions admin` (status, proxies, accounts, checkpoints, stream) cho Epic 19.
+- `ux/README.md` là canonical pointer (`status: final`, cập nhật 2026-08-26 22:04); dòng 24 chỉ rõ `EXPERIENCE.md` chứa wireframes `medirus admin` (status, proxies, accounts, checkpoints, stream) cho Epic 19.
 - `ux/DESIGN.md` chứa design system tokens, dashboard UI components, và mockups M1–M8 (`status: final`).
-- `ux/EXPERIENCE.md` chứa core user flows, bao gồm **Flow 4: Operator uses `xactions admin` CLI** (`EXPERIENCE.md:258`) với 5 wireframes chi tiết 4a–4e.
+- `ux/EXPERIENCE.md` chứa core user flows, bao gồm **Flow 4: Operator uses `medirus admin` CLI** (`EXPERIENCE.md:258`) với 5 wireframes chi tiết 4a–4e.
 - `ux/EXPERIENCE-UNIVERSAL-2026-08-21.md` bổ sung operator/AI/CLI/multi-platform flows (`status: final`).
 
 ### 4.2. Kiểm tra CLI admin wireframes cho 19.4.1–19.4.5
 
 | Story | Subcommand | Wireframe | Vị trí trong `EXPERIENCE.md` | Nội dung kiểm tra |
 |-------|------------|-----------|------------------------------|-------------------|
-| 19.4.1 | `xactions admin status` | 4a | `EXPERIENCE.md:271` | Proxy pool, current req/s, Redis lag, throttle level, hibernating accounts |
-| 19.4.2 | `xactions admin proxies` | 4b | `EXPERIENCE.md:282` | `proxies list`, `proxy quarantine`, `proxy release` với trạng thái `healthy/quarantined` |
-| 19.4.3 | `xactions admin accounts` | 4c | `EXPERIENCE.md:296` | `accounts list --platform`, `account wake`, `account rotate` |
-| 19.4.4 | `xactions admin checkpoints` | 4d | `EXPERIENCE.md:310` | `checkpoints list`, `checkpoint retry` với cursor và last error 429 |
-| 19.4.5 | `xactions admin stream` | 4e | `EXPERIENCE.md:321` | `stream metrics`, `stream alerts`, `stream test` với thresholds `pendingMessages > 50,000` |
+| 19.4.1 | `medirus admin status` | 4a | `EXPERIENCE.md:271` | Proxy pool, current req/s, Redis lag, throttle level, hibernating accounts |
+| 19.4.2 | `medirus admin proxies` | 4b | `EXPERIENCE.md:282` | `proxies list`, `proxy quarantine`, `proxy release` với trạng thái `healthy/quarantined` |
+| 19.4.3 | `medirus admin accounts` | 4c | `EXPERIENCE.md:296` | `accounts list --platform`, `account wake`, `account rotate` |
+| 19.4.4 | `medirus admin checkpoints` | 4d | `EXPERIENCE.md:310` | `checkpoints list`, `checkpoint retry` với cursor và last error 429 |
+| 19.4.5 | `medirus admin stream` | 4e | `EXPERIENCE.md:321` | `stream metrics`, `stream alerts`, `stream test` với thresholds `pendingMessages > 50,000` |
 
 Tất cả 5 wireframes:
 - Có cấu trúc lệnh rõ ràng, output JSON/CLI mẫu.
 - Khớp với Acceptance Criteria trong `epics.md:925–976`.
-- Sử dụng các trường `throttleLevel` (không còn `governorThrottle`) trong output `xactions admin status`.
+- Sử dụng các trường `throttleLevel` (không còn `governorThrottle`) trong output `medirus admin status`.
 
 ### 4.3. Kiểm tra naming `throttleLevel` trong UX docs
 
@@ -269,7 +269,7 @@ Tất cả 5 wireframes:
 
 **Không còn UX blocker nào.** Cả hai blocker từ r3 đã được khắc phục:
 
-1. ✅ CLI admin wireframes đã được bổ sung đầy đủ cho `xactions admin status/proxies/accounts/checkpoints/stream` trong `EXPERIENCE.md`.
+1. ✅ CLI admin wireframes đã được bổ sung đầy đủ cho `medirus admin status/proxies/accounts/checkpoints/stream` trong `EXPERIENCE.md`.
 2. ✅ `governorThrottle` đã được thay bằng `throttleLevel` trong `DESIGN.md` và các UX docs liên quan.
 
 ---
@@ -335,7 +335,7 @@ Tất cả 5 wireframes:
 
 **READY** — Các blocker từ báo cáo r3 đã được xử lý:
 
-1. ✅ `ux/EXPERIENCE.md` đã bổ sung CLI admin wireframes đầy đủ cho 5 subcommands `xactions admin` (19.4.1–19.4.5), phản chiếu trong `ux/README.md:24`.
+1. ✅ `ux/EXPERIENCE.md` đã bổ sung CLI admin wireframes đầy đủ cho 5 subcommands `medirus admin` (19.4.1–19.4.5), phản chiếu trong `ux/README.md:24`.
 2. ✅ `ux/DESIGN.md` đã đồng bộ tên trường từ `governorThrottle` sang `throttleLevel` (`DESIGN.md:398`), khớp với `ARCHITECTURE-SPINE.md:269`, `epics.md:933`, và `EXPERIENCE.md:278`.
 3. ✅ Không còn tham chiếu `governorThrottle` trong các tài liệu UX.
 4. ✅ `sprint-status.yaml` parse OK, cấu trúc đầy đủ, các key/filename mapping đã khớp ở mức syntax.

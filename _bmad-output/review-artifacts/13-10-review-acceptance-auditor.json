@@ -57,7 +57,7 @@
     "id": "13.10-FIND-007",
     "ac": "AC-7",
     "location": "src/cli/commands/automate.js:48-58,181-206",
-    "title": "CLI 'xactions automate' still runs legacy Puppeteer automation",
+    "title": "CLI 'medirus automate' still runs legacy Puppeteer automation",
     "detail": "src/cli/commands/automate.js imports src/scrapers/facebook/index.js, api/services/facebookAutomation.js, src/scrapers/facebook/messengerShare.js and src/scrapers/facebook/messengerQueue.js. All actions (like, comment, post, share, join-group, send-friend-request, messenger-share) call these legacy modules instead of dispatching to FacebookCrawler.start().",
     "severity": "high",
     "bucket": "patch"
@@ -75,17 +75,17 @@
     "id": "13.10-FIND-009",
     "ac": "AC-8",
     "location": "src/cli/",
-    "title": "No 'xactions actions --platform facebook' command implemented",
-    "detail": "AC-8 requires CLI 'xactions actions --platform facebook' (or equivalent) to list actions with requiredArgs, optionalArgs, example, outputType and requiresAuth. No such command exists in src/cli/commands/.",
+    "title": "No 'medirus actions --platform facebook' command implemented",
+    "detail": "AC-8 requires CLI 'medirus actions --platform facebook' (or equivalent) to list actions with requiredArgs, optionalArgs, example, outputType and requiresAuth. No such command exists in src/cli/commands/.",
     "severity": "medium",
     "bucket": "patch"
   },
   {
     "id": "13.10-FIND-010",
     "ac": "AC-9",
-    "location": "types/index.d.ts; src/types/xactions.d.ts",
+    "location": "types/index.d.ts; src/types/medirus.d.ts",
     "title": "Type declarations missing for FacebookCrawler / FacebookClient / FacebookActions",
-    "detail": "Neither types/index.d.ts nor src/types/xactions.d.ts contains declarations for the exported FacebookCrawler, FacebookClient or FacebookActions. package.json exports are correct (lines 24-25), but consumers using TypeScript will have no types. AC-9 requires type declarations be updated.",
+    "detail": "Neither types/index.d.ts nor src/types/medirus.d.ts contains declarations for the exported FacebookCrawler, FacebookClient or FacebookActions. package.json exports are correct (lines 24-25), but consumers using TypeScript will have no types. AC-9 requires type declarations be updated.",
     "severity": "medium",
     "bucket": "patch"
   },

@@ -89,7 +89,7 @@
   };
 
   const run = async () => {
-    console.log('🤖 BLOCK BOTS - XActions by nichxbt');
+    console.log('🤖 BLOCK BOTS - Medirus by nichxbt');
     console.log(CONFIG.dryRun ? '⚠️ DRY RUN MODE - Set CONFIG.dryRun = false to actually block' : '🔴 LIVE MODE');
 
     let scrollAttempts = 0;
@@ -141,7 +141,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `xactions-bots-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-bots-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       console.log('📥 Bot list downloaded as JSON');
     }

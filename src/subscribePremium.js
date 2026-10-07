@@ -146,7 +146,7 @@
 
   const run = async () => {
     console.log('═══════════════════════════════════════════');
-    console.log('💎 XActions — Subscribe to X Premium');
+    console.log('💎 Medirus — Subscribe to X Premium');
     console.log('═══════════════════════════════════════════\n');
 
     if (CONFIG.checkCurrentStatus) {

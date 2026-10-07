@@ -66,8 +66,8 @@ let seededUserId;
 
 beforeEach(async () => {
   process.env = { ...ORIGINAL_ENV };
-  process.env.XACTIONS_SERVICE_KEYS = SERVICE_MAP;
-  process.env.XACTIONS_CONSUMER_QUOTAS = JSON.stringify({
+  process.env.MEDIRUS_SERVICE_KEYS = SERVICE_MAP;
+  process.env.MEDIRUS_CONSUMER_QUOTAS = JSON.stringify({
     'jev': { 'reddit:search': '100/min', default: '100/min' },
     'jev-b': { 'reddit:search': '100/min', default: '100/min' },
     anonymous: '50/min',
@@ -309,7 +309,7 @@ describe('Story 50.9 — reddit search e2e contract', () => {
     }
   });
 
-  it('E-9: GET /api/actions ≡ x_actions_list shape (regression on 50.5)', async () => {
+  it('E-9: GET /api/actions ≡ medirus_list shape (regression on 50.5)', async () => {
     const res = await request(app).get('/api/actions?platform=reddit');
     expect(res.status).toBe(200);
     const direct = await executeActionListTool({ platform: 'reddit' });

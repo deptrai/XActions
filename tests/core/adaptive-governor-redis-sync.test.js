@@ -4,19 +4,19 @@ import { DistributedTokenBucket } from '../../src/core/distributed-token-bucket.
 import { TwitterCrawler, gaussianDelay } from '../../src/scrapers/social/twitter/crawler.js';
 
 describe('Story 32.2 — Fast Delay Flag & Distributed Hibernation Sync', () => {
-  describe('Fast Delay Flag (XACTIONS_TEST_FAST_DELAYS)', () => {
+  describe('Fast Delay Flag (MEDIRUS_TEST_FAST_DELAYS)', () => {
     let originalEnv;
 
     beforeEach(() => {
-      originalEnv = process.env.XACTIONS_TEST_FAST_DELAYS;
+      originalEnv = process.env.MEDIRUS_TEST_FAST_DELAYS;
     });
 
     afterEach(() => {
-      process.env.XACTIONS_TEST_FAST_DELAYS = originalEnv;
+      process.env.MEDIRUS_TEST_FAST_DELAYS = originalEnv;
     });
 
-    it('skips delay when XACTIONS_TEST_FAST_DELAYS=1', async () => {
-      process.env.XACTIONS_TEST_FAST_DELAYS = '1';
+    it('skips delay when MEDIRUS_TEST_FAST_DELAYS=1', async () => {
+      process.env.MEDIRUS_TEST_FAST_DELAYS = '1';
       const start = Date.now();
       const delay = await gaussianDelay(3000, 7000);
       const elapsed = Date.now() - start;
@@ -26,7 +26,7 @@ describe('Story 32.2 — Fast Delay Flag & Distributed Hibernation Sync', () => 
     });
 
     it('executes compose tweet without 3-7s delay when fast delay is enabled', async () => {
-      process.env.XACTIONS_TEST_FAST_DELAYS = '1';
+      process.env.MEDIRUS_TEST_FAST_DELAYS = '1';
 
       const mockClient = {
         init: vi.fn().mockResolvedValue(undefined),

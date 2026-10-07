@@ -36,7 +36,7 @@ This feature helps you track and celebrate your new followers by:
 
 ```javascript
 // ============================================
-// XActions - New Follower Alerts (Browser Console)
+// Medirus - New Follower Alerts (Browser Console)
 // Author: nich (@nichxbt)
 // Go to: x.com/YOUR_USERNAME/followers
 // Open console (F12), paste this
@@ -44,11 +44,11 @@ This feature helps you track and celebrate your new followers by:
 
 (async () => {
   // Configuration
-  const STORAGE_KEY = 'xactions_follower_alerts';
+  const STORAGE_KEY = 'medirus_follower_alerts';
   const SCROLL_DELAY = 1500;         // Time between scrolls (ms)
   const MAX_SCROLL_RETRIES = 10;     // Stop if no new users found
   
-  console.log('🎉 XActions - New Follower Alerts');
+  console.log('🎉 Medirus - New Follower Alerts');
   console.log('═'.repeat(50));
   
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -338,7 +338,7 @@ This feature helps you track and celebrate your new followers by:
 
 **Output example:**
 ```
-🎉 XActions - New Follower Alerts
+🎉 Medirus - New Follower Alerts
 ══════════════════════════════════════════════════
 📍 Monitoring: @nichxbt
 
@@ -425,7 +425,7 @@ npm install puppeteer
 
 ```javascript
 // ============================================
-// XActions - New Follower Alerts (Node.js + Puppeteer)
+// Medirus - New Follower Alerts (Node.js + Puppeteer)
 // Author: nich (@nichxbt)
 // 
 // Usage:
@@ -850,7 +850,7 @@ async function scrapeFollowers(username) {
 // ============================================
 
 async function checkNewFollowers(username) {
-  console.log('\n🎉 XActions - New Follower Alerts');
+  console.log('\n🎉 Medirus - New Follower Alerts');
   console.log('═'.repeat(50));
   log(`Checking for new followers of @${username}...`);
   
@@ -1110,7 +1110,7 @@ async function main() {
       break;
       
     default:
-      console.log('\n🎉 XActions - New Follower Alerts');
+      console.log('\n🎉 Medirus - New Follower Alerts');
       console.log('═'.repeat(50));
       console.log('');
       console.log('Commands:');
@@ -1136,7 +1136,7 @@ main().catch(console.error);
 node new-follower-alerts.js check nichxbt
 
 # Output:
-# 🎉 XActions - New Follower Alerts
+# 🎉 Medirus - New Follower Alerts
 # ══════════════════════════════════════════════════
 # 📌 [1/1/2026, 10:30:00 AM] Checking for new followers of @nichxbt...
 # 📌 [1/1/2026, 10:30:01 AM] First time checking this account
@@ -1284,7 +1284,7 @@ node new-follower-alerts.js scheduler nichxbt
 
 ## 🌐 Website Alternative
 
-Don't want to run scripts? Use **[xactions.app](https://xactions.app)** instead!
+Don't want to run scripts? Use **[medirus.online](https://medirus.online)** instead!
 
 ### Features:
 - ✅ **No coding required** - Just sign in and enable
@@ -1298,7 +1298,7 @@ Don't want to run scripts? Use **[xactions.app](https://xactions.app)** instead!
 - ✅ **Multiple accounts** - Monitor all your X accounts in one place
 
 ### How It Works:
-1. Visit [xactions.app](https://xactions.app)
+1. Visit [medirus.online](https://medirus.online)
 2. Click **"Connect X Account"** (secure OAuth, no password needed)
 3. Enable **"New Follower Alerts"** in your dashboard
 4. Choose notification preferences (email, push, or both)

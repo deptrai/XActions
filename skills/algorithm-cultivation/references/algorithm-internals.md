@@ -25,14 +25,14 @@
 
 ```
 ┌─────────────────────────────────────────────────┐
-│              CLI: xactions persona run           │
+│              CLI: medirus persona run           │
 ├─────────────────────────────────────────────────┤
 │  Persona Engine (personaEngine.js)              │
 │  ├─ Niche presets (6 built-in + custom)         │
 │  ├─ Activity patterns (sleep/wake schedules)    │
 │  ├─ Engagement strategies (limits & ratios)     │
 │  ├─ Session planner (shuffled activity queues)  │
-│  └─ State persistence (~/.xactions/personas/)   │
+│  └─ State persistence (~/.medirus/personas/)   │
 ├─────────────────────────────────────────────────┤
 │  Algorithm Builder (algorithmBuilder.js)        │
 │  ├─ Puppeteer + stealth (headless Chrome)       │

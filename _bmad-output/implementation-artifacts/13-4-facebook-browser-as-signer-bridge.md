@@ -24,7 +24,7 @@ so that **token extraction is resilient to Facebook DOM/script changes, supports
 ## Sources
 
 - `_bmad-output/planning-artifacts/epics.md` — Epic 13, Story 13.3 context and dependencies
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 (Tiered Hybrid Signer), AD-3 (Sticky IP / Proxy Anti-Leak), AD-5 (CDP Attach), AD-8 (Multi-Domain Expansion), AD-14 (Error Envelope)
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 (Tiered Hybrid Signer), AD-3 (Sticky IP / Proxy Anti-Leak), AD-5 (CDP Attach), AD-8 (Multi-Domain Expansion), AD-14 (Error Envelope)
 - `_bmad-output/implementation-artifacts/13-1-tiered-signer-architecture-token-ring-worker-pool.md` — `PreSignedTokenRing`, `SignerWorkerPagePool`, `requestWithSign`
 - `_bmad-output/implementation-artifacts/13-3-refactor-facebook-scraper-to-hybrid-architecture.md` — `FacebookClient`, `FacebookCrawler`, token cache
 - `/Users/luisphan/Documents/GitHub/MediaCrawler/requirements.txt` and `base/base_crawler.py`, `tools/cdp_browser.py`, `media_platform/xhs/core.py`, `media_platform/douyin/help.py` — MediaCrawler browser engine analysis
@@ -56,7 +56,7 @@ so that **token extraction is resilient to Facebook DOM/script changes, supports
 
 - **Given** `FacebookClient` is configured with `cdpUrl`, `launchChrome: true`, or a `browserBridge`
 - **When** `ensureTokens(accountId, cookies)` is called
-- **Then** it obtains a `FacebookBrowserBridge` (creating one from `cdpUrl`/`launchChrome` settings if none was passed) that uses `PlaywrightAdapter` by default and `PuppeteerAdapter` when `XACTIONS_SCRAPER_ADAPTER=puppeteer`
+- **Then** it obtains a `FacebookBrowserBridge` (creating one from `cdpUrl`/`launchChrome` settings if none was passed) that uses `PlaywrightAdapter` by default and `PuppeteerAdapter` when `MEDIRUS_SCRAPER_ADAPTER=puppeteer`
 - **And** the bridge parses the `cookies` value into `{name, value, domain, path}` records using the hostname of `this.baseUrl` as the domain, calls `adapter.setCookies(page, cookies)` (or `context.addCookies`) before navigation, and never logs raw `c_user`/`xs` values
 - **And** the bridge navigates to `this.baseUrl` with `waitUntil: 'networkidle'` and a `page.goto` timeout of 30 s (8 s for cold-start warmup)
 - **And** it extracts the following tokens from the live page context via `adapter.evaluate(page, extractFacebookTokens)` with a 3 s `Promise.race` timeout (8 s on first call) and one retry on page death/crash:
@@ -89,14 +89,14 @@ so that **token extraction is resilient to Facebook DOM/script changes, supports
 
 ### AC-5: Playwright is the default browser engine for CDP attach
 
-- **Given** the environment variable `XACTIONS_SCRAPER_ADAPTER` is unset or `playwright`
+- **Given** the environment variable `MEDIRUS_SCRAPER_ADAPTER` is unset or `playwright`
 - **When** `FacebookClient` (or `FacebookBrowserBridge`) needs a browser
-- **Then** it calls `getAdapter(process.env.XACTIONS_SCRAPER_ADAPTER || 'playwright')` and uses `PlaywrightAdapter`
-- **And** if `XACTIONS_SCRAPER_ADAPTER=puppeteer`, it uses `PuppeteerAdapter`
-- **And** it does **not** rely on the global default returned by `getAdapter()` without arguments, because `src/scrapers/adapters/index.js:42` sets `defaultAdapterName = process.env.XACTIONS_SCRAPER_ADAPTER || 'puppeteer'` for backward compatibility
+- **Then** it calls `getAdapter(process.env.MEDIRUS_SCRAPER_ADAPTER || 'playwright')` and uses `PlaywrightAdapter`
+- **And** if `MEDIRUS_SCRAPER_ADAPTER=puppeteer`, it uses `PuppeteerAdapter`
+- **And** it does **not** rely on the global default returned by `getAdapter()` without arguments, because `src/scrapers/adapters/index.js:42` sets `defaultAdapterName = process.env.MEDIRUS_SCRAPER_ADAPTER || 'puppeteer'` for backward compatibility
 - **And** the story file documents the decision: **Playwright is the default for CDP attach** because:
   1. `MediaCrawler` uses Playwright (`requirements.txt` line 3; `base/base_crawler.py` imports `playwright.async_api`)
-  2. XActions architecture explicitly wires CDP attach for real Chrome profiles (AD-5)
+  2. Medirus architecture explicitly wires CDP attach for real Chrome profiles (AD-5)
   3. Playwright's `connectOverCDP` is purpose-built for attaching to existing Chromium/CDP instances and preserves the default browser context, which is exactly what we need for `.data/facebook-profiles/<c_user>` (`src/scrapers/adapters/playwright.js:316-330`)
   4. Puppeteer with `puppeteer-extra-plugin-stealth` remains better for launching a *fresh* hidden browser (legacy `src/scrapers/facebook/`), not for attaching to a logged-in Chrome profile (`src/scrapers/adapters/puppeteer.js:243-275`)
 
@@ -151,7 +151,7 @@ so that **token extraction is resilient to Facebook DOM/script changes, supports
 - **Given** `src/core/cdp-launcher.js`
 - **When** `launchChrome()` and `buildChromeArgs()` are invoked for the Facebook browser bridge
 - **Then** they accept a `proxy` option (a normalized proxy record or string) and an `extraArgs` array and append anti-leak args by calling `ProxyIpPool.getBrowserArgs(proxy)` or the provider's `getBrowserArgs(proxy)` from `src/proxy/providers.js:1163-1168`
-- **And** they accept a `userDataDir` option that overrides the default `~/.xactions/chrome-profile`
+- **And** they accept a `userDataDir` option that overrides the default `~/.medirus/chrome-profile`
 - **And** `launchBrowserWithCdp()` passes the selected `adapter` and `preserveProfile: true` (`cdp-launcher.js:365-392`)
 
 ### AC-12: Tests
@@ -199,7 +199,7 @@ so that **token extraction is resilient to Facebook DOM/script changes, supports
   - [x] T4.1: Refill `tokenRing` with the `lsd` **string** after successful browser extraction
   - [x] T4.2: Update `buildGraphQlBody` to use `this.tokenRing.next()` for `lsd` when the ring is non-empty, otherwise fall back to the cached token object
 - [x] T5: CDP attach / launch support (AC-4, AC-5)
-  - [x] T5.1: In `FacebookBrowserBridge`, call `getAdapter(process.env.XACTIONS_SCRAPER_ADAPTER || 'playwright')`; do **not** call `getAdapter()` without arguments
+  - [x] T5.1: In `FacebookBrowserBridge`, call `getAdapter(process.env.MEDIRUS_SCRAPER_ADAPTER || 'playwright')`; do **not** call `getAdapter()` without arguments
   - [x] T5.2: Support `cdpUrl` attach via `launchBrowserWithCdp`
   - [x] T5.3: Support auto-launch via `launchChrome({ userDataDir, headless, proxy, extraArgs })`
 - [x] T6: Per-account profile and proxy isolation (AC-6)
@@ -235,7 +235,7 @@ so that **token extraction is resilient to Facebook DOM/script changes, supports
 
 ### Browser Engine Decision — Playwright vs Puppeteer
 
-**Decision: Use Playwright as the default adapter for the Facebook CDP signer bridge. Both Playwright and Puppeteer remain selectable via `XACTIONS_SCRAPER_ADAPTER`.**
+**Decision: Use Playwright as the default adapter for the Facebook CDP signer bridge. Both Playwright and Puppeteer remain selectable via `MEDIRUS_SCRAPER_ADAPTER`.**
 
 | Criterion | Playwright | Puppeteer (`puppeteer-extra` + stealth) | Winner |
 |---|---|---|---|
@@ -247,9 +247,9 @@ so that **token extraction is resilient to Facebook DOM/script changes, supports
 | Multi-browser support | Chromium, Firefox, WebKit | Chromium only | **Playwright** |
 
 Therefore:
-- `FacebookClient` calls `getAdapter(process.env.XACTIONS_SCRAPER_ADAPTER || 'playwright')`.
-- `XACTIONS_SCRAPER_ADAPTER=puppeteer` is honored for operators who need stealth on a fresh launch.
-- CDP attach mode defaults to Playwright because it aligns with MediaCrawler and the XActions architecture (AD-5: attach to real Chrome on port 9222).
+- `FacebookClient` calls `getAdapter(process.env.MEDIRUS_SCRAPER_ADAPTER || 'playwright')`.
+- `MEDIRUS_SCRAPER_ADAPTER=puppeteer` is honored for operators who need stealth on a fresh launch.
+- CDP attach mode defaults to Playwright because it aligns with MediaCrawler and the Medirus architecture (AD-5: attach to real Chrome on port 9222).
 
 ### Architecture Compliance
 
@@ -375,7 +375,7 @@ This mirrors and extends the existing HTTP regexes (`client.js:164-184`) but run
 | Package | Version | Purpose |
 |---|---|---|
 | `playwright` | `^1.62.1` (`package.json:129`) | Default browser engine for CDP attach and signer worker pages. |
-| `puppeteer` | `^24.34.0` (`package.json:132`) | Optional adapter when `XACTIONS_SCRAPER_ADAPTER=puppeteer`. |
+| `puppeteer` | `^24.34.0` (`package.json:132`) | Optional adapter when `MEDIRUS_SCRAPER_ADAPTER=puppeteer`. |
 | `puppeteer-extra` + `puppeteer-extra-plugin-stealth` | existing | Only used if Puppeteer is selected; not imported by the Playwright path. |
 | `got-scraping` | `^3.2.15` (`package.json:119`) | Default HTTP client for `FacebookClient.request()` and fallback extraction. |
 | `undici` | `^7.29.0` (`package.json:141`) | Alternative HTTP client. |
@@ -452,14 +452,14 @@ This mirrors and extends the existing HTTP regexes (`client.js:164-184`) but run
 - `src/core/base-crawler.js` — `AbstractCrawler.cdpUrl`, `launchBrowserWithCdp`, `delayWithJitter`
 - `src/scrapers/adapters/playwright.js` — `PlaywrightAdapter.connect` (`connectOverCDP`)
 - `src/scrapers/adapters/puppeteer.js` — `PuppeteerAdapter.connect` (`browserWSEndpoint`)
-- `src/scrapers/adapters/index.js:42` — `defaultAdapterName = process.env.XACTIONS_SCRAPER_ADAPTER || 'puppeteer'`; `getAdapter` honors this default unless a name is passed
+- `src/scrapers/adapters/index.js:42` — `defaultAdapterName = process.env.MEDIRUS_SCRAPER_ADAPTER || 'puppeteer'`; `getAdapter` honors this default unless a name is passed
 - `src/proxy/proxy-pool.js` — `ProxyIpPool.getBrowserArgs`
 - `src/proxy/providers.js` — `getBrowserArgs` anti-leak flags
 - `package.json` — dependency versions for `playwright`, `puppeteer`, `got-scraping`, `undici`
 - `/Users/luisphan/Documents/GitHub/MediaCrawler/requirements.txt` — `playwright>=1.61.0`
 - `/Users/luisphan/Documents/GitHub/MediaCrawler/base/base_crawler.py` — `playwright.async_api` imports
 - `/Users/luisphan/Documents/GitHub/MediaCrawler/tools/cdp_browser.py` — `connect_over_cdp` pattern
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1, AD-3, AD-5, AD-8, AD-14
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1, AD-3, AD-5, AD-8, AD-14
 - `docs/deprecation-plan.md` — legacy status tracker
 
 ---
@@ -473,8 +473,8 @@ This mirrors and extends the existing HTTP regexes (`client.js:164-184`) but run
 ### Debug Log References
 
 - MediaCrawler source reviewed to confirm Playwright as the real browser engine (`requirements.txt`, `base/base_crawler.py`, `tools/cdp_browser.py`).
-- XActions `src/scrapers/adapters/playwright.js` and `puppeteer.js` compared for CDP attach behavior.
-- XActions `src/proxy/proxy-pool.js` and `src/proxy/providers.js` reviewed for anti-leak browser args.
+- Medirus `src/scrapers/adapters/playwright.js` and `puppeteer.js` compared for CDP attach behavior.
+- Medirus `src/proxy/proxy-pool.js` and `src/proxy/providers.js` reviewed for anti-leak browser args.
 
 ### Completion Notes
 
@@ -511,7 +511,7 @@ I chose **option 3** for Playwright (the default adapter): `FacebookBrowserBridg
 
 - [x] [Review][Patch] Use a fresh `BrowserContext` per `extractTokens` call to prevent account context sharing [src/scrapers/social/facebook/signer-bridge.js:311]
 
-Per the decision above, change `adapter.newPage(browser, { preserveProfile: true })` to `adapter.newPage(browser, { preserveProfile: false })`. For Playwright this creates a new `BrowserContext` per account call; `PlaywrightAdapter.closePage` will close the context. Add a JSDoc note that callers using `XACTIONS_SCRAPER_ADAPTER=puppeteer` must use one `FacebookClient` per account because the current `PuppeteerAdapter` does not create incognito contexts.
+Per the decision above, change `adapter.newPage(browser, { preserveProfile: true })` to `adapter.newPage(browser, { preserveProfile: false })`. For Playwright this creates a new `BrowserContext` per account call; `PlaywrightAdapter.closePage` will close the context. Add a JSDoc note that callers using `MEDIRUS_SCRAPER_ADAPTER=puppeteer` must use one `FacebookClient` per account because the current `PuppeteerAdapter` does not create incognito contexts.
 
 - [x] [Review][Patch] `buildCookieHeader` in `client.js` no longer percent-encodes cookie values [src/scrapers/social/facebook/client.js:24-37]
 

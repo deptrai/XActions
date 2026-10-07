@@ -23,7 +23,7 @@
  * NFR4: fingerprint seed/UA/viewport must NEVER be logged in errors or responses.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license BSL 1.1
  */
 

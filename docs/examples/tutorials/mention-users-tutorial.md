@@ -1,6 +1,6 @@
 # Mention Users -- Tutorial
 
-> Step-by-step guide to mentioning multiple users in posts on X using XActions browser scripts.
+> Step-by-step guide to mentioning multiple users in posts on X using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -160,7 +160,7 @@ usernames: ['@nichxbt', 'valid_user', 'this-is-invalid!'],
 - **Keep mentions under 5 per tweet** to avoid spam detection. Use `batchSize: 5` with `createMultipleTweets: true` for larger groups.
 - **Set `autoPost: false`** (default) to review tweets before posting. This is safer and lets you add media.
 - **Character limit is 280.** The script warns if your tweet exceeds this. Reduce mentions or shorten your message.
-- **Mention history** is saved to sessionStorage under `xactions_mentions`.
+- **Mention history** is saved to sessionStorage under `medirus_mentions`.
 - **The `openComposer` option** automatically clicks the "Post" button in the sidebar to open the tweet dialog. Set to `false` if the composer is already open.
 - **Use `messageBeforeMentions` and `messageAfterMentions`** to frame your mentions with context.
 

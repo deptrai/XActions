@@ -18,7 +18,7 @@ The streaming system provides near-real-time monitoring of Twitter/X activity by
 ### Node.js
 
 ```javascript
-import { createStream, stopStream, listStreams, setIO } from 'xactions/streaming';
+import { createStream, stopStream, listStreams, setIO } from 'medirus/streaming';
 
 // Optional: connect Socket.IO for real-time events
 import { Server } from 'socket.io';
@@ -93,7 +93,7 @@ curl -X POST http://localhost:3001/api/streams/stop \
 | `REDIS_HOST` | `localhost` | Redis server host |
 | `REDIS_PORT` | `6379` | Redis server port |
 | `REDIS_PASSWORD` | _(none)_ | Redis password |
-| `XACTIONS_SESSION_COOKIE` | _(none)_ | Default auth token for streams |
+| `MEDIRUS_SESSION_COOKIE` | _(none)_ | Default auth token for streams |
 
 ### Interval Limits
 
@@ -194,10 +194,10 @@ socket.on('stream:error', (data) => {
 Streams persist state in Redis with a 7-day TTL:
 
 ```
-xactions:stream:{streamId}:state    → { status, lastPoll, consecutiveErrors, ... }
-xactions:stream:{streamId}:history  → List of recent events (capped)
-xactions:stream:{streamId}:meta     → { type, username, createdAt, ... }
-xactions:stream:{streamId}:lock     → Distributed lock for poll coordination
+medirus:stream:{streamId}:state    → { status, lastPoll, consecutiveErrors, ... }
+medirus:stream:{streamId}:history  → List of recent events (capped)
+medirus:stream:{streamId}:meta     → { type, username, createdAt, ... }
+medirus:stream:{streamId}:lock     → Distributed lock for poll coordination
 ```
 
 ---

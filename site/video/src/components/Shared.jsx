@@ -1,5 +1,5 @@
 /**
- * XActions Video — Reusable Components
+ * Medirus Video — Reusable Components
  * @author nich (@nichxbt)
  */
 
@@ -52,7 +52,7 @@ export const SlideIn = ({ children, from = 'left', delay = 0, duration = 20, sty
   );
 };
 
-// ─── XActions Logo ───
+// ─── Medirus Logo ───
 export const Logo = ({ size = 48, delay = 0 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -63,7 +63,7 @@ export const Logo = ({ size = 48, delay = 0 }) => {
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, transform: `scale(${scale})`, opacity: spr }}>
       <span style={{ fontSize: size, fontWeight: 900, color: theme.accent, fontFamily: theme.fontFamily }}>⚡</span>
       <span style={{ fontSize: size * 0.7, fontWeight: 800, color: theme.text, fontFamily: theme.fontFamily, letterSpacing: -1 }}>
-        XActions
+        Medirus
       </span>
     </div>
   );
@@ -161,6 +161,6 @@ export const Watermark = () => (
     gap: 8,
     opacity: 0.5,
   }}>
-    <span style={{ fontSize: 18, color: theme.textMuted, fontFamily: theme.fontFamily }}>xactions.app</span>
+    <span style={{ fontSize: 18, color: theme.textMuted, fontFamily: theme.fontFamily }}>medirus.online</span>
   </div>
 );

@@ -43,7 +43,7 @@ const MIN_LEAD_MS = 60_000; // scheduledAt must be ≥60s in the future (next cr
 
 /**
  * Validate an IANA timezone name. Returns the canonical name or throws.
- * Intl.supportedValuesOf('timeZone') is available in Node 17+ (XActions requires Node ≥18).
+ * Intl.supportedValuesOf('timeZone') is available in Node 17+ (Medirus requires Node ≥18).
  * @param {string | null | undefined} timezone
  * @returns {string | null}
  */

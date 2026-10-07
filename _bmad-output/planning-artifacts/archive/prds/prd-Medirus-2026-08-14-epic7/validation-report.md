@@ -1,9 +1,9 @@
 # Validation Report — PRD Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
 
-- **PRD:** `_bmad-output/planning-artifacts/prds/prd-XActions-2026-08-14-epic7/prd.md`
+- **PRD:** `_bmad-output/planning-artifacts/prds/prd-Medirus-2026-08-14-epic7/prd.md`
 - **Epic catalog:** `_bmad-output/planning-artifacts/epics-full.md` (§ Epic 7)
 - **Sprint Change Proposal:** `_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-14.md`
-- **Rubric:** `_bmad-output/planning-artifacts/prds/prd-XActions-2026-08-14-epic7/validation-report.md` (self-contained)
+- **Rubric:** `_bmad-output/planning-artifacts/prds/prd-Medirus-2026-08-14-epic7/validation-report.md` (self-contained)
 - **Run at:** 2026-08-14
 - **Grade:** Good
 
@@ -47,7 +47,7 @@ PRD/Epic 7 is a coherent, well-scoped expansion that correctly positions itself 
 
 - **[Mechanical]** Inline `[ASSUMPTION]` tags are missing; the Assumptions Index only lists four assumptions without inline markers. *Fix:* Add `[ASSUMPTION: ...]` next to the relevant paragraphs in §2.1, §4.1, §4.5, §4.6.
 
-- **[Mechanical]** The PRD title has `prd_ref: prd-XActions-2026-06-08` but also references `prd-XActions-2026-06-10-epic4` in §0. *Fix:* Add the Epic 4 PRD to `prd_ref` frontmatter or clarify why only one is listed.
+- **[Mechanical]** The PRD title has `prd_ref: prd-Medirus-2026-06-08` but also references `prd-Medirus-2026-06-10-epic4` in §0. *Fix:* Add the Epic 4 PRD to `prd_ref` frontmatter or clarify why only one is listed.
 
 - **[Mechanical]** In `epics-full.md`, the Epic 7 Additional Requirements mention ADR-011 (GraphQL HTTP layer), but FR-62 is deferred out of Epic 7 scope. *Fix:* Either remove ADR-011 from the epic list or add a note that it is only relevant if Phase 3 (GraphQL replay) is picked up.
 

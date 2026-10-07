@@ -31,7 +31,7 @@ Story 13.8 triển khai **MVP Marketplace search** theo Epic 13. Các bộ lọc
 - `_bmad-output/planning-artifacts/epics.md` — Epic 13, Story 13.8 [dòng 587-598]
 - `_bmad-output/planning-artifacts/prd-facebook-epics-5-6-2026-08-21.md` — FR-28..FR-31 (Marketplace Scraper, Multi-Currency Price Parse, Title/Location Extraction) [dòng 87-97]
 - `_bmad-output/planning-artifacts/implementation-readiness-report-2026-08-26.md` — FR/NFR coverage, Facebook module readiness [dòng 145-180, 207-220]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2 (AbstractCrawler/ActionRegistry), AD-4 (Namespaced Storage/JSONB GIN), AD-8 (Multi-Domain Expansion Blueprint), AD-9 (Anti-Bot Payload Validation), AD-10 (3-Tier Incremental Gap-Filling), AD-11 (CrawlerCommand/ActionRegistry)
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2 (AbstractCrawler/ActionRegistry), AD-4 (Namespaced Storage/JSONB GIN), AD-8 (Multi-Domain Expansion Blueprint), AD-9 (Anti-Bot Payload Validation), AD-10 (3-Tier Incremental Gap-Filling), AD-11 (CrawlerCommand/ActionRegistry)
 - `_bmad-output/implementation-artifacts/13-7-facebook-hybrid-post-group-comments.md` — patterns cho `FacebookCrawler` action, PII stripping, checkpoint, validation
 - `_bmad-output/implementation-artifacts/13-6-facebook-hybrid-search-global-group-search.md` — patterns cho `search()`, `groupSearch()`, `DEFAULT_FB_DOC_IDS`, `requestGraphQl` dispatcher
 - `src/scrapers/social/facebook/crawler.js` — `DEFAULT_FB_DOC_IDS` [dòng 199-220], constructor action registry [dòng 280-407], `search()` [dòng 1089-1121], `#searchByType()` [dòng 1130-1192], `groupSearch()` [dòng 1234-1332], `#normalizePostItem()` [dòng 416-479], `#saveCheckpoint()` [dòng 1717-1773], `stripPii()` [dòng 226-239]
@@ -494,7 +494,7 @@ Verification: `npx tsc --noEmit` pass; `npx vitest run tests/core tests/scrapers
 #### real-data smoke test (Sentinel)
 
 Infra profile:
-- Cookie from `~/.xactions/facebook-cookies.json` for auth tests.
+- Cookie from `~/.medirus/facebook-cookies.json` for auth tests.
 - No cookie for guest tests.
 - Residential proxy from `PROXY_URL` / `FACEBOOK_PROXY` in `.env` via `ProxyIpPool`.
 - Low volume (`limit=2`).
@@ -509,7 +509,7 @@ Infra profile:
 
 Known real-data blockers not caused by this commit:
 - `DEFAULT_FB_DOC_IDS.MARKETPLACE_SEARCH/SEARCH_*` are placeholders; live doc_ids must be captured for GraphQL-first actions.
-- The stored `~/.xactions/facebook-cookies.json` is not valid from the current IP; auth-only actions cannot be verified until a fresh cookie is supplied.
+- The stored `~/.medirus/facebook-cookies.json` is not valid from the current IP; auth-only actions cannot be verified until a fresh cookie is supplied.
 
 #### defer
 

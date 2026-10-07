@@ -98,7 +98,7 @@
         uniqueToA: onlyA.slice(0, 100).map(u => a.get(u)?.username || u),
         uniqueToB: onlyB.slice(0, 100).map(u => b.get(u)?.username || u),
         analyzedAt: new Date().toISOString(),
-      }, `xactions-overlap-${keyA}-vs-${keyB}.json`);
+      }, `medirus-overlap-${keyA}-vs-${keyB}.json`);
     }
   };
 
@@ -130,13 +130,13 @@
     compare();
   };
 
-  window.XActions = window.XActions || {};
-  window.XActions.analyze = analyze;
-  window.XActions.compare = compare;
+  window.Medirus = window.Medirus || {};
+  window.Medirus.analyze = analyze;
+  window.Medirus.compare = compare;
 
   console.log('╔════════════════════════════════════════════════╗');
   console.log('║  🔀 AUDIENCE OVERLAP ANALYZER — Ready          ║');
   console.log('║  by nichxbt — v1.0                            ║');
   console.log('╚════════════════════════════════════════════════╝');
-  console.log('\n📋 Usage: XActions.analyze("accountA", "accountB")');
+  console.log('\n📋 Usage: Medirus.analyze("accountA", "accountB")');
 })();

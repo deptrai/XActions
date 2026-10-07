@@ -12,7 +12,7 @@ stepsCompleted:
 lastStep: step-05-compare-r4
 lastSaved: 2026-08-13
 inputDocuments:
-  - /Users/luisphan/Documents/GitHub/XActions/_bmad-output/test-artifacts/test-reviews/test-review-api-e2e-2026-08-13-r4.md
+  - /Users/luisphan/Documents/GitHub/Medirus/_bmad-output/test-artifacts/test-reviews/test-review-api-e2e-2026-08-13-r4.md
   - /Users/luisphan/.bmad/cache/custom-modules/github.com/deptrai/nowing/.claude/skills/bmad-testarch-test-review/resources/knowledge/test-quality.md
   - /Users/luisphan/.bmad/cache/custom-modules/github.com/deptrai/nowing/.claude/skills/bmad-testarch-test-review/resources/knowledge/fixture-architecture.md
   - /Users/luisphan/.bmad/cache/custom-modules/github.com/deptrai/nowing/.claude/skills/bmad-testarch-test-review/resources/knowledge/data-factories.md

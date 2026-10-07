@@ -148,7 +148,7 @@
 
   const run = async () => {
     console.log('═══════════════════════════════════════════');
-    console.log('🔒 XActions — Verified-Only Replies');
+    console.log('🔒 Medirus — Verified-Only Replies');
     console.log('═══════════════════════════════════════════\n');
 
     const isVerified = checkVerificationStatus();

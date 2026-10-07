@@ -17,7 +17,7 @@
   };
   // =============================================
 
-  const STORAGE_KEY = 'xactions_followers';
+  const STORAGE_KEY = 'medirus_followers';
 
   const download = (data, filename) => {
     const a = document.createElement('a');
@@ -90,7 +90,7 @@
 
         download(
           { unfollowers: unfollowed, detectedAt: new Date().toISOString(), previousSnapshot: previous.timestamp },
-          `xactions-unfollowers-${new Date().toISOString().slice(0, 10)}.json`
+          `medirus-unfollowers-${new Date().toISOString().slice(0, 10)}.json`
         );
       } else {
         console.log('\n✨ No one unfollowed you since last check!');

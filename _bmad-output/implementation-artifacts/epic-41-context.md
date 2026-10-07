@@ -25,7 +25,7 @@ Extend the `x_social_find_profiles` OSINT harvester in two ways: (1) add two zer
 ## Technical Decisions
 
 - Only the Jaro-Winkler algorithm is ported (from Mr.Holmes' entity resolver) — as pure JS, not ported Python code. The `EntityResolver` is a pure JS module.
-- Out of scope (belongs to Mr.Holmes' investigation domain — orchestrate via its MCP instead of duplicating in XActions): Google/Yandex dorking, breach/leak checks (HIBP, Shodan, etc.), BFS recursive profiling, mindmap/LLM reports, Maigret-style 2500-site scans.
+- Out of scope (belongs to Mr.Holmes' investigation domain — orchestrate via its MCP instead of duplicating in Medirus): Google/Yandex dorking, breach/leak checks (HIBP, Shodan, etc.), BFS recursive profiling, mindmap/LLM reports, Maigret-style 2500-site scans.
 - No PII persistence (Option D — in-memory per-request only).
 - Adapters follow the existing registry pattern: register in `PROFILE_ACTION_MAP` rather than building new crawler infrastructure.
 

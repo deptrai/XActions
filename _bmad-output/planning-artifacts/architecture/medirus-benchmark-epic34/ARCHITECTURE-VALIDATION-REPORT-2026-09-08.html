@@ -31,12 +31,12 @@ hr { border: none; border-top: 1px solid #cbd5e1; margin: 2rem 0; }
 <p><strong>Reviewer Role:</strong> Rubric Walker (BMad Architecture Reviewer Gate)<br />
 <strong>Date:</strong> 2026-09-08<br />
 <strong>Status:</strong> PASS WITH FINDINGS (Revisions Required Prior to Story Freezing)<br />
-<strong>Target Architecture:</strong> <code>/Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md</code><br />
+<strong>Target Architecture:</strong> <code>/Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md</code><br />
 <strong>Referenced Specifications &amp; Context:</strong>
-- <code>_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/.memlog.md</code>
+- <code>_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/.memlog.md</code>
 - <code>_bmad-output/specs/spec-scraper-benchmark/SPEC.md</code>
 - <code>_bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md</code>
-- <code>_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md</code> (Parent Spine, especially AD-2, AD-7, AD-9, AD-13, AD-18)
+- <code>_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md</code> (Parent Spine, especially AD-2, AD-7, AD-9, AD-13, AD-18)
 - <code>_bmad-output/planning-artifacts/backlog-epic-34.md</code>
 - Brownfield Codebase:
   - <code>src/core/base-crawler.js</code> (AbstractCrawler)
@@ -48,8 +48,8 @@ hr { border: none; border-top: 1px solid #cbd5e1; margin: 2rem 0; }
   - <code>src/store/prisma-store.js</code> &amp; <code>src/store/store-with-redis.js</code> (Persistence Layer)
   - <code>prisma/schema.prisma</code> (PostgreSQL Schema)
 - Sibling Reviews:
-  - <code>_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/reviews/review-tech-currency.md</code>
-  - <code>_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/reviews/review-adversarial.md</code></p>
+  - <code>_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/reviews/review-tech-currency.md</code>
+  - <code>_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/reviews/review-adversarial.md</code></p>
 <hr />
 <h2 id="1-verdict">1. Verdict</h2>
 <p><strong>VERDICT: PASS WITH FINDINGS</strong></p>
@@ -202,9 +202,9 @@ hr { border: none; border-top: 1px solid #cbd5e1; margin: 2rem 0; }
 <li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Section "Structural Seed" (lines 114–120), <code>backlog-epic-34.md</code>.</li>
 <li><strong>The Finding:</strong><br />
   1. The spine establishes a new top-level service directory: <code>src/services/benchmark/</code> for <code>telemetry-consumer.js</code>, <code>scoring-engine.js</code>, <code>scorecard.js</code>, <code>canary-runner.js</code>, and <code>alerting-service.js</code>.
-  2. In the actual XActions brownfield repository, <code>src/services/</code> does not exist. All persistent backend services, queue consumers, and background workers reside in <code>api/services/</code> (<code>api/services/jobQueue.js</code>, <code>api/services/retentionScheduler.js</code>, <code>api/services/facebookScheduler.js</code>). Core domain logic resides in <code>src/</code> (e.g. <code>src/core/</code>, <code>src/scrapers/</code>, <code>src/utils/</code>).
+  2. In the actual Medirus brownfield repository, <code>src/services/</code> does not exist. All persistent backend services, queue consumers, and background workers reside in <code>api/services/</code> (<code>api/services/jobQueue.js</code>, <code>api/services/retentionScheduler.js</code>, <code>api/services/facebookScheduler.js</code>). Core domain logic resides in <code>src/</code> (e.g. <code>src/core/</code>, <code>src/scrapers/</code>, <code>src/utils/</code>).
   3. <code>backlog-epic-34.md</code> references <code>src/core/base-api-client.js</code>. The actual file in the repository is <code>src/core/base-client.js</code>.
-  4. Scheduled jobs in XActions follow <code>node-cron</code> with PostgreSQL advisory locks (see <code>api/services/retentionScheduler.js</code>), not Bull repeatable jobs, to prevent state loss on Redis restarts.</li>
+  4. Scheduled jobs in Medirus follow <code>node-cron</code> with PostgreSQL advisory locks (see <code>api/services/retentionScheduler.js</code>), not Bull repeatable jobs, to prevent state loss on Redis restarts.</li>
 <li><strong>Impact:</strong><br />
   Fractures the repository layout, causes broken module imports, and introduces conflicting background scheduling mechanisms.</li>
 <li><strong>Enforceable Fix:</strong><br />
@@ -322,7 +322,7 @@ hr { border: none; border-top: 1px solid #cbd5e1; margin: 2rem 0; }
 <hr />
 <h1 id="technology-currency-web-research-review-epic-34-architecture-spine">Technology Currency &amp; Web-Research Review — Epic 34 Architecture Spine</h1>
 <p><strong>Reviewer:</strong> Technology Currency &amp; Web-Research Lens<br />
-<strong>Target:</strong> <code>/Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md</code><br />
+<strong>Target:</strong> <code>/Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md</code><br />
 <strong>Date:</strong> 2026-09-08<br />
 <strong>Scope:</strong> Epic 34 (Scraper Benchmark &amp; Reliability Suite) Stack, Architectural Decisions (AD-23 to AD-28), and Implementation Assumptions  </p>
 <hr />
@@ -345,7 +345,7 @@ hr { border: none; border-top: 1px solid #cbd5e1; margin: 2rem 0; }
 <li>Time-based trimming: <code>XADD ... MINID [~] &lt;id&gt;</code> or <code>XTRIM ... MINID [~] &lt;id&gt;</code>. Since Redis Stream IDs default to millisecond timestamps (<code>&lt;millisecondsTime&gt;-&lt;sequenceNumber&gt;</code>), a rolling 7-day window must be enforced via <code>MINID ~ &lt;Date.now() - 7 * 86400 * 1000&gt;</code>.</li>
 </ol>
 </li>
-<li>The repository's existing Redis stream implementation in <code>/Users/luisphan/Documents/GitHub/XActions/src/utils/redis-stream-publisher.js</code> (lines 52–59, 83–90, 196–221) already implements both <code>MAXLEN</code> and <code>MINID</code> strategy modifiers for <code>node-redis</code> v4.</li>
+<li>The repository's existing Redis stream implementation in <code>/Users/luisphan/Documents/GitHub/Medirus/src/utils/redis-stream-publisher.js</code> (lines 52–59, 83–90, 196–221) already implements both <code>MAXLEN</code> and <code>MINID</code> strategy modifiers for <code>node-redis</code> v4.</li>
 <li><strong>Impact:</strong> Misleading specification that will cause implementers to either write invalid <code>EXPIRE</code> commands (destroying stream history) or fail to implement rolling time-based trimming.</li>
 <li><strong>Required Fix:</strong> Amend AD-23 to clarify that retention in <code>stream:benchmark:telemetry</code> is enforced via <code>MAXLEN ~ 1000000</code> (count ceiling) and rolling time-based trimming via <code>MINID ~ &lt;seven_days_ago_ms&gt;</code> executed by the consumer worker or scheduled maintenance, not via key TTL.</li>
 </ul>
@@ -361,7 +361,7 @@ hr { border: none; border-top: 1px solid #cbd5e1; margin: 2rem 0; }
 </li>
 <li><strong>Evidence &amp; Verification:</strong></li>
 <li>Redis Streams require a consumer group read loop (<code>xReadGroup</code> / <code>xAck</code>) or streaming poll.</li>
-<li>In the XActions codebase, <code>api/services/jobQueue.js</code> registers Bull processors for discrete operations (<code>operationsQueue.process</code>).</li>
+<li>In the Medirus codebase, <code>api/services/jobQueue.js</code> registers Bull processors for discrete operations (<code>operationsQueue.process</code>).</li>
 <li>Scheduling in the existing codebase (<code>api/services/retentionScheduler.js</code>, <code>api/services/facebookScheduler.js</code>, <code>api/services/tweetScheduler.js</code>) is implemented via <code>node-cron</code> with PostgreSQL advisory locks, explicitly rejecting Bull delayed/repeatable jobs to avoid state loss during Redis restarts (<code>_bmad-output/implementation-artifacts/4-1-schedule-post.md</code> line 166).</li>
 <li><strong>Impact:</strong> Implementers will face impedance mismatch attempting to configure Bull as a stream consumer.</li>
 <li><strong>Required Fix:</strong> Disentangle the two components:
@@ -375,7 +375,7 @@ hr { border: none; border-top: 1px solid #cbd5e1; margin: 2rem 0; }
 <li><strong>Location:</strong> <code>ARCHITECTURE-SPINE.md</code> Section "Stack" (line 99).</li>
 <li><strong>The Issue:</strong> The spine states <code>Node.js &gt;= 18</code>.</li>
 <li><strong>Evidence &amp; Verification:</strong></li>
-<li>In <code>/Users/luisphan/Documents/GitHub/XActions/package.json</code> line 230:
+<li>In <code>/Users/luisphan/Documents/GitHub/Medirus/package.json</code> line 230:
     <code>json
     "engines": {
       "node": "&gt;=20.18.1"
@@ -411,7 +411,7 @@ hr { border: none; border-top: 1px solid #cbd5e1; margin: 2rem 0; }
 <li>15 platforms running continuous crawling (e.g. 10 HTTP requests/min per platform) produce:
     <code>15 platforms * 10 req/min * 10,080 min = 1,512,000 events / 7 days</code>.</li>
 <li>At 500,000 entries, high-frequency crawl runs will evict telemetry within ~2.3 days.</li>
-<li>The repository's primary thin event stream <code>stream:social:raw_posts</code> in <code>/Users/luisphan/Documents/GitHub/XActions/src/utils/redis-stream-publisher.js</code> (line 87) defaults to <code>MAXLEN 1,000,000</code>.</li>
+<li>The repository's primary thin event stream <code>stream:social:raw_posts</code> in <code>/Users/luisphan/Documents/GitHub/Medirus/src/utils/redis-stream-publisher.js</code> (line 87) defaults to <code>MAXLEN 1,000,000</code>.</li>
 <li>In Redis 7.x, 1,000,000 stream entries in listpack chunks consume approximately 120–180 MB of RAM, well within standard server allocations (1–2 GB+).</li>
 <li><strong>Impact:</strong> Premature eviction of production telemetry before the 7-day rolling window completes, impairing trend evaluation and historical canary comparisons.</li>
 <li><strong>Required Fix:</strong> Increase default capacity in AD-23 to <code>MAXLEN ~ 1000000</code> (consistent with <code>stream:social:raw_posts</code>), or explicitly define sampling when scrape volume exceeds threshold.</li>
@@ -573,11 +573,11 @@ hr { border: none; border-top: 1px solid #cbd5e1; margin: 2rem 0; }
 <p><strong>Reviewer Role:</strong> Adversarial Seam Reviewer (BMad Architecture Reviewer Gate)<br />
 <strong>Date:</strong> 2026-09-08<br />
 <strong>Status:</strong> PASS WITH REVISIONS (Architectural Seams Identified)<br />
-<strong>Target Architecture:</strong> <code>_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md</code><br />
+<strong>Target Architecture:</strong> <code>_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md</code><br />
 <strong>Referenced Specifications:</strong>
 - <code>_bmad-output/specs/spec-scraper-benchmark/SPEC.md</code>
 - <code>_bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md</code>
-- <code>_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md</code> (Parent AD-1 to AD-22)
+- <code>_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md</code> (Parent AD-1 to AD-22)
 - Story Files: <code>_bmad-output/implementation-artifacts/stories/34-*.md</code> (Stories 34.1 to 34.8)
 - Existing Codebase: <code>src/core/base-crawler.js</code>, <code>src/core/base-client.js</code>, <code>src/core/platform-validator.js</code>, <code>src/utils/redis-stream-publisher.js</code>, <code>src/store/prisma-store.js</code>, <code>src/store/store-with-redis.js</code>, <code>prisma/schema.prisma</code></p>
 <hr />
@@ -713,7 +713,7 @@ hr { border: none; border-top: 1px solid #cbd5e1; margin: 2rem 0; }
 <li>Story 34.2 proposes the following extraction in <code>AbstractCrawler.start()</code>:
     <code>javascript
     itemCount: Array.isArray(result) ? result.length : (result ? 1 : 0)</code></li>
-<li>Across XActions scrapers, handlers return diverse data shapes:<ul>
+<li>Across Medirus scrapers, handlers return diverse data shapes:<ul>
 <li>Twitter profile: <code>{ user: { ... }, tweets: [...] }</code></li>
 <li>Search queries: <code>{ items: [...], nextCursor: "abc" }</code></li>
 <li>Pagination wrappers: <code>{ data: [...], pagination: { count: 50 } }</code></li>

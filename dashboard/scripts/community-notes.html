@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Community Notes — Free X/Twitter Script | XActions</title>
+  <title>Community Notes — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="View and contribute to Community Notes on posts,">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, community, notes, other tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, community, notes, other tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Community Notes — XActions">
+  <meta property="og:title" content="Community Notes — Medirus">
   <meta property="og:description" content="View and contribute to Community Notes on posts,">
-  <meta property="og:url" content="https://xactions.app/scripts/community-notes">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/community-notes">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Community Notes — XActions">
+  <meta name="twitter:title" content="Community Notes — Medirus">
   <meta name="twitter:description" content="View and contribute to Community Notes on posts,">
 
-  <link rel="canonical" href="https://xactions.app/scripts/community-notes">
+  <link rel="canonical" href="https://medirus.online/scripts/community-notes">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Community Notes — Free X/Twitter Script | XActions",
+    "headline": "Community Notes — Free X/Twitter Script | Medirus",
     "description": "View and contribute to Community Notes on posts,",
-    "url": "https://xactions.app/scripts/community-notes",
+    "url": "https://medirus.online/scripts/community-notes",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Other Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, community, notes, other tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, community, notes, other tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://xactions.app/scripts#other-tools" },
-      { "@type": "ListItem", "position": 4, "name": "Community Notes", "item": "https://xactions.app/scripts/community-notes" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://medirus.online/scripts#other-tools" },
+      { "@type": "ListItem", "position": 4, "name": "Community Notes", "item": "https://medirus.online/scripts/community-notes" }
     ]
   }
   </script>
@@ -299,7 +299,7 @@
     startTime: Date.now(),
   };
 
-  window.XActions = {
+  window.Medirus = {
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
     status() {
       const el = ((Date.now() - stats.startTime) / 1000).toFixed(0);
@@ -551,7 +551,7 @@
 
     console.log(`📋 Action: ${CONFIG.action}`);
 
-    const sessionKey = 'xactions_communityNotes';
+    const sessionKey = 'medirus_communityNotes';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     const actions = {
@@ -593,7 +593,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

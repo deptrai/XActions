@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
-// XActions — MCP Facebook Tools Contract Tests (Story 3.2)
+// Medirus — MCP Facebook Tools Contract Tests (Story 3.2)
 // by nichxbt
 
 import { describe, it, expect, beforeAll } from 'vitest';

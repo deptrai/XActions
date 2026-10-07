@@ -26,7 +26,7 @@
  * NFR4: no fingerprint/cookie/token logged in errors.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license BSL 1.1
  */
 

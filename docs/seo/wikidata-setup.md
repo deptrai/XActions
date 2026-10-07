@@ -1,6 +1,6 @@
-# Wikidata Setup Guide for XActions
+# Wikidata Setup Guide for Medirus
 
-> Step-by-step instructions to create a Wikidata item for XActions, the single most impactful action for triggering a Google Knowledge Panel.
+> Step-by-step instructions to create a Wikidata item for Medirus, the single most impactful action for triggering a Google Knowledge Panel.
 
 ---
 
@@ -17,7 +17,7 @@
 
 1. Create a Wikidata account: https://www.wikidata.org/wiki/Special:CreateAccount
 2. Read the basic editing guide: https://www.wikidata.org/wiki/Help:Editing
-3. Have all XActions metadata ready (see below)
+3. Have all Medirus metadata ready (see below)
 
 ---
 
@@ -30,9 +30,9 @@ Fill in:
 | Field | Value |
 |-------|-------|
 | **Language** | en (English) |
-| **Label** | XActions |
+| **Label** | Medirus |
 | **Description** | open-source X/Twitter automation toolkit |
-| **Aliases** | xactions, X Actions, XActions CLI, XActions MCP |
+| **Aliases** | medirus, X Actions, Medirus CLI, Medirus MCP |
 
 Click **Create**.
 
@@ -48,7 +48,7 @@ After creating the item, add these statements one by one. Click "add statement" 
 |----------|-------|-------|
 | **instance of** (P31) | free and open-source software (Q341) | |
 | **instance of** (P31) | software toolkit (Q131093) | Add second value |
-| **official name** (P1448) | XActions | |
+| **official name** (P1448) | Medirus | |
 | **inception** (P571) | 2024 | Year project started |
 | **developer** (P178) | Create item for "nich" if needed, or use text | |
 | **programmed in** (P277) | JavaScript (Q2005) | |
@@ -60,10 +60,10 @@ After creating the item, add these statements one by one. Click "add statement" 
 
 | Property | Value | Notes |
 |----------|-------|-------|
-| **official website** (P856) | https://xactions.app | |
+| **official website** (P856) | https://medirus.online | |
 | **source code repository URL** (P1324) | https://github.com/nirholas/XActions | |
-| **npm package** (P8262) | xactions | |
-| **GitHub topic** (P9100) | xactions | |
+| **npm package** (P8262) | medirus | |
+| **GitHub topic** (P9100) | medirus | |
 
 ### Descriptive Properties
 
@@ -71,8 +71,8 @@ After creating the item, add these statements one by one. Click "add statement" 
 |----------|-------|-------|
 | **use** (P366) | social media automation | Custom or find existing item |
 | **use** (P366) | web scraping | Q190117 |
-| **described at URL** (P973) | https://xactions.app/docs | |
-| **image** (P18) | Upload XActions logo to Wikimedia Commons first | |
+| **described at URL** (P973) | https://medirus.online/docs | |
+| **image** (P18) | Upload Medirus logo to Wikimedia Commons first | |
 
 ### Software-Specific
 
@@ -98,16 +98,16 @@ Click "add" next to the language list and add descriptions in major languages:
 | **zh** (Chinese) | 开源X/Twitter自动化工具包 |
 | **ko** (Korean) | 오픈소스 X/Twitter 자동화 도구킷 |
 
-This helps Google understand XActions as an entity across languages.
+This helps Google understand Medirus as an entity across languages.
 
 ---
 
 ## Step 4: Upload Logo to Wikimedia Commons
 
 1. Go to: https://commons.wikimedia.org/wiki/Special:Upload
-2. Upload the XActions logo (SVG preferred, PNG acceptable)
-3. **Filename:** `XActions_logo.svg`
-4. **Description:** `Logo of XActions, an open-source X/Twitter automation toolkit`
+2. Upload the Medirus logo (SVG preferred, PNG acceptable)
+3. **Filename:** `Medirus_logo.svg`
+4. **Description:** `Logo of Medirus, an open-source X/Twitter automation toolkit`
 5. **License:** Select the project license: Apache License 2.0
 6. After upload, go back to the Wikidata item and add the image (P18) property
 
@@ -121,12 +121,12 @@ Add the Wikidata item URL to your website's JSON-LD. In the `Organization` or `S
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "XActions",
+  "name": "Medirus",
   "sameAs": [
     "https://www.wikidata.org/wiki/Q_______",
     "https://github.com/nirholas/XActions",
     "https://x.com/nichxbt",
-    "https://www.npmjs.com/package/xactions"
+    "https://www.npmjs.com/package/medirus"
   ]
 }
 ```
@@ -146,9 +146,9 @@ Replace `Q_______` with the actual Wikidata item ID after creation.
 - Google re-crawls Wikidata regularly (within days to weeks)
 - Check Google's Knowledge Graph API (if you have access):
   ```
-  https://kgsearch.googleapis.com/v1/entities:search?query=XActions&key=YOUR_API_KEY
+  https://kgsearch.googleapis.com/v1/entities:search?query=Medirus&key=YOUR_API_KEY
   ```
-- Search "XActions" on Google weekly to check for panel appearance
+- Search "Medirus" on Google weekly to check for panel appearance
 
 ---
 
@@ -157,7 +157,7 @@ Replace `Q_______` with the actual Wikidata item ID after creation.
 - **Update version numbers** when new releases ship
 - **Add new properties** as the project grows (e.g., awards, number of users)
 - **Respond to edit suggestions** — other Wikidata editors may suggest changes
-- **Keep consistent with website** — Wikidata and xactions.app should always agree
+- **Keep consistent with website** — Wikidata and medirus.online should always agree
 
 ---
 
@@ -172,20 +172,20 @@ Study these similar software project items to see what properties they use:
 | Express.js | Q5421965 | ~65k |
 | Prisma | Q97052498 | ~40k |
 
-Visit these items and use them as templates for XActions.
+Visit these items and use them as templates for Medirus.
 
 ---
 
 ## FAQ
 
 **Q: Can my Wikidata item be deleted?**
-A: Unlike Wikipedia, Wikidata has no notability requirement. Items need only verifiability. As long as XActions exists as real software with a real website and repository, the item is valid.
+A: Unlike Wikipedia, Wikidata has no notability requirement. Items need only verifiability. As long as Medirus exists as real software with a real website and repository, the item is valid.
 
 **Q: How long until Google indexes it?**
 A: Typically 1-4 weeks. Google continuously synchronizes with Wikidata.
 
 **Q: Should I create a Wikidata item for "nich" (the author) too?**
-A: Yes — if nich has notable enough credentials. This helps Google connect the entity graph: nich → created → XActions.
+A: Yes — if nich has notable enough credentials. This helps Google connect the entity graph: nich → created → Medirus.
 
 **Q: What if someone edits my item incorrectly?**
 A: Add the item to your Wikidata watchlist. You'll be notified of any changes and can revert vandalism.

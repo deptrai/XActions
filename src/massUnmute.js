@@ -21,7 +21,7 @@
  * 3. Paste and run
  *
  * 🎮 CONTROLS:
- *   window.XActions.pause()  / .resume() / .abort() / .status()
+ *   window.Medirus.pause()  / .resume() / .abort() / .status()
  * ============================================================
  */
 (() => {
@@ -59,7 +59,7 @@
   const processedUsers = new Set();
   const keepSet = new Set(CONFIG.keepMuted.map(u => u.toLowerCase().replace(/^@/, '')));
 
-  window.XActions = {
+  window.Medirus = {
     pause()  { paused = true;  console.log('⏸️ Paused.'); },
     resume() { paused = false; console.log('▶️ Resumed.'); },
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
@@ -166,7 +166,7 @@
     if (CONFIG.exportOnComplete && unmutedLog.length > 0) {
       const blob = new Blob([JSON.stringify({ summary: { unmuted, skipped, errors }, accounts: unmutedLog }, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-unmuted-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-unmuted-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Results exported.');
     }

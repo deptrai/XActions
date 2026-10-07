@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bulk Delete Tweets — Free X/Twitter Script | XActions</title>
+  <title>Bulk Delete Tweets — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Delete your tweets by age, keyword, or engagement threshold.">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, bulk, delete, tweets, content tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, bulk, delete, tweets, content tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Bulk Delete Tweets — XActions">
+  <meta property="og:title" content="Bulk Delete Tweets — Medirus">
   <meta property="og:description" content="Delete your tweets by age, keyword, or engagement threshold.">
-  <meta property="og:url" content="https://xactions.app/scripts/bulk-delete-tweets">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/bulk-delete-tweets">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Bulk Delete Tweets — XActions">
+  <meta name="twitter:title" content="Bulk Delete Tweets — Medirus">
   <meta name="twitter:description" content="Delete your tweets by age, keyword, or engagement threshold.">
 
-  <link rel="canonical" href="https://xactions.app/scripts/bulk-delete-tweets">
+  <link rel="canonical" href="https://medirus.online/scripts/bulk-delete-tweets">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Bulk Delete Tweets — Free X/Twitter Script | XActions",
+    "headline": "Bulk Delete Tweets — Free X/Twitter Script | Medirus",
     "description": "Delete your tweets by age, keyword, or engagement threshold.",
-    "url": "https://xactions.app/scripts/bulk-delete-tweets",
+    "url": "https://medirus.online/scripts/bulk-delete-tweets",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Content Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, bulk, delete, tweets, content tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, bulk, delete, tweets, content tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Content Tools", "item": "https://xactions.app/scripts#content-tools" },
-      { "@type": "ListItem", "position": 4, "name": "Bulk Delete Tweets", "item": "https://xactions.app/scripts/bulk-delete-tweets" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Content Tools", "item": "https://medirus.online/scripts#content-tools" },
+      { "@type": "ListItem", "position": 4, "name": "Bulk Delete Tweets", "item": "https://medirus.online/scripts/bulk-delete-tweets" }
     ]
   }
   </script>
@@ -143,9 +143,9 @@
 
         <div class="controls-box">
         <h3>Runtime Controls</h3>
-        <pre><code>XActionsUtils.pause()   — pause
-XActionsUtils.resume()  — resume
-XActionsUtils.abort()   — stop</code></pre>
+        <pre><code>MedirusUtils.pause()   — pause
+MedirusUtils.resume()  — resume
+MedirusUtils.abort()   — stop</code></pre>
       </div>
         <section class="config-section">
         <h2>Configuration Options</h2>
@@ -249,9 +249,9 @@ XActionsUtils.abort()   — stop</code></pre>
  *    Use src/backupAccount.js to save your tweets before deleting.
  *
  * CONTROLS:
- *   XActionsUtils.pause()   — pause
- *   XActionsUtils.resume()  — resume
- *   XActionsUtils.abort()   — stop
+ *   MedirusUtils.pause()   — pause
+ *   MedirusUtils.resume()  — resume
+ *   MedirusUtils.abort()   — stop
  * ============================================================
  */
 (() =&gt; {
@@ -300,7 +300,7 @@ XActionsUtils.abort()   — stop</code></pre>
   // 🔧 Embedded Utilities
   // ══════════════════════════════════════════════════════════
 
-  const U = window.XActionsUtils || (() =&gt; {
+  const U = window.MedirusUtils || (() =&gt; {
     const sleep = ms =&gt; new Promise(r =&gt; setTimeout(r, ms + ms * 0.15 * (Math.random() - 0.5)));
     const rand = (lo, hi) =&gt; sleep(lo + Math.random() * (hi - lo));
 
@@ -350,8 +350,8 @@ XActionsUtils.abort()   — stop</code></pre>
         a.download = fn; document.body.appendChild(a); a.click(); a.remove();
         console.log(`📥 Downloaded: ${fn}`);
       },
-      saveState(k, d) { try { localStorage.setItem('xactions_' + k, JSON.stringify(d)); } catch {} },
-      loadState(k, d) { try { return JSON.parse(localStorage.getItem('xactions_' + k)) ?? d; } catch { return d; } },
+      saveState(k, d) { try { localStorage.setItem('medirus_' + k, JSON.stringify(d)); } catch {} },
+      loadState(k, d) { try { return JSON.parse(localStorage.getItem('medirus_' + k)) ?? d; } catch { return d; } },
     };
   })();
 
@@ -554,8 +554,8 @@ XActionsUtils.abort()   — stop</code></pre>
 
             // Periodic confirmation
             if (CONFIG.confirmEvery &gt; 0 &amp;&amp; deleted % CONFIG.confirmEvery === 0 &amp;&amp; deleted &gt; 0) {
-              console.log(`\n⏸️  Paused at ${deleted} deletions. Call XActionsUtils.resume() to continue.\n`);
-              if (window.XActionsUtils) window.XActionsUtils.pause();
+              console.log(`\n⏸️  Paused at ${deleted} deletions. Call MedirusUtils.resume() to continue.\n`);
+              if (window.MedirusUtils) window.MedirusUtils.pause();
               else { /* wait 10s then continue */ await U.sleep(10000); }
             }
 
@@ -606,7 +606,7 @@ XActionsUtils.abort()   — stop</code></pre>
     if (CONFIG.exportOnComplete &amp;&amp; deletedLog.length &gt; 0) {
       U.download(
         { deleted: deletedLog, stats: { count: deleted, skipped: skippedCount, errors, elapsed: elapsed + 's' } },
-        `xactions-deleted-tweets-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-deleted-tweets-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
 
@@ -620,7 +620,7 @@ XActionsUtils.abort()   — stop</code></pre>
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -638,7 +638,7 @@ XActionsUtils.abort()   — stop</code></pre>
 <a href="/scripts/clear-all-reposts">🗑️ Clear All Reposts</a>
 <a href="/scripts/clear-all-retweets">🗑️ Clear All Retweets</a>
 <a href="/scripts/content-repurposer">♻️ Content Repurposer</a>
-<a href="/scripts/delete-tweets">🗑️ Delete Tweets - XActions</a>
+<a href="/scripts/delete-tweets">🗑️ Delete Tweets - Medirus</a>
 <a href="/scripts/manage-bookmarks">📑 Manage Bookmarks</a>
       </div>
       <div class="sidebar-card">

@@ -5,13 +5,13 @@ Date: 2026-08-14
 
 ## Summary
 
-Epic 3 mở rộng XActions từ Twitter-only sang multi-surface Facebook: CLI platform support, MCP tool registration, REST API endpoints, và operation persistence. Đây là epic đầu tiên expose Facebook capabilities qua 3 surface (CLI/MCP/REST) và là foundation cho mọi Facebook feature sau này (Epic 4, 5, 5b, 6, 7).
+Epic 3 mở rộng Medirus từ Twitter-only sang multi-surface Facebook: CLI platform support, MCP tool registration, REST API endpoints, và operation persistence. Đây là epic đầu tiên expose Facebook capabilities qua 3 surface (CLI/MCP/REST) và là foundation cho mọi Facebook feature sau này (Epic 4, 5, 5b, 6, 7).
 
 Epic complete across five stories (4 original + 1 extension):
 
 | Story | Status | Outcome |
 |---|---|---|
-| 3.1 CLI Platform Support | done | `xactions scrape` + `xactions automate` commands, `--auth-cookie` flag, `--platform facebook` routing |
+| 3.1 CLI Platform Support | done | `medirus scrape` + `medirus automate` commands, `--auth-cookie` flag, `--platform facebook` routing |
 | 3.2 MCP Facebook Tools | done | 5 scrape tool platform enums widened, `x_facebook_automate` tool, 30 contract tests |
 | 3.2.1 MCP Tool Surface Extension | done | 3 new MCP tools: `x_facebook_group_members`, `x_facebook_marketplace`, `x_facebook_list_accounts` |
 | 3.3 REST API | done | `POST /api/facebook/scrape` + `POST /api/facebook/automate`, JWT auth, rate limiting, dashboard UI |

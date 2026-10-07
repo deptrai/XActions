@@ -3,8 +3,8 @@
  * Consumer identity & context propagation for the MCP daemon (AD-20).
  *
  * Extracts `X-Consumer-Id` (nowing | chainlens | internal) and the Bearer
- * token from HTTP requests, validates the token against XACTIONS_MCP_API_KEY
- * / XACTIONS_API_TOKEN when configured, and propagates the consumer context
+ * token from HTTP requests, validates the token against MEDIRUS_MCP_API_KEY
+ * / MEDIRUS_API_TOKEN when configured, and propagates the consumer context
  * from the Express layer down to the MCP CallToolRequestSchema handler via
  * AsyncLocalStorage (StreamableHTTPServerTransport does not expose `req`
  * inside request handlers).
@@ -30,7 +30,7 @@ export const consumerContextStorage = new AsyncLocalStorage();
  * @typedef {Object} ConsumerContext
  * @property {'nowing' | 'chainlens' | 'internal'} consumerId
  * @property {boolean} apiKeyValid - True when no API key is configured (dev mode) or the Bearer token matched.
- * @property {boolean} apiKeyRequired - True when XACTIONS_MCP_API_KEY / XACTIONS_API_TOKEN is configured.
+ * @property {boolean} apiKeyRequired - True when MEDIRUS_MCP_API_KEY / MEDIRUS_API_TOKEN is configured.
  */
 
 /**
@@ -64,7 +64,7 @@ export function extractBearerToken(req) {
  * @returns {string | null}
  */
 export function getExpectedApiKey() {
-  return process.env.XACTIONS_MCP_API_KEY || process.env.XACTIONS_API_TOKEN || null;
+  return process.env.MEDIRUS_MCP_API_KEY || process.env.MEDIRUS_API_TOKEN || null;
 }
 
 /**

@@ -1,9 +1,9 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Cookie Storage Integration
+ * Medirus Client — Cookie Storage Integration
  *
- * Integrates cookie persistence with the XActions CLI config system.
- * Stores sessions in ~/.xactions/config.json and provides multi-session management.
+ * Integrates cookie persistence with the Medirus CLI config system.
+ * Stores sessions in ~/.medirus/config.json and provides multi-session management.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @license MIT
@@ -16,7 +16,7 @@ import { CookieAuth } from './CookieAuth.js';
 
 /** @typedef {import('../api/parsers.js').Raw} Raw */
 
-const CONFIG_DIR = join(homedir(), '.xactions');
+const CONFIG_DIR = join(homedir(), '.medirus');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 const DEFAULT_COOKIE_FILE = join(CONFIG_DIR, 'cookies.json');
 
@@ -58,14 +58,14 @@ async function writeConfig(config) {
 /**
  * Get the default cookie file path.
  *
- * @returns {Promise<string>} ~/.xactions/cookies.json
+ * @returns {Promise<string>} ~/.medirus/cookies.json
  */
 export async function getDefaultCookiePath() {
   return DEFAULT_COOKIE_FILE;
 }
 
 /**
- * Save cookies into ~/.xactions/config.json under a sessions key.
+ * Save cookies into ~/.medirus/config.json under a sessions key.
  *
  * @param {CookieAuth} cookieAuth - The cookie auth instance to save
  * @param {string} username - The Twitter username to save under
@@ -91,7 +91,7 @@ export async function saveCookiesToConfig(cookieAuth, username) {
 }
 
 /**
- * Load cookies from ~/.xactions/config.json for a specific username.
+ * Load cookies from ~/.medirus/config.json for a specific username.
  *
  * @param {string} username - The Twitter username
  * @returns {Promise<CookieAuth>} CookieAuth instance with loaded cookies

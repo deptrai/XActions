@@ -16,33 +16,33 @@ Subscribe to live events from X/Twitter accounts. The system polls at configurab
 
 ```bash
 # Start watching tweets from a user
-xactions stream start tweet elonmusk --interval 60
+medirus stream start tweet elonmusk --interval 60
 
 # Watch follower changes
-xactions stream start follower nichxbt --interval 120
+medirus stream start follower nichxbt --interval 120
 
 # Watch mentions
-xactions stream start mention nichxbt
+medirus stream start mention nichxbt
 
 # List active streams
-xactions stream list
+medirus stream list
 
 # Get detailed status of a stream
-xactions stream status stream_tweet_elonmusk_a1b2c3d4
+medirus stream status stream_tweet_elonmusk_a1b2c3d4
 
 # View recent events (with optional type filter)
-xactions stream history stream_tweet_elonmusk_a1b2c3d4
-xactions stream history stream_tweet_elonmusk_a1b2c3d4 --type stream:tweet
+medirus stream history stream_tweet_elonmusk_a1b2c3d4
+medirus stream history stream_tweet_elonmusk_a1b2c3d4 --type stream:tweet
 
 # Pause / resume a stream
-xactions stream pause stream_tweet_elonmusk_a1b2c3d4
-xactions stream resume stream_tweet_elonmusk_a1b2c3d4
+medirus stream pause stream_tweet_elonmusk_a1b2c3d4
+medirus stream resume stream_tweet_elonmusk_a1b2c3d4
 
 # Stop a single stream
-xactions stream stop stream_tweet_elonmusk_a1b2c3d4
+medirus stream stop stream_tweet_elonmusk_a1b2c3d4
 
 # Stop all streams at once
-xactions stream stop-all
+medirus stream stop-all
 ```
 
 ### REST API
@@ -175,7 +175,7 @@ Available tools for Claude, Cursor, and other AI agents:
 
 ### Browser Pool
 
-Configurable max browsers (`XACTIONS_MAX_BROWSERS` env var, default 3). Browsers are reused (up to 5 pages each). Auto-pruned when disconnected or older than 30 minutes. `acquireBrowser()` times out after 30 seconds if pool is full. Pool health is exposed via `GET /api/streams/stats` and `x_stream_list`.
+Configurable max browsers (`MEDIRUS_MAX_BROWSERS` env var, default 3). Browsers are reused (up to 5 pages each). Auto-pruned when disconnected or older than 30 minutes. `acquireBrowser()` times out after 30 seconds if pool is full. Pool health is exposed via `GET /api/streams/stats` and `x_stream_list`.
 
 ## ⚠️ Notes
 
@@ -184,4 +184,4 @@ Configurable max browsers (`XACTIONS_MAX_BROWSERS` env var, default 3). Browsers
 - Minimum interval is 15 seconds, maximum is 3600 seconds
 - Streams survive process restarts (state is persisted in Redis)
 - Browser pool starts empty and grows on demand
-- Set `XACTIONS_MAX_BROWSERS` to control pool size (default: 3)
+- Set `MEDIRUS_MAX_BROWSERS` to control pool size (default: 3)

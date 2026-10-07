@@ -105,5 +105,5 @@ tier: 'free' | 'datacenter' | 'residential' | 'mobile_4g'   // PROXY_TIERS in sr
 When you add or change a scraper's selectors:
 
 1. Register the target in `config/canary-targets.json` with `name`, `url`, `selectorChain`, and a precise `expectedShape` — the shape is what `SelectorSandbox` validates candidate replacements against.
-2. Never hot-patch selectors at runtime (Redis/in-memory). Drift healing is GitOps-only: `SelectorCanary` detects → `CanaryHealer` produces a unified-diff → GitHub Draft PR via `xactions canary heal` (AD-44).
-3. Verify with `xactions canary probe` after merging.
+2. Never hot-patch selectors at runtime (Redis/in-memory). Drift healing is GitOps-only: `SelectorCanary` detects → `CanaryHealer` produces a unified-diff → GitHub Draft PR via `medirus canary heal` (AD-44).
+3. Verify with `medirus canary probe` after merging.

@@ -1,12 +1,12 @@
-# Structured Data Reference for XActions
+# Structured Data Reference for Medirus
 
-> Complete JSON-LD schema markup reference for all XActions web pages. These schemas help Google understand XActions as an entity and trigger rich results.
+> Complete JSON-LD schema markup reference for all Medirus web pages. These schemas help Google understand Medirus as an entity and trigger rich results.
 
 ---
 
 ## Overview
 
-XActions uses [Schema.org](https://schema.org) JSON-LD structured data to communicate entity information to search engines. This document defines the canonical schemas used across the site.
+Medirus uses [Schema.org](https://schema.org) JSON-LD structured data to communicate entity information to search engines. This document defines the canonical schemas used across the site.
 
 **Validation tools:**
 - Google Rich Results Test: https://search.google.com/test/rich-results
@@ -17,19 +17,19 @@ XActions uses [Schema.org](https://schema.org) JSON-LD structured data to commun
 
 ## 1. Organization Schema (about.html, footer-global)
 
-This is the **most important schema for Knowledge Panel eligibility**. It defines XActions as an entity with connected profiles.
+This is the **most important schema for Knowledge Panel eligibility**. It defines Medirus as an entity with connected profiles.
 
 ```json
 {
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "XActions",
-  "alternateName": ["xactions", "X Actions"],
+  "name": "Medirus",
+  "alternateName": ["medirus", "X Actions"],
   "description": "Free, open-source X/Twitter automation toolkit — scrapers, MCP server for AI agents, CLI, and browser scripts. No API fees.",
-  "url": "https://xactions.app",
+  "url": "https://medirus.online",
   "logo": {
     "@type": "ImageObject",
-    "url": "https://xactions.app/logo.png",
+    "url": "https://medirus.online/logo.png",
     "width": 512,
     "height": 512
   },
@@ -47,12 +47,12 @@ This is the **most important schema for Knowledge Panel eligibility**. It define
   "sameAs": [
     "https://github.com/nirholas/XActions",
     "https://x.com/nichxbt",
-    "https://www.npmjs.com/package/xactions",
+    "https://www.npmjs.com/package/medirus",
     "https://www.wikidata.org/wiki/Q_______"
   ],
   "contactPoint": {
     "@type": "ContactPoint",
-    "url": "https://xactions.app/contact",
+    "url": "https://medirus.online/contact",
     "contactType": "customer support"
   },
   "knowsAbout": [
@@ -71,16 +71,16 @@ This is the **most important schema for Knowledge Panel eligibility**. It define
 
 ## 2. SoftwareApplication Schema (site/index.html)
 
-Defines XActions as a software product with rich metadata that Google can display in search results.
+Defines Medirus as a software product with rich metadata that Google can display in search results.
 
 ```json
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "XActions",
-  "alternateName": ["xactions", "X Actions"],
+  "name": "Medirus",
+  "alternateName": ["medirus", "X Actions"],
   "description": "Free, open-source AI-powered X/Twitter automation tools with LLM integration. Compatible with GPT, Claude, and MCP servers for intelligent mass unfollow, auto-engagement, scraping, and growth.",
-  "url": "https://xactions.app",
+  "url": "https://medirus.online",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Web Browser, Node.js, CLI",
   "softwareVersion": "3.1.0",
@@ -102,15 +102,15 @@ Defines XActions as a software product with rich metadata that Google can displa
   },
   "publisher": {
     "@type": "Organization",
-    "name": "XActions",
-    "url": "https://xactions.app"
+    "name": "Medirus",
+    "url": "https://medirus.online"
   },
   "codeRepository": "https://github.com/nirholas/XActions",
   "programmingLanguage": "JavaScript",
   "runtimePlatform": "Node.js",
-  "downloadUrl": "https://www.npmjs.com/package/xactions",
-  "installUrl": "https://www.npmjs.com/package/xactions",
-  "screenshot": "https://xactions.app/og-home.png",
+  "downloadUrl": "https://www.npmjs.com/package/medirus",
+  "installUrl": "https://www.npmjs.com/package/medirus",
+  "screenshot": "https://medirus.online/og-home.png",
   "featureList": [
     "Mass unfollow non-followers",
     "X/Twitter profile scraping",
@@ -125,7 +125,7 @@ Defines XActions as a software product with rich metadata that Google can displa
   ],
   "sameAs": [
     "https://github.com/nirholas/XActions",
-    "https://www.npmjs.com/package/xactions",
+    "https://www.npmjs.com/package/medirus",
     "https://www.wikidata.org/wiki/Q_______"
   ]
 }
@@ -141,22 +141,22 @@ Enables Google Sitelinks Search Box and defines the publisher entity.
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "name": "XActions",
-  "url": "https://xactions.app",
+  "name": "Medirus",
+  "url": "https://medirus.online",
   "description": "Free AI-powered X/Twitter automation tools — mass unfollow, scrapers, MCP server, CLI",
   "inLanguage": "en",
   "publisher": {
     "@type": "Organization",
-    "name": "XActions",
-    "url": "https://xactions.app",
+    "name": "Medirus",
+    "url": "https://medirus.online",
     "logo": {
       "@type": "ImageObject",
-      "url": "https://xactions.app/logo.png"
+      "url": "https://medirus.online/logo.png"
     }
   },
   "potentialAction": {
     "@type": "SearchAction",
-    "target": "https://xactions.app/features?q={search_term_string}",
+    "target": "https://medirus.online/features?q={search_term_string}",
     "query-input": "required name=search_term_string"
   }
 }
@@ -172,9 +172,9 @@ For the dashboard SPA.
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "XActions Dashboard",
+  "name": "Medirus Dashboard",
   "description": "AI-powered X/Twitter automation control center with LLM integration. Compatible with GPT, Claude, MCP servers.",
-  "url": "https://xactions.app/dashboard",
+  "url": "https://medirus.online/dashboard",
   "applicationCategory": "BusinessApplication",
   "operatingSystem": "Web Browser",
   "browserRequirements": "Requires JavaScript. Works in Chrome, Firefox, Safari, Edge.",
@@ -186,8 +186,8 @@ For the dashboard SPA.
   },
   "author": {
     "@type": "Organization",
-    "name": "XActions",
-    "url": "https://xactions.app"
+    "name": "Medirus",
+    "url": "https://medirus.online"
   }
 }
 ```
@@ -205,10 +205,10 @@ Targets Google's "People Also Ask" and Featured Snippets.
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "Is XActions free?",
+      "name": "Is Medirus free?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes! XActions is 100% free and open-source. All browser scripts, the CLI, and the dashboard are free with no API fees."
+        "text": "Yes! Medirus is 100% free and open-source. All browser scripts, the CLI, and the dashboard are free with no API fees."
       }
     },
     {
@@ -216,20 +216,20 @@ Targets Google's "People Also Ask" and Featured Snippets.
       "name": "How do I mass unfollow on Twitter/X?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Open x.com in your browser, press F12 to open DevTools, paste the XActions unfollow script into the console, and press Enter. It will automatically unfollow accounts that don't follow you back."
+        "text": "Open x.com in your browser, press F12 to open DevTools, paste the Medirus unfollow script into the console, and press Enter. It will automatically unfollow accounts that don't follow you back."
       }
     },
     {
       "@type": "Question",
-      "name": "Does XActions require the Twitter API?",
+      "name": "Does Medirus require the Twitter API?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "No. XActions uses browser automation — scripts run directly in your browser on x.com. No API keys, no developer account, no monthly fees."
+        "text": "No. Medirus uses browser automation — scripts run directly in your browser on x.com. No API keys, no developer account, no monthly fees."
       }
     },
     {
       "@type": "Question",
-      "name": "What is the XActions MCP server?",
+      "name": "What is the Medirus MCP server?",
       "acceptedAnswer": {
         "@type": "Answer",
         "text": "The MCP server lets AI agents like Claude, GPT-4, and Cursor automate X/Twitter actions. It provides 145 tools for scraping, posting, unfollowing, and monitoring."
@@ -237,10 +237,10 @@ Targets Google's "People Also Ask" and Featured Snippets.
     },
     {
       "@type": "Question",
-      "name": "Is XActions safe to use?",
+      "name": "Is Medirus safe to use?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. XActions is open-source (Apache 2.0 license). Scripts run locally in your browser — your credentials never leave your device. Built-in rate limiting prevents account issues."
+        "text": "Yes. Medirus is open-source (Apache 2.0 license). Scripts run locally in your browser — your credentials never leave your device. Built-in rate limiting prevents account issues."
       }
     }
   ]
@@ -262,13 +262,13 @@ Used on every subpage to define hierarchy. Example for `/about`:
       "@type": "ListItem",
       "position": 1,
       "name": "Home",
-      "item": "https://xactions.app"
+      "item": "https://medirus.online"
     },
     {
       "@type": "ListItem",
       "position": 2,
       "name": "About",
-      "item": "https://xactions.app/about"
+      "item": "https://medirus.online/about"
     }
   ]
 }
@@ -285,8 +285,8 @@ For blog content:
   "@context": "https://schema.org",
   "@type": "BlogPosting",
   "headline": "How to Mass Unfollow on Twitter in 2026",
-  "description": "Step-by-step guide to mass unfollow non-followers on X/Twitter using XActions.",
-  "url": "https://xactions.app/blog/how-to-mass-unfollow-twitter",
+  "description": "Step-by-step guide to mass unfollow non-followers on X/Twitter using Medirus.",
+  "url": "https://medirus.online/blog/how-to-mass-unfollow-twitter",
   "datePublished": "2025-01-15",
   "dateModified": "2026-02-25",
   "author": {
@@ -296,17 +296,17 @@ For blog content:
   },
   "publisher": {
     "@type": "Organization",
-    "name": "XActions",
-    "url": "https://xactions.app",
+    "name": "Medirus",
+    "url": "https://medirus.online",
     "logo": {
       "@type": "ImageObject",
-      "url": "https://xactions.app/logo.png"
+      "url": "https://medirus.online/logo.png"
     }
   },
-  "image": "https://xactions.app/og-blog-unfollow.png",
+  "image": "https://medirus.online/og-blog-unfollow.png",
   "mainEntityOfPage": {
     "@type": "WebPage",
-    "@id": "https://xactions.app/blog/how-to-mass-unfollow-twitter"
+    "@id": "https://medirus.online/blog/how-to-mass-unfollow-twitter"
   }
 }
 ```

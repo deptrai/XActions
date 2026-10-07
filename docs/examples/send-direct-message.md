@@ -63,6 +63,6 @@ const CONFIG = {
 ## ⚠️ Notes
 
 - Must be on the Messages page (`x.com/messages`) before running
-- Sent messages are tracked in `localStorage` under `xactions_dm_sent`
+- Sent messages are tracked in `localStorage` under `medirus_dm_sent`
 - Failed messages are logged — check users have open DMs
 - 30-second delay between messages is the recommended minimum

@@ -31,7 +31,7 @@ const SELECTORS = {
 /**
  * Scrape recent notifications
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function getNotifications(page, options = {}) {
@@ -119,7 +119,7 @@ export async function unmuteUser(page, username) {
  * Mute a word/phrase
  * @param {import('puppeteer').Page} page
  * @param {string} word
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function muteWord(page, word, options = {}) {

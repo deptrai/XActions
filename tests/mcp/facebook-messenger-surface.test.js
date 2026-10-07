@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
-// XActions — Story 5.4 messenger-share surface tests (MCP) + schema additivity.
+// Medirus — Story 5.4 messenger-share surface tests (MCP) + schema additivity.
 // by nichxbt
 //
 // Covers:

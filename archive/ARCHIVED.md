@@ -1,6 +1,6 @@
 # Archived Code
 
-The following files have been archived as XActions transitioned to a 100% free, open-source model on January 25, 2026.
+The following files have been archived as Medirus transitioned to a 100% free, open-source model on January 25, 2026.
 
 ## Backend Payment Code (`archive/backend/`)
 
@@ -19,7 +19,7 @@ The following files have been archived as XActions transitioned to a 100% free, 
 
 ## Why Archived?
 
-XActions is now completely **free and open source** with:
+Medirus is now completely **free and open source** with:
 - ✅ No accounts required for browser scripts
 - ✅ No credit system or payments
 - ✅ No subscription tiers
@@ -28,8 +28,8 @@ XActions is now completely **free and open source** with:
 
 All features are accessible via:
 1. **Browser Console Scripts** - Copy-paste automation (no setup needed)
-2. **CLI Tools** - `npm install -g xactions` 
-3. **Node.js Library** - `import { unfollowEveryone } from 'xactions'`
+2. **CLI Tools** - `npm install -g medirus` 
+3. **Node.js Library** - `import { unfollowEveryone } from 'medirus'`
 4. **MCP Server** - AI agent integration for Claude, GPT, etc.
 
 ## Modified Files
@@ -99,4 +99,4 @@ If payment features need to be restored:
 ---
 
 *Archived by Agent 1 - January 25, 2026*
-*XActions is now 100% free and open source*
+*Medirus is now 100% free and open source*

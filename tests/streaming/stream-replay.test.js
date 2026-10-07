@@ -419,7 +419,7 @@ describe('Story 29.3: Stream Replay & Missed-Event Recovery', () => {
       await new Promise((resolve) => server.close(resolve));
     });
 
-    it('delivers replayed events with X-XActions-Replay: true header and valid HMAC signature', async () => {
+    it('delivers replayed events with X-Medirus-Replay: true header and valid HMAC signature', async () => {
       receivedDeliveries.length = 0;
 
       const res = await getStreamReplay({
@@ -439,12 +439,12 @@ describe('Story 29.3: Stream Replay & Missed-Event Recovery', () => {
       expect(receivedDeliveries.length).toBe(3);
 
       for (const delivery of receivedDeliveries) {
-        expect(delivery.headers['x-xactions-replay']).toBe('true');
-        expect(delivery.headers['x-xactions-delivery']).toBeDefined();
-        expect(delivery.headers['x-xactions-signature']).toBeDefined();
+        expect(delivery.headers['x-medirus-replay']).toBe('true');
+        expect(delivery.headers['x-medirus-delivery']).toBeDefined();
+        expect(delivery.headers['x-medirus-signature']).toBeDefined();
 
-        const sig = delivery.headers['x-xactions-signature'];
-        const ts = delivery.headers['x-xactions-timestamp'];
+        const sig = delivery.headers['x-medirus-signature'];
+        const ts = delivery.headers['x-medirus-timestamp'];
         // Signature is bound to the timestamp (Story 31 fix — replay protection).
         const valid = verifySignature(delivery.body, sig, testSecret, { timestamp: ts });
         expect(valid).toBe(true);

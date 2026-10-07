@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions — TLS Profile Provider (Story 27.1)
+ * Medirus — TLS Profile Provider (Story 27.1)
  *
  * Pluggable TLS/JA4 fingerprint layer. A `TlsProfileProvider` maps a browser
  * family (derived from the session fingerprint's user-agent) to a set of TLS

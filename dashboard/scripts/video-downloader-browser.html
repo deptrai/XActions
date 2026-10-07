@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Strategy 1 — Free X/Twitter Script | XActions</title>
+  <title>Strategy 1 — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="src/videoDownloaderBrowser.js">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, video, downloader, browser, content tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, video, downloader, browser, content tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Strategy 1 — XActions">
+  <meta property="og:title" content="Strategy 1 — Medirus">
   <meta property="og:description" content="src/videoDownloaderBrowser.js">
-  <meta property="og:url" content="https://xactions.app/scripts/video-downloader-browser">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/video-downloader-browser">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Strategy 1 — XActions">
+  <meta name="twitter:title" content="Strategy 1 — Medirus">
   <meta name="twitter:description" content="src/videoDownloaderBrowser.js">
 
-  <link rel="canonical" href="https://xactions.app/scripts/video-downloader-browser">
+  <link rel="canonical" href="https://medirus.online/scripts/video-downloader-browser">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Strategy 1 — Free X/Twitter Script | XActions",
+    "headline": "Strategy 1 — Free X/Twitter Script | Medirus",
     "description": "src/videoDownloaderBrowser.js",
-    "url": "https://xactions.app/scripts/video-downloader-browser",
+    "url": "https://medirus.online/scripts/video-downloader-browser",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Content Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, video, downloader, browser, content tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, video, downloader, browser, content tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Content Tools", "item": "https://xactions.app/scripts#content-tools" },
-      { "@type": "ListItem", "position": 4, "name": "Strategy 1", "item": "https://xactions.app/scripts/video-downloader-browser" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Content Tools", "item": "https://medirus.online/scripts#content-tools" },
+      { "@type": "ListItem", "position": 4, "name": "Strategy 1", "item": "https://medirus.online/scripts/video-downloader-browser" }
     ]
   }
   </script>
@@ -314,15 +314,15 @@
    * Strategy 5: Network interceptor — capture future video loads
    */
   const setupInterceptor = () =&gt; {
-    if (window.__XACTIONS_VD_INTERCEPTOR) return;
+    if (window.__MEDIRUS_VD_INTERCEPTOR) return;
 
-    window.__XACTIONS_VD_CAPTURED = window.__XACTIONS_VD_CAPTURED || [];
+    window.__MEDIRUS_VD_CAPTURED = window.__MEDIRUS_VD_CAPTURED || [];
 
     const originalFetch = window.fetch;
     window.fetch = async (...args) =&gt; {
       const url = args[0]?.toString?.() || args[0]?.url || args[0];
       if (url &amp;&amp; (url.includes('.mp4') || url.includes('.m3u8') || url.includes('video.twimg'))) {
-        window.__XACTIONS_VD_CAPTURED.push({
+        window.__MEDIRUS_VD_CAPTURED.push({
           url,
           quality: 'intercepted',
           type: url.includes('.m3u8') ? 'm3u8' : 'mp4',
@@ -337,7 +337,7 @@
     const originalXHROpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function (method, url, ...rest) {
       if (url &amp;&amp; (url.includes('.mp4') || url.includes('.m3u8') || url.includes('video.twimg'))) {
-        window.__XACTIONS_VD_CAPTURED.push({
+        window.__MEDIRUS_VD_CAPTURED.push({
           url,
           quality: 'intercepted-xhr',
           type: url.includes('.m3u8') ? 'm3u8' : 'mp4',
@@ -349,11 +349,11 @@
       return originalXHROpen.call(this, method, url, ...rest);
     };
 
-    window.__XACTIONS_VD_INTERCEPTOR = true;
+    window.__MEDIRUS_VD_INTERCEPTOR = true;
     console.log('🔍 Video network interceptor activated');
   };
 
-  const getInterceptedVideos = () =&gt; window.__XACTIONS_VD_CAPTURED || [];
+  const getInterceptedVideos = () =&gt; window.__MEDIRUS_VD_CAPTURED || [];
 
   // ─── Dedup &amp; Sort ─────────────────────────────────────────
 
@@ -455,7 +455,7 @@
   // ─── Feature 1: Download Video From Current Tweet ─────────
 
   const downloadCurrent = async () =&gt; {
-    console.log('🎬 XActions Video Downloader');
+    console.log('🎬 Medirus Video Downloader');
     console.log('═'.repeat(50));
 
     if (!isTweetPage()) {
@@ -528,10 +528,10 @@
     window.location.href = tweetUrl;
     console.log('⏳ Page is loading... Run downloadCurrent() once the video is visible.');
     console.log('💡 Tip: After the page loads, click PLAY on the video, then run:');
-    console.log(`   window.XActions.videoDownloader.downloadCurrent()`);
+    console.log(`   window.Medirus.videoDownloader.downloadCurrent()`);
 
     // Store intent in sessionStorage so user can resume
-    sessionStorage.setItem('xactions_vd_pending', JSON.stringify({ tweetUrl, tweetId, author }));
+    sessionStorage.setItem('medirus_vd_pending', JSON.stringify({ tweetUrl, tweetId, author }));
 
     return null;
   };
@@ -539,7 +539,7 @@
   // ─── Feature 3: Download GIF ──────────────────────────────
 
   const downloadGif = async () =&gt; {
-    console.log('🎬 XActions GIF Downloader');
+    console.log('🎬 Medirus GIF Downloader');
     console.log('═'.repeat(50));
     console.log('ℹ️  GIFs on X/Twitter are actually MP4 videos\n');
 
@@ -586,7 +586,7 @@
       return [];
     }
 
-    console.log('🎬 XActions Batch Video Downloader');
+    console.log('🎬 Medirus Batch Video Downloader');
     console.log('═'.repeat(50));
     console.log(`📦 Processing ${tweetUrls.length} tweet(s)\n`);
 
@@ -630,10 +630,10 @@
     // Save queued URLs to sessionStorage
     const queued = results.filter(r =&gt; r.status === 'queued');
     if (queued.length &gt; 0) {
-      sessionStorage.setItem('xactions_vd_batch', JSON.stringify(queued));
+      sessionStorage.setItem('medirus_vd_batch', JSON.stringify(queued));
       console.log(`\n📋 ${queued.length} tweet(s) queued in sessionStorage.`);
-      console.log('   Navigate to each tweet, then run: window.XActions.videoDownloader.downloadCurrent()');
-      console.log('   Or retrieve the queue: JSON.parse(sessionStorage.getItem(&quot;xactions_vd_batch&quot;))');
+      console.log('   Navigate to each tweet, then run: window.Medirus.videoDownloader.downloadCurrent()');
+      console.log('   Or retrieve the queue: JSON.parse(sessionStorage.getItem(&quot;medirus_vd_batch&quot;))');
     }
 
     console.log('\n═'.repeat(50));
@@ -645,7 +645,7 @@
   // ─── Feature 5: Get Video Info ────────────────────────────
 
   const getVideoInfo = async () =&gt; {
-    console.log('🎬 XActions Video Info');
+    console.log('🎬 Medirus Video Info');
     console.log('═'.repeat(50));
 
     if (!isTweetPage()) {
@@ -745,13 +745,13 @@
   // ─── Resume Pending Download (from navigation) ────────────
 
   const checkPending = () =&gt; {
-    const pending = sessionStorage.getItem('xactions_vd_pending');
+    const pending = sessionStorage.getItem('medirus_vd_pending');
     if (pending) {
       try {
         const { tweetId } = JSON.parse(pending);
         if (getTweetId() === tweetId) {
           console.log('🔄 Resuming pending download...');
-          sessionStorage.removeItem('xactions_vd_pending');
+          sessionStorage.removeItem('medirus_vd_pending');
           setTimeout(() =&gt; downloadCurrent(), 2000);
         }
       } catch (e) {
@@ -765,10 +765,10 @@
   setupInterceptor();
   checkPending();
 
-  // ─── Expose on window.XActions ────────────────────────────
+  // ─── Expose on window.Medirus ────────────────────────────
 
-  window.XActions = window.XActions || {};
-  window.XActions.videoDownloader = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.videoDownloader = {
     downloadCurrent,
     downloadFromUrl,
     downloadGif,
@@ -780,11 +780,11 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║        🎬  XActions Video Downloader — Loaded           ║
+║        🎬  Medirus Video Downloader — Loaded           ║
 ╠══════════════════════════════════════════════════════════╣
 ║                                                          ║
 ║  All functions available at:                             ║
-║    window.XActions.videoDownloader.&lt;function&gt;             ║
+║    window.Medirus.videoDownloader.&lt;function&gt;             ║
 ║                                                          ║
 ║  1. downloadCurrent()                                    ║
 ║     ↳ Download video from current tweet page             ║
@@ -813,7 +813,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -832,7 +832,7 @@
 <a href="/scripts/clear-all-reposts">🗑️ Clear All Reposts</a>
 <a href="/scripts/clear-all-retweets">🗑️ Clear All Retweets</a>
 <a href="/scripts/content-repurposer">♻️ Content Repurposer</a>
-<a href="/scripts/delete-tweets">🗑️ Delete Tweets - XActions</a>
+<a href="/scripts/delete-tweets">🗑️ Delete Tweets - Medirus</a>
       </div>
       <div class="sidebar-card">
         <h3>🔗 Quick Links</h3>

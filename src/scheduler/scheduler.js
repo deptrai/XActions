@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Local Scheduler
+ * Medirus Local Scheduler
  * Cron-based task scheduler with job history and webhook triggers.
  *
  * Kills: Phantombuster (cloud scheduling), Apify (actors + schedules)
@@ -17,7 +17,7 @@ import path from 'path';
 import os from 'os';
 import { EventEmitter } from 'events';
 
-const CONFIG_DIR = path.join(os.homedir(), '.xactions');
+const CONFIG_DIR = path.join(os.homedir(), '.medirus');
 const SCHEDULER_FILE = path.join(CONFIG_DIR, 'scheduler.json');
 const HISTORY_DIR = path.join(CONFIG_DIR, 'scheduler-history');
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Thread Composer — XActions</title>
+  <title>Thread Composer — Medirus</title>
   <link rel="stylesheet" href="/css/common.css" />
   <style>
     :root { --bg: #000; --bg2: #111; --bg3: #1a1a1a; --border: #333; --text: #e0e0e0; --text2: #888; --accent: #1d9bf0; --green: #00c853; --red: #ff4444; --yellow: #ffb800; }
@@ -318,16 +318,16 @@
 
     // ── Draft persistence ──
     document.getElementById('save-draft-btn').onclick = () => {
-      const drafts = JSON.parse(localStorage.getItem('xactions_thread_drafts') || '[]');
+      const drafts = JSON.parse(localStorage.getItem('medirus_thread_drafts') || '[]');
       const name = prompt('Draft name:', `Thread ${new Date().toLocaleDateString()}`);
       if (!name) return;
       drafts.push({ name, tweets: tweets.map(t => t.text), savedAt: new Date().toISOString() });
-      localStorage.setItem('xactions_thread_drafts', JSON.stringify(drafts));
+      localStorage.setItem('medirus_thread_drafts', JSON.stringify(drafts));
       alert('✅ Draft saved!');
     };
 
     document.getElementById('load-draft-btn').onclick = () => {
-      const drafts = JSON.parse(localStorage.getItem('xactions_thread_drafts') || '[]');
+      const drafts = JSON.parse(localStorage.getItem('medirus_thread_drafts') || '[]');
       if (drafts.length === 0) { alert('No drafts saved'); return; }
       const names = drafts.map((d, i) => `${i + 1}. ${d.name} (${d.savedAt?.split('T')[0]})`).join('\n');
       const choice = prompt('Select a draft:\n' + names);

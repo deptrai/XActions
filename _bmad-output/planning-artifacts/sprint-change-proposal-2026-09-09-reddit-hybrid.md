@@ -55,7 +55,7 @@ Research `ref=[14]` chỉ verify homepage, chưa test `.json` endpoint. Kiến t
 - `_bmad-output/planning-artifacts/research/technical-scraping-reddit-medium-instagram-2026-09-08/research.md`
 - `_bmad-output/planning-artifacts/epics.md`
 - `_bmad-output/planning-artifacts/prd.md`
-- `_bmad-output/planning-artifacts/architecture/xactions-epic35-reddit-medium-instagram/ARCHITECTURE-SPINE.md`
+- `_bmad-output/planning-artifacts/architecture/medirus-epic35-reddit-medium-instagram/ARCHITECTURE-SPINE.md`
 - `_bmad-output/implementation-artifacts/stories/35-1-reddit-scraper.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
@@ -122,7 +122,7 @@ Thêm `IN-7`: Mọi client mới phải hỗ trợ `transport` option (`'http' |
 ## 5. Implementation Handoff
 
 - **Scope:** Moderate (code + docs + live verification).
-- **Owner:** Developer (Claude / XActions dev) + Product Owner review.
+- **Owner:** Developer (Claude / Medirus dev) + Product Owner review.
 - **Deliverables:**
   - RSS fallback merge vào `main`.
   - Puppeteer bridge skeleton.
@@ -136,7 +136,7 @@ Thêm `IN-7`: Mọi client mới phải hỗ trợ `transport` option (`'http' |
 ## 6. References
 
 - Research: `_bmad-output/planning-artifacts/research/technical-scraping-reddit-medium-instagram-2026-09-08/research.md`
-- Architecture: `_bmad-output/planning-artifacts/architecture/xactions-epic35-reddit-medium-instagram/ARCHITECTURE-SPINE.md`
+- Architecture: `_bmad-output/planning-artifacts/architecture/medirus-epic35-reddit-medium-instagram/ARCHITECTURE-SPINE.md`
 - PRD: `_bmad-output/planning-artifacts/prd.md` (FR-98)
 - Epics: `_bmad-output/planning-artifacts/epics.md` (Epic 35)
 - Story: `_bmad-output/implementation-artifacts/stories/35-1-reddit-scraper.md`

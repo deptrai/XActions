@@ -1,5 +1,5 @@
 ---
-name: xactions-mcp-server
+name: medirus-mcp-server
 description: Free MCP server providing 145 tools for AI agents to automate X/Twitter. Scrapes profiles, followers, tweets. Posts, follows, likes, retweets, downloads videos, analyzes sentiment, monitors brands, manages DMs, runs workflows, and more. Uses local Puppeteer -- no API keys or payments required. Compatible with Claude Desktop, Cursor, Windsurf, VS Code. Use when setting up or using AI agent Twitter automation via MCP.
 license: Apache-2.0
 compatibility: Requires Node.js 18+. Works with Claude Desktop, Cursor, Windsurf, VS Code, and MCP-compatible clients.
@@ -8,7 +8,7 @@ metadata:
   version: "4.0"
 ---
 
-# XActions MCP Server
+# Medirus MCP Server
 
 The definitive free Twitter/X MCP server. 145 tools for AI agents.
 
@@ -17,11 +17,11 @@ The definitive free Twitter/X MCP server. 145 tools for AI agents.
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["xactions-mcp"],
+      "args": ["medirus-mcp"],
       "env": {
-        "XACTIONS_SESSION_COOKIE": "your_auth_token_here"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token_here"
       }
     }
   }
@@ -37,18 +37,18 @@ DevTools (F12) -> Application -> Cookies -> x.com -> copy `auth_token` value
 
 **Claude Desktop:**
 ```bash
-xactions mcp-config --client claude --write
+medirus mcp-config --client claude --write
 ```
 
 **Cursor:**
 ```bash
-xactions mcp-config --client cursor --write
+medirus mcp-config --client cursor --write
 ```
 
 **Windsurf / VS Code:**
 ```bash
-xactions mcp-config --client windsurf --write
-xactions mcp-config --client vscode --write
+medirus mcp-config --client windsurf --write
+medirus mcp-config --client vscode --write
 ```
 
 ### 3. Restart your client
@@ -96,14 +96,14 @@ xactions mcp-config --client vscode --write
 
 "Post a thread about the top 3 AI trends in 2026"
 
-"Monitor brand mentions of 'XActions' for the last week"
+"Monitor brand mentions of 'Medirus' for the last week"
 ```
 
 ## Environment Variables
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `XACTIONS_SESSION_COOKIE` | Yes | X auth_token for authentication |
+| `MEDIRUS_SESSION_COOKIE` | Yes | X auth_token for authentication |
 | `OPENROUTER_API_KEY` | No | Enables AI tools (voice analysis, tweet generation) |
 
 ## Full Documentation

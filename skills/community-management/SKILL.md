@@ -32,18 +32,18 @@ The script navigates between pages to process each community:
 2. **On community page** — Clicks "Joined" button → confirms Leave → marks as processed → navigates back
 3. **On completion** — Displays final count and exports results as JSON
 
-Uses `sessionStorage` key `xactions_left_communities` (JSON array of community IDs) to survive page navigations. Re-running resumes where it stopped.
+Uses `sessionStorage` key `medirus_left_communities` (JSON array of community IDs) to survive page navigations. Re-running resumes where it stopped.
 
 ### Controls
 
-- `window.XActions.pause()` — Pause execution
-- `window.XActions.resume()` — Resume
-- `window.XActions.abort()` — Stop and export progress
+- `window.Medirus.pause()` — Pause execution
+- `window.Medirus.resume()` — Resume
+- `window.Medirus.abort()` — Stop and export progress
 
 ### Reset Progress
 
 ```javascript
-sessionStorage.removeItem('xactions_left_communities')
+sessionStorage.removeItem('medirus_left_communities')
 ```
 
 Note: `sessionStorage` clears automatically when the browser tab closes.

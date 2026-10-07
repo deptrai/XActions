@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Normalizers for telegram → XActions canonical shapes (Story 50.8 skeleton).
+ * Normalizers for telegram → Medirus canonical shapes (Story 50.8 skeleton).
  * Stubs only — land the real impl when the D4 spec picks a transport. Until
  * then these document the ThinEvent data-payload shape consumers should
  * expect from each action.

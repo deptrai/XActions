@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions agent` command group.
+ * `medirus agent` command group.
  */
 import chalk from 'chalk';
 import ora from 'ora';
@@ -74,7 +74,7 @@ agentCmd
       await new Promise((resolve) => { process.stdin.once('data', resolve); });
       await driver.saveSession();
       await driver.close();
-      console.log(chalk.green('✅ Session saved! You can now run: xactions agent start'));
+      console.log(chalk.green('✅ Session saved! You can now run: medirus agent start'));
     } catch (error) { console.error(chalk.red(`❌ ${error.message}`)); process.exit(1); }
   });
 

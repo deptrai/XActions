@@ -6,7 +6,7 @@ All-in-one growth automation combining follow + like + smart unfollow for X (Twi
 
 ## ⭐ Pro Feature
 
-> **This is an advanced feature available in XActions Pro tier.** Growth Suite combines multiple automation strategies into a single, intelligent workflow that grows your account organically while you focus on creating content.
+> **This is an advanced feature available in Medirus Pro tier.** Growth Suite combines multiple automation strategies into a single, intelligent workflow that grows your account organically while you focus on creating content.
 
 ---
 
@@ -125,24 +125,24 @@ The Growth Suite is your **complete growth automation engine** that:
 **Steps:**
 1. Go to `x.com/home`
 2. Open browser console (F12 → Console tab)
-3. First paste `core.js` from the XActions repository
+3. First paste `core.js` from the Medirus repository
 4. Then paste the growth script below
 5. Watch the magic happen!
 
 ```javascript
 // ============================================
-// XActions - Growth Suite (Browser Console)
+// Medirus - Growth Suite (Browser Console)
 // Author: nich (@nichxbt)
 // REQUIRES: Paste core.js first!
 // ============================================
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, SELECTORS } = window.XActions.Core;
+  const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, SELECTORS } = window.Medirus.Core;
 
   // ============================================
   // 🎯 CONFIGURE YOUR GROWTH STRATEGY
@@ -252,7 +252,7 @@ The Growth Suite is your **complete growth automation engine** that:
   const run = async () => {
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  🚀 XActions Growth Suite - Pro                          ║
+║  🚀 Medirus Growth Suite - Pro                          ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Keywords: ${STRATEGY.KEYWORDS.slice(0, 2).join(', ').substring(0, 35).padEnd(35)}   ║
 ║  Session: ${STRATEGY.TIMING.SESSION_DURATION_MINUTES} minutes                                 ║
@@ -344,7 +344,7 @@ This production-ready script includes:
 
 ```javascript
 // ============================================
-// XActions Growth Suite - Node.js Production Script
+// Medirus Growth Suite - Node.js Production Script
 // Author: nich (@nichxbt)
 // 
 // Features:
@@ -356,7 +356,7 @@ This production-ready script includes:
 // - Comprehensive logging
 // ============================================
 
-const { XActions } = require('xactions');
+const { Medirus } = require('medirus');
 const fs = require('fs');
 const path = require('path');
 
@@ -539,9 +539,9 @@ class GrowthSuite {
   }
 
   async init() {
-    log('Initializing XActions Growth Suite...', 'INFO');
+    log('Initializing Medirus Growth Suite...', 'INFO');
     
-    this.x = new XActions({
+    this.x = new Medirus({
       auth: this.auth,
       rateLimit: {
         enabled: true,
@@ -551,7 +551,7 @@ class GrowthSuite {
     });
 
     await this.x.init();
-    log('XActions initialized successfully', 'INFO');
+    log('Medirus initialized successfully', 'INFO');
   }
 
   async searchAndFollow() {
@@ -845,7 +845,7 @@ runScheduled().catch((err) => {
 **Install dependencies:**
 
 ```bash
-npm install xactions node-cron
+npm install medirus node-cron
 ```
 
 **Set environment variables:**
@@ -866,7 +866,7 @@ node growth-suite.js
 
 ```bash
 npm install -g pm2
-pm2 start growth-suite.js --name "xactions-growth"
+pm2 start growth-suite.js --name "medirus-growth"
 pm2 save
 pm2 startup
 ```
@@ -965,7 +965,7 @@ Better Content → More Follow-Backs → Better Ratio
 
 ## 🌐 Website Alternative
 
-**Prefer a no-code solution?** The Growth Suite is available in the [xactions.app](https://xactions.app) Pro tier:
+**Prefer a no-code solution?** The Growth Suite is available in the [medirus.online](https://medirus.online) Pro tier:
 
 ### What's Included in Pro:
 
@@ -982,7 +982,7 @@ Better Content → More Follow-Backs → Better Ratio
 
 ### Getting Started with Pro:
 
-1. Visit [xactions.app/pricing](https://xactions.app/pricing)
+1. Visit [medirus.online/pricing](https://medirus.online/pricing)
 2. Sign up for Pro tier ($19/month)
 3. Connect your X account
 4. Configure your growth strategy
@@ -1014,7 +1014,7 @@ Better Content → More Follow-Backs → Better Ratio
 
 **Possible causes:**
 - Session timeout - restart the script
-- DOM changes - check for XActions updates
+- DOM changes - check for Medirus updates
 - Rate limiting - wait and retry
 - Network issues - check your connection
 

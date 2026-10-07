@@ -53,13 +53,13 @@ export function parseRateString(rateStr) {
 }
 
 /**
- * Load per-consumer quota configuration from `XACTIONS_CONSUMER_QUOTAS`.
+ * Load per-consumer quota configuration from `MEDIRUS_CONSUMER_QUOTAS`.
  * Expected format: JSON string, e.g.:
  *   {"jev": {"reddit:search": "100/min", "default": "60/min"}, "default": "60/min"}
  * @returns {Record<string, any>}
  */
 export function loadConsumerQuotas() {
-  const envVal = process.env.XACTIONS_CONSUMER_QUOTAS;
+  const envVal = process.env.MEDIRUS_CONSUMER_QUOTAS;
   if (!envVal || typeof envVal !== 'string') return {};
   try {
     const parsed = JSON.parse(envVal);
@@ -80,8 +80,8 @@ export function resolveQuotaConfig(consumerId, platform, action) {
   const quotas = loadConsumerQuotas();
 
   if (consumerId === 'anonymous') {
-    // Env override first (`XACTIONS_CONSUMER_QUOTAS.anonymous`, else
-    // `XACTIONS_CONSUMER_QUOTAS.default`), else the tight 10/min free tier
+    // Env override first (`MEDIRUS_CONSUMER_QUOTAS.anonymous`, else
+    // `MEDIRUS_CONSUMER_QUOTAS.default`), else the tight 10/min free tier
     // per IP+platform+action.
     const anonConf = quotas['anonymous'] ?? quotas['default'];
     if (anonConf) {

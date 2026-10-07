@@ -137,7 +137,7 @@
         engaged,
         dryRun: CONFIG.dryRun,
         timestamp: new Date().toISOString(),
-      }, `xactions-algorithm-builder-${Date.now()}.json`);
+      }, `medirus-algorithm-builder-${Date.now()}.json`);
     }
   };
 

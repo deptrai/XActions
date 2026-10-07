@@ -37,7 +37,7 @@
 
   // ── MAIN ──────────────────────────────────────────────────
   (async () => {
-    console.log('📊 ENGAGEMENT ANALYTICS — XActions by nichxbt');
+    console.log('📊 ENGAGEMENT ANALYTICS — Medirus by nichxbt');
 
     const username = window.location.pathname.match(/^\/([^/]+)/)?.[1];
     if (!username || ['home', 'explore', 'notifications', 'messages', 'i'].includes(username)) {
@@ -140,7 +140,7 @@
         bestHour: bestHour?.[0],
         posts: arr,
       };
-      download(report, `xactions-analytics-${username}-${new Date().toISOString().slice(0, 10)}.json`);
+      download(report, `medirus-analytics-${username}-${new Date().toISOString().slice(0, 10)}.json`);
       console.log('\n📥 Full report downloaded as JSON');
     }
   })();

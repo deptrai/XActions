@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 🤖 Auto Reply DMs - XActions
+ * 🤖 Auto Reply DMs - Medirus
  * ============================================
  *
  * @name         auto-reply-dms
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to x.com/messages
@@ -116,9 +116,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🤖 AUTO REPLY DMs - XActions                            ║
+║  🤖 AUTO REPLY DMs - Medirus                            ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
   log.info('To stop early: window.stopAutoReplyDMs()');

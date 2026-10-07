@@ -1,14 +1,14 @@
-# XActions — System-Level Test Design: Architecture
+# Medirus — System-Level Test Design: Architecture
 
 **Purpose:** Contract between Test Architecture and Development teams. Defines WHAT must be testable and WHY, based on risk. Does NOT contain test implementation code.
 
-**Project:** XActions | **Mode:** System-Level | **Date:** 2026-08-12 | **Author:** Murat (TEA)
+**Project:** Medirus | **Mode:** System-Level | **Date:** 2026-08-12 | **Author:** Murat (TEA)
 
 ---
 
 ## Executive Summary
 
-XActions is a brownfield multi-platform social automation toolkit (Node.js ESM, Express, Puppeteer+Stealth, Prisma/PostgreSQL, Redis/Bull). Seven epics span Facebook scraping, automation, multi-surface exposure, growth, Messenger, marketplace, and anti-detection. Epics 1–5b are done; Epic 6 (Anti-Detection) is in-progress.
+Medirus is a brownfield multi-platform social automation toolkit (Node.js ESM, Express, Puppeteer+Stealth, Prisma/PostgreSQL, Redis/Bull). Seven epics span Facebook scraping, automation, multi-surface exposure, growth, Messenger, marketplace, and anti-detection. Epics 1–5b are done; Epic 6 (Anti-Detection) is in-progress.
 
 **Scope:** Full system — 7 surfaces (Browser/CLI/MCP/API/Dashboard/Extension/Library), 54 FRs, 10 NFRs, 15 identified risks.
 

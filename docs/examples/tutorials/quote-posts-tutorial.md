@@ -1,6 +1,6 @@
 # Quote Posts -- Tutorial
 
-> Step-by-step guide to quote tweeting on X using XActions browser scripts.
+> Step-by-step guide to quote tweeting on X using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -105,9 +105,9 @@ The script will open the quote dialog, type your template text character by char
 While running:
 
 ```js
-XActions.pause();   // Pause after current action
-XActions.resume();  // Continue
-XActions.abort();   // Stop permanently
+Medirus.pause();   // Pause after current action
+Medirus.resume();  // Continue
+Medirus.abort();   // Stop permanently
 ```
 
 ### Step 4: Review Results

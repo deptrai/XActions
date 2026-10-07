@@ -17,7 +17,7 @@ const CONFIG = {
 };
 
 (() => {
-  const STORAGE_PREFIX = 'xactions_continuous_';
+  const STORAGE_PREFIX = 'medirus_continuous_';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   // Parse page info
@@ -182,7 +182,7 @@ const CONFIG = {
   // Initial run
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  🔭 XActions Continuous Monitor                          ║
+║  🔭 Medirus Continuous Monitor                          ║
 ║                                                           ║
 ║  Target: @${targetUser.padEnd(20)}                        ║
 ║  Tracking: ${pageType.padEnd(18)}                         ║
@@ -200,10 +200,10 @@ const CONFIG = {
   const intervalId = setInterval(runCheck, intervalMs);
 
   // Provide stop function
-  window.stopXActionsMonitor = () => {
+  window.stopMedirusMonitor = () => {
     clearInterval(intervalId);
     console.log('\n🛑 Monitoring stopped.');
   };
 
-  console.log('💡 Tip: Run stopXActionsMonitor() to stop monitoring.\n');
+  console.log('💡 Tip: Run stopMedirusMonitor() to stop monitoring.\n');
 })();

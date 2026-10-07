@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Workflow Triggers
+ * Medirus Workflow Triggers
  * Event triggers for starting workflow execution
  *
  * Supported trigger types:
@@ -16,7 +16,7 @@
 import { EventEmitter } from 'events';
 
 /**
- * @typedef {import('../types/xactions.js').WorkflowTrigger} WorkflowTrigger
+ * @typedef {import('../types/medirus.js').WorkflowTrigger} WorkflowTrigger
  */
 
 // ============================================================================

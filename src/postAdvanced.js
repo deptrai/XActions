@@ -19,8 +19,8 @@
 // - Post with voice (voice tweet)
 //
 // Usage:
-//   Paste in console, then call functions via window.XActions.postAdvanced.*
-//   Example: XActions.postAdvanced.undoPost()
+//   Paste in console, then call functions via window.Medirus.postAdvanced.*
+//   Example: Medirus.postAdvanced.undoPost()
 
 (() => {
   'use strict';
@@ -188,7 +188,7 @@
    * for the toast with an "Undo" button to appear, then clicks it.
    *
    * Usage:
-   *   XActions.postAdvanced.undoPost()
+   *   Medirus.postAdvanced.undoPost()
    *   // Then post your tweet normally — it will be undone within the grace period
    *
    * Or call it right after clicking the post button (within ~5 seconds).
@@ -1040,12 +1040,12 @@
   };
 
   // ==========================================================================
-  // Expose on window.XActions.postAdvanced
+  // Expose on window.Medirus.postAdvanced
   // ==========================================================================
 
-  if (!window.XActions) window.XActions = {};
+  if (!window.Medirus) window.Medirus = {};
 
-  window.XActions.postAdvanced = {
+  window.Medirus.postAdvanced = {
     undoPost,
     postLongContent,
     formatSelectedText,
@@ -1070,49 +1070,49 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║               XActions — Advanced Post Features              ║
+║               Medirus — Advanced Post Features              ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  🔄 XActions.postAdvanced.undoPost()                         ║
+║  🔄 Medirus.postAdvanced.undoPost()                         ║
 ║     Watch for and click Undo after posting                   ║
 ║                                                              ║
-║  📝 XActions.postAdvanced.postLongContent(text)              ║
+║  📝 Medirus.postAdvanced.postLongContent(text)              ║
 ║     Post up to 25K chars (Premium)                           ║
 ║                                                              ║
-║  🅱️  XActions.postAdvanced.boldText()                        ║
-║  🔤 XActions.postAdvanced.italicText()                       ║
-║  ✂️  XActions.postAdvanced.strikethroughText()                ║
-║  🎨 XActions.postAdvanced.formatSelectedText(type)           ║
+║  🅱️  Medirus.postAdvanced.boldText()                        ║
+║  🔤 Medirus.postAdvanced.italicText()                       ║
+║  ✂️  Medirus.postAdvanced.strikethroughText()                ║
+║  🎨 Medirus.postAdvanced.formatSelectedText(type)           ║
 ║     Format selected text (bold/italic/strikethrough)         ║
 ║                                                              ║
-║  📍 XActions.postAdvanced.addLocation(placeName)             ║
+║  📍 Medirus.postAdvanced.addLocation(placeName)             ║
 ║     Tag a location on your post                              ║
 ║                                                              ║
-║  🏷️  XActions.postAdvanced.tagPeopleInMedia([usernames])     ║
+║  🏷️  Medirus.postAdvanced.tagPeopleInMedia([usernames])     ║
 ║     Tag people in uploaded photos                            ║
 ║                                                              ║
-║  ⚠️  XActions.postAdvanced.markSensitiveContent()            ║
+║  ⚠️  Medirus.postAdvanced.markSensitiveContent()            ║
 ║     Flag media as potentially sensitive                      ║
 ║                                                              ║
-║  💾 XActions.postAdvanced.saveDraft()                        ║
-║  📂 XActions.postAdvanced.loadDrafts()                       ║
-║  🗑️  XActions.postAdvanced.deleteAllDrafts()                 ║
+║  💾 Medirus.postAdvanced.saveDraft()                        ║
+║  📂 Medirus.postAdvanced.loadDrafts()                       ║
+║  🗑️  Medirus.postAdvanced.deleteAllDrafts()                 ║
 ║     Manage compose drafts                                    ║
 ║                                                              ║
-║  ⭐ XActions.postAdvanced.highlightPost(postUrl?)            ║
+║  ⭐ Medirus.postAdvanced.highlightPost(postUrl?)            ║
 ║     Highlight post on profile (Premium)                      ║
 ║                                                              ║
-║  🎬 XActions.postAdvanced.addVideoCaptions()                 ║
+║  🎬 Medirus.postAdvanced.addVideoCaptions()                 ║
 ║     Add .srt subtitles to uploaded video                     ║
 ║                                                              ║
-║  🔵 XActions.postAdvanced.postToCircle(text?)                ║
+║  🔵 Medirus.postAdvanced.postToCircle(text?)                ║
 ║     Post to Twitter Circle (limited audience)                ║
 ║                                                              ║
-║  🎙️  XActions.postAdvanced.postWithVoice()                   ║
+║  🎙️  Medirus.postAdvanced.postWithVoice()                   ║
 ║     Create a voice tweet                                     ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
 
-  console.log('✅ XActions Advanced Post loaded — access via XActions.postAdvanced.*');
+  console.log('✅ Medirus Advanced Post loaded — access via Medirus.postAdvanced.*');
 })();

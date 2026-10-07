@@ -54,7 +54,7 @@ import { tweetToPostItem } from './normalize-tweet.js';
  * @returns {Promise<number>}
  */
 export async function gaussianDelay(min = 3000, max = 7000, mean, stdDev, signal) {
-  if (process.env.XACTIONS_TEST_FAST_DELAYS === '1' || process.env.NODE_ENV === 'test') {
+  if (process.env.MEDIRUS_TEST_FAST_DELAYS === '1' || process.env.NODE_ENV === 'test') {
     await new Promise((resolve) => setTimeout(resolve, 0));
     return 0;
   }
@@ -436,7 +436,7 @@ export class TwitterCrawler extends AbstractCrawler {
       requiresAuth: true,
       requiredArgs: ['text'],
       optionalArgs: ['mediaIds', 'premium', 'sensitive', 'dryRun'],
-      example: { text: 'Hello XActions', mediaIds: ['123'], dryRun: false },
+      example: { text: 'Hello Medirus', mediaIds: ['123'], dryRun: false },
       outputType: '{ tweet: PostItem }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.composeContent(args, session, 'post'),
     });
@@ -473,7 +473,7 @@ export class TwitterCrawler extends AbstractCrawler {
       requiresAuth: true,
       requiredArgs: ['text', 'publishAt'],
       optionalArgs: ['mediaIds', 'premium', 'sensitive', 'dryRun'],
-      example: { text: 'Hello future XActions', publishAt: '2026-09-01T12:00:00Z', dryRun: false },
+      example: { text: 'Hello future Medirus', publishAt: '2026-09-01T12:00:00Z', dryRun: false },
       outputType: '{ tweet: PostItem }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.schedule(args, session),
     });

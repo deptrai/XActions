@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * ➕ Add To List - XActions
+ * ➕ Add To List - Medirus
  * ============================================
  *
  * @name         add-to-list
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to your Lists page: https://x.com/<your-handle>/lists
@@ -149,9 +149,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  ➕ ADD TO LIST - XActions                               ║
+║  ➕ ADD TO LIST - Medirus                               ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

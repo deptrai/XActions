@@ -16,7 +16,7 @@ generatedTestFiles:
   - 'tests/store/prisma-store.test.js'
 inputDocuments:
   - '_bmad-output/implementation-artifacts/10-2-prisma-post-comment-relational-schema-migration.md'
-  - '_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
+  - '_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
   - 'prisma/schema.prisma'
   - 'prisma/migrations/20260818233000_universal_scraping_schema/migration.sql'
 ---
@@ -116,6 +116,6 @@ During implementation with `/bmad-dev-story`:
 
 ## 5. Artifact Handoff
 
-- **Story File:** [`_bmad-output/implementation-artifacts/10-2-prisma-post-comment-relational-schema-migration.md`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/implementation-artifacts/10-2-prisma-post-comment-relational-schema-migration.md)
-- **Checklist File:** [`_bmad-output/test-artifacts/atdd-checklist-10-2-prisma-post-comment-relational-schema-migration.md`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/test-artifacts/atdd-checklist-10-2-prisma-post-comment-relational-schema-migration.md)
-- **Test Scaffolds:** [`tests/store/prisma-store.test.js`](file:///Users/luisphan/Documents/GitHub/XActions/tests/store/prisma-store.test.js)
+- **Story File:** [`_bmad-output/implementation-artifacts/10-2-prisma-post-comment-relational-schema-migration.md`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/implementation-artifacts/10-2-prisma-post-comment-relational-schema-migration.md)
+- **Checklist File:** [`_bmad-output/test-artifacts/atdd-checklist-10-2-prisma-post-comment-relational-schema-migration.md`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/test-artifacts/atdd-checklist-10-2-prisma-post-comment-relational-schema-migration.md)
+- **Test Scaffolds:** [`tests/store/prisma-store.test.js`](file:///Users/luisphan/Documents/GitHub/Medirus/tests/store/prisma-store.test.js)

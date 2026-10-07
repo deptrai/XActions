@@ -26,11 +26,11 @@ deferred: []
 ## Boundaries & Constraints
 
 **Always:**
-- Ensure all emitted events include mandatory CloudEvents v1.0 attributes: `specversion: "1.0"`, `id`, `source` (e.g. `org.xactions.crawler.{platform}`), `type` (e.g. `org.xactions.scrape.completed`), `time` (RFC 3339 ISO string), and `datacontenttype: "application/json"`.
+- Ensure all emitted events include mandatory CloudEvents v1.0 attributes: `specversion: "1.0"`, `id`, `source` (e.g. `org.medirus.crawler.{platform}`), `type` (e.g. `org.medirus.scrape.completed`), `time` (RFC 3339 ISO string), and `datacontenttype: "application/json"`.
 - Generate a deterministic `idempotencyKey` computed from `sha256(`${platform}:${entityId}:${timestampBucket}`)` where `timestampBucket` defaults to hourly resolution (`YYYY-MM-DDTHH`).
 - Provide string-serialized CloudEvents `data` payload for Redis Stream `XADD` storage alongside flat backward-compatible fields (`externalId`, `storageRef`, `workspace_id`, etc.).
 - Maintain zero-exception, non-blocking delivery in `RedisStreamPublisher.publish()`.
-- Ensure all tests run with `XACTIONS_TEST_FAST_DELAYS=1` and complete in < 2 seconds.
+- Ensure all tests run with `MEDIRUS_TEST_FAST_DELAYS=1` and complete in < 2 seconds.
 
 **Never:**
 - NEVER remove legacy flat fields (`platform`, `externalId`, `authorId`, `storageRef`, `content_snippet`, `workspace_id`) that existing consumers and CDC adapters rely on.
@@ -41,7 +41,7 @@ deferred: []
 
 | Scenario | Input / State | Expected Output / Behavior | Error Handling |
 |----------|--------------|---------------------------|----------------|
-| Standard CloudEvents formatting | `ThinEvent` object with `id: 'facebook:123'`, `platform: 'facebook'`, `externalId: '123'` | `formatPayload` returns object containing `specversion: '1.0'`, `source: 'org.xactions.crawler.facebook'`, `type: 'org.xactions.scrape.completed'`, `time`, `datacontenttype: 'application/json'`, `data` JSON string, and deterministic `idempotencyKey` | Falsy input returns empty record `{}` |
+| Standard CloudEvents formatting | `ThinEvent` object with `id: 'facebook:123'`, `platform: 'facebook'`, `externalId: '123'` | `formatPayload` returns object containing `specversion: '1.0'`, `source: 'org.medirus.crawler.facebook'`, `type: 'org.medirus.scrape.completed'`, `time`, `datacontenttype: 'application/json'`, `data` JSON string, and deterministic `idempotencyKey` | Falsy input returns empty record `{}` |
 | Deterministic idempotency hash | Two items with same platform, externalId, and crawledAt within same hour | Both produce identical `idempotencyKey` | Missing externalId falls back to item id |
 | Custom timestamp bucket | Item specifies custom `timestamp_bucket: '2026-09-17'` | `idempotencyKey` incorporates custom bucket | Falls back to ISO hour slice |
 | CloudEvents validation | Valid CloudEvents record passed to `validateCloudEvent(event)` | Returns `true` | Missing required CloudEvents attribute returns `false` with reason |
@@ -67,7 +67,7 @@ deferred: []
 - `tests/core/cloudevents-compliance.test.js` -- Author contract test suite validating CloudEvents v1.0 envelope, idempotency key determinism, and CDC compatibility -- Guarantee downstream ingestion readiness.
 
 **Acceptance Criteria:**
-- Given any item passed to `RedisStreamPublisher.formatPayload()`, when formatted for Redis XADD, then the returned record contains `specversion: "1.0"`, `source: "org.xactions.crawler.<platform>"`, `type: "org.xactions.scrape.completed"`, `datacontenttype: "application/json"`, and a 64-character hex `idempotencyKey`.
+- Given any item passed to `RedisStreamPublisher.formatPayload()`, when formatted for Redis XADD, then the returned record contains `specversion: "1.0"`, `source: "org.medirus.crawler.<platform>"`, `type: "org.medirus.scrape.completed"`, `datacontenttype: "application/json"`, and a 64-character hex `idempotencyKey`.
 - Given two events with the same platform and externalId crawled within the same hour bucket, when `computeIdempotencyKey()` is evaluated, then both produce the exact same SHA-256 hash.
 - Given an event emitted by `AbstractCrawler.execute()`, when validated with `validateCloudEvent()`, then validation passes `true`.
 - Given `vitest run tests/store/redis-stream-publisher.test.js tests/core/`, when executed, then 100% of tests pass.
@@ -86,15 +86,15 @@ deferred: []
   - Finding 4 (Verification Gap Reviewer): Weak assertion `expect(parsedData).toBeDefined()` in `tests/core/cloudevents-compliance.test.js`.
     - *Resolution:* Replaced with domain assertions asserting `text`, `authorName`, and `url` retention in serialized `data`.
   - Finding 5 (Contract/Types): Added type declarations for `computeIdempotencyKey` and `validateCloudEvent` in `types/core.d.ts`.
-  - Verification: Ran `XACTIONS_TEST_FAST_DELAYS=1 npx vitest run tests/store/redis-stream-publisher.test.js tests/core/cloudevents-compliance.test.js tests/core/base-crawler-lifecycle.test.js tests/core/base-crawler-stream.test.js` (54 tests passed) and full `tests/core/` (402 tests passed). All acceptance criteria verified.
+  - Verification: Ran `MEDIRUS_TEST_FAST_DELAYS=1 npx vitest run tests/store/redis-stream-publisher.test.js tests/core/cloudevents-compliance.test.js tests/core/base-crawler-lifecycle.test.js tests/core/base-crawler-stream.test.js` (54 tests passed) and full `tests/core/` (402 tests passed). All acceptance criteria verified.
 
 ## Design Notes
 
 CloudEvents v1.0 specification defines required fields:
 - `specversion`: MUST be "1.0".
 - `id`: Unique identifier (string). Defaults to `${platform}:${externalId}` or item id.
-- `source`: URI-reference describing event source. Defaults to `org.xactions.crawler.${platform}`.
-- `type`: Reverse-DNS type. Defaults to `org.xactions.scrape.completed`.
+- `source`: URI-reference describing event source. Defaults to `org.medirus.crawler.${platform}`.
+- `type`: Reverse-DNS type. Defaults to `org.medirus.scrape.completed`.
 - `datacontenttype`: Content type of the data field ("application/json").
 - `time`: RFC 3339 timestamp.
 - `data`: JSON string representation of the event payload.

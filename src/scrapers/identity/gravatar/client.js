@@ -72,7 +72,7 @@ export class GravatarClient extends AbstractApiClient {
   getDefaultHeaders() {
     return {
       'Accept': 'application/json',
-      'User-Agent': this.options?.userAgent || 'xactions-osint/1.0',
+      'User-Agent': this.options?.userAgent || 'medirus-osint/1.0',
     };
   }
 

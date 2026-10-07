@@ -14,7 +14,7 @@
  *
  * Usage:
  *   node scripts/build-playground.mjs
- *   PLAYGROUND_API_BASE=https://xactions-playground-xyz.run.app node scripts/build-playground.mjs
+ *   PLAYGROUND_API_BASE=https://medirus-playground-xyz.run.app node scripts/build-playground.mjs
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @license Apache-2.0
@@ -32,7 +32,7 @@ const DASHBOARD = path.join(ROOT, 'dashboard');
  * The deployed playground API. The page served by the Cloud Run container
  * talks to itself, so only the static-site copy needs this.
  */
-const API_BASE = process.env.PLAYGROUND_API_BASE || 'https://playground.xactions.app';
+const API_BASE = process.env.PLAYGROUND_API_BASE || 'https://playground.medirus.online';
 
 /** Modules that are authored once and shipped to the browser verbatim. */
 const SHARED_MODULES = [

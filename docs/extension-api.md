@@ -1,4 +1,4 @@
-# XActions Extension — Internal API Reference
+# Medirus Extension — Internal API Reference
 
 Technical documentation of the extension's message protocol, storage schema, service worker API, and event lifecycle.
 
@@ -55,24 +55,24 @@ All communication uses `chrome.runtime.sendMessage` (popup ↔ background ↔ br
 
 Messages between bridge.js and injected.js use `window.postMessage` with a `source` field for routing:
 
-**Extension → Page** (`source: 'xactions-extension'`):
+**Extension → Page** (`source: 'medirus-extension'`):
 
 ```js
-{ source: 'xactions-extension', type: 'RUN_AUTOMATION', automationId: 'autoLiker', settings: {...} }
-{ source: 'xactions-extension', type: 'STOP_AUTOMATION', automationId: 'autoLiker' }
-{ source: 'xactions-extension', type: 'STOP_ALL' }
-{ source: 'xactions-extension', type: 'PAUSE_ALL' }
-{ source: 'xactions-extension', type: 'RESUME_ALL' }
-{ source: 'xactions-extension', type: 'GET_ACCOUNT_INFO' }
+{ source: 'medirus-extension', type: 'RUN_AUTOMATION', automationId: 'autoLiker', settings: {...} }
+{ source: 'medirus-extension', type: 'STOP_AUTOMATION', automationId: 'autoLiker' }
+{ source: 'medirus-extension', type: 'STOP_ALL' }
+{ source: 'medirus-extension', type: 'PAUSE_ALL' }
+{ source: 'medirus-extension', type: 'RESUME_ALL' }
+{ source: 'medirus-extension', type: 'GET_ACCOUNT_INFO' }
 ```
 
-**Page → Extension** (`source: 'xactions-page'`):
+**Page → Extension** (`source: 'medirus-page'`):
 
 ```js
-{ source: 'xactions-page', type: 'ACTION_PERFORMED', automationId: 'autoLiker', action: 'Liked tweet: ...' }
-{ source: 'xactions-page', type: 'AUTOMATION_COMPLETE', automationId: 'autoLiker', summary: '20 likes' }
-{ source: 'xactions-page', type: 'AUTOMATION_ERROR', automationId: 'autoLiker', error: 'Rate limited' }
-{ source: 'xactions-page', type: 'ACCOUNT_INFO', data: { name, handle, avatar, url } }
+{ source: 'medirus-page', type: 'ACTION_PERFORMED', automationId: 'autoLiker', action: 'Liked tweet: ...' }
+{ source: 'medirus-page', type: 'AUTOMATION_COMPLETE', automationId: 'autoLiker', summary: '20 likes' }
+{ source: 'medirus-page', type: 'AUTOMATION_ERROR', automationId: 'autoLiker', error: 'Rate limited' }
+{ source: 'medirus-page', type: 'ACCOUNT_INFO', data: { name, handle, avatar, url } }
 ```
 
 ---
@@ -221,17 +221,17 @@ activityLog: [
 
 ### Page-Context localStorage
 
-Injected.js uses `localStorage` (not chrome.storage) with `xactions_` prefix:
+Injected.js uses `localStorage` (not chrome.storage) with `medirus_` prefix:
 
 ```js
-xactions_liked_tweets      // JSON Set of tweet IDs (auto-liker)
-xactions_followed_users    // JSON object { username: { followedAt } } (keyword follow)
-xactions_commented_tweets  // JSON Set of tweet IDs (auto-commenter)
-xactions_follower_snapshot // JSON { users: [...], timestamp } (unfollower detector)
-xactions_unfollower_history // JSON array of { unfollower, detectedAt } (max 50)
-xactions_best_time_results // JSON analysis results
-xactions_quick_stats       // JSON { engagementRate, avgLikes, ... }
-xactions_daily_stats       // JSON array of daily snapshots (max 90)
+medirus_liked_tweets      // JSON Set of tweet IDs (auto-liker)
+medirus_followed_users    // JSON object { username: { followedAt } } (keyword follow)
+medirus_commented_tweets  // JSON Set of tweet IDs (auto-commenter)
+medirus_follower_snapshot // JSON { users: [...], timestamp } (unfollower detector)
+medirus_unfollower_history // JSON array of { unfollower, detectedAt } (max 50)
+medirus_best_time_results // JSON analysis results
+medirus_quick_stats       // JSON { engagementRate, avgLikes, ... }
+medirus_daily_stats       // JSON array of daily snapshots (max 90)
 ```
 
 ---
@@ -270,15 +270,15 @@ const state = {
 
 | Alarm | Interval | Purpose |
 |---|---|---|
-| `xactions-health-check` | 1 minute | Pings content scripts to verify they're alive |
+| `medirus-health-check` | 1 minute | Pings content scripts to verify they're alive |
 
 ### Context Menus
 
 | Menu ID | Title | Action |
 |---|---|---|
-| `xactions-download-video` | Download video (XActions) | Sends `RUN_AUTOMATION` for videoDownloader |
-| `xactions-unroll-thread` | Unroll thread (XActions) | Sends `RUN_AUTOMATION` for threadReader |
-| `xactions-analyze-account` | Analyze account (XActions) | Sends `RUN_AUTOMATION` for quickStats |
+| `medirus-download-video` | Download video (Medirus) | Sends `RUN_AUTOMATION` for videoDownloader |
+| `medirus-unroll-thread` | Unroll thread (Medirus) | Sends `RUN_AUTOMATION` for threadReader |
+| `medirus-analyze-account` | Analyze account (Medirus) | Sends `RUN_AUTOMATION` for quickStats |
 
 ### Rate Limit Detection
 
@@ -300,7 +300,7 @@ Creates a `<script src="chrome.runtime.getURL('content/injected.js')">` element 
 
 ### Guard
 
-`window.__xactions_bridge_loaded` prevents double-injection if the content script runs multiple times.
+`window.__medirus_bridge_loaded` prevents double-injection if the content script runs multiple times.
 
 ### Message Routing
 
@@ -308,10 +308,10 @@ Creates a `<script src="chrome.runtime.getURL('content/injected.js')">` element 
 Page (injected.js)                 Bridge (bridge.js)              Background (service-worker.js)
       │                                  │                                │
       │──window.postMessage──►           │                                │
-      │  source: 'xactions-page'         │──chrome.runtime.sendMessage──► │
+      │  source: 'medirus-page'         │──chrome.runtime.sendMessage──► │
       │                                  │                                │
       │           ◄──window.postMessage──│                                │
-      │  source: 'xactions-extension'    │◄──chrome.tabs.sendMessage──────│
+      │  source: 'medirus-extension'    │◄──chrome.tabs.sendMessage──────│
       │                                  │                                │
 ```
 
@@ -321,12 +321,12 @@ Page (injected.js)                 Bridge (bridge.js)              Background (s
 
 `content/injected.js` runs in the page's JS context (full DOM access).
 
-### Core Module (`window.XActions.Core`)
+### Core Module (`window.Medirus.Core`)
 
 ```js
-window.XActions = {
+window.Medirus = {
   Core: {
-    CONFIG: { DELAY_SHORT, DELAY_MEDIUM, DELAY_LONG, DELAY_BETWEEN_ACTIONS, MAX_ACTIONS_PER_HOUR, MAX_FOLLOWS_PER_DAY, MAX_LIKES_PER_DAY, DEBUG },
+    CONFIG: { DELAY_SHORT, DELAY_MEDIUM, DELAY_LONG, DELAY_BETWEEN_ACTIONS, MAMEDIRUS_PER_HOUR, MAX_FOLLOWS_PER_DAY, MAX_LIKES_PER_DAY, DEBUG },
     SELECTORS: { followButton, unfollowButton, likeButton, unlikeButton, retweetButton, replyButton, confirmButton, tweet, tweetText, tweetLink, userCell, userAvatar, userName, userFollowIndicator, tweetInput, searchInput, primaryColumn, timeline },
     sleep: (ms) => Promise<void>,
     randomDelay: (min, max) => Promise<void>,
@@ -334,7 +334,7 @@ window.XActions = {
     scrollToBottom: () => void,
     scrollToTop: () => void,
     scrollBy: (px) => void,
-    storage: { get, set, remove },                    // localStorage with xactions_ prefix
+    storage: { get, set, remove },                    // localStorage with medirus_ prefix
     waitForElement: (selector, timeout) => Promise<Element|null>,
     waitForElements: (selector, timeout) => Promise<NodeList>,
     clickElement: (el) => void,                       // scrollIntoView + click
@@ -372,7 +372,7 @@ window.XActions = {
 ```js
 // Register a new automation
 registerAutomation(id, async (settings) => {
-  const { sleep, log, SELECTORS, scrollBy, clickElement } = window.XActions.Core;
+  const { sleep, log, SELECTORS, scrollBy, clickElement } = window.Medirus.Core;
   // ... automation logic
   // Check stop flag: if (automationStopFlags[id]) return;
   // Log actions: log(id, 'Did something');
@@ -451,7 +451,7 @@ Toasts auto-dismiss after 3.2 seconds with CSS animation.
    → chrome.tabs.sendMessage(tabId, { type: 'RUN_AUTOMATION', automationId, settings })
    → logActivity({ type: 'start', automation: id })
 6. bridge.js: receives chrome.runtime.onMessage
-   → window.postMessage({ source: 'xactions-extension', type: 'RUN_AUTOMATION', ... })
+   → window.postMessage({ source: 'medirus-extension', type: 'RUN_AUTOMATION', ... })
 7. injected.js: receives window message
    → Calls automationRunners[id](settings)
    → Automation runs, periodically posting ACTION_PERFORMED back
@@ -462,7 +462,7 @@ Toasts auto-dismiss after 3.2 seconds with CSS animation.
 
 ```
 1. injected.js: Core.log(id, 'Liked tweet: ...')
-   → window.postMessage({ source: 'xactions-page', type: 'ACTION_PERFORMED', ... })
+   → window.postMessage({ source: 'medirus-page', type: 'ACTION_PERFORMED', ... })
 2. bridge.js: receives window message
    → chrome.runtime.sendMessage({ type: 'ACTION_PERFORMED', automationId, action })
    → chrome.runtime.sendMessage({ type: 'ACTIVITY_LOG', entry: { type: 'action', ... } })
@@ -486,7 +486,7 @@ Toasts auto-dismiss after 3.2 seconds with CSS animation.
 3. globalPause() → sets globalPaused, notifies all content scripts
 4. logActivity({ type: 'error', message: 'Rate limit detected (HTTP 429)' })
 5. chrome.storage.local.set({ rateLimited: true })
-6. chrome.notifications.create('rate-limit', { title: 'XActions — Rate Limited', ... })
+6. chrome.notifications.create('rate-limit', { title: 'Medirus — Rate Limited', ... })
 7. popup.js: (on next open or polling) reads rateLimited → shows banner
 ```
 
@@ -500,7 +500,7 @@ Toasts auto-dismiss after 3.2 seconds with CSS animation.
    → syncState(), updateBadge() → empty badge
    → chrome.tabs.sendMessage(tabId, { type: 'STOP_ALL' }) to all X tabs
    → logActivity({ type: 'stop', automation: 'all' })
-4. bridge.js: window.postMessage({ source: 'xactions-extension', type: 'STOP_ALL' })
+4. bridge.js: window.postMessage({ source: 'medirus-extension', type: 'STOP_ALL' })
 5. injected.js: Sets all automationStopFlags to true
 6. popup.js: Resets all card UIs, shows toast, updates dashboard
 ```

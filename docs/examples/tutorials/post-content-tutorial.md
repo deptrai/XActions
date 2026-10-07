@@ -1,11 +1,11 @@
 # Post Content -- Tutorial
 
-> Step-by-step guide to posting tweets with text, photos, GIFs, videos, and links using XActions browser scripts and Node.js/Puppeteer.
+> Step-by-step guide to posting tweets with text, photos, GIFs, videos, and links using Medirus browser scripts and Node.js/Puppeteer.
 
 ## Prerequisites
 - Logged into x.com in your browser
 - Browser DevTools console (F12 -> Console tab)
-- For Node.js usage: `npm install xactions` and a valid session cookie
+- For Node.js usage: `npm install medirus` and a valid session cookie
 
 ## Quick Start
 1. Navigate to x.com
@@ -28,7 +28,7 @@ document.querySelector('[data-testid="SideNav_NewTweet_Button"]').click();
 setTimeout(() => {
   const textarea = document.querySelector('[data-testid="tweetTextarea_0"]');
   textarea.focus();
-  document.execCommand('insertText', false, 'Hello from XActions!');
+  document.execCommand('insertText', false, 'Hello from Medirus!');
 }, 1500);
 ```
 
@@ -46,7 +46,7 @@ The `postTweet` function automates the full flow using Puppeteer:
 import { postTweet } from './src/postComposer.js';
 
 // Simple text post
-const result = await postTweet(page, 'Hello from XActions!');
+const result = await postTweet(page, 'Hello from Medirus!');
 
 // Post with an image and alt text
 const result = await postTweet(page, 'Check out this photo!', {

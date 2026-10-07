@@ -47,7 +47,7 @@
 | kolscan.io | 200 HTML | SPA — data qua internal API, cần probe sâu hơn |
 | Jupiter quote-api v6 | dead/empty | Jupiter đã migrate sang `lite-api.jup.ag` (v1) — endpoint cũ deprecated |
 | tokens.jup.ag | HTTP 000 | timeout/dead — Jupiter API surface đã đổi |
-| `frontend-api-v3.pump.fun/coins/{mint}` | 404 curl | CẦN CF browser session — in-browser fetch trả 200 (prior digest), plain curl bị chặn. XActions crawl qua browser/CF-passing transport = OK |
+| `frontend-api-v3.pump.fun/coins/{mint}` | 404 curl | CẦN CF browser session — in-browser fetch trả 200 (prior digest), plain curl bị chặn. Medirus crawl qua browser/CF-passing transport = OK |
 | `frontend-api-v3.pump.fun/coins/currently-live` | ✅ 200 với UA+Origin headers | không cần auth cho feed endpoint, chỉ cần browser-like headers |
 
 ## Key insight: Dexscreener = highest-value add

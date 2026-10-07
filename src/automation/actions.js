@@ -1,18 +1,18 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Actions Library - Complete X/Twitter Actions
+// Medirus Actions Library - Complete X/Twitter Actions
 // https://github.com/nirholas/XActions
 //
 // This module contains ALL available X/Twitter actions - visible, hidden, and undocumented.
-// Paste core.js FIRST, then this file. Other scripts can use window.XActions.
+// Paste core.js FIRST, then this file. Other scripts can use window.Medirus.
 //
-// Usage: XActions.tweet.post("Hello world!")
-//        XActions.user.follow("username")
-//        XActions.dm.send("username", "Hi there!")
+// Usage: Medirus.tweet.post("Hello world!")
+//        Medirus.user.follow("username")
+//        Medirus.dm.send("username", "Hi there!")
 
-window.XActions = window.XActions || {};
+window.Medirus = window.Medirus || {};
 
-window.XActions = (() => {
-  const Core = window.XActions?.Core;
+window.Medirus = (() => {
+  const Core = window.Medirus?.Core;
   if (!Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return null;
@@ -1787,7 +1787,7 @@ window.XActions = (() => {
     // Clear all X data from localStorage
     clearXData: () => {
       Object.keys(localStorage)
-        .filter(k => k.includes('twitter') || k.includes('x.com') || k.startsWith('xactions_'))
+        .filter(k => k.includes('twitter') || k.includes('x.com') || k.startsWith('medirus_'))
         .forEach(k => localStorage.removeItem(k));
       log('X data cleared from localStorage', 'success');
     },
@@ -2073,7 +2073,7 @@ window.XActions = (() => {
   };
 
   // Expose ALL sections
-  log('XActions FULL library loaded!', 'success');
+  log('Medirus FULL library loaded!', 'success');
   
   return {
     SEL,
@@ -2094,23 +2094,23 @@ window.XActions = (() => {
 
 console.log(`
 ╔══════════════════════════════════════════════════════════════════════╗
-║  📦 XActions Library - COMPLETE (All 9 Sections)                     ║
+║  📦 Medirus Library - COMPLETE (All 9 Sections)                     ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  ✅ XActions.tweet       - Post, reply, quote, delete, pin, thread   ║
-║  ✅ XActions.engage      - Like, RT, bookmark, share, highlight      ║
-║  ✅ XActions.user        - Follow, block, mute, lists, restrict      ║
-║  ✅ XActions.dm          - Send, group, react, GIFs, delete          ║
-║  ✅ XActions.search      - Query, filters, advanced operators        ║
-║  ✅ XActions.nav         - Navigation, tabs, scroll, timeline        ║
-║  ✅ XActions.lists       - Create, edit, delete, follow, pin         ║
-║  ✅ XActions.settings    - Account, privacy, muted words             ║
-║  ✅ XActions.profile     - Edit name, bio, location, avatar          ║
-║  ✅ XActions.utils       - Tokens, export, dev mode, clipboard       ║
-║  ✅ XActions.spaces      - Join, leave, request speaker, share       ║
-║  ✅ XActions.communities - Browse, join, leave, post                 ║
+║  ✅ Medirus.tweet       - Post, reply, quote, delete, pin, thread   ║
+║  ✅ Medirus.engage      - Like, RT, bookmark, share, highlight      ║
+║  ✅ Medirus.user        - Follow, block, mute, lists, restrict      ║
+║  ✅ Medirus.dm          - Send, group, react, GIFs, delete          ║
+║  ✅ Medirus.search      - Query, filters, advanced operators        ║
+║  ✅ Medirus.nav         - Navigation, tabs, scroll, timeline        ║
+║  ✅ Medirus.lists       - Create, edit, delete, follow, pin         ║
+║  ✅ Medirus.settings    - Account, privacy, muted words             ║
+║  ✅ Medirus.profile     - Edit name, bio, location, avatar          ║
+║  ✅ Medirus.utils       - Tokens, export, dev mode, clipboard       ║
+║  ✅ Medirus.spaces      - Join, leave, request speaker, share       ║
+║  ✅ Medirus.communities - Browse, join, leave, post                 ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  💡 Example: XActions.tweet.post("Hello!")                           ║
-║  💡 Example: XActions.user.follow("elonmusk")                        ║
-║  💡 Example: XActions.search.advanced({from:"user", minFaves:100})   ║
+║  💡 Example: Medirus.tweet.post("Hello!")                           ║
+║  💡 Example: Medirus.user.follow("elonmusk")                        ║
+║  💡 Example: Medirus.search.advanced({from:"user", minFaves:100})   ║
 ╚══════════════════════════════════════════════════════════════════════╝
 `);

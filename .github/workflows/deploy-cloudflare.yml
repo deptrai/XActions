@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# XActions — Deploy Static Frontend to Cloudflare Pages
+# Medirus — Deploy Static Frontend to Cloudflare Pages
 # Triggers on push to main when dashboard files change
 # by nichxbt
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -37,4 +37,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dashboard --project-name=xactions
+          command: pages deploy dashboard --project-name=medirus

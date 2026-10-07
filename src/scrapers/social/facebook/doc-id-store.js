@@ -5,7 +5,7 @@
  * doc_ids are Relay persisted-query identifiers issued by Facebook's servers per
  * web-app build: identical for every account at a point in time, rotated when
  * Facebook deploys a new build. They are captured once from any authenticated
- * session (see doc-id-capture.js / `xactions fb capture-docids`) and reused by
+ * session (see doc-id-capture.js / `medirus fb capture-docids`) and reused by
  * every account and guest session until rotation.
  *
  * This module owns the persistence layer:
@@ -28,13 +28,13 @@ const AUTO_REFRESH_FAILURE_THRESHOLD = 3;
 
 /**
  * Resolve where the doc_id store lives.
- * Priority: FACEBOOK_DOCIDS_PATH env > ~/.xactions/facebook-docids.json
+ * Priority: FACEBOOK_DOCIDS_PATH env > ~/.medirus/facebook-docids.json
  * @returns {string}
  */
 export function getDocIdStorePath() {
   return (
     process.env.FACEBOOK_DOCIDS_PATH ||
-    path.join(os.homedir(), '.xactions', 'facebook-docids.json')
+    path.join(os.homedir(), '.medirus', 'facebook-docids.json')
   );
 }
 

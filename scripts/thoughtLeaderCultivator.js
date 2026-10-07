@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions - Thought Leader Algorithm Cultivator (Standalone)
+// Medirus - Thought Leader Algorithm Cultivator (Standalone)
 // https://github.com/nirholas/XActions
 // by nichxbt
 //

@@ -1,5 +1,5 @@
 ---
-name: XActions
+name: Medirus
 status: final
 updated: 2026-09-25
 description: Internal social-intelligence & automation dashboard for a small team. Next.js + Tailwind (slate palette), lucide icons, system font stack, light/dark. This DESIGN.md specifies the visual identity deltas only — everything unlisted inherits the existing Tailwind slate base.
@@ -72,7 +72,7 @@ components:
 
 ## Brand & Style
 
-XActions is an **internal intelligence-and-automation workbench** for a small team — not a consumer SaaS. The visual posture is *calm engineering console*: dense, legible, low-chrome, dark-mode-first-tolerant. The interface's job is to get out of the way of ~30 power features; ornament is a bug. The one brand color is **Electric Blue (`#2563EB`)** — used for primary actions and the *active navigation state*. Everything else is the neutral slate surface that lets badges and live-data do the talking.
+Medirus is an **internal intelligence-and-automation workbench** for a small team — not a consumer SaaS. The visual posture is *calm engineering console*: dense, legible, low-chrome, dark-mode-first-tolerant. The interface's job is to get out of the way of ~30 power features; ornament is a bug. The one brand color is **Electric Blue (`#2563EB`)** — used for primary actions and the *active navigation state*. Everything else is the neutral slate surface that lets badges and live-data do the talking.
 
 The product already runs Tailwind's slate palette with light/dark and a system font stack. This DESIGN.md specifies only the **navigation + layout brand layer**; it does not restyle every component. Buttons, cards, inputs, tables inherit existing Tailwind/shadcn-idiom styles.
 

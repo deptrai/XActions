@@ -113,14 +113,14 @@ describe('apiPathFor', () => {
 describe('permalinks', () => {
   it('round-trips a query through a URL', () => {
     const original = resolveQuery('report', { username: 'nasa', limit: 40 });
-    const link = permalinkFor(original, 'https://xactions.app');
+    const link = permalinkFor(original, 'https://medirus.online');
     const search = new URL(link).search;
     expect(queryFromSearch(search)).toEqual(original);
   });
 
   it('round-trips a comparison', () => {
     const original = resolveQuery('compare', { users: 'nasa,spacex', limit: 25 });
-    const search = new URL(permalinkFor(original, 'https://xactions.app')).search;
+    const search = new URL(permalinkFor(original, 'https://medirus.online')).search;
     expect(queryFromSearch(search)).toEqual(original);
   });
 
@@ -171,7 +171,7 @@ describe('translateQuery', () => {
     for (const kind of Object.keys(QUERIES)) {
       const input = kind === 'compare' ? { users: 'nasa,spacex' } : { username: 'nasa' };
       const cli = translateQuery(resolveQuery(kind, input)).find((l) => l.id === 'cli').code;
-      const command = cli.replace('npx xactions ', '').split(' ')[0];
+      const command = cli.replace('npx medirus ', '').split(' ')[0];
       expect(commands.has(command)).toBe(true);
     }
   });

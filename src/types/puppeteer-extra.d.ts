@@ -17,7 +17,7 @@ declare module 'puppeteer' {
     /** Native page object from the underlying framework. */
     _native?: unknown;
     /** Browser reference attached by the multi-platform scraper dispatcher. */
-    __xactions_browser?: Browser;
+    __medirus_browser?: Browser;
   }
 }
 

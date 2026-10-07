@@ -170,7 +170,7 @@
         tweets: classified.sort((a, b) => b.viral.stars - a.viral.stars || b.velocity - a.velocity),
         analyzedAt: new Date().toISOString(),
         page: window.location.href,
-      }, `xactions-viral-${new Date().toISOString().slice(0, 10)}.json`);
+      }, `medirus-viral-${new Date().toISOString().slice(0, 10)}.json`);
       console.log('\n📥 Results exported as JSON.');
     }
   };

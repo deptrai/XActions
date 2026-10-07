@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions AI Hashtag & Content Optimizer
+ * Medirus AI Hashtag & Content Optimizer
  * Suggests hashtags, improves tweet text, predicts performance.
  *
  * Kills: Taplio (AI hashtag suggestions)
@@ -358,8 +358,8 @@ async function callLLM(apiKey, prompt) {
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://xactions.app',
-      'X-Title': 'XActions',
+      'HTTP-Referer': 'https://medirus.online',
+      'X-Title': 'Medirus',
     },
     body: JSON.stringify({
       model: process.env.OPENROUTER_MODEL || DEFAULT_MODEL,

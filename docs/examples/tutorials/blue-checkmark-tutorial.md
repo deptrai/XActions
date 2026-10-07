@@ -1,15 +1,15 @@
 ---
 title: "Blue Checkmark & Fewer Ads — Tutorial"
-description: "Get verified with a blue checkmark, reduce ads, and unlock prioritized replies on X/Twitter using XActions."
-keywords: ["twitter blue checkmark", "x verification", "fewer ads twitter", "prioritized replies x", "xactions premium manager"]
-canonical: "https://xactions.app/examples/blue-checkmark"
+description: "Get verified with a blue checkmark, reduce ads, and unlock prioritized replies on X/Twitter using Medirus."
+keywords: ["twitter blue checkmark", "x verification", "fewer ads twitter", "prioritized replies x", "medirus premium manager"]
+canonical: "https://medirus.online/examples/blue-checkmark"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Blue Checkmark & Fewer Ads — Tutorial
 
-> Step-by-step guide to getting verified, reducing ads, and understanding prioritized replies on X/Twitter using XActions.
+> Step-by-step guide to getting verified, reducing ads, and understanding prioritized replies on X/Twitter using Medirus.
 
 **Works on:** Browser Console | Node.js (Puppeteer)
 **Difficulty:** Beginner
@@ -59,7 +59,7 @@ import { checkPremiumStatus, getTierFeatures, compareTiers } from './src/premium
 
 ```javascript
 (() => {
-  console.log('💎 BLUE CHECKMARK & ADS - XActions by nichxbt\n');
+  console.log('💎 BLUE CHECKMARK & ADS - Medirus by nichxbt\n');
 
   // Check for verified badge
   const verifiedIcon = document.querySelector('[data-testid="icon-verified"]');
@@ -201,7 +201,7 @@ console.log(comparison);
 ### Expected Console Output
 
 ```
-💎 BLUE CHECKMARK & ADS - XActions by nichxbt
+💎 BLUE CHECKMARK & ADS - Medirus by nichxbt
 
 ✅ Blue checkmark detected — you have Premium!
 
@@ -265,5 +265,5 @@ Articles             | ❌      | ❌      | ❌      | ✅
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

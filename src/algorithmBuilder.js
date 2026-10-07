@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
 /**
- * XActions Algorithm Builder
+ * Medirus Algorithm Builder
  * 
  * 24/7 automated account growth engine powered by Puppeteer + LLM.
  * Builds up your X/Twitter algorithm and persona by:
@@ -176,7 +176,7 @@ async function humanType(page, selector, text) {
 /**
  * Human-like scrolling with variable speed and pauses
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').XActionsOptions} [options]
+ * @param {import('./types/medirus.js').MedirusOptions} [options]
  */
 async function humanScroll(page, options = {}) {
   const scrolls = options.scrolls || randomBetween(3, 8);
@@ -201,7 +201,7 @@ async function humanScroll(page, options = {}) {
 /**
  * Call OpenRouter for text generation
  * @param {Record<string, string>[]} messages
- * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/medirus.js').Persona} persona
  */
 async function callLLM(messages, persona) {
   const apiKey = persona.llm.apiKey || process.env.OPENROUTER_API_KEY;
@@ -218,8 +218,8 @@ async function callLLM(messages, persona) {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://xactions.app',
-        'X-Title': 'XActions Algorithm Builder',
+        'HTTP-Referer': 'https://medirus.online',
+        'X-Title': 'Medirus Algorithm Builder',
       },
       body: JSON.stringify({
         model,
@@ -235,7 +235,7 @@ async function callLLM(messages, persona) {
       return null;
     }
 
-    const data = /** @type {import('./types/xactions.js').LLMResponse} */ (await response.json());
+    const data = /** @type {import('./types/medirus.js').LLMResponse} */ (await response.json());
     return data.choices?.[0]?.message?.content?.trim() || null;
   } catch (err) {
     log('❌', `LLM request failed: ${(/** @type {Error} */ (err)).message}`);
@@ -247,7 +247,7 @@ async function callLLM(messages, persona) {
  * Generate a comment for a tweet using persona's voice
  * @param {string} tweetText
  * @param {string} tweetAuthor
- * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/medirus.js').Persona} persona
  */
 async function generateComment(tweetText, tweetAuthor, persona) {
   const systemPrompt = buildPersonaSystemPrompt(persona);
@@ -269,8 +269,8 @@ async function generateComment(tweetText, tweetAuthor, persona) {
 
 /**
  * Generate an original post using persona's voice
- * @param {import('./types/xactions.js').Persona} persona
- * @param {import('./types/xactions.js').XActionsOptions} [context]
+ * @param {import('./types/medirus.js').Persona} persona
+ * @param {import('./types/medirus.js').MedirusOptions} [context]
  */
 async function generatePost(persona, context = {}) {
   const systemPrompt = buildPersonaSystemPrompt(persona);
@@ -344,10 +344,10 @@ async function jevFilter(text, keywords) {
 /**
  * Extract visible tweets from the current page
  * @param {import('puppeteer').Page} page
- * @returns {Promise<import('./types/xactions.js').VisibleTweet[]>}
+ * @returns {Promise<import('./types/medirus.js').VisibleTweet[]>}
  */
 async function extractVisibleTweets(page) {
-  return /** @type {import('./types/xactions.js').VisibleTweet[]} */ (await page.evaluate((sel) => {
+  return /** @type {import('./types/medirus.js').VisibleTweet[]} */ (await page.evaluate((sel) => {
     const tweets = document.querySelectorAll(sel.tweet);
     return Array.from(tweets).slice(0, 20).map(tweet => {
       const textEl = tweet.querySelector(sel.tweetText);
@@ -379,10 +379,10 @@ async function extractVisibleTweets(page) {
 /**
  * Extract visible user cells from the current page
  * @param {import('puppeteer').Page} page
- * @returns {Promise<import('./types/xactions.js').VisibleUser[]>}
+ * @returns {Promise<import('./types/medirus.js').VisibleUser[]>}
  */
 async function extractVisibleUsers(page) {
-  return /** @type {import('./types/xactions.js').VisibleUser[]} */ (await page.evaluate((sel) => {
+  return /** @type {import('./types/medirus.js').VisibleUser[]} */ (await page.evaluate((sel) => {
     const cells = document.querySelectorAll(sel.userCell);
     return Array.from(cells).slice(0, 15).map(cell => {
       const links = cell.querySelectorAll('a[role="link"]');
@@ -472,7 +472,7 @@ async function likeTweet(page, tweetIndex = null) {
 /**
  * Follow a user on the current page
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/medirus.js').Persona} persona
  * @param {string|null} [username]
  */
 async function followUser(page, persona, username = null) {
@@ -510,8 +510,8 @@ async function followUser(page, persona, username = null) {
 /**
  * Comment on a tweet using LLM-generated text
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').Persona} persona
- * @param {import('./types/xactions.js').VisibleTweet} tweet
+ * @param {import('./types/medirus.js').Persona} persona
+ * @param {import('./types/medirus.js').VisibleTweet} tweet
  */
 async function commentOnTweet(page, persona, tweet) {
   if (!tweet?.text || !tweet?.author) return false;
@@ -560,7 +560,7 @@ async function commentOnTweet(page, persona, tweet) {
 /**
  * Create an original post using LLM
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/medirus.js').Persona} persona
  */
 async function createPost(page, persona) {
   const postText = await generatePost(persona);
@@ -667,7 +667,7 @@ async function checkNotifications(page) {
 /**
  * Smart unfollow — unfollow users who didn't follow back after the grace period
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/medirus.js').Persona} persona
  * @param {number} [maxUnfollows]
  */
 async function smartUnfollow(page, persona, maxUnfollows = 5) {
@@ -743,13 +743,13 @@ async function smartUnfollow(page, persona, maxUnfollows = 5) {
 /**
  * Run a single session with the given activity plan
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').Persona} persona
- * @param {import('./types/xactions.js').ActivityPlan} plan
+ * @param {import('./types/medirus.js').Persona} persona
+ * @param {import('./types/medirus.js').ActivityPlan} plan
  */
 async function runSession(page, persona, plan) {
   const startTime = Date.now();
   const maxDuration = plan.duration * 60 * 1000;
-  /** @type {import('./types/xactions.js').SessionStats} */
+  /** @type {import('./types/medirus.js').SessionStats} */
   const stats = {
     searches: 0,
     likes: 0,
@@ -764,14 +764,14 @@ async function runSession(page, persona, plan) {
   log('🎬', `Starting session — ${plan.activities.length} activities planned, ~${plan.duration}min`);
 
   // Collect tweets and users as we browse
-  /** @type {import('./types/xactions.js').VisibleTweet[]} */
+  /** @type {import('./types/medirus.js').VisibleTweet[]} */
   let collectedTweets = [];
-  /** @type {import('./types/xactions.js').VisibleUser[]} */
+  /** @type {import('./types/medirus.js').VisibleUser[]} */
   let collectedUsers = [];
   let tweetCursor = 0;
   let userCursor = 0;
 
-  for (const activity of /** @type {import('./types/xactions.js').Activity[]} */ (plan.activities)) {
+  for (const activity of /** @type {import('./types/medirus.js').Activity[]} */ (plan.activities)) {
     // Check time limit
     if (Date.now() - startTime > maxDuration) {
       log('⏰', 'Session time limit reached');
@@ -864,7 +864,7 @@ async function runSession(page, persona, plan) {
 
           // Pick a tweet with decent engagement to comment on
           const goodTweets = collectedTweets.filter(t => t.likes > 5 && !t.isLiked);
-          /** @type {import('./types/xactions.js').VisibleTweet | null} */
+          /** @type {import('./types/medirus.js').VisibleTweet | null} */
           let target = goodTweets.length > 0
             ? goodTweets[Math.floor(Math.random() * Math.min(goodTweets.length, 5))]
             : collectedTweets[0];
@@ -971,7 +971,7 @@ async function runSession(page, persona, plan) {
 /**
  * Start the algorithm builder — runs continuously with human-like patterns.
  *
- * @param {Partial<import('./types/xactions.js').StartOptions>} [options]
+ * @param {Partial<import('./types/medirus.js').StartOptions>} [options]
  */
 async function startAlgorithmBuilder(options = {}) {
   const {
@@ -985,11 +985,11 @@ async function startAlgorithmBuilder(options = {}) {
   } = options;
 
   if (!personaId) throw new Error('personaId is required');
-  if (!authToken && !process.env.XACTIONS_SESSION_COOKIE) {
-    throw new Error('authToken or XACTIONS_SESSION_COOKIE env var required');
+  if (!authToken && !process.env.MEDIRUS_SESSION_COOKIE) {
+    throw new Error('authToken or MEDIRUS_SESSION_COOKIE env var required');
   }
 
-  const cookie = /** @type {string} */ (authToken || process.env.XACTIONS_SESSION_COOKIE);
+  const cookie = /** @type {string} */ (authToken || process.env.MEDIRUS_SESSION_COOKIE);
   const persona = loadPersona(personaId);
   if (!persona) {
     throw new Error(`Persona ${personaId} not found`);
@@ -1099,7 +1099,7 @@ async function startAlgorithmBuilder(options = {}) {
 
 /**
  * Run a single session (useful for testing)
- * @param {Partial<import('./types/xactions.js').StartOptions>} [options]
+ * @param {Partial<import('./types/medirus.js').StartOptions>} [options]
  */
 async function runSingleSession(options = {}) {
   return startAlgorithmBuilder({ ...options, maxSessions: 1 });

@@ -1,14 +1,14 @@
 ---
-name: 'XActions Unified Facebook Execution Gateway'
+name: 'Medirus Unified Facebook Execution Gateway'
 type: architecture-spine
 purpose: build-substrate
 altitude: epic
 paradigm: 'Gateway + Session Factory + Account Pool + Adaptive Governor'
-scope: 'All Facebook scrape and automate operations in XActions: profile, posts, search, comments, groups, like, comment, post, share, friend, join, messenger.'
+scope: 'All Facebook scrape and automate operations in Medirus: profile, posts, search, comments, groups, like, comment, post, share, friend, join, messenger.'
 status: superseded
 created: '2026-08-23'
 updated: '2026-08-27'
-superseded_by: '_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
+superseded_by: '_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
 reason: 'The gateway/session-factory/account-pool concepts have been subsumed into the Hybrid Scraping Spine AbstractCrawler + BaseHybridClient + CrawlerGovernor integration. The active implementation path is now src/scrapers/social/facebook/ (see Epic 13, Stories 13.3-13.10).'
 binds:
   - 'api/routes/facebook.js'
@@ -22,15 +22,15 @@ binds:
   - 'src/core/error-envelope.js'
   - 'src/proxy/proxy-pool.js'
 sources:
-  - '_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
+  - '_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
 companions: []
 ---
 
-# Architecture Spine — XActions Unified Facebook Execution Gateway
+# Architecture Spine — Medirus Unified Facebook Execution Gateway
 
 > **STATUS: SUPERSEDED — 2026-08-27**
 >
-> This architecture spine is **superseded by** `xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`. The gateway/session-factory/account-pool ideas are being absorbed into the hybrid engine: `FacebookCrawler` extends `AbstractCrawler`, `FacebookClient` extends `BaseHybridClient`, and `CrawlerGovernor` + `AccountPool` provide the rate-limit and account-lifecycle controls. The active implementation path for Facebook is `src/scrapers/social/facebook/` under Epic 13 (Stories 13.3–13.10). This document is preserved as a reference for the high-level invariants (account lifecycle, sticky proxy, error envelope, read-vs-write risk profiles) that must still be honored by the hybrid implementation.
+> This architecture spine is **superseded by** `medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`. The gateway/session-factory/account-pool ideas are being absorbed into the hybrid engine: `FacebookCrawler` extends `AbstractCrawler`, `FacebookClient` extends `BaseHybridClient`, and `CrawlerGovernor` + `AccountPool` provide the rate-limit and account-lifecycle controls. The active implementation path for Facebook is `src/scrapers/social/facebook/` under Epic 13 (Stories 13.3–13.10). This document is preserved as a reference for the high-level invariants (account lifecycle, sticky proxy, error envelope, read-vs-write risk profiles) that must still be honored by the hybrid implementation.
 
 ## 1. Design Paradigm
 
@@ -87,12 +87,12 @@ flowchart TB
 
 | Inherited | From parent | Binds here |
 | --- | --- | --- |
-| AD-3 — Sticky IP per account, proxy auto-quarantine 5m, no direct fallback | `xactions-hybrid-scraping-spine` | Proxy resolution before session creation. |
-| AD-5 — Sticky IP, AbstractLogin contract, SessionManager owns state | `xactions-hybrid-scraping-spine` | SessionFactory keeps account state; gateway passes cookies/tokens. |
-| AD-9 — PlatformResponseValidator detects bot challenge/rate-limit, auth platforms hibernate 15-30m | `xactions-hybrid-scraping-spine` | Error handling and account state transitions. |
-| AD-13 — Adaptive governor by healthy proxy, account velocity, Redis lag; account rotation | `xactions-hybrid-scraping-spine` | Pre/post operation governor calls. |
-| AD-14 — Standard error envelope `{code,type,message,retryAfter,suggestedAction,accountId?,platform}` | `xactions-hybrid-scraping-spine` | All Facebook errors. |
-| AD-20 — Dual-Pool Resource Isolation: realtime 30%, bulk 70%; consumer quota | `xactions-hybrid-scraping-spine` | POOL mode bulk vs MCP on-demand scheduling. |
+| AD-3 — Sticky IP per account, proxy auto-quarantine 5m, no direct fallback | `medirus-hybrid-scraping-spine` | Proxy resolution before session creation. |
+| AD-5 — Sticky IP, AbstractLogin contract, SessionManager owns state | `medirus-hybrid-scraping-spine` | SessionFactory keeps account state; gateway passes cookies/tokens. |
+| AD-9 — PlatformResponseValidator detects bot challenge/rate-limit, auth platforms hibernate 15-30m | `medirus-hybrid-scraping-spine` | Error handling and account state transitions. |
+| AD-13 — Adaptive governor by healthy proxy, account velocity, Redis lag; account rotation | `medirus-hybrid-scraping-spine` | Pre/post operation governor calls. |
+| AD-14 — Standard error envelope `{code,type,message,retryAfter,suggestedAction,accountId?,platform}` | `medirus-hybrid-scraping-spine` | All Facebook errors. |
+| AD-20 — Dual-Pool Resource Isolation: realtime 30%, bulk 70%; consumer quota | `medirus-hybrid-scraping-spine` | POOL mode bulk vs MCP on-demand scheduling. |
 
 ## 3. Invariants & Rules
 

@@ -3,7 +3,7 @@
  * x402 Payment Middleware for AI Agent Endpoints
  *
  * Uses the official @x402/express SDK for protocol-compliant payment handling.
- * XActions-specific hooks handle analytics, webhooks, and audit logging.
+ * Medirus-specific hooks handle analytics, webhooks, and audit logging.
  *
  * Flow:
  * 1. AI agent calls /api/ai/* endpoint
@@ -92,7 +92,7 @@ function buildRouteConfig() {
     const [category, action] = operation.split(':');
     const routePath = `POST /api/ai/${category}/${action}`;
 
-    routes[routePath] = paidRoute(price, `XActions ${category}: ${action}`);
+    routes[routePath] = paidRoute(price, `Medirus ${category}: ${action}`);
   }
 
   // Script download routes
@@ -125,7 +125,7 @@ function buildRouteConfig() {
 
 /**
  * Initialize the official @x402/express middleware with hooks for
- * XActions analytics, webhooks, and audit logging.
+ * Medirus analytics, webhooks, and audit logging.
  * @param {Record<string, unknown>} context
  */
 async function onAfterSettleHook(context) {
@@ -411,7 +411,7 @@ export function x402HealthCheck(req, res) {
   const recommendedNetwork = networks.find(n => n.recommended) || networks[0];
 
   res.json({
-    service: 'XActions AI API',
+    service: 'Medirus AI API',
     status: configured ? 'operational' : 'degraded',
     timestamp: new Date().toISOString(),
     x402: {

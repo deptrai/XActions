@@ -40,7 +40,7 @@ inputDocuments:
 | **SCN-3** | AC-1: Session pass-through | `scrape('threads', ...)` builds `session: { accountId, cookies }` from `options.accountId` / `options.authCookie` / `options.cookies` and passes into `crawler.start()` | Integration | **P0** | 🔴 RED (expected fail) |
 | **SCN-4** | AC-1: `crawler.cleanup()` called | `scrape('threads', ...)` invokes `crawler.cleanup()` when `options.autoClose !== false` | Integration | **P1** | 🔴 RED (expected fail) |
 | **SCN-5** | AC-3: Package.json exports | `package.json` contains `"./scrapers/social/threads"` and `"./scrapers/social"` exports resolving to correct source files | Unit / Contract | **P0** | 🔴 RED (expected fail) |
-| **SCN-6** | AC-3: Public symbol exports | `xactions/scrapers/social/threads` exports `DEFAULT_THREADS_DOC_IDS`, `ThreadsCrawler`, `ThreadsClient`, `ThreadsPlatformResponseValidator`, `threadsNamespacedProfileId`, `normalizeThreadsProfile`, `profileItemToPostItem` | Unit / Contract | **P0** | 🔴 RED (expected fail) |
+| **SCN-6** | AC-3: Public symbol exports | `medirus/scrapers/social/threads` exports `DEFAULT_THREADS_DOC_IDS`, `ThreadsCrawler`, `ThreadsClient`, `ThreadsPlatformResponseValidator`, `threadsNamespacedProfileId`, `normalizeThreadsProfile`, `profileItemToPostItem` | Unit / Contract | **P0** | 🔴 RED (expected fail) |
 | **SCN-7** | AC-4: Deprecation markers | `src/scrapers/threads/index.js` contains top-level `// LEGACY` comment and `@deprecated` JSDoc on each legacy function | Unit / Contract | **P1** | 🔴 RED (expected fail) |
 | **SCN-8** | AC-4: Deprecation plan status | `docs/deprecation-plan.md` lists Threads legacy status as `deprecated-planned` with Story 15.1.4 reference | Unit / Contract | **P1** | 🔴 RED (expected fail) |
 | **SCN-9** | AC-5: Integration suite presence | `tests/scrapers/social/threads/caller-migration.test.js` exists and is discoverable by Vitest | Integration | **P0** | 🔴 RED (expected fail) |
@@ -75,7 +75,7 @@ inputDocuments:
 ### Task T3: `src/mcp/server.js` & `src/mcp/local-tools.js`
 - [ ] Verify `x_crawl_post` and `x_crawl_comments_tree` dispatch `scrape('threads', ...)` correctly
 - [ ] Add `x_get_profile_multiplatform`, `x_get_tweets_multiplatform`, `x_search_tweets_multiplatform` in `local-tools.js` for `platform === 'threads'`
-- [ ] Ensure `x_actions_list` instantiates `ThreadsCrawler` and calls `cleanup()`
+- [ ] Ensure `medirus_list` instantiates `ThreadsCrawler` and calls `cleanup()`
 
 ### Task T4: Deprecation markers
 - [ ] Update `docs/deprecation-plan.md` Threads row to `deprecated-planned`, reference Story 15.1.4

@@ -3,12 +3,12 @@
 **Reviewer Role:** Rubric Walker (BMad Architecture Reviewer Gate)  
 **Date:** 2026-09-08  
 **Status:** PASS WITH FINDINGS (Revisions Required Prior to Story Freezing)  
-**Target Architecture:** `/Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md`  
+**Target Architecture:** `/Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md`  
 **Referenced Specifications & Context:**
-- `_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/.memlog.md`
+- `_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/.memlog.md`
 - `_bmad-output/specs/spec-scraper-benchmark/SPEC.md`
 - `_bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md`
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (Parent Spine, especially AD-2, AD-7, AD-9, AD-13, AD-18)
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (Parent Spine, especially AD-2, AD-7, AD-9, AD-13, AD-18)
 - `_bmad-output/planning-artifacts/backlog-epic-34.md`
 - Brownfield Codebase:
   - `src/core/base-crawler.js` (AbstractCrawler)
@@ -20,8 +20,8 @@
   - `src/store/prisma-store.js` & `src/store/store-with-redis.js` (Persistence Layer)
   - `prisma/schema.prisma` (PostgreSQL Schema)
 - Sibling Reviews:
-  - `_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/reviews/review-tech-currency.md`
-  - `_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/reviews/review-adversarial.md`
+  - `_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/reviews/review-tech-currency.md`
+  - `_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/reviews/review-adversarial.md`
 
 ---
 
@@ -142,9 +142,9 @@ The findings must be rectified in `ARCHITECTURE-SPINE.md` before story implement
 - **Location:** `ARCHITECTURE-SPINE.md` Section "Structural Seed" (lines 114–120), `backlog-epic-34.md`.
 - **The Finding:**  
   1. The spine establishes a new top-level service directory: `src/services/benchmark/` for `telemetry-consumer.js`, `scoring-engine.js`, `scorecard.js`, `canary-runner.js`, and `alerting-service.js`.
-  2. In the actual XActions brownfield repository, `src/services/` does not exist. All persistent backend services, queue consumers, and background workers reside in `api/services/` (`api/services/jobQueue.js`, `api/services/retentionScheduler.js`, `api/services/facebookScheduler.js`). Core domain logic resides in `src/` (e.g. `src/core/`, `src/scrapers/`, `src/utils/`).
+  2. In the actual Medirus brownfield repository, `src/services/` does not exist. All persistent backend services, queue consumers, and background workers reside in `api/services/` (`api/services/jobQueue.js`, `api/services/retentionScheduler.js`, `api/services/facebookScheduler.js`). Core domain logic resides in `src/` (e.g. `src/core/`, `src/scrapers/`, `src/utils/`).
   3. `backlog-epic-34.md` references `src/core/base-api-client.js`. The actual file in the repository is `src/core/base-client.js`.
-  4. Scheduled jobs in XActions follow `node-cron` with PostgreSQL advisory locks (see `api/services/retentionScheduler.js`), not Bull repeatable jobs, to prevent state loss on Redis restarts.
+  4. Scheduled jobs in Medirus follow `node-cron` with PostgreSQL advisory locks (see `api/services/retentionScheduler.js`), not Bull repeatable jobs, to prevent state loss on Redis restarts.
 - **Impact:**  
   Fractures the repository layout, causes broken module imports, and introduces conflicting background scheduling mechanisms.
 - **Enforceable Fix:**  

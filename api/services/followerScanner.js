@@ -31,7 +31,7 @@ import { scrapeFollowers } from './browserAutomation.js';
 
 /**
  * Run a full follower scan for a user
- * @param {string} userId - XActions user ID
+ * @param {string} userId - Medirus user ID
  * @param {string} sessionCookie - X/Twitter auth_token
  * @param {string} username - Twitter username to scan
  * @param {Record<string, unknown>} options - { limit: 5000 }
@@ -167,7 +167,7 @@ export async function runFollowerScan(userId, sessionCookie, username, options =
 
 /**
  * Get scan history for a user
- * @param {string} userId - XActions user ID
+ * @param {string} userId - Medirus user ID
  * @param {number} limit - Number of scans to return
  * @returns {Promise<Record<string, unknown>[]>} Scan history with gained/lost counts
  */
@@ -218,7 +218,7 @@ export async function getScanHistory(userId, limit = 30) {
 
 /**
  * Get aggregated stats for a user
- * @param {string} userId - XActions user ID
+ * @param {string} userId - Medirus user ID
  * @returns {Promise<Record<string, unknown>>} Aggregated follower stats
  */
 export async function getFollowerStats(userId) {
@@ -295,7 +295,7 @@ export async function getFollowerStats(userId) {
 
 /**
  * Get recent changes (gained/lost) with full details
- * @param {string} userId - XActions user ID
+ * @param {string} userId - Medirus user ID
  * @param {string} type - 'gained', 'lost', or 'all'
  * @param {number} limit - Max records
  * @returns {Promise<Record<string, unknown>[]>} Recent follower changes
@@ -326,7 +326,7 @@ export async function getRecentChanges(userId, type = 'all', limit = 50) {
 
 /**
  * Get follower count history for charting
- * @param {string} userId - XActions user ID
+ * @param {string} userId - Medirus user ID
  * @param {number} days - Number of days to look back
  * @returns {Promise<Record<string, unknown>[]>} Daily follower counts
  */

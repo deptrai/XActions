@@ -59,4 +59,4 @@ const CONFIG = {
 - Keyword matching is case-insensitive and checks tweet text
 - `fromUsers` can be with or without the `@` prefix
 - Already-reposted tweets (green retweet icon) are automatically skipped
-- Repost history persists in `localStorage` under `xactions_auto_repost`
+- Repost history persists in `localStorage` under `medirus_auto_repost`

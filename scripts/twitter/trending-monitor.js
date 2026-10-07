@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 📡 Trending Monitor - XActions
+ * 📡 Trending Monitor - Medirus
  * ============================================
  *
  * @name         trending-monitor
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to x.com/explore/tabs/trending (or x.com/explore)
@@ -81,7 +81,7 @@
   // ============================================
   // 🛠️ HELPERS
   // ============================================
-  const STORAGE_KEY = 'xactions_trends_history';
+  const STORAGE_KEY = 'medirus_trends_history';
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const log = {
@@ -271,18 +271,18 @@
     if (CONFIG.exportResults) {
       console.log('');
       const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      download(snapshot, `xactions-trends-${stamp}.json`);
+      download(snapshot, `medirus-trends-${stamp}.json`);
     }
 
-    window.xactionsTrends = snapshot;
+    window.medirusTrends = snapshot;
     return snapshot;
   };
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📡 TRENDING MONITOR - XActions                         ║
+║  📡 TRENDING MONITOR - Medirus                         ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -323,5 +323,5 @@
     log.info('Single scan complete. Set CONFIG.repeatIntervalMs > 0 for continuous monitoring.');
   }
 
-  return window.xactionsTrends;
+  return window.medirusTrends;
 })();

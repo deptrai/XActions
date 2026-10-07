@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Update Profile Picture — Free X/Twitter Script | XActions</title>
+  <title>Update Profile Picture — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Guide and helper for updating X/Twitter profile picture">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, update, profile, picture, account management">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, update, profile, picture, account management">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Update Profile Picture — XActions">
+  <meta property="og:title" content="Update Profile Picture — Medirus">
   <meta property="og:description" content="Guide and helper for updating X/Twitter profile picture">
-  <meta property="og:url" content="https://xactions.app/scripts/update-profile-picture">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/update-profile-picture">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Update Profile Picture — XActions">
+  <meta name="twitter:title" content="Update Profile Picture — Medirus">
   <meta name="twitter:description" content="Guide and helper for updating X/Twitter profile picture">
 
-  <link rel="canonical" href="https://xactions.app/scripts/update-profile-picture">
+  <link rel="canonical" href="https://medirus.online/scripts/update-profile-picture">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Update Profile Picture — Free X/Twitter Script | XActions",
+    "headline": "Update Profile Picture — Free X/Twitter Script | Medirus",
     "description": "Guide and helper for updating X/Twitter profile picture",
-    "url": "https://xactions.app/scripts/update-profile-picture",
+    "url": "https://medirus.online/scripts/update-profile-picture",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Account Management",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, update, profile, picture, account management"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, update, profile, picture, account management"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Account Management", "item": "https://xactions.app/scripts#account-management" },
-      { "@type": "ListItem", "position": 4, "name": "Update Profile Picture", "item": "https://xactions.app/scripts/update-profile-picture" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Account Management", "item": "https://medirus.online/scripts#account-management" },
+      { "@type": "ListItem", "position": 4, "name": "Update Profile Picture", "item": "https://medirus.online/scripts/update-profile-picture" }
     ]
   }
   </script>
@@ -237,8 +237,8 @@ var CONFIG = {
   console.log('');
   
   // Create helper functions
-  window.XActions = window.XActions || {};
-  window.XActions.ProfilePicture = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.ProfilePicture = {
     
     // Trigger file picker
     selectFile: () =&gt; {
@@ -275,10 +275,10 @@ var CONFIG = {
       console.log('');
       console.log('📋 AVAILABLE COMMANDS:');
       console.log('');
-      console.log('   XActions.ProfilePicture.selectFile()');
+      console.log('   Medirus.ProfilePicture.selectFile()');
       console.log('   → Opens file picker to select new profile picture');
       console.log('');
-      console.log('   XActions.ProfilePicture.save()');
+      console.log('   Medirus.ProfilePicture.save()');
       console.log('   → Saves the profile changes');
       console.log('');
     }
@@ -288,12 +288,12 @@ var CONFIG = {
   console.log('');
   console.log('📋 INSTRUCTIONS:');
   console.log('');
-  console.log('   Step 1: Run XActions.ProfilePicture.selectFile()');
+  console.log('   Step 1: Run Medirus.ProfilePicture.selectFile()');
   console.log('   Step 2: Choose your image file');
   console.log('   Step 3: Crop/adjust the image');
-  console.log('   Step 4: Run XActions.ProfilePicture.save()');
+  console.log('   Step 4: Run Medirus.ProfilePicture.save()');
   console.log('');
-  console.log('💡 Type XActions.ProfilePicture.help() for more info');
+  console.log('💡 Type Medirus.ProfilePicture.help() for more info');
   console.log('');
   
   // Auto-open file picker if enabled
@@ -318,7 +318,7 @@ var CONFIG = {
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -328,7 +328,7 @@ var CONFIG = {
     <aside class="sidebar-right">
       <div class="sidebar-card">
         <h3>🖼️ Account Management</h3>
-        <a href="/scripts/account-settings">⚙️ Account Settings - XActions</a>
+        <a href="/scripts/account-settings">⚙️ Account Settings - Medirus</a>
 <a href="/scripts/backup-account">💾 Backup Account</a>
 <a href="/scripts/delegate-access">🔑 Delegate Access</a>
 <a href="/scripts/download-account-data">📥 Download Account Data</a>

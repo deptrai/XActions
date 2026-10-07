@@ -64,22 +64,22 @@ Scrapes follower profiles and classifies by niche (tech, marketing, crypto, etc.
 ### engagementLeaderboard.js
 Ranks users who engage most with your content. Identifies superfans (5+ interactions), regulars, and casual engagers. Exports VIP list for relationship building.
 
-**Controls:** Auto-run on paste. `XActions.pause()` / `XActions.abort()` available.
+**Controls:** Auto-run on paste. `Medirus.pause()` / `Medirus.abort()` available.
 
 ### tweetABTester.js
 Create controlled tests between two tweet variations. Post both, track metrics over time, get statistical winner determination with percentage difference.
 
-**Controls:** `XActions.createTest()`, `XActions.measure()`, `XActions.results()`
+**Controls:** `Medirus.createTest()`, `Medirus.measure()`, `Medirus.results()`
 
 ### followRatioManager.js
 Monitors follower/following ratio with letter grades (S→F). Generates 3 improvement paths (unfollow more, gain followers, combination). Tracks ratio history over time.
 
-**Controls:** `XActions.track()`, `XActions.plan()`, `XActions.history()`
+**Controls:** `Medirus.track()`, `Medirus.plan()`, `Medirus.history()`
 
 ### audienceOverlap.js
 Compare follower lists between two accounts to find shared followers, unique audiences, and Jaccard similarity. Useful for collaboration decisions and competitor analysis.
 
-**Controls:** `XActions.analyze('accountA', 'accountB')`
+**Controls:** `Medirus.analyze('accountA', 'accountB')`
 
 ## Strategy Guide
 
@@ -87,7 +87,7 @@ Compare follower lists between two accounts to find shared followers, unique aud
 
 1. Run `src/tweetPerformance.js` — identify this week's top content
 2. Run `src/tweetScheduleOptimizer.js` — verify you're posting at optimal times
-3. Run `src/followRatioManager.js` → `XActions.track()` — log weekly ratio
+3. Run `src/followRatioManager.js` → `Medirus.track()` — log weekly ratio
 4. Run `src/engagementLeaderboard.js` — identify top engagers to nurture
 
 ### Diagnosing a growth stall

@@ -1,17 +1,17 @@
-# Agent customization surface for xactions-test-engineer.
-# Team overrides:     {project-root}/_bmad/custom/xactions-test-engineer.toml
-# Personal overrides: {project-root}/_bmad/custom/xactions-test-engineer.user.toml
+# Agent customization surface for medirus-test-engineer.
+# Team overrides:     {project-root}/_bmad/custom/medirus-test-engineer.toml
+# Personal overrides: {project-root}/_bmad/custom/medirus-test-engineer.user.toml
 
 [agent]
 
 # --- Metadata (install-time roster contract) ---
 # Consumed by module.yaml:agents[] and `[agents.<code>]` in central config.
 
-code = "xactions-test-engineer"
+code = "medirus-test-engineer"
 name = ""
-title = "XActions Test Engineer"
+title = "Medirus Test Engineer"
 icon = "🧪"
-description = "A memory agent for XActions that tests real API routes, MCP tools, and browser flows against live implementations and remembers contracts, schemas, selectors, and failure patterns."
+description = "A memory agent for Medirus that tests real API routes, MCP tools, and browser flows against live implementations and remembers contracts, schemas, selectors, and failure patterns."
 agent_type = "memory"
 
 # --- Configurable below. Overrides merge per BMad structural rules: ---

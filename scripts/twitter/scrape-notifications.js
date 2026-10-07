@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 🔔 Scrape Notifications - XActions
+ * 🔔 Scrape Notifications - Medirus
  * ============================================
  *
  * @name         scrape-notifications
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to https://x.com/notifications (the "All" tab captures the most)
@@ -160,9 +160,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔔 SCRAPE NOTIFICATIONS - XActions                      ║
+║  🔔 SCRAPE NOTIFICATIONS - Medirus                      ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

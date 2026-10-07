@@ -1,10 +1,10 @@
-# XActions
+# Medirus
 
 > ⚡ The Complete X/Twitter Automation Toolkit — Scrapers, MCP server for AI agents (Claude/GPT), CLI, browser scripts. No API fees. Open source. By nichxbt.
 
 ## Overview
 
-XActions automates X/Twitter without needing official API access. It combines 60+ browser-paste scripts, Puppeteer-based scrapers, an MCP server for AI agent integration, a CLI tool, and a full-stack Express.js web dashboard backed by PostgreSQL.
+Medirus automates X/Twitter without needing official API access. It combines 60+ browser-paste scripts, Puppeteer-based scrapers, an MCP server for AI agent integration, a CLI tool, and a full-stack Express.js web dashboard backed by PostgreSQL.
 
 ## Architecture
 
@@ -89,21 +89,21 @@ docs/agents/        → DOM selectors, browser-script patterns, contributing gui
 ## npm Package Exports
 
 ```
-xactions           → ./src/index.js (main)
-xactions/scrapers  → ./src/scrapers/index.js
-xactions/streaming → ./src/streaming/index.js
-xactions/analytics → ./src/analytics/index.js
-xactions/plugins   → ./src/plugins/index.js
-xactions/mcp       → ./src/mcp/server.js
-xactions/cli       → ./src/cli/index.js
-xactions/client    → ./src/client/index.js
+medirus           → ./src/index.js (main)
+medirus/scrapers  → ./src/scrapers/index.js
+medirus/streaming → ./src/streaming/index.js
+medirus/analytics → ./src/analytics/index.js
+medirus/plugins   → ./src/plugins/index.js
+medirus/mcp       → ./src/mcp/server.js
+medirus/cli       → ./src/cli/index.js
+medirus/client    → ./src/client/index.js
 ```
 
 ## CLI Binaries
 
-- `xactions` → CLI tool (`src/cli/index.js`)
-- `xactions-mcp` → MCP server (`src/mcp/server.js`)
-- `xactions-agent` → Thought leader agent (`src/agents/thoughtLeaderAgent.js`)
+- `medirus` → CLI tool (`src/cli/index.js`)
+- `medirus-mcp` → MCP server (`src/mcp/server.js`)
+- `medirus-agent` → Thought leader agent (`src/agents/thoughtLeaderAgent.js`)
 
 ## Repository
 

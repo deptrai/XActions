@@ -28,7 +28,7 @@ so that **tôi có thể thu thập dữ liệu cá nhân/cộng đồng với t
 
 - `_bmad-output/planning-artifacts/epics.md` — Epic 13, Story 13.5 [dòng 548-559]
 - `_bmad-output/planning-artifacts/prd.md` — FR-72 (Facebook Crawler Refactor) [dòng 80]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2, AD-3, AD-4, AD-8, AD-9, AD-10, AD-11, AD-12, AD-14, AD-15
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2, AD-3, AD-4, AD-8, AD-9, AD-10, AD-11, AD-12, AD-14, AD-15
 - `_bmad-output/implementation-artifacts/13-3-refactor-facebook-scraper-to-hybrid-architecture.md` — `FacebookClient`, `FacebookCrawler`, `DEFAULT_FB_DOC_IDS`, token cache
 - `_bmad-output/implementation-artifacts/13-4-facebook-browser-as-signer-bridge.md` — `FacebookBrowserBridge`, Playwright default, token extraction
 - `src/scrapers/social/facebook/crawler.js` — `FacebookCrawler` hiện tại, action registry `group_posts`, `page_posts`, `get_comments` [dòng 62-133]
@@ -213,7 +213,7 @@ so that **tôi có thể thu thập dữ liệu cá nhân/cộng đồng với t
 
 - `FacebookClient.requestGraphQl` **chỉ merge `headers`, `body`, `cookies`** vào `this.request()`; không dùng `requestWithSign()` vì `AbstractApiClient.requestWithSign()` không merge `signResult.body` (13.3 Dev Notes [dòng 133]).
 - `FacebookClient.#fetchTokens` (HTTP regex extraction) được đánh dấu `deprecated-planned` trong 13.4; vẫn giữ làm fallback.
-- `FacebookBrowserBridge.extractTokens` là mặc định khi `cdpUrl`/`launchChrome` được cấu hình; Playwright mặc định, Puppeteer khi `XACTIONS_SCRAPER_ADAPTER=puppeteer` (13.4 AC-5).
+- `FacebookBrowserBridge.extractTokens` là mặc định khi `cdpUrl`/`launchChrome` được cấu hình; Playwright mặc định, Puppeteer khi `MEDIRUS_SCRAPER_ADAPTER=puppeteer` (13.4 AC-5).
 - `AbstractCrawler.start()` tự động resolve `accountId`, kiểm tra `governor`, rồi gọi handler `(args, session)` [dòng 149-244].
 - `AbstractCrawler.registerAction()` bắt buộc tên `snake_case` regex `^[a-z0-9_]+$` [dòng 84-90].
 - `AbstractCrawler.listActions()` trả về `{ action, description, requiredArgs, optionalArgs, example, outputType }` [dòng 106-115].
@@ -768,7 +768,7 @@ Dưới đây là các payload mẫu để dùng trong test `http.createServer`.
 | `got-scraping` | `^3.2.15` | HTTP client mặc định, TLS/JA4 spoofing, proxy `proxyUrl` [package.json]. |
 | `undici` | `^7.29.0` | HTTP client fallback với `ProxyAgent` [package.json]. |
 | `playwright` | `^1.62.1` | Browser engine CDP attach (mặc định) [package.json]. |
-| `puppeteer` | `^24.34.0` | Browser engine khi `XACTIONS_SCRAPER_ADAPTER=puppeteer`. |
+| `puppeteer` | `^24.34.0` | Browser engine khi `MEDIRUS_SCRAPER_ADAPTER=puppeteer`. |
 | `p-limit` | `^7.2.0` | Giới hạn concurrency nếu cần batch request [package.json]. |
 
 ## File Structure Requirements
@@ -837,7 +837,7 @@ Dưới đây là các payload mẫu để dùng trong test `http.createServer`.
 ### Story 13.4 (Done)
 
 - `FacebookClient` hỗ trợ `browserBridge`, `cdpUrl`, `launchChrome`.
-- `FacebookBrowserBridge` dùng Playwright mặc định, Puppeteer khi `XACTIONS_SCRAPER_ADAPTER=puppeteer`.
+- `FacebookBrowserBridge` dùng Playwright mặc định, Puppeteer khi `MEDIRUS_SCRAPER_ADAPTER=puppeteer`.
 - Per-account profile dir `.data/facebook-profiles/<c_user>`; sticky proxy + anti-leak browser args.
 - HTTP-only `#fetchTokens` là fallback và được đánh dấu `deprecated-planned`.
 
@@ -845,7 +845,7 @@ Dưới đây là các payload mẫu để dùng trong test `http.createServer`.
 
 - Epic 13: `_bmad-output/planning-artifacts/epics.md#epic-13-high-throughput-hybrid-scraping-engine-twitter--facebook-refactor`
 - FR-72: `_bmad-output/planning-artifacts/prd.md` dòng 80
-- AD-2/AD-3/AD-4/AD-10/AD-11/AD-12/AD-14/AD-15: `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`
+- AD-2/AD-3/AD-4/AD-10/AD-11/AD-12/AD-14/AD-15: `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`
 
 ## Dev Agent Record
 

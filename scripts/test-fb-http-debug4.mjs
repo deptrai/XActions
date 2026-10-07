@@ -2,7 +2,7 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import { gotScraping } from 'got-scraping';
 
-const rawCookies = JSON.parse(fs.readFileSync('/Users/luisphan/.xactions/facebook-cookies.json', 'utf8'));
+const rawCookies = JSON.parse(fs.readFileSync('/Users/luisphan/.medirus/facebook-cookies.json', 'utf8'));
 const cookieRecord = {};
 for (const c of rawCookies) {
   if (c.name) cookieRecord[c.name] = c.value;

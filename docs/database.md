@@ -13,7 +13,7 @@ Schema: [`prisma/schema.prisma`](../prisma/schema.prisma).
 
 ```bash
 # 1. Point at a database
-export DATABASE_URL="postgresql://user:password@localhost:5432/xactions?schema=public"
+export DATABASE_URL="postgresql://user:password@localhost:5432/medirus?schema=public"
 
 # 2. Generate the typed client
 npx prisma generate

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Cookie-Based Authentication
+ * Medirus Client — Cookie-Based Authentication
  *
  * Manages authentication via browser cookies (ct0, auth_token, twid).
  * This is the primary auth method: export cookies from a logged-in browser session,
@@ -77,13 +77,13 @@ export class CookieAuth {
   }
 
   /**
-   * Create CookieAuth from the XACTIONS_SESSION_COOKIE environment variable.
+   * Create CookieAuth from the MEDIRUS_SESSION_COOKIE environment variable.
    *
    * @param {import('./TokenManager.js').TokenManager} [tokenManager]
    * @returns {CookieAuth}
    */
   static fromEnv(tokenManager) {
-    const cookieString = typeof process !== 'undefined' ? process.env.XACTIONS_SESSION_COOKIE || '' : '';
+    const cookieString = typeof process !== 'undefined' ? process.env.MEDIRUS_SESSION_COOKIE || '' : '';
     return CookieAuth.parse(cookieString, tokenManager);
   }
 

@@ -52,7 +52,7 @@ Story 16.2 triển khai TikTok Shop E-Commerce crawler trên nền tảng `Abstr
 
 - `_bmad-output/planning-artifacts/epics.md` — Story 16.2 [dòng 869-879]
 - `_bmad-output/planning-artifacts/prd.md` — FR-77, NFR-11/12/13/15/18 [dòng 92, 114-120]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2, AD-3, AD-11, AD-14, AD-18
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2, AD-3, AD-11, AD-14, AD-18
 - `src/scrapers/social/tiktok/signer-bridge.js` — `TikTokBrowserBridge`
 - `src/scrapers/social/tiktok/client.js` — `TikTokClient` pattern
 - `src/scrapers/ecom/shopee/` — E-commerce normalizer & crawler pattern

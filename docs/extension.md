@@ -1,6 +1,6 @@
-# XActions Extension — User Guide
+# Medirus Extension — User Guide
 
-Complete guide to installing and using the XActions browser extension for X/Twitter automation.
+Complete guide to installing and using the Medirus browser extension for X/Twitter automation.
 
 ---
 
@@ -28,7 +28,7 @@ Complete guide to installing and using the XActions browser extension for X/Twit
 1. Open `chrome://extensions/` (or `edge://extensions/` / `brave://extensions/`)
 2. Enable **Developer mode** (toggle in the top-right corner)
 3. Click **Load unpacked**
-4. Select the `extension/` directory from the XActions repository
+4. Select the `extension/` directory from the Medirus repository
 5. The **XA** icon appears in your toolbar
 6. **Pin it** — right-click the icon → Pin for easy access
 
@@ -52,7 +52,7 @@ After loading, navigate to **x.com**. Click the **XA** icon:
 
 ## First Launch
 
-On first install, a **Welcome to XActions** modal appears:
+On first install, a **Welcome to Medirus** modal appears:
 
 1. Review the featured automations (Auto-Liker, Smart Unfollow, Video Downloader, Thread Reader)
 2. The **"Enable popular features"** checkbox is pre-checked — this auto-configures Video Downloader and Thread Reader with sensible defaults
@@ -275,7 +275,7 @@ Adds a ⬇ download button to tweets that contain video.
 4. Triggers download via `<a download>` element
 5. Runs persistently until stopped
 
-**Also available via right-click:** Right-click any tweet → "Download video (XActions)"
+**Also available via right-click:** Right-click any tweet → "Download video (Medirus)"
 
 ---
 
@@ -341,7 +341,7 @@ Adds an "Unroll 🧵" button to detected threads and shows a clean readable over
 4. On click: collects all tweet texts, shows fullscreen overlay with numbered tweets
 5. "📋 Copy Thread" button copies formatted text to clipboard
 
-**Also available via right-click:** Right-click any tweet → "Unroll thread (XActions)"
+**Also available via right-click:** Right-click any tweet → "Unroll thread (Medirus)"
 
 ---
 
@@ -363,7 +363,7 @@ Calculates your engagement rate and shows a floating overlay.
 3. Injects a fixed-position overlay (bottom-right) with a 2×2 stats grid
 4. Saves to localStorage; if track daily enabled, appends to history
 
-**Also available via right-click:** Right-click on any profile → "Analyze account (XActions)"
+**Also available via right-click:** Right-click on any profile → "Analyze account (Medirus)"
 
 ---
 
@@ -448,7 +448,7 @@ Global settings auto-save on change.
 
 | Button | Action |
 |---|---|
-| **Export settings** | Downloads all settings as `xactions-settings-YYYY-MM-DD.json` |
+| **Export settings** | Downloads all settings as `medirus-settings-YYYY-MM-DD.json` |
 | **Import settings** | Upload a previously exported JSON file |
 | **Reset all data** | Clears ALL storage (requires confirmation) |
 
@@ -471,9 +471,9 @@ Right-click on any x.com page to access:
 
 | Menu Item | Action |
 |---|---|
-| **Download video (XActions)** | Triggers Video Downloader on current page |
-| **Unroll thread (XActions)** | Triggers Thread Reader on current tweet |
-| **Analyze account (XActions)** | Triggers Quick Stats on current profile |
+| **Download video (Medirus)** | Triggers Video Downloader on current page |
+| **Unroll thread (Medirus)** | Triggers Thread Reader on current tweet |
+| **Analyze account (Medirus)** | Triggers Quick Stats on current profile |
 
 These work even if the corresponding automation isn't running in the popup.
 
@@ -515,7 +515,7 @@ These work even if the corresponding automation isn't running in the popup.
 **Fix:**
 1. Make sure you're on `x.com` or `twitter.com`
 2. Refresh the page
-3. If still disconnected, go to `chrome://extensions/`, find XActions, click the reload ↻ button
+3. If still disconnected, go to `chrome://extensions/`, find Medirus, click the reload ↻ button
 
 ### Automation Not Working
 
@@ -551,10 +551,10 @@ These work even if the corresponding automation isn't running in the popup.
 ## FAQ
 
 **Q: Does this use the X/Twitter API?**
-No. XActions operates entirely through browser DOM automation — it clicks real buttons on the real x.com page. No API keys, no fees.
+No. Medirus operates entirely through browser DOM automation — it clicks real buttons on the real x.com page. No API keys, no fees.
 
 **Q: Can X detect this?**
-XActions mimics human behavior with randomized delays, but no automation is 100% undetectable. Use conservative settings and don't exceed daily limits.
+Medirus mimics human behavior with randomized delays, but no automation is 100% undetectable. Use conservative settings and don't exceed daily limits.
 
 **Q: Does it work when the popup is closed?**
 Persistent automations (Video Downloader, Thread Reader) run via MutationObserver in the page and stay active as long as the x.com tab is open. Action-based automations (Auto-Liker, etc.) run in the page context and continue even when the popup is closed.
@@ -569,4 +569,4 @@ Yes. The dashboard shows how many are running simultaneously. Be cautious — ru
 Everything is stored locally in `chrome.storage.local` — never sent to any server. Export to back up your settings.
 
 **Q: How do I uninstall?**
-Go to `chrome://extensions/`, find XActions, click Remove. All stored data is deleted automatically.
+Go to `chrome://extensions/`, find Medirus, click Remove. All stored data is deleted automatically.

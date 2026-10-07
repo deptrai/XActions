@@ -22,7 +22,7 @@
 | Browser UA thường | post permalink | HTTP 400 |
 | `mbasic.facebook.com` | Page | HTTP 200 → login wall |
 
-**Kết luận:** Cào Facebook không cookie **không thể** bằng `axios`+`cheerio`. Đường duy nhất còn lại là **browser DOM render** — và XActions đã build sẵn qua `fb-guest` trong Epic 13.
+**Kết luận:** Cào Facebook không cookie **không thể** bằng `axios`+`cheerio`. Đường duy nhất còn lại là **browser DOM render** — và Medirus đã build sẵn qua `fb-guest` trong Epic 13.
 
 **Khám phá quan trọng:** capability đã tồn tại end-to-end:
 - `api/services/facebookScrape.js:63` — "Public actions can omit authCookie entirely and run as guest"

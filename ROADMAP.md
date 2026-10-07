@@ -1,4 +1,4 @@
-# 🗺️ XActions Roadmap
+# 🗺️ Medirus Roadmap
 
 > Building the ultimate X/Twitter automation toolkit
 

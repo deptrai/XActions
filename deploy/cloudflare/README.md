@@ -1,4 +1,4 @@
-# Deploying xactions.app to Cloudflare Pages
+# Deploying medirus.online to Cloudflare Pages
 
 The site (landing page + dashboard + docs/blog/tutorials) deploys to Cloudflare
 Pages for free (unlimited requests/bandwidth on the Free plan, no card
@@ -15,14 +15,14 @@ required). This replaces the old Vercel deployment, which was disabled.
    ```
    export CLOUDFLARE_API_TOKEN=...
    export CLOUDFLARE_ACCOUNT_ID=...
-   npx wrangler pages project create xactions --production-branch main
+   npx wrangler pages project create medirus --production-branch main
    ```
 
 ## Deploy
 
 ```
 bash deploy/cloudflare/build.sh
-npx wrangler pages deploy pages-out --project-name xactions
+npx wrangler pages deploy pages-out --project-name medirus
 ```
 
 `build.sh` assembles `pages-out/` from three sources:
@@ -70,7 +70,7 @@ served at `/foo`, and a direct request to `/foo.html` gets a 308 redirect to
   live backend is deployed and `deploy/cloudflare/_redirects` is updated to
   point at it. All content pages (docs, blog, tutorials, pricing, etc.)
   work fully without it.
-- Custom domain (`xactions.app`) is not yet attached to this Pages project.
+- Custom domain (`medirus.online`) is not yet attached to this Pages project.
   That requires switching the domain's nameservers to Cloudflare at the
   registrar (Namecheap), then adding the domain under the Pages project's
   Custom Domains tab.

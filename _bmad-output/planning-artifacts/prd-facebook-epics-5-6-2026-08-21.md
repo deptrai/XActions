@@ -6,8 +6,8 @@ status: approved
 epics: [5, 5b, 6]
 author: "John (BMad Product Manager) & Winston (BMad System Architect)"
 prd_ref:
-  - prd-XActions-2026-06-08
-  - prd-XActions-2026-06-10-epic4
+  - prd-Medirus-2026-06-08
+  - prd-Medirus-2026-06-10-epic4
 ---
 
 # PRD: Facebook Epics 5, 5b & 6 — Messenger Port, Marketplace, Headless/Anti-Detection
@@ -18,7 +18,7 @@ prd_ref:
 
 ## 0. Mục Đích & Bối Cảnh
 
-PRD này là phần tiếp theo của `prd-XActions-2026-06-08` (Epics 1–3: scrape/automate/surfaces) và `prd-XActions-2026-06-10-epic4` (Epic 4: growth automation). Nó định nghĩa:
+PRD này là phần tiếp theo của `prd-Medirus-2026-06-08` (Epics 1–3: scrape/automate/surfaces) và `prd-Medirus-2026-06-10-epic4` (Epic 4: growth automation). Nó định nghĩa:
 
 - **Epic 5 — Facebook Messenger Port:** GraphQL HTTP layer, Messenger share campaign, auth proxy, input queue, campaign UI.
 - **Epic 5b — Marketplace & Infrastructure Enhancements:** Marketplace scraper, share-link-uid v2, `headless` parameter, Chrome executable auto-resolution.
@@ -30,7 +30,7 @@ FR đánh số tiếp từ FR-23 (→ FR-23..FR-54). NFR tiếp từ NFR-10 củ
 
 ## 1. Vision
 
-XActions Facebook module không chỉ là công cụ scrape và automate post/like/comment, mà còn là một **Facebook growth & lead engine đầy đủ**: share qua Messenger, khai thác Marketplace, và mô phỏng hành vi người dùng thật để giảm tỷ lệ checkpoint. Mọi tính năng mới đều đi qua cùng một dispatcher, dry-run mặc định, và `runGuardedBatch`.
+Medirus Facebook module không chỉ là công cụ scrape và automate post/like/comment, mà còn là một **Facebook growth & lead engine đầy đủ**: share qua Messenger, khai thác Marketplace, và mô phỏng hành vi người dùng thật để giảm tỷ lệ checkpoint. Mọi tính năng mới đều đi qua cùng một dispatcher, dry-run mặc định, và `runGuardedBatch`.
 
 ---
 
@@ -47,7 +47,7 @@ XActions Facebook module không chỉ là công cụ scrape và automate post/li
 
 - **UJ-5.1:** An muốn gửi bài post đến 50 người qua Messenger. An tạo campaign, paste URL, nhập UID list, dry-run preview, chạy thật với delay bảo thủ.
 - **UJ-5b.1:** Mai theo dõi giá laptop trên Facebook Marketplace. Mai chạy `x_facebook_marketplace_search` với query, nhận về danh sách có giá parse đa tiền tệ.
-- **UJ-5b.2:** Tuấn deploy trên server headless. Tuấn chạy `xactions automate --platform facebook --headless true`, hệ thống tự resolve Chrome path.
+- **UJ-5b.2:** Tuấn deploy trên server headless. Tuấn chạy `medirus automate --platform facebook --headless true`, hệ thống tự resolve Chrome path.
 - **UJ-6.1:** Hưng nuôi account mới (< 7 ngày). Hưng bật `accountAge` mode, hệ thống tự động giảm 50% velocity limits và thêm warming sequence.
 
 ---

@@ -69,7 +69,7 @@ const LOW_CREDIT_TRIGGERS = {
 const SHARE_REWARDS = {
   twitter: {
     credits: 1,                     // Useless alone
-    template: "Just cleaned my X following with @XActionsApp 🧹 {count} unfollowed! Try it: xactions.app/r/{code}",
+    template: "Just cleaned my X following with @MedirusApp 🧹 {count} unfollowed! Try it: medirus.online/r/{code}",
     requireVerification: true,
     cooldown: '7d',
     maxPerMonth: 2,                 // 2 credits/month max = nothing

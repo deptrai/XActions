@@ -343,7 +343,7 @@ so that I can analyze engagement, sentiment, and community activity at scale.
 
 - `_bmad-output/architecture-artifacts/epic7-2026-08-14/STORIES.md` — Story 7.3 acceptance criteria and implementation notes.
 - `_bmad-output/architecture-artifacts/epic7-2026-08-14/ARCHITECTURE-SPINE.md` — C4 component map, data flows, NFR mapping.
-- `_bmad-output/planning-artifacts/prds/prd-XActions-2026-08-14-epic7/prd.md` — FR-58, FR-59, FR-60, FR-61, FR-63, NFR-10..NFR-15.
+- `_bmad-output/planning-artifacts/prds/prd-Medirus-2026-08-14-epic7/prd.md` — FR-58, FR-59, FR-60, FR-61, FR-63, NFR-10..NFR-15.
 - `_bmad-output/implementation-artifacts/7-2-multi-type-search.md` — patterns for hydration-first extraction, scroll loops, dispatchers, and tests.
 - `src/scrapers/facebook/index.js` — existing scrapers, normalizers, `assertFacebookUrlLocal`, `stripPii`.
 - `src/scrapers/index.js` — `scrape()` dispatcher and `platformActionMap`.

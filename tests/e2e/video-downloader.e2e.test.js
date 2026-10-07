@@ -153,7 +153,7 @@ test.describe('Story 13.2.4 — /video E2E', () => {
     await expect(page.locator('#result')).toHaveClass(/visible/, { timeout: 10000 });
 
     const history = await page.evaluate(() => {
-      return JSON.parse(localStorage.getItem('xactions_video_history') || '[]');
+      return JSON.parse(localStorage.getItem('medirus_video_history') || '[]');
     });
 
     expect(history).toHaveLength(1);

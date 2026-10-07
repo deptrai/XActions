@@ -1,4 +1,4 @@
-Read `/Users/luisphan/Documents/GitHub/XActions/.claude/skills/bmad-code-review/review-prompts/verification-gap.md` completely and follow it as your review instructions.
+Read `/Users/luisphan/Documents/GitHub/Medirus/.claude/skills/bmad-code-review/review-prompts/verification-gap.md` completely and follow it as your review instructions.
 
 Review content:
 

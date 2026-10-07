@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Profile Data Model
+ * Medirus Client — Profile Data Model
  *
  * Represents a Twitter user profile from the internal GraphQL API.
  * Use Profile.fromGraphQL(raw) to parse raw API responses.

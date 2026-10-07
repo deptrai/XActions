@@ -2,9 +2,9 @@
 /**
  * Remote Facebook API client for MCP server.
  *
- * When XACTIONS_MODE=remote, Facebook MCP tools route through the production
+ * When MEDIRUS_MODE=remote, Facebook MCP tools route through the production
  * REST API instead of using Prisma/Puppeteer locally. This requires
- * XACTIONS_API_TOKEN (JWT) for authentication.
+ * MEDIRUS_API_TOKEN (JWT) for authentication.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
  */
@@ -23,7 +23,7 @@ const SCRAPE_ACTION_MAP = {
 
 /**
  * Call the production Facebook API.
- * @param {string} apiUrl - Base API URL (e.g. https://api-xactions.medirus.online)
+ * @param {string} apiUrl - Base API URL (e.g. https://api-medirus.medirus.online)
  * @param {string} token - JWT token
  * @param {string} method - HTTP method
  * @param {string} path - API path (e.g. /api/facebook/scrape)

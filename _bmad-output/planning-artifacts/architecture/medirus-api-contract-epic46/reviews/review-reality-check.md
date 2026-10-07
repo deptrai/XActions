@@ -1,12 +1,12 @@
 ---
 review: reality-check
-spine: ARCHITECTURE-SPINE.md (xactions-api-contract-epic46)
+spine: ARCHITECTURE-SPINE.md (medirus-api-contract-epic46)
 lens: "Verify every committed decision was web-researched or reality-checked rather than asserted from training data: current library/framework versions, that each named technology still exists and fits, and — greenfield — the live defaults of any starter it leans on."
 method: npm registry (`npm view` versions + peerDependencies) + direct repo inspection + web search (swagger-ui try-it-out semantics)
 verdict: PASS WITH CONDITIONS
 ---
 
-# Reality-Check Review — XActions API Contract Spine (Epic 46)
+# Reality-Check Review — Medirus API Contract Spine (Epic 46)
 
 ## Verdict: PASS WITH CONDITIONS
 
@@ -49,7 +49,7 @@ Every pinned version exists on npm at exactly the pinned version, and every repo
 `src/analytics/viralStatsStore.js:13` does `import { z } from 'zod'` but **zod is not declared in package.json** — it resolves to a transitive **zod 3.25.76** (hoisted via abitype/remotion/hono et al.). Adding `zod@4.6.5` as a direct dep flips that file's import to v4 with zero diff in the file itself. The file's surface usage (`z.object`, `z.enum`, two-arg `z.record`, `z.string().datetime()`) is mostly v4-compatible, but this is exactly the class of silent break the spine's AD-1 "single source of truth" story should have caught. **Action for Story 46.2: declare zod, then smoke-test `viralStatsStore` schema parse paths.** Spine does not mention this.
 
 ### Finding 2 (MEDIUM) — `workspaces` enablement is a topology change, not a script addition
-AD-8 says `@xactions/api-client` resolves "qua root `workspaces`" — true, root has no workspaces field (verified). But the repo is already an *unwired* pseudo-monorepo: `packages/xactions-mcp/` (name `xactions-mcp`) and `apps/{api,web}/` exist as directories; `apps/web` is a scaffold (only `public/`, no package.json). Turning on npm workspaces will re-resolve node_modules, regenerate package-lock, and can surface *other* phantom deps like Finding 1. Spine treats this as one line in AD-8; it's a package-manager topology change deserving an explicit step + install audit.
+AD-8 says `@medirus/api-client` resolves "qua root `workspaces`" — true, root has no workspaces field (verified). But the repo is already an *unwired* pseudo-monorepo: `packages/medirus-mcp/` (name `medirus-mcp`) and `apps/{api,web}/` exist as directories; `apps/web` is a scaffold (only `public/`, no package.json). Turning on npm workspaces will re-resolve node_modules, regenerate package-lock, and can surface *other* phantom deps like Finding 1. Spine treats this as one line in AD-8; it's a package-manager topology change deserving an explicit step + install audit.
 
 ### Finding 3 (LOW–MEDIUM) — Per-operation try-it-out disabling is not a built-in swagger-ui feature
 AD-7 writes "`x-tryitout: false` hoặc `supportedSubmitMethods` tương đương". Web-verified: `supportedSubmitMethods` is a **global** config filtered by HTTP *method* only (swagger-ui PR #4186) — it cannot disable try-it-out for specific operations (e.g. POST tweet while leaving POST auth). `x-tryitout` is **not** a recognized swagger-ui extension; it would be ignored unless a custom plugin wraps the `allowTryItOutFor` selector (the documented `DisableTryItOutPlugin` pattern via `wrapSelectors`). The hedged phrasing saves it from being false, but a reader will assume it's a config toggle. **Reality: needs a small swagger-ui plugin passed via `swagger-ui-express`'s `swaggerOptions.plugins` — write that into Story 46.1 acceptance.**

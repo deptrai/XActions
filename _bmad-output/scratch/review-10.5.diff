@@ -332,7 +332,7 @@ index f3dbabb..6003a2a 100644
 +    "schemas",
      "api/config/x402-config.js"
    ],
-   "mcpName": "io.github.nirholas/xactions",
+   "mcpName": "io.github.nirholas/medirus",
 
 --- schemas/shopee/ecom.json (status:  A)
 diff --git a/schemas/shopee/ecom.json b/schemas/shopee/ecom.json

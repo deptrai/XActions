@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Session Validator
+ * Medirus Client — Session Validator
  *
  * Validates stored cookies against Twitter's API and handles session refresh.
  * Detects expired, locked, and suspended sessions.

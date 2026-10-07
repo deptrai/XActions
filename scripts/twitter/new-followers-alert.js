@@ -55,7 +55,7 @@ var CONFIG = {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   
   const $userCell = '[data-testid="UserCell"]';
-  const STORAGE_KEY = 'xactions_followers_snapshot';
+  const STORAGE_KEY = 'medirus_followers_snapshot';
   
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║  🆕 NEW FOLLOWERS ALERT                                    ║');

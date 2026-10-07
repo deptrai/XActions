@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 🔀 Audience Overlap - XActions
+ * 🔀 Audience Overlap - Medirus
  * ============================================
  *
  * @name         audience-overlap
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Get two lists of handles (from the scrape-followers tool, a CSV, or by hand)
@@ -136,9 +136,9 @@
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔀 AUDIENCE OVERLAP - XActions                         ║
+║  🔀 AUDIENCE OVERLAP - Medirus                         ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -244,12 +244,12 @@
   if (CONFIG.exportResults) {
     console.log('');
     const safe = (s) => String(s).replace(/[^A-Za-z0-9_-]/g, '');
-    download(report, `xactions-overlap-${safe(CONFIG.labelA)}-vs-${safe(CONFIG.labelB)}.json`);
+    download(report, `medirus-overlap-${safe(CONFIG.labelA)}-vs-${safe(CONFIG.labelB)}.json`);
   }
 
-  window.xactionsOverlap = report;
+  window.medirusOverlap = report;
   console.log('');
-  log.info('Full report object: window.xactionsOverlap');
+  log.info('Full report object: window.medirusOverlap');
   log.success('Done.');
 
   return report;

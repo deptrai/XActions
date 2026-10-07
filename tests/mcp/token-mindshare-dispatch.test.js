@@ -26,7 +26,7 @@ import {
   initializeBackend,
 } from '../../src/mcp/server.js';
 
-const DB_PATH = path.join(os.homedir(), '.xactions', 'analytics.db');
+const DB_PATH = path.join(os.homedir(), '.medirus', 'analytics.db');
 
 /**
  * Ensure token_mentions exists in the real analytics.db (schema mirrors 54.2).
@@ -57,7 +57,7 @@ function ensureSchema(db) {
 
 describe('Story 54.4: x_analytics token_mindshare dispatch', () => {
   beforeAll(async () => {
-    process.env.XACTIONS_MODE = 'local';
+    process.env.MEDIRUS_MODE = 'local';
     await initializeBackend();
 
     fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });

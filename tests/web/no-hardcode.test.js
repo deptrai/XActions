@@ -59,14 +59,14 @@ describe('Zero Hardcoded Backend URLs & Import Guards', () => {
     expect(violations).toEqual([]);
   });
 
-  it('enforces lib/api.ts uses import type only for @xactions/api-client', () => {
+  it('enforces lib/api.ts uses import type only for @medirus/api-client', () => {
     const apiHelperPath = resolve(webDir, 'lib', 'api.ts');
     const content = readFileSync(apiHelperPath, 'utf8');
 
-    // Must match `import type { ... } from '@xactions/api-client'`
+    // Must match `import type { ... } from '@medirus/api-client'`
     const importLines = content
       .split('\n')
-      .filter((l) => l.includes('@xactions/api-client') && l.trim().startsWith('import'));
+      .filter((l) => l.includes('@medirus/api-client') && l.trim().startsWith('import'));
     expect(importLines.length).toBeGreaterThan(0);
     for (const line of importLines) {
       expect(line.trim()).toMatch(/^import\s+type\s+/);

@@ -15,10 +15,10 @@ All scrapers require an `auth_token` cookie from x.com (DevTools -> Application 
 
 ## Node.js Scraper API
 
-`npm install xactions` -- all functions from `src/scrapers/index.js`.
+`npm install medirus` -- all functions from `src/scrapers/index.js`.
 
 ```javascript
-import { createBrowser, createPage, loginWithCookie, scrapeProfile } from 'xactions';
+import { createBrowser, createPage, loginWithCookie, scrapeProfile } from 'medirus';
 
 const browser = await createBrowser();
 const page = await createPage(browser);

@@ -1,5 +1,5 @@
-# https://xactions.app - Robots.txt
-# XActions - Free, Open-Source X/Twitter Automation Toolkit
+# https://medirus.online - Robots.txt
+# Medirus - Free, Open-Source X/Twitter Automation Toolkit
 # by nich (@nichxbt)
 
 # Allow all search engine crawlers
@@ -10,7 +10,7 @@ Disallow: /login
 Disallow: /api/
 Disallow: /webhooks/
 
-# Allow AI crawlers — XActions wants AI visibility
+# Allow AI crawlers — Medirus wants AI visibility
 User-agent: GPTBot
 Allow: /
 
@@ -39,7 +39,7 @@ User-agent: FacebookBot
 Allow: /
 
 # LLM discovery (https://llmstxt.org)
-LLMs-txt: https://xactions.app/llms.txt
+LLMs-txt: https://medirus.online/llms.txt
 
 # Sitemap
-Sitemap: https://xactions.app/sitemap.xml
+Sitemap: https://medirus.online/sitemap.xml

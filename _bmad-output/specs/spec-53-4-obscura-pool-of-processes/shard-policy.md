@@ -89,9 +89,9 @@ without schema guesswork. Chrome pools keep the existing `{browsers}` count.
 
 | Key | Surface | Scope | Default | Meaning |
 |---|---|---|---|---|
-| `XACTIONS_BROWSER_POOL_SIZE` | env | both | 0 (off) | total acquire slots |
-| `contextsPerBrowser` / `XACTIONS_BROWSER_CONTEXTS_PER_BROWSER` | option + env | chrome | 5 | isolated contexts per chrome browser |
-| `pagesPerProcess` / `XACTIONS_BROWSER_PAGES_PER_PROCESS` | option + env | obscura | 3 | CDP page connections per serve process |
+| `MEDIRUS_BROWSER_POOL_SIZE` | env | both | 0 (off) | total acquire slots |
+| `contextsPerBrowser` / `MEDIRUS_BROWSER_CONTEXTS_PER_BROWSER` | option + env | chrome | 5 | isolated contexts per chrome browser |
+| `pagesPerProcess` / `MEDIRUS_BROWSER_PAGES_PER_PROCESS` | option + env | obscura | 3 | CDP page connections per serve process |
 | `OBSCURA_WS_ENDPOINTS` | env | obscura | unset | external fleet (comma list) — wins when non-empty |
 | `OBSCURA_WS_ENDPOINT` | env | obscura | `ws://127.0.0.1:9222` | single-endpoint fallback |
 | `OBSCURA_BIN` / `OBSCURA_PORT_BASE` | env | obscura | unset / 9222 | optional dev auto-spawn (only when no endpoints env) |

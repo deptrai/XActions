@@ -54,7 +54,7 @@
   };
 
   const run = async () => {
-    console.log('📝 XActions Profile Editor');
+    console.log('📝 Medirus Profile Editor');
     console.log('========================');
 
     // Click edit profile if needed

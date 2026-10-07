@@ -9,7 +9,7 @@
 
 ## User Story
 
-**As a** consumer of the `xactions` package (npm / local `import`)
+**As a** consumer of the `medirus` package (npm / local `import`)
 **I want** mọi `package.json` export trỏ tới `src/scrapers/social/` thay vì các legacy platform folders (`src/scrapers/{twitter,bluesky,mastodon,threads}/`)
 **So that** có một surface API thống nhất, hiện đại, đi qua dispatcher `scrape()` — trong khi vẫn giữ các path cũ hoạt động (backward-compatible) cho ít nhất 1 release cycle.
 
@@ -108,7 +108,7 @@ npm test   # ít nhất dispatcher + social suites
 - Script verify tồn tại target cho mọi export key (ở trên).
 - `npm run typecheck` = `tsc --noEmit` phải pass.
 - `npm test` — đặc biệt `tests/scrapers/dispatcher.test.js` (35 tests) + social suites; không regression.
-- Smoke import: `node -e "import('xactions/scrapers/twitter').then(m=>console.log(Object.keys(m)))"` (hoặc import path tương đương qua self-reference) — xác nhận key cũ vẫn resolve.
+- Smoke import: `node -e "import('medirus/scrapers/twitter').then(m=>console.log(Object.keys(m)))"` (hoặc import path tương đương qua self-reference) — xác nhận key cũ vẫn resolve.
 
 ---
 

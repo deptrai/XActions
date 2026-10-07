@@ -8,8 +8,8 @@ scope: major
 # Sprint Change Proposal
 
 **Date:** 2026-09-05  
-**Project:** XActions  
-**Triggering issue:** Sau khi hoàn thành Epic 23 (Bluesky & Mastodon Integration) và các epic 10–19, XActions cần lộ trình mới ngoài backlog hiện tại (Epics 20, 24–26). Trước khi lên kế hoạch, đã audit toàn bộ code/docs để xác định chính xác những gì đã implement, đang partial, và còn thiếu.
+**Project:** Medirus  
+**Triggering issue:** Sau khi hoàn thành Epic 23 (Bluesky & Mastodon Integration) và các epic 10–19, Medirus cần lộ trình mới ngoài backlog hiện tại (Epics 20, 24–26). Trước khi lên kế hoạch, đã audit toàn bộ code/docs để xác định chính xác những gì đã implement, đang partial, và còn thiếu.
 
 ---
 
@@ -17,7 +17,7 @@ scope: major
 
 ### Problem statement
 1. **Backlog hiện tại đang cạn:** Epic 20, 24, 25, 26 là cleanup/consolidation, không cung cấp giá trị business mới trực tiếp.
-2. **Cạnh tranh anti-bot ngày càng khắc nghiệt:** X/Twitter, Threads, Facebook liên tục cập nhật bot detection (TLS fingerprinting, DOM drift, challenge pages). XActions cần tự động hóa resilience.
+2. **Cạnh tranh anti-bot ngày càng khắc nghiệt:** X/Twitter, Threads, Facebook liên tục cập nhật bot detection (TLS fingerprinting, DOM drift, challenge pages). Medirus cần tự động hóa resilience.
 3. **Silent data degradation:** Selector DOM thay đổi → payload rỗng/thiếu field mà không cảnh báo.
 4. **Thiếu real-time event pipeline:** Consumer phải polling định kỳ, tốn tài nguyên.
 5. **Cross-platform duplication:** Người dùng cần đăng bài/tương tác đồng thời trên nhiều nền tảng.
@@ -109,7 +109,7 @@ This proposal was rewritten after a full code/docs audit. The following stories 
 **Rationale:**
 - Nhiều tính năng đã có nền tảng (governor, account pool, stealth, streaming, webhook inbound, schema registry). Việc viết lại từ đầu sẽ tốn effort và rủi ro hồi quy.
 - Các gap còn lại là incremental: TLS/JA4, health score, circuit breaker, canary, outbound webhook, cross-platform write, universal media, UI dashboard, distributed token bucket.
-- XActions giữ scope Producer/Scraping Engine; không đè lên Nowing (CDP operator, CRM) hay ChainLens (deep research).
+- Medirus giữ scope Producer/Scraping Engine; không đè lên Nowing (CDP operator, CRM) hay ChainLens (deep research).
 
 **Effort estimate:**
 - Epic 27: 2–3 sprints (TLS fingerprinting + health orchestrator).
@@ -192,7 +192,7 @@ This proposal was rewritten after a full code/docs audit. The following stories 
 ## Section 7 — Vietnam Market Pivot Addendum (2026-09-05)
 
 ### Trigger
-Luisphan confirmed strategic pivot: XActions should prioritize the Vietnam market for Nowing AI Lead Hub. Existing VN coverage (Epic 15–18) covers 7 platforms but misses high-value VN-specific sources.
+Luisphan confirmed strategic pivot: Medirus should prioritize the Vietnam market for Nowing AI Lead Hub. Existing VN coverage (Epic 15–18) covers 7 platforms but misses high-value VN-specific sources.
 
 ### Epic impact
 
@@ -266,7 +266,7 @@ Phase D — Finalization:
 
 ### Scope boundary (VN pivot does NOT change)
 
-- **XActions** = scraping/data engine. Nowing = CRM/lead scoring/operator. ChainLens = deep research.
+- **Medirus** = scraping/data engine. Nowing = CRM/lead scoring/operator. ChainLens = deep research.
 - Zalo OA API covers business content only — Zalo personal messaging is deferred.
 - YouTube uses official API v3 first; InnerTube/yt-dlp is fallback only.
 - All VN crawlers reuse `AbstractCrawler` + `AbstractApiClient` + `ProxyIpPool` + `PrismaStore` + `RedisStreamPublisher` — no new core infrastructure needed.
@@ -349,7 +349,7 @@ Phase D — Finalization:
 
 - **Nowing** owns: CDP browser operator, CRM sync, Google Sheets/Lark integration, lead scoring, outbound. Do not re-propose.
 - **ChainLens** owns: deep research, market intelligence, synthesis. Do not re-propose.
-- **XActions** owns: scraping engine, anti-detection, session resilience, streaming, cross-platform action, media extraction, rate governance, operator dashboard.
+- **Medirus** owns: scraping engine, anti-detection, session resilience, streaming, cross-platform action, media extraction, rate governance, operator dashboard.
 
 ---
 

@@ -26,7 +26,7 @@
   };
   // =============================================
 
-  const STORAGE_KEY = 'xactions_known_followers';
+  const STORAGE_KEY = 'medirus_known_followers';
 
   const download = (data, filename) => {
     const a = document.createElement('a');
@@ -158,7 +158,7 @@
     if (CONFIG.exportOnComplete && newFollowers.length > 0) {
       download(
         { newFollowers, dmsSent, totalKnown: updatedKnown.size, detectedAt: new Date().toISOString() },
-        `xactions-new-followers-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-new-followers-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
 

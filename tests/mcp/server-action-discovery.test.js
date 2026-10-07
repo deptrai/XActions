@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Action discovery tests for x_actions_list (Story 14.2)
+ * Action discovery tests for medirus_list (Story 14.2)
  *
  * Tests executeActionListTool returns ActionDescriptor[] with requiresAuth and
  * platform fields. Instantiation of FacebookCrawler and ThreadsCrawler must not
@@ -24,7 +24,7 @@ beforeAll(async () => {
   }
 });
 
-describe('x_actions_list', () => {
+describe('medirus_list', () => {
   it('returns an array of ActionDescriptor objects', async function () {
     if (unavailable) this.skip();
 

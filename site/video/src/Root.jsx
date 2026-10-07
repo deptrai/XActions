@@ -1,5 +1,5 @@
 /**
- * Root — Registers all XActions video compositions with Remotion.
+ * Root — Registers all Medirus video compositions with Remotion.
  * @author nich (@nichxbt)
  */
 
@@ -25,7 +25,7 @@ export const RemotionRoot = () => {
         defaultProps={{
           author: 'nich',
           handle: '@nichxbt',
-          text: 'XActions: 75+ free MCP tools for Twitter automation.\n\nNo API fees. Open source. Works with Claude, Cursor, GPT.\n\nnpx xactions-mcp',
+          text: 'Medirus: 75+ free MCP tools for Twitter automation.\n\nNo API fees. Open source. Works with Claude, Cursor, GPT.\n\nnpx medirus-mcp',
           likes: 2847,
           retweets: 412,
           replies: 163,
@@ -43,7 +43,7 @@ export const RemotionRoot = () => {
         defaultProps={{
           author: 'nich',
           handle: '@nichxbt',
-          text: 'XActions: 75+ free MCP tools for Twitter automation.\n\nNo API fees. Open source. Works with Claude, Cursor, GPT.\n\nnpx xactions-mcp',
+          text: 'Medirus: 75+ free MCP tools for Twitter automation.\n\nNo API fees. Open source. Works with Claude, Cursor, GPT.\n\nnpx medirus-mcp',
           likes: 2847,
           retweets: 412,
           replies: 163,
@@ -61,7 +61,7 @@ export const RemotionRoot = () => {
         defaultProps={{
           author: 'nich',
           handle: '@nichxbt',
-          text: 'XActions: 75+ free MCP tools for Twitter automation.\n\nNo API fees. Open source. Works with Claude, Cursor, GPT.\n\nnpx xactions-mcp',
+          text: 'Medirus: 75+ free MCP tools for Twitter automation.\n\nNo API fees. Open source. Works with Claude, Cursor, GPT.\n\nnpx medirus-mcp',
           likes: 2847,
           retweets: 412,
           replies: 163,
@@ -86,7 +86,7 @@ export const RemotionRoot = () => {
             '1/ Scrape anything — profiles, followers, tweets, threads, videos.\n\nNo API key needed. Just your browser cookie.',
             '2/ AI writing assistant — analyze anyone\'s voice, then generate tweets that match their style.\n\nPowered by free LLMs via OpenRouter.',
             '3/ Real-time analytics — best time to post, engagement rates, follower growth, sentiment analysis.',
-            '4/ Works with Claude, Cursor, Windsurf, VS Code, GPT.\n\nJust run: npx xactions-mcp\n\ngithub.com/nirholas/XActions',
+            '4/ Works with Claude, Cursor, Windsurf, VS Code, GPT.\n\nJust run: npx medirus-mcp\n\ngithub.com/nirholas/XActions',
           ],
         }}
       />
@@ -107,7 +107,7 @@ export const RemotionRoot = () => {
             '1/ Scrape anything — profiles, followers, tweets, threads, videos.\n\nNo API key needed.',
             '2/ AI writing assistant — analyze voice → generate matching tweets.',
             '3/ Real-time analytics — best posting times, engagement, sentiment.',
-            '4/ Works with Claude, Cursor, GPT.\n\nnpx xactions-mcp\ngithub.com/nirholas/XActions',
+            '4/ Works with Claude, Cursor, GPT.\n\nnpx medirus-mcp\ngithub.com/nirholas/XActions',
           ],
         }}
       />

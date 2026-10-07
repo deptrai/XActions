@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "XActions — X/Twitter Automation Toolkit",
+  "name": "Medirus — X/Twitter Automation Toolkit",
   "version": "1.0.0",
-  "description": "Run XActions automation scripts on X/Twitter without browser console. Auto-like, smart unfollow, keyword follow, growth suite, and more.",
+  "description": "Run Medirus automation scripts on X/Twitter without browser console. Auto-like, smart unfollow, keyword follow, growth suite, and more.",
   "author": "nichxbt",
   "homepage_url": "https://github.com/nirholas/XActions",
 

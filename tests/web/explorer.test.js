@@ -41,6 +41,6 @@ describe('Story 47.5 — Universal Data Explorer & Export Screen', () => {
     expect(src).toContain('handleExportCSV');
     expect(src.includes('\uFEFF')).toBe(true);
     expect(src).toContain('text/csv;charset=utf-8;');
-    expect(src).toContain('xactions-');
+    expect(src).toContain('medirus-');
   });
 });

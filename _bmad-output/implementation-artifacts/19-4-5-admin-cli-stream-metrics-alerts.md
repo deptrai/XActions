@@ -17,10 +17,10 @@ Status: ready-for-dev
 
 ## ⚠️ Critical Constraints / Architecture Variance
 
-1. **Extend Existing `xactions admin stream` Group** — `xactions admin stream metrics` and `xactions admin stream alerts` already exist in `src/cli/commands/admin.js` (Story 14.3 / 19.3). This story adds the missing `test` subcommand (`xactions admin stream test`) to trigger a synthetic alert from the CLI.
+1. **Extend Existing `medirus admin stream` Group** — `medirus admin stream metrics` and `medirus admin stream alerts` already exist in `src/cli/commands/admin.js` (Story 14.3 / 19.3). This story adds the missing `test` subcommand (`medirus admin stream test`) to trigger a synthetic alert from the CLI.
 2. **REST-First with In-Process Fallback**:
    - For `test`: Call `POST /api/admin/stream/alerts/test` with optional body. If remote API is unreachable and no explicit `--url` was provided, fall back to in-process `defaultStreamAlertEngine.testAlert(customPayload)`.
-3. **Preserve Existing `metrics` and `alerts` Commands** — Do NOT rename, move, or break the existing `xactions admin stream metrics` and `alerts` commands. The dashboard, docs, and existing tests depend on them.
+3. **Preserve Existing `metrics` and `alerts` Commands** — Do NOT rename, move, or break the existing `medirus admin stream metrics` and `alerts` commands. The dashboard, docs, and existing tests depend on them.
 4. **Dual Output Modes (CLI Formatted + Raw JSON)**:
    - Human-readable: Clean terminal messages with `chalk` and emojis (✅, ⚠️, ❌), showing whether the test alert was delivered to webhook/email.
    - Machine-readable: Valid JSON output via `JSON.stringify(..., null, 2)` when `--json` is supplied.
@@ -38,7 +38,7 @@ Status: ready-for-dev
 ## Story
 
 As an **Internal Automation Operator**,  
-I want **the command `xactions admin stream test` (alongside existing `metrics` and `alerts`)**,  
+I want **the command `medirus admin stream test` (alongside existing `metrics` and `alerts`)**,  
 so that **I can verify that alert channels (webhook/email) are configured correctly and will fire when `pendingMessages > 50,000` or `lastAckTime > 60s`**.
 
 ---
@@ -47,8 +47,8 @@ so that **I can verify that alert channels (webhook/email) are configured correc
 
 ### AC-1: CLI Command Registration & Help Contract
 
-- **Given** the `xactions admin` command group
-- **When** the operator runs `xactions admin stream --help`
+- **Given** the `medirus admin` command group
+- **When** the operator runs `medirus admin stream --help`
 - **Then** the output lists:
   - `metrics`: Display real-time stream metrics
   - `alerts`: Display recent stream alerts and threshold status
@@ -58,7 +58,7 @@ so that **I can verify that alert channels (webhook/email) are configured correc
 ### AC-2: Send Test Alert via REST or In-Process Engine
 
 - **Given** a running admin daemon or local in-process environment
-- **When** the operator runs `xactions admin stream test` (or `xactions admin stream test --json`)
+- **When** the operator runs `medirus admin stream test` (or `medirus admin stream test --json`)
 - **Then** the command attempts `POST /api/admin/stream/alerts/test` with optional Bearer token
 - **And** on success, prints a confirmation with delivery status (`webhookDelivered`, `emailDelivered`)
 - **And** if `--json` is passed, outputs `{ success: true, message: "Test alert sent", result: { ... } }`
@@ -66,16 +66,16 @@ so that **I can verify that alert channels (webhook/email) are configured correc
 
 ### AC-3: Preserve Existing Stream Metrics and Alerts Commands
 
-- **Given** the existing `xactions admin stream` tree
+- **Given** the existing `medirus admin stream` tree
 - **When** this story is implemented
-- **Then** `xactions admin stream metrics` continues to display stream metrics as before
-- **And** `xactions admin stream alerts` continues to display alert status as before
+- **Then** `medirus admin stream metrics` continues to display stream metrics as before
+- **And** `medirus admin stream alerts` continues to display alert status as before
 - **And** their option flags (`--url`, `--token`, `--json`) and output formatting are preserved
 
 ### AC-4: Error Handling & Validation
 
 - **Given** the API server returns 4xx/5xx or the alert engine is unavailable
-- **When** the operator runs `xactions admin stream test`
+- **When** the operator runs `medirus admin stream test`
 - **Then** the command prints the error cleanly with `printCliError(err, { json: options.json })`
 - **And** it does not crash or leak internal stack traces
 
@@ -162,7 +162,7 @@ streamCmd
 ## Testing Plan
 
 1. **Unit & CLI Verification (`tests/cli/admin-stream.test.js`)**:
-   - Verify `xactions admin stream --help` lists `metrics`, `alerts`, and `test`.
+   - Verify `medirus admin stream --help` lists `metrics`, `alerts`, and `test`.
    - Verify `test` subcommand exposes `--url`, `--token`, and `--json` options.
    - Test in-process fallback for `test` and verify the result contains `delivered: { webhook, email }` fields.
    - Test `--json` flag formats valid JSON output for `test`.
@@ -176,7 +176,7 @@ streamCmd
 
 - **Status**: `done`
 - **Reviewed**: `Approved`
-- **Notes**: Implemented `xactions admin stream test` with REST-first/in-process fallback and 4/4 tests passing.
+- **Notes**: Implemented `medirus admin stream test` with REST-first/in-process fallback and 4/4 tests passing.
 
 ---
 

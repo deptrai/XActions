@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Account Importer / Migration Tool
+ * Medirus Account Importer / Migration Tool
  * Import/migrate Twitter data to Bluesky or Mastodon.
  *
  * Bluesky: via @atproto/api (create posts, follow matching users)

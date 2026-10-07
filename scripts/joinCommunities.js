@@ -27,7 +27,7 @@
   const processed = new Set();
 
   const run = async () => {
-    console.log('🏘️ JOIN COMMUNITIES — XActions by nichxbt\n');
+    console.log('🏘️ JOIN COMMUNITIES — Medirus by nichxbt\n');
 
     if (CONFIG.dryRun) console.log('⚠️ DRY RUN — Set CONFIG.dryRun = false to actually join\n');
     if (CONFIG.keywords.length > 0) console.log(`🔍 Keywords: ${CONFIG.keywords.join(', ')}\n`);

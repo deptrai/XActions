@@ -296,7 +296,7 @@ Patterns:
 ## Project Context Reference
 
 - Epic 13: `_bmad-output/planning-artifacts/epics.md#epic-13-high-throughput-hybrid-scraping-engine-twitter--facebook-refactor`
-- Architecture: `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (AD-1, AD-2, AD-3, AD-8, AD-9, AD-11, AD-12, AD-14)
+- Architecture: `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (AD-1, AD-2, AD-3, AD-8, AD-9, AD-11, AD-12, AD-14)
 - PRD: `_bmad-output/planning-artifacts/prd.md` (FR-72: Facebook Crawler Refactor)
 - Facebook PRD: `_bmad-output/planning-artifacts/prd-facebook-epics-5-6-2026-08-21.md` (FR-23, NFR-7, AR8-AR10)
 - Core contracts:

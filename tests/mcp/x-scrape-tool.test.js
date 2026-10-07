@@ -28,12 +28,12 @@ describe('x_scrape tool registration and schema', () => {
     assert.ok(props.artifactFormat, 'artifactFormat prop required');
   });
 
-  it('updates x_actions_list schema with category and detailLevel', () => {
-    const tool = TOOLS.find((t) => t.name === 'x_actions_list');
-    assert.ok(tool, 'x_actions_list tool should be registered');
+  it('updates medirus_list schema with category and detailLevel', () => {
+    const tool = TOOLS.find((t) => t.name === 'medirus_list');
+    assert.ok(tool, 'medirus_list tool should be registered');
     const props = tool.inputSchema.properties;
-    assert.ok(props.category, 'category property should be added to x_actions_list');
-    assert.ok(props.detailLevel, 'detailLevel property should be added to x_actions_list');
+    assert.ok(props.category, 'category property should be added to medirus_list');
+    assert.ok(props.detailLevel, 'detailLevel property should be added to medirus_list');
     assert.deepEqual(props.detailLevel.enum, ['summary', 'full']);
   });
 });

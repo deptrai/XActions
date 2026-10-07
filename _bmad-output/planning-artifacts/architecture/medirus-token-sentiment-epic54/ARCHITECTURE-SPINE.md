@@ -1,5 +1,5 @@
 ---
-name: 'XActions Token Sentiment Intelligence — Epic 54'
+name: 'Medirus Token Sentiment Intelligence — Epic 54'
 type: architecture-spine
 purpose: build-substrate
 altitude: epic
@@ -11,8 +11,8 @@ updated: '2026-10-04'
 binds: [Story 54.0, Story 54.1, Story 54.2, Story 54.3, Story 54.4, Story 54.5, Story 54.6]
 sources:
   - 'planning-artifacts/epics.md (Epic 54)'
-  - 'architecture/xactions-hybrid-scraping-spine (parent, canonical)'
-  - 'architecture/architecture-xactions-public-scrape-gateway-2026-09-26 (parent)'
+  - 'architecture/medirus-hybrid-scraping-spine (parent, canonical)'
+  - 'architecture/architecture-medirus-public-scrape-gateway-2026-09-26 (parent)'
   - 'research/technical-telegram-channel-crawler-mmomarket-pattern-2026-10-04'
   - 'research/technical-crypto-social-sentiment-providers-2026-10-04 (jev-trading)'
 companions: ['epics.md Epic 54']
@@ -184,7 +184,7 @@ src/mcp/server.js           # + actions on x_analytics / x_crypto dispatchers (A
 
 ### OQ-1 — Who owns `TELEGRAM_SESSION`?
 
-**Resolved: dedicated Telegram account on a dedicated real SIM/eSIM — an org-owned infra asset, not a person's account.** The relay's own error taxonomy treats sessions as expendable (`SESSION_BANNED` → `permanently_unhealthy` is a designed-in terminal state), so the backing account must be disposable — banning a personal number costs a whole social graph. The account registers as `SocialAccount{platform:'telegram'}` (health tracking free via `SocialAccountHealth`), binds a sticky residential proxy per account-pool convention, and the session string lives in env secrets like `XACTIONS_SESSION_COOKIE` does today. Re-login after a ban is an ops runbook item, not an incident. Virtual/VoIP numbers rejected (flagged fast for crypto-adjacent use).
+**Resolved: dedicated Telegram account on a dedicated real SIM/eSIM — an org-owned infra asset, not a person's account.** The relay's own error taxonomy treats sessions as expendable (`SESSION_BANNED` → `permanently_unhealthy` is a designed-in terminal state), so the backing account must be disposable — banning a personal number costs a whole social graph. The account registers as `SocialAccount{platform:'telegram'}` (health tracking free via `SocialAccountHealth`), binds a sticky residential proxy per account-pool convention, and the session string lives in env secrets like `MEDIRUS_SESSION_COOKIE` does today. Re-login after a ban is an ops runbook item, not an incident. Virtual/VoIP numbers rejected (flagged fast for crypto-adjacent use).
 
 ### OQ-2 — Does 54.2 need its own rate limiter?
 

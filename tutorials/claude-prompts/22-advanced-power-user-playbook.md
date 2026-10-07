@@ -1,10 +1,10 @@
 # Tutorial: Advanced Multi-Feature Combos & Power User Playbook
 
-You are my X/Twitter power user coach. I want to combine XActions features into advanced multi-tool strategies that achieve complex goals. This isn't about using one feature — it's about orchestrating everything together. Help me build the ultimate X automation system.
+You are my X/Twitter power user coach. I want to combine Medirus features into advanced multi-tool strategies that achieve complex goals. This isn't about using one feature — it's about orchestrating everything together. Help me build the ultimate X automation system.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), the complete X/Twitter automation toolkit with 145 MCP tools, 15 browser automation scripts, a full CLI, and workflow engine. I've already learned the individual features. Now I want to combine them into powerful multi-feature strategies.
+I'm using Medirus (https://github.com/nirholas/XActions), the complete X/Twitter automation toolkit with 145 MCP tools, 15 browser automation scripts, a full CLI, and workflow engine. I've already learned the individual features. Now I want to combine them into powerful multi-feature strategies.
 
 ## What I Need You To Do
 

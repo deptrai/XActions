@@ -236,7 +236,7 @@ Run `window.algoReset()` to clear all state and start fresh.
 | `window.algoStats()` | Print all-time stats and return stats object |
 | `window.algoReset()` | Clear all saved state |
 | `window.algoConfig()` | Print current configuration |
-| `window.XActions.AlgoBuilder` | Full namespace with state, config, and methods |
+| `window.Medirus.AlgoBuilder` | Full namespace with state, config, and methods |
 
 ### Stats Output
 
@@ -259,7 +259,7 @@ Run `window.algoReset()` to clear all state and start fresh.
 
 ## Rate Limits
 
-The builder uses XActions' built-in rate limiting (`rateLimit.check()` / `rateLimit.increment()`) to enforce both per-session and per-day caps. When daily limits are hit, those action types are skipped — the builder continues other activities.
+The builder uses Medirus' built-in rate limiting (`rateLimit.check()` / `rateLimit.increment()`) to enforce both per-session and per-day caps. When daily limits are hit, those action types are skipped — the builder continues other activities.
 
 | Action | Per Session | Per Day |
 |--------|-------------|---------|

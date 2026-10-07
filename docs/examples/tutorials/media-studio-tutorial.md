@@ -1,8 +1,8 @@
 ---
 title: "Access Media Studio — Tutorial"
-description: "Navigate to Media Studio, browse your media library, upload media, and view media analytics on X/Twitter using XActions."
-keywords: ["x media studio", "twitter media library", "media studio analytics", "upload media twitter", "xactions media studio"]
-canonical: "https://xactions.app/examples/media-studio"
+description: "Navigate to Media Studio, browse your media library, upload media, and view media analytics on X/Twitter using Medirus."
+keywords: ["x media studio", "twitter media library", "media studio analytics", "upload media twitter", "medirus media studio"]
+canonical: "https://medirus.online/examples/media-studio"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
@@ -67,7 +67,7 @@ const CONFIG = {
 (async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('🎬 MEDIA STUDIO - XActions by nichxbt\n');
+  console.log('🎬 MEDIA STUDIO - Medirus by nichxbt\n');
 
   // Show upload instructions
   console.log('══════════════════════════════════════════════════');
@@ -112,7 +112,7 @@ After navigating to `studio.x.com`, paste this script:
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const maxMedia = 50;
 
-  console.log('📚 SCAN MEDIA LIBRARY - XActions by nichxbt\n');
+  console.log('📚 SCAN MEDIA LIBRARY - Medirus by nichxbt\n');
 
   const mediaItems = [];
   let previousCount = 0;
@@ -171,7 +171,7 @@ After navigating to `studio.x.com`, paste this script:
     });
 
     // Save to sessionStorage
-    sessionStorage.setItem('xactions_media_studio', JSON.stringify({
+    sessionStorage.setItem('medirus_media_studio', JSON.stringify({
       scannedAt: new Date().toISOString(),
       count: mediaItems.length,
       items: mediaItems,
@@ -189,7 +189,7 @@ After navigating to `studio.x.com`, paste this script:
 (async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('📊 MEDIA ANALYTICS - XActions by nichxbt\n');
+  console.log('📊 MEDIA ANALYTICS - Medirus by nichxbt\n');
 
   // Try to find and click analytics tab
   const analyticsTab = document.querySelector('[data-testid="analyticsTab"]')
@@ -223,7 +223,7 @@ After navigating to `studio.x.com`, paste this script:
 ### Expected Console Output (Library Scan)
 
 ```
-📚 SCAN MEDIA LIBRARY - XActions by nichxbt
+📚 SCAN MEDIA LIBRARY - Medirus by nichxbt
 
    🔄 Found 12 media items...
    🔄 Found 24 media items...
@@ -289,5 +289,5 @@ After navigating to `studio.x.com`, paste this script:
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

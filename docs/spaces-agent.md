@@ -2,7 +2,7 @@
 
 > Let AI agents join, listen, and speak in X/Twitter Spaces — powered by voice AI.
 
-XActions integrates the [`xspace-agent`](https://github.com/nirholas/xspace-agent) SDK to enable AI agents to autonomously participate in live X Spaces. Agents can join a Space, transcribe other speakers in real time, generate intelligent responses with an LLM, and speak them back into the Space via text-to-speech.
+Medirus integrates the [`xspace-agent`](https://github.com/nirholas/xspace-agent) SDK to enable AI agents to autonomously participate in live X Spaces. Agents can join a Space, transcribe other speakers in real time, generate intelligent responses with an LLM, and speak them back into the Space via text-to-speech.
 
 ## How It Works
 
@@ -45,7 +45,7 @@ OpenAI)  ↓     Browser
 ## Installation
 
 ```bash
-npm install xactions xspace-agent
+npm install medirus xspace-agent
 ```
 
 `xspace-agent` is an optional peer dependency — it's only needed if you want to use the Space agent features.
@@ -68,7 +68,7 @@ export X_CT0="your_ct0_value"
 
 ### Via MCP Server (Claude Desktop, Cursor, etc.)
 
-If you already have XActions configured as an MCP server, the Space agent tools are available immediately:
+If you already have Medirus configured as an MCP server, the Space agent tools are available immediately:
 
 ```
 "Join this Space as an AI agent: https://x.com/i/spaces/1abc..."
@@ -79,7 +79,7 @@ Claude will call the `x_space_join` tool and your agent will enter the Space.
 ### Via Node.js
 
 ```javascript
-import { joinSpace, leaveSpace, getSpaceAgentStatus, getSpaceTranscript } from 'xactions/spaces/agent';
+import { joinSpace, leaveSpace, getSpaceAgentStatus, getSpaceTranscript } from 'medirus/spaces/agent';
 
 // Join a Space
 const result = await joinSpace({
@@ -110,10 +110,10 @@ console.log(summary);
 
 ```bash
 # Join a Space with default settings (uses env vars)
-xactions space join https://x.com/i/spaces/1abc123
+medirus space join https://x.com/i/spaces/1abc123
 
 # Join with a custom system prompt
-xactions space join https://x.com/i/spaces/1abc123 \
+medirus space join https://x.com/i/spaces/1abc123 \
   --provider claude \
   --system-prompt "You are a crypto analyst. Share concise market insights."
 ```
@@ -201,7 +201,7 @@ The agent emits events you can listen to for logging, monitoring, or custom beha
 ## Example: Crypto Alpha Space Agent
 
 ```javascript
-import { joinSpace } from 'xactions/spaces/agent';
+import { joinSpace } from 'medirus/spaces/agent';
 
 await joinSpace({
   url: 'https://x.com/i/spaces/1abc123',

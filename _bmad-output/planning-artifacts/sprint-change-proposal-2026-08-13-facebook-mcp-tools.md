@@ -8,7 +8,7 @@ mode: batch
 
 ## 1. Issue Summary
 
-Người dùng yêu cầu gọi tool MCP để tìm kiếm sản phẩm trên Facebook Marketplace (`macbook pro 14inch 32gb ram, 1tb`, khu vực Hồ Chí Minh). Khi kiểm tra `xactions` MCP server, tool `x_facebook_marketplace` **không tồn tại** trong `src/mcp/server.js`. Đồng thời, audit nhanh cho thấy một số tính năng Facebook khác đã có implementation trong codebase nhưng **chưa được expose thành MCP tool**:
+Người dùng yêu cầu gọi tool MCP để tìm kiếm sản phẩm trên Facebook Marketplace (`macbook pro 14inch 32gb ram, 1tb`, khu vực Hồ Chí Minh). Khi kiểm tra `medirus` MCP server, tool `x_facebook_marketplace` **không tồn tại** trong `src/mcp/server.js`. Đồng thời, audit nhanh cho thấy một số tính năng Facebook khác đã có implementation trong codebase nhưng **chưa được expose thành MCP tool**:
 
 - `x_facebook_group_members` — `FR-20` / Epic 4 story `4-6-scrape-group-members` đã done, hàm `scrapeGroupMembers` đã có trong `src/scrapers/facebook/index.js`.
 - `x_facebook_marketplace` — Epic 5b story `5b-1-marketplace-scraper` đã done, hàm `scrapeMarketplace` đã có trong `src/scrapers/facebook/index.js`.
@@ -35,7 +35,7 @@ Người dùng yêu cầu gọi tool MCP để tìm kiếm sản phẩm trên Fa
 | `src/mcp/server.js` | Có | Cần thêm tool definitions và handler dispatch. |
 | `tests/mcp/` | Có | Cần thêm schema/dispatch tests cho tool mới. |
 | `src/scrapers/facebook/index.js` | Không | Code đã sẵn sàng, chỉ import và gọi. |
-| `_bmad-output/planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md` | Có | §6.2 ghi Marketplace out-of-scope, nhưng `sprint-status.yaml` và code lại có epic-5b. Cần reconcile. |
+| `_bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-10-epic4/prd.md` | Có | §6.2 ghi Marketplace out-of-scope, nhưng `sprint-status.yaml` và code lại có epic-5b. Cần reconcile. |
 | `_bmad-output/implementation-artifacts/sprint-status.yaml` | Có | `3-2-mcp-facebook: done` và `5b-1-marketplace-scraper: done` ghi nhận sai trạng thái nếu MCP chưa expose. |
 | `architecture.md` | Không | Khuyến nghị thêm MCP contract tests khi thay đổi public surface. |
 
@@ -115,7 +115,7 @@ Nên tách thành story riêng do liên quan đến quyền và PII.
 
 ### 4.4 PRD / Sprint Status Reconciliation
 
-- Cập nhật `prd-XActions-2026-06-10-epic4/prd.md`: §6.2 ghi Marketplace là `defer` → đổi thành `covered by Epic 5b`.
+- Cập nhật `prd-Medirus-2026-06-10-epic4/prd.md`: §6.2 ghi Marketplace là `defer` → đổi thành `covered by Epic 5b`.
 - Cập nhật `sprint-status.yaml`: tách `5b-1-marketplace-scraper` thành `in-progress` hoặc thêm `5b-3-marketplace-mcp-tool`.
 
 ## 5. PRD MVP Impact & Action Plan

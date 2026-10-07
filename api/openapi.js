@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * OpenAPI 3.1 Specification for XActions AI API
+ * OpenAPI 3.1 Specification for Medirus AI API
  *
  * Serves /openapi.json for x402scan automatic resource discovery.
  * Includes x402 payment extensions so scanners can display pricing,
@@ -945,14 +945,14 @@ export function generateSpec() {
   const literalSpec = {
     openapi: '3.1.0',
     info: {
-      title: 'XActions AI API',
+      title: 'Medirus AI API',
       version: '2.0.0',
       description:
         'X/Twitter automation API for AI agents. Pay-per-request via x402 protocol (USDC on Base). ' +
         'Scrape profiles, automate actions, monitor followers, download media, and generate content. ' +
         'Deployment note: on the serverless (Vercel) surface only a subset of mounts is served — ' +
         'unavailable paths return 503 there; the full set runs on the primary Node/Express deployment.',
-      'x-guidance': `XActions is a pay-per-request X/Twitter automation API designed for AI agents.
+      'x-guidance': `Medirus is a pay-per-request X/Twitter automation API designed for AI agents.
 
 How to use this API:
 1. All paid endpoints are under /api/ai/ and accept POST requests with JSON bodies.
@@ -988,7 +988,7 @@ Categories:
 - datasets: Pre-built datasets
 - teams: Team management for multi-user automation
 
-Free alternatives: Browser scripts, CLI, and Node.js library at https://xactions.app are 100% free. This paid API is for remote AI agent access only.`,
+Free alternatives: Browser scripts, CLI, and Node.js library at https://medirus.online are 100% free. This paid API is for remote AI agent access only.`,
       contact: {
         name: 'nichxbt',
         url: 'https://github.com/nirholas/XActions',
@@ -998,13 +998,13 @@ Free alternatives: Browser scripts, CLI, and Node.js library at https://xactions
         url: 'https://github.com/nirholas/XActions/blob/main/LICENSE',
       },
       'x-logo': {
-        url: 'https://xactions.app/icons/icon-512.png',
+        url: 'https://medirus.online/icons/icon-512.png',
       },
     },
 
     servers: [
       { url: 'http://localhost:3001', description: 'Local development' },
-      { url: 'https://xactions.app', description: 'Production' },
+      { url: 'https://medirus.online', description: 'Production' },
     ],
 
     // ── x402 top-level extension ──────────────────────────────────

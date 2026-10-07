@@ -1,8 +1,8 @@
 ---
 title: "Export X (Twitter) Bookmarks to JSON/CSV — Free 2026"
 description: "Export all your X/Twitter bookmarks to JSON or CSV. Free browser script, no API needed. Backup before they're gone."
-keywords: ["export twitter bookmarks", "twitter bookmark exporter free", "save X bookmarks 2026", "how to export bookmarks from twitter", "twitter bookmark backup", "download twitter bookmarks CSV", "twitter bookmarks to spreadsheet", "export bookmarks X free", "xactions bookmark exporter", "backup twitter bookmarks no API"]
-canonical: "https://xactions.app/examples/bookmark-exporter"
+keywords: ["export twitter bookmarks", "twitter bookmark exporter free", "save X bookmarks 2026", "how to export bookmarks from twitter", "twitter bookmark backup", "download twitter bookmarks CSV", "twitter bookmarks to spreadsheet", "export bookmarks X free", "medirus bookmark exporter", "backup twitter bookmarks no API"]
+canonical: "https://medirus.online/examples/bookmark-exporter"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 Over the past two years, you've been bookmarking the best tweets you find — startup advice, coding tutorials, AI research papers, motivational threads. You have **847 bookmarks** and use them as your personal knowledge base. But you just read that X might make bookmarks a premium-only feature, and you can't search or organize them natively anyway. You want to export everything to a searchable spreadsheet or Notion database before it's too late.
 
-Manual option: Open each bookmark, copy the text, paste into a doc. 847 times. That's about **7 hours of mindless copy-pasting.** XActions exports them all in under 5 minutes.
+Manual option: Open each bookmark, copy the text, paste into a doc. 847 times. That's about **7 hours of mindless copy-pasting.** Medirus exports them all in under 5 minutes.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -47,7 +47,7 @@ Manual option: Open each bookmark, copy the text, paste into a doc. 847 times. T
 └──────────────────────────────────────────────────────┘
 ```
 
-**After XActions:**
+**After Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -168,8 +168,8 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 
 ```javascript
 // ============================================
-// XActions - Export X/Twitter Bookmarks
-// by nichxbt — https://xactions.app
+// Medirus - Export X/Twitter Bookmarks
+// by nichxbt — https://medirus.online
 // Go to: x.com/i/bookmarks
 // Open console (F12 → Console), paste, Enter
 // ============================================
@@ -188,7 +188,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
   }
 
   console.log('');
-  console.log('📚 XActions - BOOKMARK EXPORTER');
+  console.log('📚 Medirus - BOOKMARK EXPORTER');
   console.log('════════════════════════════════════════');
   console.log(`🎯 Max bookmarks: ${CONFIG.MAX_BOOKMARKS}`);
   console.log(`📁 Format: ${CONFIG.FORMAT}`);
@@ -349,7 +349,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 ### ✅ Expected Output
 
 ```
-📚 XActions - BOOKMARK EXPORTER
+📚 Medirus - BOOKMARK EXPORTER
 ════════════════════════════════════════
 🎯 Max bookmarks: 1000
 📁 Format: both
@@ -387,14 +387,14 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 
 ## 💻 Method 2: CLI (Command Line)
 
-The XActions CLI currently focuses on scraping and search. For bookmark export, use the browser console method above or the MCP server method below.
+The Medirus CLI currently focuses on scraping and search. For bookmark export, use the browser console method above or the MCP server method below.
 
 ```bash
-# Install XActions
-npm install -g xactions
+# Install Medirus
+npm install -g medirus
 
 # The MCP server supports bookmark export via AI agents:
-npx xactions mcp
+npx medirus mcp
 ```
 
 ---
@@ -408,9 +408,9 @@ npx xactions mcp
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions", "mcp"]
+      "args": ["-y", "medirus", "mcp"]
     }
   }
 }
@@ -538,7 +538,7 @@ Handle,DisplayName,Text,URL,Time,Likes,Retweets,Replies,Views
 - **Bookmarks are private** — Only you can see your bookmarks. The script reads from your logged-in session and exports locally to your computer. Nothing is sent to any server.
 - **Scroll loading limitations** — X loads bookmarks in batches as you scroll. Very large bookmark libraries (2,000+) may take longer. If the scraper stops early, increase `MAX_BOOKMARKS` and run again.
 - **No official export** — X does not provide a native bookmark export feature. This script fills that gap. The data archive download from Settings includes bookmarks but in a raw format that's harder to use.
-- **X DOM changes** — If X updates their UI, the `data-testid` selectors may change. Check [xactions.app](https://xactions.app) or the [GitHub repo](https://github.com/nichxbt/xactions) for the latest version.
+- **X DOM changes** — If X updates their UI, the `data-testid` selectors may change. Check [medirus.online](https://medirus.online) or the [GitHub repo](https://github.com/nichxbt/xactions) for the latest version.
 
 ---
 
@@ -557,7 +557,7 @@ Handle,DisplayName,Text,URL,Time,Likes,Retweets,Replies,Views
 ## ❓ FAQ
 
 ### Q: How do I export my Twitter / X bookmarks in 2026?
-**A:** Go to `x.com/i/bookmarks`, open your browser console (F12 → Console), paste the XActions bookmark exporter script, and press Enter. The script scrolls through your entire bookmark list, extracts every tweet with full metadata, and auto-downloads both JSON and CSV files. Free, no API key, no app install.
+**A:** Go to `x.com/i/bookmarks`, open your browser console (F12 → Console), paste the Medirus bookmark exporter script, and press Enter. The script scrolls through your entire bookmark list, extracts every tweet with full metadata, and auto-downloads both JSON and CSV files. Free, no API key, no app install.
 
 ### Q: Can I export bookmarks to a spreadsheet?
 **A:** Yes. The script automatically generates a CSV file that opens directly in Google Sheets, Excel, or LibreOffice Calc. Each row is one bookmarked tweet with columns for author, text, engagement metrics, URL, and timestamp.
@@ -571,5 +571,5 @@ Handle,DisplayName,Text,URL,Time,Likes,Retweets,Replies,Views
 ---
 
 <footer>
-Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

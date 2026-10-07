@@ -38,7 +38,7 @@ const CONFIG = {
   ],
   searchTerms: [               // Search columns to add
     // 'from:nichxbt',
-    // '#xactions',
+    // '#medirus',
   ],
   showColumnInfo: true,        // Display info about existing columns
   delayBetweenActions: 2000,  // ms between UI actions

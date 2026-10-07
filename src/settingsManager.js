@@ -106,7 +106,7 @@ export async function toggleProtectedAccount(page, protect) {
 /**
  * Get blocked accounts list
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function getBlockedAccounts(page, options = {}) {
@@ -149,7 +149,7 @@ export async function getBlockedAccounts(page, options = {}) {
 /**
  * Get muted accounts list
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function getMutedAccounts(page, options = {}) {
@@ -220,7 +220,7 @@ export async function requestDataDownload(page) {
 /**
  * Set content preferences (reduce political content, etc.)
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').ContentPreferences} preferences
+ * @param {import('./types/medirus.js').ContentPreferences} preferences
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function setContentPreferences(page, preferences = {}) {

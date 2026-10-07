@@ -4,7 +4,7 @@
 
 ## Goal
 
-Mở rộng XActions scraping engine để hỗ trợ ba nguồn dữ liệu mới: **Reddit** (community discussion), **Medium** (long-form content), và **Instagram** (visual social + influencer). Mục tiêu là cung cấp `PostItem`/`ProfileItem`/`CommentItem` chuẩn hóa cho Nowing AI Lead Hub thông qua kiến trúc `AbstractCrawler`/`AbstractApiClient` hiện có, với mỗi nền tảng chọn adapter phù hợp (HTTP, RSS, Puppeteer, hoặc hybrid).
+Mở rộng Medirus scraping engine để hỗ trợ ba nguồn dữ liệu mới: **Reddit** (community discussion), **Medium** (long-form content), và **Instagram** (visual social + influencer). Mục tiêu là cung cấp `PostItem`/`ProfileItem`/`CommentItem` chuẩn hóa cho Nowing AI Lead Hub thông qua kiến trúc `AbstractCrawler`/`AbstractApiClient` hiện có, với mỗi nền tảng chọn adapter phù hợp (HTTP, RSS, Puppeteer, hoặc hybrid).
 
 ## Stories
 

@@ -1,8 +1,8 @@
 ---
 title: "Scrape Tweets on X (Twitter) — Free No-API Tool 2026"
 description: "Search and scrape tweets from X/Twitter to JSON or CSV. Free browser script with keyword search, no API needed."
-keywords: ["scrape tweets twitter", "twitter tweet scraper free", "search tweets X 2026", "how to scrape twitter without API", "twitter search export CSV", "scrape twitter search results", "tweet scraper no API", "export twitter search", "twitter data scraping free", "xactions tweet scraping"]
-canonical: "https://xactions.app/examples/tweet-scraping"
+keywords: ["scrape tweets twitter", "twitter tweet scraper free", "search tweets X 2026", "how to scrape twitter without API", "twitter search export CSV", "scrape twitter search results", "tweet scraper no API", "export twitter search", "twitter data scraping free", "medirus tweet scraping"]
+canonical: "https://medirus.online/examples/tweet-scraping"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You're a product manager at a SaaS company and your CEO just asked: "What are people saying about us on Twitter?" You need to find every tweet mentioning your product from the last 30 days, export it to a spreadsheet, and sort by engagement to identify the loudest praise and complaints. Twitter's API charges $100/month for search access. You need this data **today** for a board meeting.
 
-XActions' tweet scraper searches X for your keyword, scrolls through results to collect hundreds of tweets, extracts the full text, author, engagement metrics (likes, retweets, replies, views), and exports everything to a clean JSON or CSV file — in under 5 minutes.
+Medirus' tweet scraper searches X for your keyword, scrolls through results to collect hundreds of tweets, extracts the full text, author, engagement metrics (likes, retweets, replies, views), and exports everything to a clean JSON or CSV file — in under 5 minutes.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -46,11 +46,11 @@ XActions' tweet scraper searches X for your keyword, scrolls through results to 
 └──────────────────────────────────────────────────────┘
 ```
 
-**After XActions:**
+**After Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  The XActions Way                                    │
+│  The Medirus Way                                    │
 ├──────────────────────────────────────────────────────┤
 │                                                      │
 │  1. Go to X search, type your product name           │
@@ -130,18 +130,18 @@ XActions' tweet scraper searches X for your keyword, scrolls through results to 
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│ 🔍 x.com/search?q=xactions&src=typed_query&f=top    │
+│ 🔍 x.com/search?q=medirus&src=typed_query&f=top    │
 ├──────────────────────────────────────────────────────┤
 │  Top  |  Latest  |  People  |  Media  |  Lists      │
 ├──────────────────────────────────────────────────────┤
 │                                                      │
 │  👤 @nichxbt · 2h                                    │
-│  "XActions v3 just dropped — auto-like, scrape,     │
+│  "Medirus v3 just dropped — auto-like, scrape,     │
 │   unfollow, all from your browser console 🚀"       │
 │  ❤️ 127  🔄 34  💬 18  👁️ 4,521                      │
 │                                                      │
 │  👤 @devtools_fan · 5h                               │
-│  "Just tried XActions for scraping my followers.    │
+│  "Just tried Medirus for scraping my followers.    │
 │   Exported 10K followers to CSV in 3 minutes."      │
 │  ❤️ 45  🔄 12  💬 8  👁️ 1,892                        │
 │                                                      │
@@ -165,8 +165,8 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 
 ```javascript
 // ============================================
-// XActions - Scrape Twitter/X Search Results
-// by nichxbt — https://xactions.app
+// Medirus - Scrape Twitter/X Search Results
+// by nichxbt — https://medirus.online
 // Go to: x.com/search?q=YOUR+KEYWORD
 // Open console (F12 → Console), paste, Enter
 // ============================================
@@ -189,7 +189,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
   const query = new URLSearchParams(window.location.search).get('q') || 'unknown';
 
   console.log('');
-  console.log('🔍 XActions - TWEET SCRAPER');
+  console.log('🔍 Medirus - TWEET SCRAPER');
   console.log('════════════════════════════════════════');
   console.log(`📝 Query: "${query}"`);
   console.log(`🎯 Max tweets: ${CONFIG.MAX_TWEETS}`);
@@ -331,9 +331,9 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 ### ✅ Expected Output
 
 ```
-🔍 XActions - TWEET SCRAPER
+🔍 Medirus - TWEET SCRAPER
 ════════════════════════════════════════
-📝 Query: "xactions"
+📝 Query: "medirus"
 🎯 Max tweets: 500
 ⏱️  Scroll delay: 1500ms
 ════════════════════════════════════════
@@ -348,15 +348,15 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 🔍 Collected 312 tweets...
 
 ════════════════════════════════════════
-🔍 SCRAPED 312 TWEETS FOR "xactions"
+🔍 SCRAPED 312 TWEETS FOR "medirus"
 ════════════════════════════════════════
 📊 Total engagement: 14,521 likes, 2,891 retweets
 
 🏆 Top 5 by engagement:
-   1. @nichxbt (823 ❤️): "XActions v3 just dropped — auto-like, scrape, un..."
+   1. @nichxbt (823 ❤️): "Medirus v3 just dropped — auto-like, scrape, un..."
    2. @devtools_weekly (412 ❤️): "Best free Twitter automation tools in 2026: 1..."
    3. @startuptools (298 ❤️): "Thread: How I grew from 500→10K followers using ..."
-   4. @ai_marc (187 ❤️): "Just tried the XActions MCP server with Claude D..."
+   4. @ai_marc (187 ❤️): "Just tried the Medirus MCP server with Claude D..."
    5. @buildinpublic_ (143 ❤️): "Scraping Twitter without paying $100/mo for API?..."
 💾 Downloaded JSON
 💾 Downloaded CSV
@@ -370,14 +370,14 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 ## 💻 Method 2: CLI (Command Line)
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Search and export tweets
-npx xactions search "AI startups" --limit 200 --output ai-tweets.json
+npx medirus search "AI startups" --limit 200 --output ai-tweets.json
 
 # With more options
-npx xactions search "your product name" \
+npx medirus search "your product name" \
   --limit 500 \
   --format csv \
   --output product-mentions.csv
@@ -386,7 +386,7 @@ npx xactions search "your product name" \
 ### ✅ CLI Output Preview
 
 ```
-⚡ XActions v3.x.x
+⚡ Medirus v3.x.x
 🔍 Searching for "AI startups"...
    📊 Collected 200 tweets
    💾 Saved to: ai-tweets.json
@@ -413,9 +413,9 @@ npx xactions search "your product name" \
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions", "mcp"]
+      "args": ["-y", "medirus", "mcp"]
     }
   }
 }
@@ -479,7 +479,7 @@ npx xactions search "your product name" \
       "tweetId": "1893847562938475629",
       "handle": "nichxbt",
       "displayName": "nich",
-      "text": "XActions v3 just dropped — auto-like, scrape, unfollow, all from your browser console 🚀",
+      "text": "Medirus v3 just dropped — auto-like, scrape, unfollow, all from your browser console 🚀",
       "url": "https://x.com/nichxbt/status/1893847562938475629",
       "time": "2026-02-24T10:23:00.000Z",
       "likes": 823,
@@ -492,7 +492,7 @@ npx xactions search "your product name" \
       "tweetId": "1893812345678901234",
       "handle": "devtools_weekly",
       "displayName": "Dev Tools Weekly",
-      "text": "Best free Twitter automation tools in 2026: 1. XActions...",
+      "text": "Best free Twitter automation tools in 2026: 1. Medirus...",
       "url": "https://x.com/devtools_weekly/status/1893812345678901234",
       "time": "2026-02-24T08:15:00.000Z",
       "likes": 412,
@@ -509,7 +509,7 @@ npx xactions search "your product name" \
 
 ```csv
 Handle,DisplayName,Text,Likes,Retweets,Replies,Views,URL,Time
-"@nichxbt","nich","XActions v3 just dropped — auto-like, scrape, unfollow...",823,217,54,42100,"https://x.com/nichxbt/status/1893847562938475629","2026-02-24T10:23:00.000Z"
+"@nichxbt","nich","Medirus v3 just dropped — auto-like, scrape, unfollow...",823,217,54,42100,"https://x.com/nichxbt/status/1893847562938475629","2026-02-24T10:23:00.000Z"
 "@devtools_weekly","Dev Tools Weekly","Best free Twitter automation tools in 2026...",412,89,31,18500,"https://x.com/devtools_weekly/status/1893812345678901234","2026-02-24T08:15:00.000Z"
 ```
 
@@ -532,7 +532,7 @@ Handle,DisplayName,Text,Likes,Retweets,Replies,Views,URL,Time
 ## ⚠️ Important Notes
 
 - **Rate limits** — The scraper scrolls passively and reads DOM content. It doesn't make API calls, so standard API rate limits don't apply. However, X may slow down page loading after extended scrolling. If results stop loading, wait a few minutes and try again.
-- **Accuracy** — The scraper extracts what's visible on the page. If X's DOM structure changes, selectors may need updating. Check [xactions.app](https://xactions.app) for the latest version.
+- **Accuracy** — The scraper extracts what's visible on the page. If X's DOM structure changes, selectors may need updating. Check [medirus.online](https://medirus.online) for the latest version.
 - **Search scope** — X's search results are not exhaustive. X may not show all matching tweets, especially older ones. For comprehensive historical data, consider multiple searches with date filters.
 - **Data privacy** — All scraped tweets are public data. Respect users' privacy — don't use scraped data for harassment, spam, or unauthorized commercial purposes.
 
@@ -553,7 +553,7 @@ Handle,DisplayName,Text,Likes,Retweets,Replies,Views,URL,Time
 ## ❓ FAQ
 
 ### Q: How do I scrape tweets from Twitter / X without the API in 2026?
-**A:** Go to `x.com/search?q=your+keyword`, open your browser console (F12 → Console), paste the XActions tweet scraper script, and press Enter. The script scrolls through search results, extracts every tweet with full engagement metrics, and auto-downloads JSON and CSV files. No API key, no paid plan, no software to install.
+**A:** Go to `x.com/search?q=your+keyword`, open your browser console (F12 → Console), paste the Medirus tweet scraper script, and press Enter. The script scrolls through search results, extracts every tweet with full engagement metrics, and auto-downloads JSON and CSV files. No API key, no paid plan, no software to install.
 
 ### Q: How many tweets can I scrape at once?
 **A:** The browser script can typically collect 300–500 tweets per search before X stops loading new results. Set `MAX_TWEETS` up to 1000–2000 for larger collections. For exhaustive scraping, run multiple searches with different date filters (e.g., `since:2026-02-01 until:2026-02-15`).
@@ -567,5 +567,5 @@ Handle,DisplayName,Text,Likes,Retweets,Replies,Views,URL,Time
 ---
 
 <footer>
-Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

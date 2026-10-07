@@ -18,7 +18,7 @@ So that I can trust (or calibrate) the viral stats before relying on them for co
 
 ### AC1: Fetch Own Posts
 - **Given** viral stats exist and I have posted content in the target platform+niche
-- **When** I run `xactions backtest --platform {platform} --niche {niche} --days {days}`
+- **When** I run `medirus backtest --platform {platform} --niche {niche} --days {days}`
 - **Then** system fetches my posts from the last {days} days via platform-appropriate scraper
 
 ### AC2: Viral DNA Extraction
@@ -59,8 +59,8 @@ So that I can trust (or calibrate) the viral stats before relying on them for co
 
 ### CLI
 ```bash
-xactions backtest --platform twitter --niche web3 --days 7
-xactions backtest --platform linkedin --niche saas --days 30
+medirus backtest --platform twitter --niche web3 --days 7
+medirus backtest --platform linkedin --niche saas --days 30
 ```
 
 ## Test Plan
@@ -77,4 +77,4 @@ xactions backtest --platform linkedin --niche saas --days 30
 - Verify report file output
 
 ### E2E Tests
-- `xactions viral-mine` → `xactions backtest` → verify report generated
+- `medirus viral-mine` → `medirus backtest` → verify report generated

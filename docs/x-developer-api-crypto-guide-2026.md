@@ -153,7 +153,7 @@ The X API has real constraints crypto developers must plan around:
 
 **Cost cliff** — The $4,900 gap between Basic and Pro forces many developers toward third-party providers or unofficial methods.
 
-**Third-party alternatives** — Services like [XActions](https://xactions.app) offer pay-per-request X data access via the x402 protocol, which can be more cost-effective for intermittent or agent-based crypto workflows without committing to a monthly tier.
+**Third-party alternatives** — Services like [Medirus](https://medirus.online) offer pay-per-request X data access via the x402 protocol, which can be more cost-effective for intermittent or agent-based crypto workflows without committing to a monthly tier.
 
 ---
 

@@ -1,15 +1,15 @@
 ---
 title: "Use Grok AI — Tutorial"
-description: "Chat with Grok AI, generate images, analyze posts, and summarize topics on X/Twitter using XActions automation."
-keywords: ["grok ai twitter", "x grok integration", "grok image generation", "grok post analysis", "xactions grok"]
-canonical: "https://xactions.app/examples/use-grok"
+description: "Chat with Grok AI, generate images, analyze posts, and summarize topics on X/Twitter using Medirus automation."
+keywords: ["grok ai twitter", "x grok integration", "grok image generation", "grok post analysis", "medirus grok"]
+canonical: "https://medirus.online/examples/use-grok"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Use Grok AI — Tutorial
 
-> Step-by-step guide to chatting with Grok AI, generating images, analyzing posts, and summarizing topics using XActions.
+> Step-by-step guide to chatting with Grok AI, generating images, analyzing posts, and summarizing topics using Medirus.
 
 **Works on:** Node.js (Puppeteer)
 **Difficulty:** Intermediate
@@ -67,7 +67,7 @@ Navigate to `x.com/i/grok` first, then paste:
 (async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('🤖 GROK AI - XActions by nichxbt');
+  console.log('🤖 GROK AI - Medirus by nichxbt');
 
   const query = 'What are the top trending topics on X right now?';
 
@@ -246,5 +246,5 @@ console.log(analysis.response);
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

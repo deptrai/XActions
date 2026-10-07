@@ -12,7 +12,7 @@ baseline_commit: '98c2c930'
 context:
   - _bmad-output/planning-artifacts/epics.md#epic-35
   - _bmad-output/planning-artifacts/prd.md#fr-99
-  - _bmad-output/planning-artifacts/architecture/xactions-epic35-reddit-medium-instagram/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/medirus-epic35-reddit-medium-instagram/ARCHITECTURE-SPINE.md
   - _bmad-output/planning-artifacts/research/technical-scraping-reddit-medium-instagram-2026-09-08/research.md
   - src/core/base-client.js
   - src/core/base-crawler.js
@@ -32,7 +32,7 @@ context:
 
 ## Intent
 
-**Problem:** Nowing AI Lead Hub cần cào dữ liệu từ **Medium** — nguồn long-form content / thought-leadership phương Tây — để mở rộng lead generation, sentiment analysis và market intelligence. XActions hiện thiếu adapter cho Medium trong `src/scrapers/social/`.
+**Problem:** Nowing AI Lead Hub cần cào dữ liệu từ **Medium** — nguồn long-form content / thought-leadership phương Tây — để mở rộng lead generation, sentiment analysis và market intelligence. Medirus hiện thiếu adapter cho Medium trong `src/scrapers/social/`.
 
 Medium được phân loại **low complexity, low risk** trong research: official API đã deprecated, nhưng các RSS feed công khai (`/feed/@username`, `/feed/{publication}`, `/feed/tag/{tag}`) vẫn trả HTTP 200, không cần auth, chứa full HTML bài viết public trong `content:encoded`. Khi RSS bị chặn hoặc thiếu metadata, có thể fallback sang `?format=json` hoặc HTML/Puppeteer.
 
@@ -51,7 +51,7 @@ Medium được phân loại **low complexity, low risk** trong research: offici
 **Always:**
 - **RSS-first** cho mọi feed: `https://medium.com/feed/@username`, `https://medium.com/feed/{publication}`, `https://medium.com/feed/tag/{tag}`, `https://medium.com/feed/{publication}/tagged/{tag}`.
 - **No auth mặc định**: Medium public feed không cần API key, cookie hay token.
-- `User-Agent` bắt buộc là realistic browser UA (`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ... Chrome/120.0.0.0 Safari/537.36` hoặc `xactions/1.0` fallback), đặc biệt khi gọi `?format=json` hoặc GraphQL.
+- `User-Agent` bắt buộc là realistic browser UA (`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ... Chrome/120.0.0.0 Safari/537.36` hoặc `medirus/1.0` fallback), đặc biệt khi gọi `?format=json` hoặc GraphQL.
 - Force **HTTP/1.1** trên `undici`/`got-scraping` cho direct Medium requests để tránh Cloudflare TLS fingerprint reset.
 - Rate limiting: 1–3s giữa các request; 429 → exponential backoff với jitter; quarantine proxy khi gặp 403/429.
 - Tất cả items phải qua `this.validateItem(item)` trước khi trả về hoặc lưu.

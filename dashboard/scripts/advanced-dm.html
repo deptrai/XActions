@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced DM — Free X/Twitter Script | XActions</title>
+  <title>Advanced DM — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="src/advancedDM.js">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, advanced, other tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, advanced, other tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Advanced DM — XActions">
+  <meta property="og:title" content="Advanced DM — Medirus">
   <meta property="og:description" content="src/advancedDM.js">
-  <meta property="og:url" content="https://xactions.app/scripts/advanced-dm">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/advanced-dm">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Advanced DM — XActions">
+  <meta name="twitter:title" content="Advanced DM — Medirus">
   <meta name="twitter:description" content="src/advancedDM.js">
 
-  <link rel="canonical" href="https://xactions.app/scripts/advanced-dm">
+  <link rel="canonical" href="https://medirus.online/scripts/advanced-dm">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Advanced DM — Free X/Twitter Script | XActions",
+    "headline": "Advanced DM — Free X/Twitter Script | Medirus",
     "description": "src/advancedDM.js",
-    "url": "https://xactions.app/scripts/advanced-dm",
+    "url": "https://medirus.online/scripts/advanced-dm",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Other Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, advanced, other tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, advanced, other tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://xactions.app/scripts#other-tools" },
-      { "@type": "ListItem", "position": 4, "name": "Advanced DM", "item": "https://xactions.app/scripts/advanced-dm" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://medirus.online/scripts#other-tools" },
+      { "@type": "ListItem", "position": 4, "name": "Advanced DM", "item": "https://medirus.online/scripts/advanced-dm" }
     ]
   }
   </script>
@@ -159,7 +159,7 @@
 // 1. Go to https://x.com/messages (or open a DM conversation)
 // 2. Open DevTools Console (F12)
 // 3. Paste and run this script
-// 4. Use window.XActions.advancedDM.&lt;function&gt;() to call features
+// 4. Use window.Medirus.advancedDM.&lt;function&gt;() to call features
 //
 // Features:
 //   sendMedia(filePath)         - Send photo/video/GIF via the media button
@@ -1146,10 +1146,10 @@
   };
 
   // ─────────────────────────────────────────────────────────
-  // Expose on window.XActions.advancedDM
+  // Expose on window.Medirus.advancedDM
   // ─────────────────────────────────────────────────────────
-  window.XActions = window.XActions || {};
-  window.XActions.advancedDM = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.advancedDM = {
     sendMedia,
     sendGIF,
     sendVoiceMessage,
@@ -1172,7 +1172,7 @@
   // ─────────────────────────────────────────────────────────
   const W = 62;
   console.log('╔' + '═'.repeat(W) + '╗');
-  console.log('║  💬 ADVANCED DM FEATURES — XActions' + ' '.repeat(W - 38) + '║');
+  console.log('║  💬 ADVANCED DM FEATURES — Medirus' + ' '.repeat(W - 38) + '║');
   console.log('║  by nichxbt — v1.0' + ' '.repeat(W - 21) + '║');
   console.log('╠' + '═'.repeat(W) + '╣');
   console.log('║  📎 Media &amp; Content' + ' '.repeat(W - 21) + '║');
@@ -1201,7 +1201,7 @@
   console.log('║    removeGroupMember(&quot;username&quot;)' + ' '.repeat(W - 33) + '║');
   console.log('╚' + '═'.repeat(W) + '╝');
   console.log('');
-  console.log('💡 Usage: window.XActions.advancedDM.sendGIF(&quot;thumbs up&quot;)');
+  console.log('💡 Usage: window.Medirus.advancedDM.sendGIF(&quot;thumbs up&quot;)');
   console.log('💡 Open a DM conversation first, then call a function.');
 })();
 </code></pre>
@@ -1209,7 +1209,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

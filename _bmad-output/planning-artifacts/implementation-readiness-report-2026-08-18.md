@@ -7,7 +7,7 @@ assessment_lead: 'John (Product Manager) & Winston (System Architect)'
 ---
 
 # Comprehensive Implementation Readiness (IR) Assessment Report
-**Project:** XActions Universal Hybrid Scraping & Automation Engine (Epics 10–18)  
+**Project:** Medirus Universal Hybrid Scraping & Automation Engine (Epics 10–18)  
 **Date:** 2026-08-18  
 **Final Status:** 🟢 **100% READY FOR IMPLEMENTATION (CERTIFIED & HARDENED)**
 
@@ -15,11 +15,11 @@ assessment_lead: 'John (Product Manager) & Winston (System Architect)'
 
 ## 1. Executive Summary
 
-Hội đồng Thẩm định BMad (Product Management, Architecture, Engineering, QA/TEA, UX/DX, Anti-Bot & Edge Case Hunter) đã hoàn thành quy trình đánh giá tính sẵn sàng triển khai (**Implementation Readiness Assessment**) cho hệ thống **XActions Universal Hybrid Scraping Microservice (Epics 10–18)** kết nối với **Nowing AI Lead Hub**.
+Hội đồng Thẩm định BMad (Product Management, Architecture, Engineering, QA/TEA, UX/DX, Anti-Bot & Edge Case Hunter) đã hoàn thành quy trình đánh giá tính sẵn sàng triển khai (**Implementation Readiness Assessment**) cho hệ thống **Medirus Universal Hybrid Scraping Microservice (Epics 10–18)** kết nối với **Nowing AI Lead Hub**.
 
 ### Kết quả Thẩm định Cốt lõi:
 * **Độ bao phủ Yêu cầu (Traceability):** **100%** (22/22 Functional Requirements FR64 ➔ FR84 và 6/6 NFRs).
-* **Tính toàn vẹn Kiến trúc (Spine Integrity):** **100% Aligned** giữa XActions (`AD-1` ➔ `AD-11`) và Nowing (`AD-SOC-1` ➔ `AD-SOC-11`).
+* **Tính toàn vẹn Kiến trúc (Spine Integrity):** **100% Aligned** giữa Medirus (`AD-1` ➔ `AD-11`) và Nowing (`AD-SOC-1` ➔ `AD-SOC-11`).
 * **Tính sẵn sàng của User Stories:** **24/24 Stories** đạt chuẩn cấu trúc *Given/When/Then* với tiêu chí nghiệm thu định lượng (Acceptance Criteria) và các kịch bản bọc thép phòng vệ (Adaptive Infrastructure Rate Limiter, Fault Injection, Anti-Bot, Deadlock Prevention, Thin Events).
 * **Cơ Chế Bảo Vệ Hạ Tầng (Adaptive Rate Limiter):** Đã bổ sung `Story 11.5` định nghĩa pipeline tích hợp `ProxyIpPool` + `AccountPool` với hai chế độ: (1) auth-required platforms dùng sticky IP + xoay tài khoản khi rate-limit/hibernation; (2) no-auth platforms dùng rotating residential IP. `Story 11.4` điều tốc theo số lượng Proxy sống và đưa tài khoản vào chế độ Ngủ đông khi gặp thử thách.
 
@@ -78,7 +78,7 @@ Hội đồng Thẩm định BMad (Product Management, Architecture, Engineering
 7. **AD-7 (Dual-Channel Microservice):** Daemon MCP over HTTP tại endpoint `/mcp` (Port 3001) <2ms RPC + Redis Stream `stream:social:raw_posts` >50k evt/s.
 8. **AD-8 (Multi-Domain Directory):** Phân chia module rõ ràng: `social/`, `ecom/`, `realestate/`, `recruitment/`, `b2b/`.
 9. **AD-9 (Anti-Bot False 200 OK & Data Sanitization):** Kiểm tra `error !== 0` trên HTTP 200, loại bỏ SĐT masked `***`, sanitize `\r\n` cho JSONL.
-10. **AD-10 (3-Tier Incremental Gap-Filling & Retention Policy):** Cào bù khoảng trống theo timestamp/cursor; dữ liệu thô XActions lưu 30 ngày (TTL), Nowing lưu Leads vĩnh viễn.
+10. **AD-10 (3-Tier Incremental Gap-Filling & Retention Policy):** Cào bù khoảng trống theo timestamp/cursor; dữ liệu thô Medirus lưu 30 ngày (TTL), Nowing lưu Leads vĩnh viễn.
 11. **AD-11 (Adaptive Infrastructure Rate Limiting & Account Protection):** Tự động điều tốc theo tỷ lệ Proxy sống (`Max Throughput = Healthy Proxies * SafeRatePerIP`). Auth-required platforms: sticky IP + `AccountPool` tự động chuyển tài khoản khi đạt giới hạn hoặc bị hibernation 15–30 phút. No-auth platforms: rotate residential IP per request.
 
 ---

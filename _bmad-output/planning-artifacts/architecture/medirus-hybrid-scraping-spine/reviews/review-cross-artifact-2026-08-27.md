@@ -57,7 +57,7 @@ This review audited all 10 consistency criteria (X1–X10) across the proposal, 
 - **`epics.md:106-107` (Story 10.1 AC):** Explicitly specifies `ActionDescriptor` supports `requiresAuth?: boolean` and `listActions()` returns resolved `requiresAuth`. *(Aligned)*
 - **`epics.md:675` (Story 14.2 Action Discovery AC):**
   ```markdown
-  674: * **When** gọi tool `x_actions_list`
+  674: * **When** gọi tool `medirus_list`
   675: * **Then** trả về `ActionDescriptor[]` với `{ action, description, requiredArgs, optionalArgs, example, outputType }`.
   ```
   **Discrepancy:** Story 14.2 was not included in the proposal's amended story list (Section 5.2). Line 675 still contains the pre-amendment 6-field shape without `requiresAuth`.

@@ -15,7 +15,7 @@ Two deliverables:
    across platforms.
 2. **Migration quickstart** — `docs/consumer-quickstart.md` +
    `apps/web/app/gateway/quickstart/` interactive page that converts a
-   legacy `xactionsClient.ts` (queue+poll via `/api/ai/discovery/search`)
+   legacy `medirusClient.ts` (queue+poll via `/api/ai/discovery/search`)
    to the new contract.
 
 ## 2. Contract verification
@@ -38,7 +38,7 @@ Two deliverables:
   `search` needs query; telegram `channel_messages` must 400 with mode:'sync').
 - Envelope shape equal across `reddit`, `pumpfun`, `x` — same `error.kind` enum coverage.
 - Per-consumer quota isolation: two bearer tokens, exhaust one, other still works.
-- `GET /api/actions` matches `x_actions_list` shape (50.5 contract — regression).
+- `GET /api/actions` matches `medirus_list` shape (50.5 contract — regression).
 
 ### File: `tests/gateway/reddit-search-e2e.test.js`
 
@@ -58,7 +58,7 @@ Two deliverables:
 ### `docs/consumer-quickstart.md`
 
 Sections:
-- before/after `xactionsClient.ts` diff — show `searchTwitter` +
+- before/after `medirusClient.ts` diff — show `searchTwitter` +
   `searchReddit` methods rewritten to `POST /api/platform/{platform}/scrape`
   sync lane
 - auth migration: drop `sessionCookie` → add `Authorization: Bearer` (JWT or
@@ -77,7 +77,7 @@ Sections:
   | `internal` | maybe | report with request_id |
 - common pitfalls — absent Bearer lands on anonymous IP bucket, spoofed
   X-Consumer-Id is ignored, sync on non-sync-capable action → 400
-- jev-specific section: shows diff for `xactionsClient.ts` `searchReddit` and
+- jev-specific section: shows diff for `medirusClient.ts` `searchReddit` and
   `searchTwitter` methods, references real file paths
 - working playground link (prefilled URL params)
 
@@ -95,7 +95,7 @@ Sections:
 ## 4. Live-probe documentation
 
 Append `live-probe-results.md` (under `_bmad-output/planning-artifacts/
-architecture/architecture-xactions-public-scrape-gateway-2026-09-26/`):
+architecture/architecture-medirus-public-scrape-gateway-2026-09-26/`):
 timestamped probes against api.dexscreener.com, frontend-api-v3.pump.fun,
 reddit.com — record `duration_ms`, `p50` from `recordGatewayCall` ring, and
 sync_capable verdict per platform.
@@ -127,7 +127,7 @@ sync_capable verdict per platform.
 | envelope shape parity across 3 platforms | snapshot compare |
 | per-consumer quota isolation | jev-a exhausts, jev-b still 200 |
 | not_sync_capable → 400 | telegram mode:sync test |
-| GET /api/actions ≡ x_actions_list | shared executor test |
+| GET /api/actions ≡ medirus_list | shared executor test |
 | docs:matrix reddit/search syncCapable ✅ | regenerate + assert |
 | live-probe-results.md | appended under architecture dir |
 | migration quickstart | docs/consumer-quickstart.md + apps/web/app/gateway/quickstart/page.tsx |
@@ -156,7 +156,7 @@ _(to fill during spec review pass)_
   returns a kind inside the enum and `retryable` flag consistent with kind.
 - F-6 (testability): `jev-trading` repo paths are illustrative — real file
   paths unknown to this repo. Quickstart uses a generic-but-accurate
-  `xactionsClient.ts` snippet + section noting "adapt paths to your repo".
+  `medirusClient.ts` snippet + section noting "adapt paths to your repo".
   **Applied** §3.
 
 ### Auto Run Result

@@ -1,7 +1,7 @@
 # Technology Currency & Web-Research Review — Epic 34 Architecture Spine
 
 **Reviewer:** Technology Currency & Web-Research Lens  
-**Target:** `/Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md`  
+**Target:** `/Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md`  
 **Date:** 2026-09-08  
 **Scope:** Epic 34 (Scraper Benchmark & Reliability Suite) Stack, Architectural Decisions (AD-23 to AD-28), and Implementation Assumptions  
 
@@ -26,7 +26,7 @@ The overall architectural direction (two-tier telemetry, centralized base crawle
   - In Redis 7.x, message eviction within a stream is achieved exclusively through:
     1. Count-based trimming: `XADD ... MAXLEN [~] <count>` or `XTRIM ... MAXLEN [~] <count>`
     2. Time-based trimming: `XADD ... MINID [~] <id>` or `XTRIM ... MINID [~] <id>`. Since Redis Stream IDs default to millisecond timestamps (`<millisecondsTime>-<sequenceNumber>`), a rolling 7-day window must be enforced via `MINID ~ <Date.now() - 7 * 86400 * 1000>`.
-  - The repository's existing Redis stream implementation in `/Users/luisphan/Documents/GitHub/XActions/src/utils/redis-stream-publisher.js` (lines 52–59, 83–90, 196–221) already implements both `MAXLEN` and `MINID` strategy modifiers for `node-redis` v4.
+  - The repository's existing Redis stream implementation in `/Users/luisphan/Documents/GitHub/Medirus/src/utils/redis-stream-publisher.js` (lines 52–59, 83–90, 196–221) already implements both `MAXLEN` and `MINID` strategy modifiers for `node-redis` v4.
 - **Impact:** Misleading specification that will cause implementers to either write invalid `EXPIRE` commands (destroying stream history) or fail to implement rolling time-based trimming.
 - **Required Fix:** Amend AD-23 to clarify that retention in `stream:benchmark:telemetry` is enforced via `MAXLEN ~ 1000000` (count ceiling) and rolling time-based trimming via `MINID ~ <seven_days_ago_ms>` executed by the consumer worker or scheduled maintenance, not via key TTL.
 
@@ -40,7 +40,7 @@ The overall architectural direction (two-tier telemetry, centralized base crawle
   Bull 4.x operates exclusively on **Redis Lists and Sorted Sets** (`BRPOPLPUSH`, `ZADD`, Lua scripts); it is **not a Redis Stream consumer client**. Bull queues cannot natively subscribe to or ingest from a Redis Stream.
 - **Evidence & Verification:**
   - Redis Streams require a consumer group read loop (`xReadGroup` / `xAck`) or streaming poll.
-  - In the XActions codebase, `api/services/jobQueue.js` registers Bull processors for discrete operations (`operationsQueue.process`).
+  - In the Medirus codebase, `api/services/jobQueue.js` registers Bull processors for discrete operations (`operationsQueue.process`).
   - Scheduling in the existing codebase (`api/services/retentionScheduler.js`, `api/services/facebookScheduler.js`, `api/services/tweetScheduler.js`) is implemented via `node-cron` with PostgreSQL advisory locks, explicitly rejecting Bull delayed/repeatable jobs to avoid state loss during Redis restarts (`_bmad-output/implementation-artifacts/4-1-schedule-post.md` line 166).
 - **Impact:** Implementers will face impedance mismatch attempting to configure Bull as a stream consumer.
 - **Required Fix:** Disentangle the two components:
@@ -55,7 +55,7 @@ The overall architectural direction (two-tier telemetry, centralized base crawle
 - **Location:** `ARCHITECTURE-SPINE.md` Section "Stack" (line 99).
 - **The Issue:** The spine states `Node.js >= 18`.
 - **Evidence & Verification:**
-  - In `/Users/luisphan/Documents/GitHub/XActions/package.json` line 230:
+  - In `/Users/luisphan/Documents/GitHub/Medirus/package.json` line 230:
     ```json
     "engines": {
       "node": ">=20.18.1"
@@ -90,7 +90,7 @@ The overall architectural direction (two-tier telemetry, centralized base crawle
   - 15 platforms running continuous crawling (e.g. 10 HTTP requests/min per platform) produce:
     `15 platforms * 10 req/min * 10,080 min = 1,512,000 events / 7 days`.
   - At 500,000 entries, high-frequency crawl runs will evict telemetry within ~2.3 days.
-  - The repository's primary thin event stream `stream:social:raw_posts` in `/Users/luisphan/Documents/GitHub/XActions/src/utils/redis-stream-publisher.js` (line 87) defaults to `MAXLEN 1,000,000`.
+  - The repository's primary thin event stream `stream:social:raw_posts` in `/Users/luisphan/Documents/GitHub/Medirus/src/utils/redis-stream-publisher.js` (line 87) defaults to `MAXLEN 1,000,000`.
   - In Redis 7.x, 1,000,000 stream entries in listpack chunks consume approximately 120–180 MB of RAM, well within standard server allocations (1–2 GB+).
 - **Impact:** Premature eviction of production telemetry before the 7-day rolling window completes, impairing trend evaluation and historical canary comparisons.
 - **Required Fix:** Increase default capacity in AD-23 to `MAXLEN ~ 1000000` (consistent with `stream:social:raw_posts`), or explicitly define sampling when scrape volume exceeds threshold.

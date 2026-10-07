@@ -4,7 +4,7 @@ Systematic audit of all 66 paste-in-console scripts in scripts/twitter/ (plus sr
 
 # Batch 1 audit report
 
-Repo: `/tmp/claude-1000/-workspaces-three-ws/5569b458-7481-4382-b68d-9456f4af03d8/scratchpad/XActions`
+Repo: `/tmp/claude-1000/-workspaces-three-ws/5569b458-7481-4382-b68d-9456f4af03d8/scratchpad/Medirus`
 All 17 assigned files pass `node --check`. No em/en dashes introduced. No git commands run.
 
 ## scripts/twitter/audit-followers.js
@@ -199,7 +199,7 @@ Clean. Small, linear, correct; the `location.href` navigation path correctly tel
 
 # Batch 3 audit report
 
-Repo: `/tmp/claude-1000/-workspaces-three-ws/5569b458-7481-4382-b68d-9456f4af03d8/scratchpad/XActions`
+Repo: `/tmp/claude-1000/-workspaces-three-ws/5569b458-7481-4382-b68d-9456f4af03d8/scratchpad/Medirus`
 All 17 assigned files pass `node --check`. No em/en dash characters introduced. No git commands run.
 
 A recurring class of bug in this batch: scripts that "navigate" by assigning `window.location.href`. That triggers a full page load, which destroys the console script's JS context, so everything after the first navigation silently never runs. Fixed with an in-SPA navigation helper (`history.pushState` + synthetic `popstate`, with a cross-origin fallback to `location.href`). Second recurring class: `Date.now()` appended to text-based tweet-ID fallbacks, which made the same tweet look new on every scan pass and defeated deduplication entirely.

@@ -1,13 +1,13 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Plugin Loader
+ * Medirus Plugin Loader
  * Discovers and loads plugins from npm packages and local paths.
  * 
- * Plugins are npm packages named `xactions-plugin-*` or `@xactions/*`.
- * They are registered in ~/.xactions/plugins.json.
+ * Plugins are npm packages named `medirus-plugin-*` or `@medirus/*`.
+ * They are registered in ~/.medirus/plugins.json.
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  */
 
@@ -20,12 +20,12 @@ import { createRequire } from 'module';
 // Constants
 // ============================================================================
 
-const CONFIG_DIR = path.join(os.homedir(), '.xactions');
+const CONFIG_DIR = path.join(os.homedir(), '.medirus');
 const PLUGINS_FILE = path.join(CONFIG_DIR, 'plugins.json');
 
 const PLUGIN_NAME_PATTERNS = [
-  /^xactions-plugin-/,
-  /^@xactions\//,
+  /^medirus-plugin-/,
+  /^@medirus\//,
 ];
 
 // ============================================================================
@@ -33,7 +33,7 @@ const PLUGIN_NAME_PATTERNS = [
 // ============================================================================
 
 /**
- * Read the plugins registry from ~/.xactions/plugins.json
+ * Read the plugins registry from ~/.medirus/plugins.json
  * @returns {Promise<Record<string, unknown>>} The plugins config { plugins: { name: { version, path, enabled } } }
  */
 export async function readPluginsConfig() {
@@ -46,7 +46,7 @@ export async function readPluginsConfig() {
 }
 
 /**
- * Write the plugins registry to ~/.xactions/plugins.json
+ * Write the plugins registry to ~/.medirus/plugins.json
  * @param {Record<string, unknown>} config - The plugins config
  */
 export async function writePluginsConfig(config) {
@@ -161,7 +161,7 @@ export async function loadAllPlugins() {
 }
 
 /**
- * Discover xactions plugins from node_modules
+ * Discover medirus plugins from node_modules
  * Scans for packages matching the naming convention
  * @returns {Promise<string[]>} Array of discovered plugin package names
  */
@@ -175,8 +175,8 @@ export async function discoverPlugins() {
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
 
-      if (entry.name.startsWith('@xactions')) {
-        // Scoped packages: @xactions/*
+      if (entry.name.startsWith('@medirus')) {
+        // Scoped packages: @medirus/*
         const scopedDir = path.join(nodeModulesDir, entry.name);
         const scopedEntries = await fs.readdir(scopedDir, { withFileTypes: true });
         for (const scoped of scopedEntries) {
@@ -184,7 +184,7 @@ export async function discoverPlugins() {
             discovered.push(`${entry.name}/${scoped.name}`);
           }
         }
-      } else if (entry.name.startsWith('xactions-plugin-')) {
+      } else if (entry.name.startsWith('medirus-plugin-')) {
         discovered.push(entry.name);
       }
     }

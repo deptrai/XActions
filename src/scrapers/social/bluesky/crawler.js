@@ -191,7 +191,7 @@ export class BlueskyCrawler extends AbstractCrawler {
       requiresAuth: true,
       requiredArgs: ['text'],
       optionalArgs: ['reply', 'dryRun', 'identifier', 'password'],
-      example: { text: 'Hello Bluesky from XActions', dryRun: false },
+      example: { text: 'Hello Bluesky from Medirus', dryRun: false },
       outputType: '{ uri: string, cid: string, success: boolean }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.post(args, session),
     });

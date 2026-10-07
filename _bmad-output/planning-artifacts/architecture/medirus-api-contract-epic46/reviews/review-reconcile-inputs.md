@@ -1,8 +1,8 @@
-# INPUT-RECONCILE Review — xactions-api-contract-epic46 Spine
+# INPUT-RECONCILE Review — medirus-api-contract-epic46 Spine
 
 **Reviewer role:** INPUT-RECONCILE (BMad architecture spine gate)
-**Spine under review:** `_bmad-output/planning-artifacts/architecture/xactions-api-contract-epic46/ARCHITECTURE-SPINE.md`
-**Inputs reconciled:** Epic 46 spec (`epics.md` ~L2838-2965), parent spine AD-14 (`xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` L284-296), repo reality (`api/server.js`, `api/openapi.js`, `src/core/error-envelope.js`)
+**Spine under review:** `_bmad-output/planning-artifacts/architecture/medirus-api-contract-epic46/ARCHITECTURE-SPINE.md`
+**Inputs reconciled:** Epic 46 spec (`epics.md` ~L2838-2965), parent spine AD-14 (`medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` L284-296), repo reality (`api/server.js`, `api/openapi.js`, `src/core/error-envelope.js`)
 **Verdict:** **PASS WITH GAPS** — the spine is broadly faithful: all 3 exclusion classes, mount-before-`/docs/:slug`, CORS `*`, optional-auth union, contract-test minimum, no-live-fetch codegen, typed error union, and the serverless 503 caveat all landed. However, several quiet requirements were dropped or weakened — most materially the `servers` AC, the `PaginatedResponse<T>` named export, and an AD-3 field allowlist that contradicts its own "không bỏ field" rule and the repo's actual envelope.
 
 ---
@@ -29,7 +29,7 @@
 | Four securitySchemes incl. `sessionCookie` dual mechanism + optional-auth `{}` union (L2884) | AD-6 | ✅ |
 | CI: spec lint + contract test ≥1 endpoint per group (L2885) | AD-9 | ✅ (spine pins `@redocly/cli`; spec allowed "redocly hoặc spectral" — acceptable narrowing) |
 | Codegen reads committed `openapi.json` or imports builder — **no HTTP fetch from live server**, fail loudly (L2899) | AD-8 | ✅ |
-| Output `packages/api-client/` → `@xactions/api-client` via root workspaces (L2900) | AD-8 | ✅ |
+| Output `packages/api-client/` → `@medirus/api-client` via root workspaces (L2900) | AD-8 | ✅ |
 | Component dedupe vs `Error`/`SuccessResponse`/`PaymentRequired` (L2901) | AD-8 | ✅ (confirmed: `Error` L1041 and `PaymentRequired` L1052 exist in `api/openapi.js`) |
 | Typed error union `400 | 401 | 402 | 429 | 500`, auth injection (L2902) | AD-8 | ✅ |
 | `/api/analytics` dual-router dedupe, `/api/governor` documented / `/governor` not (L2922-2923) | AD-9 | ✅ |
@@ -39,7 +39,7 @@
 
 - **Input:** epics.md L2868 — *"UI khai báo `servers` (localhost + production)"*.
 - **Spine:** no mention of `servers` anywhere — not in AD-1, AD-7, AD-9, or conventions.
-- **Repo reality:** `api/openapi.js:1002-1004` currently declares only `{ url: 'https://xactions.app', description: 'Production' }` — so the AC requires **adding** a localhost entry, and the spine carries no rule guaranteeing either entry survives the Zod-to-OpenAPI refactor. Silent drop of an explicit AC clause.
+- **Repo reality:** `api/openapi.js:1002-1004` currently declares only `{ url: 'https://medirus.online', description: 'Production' }` — so the AC requires **adding** a localhost entry, and the spine carries no rule guaranteeing either entry survives the Zod-to-OpenAPI refactor. Silent drop of an explicit AC clause.
 
 ### 1.3 WEAKENED / PARTIAL items
 
@@ -71,7 +71,7 @@
 
 ## 2. Parent AD-14 → spine AD-3 reconciliation
 
-Parent (xactions-hybrid-scraping-spine L288-292): envelope `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }` flat; `type` enum of 7; `suggestedAction` enum of 8.
+Parent (medirus-hybrid-scraping-spine L288-292): envelope `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }` flat; `type` enum of 7; `suggestedAction` enum of 8.
 
 ### 2.1 Field preservation
 
@@ -95,7 +95,7 @@ Spine AD-3 maps: `error.code` = domain code, `error.type` = AD-14 type, `error.d
 ### 2.5 Enum lists — no contradiction introduced, but drift unacknowledged
 
 - Spine does not restate the enums ("`error.type` = AD-14 type"; "không suy ra `suggestedAction` mới") — no violation. ✅
-- However the parent's lists are already stale vs repo: `ErrorTypes` has **12** values (error-envelope.js:10-23 adds `not_found`, `target_not_found`, `deprecated`, `degraded_data`, `budget_ceiling_reached`), `SuggestedActions` has **12** (L25-38 adds `rate_limit_backoff`, `use_x_actions_list`, `verify_url`, `retry_with_different_account`). If "AD-14 type" is read as the 7-value enum, five repo-real types are non-compliant. The spine doesn't resolve or acknowledge this drift — worth an explicit "enum sets = repo `ErrorTypes`/`SuggestedActions`, superset of AD-14" note.
+- However the parent's lists are already stale vs repo: `ErrorTypes` has **12** values (error-envelope.js:10-23 adds `not_found`, `target_not_found`, `deprecated`, `degraded_data`, `budget_ceiling_reached`), `SuggestedActions` has **12** (L25-38 adds `rate_limit_backoff`, `use_medirus_list`, `verify_url`, `retry_with_different_account`). If "AD-14 type" is read as the 7-value enum, five repo-real types are non-compliant. The spine doesn't resolve or acknowledge this drift — worth an explicit "enum sets = repo `ErrorTypes`/`SuggestedActions`, superset of AD-14" note.
 - Minor: spine says domain code = "`FB_*`/`XACT_*`" — matches repo default `XACT_0000` (L76), but parent AD-14 examples use numeric codes (`42901`, `42902`). Spine narrows the parent's documented examples; consistent with repo reality, but note the doc-vs-code discrepancy lives in the parent.
 
 ---

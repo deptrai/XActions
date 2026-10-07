@@ -29,7 +29,7 @@ const SELECTORS = {
  * Monitor brand mentions
  * @param {import('puppeteer').Page} page
  * @param {string} brandName - Brand name or @handle to monitor
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function monitorBrandMentions(page, brandName, options = {}) {
@@ -100,7 +100,7 @@ export async function monitorBrandMentions(page, brandName, options = {}) {
  * Get audience insights for an account
  * @param {import('puppeteer').Page} page
  * @param {string} username
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function getAudienceInsights(page, username, options = {}) {

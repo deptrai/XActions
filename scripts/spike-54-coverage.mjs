@@ -24,8 +24,8 @@
  *   QUERIES_JSON='[{"type":"cashtag","query":"$PEPE"}]' node scripts/spike-54-coverage.mjs
  *   CEILING_MAX=20 CEILING_WINDOW_MS=600000 node scripts/spike-54-coverage.mjs
  *
- * Env: XACTIONS_SESSION_COOKIE (auth_token value or full cookie string),
- *      XACTIONS_CSRF_TOKEN (optional ct0), PROXY_SERVER (optional).
+ * Env: MEDIRUS_SESSION_COOKIE (auth_token value or full cookie string),
+ *      MEDIRUS_CSRF_TOKEN (optional ct0), PROXY_SERVER (optional).
  *
  * Output: implementation-artifacts/spike-54-coverage-report.md + raw JSON in
  *         scripts/spike-54-coverage-results/
@@ -54,8 +54,8 @@ const SEARCH_LIMIT = Number(process.env.SEARCH_LIMIT || 25);
 const CEILING_MAX = Number(process.env.CEILING_MAX || 30);          // cap probe iterations
 const CEILING_WINDOW_MS = Number(process.env.CEILING_WINDOW_MS || 600_000); // 10 min
 const QUERY_GAP_MS = Number(process.env.QUERY_GAP_MS || 4000);      // polite spacing in ceiling probe
-const SESSION_COOKIE = process.env.XACTIONS_SESSION_COOKIE || '';
-const CSRF_TOKEN = process.env.XACTIONS_CSRF_TOKEN || '';
+const SESSION_COOKIE = process.env.MEDIRUS_SESSION_COOKIE || '';
+const CSRF_TOKEN = process.env.MEDIRUS_CSRF_TOKEN || '';
 
 // Default query set — overridable via QUERIES_JSON.
 const DEFAULT_QUERIES = [
@@ -138,11 +138,11 @@ async function probeSearch() {
   console.log('\n═══ M1: X Search coverage probe ═══');
   results.search = { queries: [], summary: {} };
   const cookies = buildCookies();
-  const cookieFilePath = path.join(process.env.HOME ?? '~', '.xactions', 'cookies.json');
+  const cookieFilePath = path.join(process.env.HOME ?? '~', '.medirus', 'cookies.json');
   if (SESSION_COOKIE) {
-    results.auth.path = 'auth_session (XACTIONS_SESSION_COOKIE env)';
+    results.auth.path = 'auth_session (MEDIRUS_SESSION_COOKIE env)';
   } else if (fs.existsSync(cookieFilePath)) {
-    results.auth.path = 'auth_session (~/.xactions/cookies.json fallback)';
+    results.auth.path = 'auth_session (~/.medirus/cookies.json fallback)';
   } else {
     results.auth.path = 'no_session';
   }

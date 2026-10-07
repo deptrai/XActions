@@ -1,10 +1,10 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Plugin Manager
+ * Medirus Plugin Manager
  * Manages plugin lifecycle: install, uninstall, enable, disable, and hook execution.
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  */
 
@@ -47,7 +47,7 @@ const pluginHooks = [];
 
 /**
  * Install a plugin by npm package name
- * @param {string} name - Package name (e.g., xactions-plugin-analytics)
+ * @param {string} name - Package name (e.g., medirus-plugin-analytics)
  * @returns {Promise<Record<string, unknown>>} The installed plugin info
  */
 export async function installPlugin(name) {
@@ -56,7 +56,7 @@ export async function installPlugin(name) {
 
   if (!isLocal && !isValidPluginName(name)) {
     throw new Error(
-      `Invalid plugin name "${name}". Plugins must be named "xactions-plugin-*" or "@xactions/*".`
+      `Invalid plugin name "${name}". Plugins must be named "medirus-plugin-*" or "@medirus/*".`
     );
   }
 

@@ -65,7 +65,7 @@
       window.scrollTo(0, document.body.scrollHeight);
       await sleep(CONFIG.scrollDelay);
     }
-    console.log(`✅ Found ${tweets.length} tweets. Use XActions.list() to see them.\n`);
+    console.log(`✅ Found ${tweets.length} tweets. Use Medirus.list() to see them.\n`);
   };
 
   const splitChunks = (text, maxLen) => {
@@ -138,30 +138,30 @@
   };
 
   const listTweets = () => {
-    if (tweets.length === 0) { console.log('❌ Run XActions.scan() first.'); return; }
+    if (tweets.length === 0) { console.log('❌ Run Medirus.scan() first.'); return; }
     console.log(`\n📋 TWEETS (${tweets.length}):\n`);
     tweets.forEach(t => console.log(`  [${t.index}] "${t.text.slice(0, 80)}..." — ❤️${t.metrics.likes} 🔄${t.metrics.retweets}`));
   };
 
   const exportAll = () => {
     if (repurposed.length === 0) { console.log('❌ No repurposed content yet.'); return; }
-    download({ tweets: tweets.map(t => ({ index: t.index, text: t.text, metrics: t.metrics, url: t.url })), repurposed, generatedAt: new Date().toISOString() }, `xactions-repurposed-${Date.now()}.json`);
+    download({ tweets: tweets.map(t => ({ index: t.index, text: t.text, metrics: t.metrics, url: t.url })), repurposed, generatedAt: new Date().toISOString() }, `medirus-repurposed-${Date.now()}.json`);
   };
 
-  window.XActions = window.XActions || {};
-  window.XActions.scan = scrapeTweets;
-  window.XActions.list = listTweets;
-  window.XActions.toThread = toThread;
-  window.XActions.toSummary = toSummary;
-  window.XActions.toStorm = toStorm;
-  window.XActions.toQuoteTemplates = toQuoteTemplates;
-  window.XActions.all = (idx) => { toThread(idx); toSummary(idx); toStorm(idx); toQuoteTemplates(idx); };
-  window.XActions.export = exportAll;
+  window.Medirus = window.Medirus || {};
+  window.Medirus.scan = scrapeTweets;
+  window.Medirus.list = listTweets;
+  window.Medirus.toThread = toThread;
+  window.Medirus.toSummary = toSummary;
+  window.Medirus.toStorm = toStorm;
+  window.Medirus.toQuoteTemplates = toQuoteTemplates;
+  window.Medirus.all = (idx) => { toThread(idx); toSummary(idx); toStorm(idx); toQuoteTemplates(idx); };
+  window.Medirus.export = exportAll;
 
   console.log('╔════════════════════════════════════════════════╗');
   console.log('║  ♻️ CONTENT REPURPOSER — Ready                 ║');
   console.log('║  by nichxbt — v1.0                            ║');
   console.log('╚════════════════════════════════════════════════╝');
-  console.log('\n📋 XActions.scan() → .list() → .toThread(i) / .toSummary(i) / .toStorm(i) / .toQuoteTemplates(i) / .all(i)');
-  console.log('   XActions.export() to download JSON');
+  console.log('\n📋 Medirus.scan() → .list() → .toThread(i) / .toSummary(i) / .toStorm(i) / .toQuoteTemplates(i) / .all(i)');
+  console.log('   Medirus.export() to download JSON');
 })();

@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 import { readFileSync, writeFileSync } from 'fs';
 
-const raw = JSON.parse(readFileSync('/Users/luisphan/.xactions/facebook-cookies.json', 'utf8'));
+const raw = JSON.parse(readFileSync('/Users/luisphan/.medirus/facebook-cookies.json', 'utf8'));
 const ck = raw.map(c => ({
   name: c.name,
   value: c.value,

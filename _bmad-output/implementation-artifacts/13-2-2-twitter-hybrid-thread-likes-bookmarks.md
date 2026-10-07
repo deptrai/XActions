@@ -38,7 +38,7 @@ Tất cả output phải chuẩn hóa thành `PostItem` (thread/bookmarks) hoặ
 ## Sources
 
 - `_bmad-output/planning-artifacts/epics.md` — Story 13.2.2 [dòng 454-464], Story 13.2 [dòng 429-439], Story 13.2.1 [dòng 442-452]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 [dòng 125-133], AD-2 [dòng 134-141], AD-3 [dòng 142-163], AD-4 [dòng 164-174], AD-11 [dòng 233-243], AD-12 [dòng 245-248]
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 [dòng 125-133], AD-2 [dòng 134-141], AD-3 [dòng 142-163], AD-4 [dòng 164-174], AD-11 [dòng 233-243], AD-12 [dòng 245-248]
 - `_bmad-output/implementation-artifacts/13-2-refactor-twitter-scraper-to-hybrid-architecture.md` — nền tảng Story 13.2 (AC-1..AC-4)
 - `_bmad-output/implementation-artifacts/13-2-1-twitter-hybrid-profile-relationships.md` — Story 13.2.1 pattern hoàn chỉnh cho action registration, GraphQL dispatch, normalization, checkpoint, deprecation
 - `src/core/base-crawler.js` — `AbstractCrawler` contract & `ActionRegistry` [dòng 21-307]
@@ -561,7 +561,7 @@ Xem mẫu: `src/scrapers/social/tiktok/crawler.js` dòng 118-155.
 ## References
 
 - `[Source: _bmad-output/planning-artifacts/epics.md#Story-13.2.2]` (dòng 454-464)
-- `[Source: _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md#AD-1..AD-12]`
+- `[Source: _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md#AD-1..AD-12]`
 - `[Source: _bmad-output/implementation-artifacts/13-2-refactor-twitter-scraper-to-hybrid-architecture.md]`
 - `[Source: _bmad-output/implementation-artifacts/13-2-1-twitter-hybrid-profile-relationships.md]`
 - `[Source: src/core/base-crawler.js]`

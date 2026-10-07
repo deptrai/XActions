@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions AI Tweet Generator
+ * Medirus AI Tweet Generator
  * 
  * Uses OpenRouter to generate tweets in a user's voice.
  * Supports single tweets, threads, rewrites, weekly calendars, and replies.
@@ -101,8 +101,8 @@ async function callLLM(messages, options = {}) {
     headers = {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://xactions.app',
-      'X-Title': 'XActions AI Tweet Writer',
+      'HTTP-Referer': 'https://medirus.online',
+      'X-Title': 'Medirus AI Tweet Writer',
     };
   }
 

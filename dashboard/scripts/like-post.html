@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Like Post — Free X/Twitter Script | XActions</title>
+  <title>Like Post — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Like Posts on X - by nichxbt">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, like, post, engagement">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, like, post, engagement">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Like Post — XActions">
+  <meta property="og:title" content="Like Post — Medirus">
   <meta property="og:description" content="Like Posts on X - by nichxbt">
-  <meta property="og:url" content="https://xactions.app/scripts/like-post">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/like-post">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Like Post — XActions">
+  <meta name="twitter:title" content="Like Post — Medirus">
   <meta name="twitter:description" content="Like Posts on X - by nichxbt">
 
-  <link rel="canonical" href="https://xactions.app/scripts/like-post">
+  <link rel="canonical" href="https://medirus.online/scripts/like-post">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Like Post — Free X/Twitter Script | XActions",
+    "headline": "Like Post — Free X/Twitter Script | Medirus",
     "description": "Like Posts on X - by nichxbt",
-    "url": "https://xactions.app/scripts/like-post",
+    "url": "https://medirus.online/scripts/like-post",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Engagement",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, like, post, engagement"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, like, post, engagement"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://xactions.app/scripts#engagement" },
-      { "@type": "ListItem", "position": 4, "name": "Like Post", "item": "https://xactions.app/scripts/like-post" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://medirus.online/scripts#engagement" },
+      { "@type": "ListItem", "position": 4, "name": "Like Post", "item": "https://medirus.online/scripts/like-post" }
     ]
   }
   </script>
@@ -439,7 +439,7 @@
   // ── Main ──
   const run = async () =&gt; {
     console.log('═══════════════════════════════════════');
-    console.log('❤️  XActions — Like Posts');
+    console.log('❤️  Medirus — Like Posts');
     console.log('═══════════════════════════════════════');
 
     if (CONFIG.mode === 'urls') {
@@ -458,15 +458,15 @@
 
     // Save tracking data
     if (CONFIG.trackLiked) {
-      const history = JSON.parse(sessionStorage.getItem('xactions_liked') || '[]');
+      const history = JSON.parse(sessionStorage.getItem('medirus_liked') || '[]');
       history.push({
         timestamp: new Date().toISOString(),
         mode: CONFIG.mode,
         count: liked,
         posts: likedPosts,
       });
-      sessionStorage.setItem('xactions_liked', JSON.stringify(history));
-      console.log('💾 Saved to sessionStorage (key: &quot;xactions_liked&quot;)');
+      sessionStorage.setItem('medirus_liked', JSON.stringify(history));
+      console.log('💾 Saved to sessionStorage (key: &quot;medirus_liked&quot;)');
     }
 
     if (likedPosts.length &gt; 0) {
@@ -491,7 +491,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -504,7 +504,7 @@
         <a href="/scripts/auto-commenter">💬 Auto Commenter</a>
 <a href="/scripts/auto-engage">⚡ Auto Engage</a>
 <a href="/scripts/auto-liker">❤️ Auto Liker</a>
-<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - XActions</a>
+<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - Medirus</a>
 <a href="/scripts/auto-repost">🔁 Auto Repost</a>
 <a href="/scripts/auto-plug-replies">🔌 Auto-Plug Replies</a>
 <a href="/scripts/auto-reply">💬 Auto-Reply / Auto-Respond</a>

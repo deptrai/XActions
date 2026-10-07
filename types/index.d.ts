@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// XActions — TypeScript Type Declarations
+// Medirus — TypeScript Type Declarations
 // The Complete X/Twitter Automation Toolkit
 // by nichxbt
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -569,7 +569,7 @@ export declare class ClientConversation {
 // ── Error Classes ───────────────────────────────────────────────────────────
 
 /**
- * Base error for all XActions client errors.
+ * Base error for all Medirus client errors.
  */
 export declare class ScraperError extends Error {
   code: string;
@@ -627,7 +627,7 @@ export declare class TwitterApiError extends ScraperError {
  *
  * @example
  * ```js
- * import { Scraper, SearchMode } from 'xactions/client';
+ * import { Scraper, SearchMode } from 'medirus/client';
  *
  * const scraper = new Scraper();
  * await scraper.loadCookies('./cookies.json');

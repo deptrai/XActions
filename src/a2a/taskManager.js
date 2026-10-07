@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions A2A — Task Manager
+ * Medirus A2A — Task Manager
  *
  * Full lifecycle management for A2A tasks: creation, state transitions,
  * artifact storage, history tracking, execution, and cleanup.

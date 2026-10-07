@@ -2,11 +2,11 @@
 /**
  * 06 — Who doesn't follow you back
  *
- * The set difference that XActions is best known for, done with the HTTP
+ * The set difference that Medirus is best known for, done with the HTTP
  * client instead of a browser. Requires a logged-in session.
  *
  * Read-only on purpose. It prints the list and writes it to JSON; unfollowing
- * is a separate, deliberate step (`xactions unfollow`, or the browser script
+ * is a separate, deliberate step (`medirus unfollow`, or the browser script
  * in `scripts/unfollowback.js`). Bulk-unfollowing on the same breath as
  * discovering the list is how people trip X's rate limits and lock themselves
  * out for a day.
@@ -15,7 +15,7 @@
  *   node examples/06-find-non-followers.js nasa
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 

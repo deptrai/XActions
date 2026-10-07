@@ -1,4 +1,4 @@
-# Spine Pair Review — XActions
+# Spine Pair Review — Medirus
 
 ## Overall verdict
 The spine pair is a usable, well-structured contract that solves the stated problem (38 flat nav → 6 task groups). Strongest on IA clarity, fixes, and interaction primitives; weakest on token completeness for dark-mode nav states and a few coverage gaps in component/state specs. Fixable before Finalize — no structural rework needed.

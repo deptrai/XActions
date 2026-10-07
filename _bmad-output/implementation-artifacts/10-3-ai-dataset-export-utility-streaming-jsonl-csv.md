@@ -75,7 +75,7 @@ status: done
 
 - **Given** an invalid `format`, missing `outputPath`, or an unparseable date
 - **When** `exportDataset()` is called
-- **Then** it throws `PlatformError` with `type: 'invalid_args'`, `code: 'XACT_4001'`, `suggestedAction: 'use_x_actions_list'` **before** touching the database or file system.
+- **Then** it throws `PlatformError` with `type: 'invalid_args'`, `code: 'XACT_4001'`, `suggestedAction: 'use_medirus_list'` **before** touching the database or file system.
 
 ```js
 import { PlatformError, ErrorTypes, SuggestedActions } from '../core/error-envelope.js';
@@ -123,7 +123,7 @@ throw new PlatformError({
   - [x] Serialize `metadata` and `mediaUrls` with `JSON.stringify(...)` before CSV-escaping.
 
 - [x] **Task 4: CLI integration (optional but recommended)**
-  - [x] Add `xactions dataset export-db` command in `src/cli/index.js` under the existing `dataset` command group.
+  - [x] Add `medirus dataset export-db` command in `src/cli/index.js` under the existing `dataset` command group.
   - [x] Options: `--platform`, `--keyword`, `--from`, `--to`, `--format`, `--output`, `--compress`, `--include-comments`.
 
 - [x] **Task 5: Tests (AC: End-to-end verification)**
@@ -153,7 +153,7 @@ throw new PlatformError({
 ## Current Implementation State
 
 - `src/utils/exporter.js` has been implemented with streaming JSONL/CSV/Gzip export and backpressure handling.
-- `tests/utils/exporter.test.js` now runs against the real `xactions_test` PostgreSQL database and exercises cursor pagination, filters, gzip, and CSV escaping.
+- `tests/utils/exporter.test.js` now runs against the real `medirus_test` PostgreSQL database and exercises cursor pagination, filters, gzip, and CSV escaping.
 - `tests/store/prisma-store.test.js` and `tests/store/store-automation.test.js` have been restored to real PostgreSQL integration tests.
 - A legacy `src/portability/exporter.js` exists for Twitter account export (profile/tweets/followers). **Do not reuse** for this story; it is not Prisma-based and does not stream correctly.
 - `src/store/prisma-store.js`, `prisma/schema.prisma`, and `tests/store/test-prisma-client.js` from Story 10.2 provide the read model and test DB setup.
@@ -171,7 +171,7 @@ throw new PlatformError({
   - `metadata` is opaque `Json?`; export it as-is, do not flatten by default.
   - `crawledAt` is indexed on both `Post` and `Comment` for date-range queries.
 - **AD-9 — Anti-Bot Payload Validation & Data Sanitization Defense** (`ARCHITECTURE-SPINE.md`)
-  - Rule 3: "JSONL Exporter: Tự động sanitize ký tự xuống dòng (`\r\n`) trong `content` trước khi ghi stream." [Source: `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` line 200]
+  - Rule 3: "JSONL Exporter: Tự động sanitize ký tự xuống dòng (`\r\n`) trong `content` trước khi ghi stream." [Source: `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` line 200]
 - **AD-10 — 3-Tier Incremental Gap-Filling & Retention Policy**
   - Raw `Post`/`Comment` data is retained for 30 days; exports must not hold entire tables in memory.
 
@@ -192,7 +192,7 @@ throw new PlatformError({
 - JSDoc for public functions and typedefs.
 - `src/core/` must remain zero-runtime-dependency; `src/utils/exporter.js` can depend on `@prisma/client` because it reads from PostgreSQL.
 - Throw `PlatformError` (not plain `Error`) for business-level errors.
-- Do not mock `PrismaClient` in tests; use the real `xactions_test` PostgreSQL database.
+- Do not mock `PrismaClient` in tests; use the real `medirus_test` PostgreSQL database.
 
 ---
 
@@ -320,7 +320,7 @@ When `compress: true`:
 
 ### Environment
 
-- Use the same test database setup as Story 10.2 (`DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5434/xactions_test` or `DATABASE_URL`).
+- Use the same test database setup as Story 10.2 (`DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5434/medirus_test` or `DATABASE_URL`).
 - Run `npx prisma migrate deploy` before tests if the test DB is fresh.
 - Clean seeded rows between tests with `TRUNCATE TABLE IF EXISTS "Post" CASCADE;` (CrawlCheckpoint and Comment rows are cascade-deleted because of FK relations) or transactional cleanup.
 
@@ -388,7 +388,7 @@ npx vitest run tests/store tests/utils   # regression with 10.2
 
 ## Project Context Reference
 
-- Project: XActions
+- Project: Medirus
 - Project key: XACT
 - Repository: https://github.com/nirholas/XActions
 - Tech: Node.js ESM, Prisma, PostgreSQL, Vitest
@@ -405,7 +405,7 @@ npx vitest run tests/store tests/utils   # regression with 10.2
 4. **Do not double-stringify `metadata` in JSONL**: It is a JSON object, so `JSON.stringify(row)` handles it naturally.
 5. **CSV `metadata` and `mediaUrls` cells**: must be JSON strings within the cell; escape them as part of the normal CSV escaping rules.
 6. **Backpressure with Gzip**: `gzip.write(line)` can return `false`; wait for `drain` on the gzip stream, not the file stream, and let `gzip.pipe(file)` propagate backpressure.
-7. **No mocks in tests**: Use the real `xactions_test` database; import `prisma` and `cleanupTestDatabase` from `tests/store/test-prisma-client.js`.
+7. **No mocks in tests**: Use the real `medirus_test` database; import `prisma` and `cleanupTestDatabase` from `tests/store/test-prisma-client.js`.
 8. **Scope boundary**: JSON Schema validation of `metadata` is Story 10.5; this story should not implement it.
 
 ---
@@ -416,7 +416,7 @@ npx vitest run tests/store tests/utils   # regression with 10.2
 - Output order is `Post` rows first, then `Comment` rows, both sorted by `crawledAt` ascending, to keep CSV header stable.
 - `compress: true` appends `.gz` to `outputPath` if not present.
 - `dateRange` filters `crawledAt` (ingestion time) because it is indexed and non-null.
-- CLI command is `xactions dataset export-db` under the existing `dataset` group.
+- CLI command is `medirus dataset export-db` under the existing `dataset` group.
 - Return value is `{ rowCount: number, outputPath: string, compressed: boolean }`.
 
 ---
@@ -446,7 +446,7 @@ npx vitest run tests/store tests/utils   # regression with 10.2
 - Implemented AD-9 Rule 3 newline sanitization (`\r\n|\r|\n` ➔ `' '`) on content.
 - Implemented RFC 4180 CSV escaping with standard headers and JSON serialization for metadata and mediaUrls, plus CSV formula injection defense.
 - Added Gzip stream compression pipeline with auto `.gz` extension appending.
-- Added `xactions dataset export-db` CLI command in `src/cli/index.js` with proper `$disconnect()` and `process.exitCode`.
+- Added `medirus dataset export-db` CLI command in `src/cli/index.js` with proper `$disconnect()` and `process.exitCode`.
 - Added TypeScript types in `types/exporter.d.ts` (strict, no `any`) and exported in `types/index.d.ts`.
 - Verified all 10 acceptance tests in `tests/utils/exporter.test.js` passing 100%.
 - Verified full test suite regression: 76 tests passing across 5 test suites.

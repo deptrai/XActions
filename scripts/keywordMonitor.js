@@ -22,7 +22,7 @@
   };
   // =============================================
 
-  const STORAGE_KEY = 'xactions_keyword_monitor';
+  const STORAGE_KEY = 'medirus_keyword_monitor';
 
   const download = (data, filename) => {
     const a = document.createElement('a');
@@ -149,37 +149,37 @@
     console.log('');
 
     if (CONFIG.exportResults) {
-      download({ keywords, mentions, newMentions: newMentions.length, topAuthors, scanTime: new Date().toISOString() }, `xactions-keyword-${Date.now()}.json`);
+      download({ keywords, mentions, newMentions: newMentions.length, topAuthors, scanTime: new Date().toISOString() }, `medirus-keyword-${Date.now()}.json`);
     }
   };
 
-  window.XActions = window.XActions || {};
-  window.XActions.monitor = (kws) => {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.monitor = (kws) => {
     CONFIG.keywords = kws;
     const q = encodeURIComponent(kws.join(' OR '));
     window.location.href = `https://x.com/search?q=${q}&src=typed_query&f=live`;
     setTimeout(scan, 5000);
   };
-  window.XActions.scan = scan;
-  window.XActions.autoRefresh = (ms) => {
+  window.Medirus.scan = scan;
+  window.Medirus.autoRefresh = (ms) => {
     if (autoTimer) clearInterval(autoTimer);
     const interval = ms || CONFIG.checkInterval;
     console.log(`🔄 Auto-refreshing every ${(interval / 60000).toFixed(1)} min.`);
     autoTimer = setInterval(() => { console.log('\n🔄 Refreshing...'); window.scrollTo(0, 0); setTimeout(scan, 2000); }, interval);
   };
-  window.XActions.stop = () => { if (autoTimer) { clearInterval(autoTimer); autoTimer = null; } console.log('⏹️ Stopped.'); };
-  window.XActions.history = () => {
+  window.Medirus.stop = () => { if (autoTimer) { clearInterval(autoTimer); autoTimer = null; } console.log('⏹️ Stopped.'); };
+  window.Medirus.history = () => {
     const d = loadData();
     if (d.mentions.length === 0) { console.log('📭 No history.'); return; }
     d.mentions.slice(-15).forEach(m => console.log(`  @${m.author}: "${m.text.slice(0, 60)}..."`));
   };
-  window.XActions.reset = () => { localStorage.removeItem(STORAGE_KEY); console.log('🗑️ Cleared.'); };
+  window.Medirus.reset = () => { localStorage.removeItem(STORAGE_KEY); console.log('🗑️ Cleared.'); };
 
   if (window.location.href.includes('/search')) scan();
   else {
     console.log('╔════════════════════════════════════════════════╗');
     console.log('║  🔍 KEYWORD MONITOR — Ready                    ║');
     console.log('╚════════════════════════════════════════════════╝');
-    console.log('\n📋 XActions.monitor(["kw1","kw2"]) or XActions.scan() on a search page');
+    console.log('\n📋 Medirus.monitor(["kw1","kw2"]) or Medirus.scan() on a search page');
   }
 })();

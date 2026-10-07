@@ -10,11 +10,11 @@ Status: done
 
 ## Story
 
-As a multi-account operator using XActions,
+As a multi-account operator using Medirus,
 I want uid/password login + 2FA TOTP injection + proxy rotation from 3 providers,
 so that I can run Messenger share campaigns across many accounts, each on a different IP, without a pre-existing cookie.
 
-This story adds the **alternative auth path** and **per-session IP rotation** the C# tool has but XActions lacks. It consolidates three independent features:
+This story adds the **alternative auth path** and **per-session IP rotation** the C# tool has but Medirus lacks. It consolidates three independent features:
 - **(P7) uid/password login mode** — bait-cookie injection + login form fill + "Continue" prompt handling, for accounts where only `uid`+`pass` is available (no `c_user`/`xs` cookie).
 - **(P8) 2FA TOTP injection** — generate a 6-digit TOTP from a 32-char seed via `otplib` and inject it when Facebook presents a 2FA challenge during password login.
 - **(P6) Proxy rotation** — call one of three provider rotate APIs (`proxyfb` / `tmproxy` / `shoplike`) and return a fresh proxy string ready to wire into `browserOptions.proxy`.

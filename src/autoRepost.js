@@ -72,7 +72,7 @@
   };
 
   const run = async () => {
-    console.log('🔄 AUTO REPOST - XActions by nichxbt');
+    console.log('🔄 AUTO REPOST - Medirus by nichxbt');
 
     if (CONFIG.keywords.length === 0 && CONFIG.fromUsers.length === 0) {
       console.error('❌ No filters! Edit CONFIG.keywords or CONFIG.fromUsers');

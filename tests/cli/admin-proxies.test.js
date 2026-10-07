@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Tests for xactions admin proxies & proxy command group (Story 19.4.2)
+ * Tests for medirus admin proxies & proxy command group (Story 19.4.2)
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -15,7 +15,7 @@ function stripAnsi(str) {
   return str.replace(/\x1B\[[0-9;]*m/g, '');
 }
 
-describe('Story 19.4.2: xactions admin proxies management', () => {
+describe('Story 19.4.2: medirus admin proxies management', () => {
   beforeEach(() => {
     // Ensure test proxies exist in globalProxyPool
     globalProxyPool.add('http://1.1.1.1:8080');

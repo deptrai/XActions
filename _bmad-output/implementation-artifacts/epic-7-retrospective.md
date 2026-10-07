@@ -5,7 +5,7 @@ Date: 2026-08-14
 
 ## Summary
 
-Epic 7 mở rộng khả năng **đọc** Facebook của XActions để phục vụ lead generation và market research: search đa loại (posts/people/pages/groups), scrape comments của post, scrape posts/comments trong group, account health filtering, parallel execution bằng pool nhiều account, và unification API + MCP surface. Tất cả xuất JSON, không lưu trữ kết quả scrape trong XActions (NFR-10).
+Epic 7 mở rộng khả năng **đọc** Facebook của Medirus để phục vụ lead generation và market research: search đa loại (posts/people/pages/groups), scrape comments của post, scrape posts/comments trong group, account health filtering, parallel execution bằng pool nhiều account, và unification API + MCP surface. Tất cả xuất JSON, không lưu trữ kết quả scrape trong Medirus (NFR-10).
 
 Epic complete across four stories:
 

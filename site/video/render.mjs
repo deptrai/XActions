@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * XActions Video Render Script
+ * Medirus Video Render Script
  * 
  * Usage:
  *   node render.mjs                       # render all compositions
@@ -40,7 +40,7 @@ const toRender = compositionArg
   ? [compositionArg]
   : ALL_COMPOSITIONS;
 
-console.log('⚡ XActions Video Renderer\n');
+console.log('⚡ Medirus Video Renderer\n');
 
 const entryPoint = path.resolve(__dirname, 'src/index.js');
 console.log('📦 Bundling...');

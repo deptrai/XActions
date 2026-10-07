@@ -3,51 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>XActions Actions Library Reference (`actions.js`) — XActions Docs</title>
+<title>Medirus Actions Library Reference (`actions.js`) — Medirus Docs</title>
 <meta name="description" content="The complete X/Twitter actions library — 2,100+ lines, 12 namespaces, 100+ functions covering every available user action.">
-<meta name="keywords" content="xactions, twitter automation, x automation, free, open source, actions, reference, library, (`actions.js`), browser automation">
+<meta name="keywords" content="medirus, twitter automation, x automation, free, open source, actions, reference, library, (`actions.js`), browser automation">
 <meta name="author" content="nich (@nichxbt)">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="color-scheme" content="light dark">
 
 <meta property="og:type" content="article">
-<meta property="og:title" content="XActions Actions Library Reference (`actions.js`) — XActions">
+<meta property="og:title" content="Medirus Actions Library Reference (`actions.js`) — Medirus">
 <meta property="og:description" content="The complete X/Twitter actions library — 2,100+ lines, 12 namespaces, 100+ functions covering every available user action.">
-<meta property="og:url" content="https://xactions.app/docs/automation/actions-reference">
-<meta property="og:image" content="https://xactions.app/og-docs.png">
-<meta property="og:site_name" content="XActions">
+<meta property="og:url" content="https://medirus.online/docs/automation/actions-reference">
+<meta property="og:image" content="https://medirus.online/og-docs.png">
+<meta property="og:site_name" content="Medirus">
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@nichxbt">
-<meta name="twitter:title" content="XActions Actions Library Reference (`actions.js`) — XActions">
+<meta name="twitter:title" content="Medirus Actions Library Reference (`actions.js`) — Medirus">
 <meta name="twitter:description" content="The complete X/Twitter actions library — 2,100+ lines, 12 namespaces, 100+ functions covering every available user action.">
-<meta name="twitter:image" content="https://xactions.app/og-docs.png">
+<meta name="twitter:image" content="https://medirus.online/og-docs.png">
 
-<link rel="canonical" href="https://xactions.app/docs/automation/actions-reference">
+<link rel="canonical" href="https://medirus.online/docs/automation/actions-reference">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 <link rel="stylesheet" href="/docs/assets/docs.css">
 
 <script>
 /* Applied before first paint so a dark-theme reader never sees a white flash. */
-(function(){try{var t=localStorage.getItem('xactions-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+(function(){try{var t=localStorage.getItem('medirus-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
 </script>
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "TechArticle",
-  "headline": "XActions Actions Library Reference (`actions.js`) — XActions Docs",
+  "headline": "Medirus Actions Library Reference (`actions.js`) — Medirus Docs",
   "description": "The complete X/Twitter actions library — 2,100+ lines, 12 namespaces, 100+ functions covering every available user action.",
-  "url": "https://xactions.app/docs/automation/actions-reference",
-  "image": "https://xactions.app/og-docs.png",
+  "url": "https://medirus.online/docs/automation/actions-reference",
+  "image": "https://medirus.online/og-docs.png",
   "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-  "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+  "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
   "isAccessibleForFree": true,
   "license": "https://www.apache.org/licenses/LICENSE-2.0",
-  "mainEntityOfPage": "https://xactions.app/docs/automation/actions-reference",
+  "mainEntityOfPage": "https://medirus.online/docs/automation/actions-reference",
   "articleSection": "Browser Automation",
-  "keywords": "xactions, twitter automation, x automation, free, open source, actions, reference, library, (`actions.js`), browser automation"
+  "keywords": "medirus, twitter automation, x automation, free, open source, actions, reference, library, (`actions.js`), browser automation"
 }
 </script>
 <script type="application/ld+json">
@@ -55,10 +55,10 @@
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   "itemListElement": [
-    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://xactions.app/docs" },
-    { "@type": "ListItem", "position": 3, "name": "Browser Automation", "item": "https://xactions.app/docs" },
-    { "@type": "ListItem", "position": 4, "name": "XActions Actions Library Reference (`actions.js`)", "item": "https://xactions.app/docs/automation/actions-reference" }
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://medirus.online/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Browser Automation", "item": "https://medirus.online/docs" },
+    { "@type": "ListItem", "position": 4, "name": "Medirus Actions Library Reference (`actions.js`)", "item": "https://medirus.online/docs/automation/actions-reference" }
   ]
 }
 </script>
@@ -68,7 +68,7 @@
 
 <header class="topbar">
   <button class="icon-btn menu-toggle" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button>
-  <a class="topbar__brand" href="/">⚡ XActions</a>
+  <a class="topbar__brand" href="/">⚡ Medirus</a>
   <div class="topbar__spacer"></div>
   <button class="search-trigger" data-search-trigger aria-label="Search documentation">
     <span aria-hidden="true">🔍</span><span class="search-trigger__label">Search docs</span><kbd>⌘K</kbd>
@@ -89,8 +89,8 @@
     <div class="sidebar__group">
       <div class="sidebar__heading">Guides &amp; Reference</div>
       <a class="sidebar__link" href="/docs/guides/scheduler">⏰ Scheduler &amp; Webhook Triggers</a>
-      <a class="sidebar__link" href="/docs/guides/a2a-api-reference">A2A API Reference — XActions</a>
-      <a class="sidebar__link" href="/docs/guides/a2a-protocol">A2A Protocol — XActions</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-api-reference">A2A API Reference — Medirus</a>
+      <a class="sidebar__link" href="/docs/guides/a2a-protocol">A2A Protocol — Medirus</a>
       <a class="sidebar__link" href="/docs/guides/portability">Account Portability — Export, Migrate &amp; Diff</a>
       <a class="sidebar__link" href="/docs/guides/algorithm-builder">Algorithm Builder — 24/7 Niche Growth Automation</a>
       <a class="sidebar__link" href="/docs">+ 65 more…</a>
@@ -118,9 +118,9 @@
       <div class="sidebar__heading">Browser Automation</div>
       <a class="sidebar__link" href="/docs/automation/advanced-techniques">Advanced Automation Techniques</a>
       <a class="sidebar__link" href="/docs/automation/getting-started-browser">Getting Started with Browser Automation</a>
-      <a class="sidebar__link" href="/docs/automation/actions-reference" aria-current="page">XActions Actions Library Reference (`actions.js`)</a>
-      <a class="sidebar__link" href="/docs/automation/scripts-reference">XActions Automation Scripts — Complete Reference</a>
-      <a class="sidebar__link" href="/docs/automation/core-reference">XActions Core Module Reference (`core.js`)</a>
+      <a class="sidebar__link" href="/docs/automation/actions-reference" aria-current="page">Medirus Actions Library Reference (`actions.js`)</a>
+      <a class="sidebar__link" href="/docs/automation/scripts-reference">Medirus Automation Scripts — Complete Reference</a>
+      <a class="sidebar__link" href="/docs/automation/core-reference">Medirus Core Module Reference (`core.js`)</a>
     </div>
     <div class="sidebar__group">
       <div class="sidebar__heading">Research &amp; Architecture</div>
@@ -151,7 +151,7 @@
     </div>
     <div class="sidebar__group">
       <div class="sidebar__heading">Claude Prompt Library</div>
-      <a class="sidebar__link" href="/docs/prompts/mcp-setup-and-first-commands">Tutorial: Setting Up XActions MCP Server with Claude</a>
+      <a class="sidebar__link" href="/docs/prompts/mcp-setup-and-first-commands">Tutorial: Setting Up Medirus MCP Server with Claude</a>
       <a class="sidebar__link" href="/docs/prompts/unfollow-non-followers-cleanup">Tutorial: Unfollow Non-Followers &amp; Follower Cleanup with Claude</a>
       <a class="sidebar__link" href="/docs/prompts/growth-automation-suite">Tutorial: Growth Automation Suite — Grow Your X Account on Autopilot</a>
       <a class="sidebar__link" href="/docs/prompts/scraping-research-analysis">Tutorial: Tweet Scraping, Profile Analysis &amp; Research with Claude</a>
@@ -160,9 +160,9 @@
     </div>
     <div class="sidebar__group">
       <div class="sidebar__heading">Project Info</div>
-      <a class="sidebar__link" href="/docs/project/contributing">Contributing to XActions</a>
+      <a class="sidebar__link" href="/docs/project/contributing">Contributing to Medirus</a>
       <a class="sidebar__link" href="/docs/project/changelog">Changelog</a>
-      <a class="sidebar__link" href="/docs/project/roadmap">XActions Roadmap</a>
+      <a class="sidebar__link" href="/docs/project/roadmap">Medirus Roadmap</a>
       <a class="sidebar__link" href="/docs/project/security">Security Policy</a>
       <a class="sidebar__link" href="/docs/project/code_of_conduct">Contributor Covenant Code of Conduct</a>
       <a class="sidebar__link" href="/docs/project/readme">Quick start</a>
@@ -171,27 +171,27 @@
       <div class="sidebar__heading">Extensions &amp; Plugins</div>
       <a class="sidebar__link" href="/docs/extras/scripts">Chrome DevTools Console Scripts</a>
       <a class="sidebar__link" href="/docs/extras/examples">Examples</a>
-      <a class="sidebar__link" href="/docs/extras/integrations-n8n">n8n-nodes-xactions</a>
-      <a class="sidebar__link" href="/docs/extras/extension">XActions Browser Extension</a>
-      <a class="sidebar__link" href="/docs/extras/src-plugins-excel">XActions Excel Plugin</a>
-      <a class="sidebar__link" href="/docs/extras/src-plugins-google-sheets">XActions Google Sheets Plugin</a>
-      <a class="sidebar__link" href="/docs/extras/src-plugins-template">xactions-plugin-example</a>
+      <a class="sidebar__link" href="/docs/extras/integrations-n8n">n8n-nodes-medirus</a>
+      <a class="sidebar__link" href="/docs/extras/extension">Medirus Browser Extension</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-excel">Medirus Excel Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-google-sheets">Medirus Google Sheets Plugin</a>
+      <a class="sidebar__link" href="/docs/extras/src-plugins-template">medirus-plugin-example</a>
     </div>
     <div class="sidebar__group">
       <div class="sidebar__heading">Launch &amp; Releases</div>
-      <a class="sidebar__link" href="/docs/launch/v310-launch-content">XActions v3.1.0 — Launch Content</a>
+      <a class="sidebar__link" href="/docs/launch/v310-launch-content">Medirus v3.1.0 — Launch Content</a>
     </div>
   </aside>
 
   <main class="content" id="main">
     <nav class="breadcrumb" aria-label="Breadcrumb">
-      <a href="https://xactions.app">Home</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Docs</a> <span aria-hidden="true">›</span> <a href="https://xactions.app/docs">Browser Automation</a> <span aria-hidden="true">›</span> <span>XActions Actions Library Reference (`actions.js`)</span>
+      <a href="https://medirus.online">Home</a> <span aria-hidden="true">›</span> <a href="https://medirus.online/docs">Docs</a> <span aria-hidden="true">›</span> <a href="https://medirus.online/docs">Browser Automation</a> <span aria-hidden="true">›</span> <span>Medirus Actions Library Reference (`actions.js`)</span>
     </nav>
 
     <span class="eyebrow">⚙️ Browser Automation</span>
 
     <article class="prose">
-<h1 id="xactions-actions-library-reference-actionsjs">XActions Actions Library Reference (<code>actions.js</code>)</h1>
+<h1 id="medirus-actions-library-reference-actionsjs">Medirus Actions Library Reference (<code>actions.js</code>)</h1>
 <blockquote>
 <p>The complete X/Twitter actions library — 2,100+ lines, 12 namespaces, 100+ functions covering every available user action.</p>
 </blockquote>
@@ -202,30 +202,30 @@
 <li><a href="#overview">Overview</a></li>
 <li><a href="#loading">Loading</a></li>
 <li><a href="#extended-selectors-sel">Extended Selectors (SEL)</a></li>
-<li><a href="#xactionstweet--post-management">XActions.tweet — Post Management</a></li>
-<li><a href="#xactionsengage--engagement-actions">XActions.engage — Engagement Actions</a></li>
-<li><a href="#xactionsuser--user-interactions">XActions.user — User Interactions</a></li>
-<li><a href="#xactionsdm--direct-messages">XActions.dm — Direct Messages</a></li>
-<li><a href="#xactionssearch--search--discovery">XActions.search — Search &amp; Discovery</a></li>
-<li><a href="#xactionsnav--navigation">XActions.nav — Navigation</a></li>
-<li><a href="#xactionslists--list-management">XActions.lists — List Management</a></li>
-<li><a href="#xactionssettings--account-settings">XActions.settings — Account Settings</a></li>
-<li><a href="#xactionsprofile--profile-editing">XActions.profile — Profile Editing</a></li>
-<li><a href="#xactionsutils--power-utilities">XActions.utils — Power Utilities</a></li>
-<li><a href="#xactionsspaces--twitter-spaces">XActions.spaces — Twitter Spaces</a></li>
-<li><a href="#xactionscommunities--communities">XActions.communities — Communities</a></li>
+<li><a href="#medirustweet--post-management">Medirus.tweet — Post Management</a></li>
+<li><a href="#medirusengage--engagement-actions">Medirus.engage — Engagement Actions</a></li>
+<li><a href="#medirususer--user-interactions">Medirus.user — User Interactions</a></li>
+<li><a href="#medirusdm--direct-messages">Medirus.dm — Direct Messages</a></li>
+<li><a href="#medirussearch--search--discovery">Medirus.search — Search &amp; Discovery</a></li>
+<li><a href="#medirusnav--navigation">Medirus.nav — Navigation</a></li>
+<li><a href="#mediruslists--list-management">Medirus.lists — List Management</a></li>
+<li><a href="#medirussettings--account-settings">Medirus.settings — Account Settings</a></li>
+<li><a href="#medirusprofile--profile-editing">Medirus.profile — Profile Editing</a></li>
+<li><a href="#medirusutils--power-utilities">Medirus.utils — Power Utilities</a></li>
+<li><a href="#medirusspaces--twitter-spaces">Medirus.spaces — Twitter Spaces</a></li>
+<li><a href="#mediruscommunities--communities">Medirus.communities — Communities</a></li>
 </ul>
 <hr>
 <h2 id="overview">Overview</h2>
-<p><code>actions.js</code> replaces <code>window.XActions</code> with a complete action library. It requires <code>core.js</code> to be loaded first — it destructures Core&#39;s utilities at the top:</p>
+<p><code>actions.js</code> replaces <code>window.Medirus</code> with a complete action library. It requires <code>core.js</code> to be loaded first — it destructures Core&#39;s utilities at the top:</p>
 <pre><code class="language-javascript">const { sleep, randomDelay, log, storage, waitForElement, waitForElements, clickElement, typeText } = Core;
 </code></pre>
 <p>When loaded successfully, you&#39;ll see a banner showing all 12 sections:</p>
 <pre><code>╔══════════════════════════════════════════════════════════════════════╗
-║  📦 XActions Library - COMPLETE (All 9 Sections)                     ║
+║  📦 Medirus Library - COMPLETE (All 9 Sections)                     ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  ✅ XActions.tweet       - Post, reply, quote, delete, pin, thread   ║
-║  ✅ XActions.engage      - Like, RT, bookmark, share, highlight      ║
+║  ✅ Medirus.tweet       - Post, reply, quote, delete, pin, thread   ║
+║  ✅ Medirus.engage      - Like, RT, bookmark, share, highlight      ║
 ║  ...                                                                   ║
 ╚══════════════════════════════════════════════════════════════════════╝
 </code></pre>
@@ -236,15 +236,15 @@
 // 2. Then paste actions.js
 
 // Verify:
-await XActions.tweet.post(&quot;Test!&quot;); // Posts a tweet
-XActions.utils.getCurrentUser();     // Returns your username
+await Medirus.tweet.post(&quot;Test!&quot;); // Posts a tweet
+Medirus.utils.getCurrentUser();     // Returns your username
 </code></pre>
 <blockquote>
-<p><strong>Important:</strong> After loading actions.js, <code>window.XActions.Core</code> is still accessible via the Core reference inside the closure, but <code>window.XActions</code> now points to the actions library (tweet, engage, user, etc.), not Core. Access Core directly via <code>window.XActions.Core</code> if needed.</p>
+<p><strong>Important:</strong> After loading actions.js, <code>window.Medirus.Core</code> is still accessible via the Core reference inside the closure, but <code>window.Medirus</code> now points to the actions library (tweet, engage, user, etc.), not Core. Access Core directly via <code>window.Medirus.Core</code> if needed.</p>
 </blockquote>
 <hr>
 <h2 id="extended-selectors-sel">Extended Selectors (SEL)</h2>
-<p><code>actions.js</code> defines its own extended selector map (<code>SEL</code>) that goes beyond what Core provides. These are used internally but you can access them via <code>XActions.SEL</code>:</p>
+<p><code>actions.js</code> defines its own extended selector map (<code>SEL</code>) that goes beyond what Core provides. These are used internally but you can access them via <code>Medirus.SEL</code>:</p>
 <h3 id="composeinput">Compose/Input</h3>
 <table>
 <thead>
@@ -491,11 +491,11 @@ XActions.utils.getCurrentUser();     // Returns your username
 </tr>
 </tbody></table>
 <hr>
-<h2 id="xactionstweet--post-management">XActions.tweet — Post Management</h2>
+<h2 id="medirustweet--post-management">Medirus.tweet — Post Management</h2>
 <h3 id="tweetposttext-options"><code>tweet.post(text, options)</code></h3>
 <p>Post a new tweet.</p>
-<pre><code class="language-javascript">await XActions.tweet.post(&quot;Hello world!&quot;);
-await XActions.tweet.post(&quot;Check this out!&quot;, { draft: true }); // Don&#39;t auto-send
+<pre><code class="language-javascript">await Medirus.tweet.post(&quot;Hello world!&quot;);
+await Medirus.tweet.post(&quot;Check this out!&quot;, { draft: true }); // Don&#39;t auto-send
 </code></pre>
 <p><strong>Options:</strong></p>
 <ul>
@@ -505,36 +505,36 @@ await XActions.tweet.post(&quot;Check this out!&quot;, { draft: true }); // Don&
 <p><strong>How it works:</strong> Opens the compose dialog if needed → types text character-by-character → clicks the Post button.</p>
 <h3 id="tweetreplytweetelement-text"><code>tweet.reply(tweetElement, text)</code></h3>
 <p>Reply to a specific tweet.</p>
-<pre><code class="language-javascript">const tweets = XActions.tweet.getAll();
-await XActions.tweet.reply(tweets[0], &quot;Great point!&quot;);
+<pre><code class="language-javascript">const tweets = Medirus.tweet.getAll();
+await Medirus.tweet.reply(tweets[0], &quot;Great point!&quot;);
 </code></pre>
 <h3 id="tweetquotetweetelement-text"><code>tweet.quote(tweetElement, text)</code></h3>
 <p>Quote-tweet with your commentary.</p>
-<pre><code class="language-javascript">const tweets = XActions.tweet.getAll();
-await XActions.tweet.quote(tweets[0], &quot;This is exactly what I&#39;ve been saying&quot;);
+<pre><code class="language-javascript">const tweets = Medirus.tweet.getAll();
+await Medirus.tweet.quote(tweets[0], &quot;This is exactly what I&#39;ve been saying&quot;);
 </code></pre>
 <h3 id="tweetdeletetweetelement"><code>tweet.delete(tweetElement)</code></h3>
 <p>Delete one of your tweets. Opens ⋯ menu → Delete → Confirm.</p>
-<pre><code class="language-javascript">const tweets = XActions.tweet.getAll();
-await XActions.tweet.delete(tweets[0]);
+<pre><code class="language-javascript">const tweets = Medirus.tweet.getAll();
+await Medirus.tweet.delete(tweets[0]);
 </code></pre>
 <h3 id="tweetpintweetelement"><code>tweet.pin(tweetElement)</code></h3>
 <p>Pin a tweet to your profile. Opens ⋯ menu → Pin → Confirm.</p>
-<pre><code class="language-javascript">await XActions.tweet.pin(tweetElement);
+<pre><code class="language-javascript">await Medirus.tweet.pin(tweetElement);
 </code></pre>
 <h3 id="tweetgetidtweetelement"><code>tweet.getId(tweetElement)</code></h3>
 <p>Extract the tweet ID from an element.</p>
-<pre><code class="language-javascript">const id = XActions.tweet.getId(tweetElement);
+<pre><code class="language-javascript">const id = Medirus.tweet.getId(tweetElement);
 // Returns: &#39;1234567890123456789&#39;
 </code></pre>
 <h3 id="tweetgetall"><code>tweet.getAll()</code></h3>
 <p>Get all visible tweet elements on the current page.</p>
-<pre><code class="language-javascript">const tweets = XActions.tweet.getAll();
+<pre><code class="language-javascript">const tweets = Medirus.tweet.getAll();
 console.log(`${tweets.length} tweets visible`);
 </code></pre>
 <h3 id="tweetthreadtweets"><code>tweet.thread(tweets)</code></h3>
 <p>Post a thread of multiple tweets.</p>
-<pre><code class="language-javascript">await XActions.tweet.thread([
+<pre><code class="language-javascript">await Medirus.tweet.thread([
   &quot;Thread 🧵 Here&#39;s what I learned about AI agents...&quot;,
   &quot;1/ First, they need clear goals and constraints...&quot;,
   &quot;2/ Second, context management is everything...&quot;,
@@ -542,35 +542,35 @@ console.log(`${tweets.length} tweets visible`);
 ]);
 </code></pre>
 <hr>
-<h2 id="xactionsengage--engagement-actions">XActions.engage — Engagement Actions</h2>
+<h2 id="medirusengage--engagement-actions">Medirus.engage — Engagement Actions</h2>
 <h3 id="engageliketweetelement--engageunliketweetelement"><code>engage.like(tweetElement)</code> / <code>engage.unlike(tweetElement)</code></h3>
 <p>Like or unlike a tweet.</p>
-<pre><code class="language-javascript">const tweets = XActions.tweet.getAll();
-await XActions.engage.like(tweets[0]);
-await XActions.engage.unlike(tweets[1]);
+<pre><code class="language-javascript">const tweets = Medirus.tweet.getAll();
+await Medirus.engage.like(tweets[0]);
+await Medirus.engage.unlike(tweets[1]);
 </code></pre>
 <h3 id="engageretweettweetelement--engageunretweettweetelement"><code>engage.retweet(tweetElement)</code> / <code>engage.unretweet(tweetElement)</code></h3>
 <p>Retweet or undo a retweet (clicks confirm dialog).</p>
-<pre><code class="language-javascript">await XActions.engage.retweet(tweetElement);
+<pre><code class="language-javascript">await Medirus.engage.retweet(tweetElement);
 </code></pre>
 <h3 id="engagebookmarktweetelement--engageunbookmarktweetelement"><code>engage.bookmark(tweetElement)</code> / <code>engage.unbookmark(tweetElement)</code></h3>
 <p>Bookmark via the share menu.</p>
-<pre><code class="language-javascript">await XActions.engage.bookmark(tweetElement);
+<pre><code class="language-javascript">await Medirus.engage.bookmark(tweetElement);
 </code></pre>
 <h3 id="engageaddtolisttweetelement-listname"><code>engage.addToList(tweetElement, listName)</code></h3>
 <p>Add the tweet&#39;s author to a list via the ⋯ menu.</p>
-<pre><code class="language-javascript">await XActions.engage.addToList(tweetElement, &#39;AI Accounts&#39;);
+<pre><code class="language-javascript">await Medirus.engage.addToList(tweetElement, &#39;AI Accounts&#39;);
 </code></pre>
 <h3 id="engagereporttweetelement-reason"><code>engage.report(tweetElement, reason)</code></h3>
 <p>Open the report dialog for a tweet.</p>
-<pre><code class="language-javascript">await XActions.engage.report(tweetElement);
+<pre><code class="language-javascript">await Medirus.engage.report(tweetElement);
 // Opens dialog — complete manually
 </code></pre>
 <h3 id="engagecopylinktweetelement"><code>engage.copyLink(tweetElement)</code></h3>
 <p>Copy the tweet&#39;s link to clipboard via share menu.</p>
 <h3 id="engageshareviadmtweetelement-username"><code>engage.shareViaDM(tweetElement, username)</code></h3>
 <p>Share a tweet to someone via DM.</p>
-<pre><code class="language-javascript">await XActions.engage.shareViaDM(tweetElement, &#39;friendUsername&#39;);
+<pre><code class="language-javascript">await Medirus.engage.shareViaDM(tweetElement, &#39;friendUsername&#39;);
 </code></pre>
 <h3 id="engageembedtweetelement"><code>engage.embed(tweetElement)</code></h3>
 <p>Open the embed code dialog.</p>
@@ -581,42 +581,42 @@ await XActions.engage.unlike(tweets[1]);
 <h3 id="engagehighlighttweetelement"><code>engage.highlight(tweetElement)</code></h3>
 <p>Highlight a tweet (X Premium feature).</p>
 <hr>
-<h2 id="xactionsuser--user-interactions">XActions.user — User Interactions</h2>
+<h2 id="medirususer--user-interactions">Medirus.user — User Interactions</h2>
 <h3 id="userfollowtarget--userunfollowtarget"><code>user.follow(target)</code> / <code>user.unfollow(target)</code></h3>
 <p>Follow or unfollow. Accepts a username string or DOM element.</p>
-<pre><code class="language-javascript">await XActions.user.follow(&#39;username&#39;);     // Navigate + click follow
-await XActions.user.follow(userCellElement); // Click follow in existing cell
-await XActions.user.unfollow(&#39;username&#39;);   // Navigate + click unfollow + confirm
+<pre><code class="language-javascript">await Medirus.user.follow(&#39;username&#39;);     // Navigate + click follow
+await Medirus.user.follow(userCellElement); // Click follow in existing cell
+await Medirus.user.unfollow(&#39;username&#39;);   // Navigate + click unfollow + confirm
 </code></pre>
 <h3 id="userblockusername--userunblockusername"><code>user.block(username)</code> / <code>user.unblock(username)</code></h3>
 <p>Block or unblock a user. Navigates to profile → ... menu → Block → Confirm.</p>
-<pre><code class="language-javascript">await XActions.user.block(&#39;spambot123&#39;);
-await XActions.user.unblock(&#39;spambot123&#39;);
+<pre><code class="language-javascript">await Medirus.user.block(&#39;spambot123&#39;);
+await Medirus.user.unblock(&#39;spambot123&#39;);
 </code></pre>
 <h3 id="usermuteusername--userunmuteusername"><code>user.mute(username)</code> / <code>user.unmute(username)</code></h3>
 <p>Mute or unmute a user.</p>
-<pre><code class="language-javascript">await XActions.user.mute(&#39;annoying_account&#39;);
+<pre><code class="language-javascript">await Medirus.user.mute(&#39;annoying_account&#39;);
 </code></pre>
 <h3 id="userreportusername"><code>user.report(username)</code></h3>
 <p>Open the report dialog for a user.</p>
 <h3 id="useraddtolistusername-listname"><code>user.addToList(username, listName)</code></h3>
 <p>Add a user to a specific list.</p>
-<pre><code class="language-javascript">await XActions.user.addToList(&#39;alice&#39;, &#39;AI People&#39;);
+<pre><code class="language-javascript">await Medirus.user.addToList(&#39;alice&#39;, &#39;AI People&#39;);
 </code></pre>
 <h3 id="usernotifyonusername--usernotifyoffusername"><code>user.notifyOn(username)</code> / <code>user.notifyOff(username)</code></h3>
 <p>Toggle post notifications for a user.</p>
-<pre><code class="language-javascript">await XActions.user.notifyOn(&#39;vitalikbuterin&#39;); // Get notified of their posts
+<pre><code class="language-javascript">await Medirus.user.notifyOn(&#39;vitalikbuterin&#39;); // Get notified of their posts
 </code></pre>
 <h3 id="userrestrictusername"><code>user.restrict(username)</code></h3>
 <p>Restrict a user&#39;s interactions with your content.</p>
 <h3 id="userfollowsyouusername"><code>user.followsYou(username)</code></h3>
 <p>Check if a user follows you. Navigates to their profile and checks for the badge.</p>
-<pre><code class="language-javascript">const follows = await XActions.user.followsYou(&#39;someuser&#39;);
+<pre><code class="language-javascript">const follows = await Medirus.user.followsYou(&#39;someuser&#39;);
 // Returns: true/false
 </code></pre>
 <h3 id="usergetinfousername"><code>user.getInfo(username)</code></h3>
 <p>Get structured user information.</p>
-<pre><code class="language-javascript">const info = await XActions.user.getInfo(&#39;elonmusk&#39;);
+<pre><code class="language-javascript">const info = await Medirus.user.getInfo(&#39;elonmusk&#39;);
 // Returns: {
 //   username: &#39;elonmusk&#39;,
 //   displayName: &#39;Elon Musk&#39;,
@@ -630,29 +630,29 @@ await XActions.user.unblock(&#39;spambot123&#39;);
 </code></pre>
 <h3 id="navigation-helpers">Navigation Helpers</h3>
 <p>All navigate to specific user pages:</p>
-<pre><code class="language-javascript">await XActions.user.viewFollowers(&#39;username&#39;);
-await XActions.user.viewFollowing(&#39;username&#39;);
-await XActions.user.viewLikes(&#39;username&#39;);
-await XActions.user.viewMedia(&#39;username&#39;);
-await XActions.user.viewReplies(&#39;username&#39;);
-await XActions.user.viewHighlights(&#39;username&#39;);
-await XActions.user.viewArticles(&#39;username&#39;);
-await XActions.user.viewTopics(&#39;username&#39;);
-await XActions.user.viewLists(&#39;username&#39;);
+<pre><code class="language-javascript">await Medirus.user.viewFollowers(&#39;username&#39;);
+await Medirus.user.viewFollowing(&#39;username&#39;);
+await Medirus.user.viewLikes(&#39;username&#39;);
+await Medirus.user.viewMedia(&#39;username&#39;);
+await Medirus.user.viewReplies(&#39;username&#39;);
+await Medirus.user.viewHighlights(&#39;username&#39;);
+await Medirus.user.viewArticles(&#39;username&#39;);
+await Medirus.user.viewTopics(&#39;username&#39;);
+await Medirus.user.viewLists(&#39;username&#39;);
 </code></pre>
 <hr>
-<h2 id="xactionsdm--direct-messages">XActions.dm — Direct Messages</h2>
+<h2 id="medirusdm--direct-messages">Medirus.dm — Direct Messages</h2>
 <h3 id="dmsendusername-message"><code>dm.send(username, message)</code></h3>
 <p>Send a DM to a user. Navigates to Messages → New → Search → Type → Send.</p>
-<pre><code class="language-javascript">await XActions.dm.send(&#39;friendUsername&#39;, &#39;Hey, check out this project!&#39;);
+<pre><code class="language-javascript">await Medirus.dm.send(&#39;friendUsername&#39;, &#39;Hey, check out this project!&#39;);
 </code></pre>
 <h3 id="dmopenusername"><code>dm.open(username)</code></h3>
 <p>Open an existing DM conversation, or start a new one.</p>
-<pre><code class="language-javascript">await XActions.dm.open(&#39;friendUsername&#39;);
+<pre><code class="language-javascript">await Medirus.dm.open(&#39;friendUsername&#39;);
 </code></pre>
 <h3 id="dmgetconversations"><code>dm.getConversations()</code></h3>
 <p>Get all visible DM conversations.</p>
-<pre><code class="language-javascript">const convos = await XActions.dm.getConversations();
+<pre><code class="language-javascript">const convos = await Medirus.dm.getConversations();
 // Returns: [{ element, text }, ...]
 </code></pre>
 <h3 id="dmdeleteconversationconversationelement"><code>dm.deleteConversation(conversationElement)</code></h3>
@@ -661,43 +661,43 @@ await XActions.user.viewLists(&#39;username&#39;);
 <p>Leave a group DM (must be viewing the group).</p>
 <h3 id="dmcreategroupusernames-groupname"><code>dm.createGroup(usernames, groupName)</code></h3>
 <p>Create a group DM with multiple users.</p>
-<pre><code class="language-javascript">await XActions.dm.createGroup([&#39;alice&#39;, &#39;bob&#39;, &#39;charlie&#39;]);
+<pre><code class="language-javascript">await Medirus.dm.createGroup([&#39;alice&#39;, &#39;bob&#39;, &#39;charlie&#39;]);
 </code></pre>
 <h3 id="dmsendimage--dmsendgifsearchterm"><code>dm.sendImage()</code> / <code>dm.sendGif(searchTerm)</code></h3>
 <p>Send media in DMs.</p>
-<pre><code class="language-javascript">await XActions.dm.sendGif(&#39;celebration&#39;);
+<pre><code class="language-javascript">await Medirus.dm.sendGif(&#39;celebration&#39;);
 // Opens GIF picker, searches &#39;celebration&#39;, clicks first result
 </code></pre>
 <h3 id="dmreactmessageelement-emoji"><code>dm.react(messageElement, emoji)</code></h3>
 <p>React to a message with an emoji.</p>
-<pre><code class="language-javascript">await XActions.dm.react(messageElement, &#39;❤️&#39;);
+<pre><code class="language-javascript">await Medirus.dm.react(messageElement, &#39;❤️&#39;);
 </code></pre>
 <hr>
-<h2 id="xactionssearch--search-amp-discovery">XActions.search — Search &amp; Discovery</h2>
+<h2 id="medirussearch--search-amp-discovery">Medirus.search — Search &amp; Discovery</h2>
 <h3 id="searchqueryquery-filter"><code>search.query(query, filter)</code></h3>
 <p>Run a search with optional filter.</p>
-<pre><code class="language-javascript">await XActions.search.query(&#39;AI agents&#39;, &#39;top&#39;);
-await XActions.search.query(&#39;AI agents&#39;, &#39;live&#39;);  // Latest
-await XActions.search.query(&#39;AI agents&#39;, &#39;user&#39;);  // People
-await XActions.search.query(&#39;AI agents&#39;, &#39;image&#39;); // Photos
-await XActions.search.query(&#39;AI agents&#39;, &#39;video&#39;); // Videos
+<pre><code class="language-javascript">await Medirus.search.query(&#39;AI agents&#39;, &#39;top&#39;);
+await Medirus.search.query(&#39;AI agents&#39;, &#39;live&#39;);  // Latest
+await Medirus.search.query(&#39;AI agents&#39;, &#39;user&#39;);  // People
+await Medirus.search.query(&#39;AI agents&#39;, &#39;image&#39;); // Photos
+await Medirus.search.query(&#39;AI agents&#39;, &#39;video&#39;); // Videos
 </code></pre>
 <h3 id="shortcut-methods">Shortcut Methods</h3>
-<pre><code class="language-javascript">await XActions.search.top(&#39;AI agents&#39;);
-await XActions.search.latest(&#39;AI agents&#39;);
-await XActions.search.people(&#39;AI agents&#39;);
-await XActions.search.photos(&#39;AI agents&#39;);
-await XActions.search.videos(&#39;AI agents&#39;);
+<pre><code class="language-javascript">await Medirus.search.top(&#39;AI agents&#39;);
+await Medirus.search.latest(&#39;AI agents&#39;);
+await Medirus.search.people(&#39;AI agents&#39;);
+await Medirus.search.photos(&#39;AI agents&#39;);
+await Medirus.search.videos(&#39;AI agents&#39;);
 </code></pre>
 <h3 id="operator-search">Operator Search</h3>
-<pre><code class="language-javascript">await XActions.search.from(&#39;elonmusk&#39;);     // Tweets FROM user
-await XActions.search.to(&#39;elonmusk&#39;);       // Tweets TO user
-await XActions.search.mentions(&#39;elonmusk&#39;); // Tweets mentioning user
-await XActions.search.hashtag(&#39;web3&#39;);      // Search hashtag
+<pre><code class="language-javascript">await Medirus.search.from(&#39;elonmusk&#39;);     // Tweets FROM user
+await Medirus.search.to(&#39;elonmusk&#39;);       // Tweets TO user
+await Medirus.search.mentions(&#39;elonmusk&#39;); // Tweets mentioning user
+await Medirus.search.hashtag(&#39;web3&#39;);      // Search hashtag
 </code></pre>
 <h3 id="searchadvancedoptions"><code>search.advanced(options)</code></h3>
 <p>Build complex search queries using X&#39;s undocumented operators.</p>
-<pre><code class="language-javascript">await XActions.search.advanced({
+<pre><code class="language-javascript">await Medirus.search.advanced({
   words: &#39;AI agents&#39;,              // Contains these words
   exactPhrase: &#39;large language&#39;,   // Contains exact phrase
   anyWords: &#39;GPT Claude Gemini&#39;,   // Contains any of these
@@ -730,58 +730,58 @@ from:username min_faves:100 since:2025-01-01 filter:verified filter:media lang:e
 </code></pre>
 <h3 id="searchgetresults"><code>search.getResults()</code></h3>
 <p>Get current tweet elements from search results.</p>
-<pre><code class="language-javascript">const results = XActions.search.getResults();
+<pre><code class="language-javascript">const results = Medirus.search.getResults();
 // Returns: Array of tweet DOM elements
 </code></pre>
 <hr>
-<h2 id="xactionsnav--navigation">XActions.nav — Navigation</h2>
+<h2 id="medirusnav--navigation">Medirus.nav — Navigation</h2>
 <h3 id="core-navigation">Core Navigation</h3>
-<pre><code class="language-javascript">await XActions.nav.home();           // Home timeline
-await XActions.nav.explore();        // Explore page
-await XActions.nav.notifications();  // Notifications
-await XActions.nav.messages();       // DMs
-await XActions.nav.bookmarks();      // Bookmarks
-await XActions.nav.lists();          // Your lists
-await XActions.nav.communities();    // Communities
-await XActions.nav.premium();        // Premium signup
-await XActions.nav.profile(&#39;user&#39;);  // User profile
-await XActions.nav.settings();       // Settings
+<pre><code class="language-javascript">await Medirus.nav.home();           // Home timeline
+await Medirus.nav.explore();        // Explore page
+await Medirus.nav.notifications();  // Notifications
+await Medirus.nav.messages();       // DMs
+await Medirus.nav.bookmarks();      // Bookmarks
+await Medirus.nav.lists();          // Your lists
+await Medirus.nav.communities();    // Communities
+await Medirus.nav.premium();        // Premium signup
+await Medirus.nav.profile(&#39;user&#39;);  // User profile
+await Medirus.nav.settings();       // Settings
 </code></pre>
 <h3 id="timeline-tabs">Timeline Tabs</h3>
-<pre><code class="language-javascript">await XActions.nav.forYou();         // &quot;For You&quot; tab
-await XActions.nav.following();      // &quot;Following&quot; tab
+<pre><code class="language-javascript">await Medirus.nav.forYou();         // &quot;For You&quot; tab
+await Medirus.nav.following();      // &quot;Following&quot; tab
 </code></pre>
 <h3 id="notification-tabs">Notification Tabs</h3>
-<pre><code class="language-javascript">await XActions.nav.notifyAll();      // All notifications
-await XActions.nav.notifyVerified(); // Verified only
-await XActions.nav.notifyMentions(); // Mentions only
+<pre><code class="language-javascript">await Medirus.nav.notifyAll();      // All notifications
+await Medirus.nav.notifyVerified(); // Verified only
+await Medirus.nav.notifyMentions(); // Mentions only
 </code></pre>
 <h3 id="explore-page-tabs">Explore Page Tabs</h3>
-<pre><code class="language-javascript">await XActions.nav.trending();        // Trending
-await XActions.nav.forYouExplore();   // For You
-await XActions.nav.news();            // News
-await XActions.nav.sports();          // Sports
-await XActions.nav.entertainment();   // Entertainment
-await XActions.nav.spaces();          // Spaces
+<pre><code class="language-javascript">await Medirus.nav.trending();        // Trending
+await Medirus.nav.forYouExplore();   // For You
+await Medirus.nav.news();            // News
+await Medirus.nav.sports();          // Sports
+await Medirus.nav.entertainment();   // Entertainment
+await Medirus.nav.spaces();          // Spaces
 </code></pre>
 <h3 id="scroll-amp-history">Scroll &amp; History</h3>
-<pre><code class="language-javascript">XActions.nav.scrollToTop();    // Smooth scroll up
-XActions.nav.scrollToBottom(); // Smooth scroll down
-XActions.nav.scrollBy(500);    // Scroll by px
-XActions.nav.back();           // Browser back
-XActions.nav.forward();        // Browser forward
-XActions.nav.refresh();        // Refresh page
+<pre><code class="language-javascript">Medirus.nav.scrollToTop();    // Smooth scroll up
+Medirus.nav.scrollToBottom(); // Smooth scroll down
+Medirus.nav.scrollBy(500);    // Scroll by px
+Medirus.nav.back();           // Browser back
+Medirus.nav.forward();        // Browser forward
+Medirus.nav.refresh();        // Refresh page
 </code></pre>
 <hr>
-<h2 id="xactionslists--list-management">XActions.lists — List Management</h2>
+<h2 id="mediruslists--list-management">Medirus.lists — List Management</h2>
 <h3 id="listscreatename-description-isprivate"><code>lists.create(name, description, isPrivate)</code></h3>
 <p>Create a new list.</p>
-<pre><code class="language-javascript">await XActions.lists.create(&#39;AI Researchers&#39;, &#39;Top AI/ML accounts&#39;, true);
+<pre><code class="language-javascript">await Medirus.lists.create(&#39;AI Researchers&#39;, &#39;Top AI/ML accounts&#39;, true);
 </code></pre>
 <h3 id="listsdeletelistid--listseditlistid-name-description"><code>lists.delete(listId)</code> / <code>lists.edit(listId, name, description)</code></h3>
 <p>Delete or edit a list.</p>
-<pre><code class="language-javascript">await XActions.lists.edit(&#39;123456&#39;, &#39;New List Name&#39;, &#39;Updated description&#39;);
-await XActions.lists.delete(&#39;123456&#39;);
+<pre><code class="language-javascript">await Medirus.lists.edit(&#39;123456&#39;, &#39;New List Name&#39;, &#39;Updated description&#39;);
+await Medirus.lists.delete(&#39;123456&#39;);
 </code></pre>
 <h3 id="listsfollowlistid--listsunfollowlistid"><code>lists.follow(listId)</code> / <code>lists.unfollow(listId)</code></h3>
 <p>Follow or unfollow a list.</p>
@@ -789,63 +789,63 @@ await XActions.lists.delete(&#39;123456&#39;);
 <p>Toggle list pin on your sidebar.</p>
 <h3 id="listsgetall"><code>lists.getAll()</code></h3>
 <p>Get all your lists.</p>
-<pre><code class="language-javascript">const myLists = await XActions.lists.getAll();
+<pre><code class="language-javascript">const myLists = await Medirus.lists.getAll();
 // Returns: [{ element, text }, ...]
 </code></pre>
 <h3 id="listsviewmemberslistid--listsviewfollowerslistid"><code>lists.viewMembers(listId)</code> / <code>lists.viewFollowers(listId)</code></h3>
 <p>Navigate to list member/follower pages.</p>
 <hr>
-<h2 id="xactionssettings--account-settings">XActions.settings — Account Settings</h2>
+<h2 id="medirussettings--account-settings">Medirus.settings — Account Settings</h2>
 <p>Navigation functions to settings pages:</p>
-<pre><code class="language-javascript">await XActions.settings.account();         // Account settings
-await XActions.settings.security();        // Security
-await XActions.settings.privacy();         // Privacy &amp; safety
-await XActions.settings.notifications();   // Notification settings
-await XActions.settings.accessibility();   // Accessibility
-await XActions.settings.monetization();    // Monetization
-await XActions.settings.creatorSubs();     // Creator subscriptions
-await XActions.settings.premium();         // Premium settings
-await XActions.settings.mutedAccounts();   // Muted accounts list
-await XActions.settings.mutedWords();      // Muted words list
-await XActions.settings.blockedAccounts(); // Blocked accounts list
+<pre><code class="language-javascript">await Medirus.settings.account();         // Account settings
+await Medirus.settings.security();        // Security
+await Medirus.settings.privacy();         // Privacy &amp; safety
+await Medirus.settings.notifications();   // Notification settings
+await Medirus.settings.accessibility();   // Accessibility
+await Medirus.settings.monetization();    // Monetization
+await Medirus.settings.creatorSubs();     // Creator subscriptions
+await Medirus.settings.premium();         // Premium settings
+await Medirus.settings.mutedAccounts();   // Muted accounts list
+await Medirus.settings.mutedWords();      // Muted words list
+await Medirus.settings.blockedAccounts(); // Blocked accounts list
 </code></pre>
 <h3 id="settingsaddmutedwordword-options"><code>settings.addMutedWord(word, options)</code></h3>
 <p>Mute a word/phrase.</p>
-<pre><code class="language-javascript">await XActions.settings.addMutedWord(&#39;spoiler&#39;);
+<pre><code class="language-javascript">await Medirus.settings.addMutedWord(&#39;spoiler&#39;);
 </code></pre>
 <h3 id="settingsdownloaddata"><code>settings.downloadData()</code></h3>
 <p>Navigate to the &quot;Download your data&quot; page.</p>
 <h3 id="settingsdeactivate"><code>settings.deactivate()</code></h3>
 <p>Navigate to the account deactivation page (proceed with caution).</p>
 <hr>
-<h2 id="xactionsprofile--profile-editing">XActions.profile — Profile Editing</h2>
+<h2 id="medirusprofile--profile-editing">Medirus.profile — Profile Editing</h2>
 <h3 id="profileedit"><code>profile.edit()</code></h3>
 <p>Open the profile edit modal.</p>
 <h3 id="profileupdatenamenewname--profileupdatebionewbio--profileupdatelocationlocation--profileupdatewebsiteurl"><code>profile.updateName(newName)</code> / <code>profile.updateBio(newBio)</code> / <code>profile.updateLocation(location)</code> / <code>profile.updateWebsite(url)</code></h3>
 <p>Update profile fields.</p>
-<pre><code class="language-javascript">await XActions.profile.updateName(&#39;Alice Builder&#39;);
-await XActions.profile.updateBio(&#39;Building the future of web3 🚀&#39;);
-await XActions.profile.updateLocation(&#39;San Francisco, CA&#39;);
-await XActions.profile.updateWebsite(&#39;https://alice.dev&#39;);
+<pre><code class="language-javascript">await Medirus.profile.updateName(&#39;Alice Builder&#39;);
+await Medirus.profile.updateBio(&#39;Building the future of web3 🚀&#39;);
+await Medirus.profile.updateLocation(&#39;San Francisco, CA&#39;);
+await Medirus.profile.updateWebsite(&#39;https://alice.dev&#39;);
 </code></pre>
 <h3 id="profileupdateavatar--profileupdateheader"><code>profile.updateAvatar()</code> / <code>profile.updateHeader()</code></h3>
 <p>Open file picker for avatar/header image (manual file selection required).</p>
 <h3 id="profileswitchtoprofessional"><code>profile.switchToProfessional()</code></h3>
 <p>Start the professional account conversion flow.</p>
 <hr>
-<h2 id="xactionsutils--power-utilities">XActions.utils — Power Utilities</h2>
+<h2 id="medirusutils--power-utilities">Medirus.utils — Power Utilities</h2>
 <h3 id="utilsgetcurrentuser"><code>utils.getCurrentUser()</code></h3>
 <p>Get your current username.</p>
-<pre><code class="language-javascript">const me = XActions.utils.getCurrentUser();
+<pre><code class="language-javascript">const me = Medirus.utils.getCurrentUser();
 // Returns: &#39;myusername&#39;
 </code></pre>
 <h3 id="utilsisloggedin"><code>utils.isLoggedIn()</code></h3>
 <p>Check if you&#39;re logged in.</p>
-<pre><code class="language-javascript">XActions.utils.isLoggedIn(); // true/false
+<pre><code class="language-javascript">Medirus.utils.isLoggedIn(); // true/false
 </code></pre>
 <h3 id="utilsgettokens"><code>utils.getTokens()</code></h3>
 <p>Get authentication tokens from cookies (for API use).</p>
-<pre><code class="language-javascript">const tokens = XActions.utils.getTokens();
+<pre><code class="language-javascript">const tokens = Medirus.utils.getTokens();
 // Returns: { ct0: &#39;csrf_token_here&#39;, authToken: &#39;auth_token_here&#39; }
 </code></pre>
 <blockquote>
@@ -853,26 +853,26 @@ await XActions.profile.updateWebsite(&#39;https://alice.dev&#39;);
 </blockquote>
 <h3 id="utilsgettweetidfromurlurl--utilsgetusernamefromurlurl"><code>utils.getTweetIdFromUrl(url)</code> / <code>utils.getUsernameFromUrl(url)</code></h3>
 <p>Extract IDs from URLs.</p>
-<pre><code class="language-javascript">XActions.utils.getTweetIdFromUrl(&#39;https://x.com/user/status/1234567&#39;);
+<pre><code class="language-javascript">Medirus.utils.getTweetIdFromUrl(&#39;https://x.com/user/status/1234567&#39;);
 // Returns: &#39;1234567&#39;
 
-XActions.utils.getUsernameFromUrl(&#39;https://x.com/elonmusk&#39;);
+Medirus.utils.getUsernameFromUrl(&#39;https://x.com/elonmusk&#39;);
 // Returns: &#39;elonmusk&#39;
 </code></pre>
 <h3 id="utilswaitforpageload"><code>utils.waitForPageLoad()</code></h3>
 <p>Wait for the main content column to appear.</p>
 <h3 id="utilsloadmoretimes"><code>utils.loadMore(times)</code></h3>
 <p>Scroll to load more content.</p>
-<pre><code class="language-javascript">await XActions.utils.loadMore(5); // Scroll 5 times with 2s pauses
+<pre><code class="language-javascript">await Medirus.utils.loadMore(5); // Scroll 5 times with 2s pauses
 </code></pre>
 <h3 id="utilsexportbookmarksmaxitems"><code>utils.exportBookmarks(maxItems)</code></h3>
 <p>Scroll through bookmarks and collect them.</p>
-<pre><code class="language-javascript">const bookmarks = await XActions.utils.exportBookmarks(200);
+<pre><code class="language-javascript">const bookmarks = await Medirus.utils.exportBookmarks(200);
 // Returns: [{ link: &#39;https://x.com/.../status/...&#39;, text: &#39;Tweet text...&#39; }, ...]
 </code></pre>
 <h3 id="utilsexportlikesusername-maxitems"><code>utils.exportLikes(username, maxItems)</code></h3>
 <p>Export a user&#39;s liked tweets.</p>
-<pre><code class="language-javascript">const likes = await XActions.utils.exportLikes(&#39;myusername&#39;, 100);
+<pre><code class="language-javascript">const likes = await Medirus.utils.exportLikes(&#39;myusername&#39;, 100);
 // Returns: [&#39;https://x.com/.../status/...&#39;, ...]
 </code></pre>
 <h3 id="utilscopytoclipboardtext"><code>utils.copyToClipboard(text)</code></h3>
@@ -883,30 +883,30 @@ XActions.utils.getUsernameFromUrl(&#39;https://x.com/elonmusk&#39;);
 <p>Clear all X-related data from localStorage (broader than <code>Core.storage.clear()</code>).</p>
 <h3 id="utilsdevmode"><code>utils.devMode()</code></h3>
 <p>Visual DOM inspector — outlines all <code>data-testid</code> elements in red with tooltip labels.</p>
-<pre><code class="language-javascript">XActions.utils.devMode();
+<pre><code class="language-javascript">Medirus.utils.devMode();
 // Every data-testid element gets a red outline and hover tooltip
 </code></pre>
 <h3 id="utilsgetallselectors"><code>utils.getAllSelectors()</code></h3>
 <p>Get all <code>data-testid</code> values currently on the page.</p>
-<pre><code class="language-javascript">const selectors = XActions.utils.getAllSelectors();
+<pre><code class="language-javascript">const selectors = Medirus.utils.getAllSelectors();
 // Returns: [&#39;SearchBox_Search_Input&#39;, &#39;SideNav_AccountSwitcher_Button&#39;, &#39;tweet&#39;, ...]
 </code></pre>
 <hr>
-<h2 id="xactionsspaces--twitter-spaces">XActions.spaces — Twitter Spaces</h2>
-<pre><code class="language-javascript">await XActions.spaces.browse();               // Browse live spaces
-await XActions.spaces.join(&#39;spaceId&#39;);         // Join a space
-await XActions.spaces.leave();                 // Leave current space
-await XActions.spaces.requestToSpeak();        // Request to speak
-await XActions.spaces.setReminder(&#39;spaceId&#39;);  // Set reminder for scheduled space
-await XActions.spaces.share();                 // Copy space link
+<h2 id="medirusspaces--twitter-spaces">Medirus.spaces — Twitter Spaces</h2>
+<pre><code class="language-javascript">await Medirus.spaces.browse();               // Browse live spaces
+await Medirus.spaces.join(&#39;spaceId&#39;);         // Join a space
+await Medirus.spaces.leave();                 // Leave current space
+await Medirus.spaces.requestToSpeak();        // Request to speak
+await Medirus.spaces.setReminder(&#39;spaceId&#39;);  // Set reminder for scheduled space
+await Medirus.spaces.share();                 // Copy space link
 </code></pre>
 <hr>
-<h2 id="xactionscommunities--communities">XActions.communities — Communities</h2>
-<pre><code class="language-javascript">await XActions.communities.browse();                    // Browse communities
-await XActions.communities.view(&#39;communityId&#39;);          // View a community
-await XActions.communities.join(&#39;communityId&#39;);           // Join
-await XActions.communities.leave(&#39;communityId&#39;);          // Leave
-await XActions.communities.post(&#39;communityId&#39;, &#39;Hello!&#39;); // Post in community
+<h2 id="mediruscommunities--communities">Medirus.communities — Communities</h2>
+<pre><code class="language-javascript">await Medirus.communities.browse();                    // Browse communities
+await Medirus.communities.view(&#39;communityId&#39;);          // View a community
+await Medirus.communities.join(&#39;communityId&#39;);           // Join
+await Medirus.communities.leave(&#39;communityId&#39;);          // Leave
+await Medirus.communities.post(&#39;communityId&#39;, &#39;Hello!&#39;); // Post in community
 </code></pre>
 
     </article>
@@ -919,7 +919,7 @@ await XActions.communities.post(&#39;communityId&#39;, &#39;Hello!&#39;); // Pos
 
     <nav class="page-nav" aria-label="Previous and next">
       <a class="page-nav__link" href="/docs/automation/getting-started-browser"><span class="page-nav__dir">← Previous</span><span class="page-nav__title">Getting Started with Browser Automation</span></a>
-      <a class="page-nav__link page-nav__link--next" href="/docs/automation/scripts-reference"><span class="page-nav__dir">Next →</span><span class="page-nav__title">XActions Automation Scripts — Complete Reference</span></a>
+      <a class="page-nav__link page-nav__link--next" href="/docs/automation/scripts-reference"><span class="page-nav__dir">Next →</span><span class="page-nav__title">Medirus Automation Scripts — Complete Reference</span></a>
     </nav>
 
     <div class="callout">
@@ -947,7 +947,7 @@ await XActions.communities.post(&#39;communityId&#39;, &#39;Hello!&#39;); // Pos
 <footer class="site-footer">
   <div class="site-footer__inner">
     <div>
-      <h4>XActions</h4>
+      <h4>Medirus</h4>
       <p>Free, open-source X/Twitter automation.</p>
       <p>Built by <a href="https://x.com/nichxbt" target="_blank" rel="noopener">@nichxbt</a></p>
     </div>
@@ -974,7 +974,7 @@ await XActions.communities.post(&#39;communityId&#39;, &#39;Hello!&#39;); // Pos
     </div>
   </div>
   <div class="site-footer__bottom">
-    <p>© 2024–2026 XActions. Apache-2.0 licensed. No API fees.</p>
+    <p>© 2024–2026 Medirus. Apache-2.0 licensed. No API fees.</p>
   </div>
 </footer>
 

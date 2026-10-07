@@ -13,7 +13,7 @@ context: []
 
 ## Intent
 
-**Problem:** Anti-detection hiện tại của XActions là reactive và không nhất quán: `launchStealthBrowser()`/`createStealthPage()` randomize UA/viewport/WebGL ad-hoc per call và **hardcode** `platform`/`--lang`/WebGL vendor — nên mỗi session nhận một fingerprint khác (gây re-auth), và fingerprint lệch khỏi proxy geo (mismatch timezone/locale/UA → bị phát hiện). Không có TLS/JA4 spoofing — handshake lộ Chrome-default dù UA là Firefox/Safari.
+**Problem:** Anti-detection hiện tại của Medirus là reactive và không nhất quán: `launchStealthBrowser()`/`createStealthPage()` randomize UA/viewport/WebGL ad-hoc per call và **hardcode** `platform`/`--lang`/WebGL vendor — nên mỗi session nhận một fingerprint khác (gây re-auth), và fingerprint lệch khỏi proxy geo (mismatch timezone/locale/UA → bị phát hiện). Không có TLS/JA4 spoofing — handshake lộ Chrome-default dù UA là Firefox/Safari.
 
 **Approach:** Thêm `FingerprintManager` trong `src/core/` quản lý pool fingerprint *đầy đủ* và persist per-account. `getForAccount(accountId)` trả fingerprint ổn định bind tới proxy region (timezone/locale khớp geo); `launchStealthBrowser()`/`createStealthPage()` consume nó thay vì randomize. TLS/JA4 spoofing qua interface pluggable `TlsProfileProvider` (optional).
 

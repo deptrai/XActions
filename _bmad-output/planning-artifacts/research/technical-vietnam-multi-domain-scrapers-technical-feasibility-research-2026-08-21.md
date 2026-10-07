@@ -3,11 +3,11 @@ stepsCompleted: [1, 2, 3, 4, 5]
 inputDocuments:
   - _bmad-output/planning-artifacts/prd.md
   - _bmad-output/planning-artifacts/epics.md
-  - _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
   - scripts/probe-parser-test.js
 workflowType: 'technical-research'
 lastStep: 5
-project_name: 'XActions'
+project_name: 'Medirus'
 user_name: 'Luis'
 date: '2026-08-21'
 research_topic: 'Khảo sát Kỹ thuật Chuyên sâu, Reverse Engineering API & Thẩm định Tính Khả thi bằng Dữ liệu Thật cho các Domain Scrapers Mới (Epics 21 & 22)'
@@ -25,12 +25,12 @@ research_goals: 'Phân tích kiến trúc API, cơ chế WAF/chống bot, cấu 
 
 ## 1. Executive Summary & Proof-of-Concept Results
 
-Đã thực hiện khảo sát kỹ thuật, reverse engineering và chạy kiểm thử trực tiếp mã nguồn khai thác dữ liệu thật thông qua script [`scripts/probe-parser-test.js`](file:///Users/luisphan/Documents/GitHub/XActions/scripts/probe-parser-test.js). 
+Đã thực hiện khảo sát kỹ thuật, reverse engineering và chạy kiểm thử trực tiếp mã nguồn khai thác dữ liệu thật thông qua script [`scripts/probe-parser-test.js`](file:///Users/luisphan/Documents/GitHub/Medirus/scripts/probe-parser-test.js). 
 
 **Kết quả kiểm thử thực tế:**
 - ✅ **100% các endpoint mục tiêu** (MaSoThue, BonBanh, PasGo, YouMed) phản hồi HTTP **200 OK** với dữ liệu đầy đủ.
 - ✅ **Không bị chặn bởi WAF / Cloudflare** khi gửi HTTP request tiêu chuẩn kèm User-Agent phù hợp.
-- ✅ **100% dữ liệu bóc tách được** map chuẩn xác vào schema dữ liệu `PostItem` / `CommentItem` của XActions & PostgreSQL Prisma Store.
+- ✅ **100% dữ liệu bóc tách được** map chuẩn xác vào schema dữ liệu `PostItem` / `CommentItem` của Medirus & PostgreSQL Prisma Store.
 
 ---
 
@@ -126,9 +126,9 @@ research_goals: 'Phân tích kiến trúc API, cơ chế WAF/chống bot, cấu 
 
 ---
 
-## 3. Kiến Trúc Tích Hợp Vào Core XActions
+## 3. Kiến Trúc Tích Hợp Vào Core Medirus
 
-Tất cả 5 Scraper mới đều được tích hợp vào kiến trúc Hexagonal của XActions mà không làm thay đổi bất kỳ dòng code nào trong `src/core/`:
+Tất cả 5 Scraper mới đều được tích hợp vào kiến trúc Hexagonal của Medirus mà không làm thay đổi bất kỳ dòng code nào trong `src/core/`:
 
 ```
 src/scrapers/
@@ -172,4 +172,4 @@ src/scrapers/
 Nghiên cứu kỹ thuật và kiểm thử thực tế khẳng định:
 1. **100% khả thi về mặt kỹ thuật:** Toàn bộ các endpoint đều cung cấp dữ liệu mở công khai, cấu trúc HTML/JSON ổn định.
 2. **Tiết kiệm tài nguyên tuyệt đối:** Đều là `No-Auth`, chỉ cần chạy qua Fast HTTP Client + Proxy Pool xoay IP, tốc độ đạt >200 req/s mà không tiêu tốn RAM trình duyệt.
-3. **Mã nguồn PoC đã sẵn sàng:** File [`scripts/probe-parser-test.js`](file:///Users/luisphan/Documents/GitHub/XActions/scripts/probe-parser-test.js) có thể tái sử dụng trực tiếp làm nền tảng khi triển khai Epics 21 và 22!
+3. **Mã nguồn PoC đã sẵn sàng:** File [`scripts/probe-parser-test.js`](file:///Users/luisphan/Documents/GitHub/Medirus/scripts/probe-parser-test.js) có thể tái sử dụng trực tiếp làm nền tảng khi triển khai Epics 21 và 22!

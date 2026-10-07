@@ -11,7 +11,7 @@ stepsCompleted:
 # Implementation Readiness Assessment Report
 
 **Date:** 2026-08-27
-**Project:** XActions
+**Project:** Medirus
 
 ## Document Discovery
 
@@ -19,11 +19,11 @@ stepsCompleted:
 - **Whole (canonical):** `_bmad-output/planning-artifacts/prd.md` (187 lines, approved, supersedes archive PRDs)
 - **Addendum:** `prd-canonicalization-addendum-2026-08-21.md`
 - **Platform-specific:** `prd-facebook-epics-5-6-2026-08-21.md` (FR-23–FR-54)
-- **Archive:** `archive/prds/prd-XActions-*/prd.md` (deprecated)
+- **Archive:** `archive/prds/prd-Medirus-*/prd.md` (deprecated)
 
 ### Architecture Documents
-- **Whole / sharded (canonical):** `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`
-- **Supplemental alternate:** `architecture/xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` (not mapped to epics yet)
+- **Whole / sharded (canonical):** `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`
+- **Supplemental alternate:** `architecture/medirus-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` (not mapped to epics yet)
 - **Reviews/updates:** `ARCHITECTURE-UPDATE-GATE-*.md`, `ARCHITECTURE-UX-REVIEW-*.md`, `EPIC10-DECISION-LOG-*.md`
 - **Archive:** `archive/architecture-brownfield-2026-08-20.md`
 
@@ -67,10 +67,10 @@ stepsCompleted:
 19. **FR-81 (VietnamWorks Job Scraper):** Cào tin tuyển dụng IT và cấp cao trên VietnamWorks qua API public.
 20. **FR-82 (LinkedIn B2B Lead & Job Scraper):** Cào thông tin nhân sự và bài đăng tuyển dụng trên LinkedIn qua CDP Remote Attach 9222.
 21. **FR-83 (Realtime Thin Event Redis Stream Ingest):** Phát luồng sự kiện tinh gọn (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 20000`).
-22. **FR-84 (Nowing Adapter Cutover & Legacy Scraper Decommissioning):** Nâng cấp adapter bên Nowing kết nối sang XActions MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
-23. **FR-85 (Internal Operator Dashboard & Admin CLI):** Cung cấp giao diện vận hành nội bộ (web dashboard + CLI `xactions admin`) để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts.
+22. **FR-84 (Nowing Adapter Cutover & Legacy Scraper Decommissioning):** Nâng cấp adapter bên Nowing kết nối sang Medirus MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
+23. **FR-85 (Internal Operator Dashboard & Admin CLI):** Cung cấp giao diện vận hành nội bộ (web dashboard + CLI `medirus admin`) để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts.
 24. **FR-86 (Metadata Schema Contract for Consumers):** Mỗi platform/category phải publish JSON Schema hoặc TypeScript type cho `Post.metadata`; consumer lấy schema qua API/MCP/CLI; `PrismaStore` validate `metadata`.
-25. **FR-87 (Data Retention Policy):** Dữ liệu raw crawl trong XActions TTL 30 ngày; lead/processed output ở Nowing vĩnh viễn; checkpoints/audit logs 90 ngày.
+25. **FR-87 (Data Retention Policy):** Dữ liệu raw crawl trong Medirus TTL 30 ngày; lead/processed output ở Nowing vĩnh viễn; checkpoints/audit logs 90 ngày.
 26. **FR-88 (3-Tier Incremental Gap-Filling):** Cào theo mô hình 3 tầng: full seed, delta/gap fill, on-demand refresh; loại bỏ 100% duplication, tiết kiệm 90% proxy cost.
 
 **Total FRs:** 26 (FR-64 through FR-88, including FR-66B).
@@ -156,7 +156,7 @@ stepsCompleted:
 
 ### Warnings
 - **Multiple UX documents without a canonical register:** `ux/DESIGN.md`, `ux/EXPERIENCE.md`, and `ux/EXPERIENCE-UNIVERSAL-2026-08-21.md` may overlap. Recommend adding a `ux/README.md` or a line in `prd.md` pointing to the canonical UX source.
-- **UX not deeply tied to CLI flows:** `xactions admin ...` CLI commands are in Epic 19 but UX documents are dashboard-centric; CLI wireframes/flows are not explicitly documented.
+- **UX not deeply tied to CLI flows:** `medirus admin ...` CLI commands are in Epic 19 but UX documents are dashboard-centric; CLI wireframes/flows are not explicitly documented.
 
 ## Epic Quality Review
 
@@ -241,7 +241,7 @@ stepsCompleted:
 
 ### Critical Issues Requiring Immediate Action
 
-1. **Architecture conflict for Facebook:** Two architecture documents (`xactions-hybrid-scraping-spine/` and `xactions-facebook-gateway-2026-08-23/`) are not reconciled. The new sub-stories in Epic 13 assume the hybrid spine, but the gateway spine proposes a different execution model. **Recommendation:** Add an architecture decision record (ADR) or update `epics.md` to explicitly deprecate/supersede the gateway spine, or extract it into an `Epic 23` for evaluation.
+1. **Architecture conflict for Facebook:** Two architecture documents (`medirus-hybrid-scraping-spine/` and `medirus-facebook-gateway-2026-08-23/`) are not reconciled. The new sub-stories in Epic 13 assume the hybrid spine, but the gateway spine proposes a different execution model. **Recommendation:** Add an architecture decision record (ADR) or update `epics.md` to explicitly deprecate/supersede the gateway spine, or extract it into an `Epic 23` for evaluation.
 2. **Multi-platform epics are too broad:** Epic 13, 15, 16, 17, 18 each contain 2–3 platforms. This risks batching unrelated work and blooting sprint scope. **Recommendation:** Split each into per-platform epics (e.g., Epic 13A Twitter, 13B Facebook; Epic 15A Threads, 15B TikTok) or accept them as "platform suite" epics with clear acceptance that each story still ships independently.
 3. **Large umbrella stories:** `Story 13.2.6` (Twitter social actions) and `Story 19.7/19.8` are large. **Recommendation:** Break 13.2.6 into read/like/retweet/post/messenger sub-stories; split 19.7/19.8 into per-endpoint/tool stories.
 4. **Integration stories not user-facing:** 13.2.7, 13.10, 15.1.4 are necessary but should be the final stories in their epics and should not be started before their prerequisites.
@@ -264,8 +264,8 @@ This assessment identified **7 issues** across **4 categories** (architecture co
 The following readiness issues have been resolved since the initial assessment:
 
 1. **Facebook architecture conflict resolved:**
-   - `xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` updated to list `xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` in `supersedes`.
-   - `xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` marked `status: superseded` and a `superseded_by` / `reason` block added. A callout at the top of the document explains that gateway concepts are absorbed into the hybrid engine (`AbstractCrawler` + `BaseHybridClient` + `CrawlerGovernor`) and the active implementation path is `src/scrapers/social/facebook/`.
+   - `medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` updated to list `medirus-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` in `supersedes`.
+   - `medirus-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` marked `status: superseded` and a `superseded_by` / `reason` block added. A callout at the top of the document explains that gateway concepts are absorbed into the hybrid engine (`AbstractCrawler` + `BaseHybridClient` + `CrawlerGovernor`) and the active implementation path is `src/scrapers/social/facebook/`.
 
 2. **Multi-platform epics clarified:**
    - Epic 13, 15, 16, 17, 18 each received an **Epic grouping note** explaining they are *platform suites* and that the platform-specific stories are independent sub-threads that can ship independently. No renumbering was done in order to preserve stable `sprint-status.yaml` and branch references.

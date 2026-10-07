@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Shell completion generator tests
+// Medirus — Shell completion generator tests
 // by nichxbt
 
 import { describe, it, expect } from 'vitest';
@@ -16,7 +16,7 @@ import {
 function makeProgram() {
   // `.version()` already registers -V/--version; adding it again throws.
   const program = new Command();
-  program.name('xactions').version('0.0.0-test');
+  program.name('medirus').version('0.0.0-test');
 
   program
     .command('profile <username>')
@@ -28,7 +28,7 @@ function makeProgram() {
     .command('analyze <usernames...>')
     .description("Account report: engagement rate, cadence, and the owner's best hour");
 
-  const plugin = program.command('plugin').description('Manage XActions plugins');
+  const plugin = program.command('plugin').description('Manage Medirus plugins');
   plugin.command('install <name>').description('Install a plugin').option('-f, --force', 'force');
   plugin.command('list').description('List plugins');
 
@@ -85,9 +85,9 @@ describe('completion', () => {
 
     it('registers the completion function in bash', () => {
       const script = generateCompletion(makeProgram(), 'bash');
-      expect(script).toContain('complete -F _xactions xactions');
+      expect(script).toContain('complete -F _medirus medirus');
       expect(script).toContain('profile');
-      expect(script).toContain('plugin) __xactions_reply "install list');
+      expect(script).toContain('plugin) __medirus_reply "install list');
     });
 
     it('escapes colons in zsh descriptions so the pair does not split early', () => {
@@ -105,8 +105,8 @@ describe('completion', () => {
 
     it('emits a compdef header for zsh', () => {
       const script = generateCompletion(makeProgram(), 'zsh');
-      expect(script.startsWith('#compdef xactions')).toBe(true);
-      expect(script).toContain('compdef _xactions xactions');
+      expect(script.startsWith('#compdef medirus')).toBe(true);
+      expect(script).toContain('compdef _medirus medirus');
     });
 
     it('emits one fish completion per command and sub-command', () => {

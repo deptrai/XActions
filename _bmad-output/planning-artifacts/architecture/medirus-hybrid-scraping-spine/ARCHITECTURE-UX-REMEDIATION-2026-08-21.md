@@ -17,8 +17,8 @@ Tài liệu này map 10 UX findings (F1–F10) từ `ARCHITECTURE-UX-REVIEW-2026
 - **Epic/Story:** Story 14.2 (MCP Tool Exporters & Daemon HTTP/SSE Server)
 - **Priority:** P0
 - **AC bổ sung:**
-  - CLI `xactions daemon start|status|stop` hoạt động.
-  - `xactions daemon status` trả về `{ transport, port, pid, healthUrl, startedAt }`.
+  - CLI `medirus daemon start|status|stop` hoạt động.
+  - `medirus daemon status` trả về `{ transport, port, pid, healthUrl, startedAt }`.
   - Dashboard hiển thị daemon state tile (online/offline).
   - `README` hoặc `--help` giải thích khi nào dùng `stdio` vs `HTTP/SSE`.
 
@@ -33,7 +33,7 @@ Tài liệu này map 10 UX findings (F1–F10) từ `ARCHITECTURE-UX-REVIEW-2026
   - `--qr-url` in ra URL để mở trên điện thoại / trình duyệt khi không TTY.
   - `--qr-webhook` hoặc `--qr-push` để user confirm từ app.
   - Non-TTY mode tự phát hiện và in URL thay vì ASCII QR.
-  - Timeout message có hành động gợi ý: "QR hết hạn — gọi lại `xactions login --qr` hoặc dùng `--cdp`".
+  - Timeout message có hành động gợi ý: "QR hết hạn — gọi lại `medirus login --qr` hoặc dùng `--cdp`".
 
 ---
 
@@ -44,7 +44,7 @@ Tài liệu này map 10 UX findings (F1–F10) từ `ARCHITECTURE-UX-REVIEW-2026
 - **Priority:** P0
 - **AC bổ sung:**
   - `GET /governor/status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
-  - CLI `xactions status` hiển thị cùng shape.
+  - CLI `medirus status` hiển thị cùng shape.
   - Thông điệp lỗi / log bao gồm `suggestedAction` khi tài khoản hibernation.
 
 ---
@@ -56,7 +56,7 @@ Tài liệu này map 10 UX findings (F1–F10) từ `ARCHITECTURE-UX-REVIEW-2026
 - **Priority:** P1
 - **AC bổ sung:**
   - API `GET /checkpoints` với filter `platform`, `targetType`, `status`.
-  - CLI `xactions checkpoints list|show|resume|pause|retry`.
+  - CLI `medirus checkpoints list|show|resume|pause|retry`.
   - Dashboard checkpoint table: `lastCrawledAt`, `lastCursor`, `status`.
 
 ---
@@ -68,7 +68,7 @@ Tài liệu này map 10 UX findings (F1–F10) từ `ARCHITECTURE-UX-REVIEW-2026
 - **Priority:** P0
 - **AC bổ sung:**
   - `AbstractCrawler.listActions()` trả `ActionDescriptor[]` với `action, description, requiredArgs, example, category`.
-  - MCP tool `x_actions_list` / CLI `xactions actions --platform <platform>` hoạt động.
+  - MCP tool `medirus_list` / CLI `medirus actions --platform <platform>` hoạt động.
   - Document được tự động generate từ registry.
 
 ---
@@ -104,7 +104,7 @@ Tài liệu này map 10 UX findings (F1–F10) từ `ARCHITECTURE-UX-REVIEW-2026
 - **Priority:** P2
 - **AC bổ sung:**
   - Mỗi `schemas/<platform>/<category>.json` publish JSON Schema.
-  - MCP `x_schema_get --platform <p> --category <c>` / CLI `xactions schema get`.
+  - MCP `x_schema_get --platform <p> --category <c>` / CLI `medirus schema get`.
   - `PrismaStore` validate `metadata` trước khi ghi.
 
 ---
@@ -128,8 +128,8 @@ Tài liệu này map 10 UX findings (F1–F10) từ `ARCHITECTURE-UX-REVIEW-2026
 - **Epic/Story:** Story 14.2 (MCP/CLI) + Story 20.1 (Nowing Cutover)
 - **Priority:** P2
 - **AC bổ sung:**
-  - Legacy commands (`xactions unfollow`, `xactions get_followers`, v.v.) map vào `CrawlerCommand` với `{ action, platform }`.
-  - Error message rõ ràng nếu lệnh cũ không còn hỗ trợ: "Command `<old>` moved to `xactions crawl --platform twitter --action followers`".
+  - Legacy commands (`medirus unfollow`, `medirus get_followers`, v.v.) map vào `CrawlerCommand` với `{ action, platform }`.
+  - Error message rõ ràng nếu lệnh cũ không còn hỗ trợ: "Command `<old>` moved to `medirus crawl --platform twitter --action followers`".
   - `unfollowx` alias vẫn hoạt động với deprecation warning.
 
 ---

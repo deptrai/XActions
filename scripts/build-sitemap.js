@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Copyright (c) 2024-2026 nich (@nichxbt). All rights reserved.
 /**
- * Builds the complete sitemap for xactions.app from what actually ships:
+ * Builds the complete sitemap for medirus.online from what actually ships:
  * every .html page in dashboard/ (served with clean URLs on Cloudflare Pages)
  * plus the landing page. Replaces the stale hand-maintained sitemap.
  * Run after the page generators:  node scripts/build-sitemap.js
@@ -13,7 +13,7 @@ import { fileURLToPath } from 'url';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DASH = path.join(ROOT, 'dashboard');
-const SITE = 'https://xactions.app';
+const SITE = 'https://medirus.online';
 const EXCLUDE = new Set(['/404', '/50x', '/admin', '/team']);
 
 function* htmlFiles(dir) {

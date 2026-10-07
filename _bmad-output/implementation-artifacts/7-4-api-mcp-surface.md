@@ -10,7 +10,7 @@ Status: done
 
 ## Story
 
-As an AI agent calling XActions via MCP,
+As an AI agent calling Medirus via MCP,
 I want new Facebook scrape tools exposed via MCP that call the same service as the REST API,
 so that the surface is consistent and maintainable.
 
@@ -190,13 +190,13 @@ so that the surface is consistent and maintainable.
 ### `page.authenticate(proxyAuth)` placement
 
 In `src/scrapers/index.js`, the auto-create browser/page block (lines 233-255) currently does:
-1. `createBrowser` → `createPage` → store `__xactions_browser`
+1. `createBrowser` → `createPage` → store `__medirus_browser`
 2. `loginWithCookie` (if auth provided)
 
 Insert `page.authenticate(proxyAuth)` between step 1 and step 2:
 ```js
 page = await mod.createPage(browser, options.browserOptions || {});
-page.__xactions_browser = browser;
+page.__medirus_browser = browser;
 
 // Authenticate proxy before login so the proxy tunnel is established first.
 const proxyAuth = options.browserOptions?.proxyAuth;

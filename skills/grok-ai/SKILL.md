@@ -31,11 +31,11 @@ Automates Grok AI prompts and response scraping.
 3. Paste the script -> Enter
 
 ### Controls
-- `XActions.ask(prompt)` -- Send a prompt to Grok
-- `XActions.scrapeResponse()` -- Capture Grok's latest response
-- `XActions.generateImage(prompt)` -- Request image generation
-- `XActions.batchAsk(prompts[])` -- Send multiple prompts sequentially
-- `XActions.export()` -- Download conversation history as JSON
+- `Medirus.ask(prompt)` -- Send a prompt to Grok
+- `Medirus.scrapeResponse()` -- Capture Grok's latest response
+- `Medirus.generateImage(prompt)` -- Request image generation
+- `Medirus.batchAsk(prompts[])` -- Send multiple prompts sequentially
+- `Medirus.export()` -- Download conversation history as JSON
 
 ### Features
 - Automated prompt submission with response capture
@@ -57,25 +57,25 @@ Automates Grok AI prompts and response scraping.
 ## Content Strategy with Grok
 
 ### Using Grok for content ideation
-1. `XActions.ask("What are the top 5 trending topics in {niche} right now?")`
-2. `XActions.ask("Write 3 tweet variations about {topic}")`
-3. `XActions.ask("Analyze this tweet for engagement: {tweet_text}")`
-4. Capture responses with `XActions.scrapeResponse()`
+1. `Medirus.ask("What are the top 5 trending topics in {niche} right now?")`
+2. `Medirus.ask("Write 3 tweet variations about {topic}")`
+3. `Medirus.ask("Analyze this tweet for engagement: {tweet_text}")`
+4. Capture responses with `Medirus.scrapeResponse()`
 5. Feed into `src/threadComposer.js` for thread creation
 
 ### Batch content generation
 ```javascript
-await XActions.batchAsk([
+await Medirus.batchAsk([
   "Write a hot take about AI agents",
   "Write a thread hook about productivity",
   "Write a poll question about remote work",
   "Suggest 5 tweet ideas about {niche}",
 ]);
-XActions.export(); // Download all responses
+Medirus.export(); // Download all responses
 ```
 
 ### Image generation workflow
-1. `XActions.generateImage("Professional headshot, tech founder, minimalist")`
+1. `Medirus.generateImage("Professional headshot, tech founder, minimalist")`
 2. Wait for generation (10-30 seconds)
 3. Right-click generated image to save
 4. Use as profile picture, header, or tweet media
@@ -88,7 +88,7 @@ XActions.export(); // Download all responses
 
 ## MCP Alternative
 
-For programmatic AI content without Grok, the XActions MCP server includes AI tools powered by OpenRouter:
+For programmatic AI content without Grok, the Medirus MCP server includes AI tools powered by OpenRouter:
 
 | MCP Tool | Purpose |
 |----------|---------|

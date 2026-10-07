@@ -1,6 +1,6 @@
 ---
 name: teams-management
-description: Create and manage teams in XActions — invite members, assign roles, and collaborate on automation tasks. Use when users want to set up multi-user access or team-based account management.
+description: Create and manage teams in Medirus — invite members, assign roles, and collaborate on automation tasks. Use when users want to set up multi-user access or team-based account management.
 license: Apache-2.0
 metadata:
   author: nichxbt
@@ -9,7 +9,7 @@ metadata:
 
 # Teams Management
 
-API-powered team management for collaborative XActions usage.
+API-powered team management for collaborative Medirus usage.
 
 ## Entry Points
 
@@ -62,8 +62,8 @@ Content-Type: application/json
 
 ## Notes
 
-- Teams are scoped per XActions account
-- Invitations are sent via email; invitees must create or link an XActions account
+- Teams are scoped per Medirus account
+- Invitations are sent via email; invitees must create or link an Medirus account
 - Role permissions are enforced at the API middleware level
 - Teams share operation quotas by default (configurable per team)
 
@@ -71,4 +71,4 @@ Content-Type: application/json
 
 - **delegate-access** — Grant X-native delegate access to post on your behalf
 - **billing-management** — Manage subscription plans for your team
-- **xactions-mcp-server** — Use the MCP server for team-level AI agent access
+- **medirus-mcp-server** — Use the MCP server for team-level AI agent access

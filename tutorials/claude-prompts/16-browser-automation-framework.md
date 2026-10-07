@@ -1,10 +1,10 @@
-# Tutorial: The Complete XActions Browser Automation Framework
+# Tutorial: The Complete Medirus Browser Automation Framework
 
-You are my browser automation expert. I want to master the XActions automation framework — the core.js module, the actions.js library, and every automation script. Walk me through the entire system from foundation to advanced techniques.
+You are my browser automation expert. I want to master the Medirus automation framework — the core.js module, the actions.js library, and every automation script. Walk me through the entire system from foundation to advanced techniques.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit. The browser automation framework lives in `src/automation/` and consists of:
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit. The browser automation framework lives in `src/automation/` and consists of:
 - **core.js** — Foundation module (paste FIRST, always)
 - **actions.js** — Complete actions library (2100+ lines, every X action possible)
 - **15 automation scripts** — Each automates a specific workflow
@@ -18,9 +18,9 @@ Everything works by pasting into the browser developer console on x.com.
 Explain the framework's design:
 
 1. **The Module System:**
-   - All scripts use `window.XActions` as a namespace
-   - `core.js` creates `window.XActions.Core` with shared utilities
-   - `actions.js` creates `window.XActions` with ready-to-use functions
+   - All scripts use `window.Medirus` as a namespace
+   - `core.js` creates `window.Medirus.Core` with shared utilities
+   - `actions.js` creates `window.Medirus` with ready-to-use functions
    - Individual scripts check for Core and use its utilities
    - This means: **Always paste core.js first**
 
@@ -37,30 +37,30 @@ Explain the framework's design:
 3. **The Actions Library (actions.js):**
    Organized into namespaces:
    ```javascript
-   XActions.tweet.post("text")      // Post a tweet
-   XActions.tweet.reply(el, "text") // Reply to a tweet
-   XActions.tweet.quote(el, "text") // Quote tweet
-   XActions.tweet.like(el)          // Like a tweet
-   XActions.tweet.retweet(el)       // Retweet
-   XActions.tweet.bookmark(el)      // Bookmark
-   XActions.tweet.delete(el)        // Delete your tweet
+   Medirus.tweet.post("text")      // Post a tweet
+   Medirus.tweet.reply(el, "text") // Reply to a tweet
+   Medirus.tweet.quote(el, "text") // Quote tweet
+   Medirus.tweet.like(el)          // Like a tweet
+   Medirus.tweet.retweet(el)       // Retweet
+   Medirus.tweet.bookmark(el)      // Bookmark
+   Medirus.tweet.delete(el)        // Delete your tweet
    
-   XActions.user.follow("username") // Follow a user
-   XActions.user.unfollow("username") // Unfollow
-   XActions.user.block("username")  // Block
-   XActions.user.mute("username")   // Mute
-   XActions.user.getInfo("username") // Get user info
+   Medirus.user.follow("username") // Follow a user
+   Medirus.user.unfollow("username") // Unfollow
+   Medirus.user.block("username")  // Block
+   Medirus.user.mute("username")   // Mute
+   Medirus.user.getInfo("username") // Get user info
    
-   XActions.dm.send("username", "message") // Send DM
-   XActions.dm.read()               // Read DMs
+   Medirus.dm.send("username", "message") // Send DM
+   Medirus.dm.read()               // Read DMs
    
-   XActions.search.tweets("query")  // Search tweets
-   XActions.search.users("query")   // Search users
+   Medirus.search.tweets("query")  // Search tweets
+   Medirus.search.users("query")   // Search users
    
-   XActions.navigate.toProfile("username")
-   XActions.navigate.toHome()
-   XActions.navigate.toFollowers("username")
-   XActions.navigate.toFollowing("username")
+   Medirus.navigate.toProfile("username")
+   Medirus.navigate.toHome()
+   Medirus.navigate.toFollowers("username")
+   Medirus.navigate.toFollowing("username")
    ```
 
 ### Part 2: Setting Up — Your First Automation
@@ -72,14 +72,14 @@ Walk me through the exact steps:
    - Windows/Linux: F12 or Ctrl+Shift+I
    - Mac: Cmd+Option+I
 3. **Go to the Console tab**
-4. **Paste core.js** — you'll see: `✅ XActions Core loaded! Ready for automation scripts.`
+4. **Paste core.js** — you'll see: `✅ Medirus Core loaded! Ready for automation scripts.`
 5. **Test it:**
    ```javascript
    // Check it loaded
-   window.XActions.Core.log('Hello from XActions!', 'success');
+   window.Medirus.Core.log('Hello from Medirus!', 'success');
    
    // Try a utility  
-   await window.XActions.Core.sleep(1000);
+   await window.Medirus.Core.sleep(1000);
    console.log('Slept for 1 second');
    ```
 
@@ -234,7 +234,7 @@ The power of the framework is chaining scripts together:
 **Example 2: Research + Follow + Engage**
 ```
 1. Paste core.js
-2. Paste actions.js (gives you the full XActions API)
+2. Paste actions.js (gives you the full Medirus API)
 3. Navigate to a viral tweet in your niche
 4. Paste followEngagers.js (follow the likers)
 5. Paste autoLiker.js (like related content)
@@ -257,7 +257,7 @@ How data persists between sessions:
    - All tracking data (followed users, liked tweets, etc.)
    - Survives browser refresh
    - Persists until manually cleared
-   - Prefix: `xactions_` for all keys
+   - Prefix: `medirus_` for all keys
 
 2. **sessionStorage** — Used by navigation scripts
    - Tracks processed items during multi-page navigation
@@ -266,16 +266,16 @@ How data persists between sessions:
 
 3. **How to view stored data:**
    ```javascript
-   // See all XActions data
-   Object.keys(localStorage).filter(k => k.startsWith('xactions_')).forEach(k => {
+   // See all Medirus data
+   Object.keys(localStorage).filter(k => k.startsWith('medirus_')).forEach(k => {
      console.log(k, JSON.parse(localStorage.getItem(k)));
    });
    ```
 
 4. **How to clear data:**
    ```javascript
-   // Clear all XActions data
-   window.XActions.Core.storage.clear();
+   // Clear all Medirus data
+   window.Medirus.Core.storage.clear();
    ```
 
 ### Part 7: Debugging & Safety

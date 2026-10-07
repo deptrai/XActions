@@ -45,7 +45,7 @@
   };
 
   const run = async () => {
-    console.log('🔊 MASS UNMUTE — XActions by nichxbt');
+    console.log('🔊 MASS UNMUTE — Medirus by nichxbt');
 
     if (!window.location.href.includes('/muted')) {
       console.error('❌ Navigate to x.com/settings/muted first!');
@@ -101,7 +101,7 @@
 
     if (log.length > 0) {
       download({ summary: { unmuted, skipped, errors }, accounts: log },
-        `xactions-unmuted-${new Date().toISOString().slice(0, 10)}.json`);
+        `medirus-unmuted-${new Date().toISOString().slice(0, 10)}.json`);
     }
   };
 

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Stream Manager
+ * Medirus Stream Manager
  * Manages active streams (both polling-based and push-based adapters),
  * deduplication via Redis, and emits events/diffs over Socket.IO.
  *
@@ -96,13 +96,13 @@ async function getRedis() {
 }
 
 // ============================================================================
-// State keys (all under xactions:stream: namespace)
+// State keys (all under medirus:stream: namespace)
 // ============================================================================
 
-const stateKey = (streamId) => `xactions:stream:${streamId}:state`;
-const historyKey = (streamId) => `xactions:stream:${streamId}:history`;
-const metaKey = (streamId) => `xactions:stream:${streamId}:meta`;
-const lockKey = (streamId) => `xactions:stream:${streamId}:lock`;
+const stateKey = (streamId) => `medirus:stream:${streamId}:state`;
+const historyKey = (streamId) => `medirus:stream:${streamId}:history`;
+const metaKey = (streamId) => `medirus:stream:${streamId}:meta`;
+const lockKey = (streamId) => `medirus:stream:${streamId}:lock`;
 
 // ============================================================================
 // In-memory registry (augmented by Redis persistence)
@@ -125,7 +125,7 @@ let streamQueue = null;
 
 function getQueue() {
   if (!streamQueue) {
-    streamQueue = new Queue('xactions-streams', {
+    streamQueue = new Queue('medirus-streams', {
       redis: getRedisOpts(),
       defaultJobOptions: {
         attempts: 1,
@@ -340,7 +340,7 @@ export async function stopStream(streamId) {
   // Clean Redis
   try {
     const redis = await getRedis();
-    await redis.del(stateKey(streamId), historyKey(streamId), metaKey(streamId), lockKey(streamId), `xactions:adapter_cursor:${streamId}`);
+    await redis.del(stateKey(streamId), historyKey(streamId), metaKey(streamId), lockKey(streamId), `medirus:adapter_cursor:${streamId}`);
   } catch { /* Redis may be down */ }
 
   activeStreams.delete(streamId);
@@ -847,7 +847,7 @@ async function removeRepeatableJob(streamId) {
 async function refreshFromRedis() {
   try {
     const redis = await getRedis();
-    const keys = await redis.keys('xactions:stream:*:meta');
+    const keys = await redis.keys('medirus:stream:*:meta');
     for (const key of keys) {
       const raw = await redis.get(key);
       if (!raw) continue;

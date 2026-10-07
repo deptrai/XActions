@@ -44,7 +44,7 @@ import {
   multiOverlap,
   findSimilarAudience,
   getAudienceInsights
-} from 'xactions/src/analytics/audienceOverlap.js';
+} from 'medirus/src/analytics/audienceOverlap.js';
 
 // Two-account overlap
 const result = await analyzeOverlap('elonmusk', 'jack', { limit: 5000 });

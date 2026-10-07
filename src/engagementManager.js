@@ -85,7 +85,7 @@ export async function unlikeTweet(page, tweetUrl) {
  * @param {import('puppeteer').Page} page
  * @param {string} tweetUrl
  * @param {string} replyText
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function replyToTweet(page, tweetUrl, replyText, options = {}) {
@@ -183,7 +183,7 @@ export async function hideReply(page, replyUrl) {
 /**
  * Auto-like posts in a feed based on keywords
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function autoLikeByKeyword(page, options = {}) {

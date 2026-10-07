@@ -12,8 +12,8 @@
  * populates `req.consumer`.
  *
  * Key resolution order:
- *   1. `XACTIONS_SERVICE_KEYS` env JSON map: {"<token>":{"consumer_id":"jev","tier":"internal"}}
- *   2. Legacy single-token check: `XACTIONS_MCP_API_KEY` / `XACTIONS_API_TOKEN` → 'internal'
+ *   1. `MEDIRUS_SERVICE_KEYS` env JSON map: {"<token>":{"consumer_id":"jev","tier":"internal"}}
+ *   2. Legacy single-token check: `MEDIRUS_MCP_API_KEY` / `MEDIRUS_API_TOKEN` → 'internal'
  *   3. `NODE_ENV === 'production'` + empty map + no legacy → apiKeyValid:false (fail-closed)
  *   4. `NODE_ENV === 'development'` + empty map + no legacy → apiKeyValid:true, apiKeyRequired:false (dev parity)
  *   5. No match → apiKeyValid:false
@@ -32,7 +32,7 @@ import {
 } from '../../src/mcp/consumer-context.js';
 
 /**
- * Lazily parsed + cached `XACTIONS_SERVICE_KEYS` env map.
+ * Lazily parsed + cached `MEDIRUS_SERVICE_KEYS` env map.
  * Shape: `{ "<token>": { consumer_id: string, tier?: string } }`.
  * On malformed JSON → `{}` + one-shot WARN (fail-closed on named keys).
  * @type {Record<string, { consumer_id: string, tier?: string }> | null}
@@ -41,15 +41,15 @@ let _serviceKeyMap = null;
 let _serviceKeyWarned = false;
 
 /**
- * Parse `XACTIONS_SERVICE_KEYS` env into a token→consumer map.
+ * Parse `MEDIRUS_SERVICE_KEYS` env into a token→consumer map.
  * Returns `{}` on malformed env or unset (fail-closed for named keys,
- * legacy `XACTIONS_MCP_API_KEY` check still applies downstream).
+ * legacy `MEDIRUS_MCP_API_KEY` check still applies downstream).
  *
  * @returns {Record<string, { consumer_id: string, tier?: string }>}
  */
 export function loadServiceKeyMap() {
   if (_serviceKeyMap !== null) return _serviceKeyMap;
-  const raw = process.env.XACTIONS_SERVICE_KEYS;
+  const raw = process.env.MEDIRUS_SERVICE_KEYS;
   if (!raw || typeof raw !== 'string') {
     _serviceKeyMap = {};
     return _serviceKeyMap;
@@ -60,14 +60,14 @@ export function loadServiceKeyMap() {
       _serviceKeyMap = /** @type {Record<string, { consumer_id: string, tier?: string }>} */ (parsed);
     } else {
       if (!_serviceKeyWarned) {
-        console.warn('⚠️  serviceAuth: XACTIONS_SERVICE_KEYS is not a valid JSON object — treating as empty map.');
+        console.warn('⚠️  serviceAuth: MEDIRUS_SERVICE_KEYS is not a valid JSON object — treating as empty map.');
         _serviceKeyWarned = true;
       }
       _serviceKeyMap = {};
     }
   } catch (err) {
     if (!_serviceKeyWarned) {
-      console.warn('⚠️  serviceAuth: XACTIONS_SERVICE_KEYS malformed JSON — treating as empty map (fail-closed on named keys).', err instanceof Error ? err.message : err);
+      console.warn('⚠️  serviceAuth: MEDIRUS_SERVICE_KEYS malformed JSON — treating as empty map (fail-closed on named keys).', err instanceof Error ? err.message : err);
       _serviceKeyWarned = true;
     }
     _serviceKeyMap = {};
@@ -186,7 +186,7 @@ export function serviceAuth(req, res, next) {
       : resolveConsumerFromBearer(token);
 
     if (!resolved.apiKeyValid) {
-      return next(new ApiError('XACT_4001', 401, 'Invalid or missing Bearer token for XActions service API', undefined, 'auth'));
+      return next(new ApiError('XACT_4001', 401, 'Invalid or missing Bearer token for Medirus service API', undefined, 'auth'));
     }
 
     const source = token ? 'serviceAuth' : 'anonymous';

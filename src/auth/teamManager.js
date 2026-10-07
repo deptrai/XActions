@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Team & Multi-User Manager
+ * Medirus Team & Multi-User Manager
  * Team creation, role-based access, shared workspaces, and activity logging.
  *
  * Kills: Phantombuster (team plans), Taplio (team features)
@@ -15,7 +15,7 @@ import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
 
-const DATA_DIR = path.join(os.homedir(), '.xactions');
+const DATA_DIR = path.join(os.homedir(), '.medirus');
 const TEAMS_FILE = path.join(DATA_DIR, 'teams.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const ACTIVITY_FILE = path.join(DATA_DIR, 'activity-log.json');

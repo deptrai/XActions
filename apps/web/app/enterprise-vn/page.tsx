@@ -9,7 +9,7 @@ import {
   Calendar, MapPin, User, Briefcase, Phone, ArrowRight,
   Sparkles, X, Award, Info,
 } from 'lucide-react';
-import type { ApiResult } from '@xactions/api-client';
+import type { ApiResult } from '@medirus/api-client';
 import { api } from '@/lib/api';
 import { isAsyncAccepted, pollOperation } from '@/lib/scrape-poll';
 import type { AsyncAccepted } from '@/lib/scrape-poll';

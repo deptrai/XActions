@@ -57,7 +57,7 @@ This is the **nuclear option** for your X/Twitter account:
 
 ```javascript
 // ============================================
-// XActions - Unfollow Everyone (Browser Console)
+// Medirus - Unfollow Everyone (Browser Console)
 // Author: nich (@nichxbt)
 // Go to: x.com/YOUR_USERNAME/following
 // Open console (F12), paste this
@@ -72,7 +72,7 @@ This is the **nuclear option** for your X/Twitter account:
   const MAX_SCROLL_RETRIES = 15;     // Stop scrolling if no new users found
   
   console.log('');
-  console.log('☢️  XActions - UNFOLLOW EVERYONE');
+  console.log('☢️  Medirus - UNFOLLOW EVERYONE');
   console.log('====================================');
   console.log('⚠️  WARNING: This will unfollow ALL accounts!');
   console.log('⚠️  This action CANNOT be undone!');
@@ -414,7 +414,7 @@ This is the **nuclear option** for your X/Twitter account:
 
 ```javascript
 // ============================================
-// XActions - Unfollow Everyone (Node.js/Puppeteer)
+// Medirus - Unfollow Everyone (Node.js/Puppeteer)
 // Author: nich (@nichxbt)
 // Save as: unfollow-everyone.js
 // Run: node unfollow-everyone.js
@@ -676,7 +676,7 @@ async function unfollowUser(page, username) {
 async function unfollowEveryone() {
   console.log('');
   console.log('☢️  ═══════════════════════════════════════════');
-  console.log('☢️  XACTIONS - UNFOLLOW EVERYONE');
+  console.log('☢️  MEDIRUS - UNFOLLOW EVERYONE');
   console.log('☢️  ═══════════════════════════════════════════');
   console.log('');
   console.log('⚠️  WARNING: This will unfollow ALL accounts!');
@@ -967,7 +967,7 @@ node unfollow-everyone.js
 **Output example:**
 ```
 ☢️  ═══════════════════════════════════════════
-☢️  XACTIONS - UNFOLLOW EVERYONE
+☢️  MEDIRUS - UNFOLLOW EVERYONE
 ☢️  ═══════════════════════════════════════════
 
 ⚠️  WARNING: This will unfollow ALL accounts!
@@ -1086,7 +1086,7 @@ Preview of accounts to unfollow:
 
 ## 🌐 Website Alternative
 
-Don't want to run scripts? Use [xactions.app](https://xactions.app):
+Don't want to run scripts? Use [medirus.online](https://medirus.online):
 
 1. **Login** - Connect your X account securely
 2. **Backup** - Export your entire following list first
@@ -1148,4 +1148,4 @@ The script will attempt to unfollow them normally. If it fails, they'll appear i
 ---
 
 *Author: nich ([@nichxbt](https://x.com/nichxbt))*  
-*Part of [XActions](https://xactions.app) - X/Twitter Automation Tools*
+*Part of [Medirus](https://medirus.online) - X/Twitter Automation Tools*

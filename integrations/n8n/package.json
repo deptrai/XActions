@@ -1,11 +1,11 @@
 {
-  "name": "n8n-nodes-xactions",
+  "name": "n8n-nodes-medirus",
   "version": "1.0.0",
-  "description": "n8n community node for XActions — X/Twitter automation without API fees",
+  "description": "n8n community node for Medirus — X/Twitter automation without API fees",
   "keywords": [
     "n8n-community-node-package",
     "n8n",
-    "xactions",
+    "medirus",
     "twitter",
     "x",
     "bluesky",
@@ -26,23 +26,23 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/XActionsApi.credentials.js"
+      "dist/credentials/MedirusApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/XActions/XActions.node.js",
-      "dist/nodes/XActions/XActionsTrigger.node.js"
+      "dist/nodes/Medirus/Medirus.node.js",
+      "dist/nodes/Medirus/MedirusTrigger.node.js"
     ]
   },
   "scripts": {
     "build": "cp -r credentials nodes dist/ 2>/dev/null; echo 'Build complete'",
-    "dev": "node --check nodes/XActions/XActions.node.js && node --check nodes/XActions/XActionsTrigger.node.js && echo 'Syntax OK'",
-    "lint": "node --check credentials/XActionsApi.credentials.js && node --check nodes/XActions/XActions.node.js && node --check nodes/XActions/XActionsTrigger.node.js && node --check index.js"
+    "dev": "node --check nodes/Medirus/Medirus.node.js && node --check nodes/Medirus/MedirusTrigger.node.js && echo 'Syntax OK'",
+    "lint": "node --check credentials/MedirusApi.credentials.js && node --check nodes/Medirus/Medirus.node.js && node --check nodes/Medirus/MedirusTrigger.node.js && node --check index.js"
   },
   "peerDependencies": {
     "n8n-workflow": ">=1.0.0"
   },
   "dependencies": {
-    "xactions": "^3.0.0"
+    "medirus": "^3.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

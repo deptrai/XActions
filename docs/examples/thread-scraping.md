@@ -37,7 +37,7 @@ Scrape complete tweet threads from X/Twitter with proper ordering and full metad
 
 ```javascript
 // ============================================
-// XActions - Thread Scraper (Browser Console)
+// Medirus - Thread Scraper (Browser Console)
 // Go to: x.com/USERNAME/status/TWEET_ID
 // Open console (F12), paste this
 // Author: nich (@nichxbt)
@@ -383,7 +383,7 @@ npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
 
 ```javascript
 // ============================================
-// XActions - Thread Scraper (Node.js + Puppeteer)
+// Medirus - Thread Scraper (Node.js + Puppeteer)
 // Save as: scrape-thread.js
 // Run: node scrape-thread.js https://x.com/naval/status/1002103360646823936
 // Author: nich (@nichxbt)
@@ -799,7 +799,7 @@ const args = process.argv.slice(2);
 
 if (args.length === 0) {
   console.log(`
-🧵 XActions Thread Scraper
+🧵 Medirus Thread Scraper
 ==========================
 
 Usage:
@@ -951,13 +951,13 @@ Common issues and solutions:
 
 ---
 
-## 🌐 Website Alternative: XActions.app
+## 🌐 Website Alternative: Medirus.app
 
 Don't want to run code? Use our web interface:
 
-**[xactions.app](https://xactions.app)**
+**[medirus.online](https://medirus.online)**
 
-1. Visit [xactions.app](https://xactions.app)
+1. Visit [medirus.online](https://medirus.online)
 2. Paste any tweet URL from a thread
 3. Click "Scrape Thread"
 4. Download JSON or copy to clipboard
@@ -992,4 +992,4 @@ Don't want to run code? Use our web interface:
 ---
 
 *Author: nich ([@nichxbt](https://x.com/nichxbt))*  
-*Part of the [XActions](https://xactions.app) toolkit*
+*Part of the [Medirus](https://medirus.online) toolkit*

@@ -1,4 +1,4 @@
-# Build + deploy the XActions API server (api/server.js) to Cloud Run.
+# Build + deploy the Medirus API server (api/server.js) to Cloud Run.
 # Prereqs: run deploy/gcp/provision-api.sh once first — it creates the Cloud
 # SQL instance, Secret Manager entries, and IAM bindings this config expects.
 #
@@ -40,7 +40,7 @@ steps:
     args:
       - run
       - deploy
-      - xactions-api
+      - medirus-api
       - --image=$_IMAGE
       - --project=$PROJECT_ID
       - --region=us-central1
@@ -55,19 +55,19 @@ steps:
       - --service-account=three-ws@aerial-vehicle-466722-p5.iam.gserviceaccount.com
       # Cloud SQL Auth Proxy sidecar — reaches Postgres over a unix socket,
       # no VPC connector needed for this leg.
-      - --add-cloudsql-instances=aerial-vehicle-466722-p5:us-central1:xactions-db
+      - --add-cloudsql-instances=aerial-vehicle-466722-p5:us-central1:medirus-db
       # Reuse the three-ws Memorystore Redis instance (10.234.231.139:6379)
       # over the existing three-ws-vpc connector — see docs/ops/gcp-production.md
       # in the three.ws repo for the topology. Bull queue keys are namespaced
-      # with prefix "xactions" (api/services/jobQueue.js) so they never collide
+      # with prefix "medirus" (api/services/jobQueue.js) so they never collide
       # with three.ws's own keys on the same instance.
       - --vpc-connector=three-ws-vpc
       - --vpc-egress=private-ranges-only
-      - --set-env-vars=NODE_ENV=production,PORT=3001,REDIS_HOST=10.234.231.139,REDIS_PORT=6379,REDIS_QUEUE_PREFIX=xactions,API_URL=https://api.xactions.app,API_BASE_URL=https://api.xactions.app,FRONTEND_URL=https://xactions.app,CORS_ORIGINS=https://xactions.app\,https://www.xactions.app\,https://xactions-e7r.pages.dev,PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true,PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium,PUPPETEER_HEADLESS=true,PUPPETEER_NO_SANDBOX=true
-      - --set-secrets=DATABASE_URL=xactions-database-url:latest,JWT_SECRET=xactions-jwt-secret:latest,SESSION_SECRET=xactions-session-secret:latest,ADMIN_API_KEY=xactions-admin-api-key:latest
+      - --set-env-vars=NODE_ENV=production,PORT=3001,REDIS_HOST=10.234.231.139,REDIS_PORT=6379,REDIS_QUEUE_PREFIX=medirus,API_URL=https://api.medirus.online,API_BASE_URL=https://api.medirus.online,FRONTEND_URL=https://medirus.online,CORS_ORIGINS=https://medirus.online\,https://www.medirus.online\,https://medirus-e7r.pages.dev,PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true,PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium,PUPPETEER_HEADLESS=true,PUPPETEER_NO_SANDBOX=true
+      - --set-secrets=DATABASE_URL=medirus-database-url:latest,JWT_SECRET=medirus-jwt-secret:latest,SESSION_SECRET=medirus-session-secret:latest,ADMIN_API_KEY=medirus-admin-api-key:latest
 
 images:
   - $_IMAGE
 
 substitutions:
-  _IMAGE: us-central1-docker.pkg.dev/aerial-vehicle-466722-p5/containers/xactions-api:latest
+  _IMAGE: us-central1-docker.pkg.dev/aerial-vehicle-466722-p5/containers/medirus-api:latest

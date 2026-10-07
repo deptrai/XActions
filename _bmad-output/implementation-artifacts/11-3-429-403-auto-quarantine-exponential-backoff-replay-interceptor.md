@@ -562,11 +562,11 @@ npx vitest run tests/proxy/providers-tunnel.test.js tests/proxy/proxy-pool.test.
 ### Planning artifacts
 
 - `_bmad-output/planning-artifacts/epics.md:202-213` — Story 11.3 source.
-- `_bmad-output/planning-artifacts/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md:62-65` — FR-66B.
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:133-145` — AD-3.
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:192-200` — AD-9.
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:219-229` — AD-13.
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:230-241` — AD-14.
+- `_bmad-output/planning-artifacts/prds/prd-Medirus-2026-08-18-universal-scraping-engine/prd.md:62-65` — FR-66B.
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:133-145` — AD-3.
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:192-200` — AD-9.
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:219-229` — AD-13.
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:230-241` — AD-14.
 - `_bmad-output/implementation-artifacts/11-2-static-dynamic-residential-tunnel-proxy-providers.md` — previous story with provider contract and quarantine patterns.
 
 ### Current sprint status

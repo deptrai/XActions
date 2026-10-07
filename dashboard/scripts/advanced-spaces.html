@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wait for a DOM element to appear — Free X/Twitter Script | XActions</title>
+  <title>Wait for a DOM element to appear — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="src/advancedSpaces.js">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, advanced, spaces, other tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, advanced, spaces, other tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Wait for a DOM element to appear — XActions">
+  <meta property="og:title" content="Wait for a DOM element to appear — Medirus">
   <meta property="og:description" content="src/advancedSpaces.js">
-  <meta property="og:url" content="https://xactions.app/scripts/advanced-spaces">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/advanced-spaces">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Wait for a DOM element to appear — XActions">
+  <meta name="twitter:title" content="Wait for a DOM element to appear — Medirus">
   <meta name="twitter:description" content="src/advancedSpaces.js">
 
-  <link rel="canonical" href="https://xactions.app/scripts/advanced-spaces">
+  <link rel="canonical" href="https://medirus.online/scripts/advanced-spaces">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Wait for a DOM element to appear — Free X/Twitter Script | XActions",
+    "headline": "Wait for a DOM element to appear — Free X/Twitter Script | Medirus",
     "description": "src/advancedSpaces.js",
-    "url": "https://xactions.app/scripts/advanced-spaces",
+    "url": "https://medirus.online/scripts/advanced-spaces",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Other Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, advanced, spaces, other tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, advanced, spaces, other tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://xactions.app/scripts#other-tools" },
-      { "@type": "ListItem", "position": 4, "name": "Wait for a DOM element to appear", "item": "https://xactions.app/scripts/advanced-spaces" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://medirus.online/scripts#other-tools" },
+      { "@type": "ListItem", "position": 4, "name": "Wait for a DOM element to appear", "item": "https://medirus.online/scripts/advanced-spaces" }
     ]
   }
   </script>
@@ -396,7 +396,7 @@
   const inviteUsers = async (usernames = []) =&gt; {
     if (!usernames || usernames.length === 0) {
       console.log('❌ No usernames provided');
-      console.log('💡 Usage: window.XActions.advancedSpaces.inviteUsers([&quot;user1&quot;, &quot;user2&quot;])');
+      console.log('💡 Usage: window.Medirus.advancedSpaces.inviteUsers([&quot;user1&quot;, &quot;user2&quot;])');
       return { success: false, error: 'No usernames provided' };
     }
 
@@ -502,7 +502,7 @@
   const manageCoHost = async (username, action = 'add') =&gt; {
     if (!username) {
       console.log('❌ No username provided');
-      console.log('💡 Usage: window.XActions.advancedSpaces.manageCoHost(&quot;user&quot;, &quot;add&quot;)');
+      console.log('💡 Usage: window.Medirus.advancedSpaces.manageCoHost(&quot;user&quot;, &quot;add&quot;)');
       return { success: false, error: 'No username provided' };
     }
 
@@ -991,11 +991,11 @@
   };
 
   // ──────────────────────────────────────────────────────────────
-  // Expose on window.XActions.advancedSpaces
+  // Expose on window.Medirus.advancedSpaces
   // ──────────────────────────────────────────────────────────────
 
-  window.XActions = window.XActions || {};
-  window.XActions.advancedSpaces = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.advancedSpaces = {
     joinSpace,
     leaveSpace,
     requestToSpeak,
@@ -1014,11 +1014,11 @@
 
   const W = 64;
   console.log('╔' + '═'.repeat(W) + '╗');
-  console.log('║  🎙️ ADVANCED SPACES — XActions' + ' '.repeat(W - 33) + '║');
+  console.log('║  🎙️ ADVANCED SPACES — Medirus' + ' '.repeat(W - 33) + '║');
   console.log('║  by nichxbt — v1.0' + ' '.repeat(W - 21) + '║');
   console.log('╚' + '═'.repeat(W) + '╝');
   console.log('');
-  console.log('Available commands (via window.XActions.advancedSpaces):');
+  console.log('Available commands (via window.Medirus.advancedSpaces):');
   console.log('');
   console.log('  1.  joinSpace(spaceUrl?)          — Join a Space as a listener');
   console.log('  2.  leaveSpace()                   — Leave/exit the current Space');
@@ -1032,8 +1032,8 @@
   console.log('  10. downloadRecording(spaceUrl?)    — Download Space recording');
   console.log('');
   console.log('Example:');
-  console.log('  await window.XActions.advancedSpaces.joinSpace(&quot;https://x.com/i/spaces/abc123&quot;)');
-  console.log('  await window.XActions.advancedSpaces.sendReaction(&quot;🔥&quot;)');
+  console.log('  await window.Medirus.advancedSpaces.joinSpace(&quot;https://x.com/i/spaces/abc123&quot;)');
+  console.log('  await window.Medirus.advancedSpaces.sendReaction(&quot;🔥&quot;)');
   console.log('');
   console.log('✅ Advanced Spaces loaded — all commands ready');
 })();
@@ -1042,7 +1042,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

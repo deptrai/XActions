@@ -30,9 +30,9 @@ describe('Story 19.10 — Admin MCP Tools (Extended Test Suite)', () => {
   beforeAll(async () => {
     // Tạo admin user cho extended test suite
     adminUser = await prisma.user.upsert({
-      where: { email: 'e2e_mcp_admin_ext@xactions.test' },
+      where: { email: 'e2e_mcp_admin_ext@medirus.test' },
       create: {
-        email: 'e2e_mcp_admin_ext@xactions.test',
+        email: 'e2e_mcp_admin_ext@medirus.test',
         username: 'e2e_mcp_admin_ext',
         password: 'e2e-password',
         isAdmin: true,
@@ -42,14 +42,14 @@ describe('Story 19.10 — Admin MCP Tools (Extended Test Suite)', () => {
 
     adminToken = jwt.sign({ userId: adminUser.id, isAdmin: true }, JWT_SECRET, { expiresIn: '1h' });
 
-    process.env.XACTIONS_MODE = 'local';
+    process.env.MEDIRUS_MODE = 'local';
     mod = await import('../../src/mcp/server.js');
     await mod.initializeBackend();
   });
 
   afterAll(async () => {
     await prisma.user.deleteMany({
-      where: { email: 'e2e_mcp_admin_ext@xactions.test' },
+      where: { email: 'e2e_mcp_admin_ext@medirus.test' },
     });
   });
 

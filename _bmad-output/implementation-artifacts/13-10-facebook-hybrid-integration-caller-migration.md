@@ -20,11 +20,11 @@ Status: done
 
 ## Story
 
-As a **XActions Platform Engineer**,  
+As a **Medirus Platform Engineer**,  
 I want **`scrape('facebook', ...)`, MCP/CLI tools, and `api/services/*` to switch to the new `FacebookCrawler` / `FacebookClient` hybrid architecture**,  
 So that **end users and internal services no longer depend on the legacy `src/scrapers/facebook/` Puppeteer-only code path, and all Facebook operations benefit from the hybrid engine (GraphQL-first, browser-bridge fallback, sticky residential proxy, error envelopes, velocity tracking, and action-level auth)**.
 
-Như một **Kỹ sư Nền tảng XActions**,  
+Như một **Kỹ sư Nền tảng Medirus**,  
 Tôi muốn **`scrape('facebook', ...)`, công cụ MCP/CLI và `api/services/*` chuyển sang kiến trúc hybrid `FacebookCrawler` / `FacebookClient` mới**,  
 Để **người dùng cuối và các dịch vụ nội bộ không còn phụ thuộc vào code path Puppeteer-only legacy `src/scrapers/facebook/`, đồng thời mọi thao tác Facebook tận dụng được hybrid engine (ưu tiên GraphQL, fallback browser bridge, proxy residential cố định, error envelope chuẩn, velocity tracking và xác thực cấp action).**
 
@@ -41,7 +41,7 @@ Story 13.10 là **story cắt chuyển / tích hợp** cho nhánh Facebook hybri
   - Cập nhật `api/routes/facebook.js` (`/scrape` và `/automate`) để validation giữ nguyên, nhưng bên dưới gọi hybrid.
   - Cập nhật `src/mcp/server.js` để tất cả Facebook tools chuyển sang hybrid cho các action đã có trong `FacebookCrawler`.
   - Cập nhật `src/cli/commands/scrape.js` và `src/cli/commands/automate.js` để hỗ trợ nhiều action hơn và route sang hybrid.
-  - Cập nhật `package.json` `exports` để expose `xactions/scrapers/social` (và `xactions/scrapers/social/facebook`) cho consumer.
+  - Cập nhật `package.json` `exports` để expose `medirus/scrapers/social` (và `medirus/scrapers/social/facebook`) cho consumer.
   - Cập nhật `docs/deprecation-plan.md` và gắn `@deprecated` / `// LEGACY — see docs/deprecation-plan.md` cho `src/scrapers/facebook/index.js`, `api/services/facebookAutomation.js`, và các file legacy còn lại.
   - Cập nhật / đánh dấu `@deprecated` cho `tests/scrapers/facebook-*.test.js` legacy; kiểm thử hybrid tập trung trong `tests/scrapers/social/facebook/`.
 
@@ -60,8 +60,8 @@ Story 13.10 là **story cắt chuyển / tích hợp** cho nhánh Facebook hybri
 ## Sources
 
 - `_bmad-output/planning-artifacts/epics.md` — Epic 13, Story 13.10 [dòng 621-635]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 (Tiered Signer), AD-2 (AbstractCrawler/ActionRegistry), AD-3 (Proxy Strategy/Action-Level Auth), AD-11 (CrawlerCommand), AD-13 (Adaptive Governor), AD-14 (Error Envelope), AD-18 (Metadata Schema), AD-20 (Dual-Pool Resource Isolation)
-- `_bmad-output/planning-artifacts/architecture/xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` — trạng thái `superseded` nhưng vẫn chứa các invariant về account lifecycle, sticky proxy, error envelope, read/write risk profiles
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 (Tiered Signer), AD-2 (AbstractCrawler/ActionRegistry), AD-3 (Proxy Strategy/Action-Level Auth), AD-11 (CrawlerCommand), AD-13 (Adaptive Governor), AD-14 (Error Envelope), AD-18 (Metadata Schema), AD-20 (Dual-Pool Resource Isolation)
+- `_bmad-output/planning-artifacts/architecture/medirus-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` — trạng thái `superseded` nhưng vẫn chứa các invariant về account lifecycle, sticky proxy, error envelope, read/write risk profiles
 - `_bmad-output/implementation-artifacts/13-3-refactor-facebook-scraper-to-hybrid-architecture.md` — `FacebookClient`, `FacebookCrawler`, `DEFAULT_FB_DOC_IDS`
 - `_bmad-output/implementation-artifacts/13-4-facebook-browser-as-signer-bridge.md` — `FacebookBrowserBridge`
 - `_bmad-output/implementation-artifacts/13-5-facebook-hybrid-profile-followers-group-members.md` — `resolveTargetKey`, `resolveGroupId`, action auth
@@ -78,7 +78,7 @@ Story 13.10 là **story cắt chuyển / tích hợp** cho nhánh Facebook hybri
 - `src/scrapers/social/index.js` — barrel export [dòng 8-10]
 - `src/index.js` — re-export scrapers + social [dòng 27-28]
 - `package.json` — `exports` field [dòng 16-32], `bin` entries [dòng 33-37]
-- `src/types/xactions.d.ts` — `XActionsOptions` [dòng 18-81]
+- `src/types/medirus.d.ts` — `MedirusOptions` [dòng 18-81]
 - `types/index.d.ts` — `scrapers` declaration [dòng 304-315]
 - `api/services/facebookScrape.js` — `run()` [dòng 23-57], `runSearchAllParallel()` [dòng 69-114], `// TODO(13.10)` [dòng 54]
 - `api/services/facebookAutomation.js` — `// @deprecated` header [dòng 4], `likeFacebookPosts` [dòng 412-], `commentOnFacebookPosts` [dòng 533-], `createFacebookPost` [dòng 745-], `shareFacebookPosts` [dòng 999-], `joinFacebookGroups` [dòng 1365-], `postToFacebookGroups` [dòng 1570-], `sendFriendRequests` [dòng 1837-]
@@ -86,8 +86,8 @@ Story 13.10 là **story cắt chuyển / tích hợp** cho nhánh Facebook hybri
 - `api/routes/facebook.js` — `POST /scrape` [dòng 335-589], `VALID_ACTIONS` [dòng 367], `scrapeArgs` builder [dòng 535-568], marketplace `scrapeArgs` [dòng 545-560], `POST /automate` [dòng 604-1066], `runMessengerCampaign` [dòng 258-305]
 - `src/mcp/server.js` — Facebook tool definitions [dòng 1386-1685], `x_facebook_automate` dispatch [dòng 2773-2949], `x_facebook_list_accounts` [dòng 2952-2982], `runWithFacebookBrowser` [dòng 2985-2999], `executeFacebookEpic4Tool` [dòng 3002-3204], `x_facebook_group_members` [dòng 3133-3148], `x_facebook_marketplace` [dòng 3151-3200], `executeFacebookScrapeTool` [dòng 3214-3258], `ACTION_MAP` [dòng 3230-3236]
 - `src/mcp/facebook-auth.js` — `resolveMcpFacebookAuth()` [dòng 23-25]
-- `src/cli/commands/scrape.js` — `xactions scrape` [dòng 17-74]
-- `src/cli/commands/automate.js` — `xactions automate` [dòng 18-182]
+- `src/cli/commands/scrape.js` — `medirus scrape` [dòng 17-74]
+- `src/cli/commands/automate.js` — `medirus automate` [dòng 18-182]
 - `docs/deprecation-plan.md` — legacy-to-hybrid mapping table [dòng 99-127], status tracker [dòng 81-96]
 - `src/scrapers/facebook/index.js` — legacy re-exports [dòng 1-64]
 - `tests/scrapers/social/facebook/crawler-social-actions.test.js` — ATDD pattern 13.9
@@ -195,9 +195,9 @@ Story 13.10 là **story cắt chuyển / tích hợp** cho nhánh Facebook hybri
 - **And** `x_facebook_schedule_post` and `x_facebook_list_accounts` **KHÔNG bắt buộc** phải chuyển trong 13.10 vì chưa có action tương ứng trong `FacebookCrawler`. `x_facebook_warmup_scroll`, `x_facebook_warmup_account`, and `x_facebook_cancel_friend_requests` are now migrated to hybrid actions.
 - **And** nếu một tool cần multi-account (như messenger-share), nó có thể sử dụng `FacebookCrawler` với `accountPool` hoặc giữ `runMessengerCampaign` legacy tạm thời
 
-### AC-7: CLI `xactions scrape` và `xactions automate` route sang hybrid
+### AC-7: CLI `medirus scrape` và `medirus automate` route sang hybrid
 
-- **Given** `xactions scrape --platform facebook --action <action>`
+- **Given** `medirus scrape --platform facebook --action <action>`
 - **When** chạy
 - **Then** `src/cli/commands/scrape.js` hỗ trợ thêm: `marketplace`, `group_posts`, `group_comments`, `post_comments`, `group_search`, `group_members`
 - **And** thêm option `--url <url>` cho các action cần URL, `--include-replies` cho comments, `--location`, `--category`, `--min-price`, `--max-price`, `--latitude`, `--longitude`, `--radius-km`, `--category-id` cho `marketplace`
@@ -209,16 +209,16 @@ Story 13.10 là **story cắt chuyển / tích hợp** cho nhánh Facebook hybri
 - **Given** `FacebookCrawler.listActions()` [kế thừa `AbstractCrawler.listActions()` dòng 107-117]
 - **When** MCP/CLI/API cần liệt kê action
 - **Then** `requiresAuth` được phân giải theo từng descriptor (ví dụ `marketplace`, `search`, `page_posts`, `profile` = `false`; `like`, `comment`, `post`, `messenger_share`, `join_group` = `true`)
-- **And** MCP tool `x_actions_list` (nếu tồn tại) hoặc CLI `xactions actions --platform facebook` trả về danh sách action với `requiredArgs`, `optionalArgs`, `example`, `outputType`, `requiresAuth`
-- **And** nếu CLI `xactions actions` chưa tồn tại, **bổ sung command** `xactions actions --platform <platform>` hoặc `xactions facebook actions`
+- **And** MCP tool `medirus_list` (nếu tồn tại) hoặc CLI `medirus actions --platform facebook` trả về danh sách action với `requiredArgs`, `optionalArgs`, `example`, `outputType`, `requiresAuth`
+- **And** nếu CLI `medirus actions` chưa tồn tại, **bổ sung command** `medirus actions --platform <platform>` hoặc `medirus facebook actions`
 
 ### AC-9: `package.json` / module exports
 
-- **Given** consumer `import { FacebookCrawler, FacebookClient } from 'xactions/scrapers/social'`
+- **Given** consumer `import { FacebookCrawler, FacebookClient } from 'medirus/scrapers/social'`
 - **When** package resolve
 - **Then** `package.json:exports` bổ sung `./scrapers/social` → `./src/scrapers/social/index.js` và `./scrapers/social/facebook` → `./src/scrapers/social/facebook/index.js`
-- **And** `src/scrapers/index.js` có thể re-export `FacebookCrawler`, `FacebookClient`, `FacebookActions` as named để consumer dùng `import { FacebookCrawler } from 'xactions/scrapers'`
-- **And** `types/index.d.ts` hoặc `src/types/xactions.d.ts` cập nhật declaration cho `FacebookCrawler` / `FacebookClient` (tối thiểu cập nhật `scrapers` namespace)
+- **And** `src/scrapers/index.js` có thể re-export `FacebookCrawler`, `FacebookClient`, `FacebookActions` as named để consumer dùng `import { FacebookCrawler } from 'medirus/scrapers'`
+- **And** `types/index.d.ts` hoặc `src/types/medirus.d.ts` cập nhật declaration cho `FacebookCrawler` / `FacebookClient` (tối thiểu cập nhật `scrapers` namespace)
 
 ### AC-10: Deprecation markers
 
@@ -332,9 +332,9 @@ Trong `src/scrapers/index.js` [dòng 157-328]:
 
 ### TR-6: Type declarations
 
-- `types/index.d.ts` hoặc `src/types/xactions.d.ts` bổ sung:
+- `types/index.d.ts` hoặc `src/types/medirus.d.ts` bổ sung:
   - `declare const scrapers` chứa `FacebookCrawler` / `FacebookClient` (hoặc new module declaration)
-  - `FacebookOptions` trong `src/types/facebook.d.ts` đã tồn tại; cập nhật `XActionsOptions` nếu cần thêm `action`/`url` cho CLI parse.
+  - `FacebookOptions` trong `src/types/facebook.d.ts` đã tồn tại; cập nhật `MedirusOptions` nếu cần thêm `action`/`url` cho CLI parse.
 
 ### TR-7: Deprecation & docs
 
@@ -377,7 +377,7 @@ Trong `src/scrapers/index.js` [dòng 157-328]:
 - `src/cli/commands/scrape.js` — mở rộng action/option list.
 - `src/cli/commands/automate.js` — mở rộng action/option list.
 - `package.json` — thêm `exports` `./scrapers/social` và `./scrapers/social/facebook`.
-- `types/index.d.ts` hoặc `src/types/xactions.d.ts` — cập nhật declaration cho hybrid scrapers.
+- `types/index.d.ts` hoặc `src/types/medirus.d.ts` — cập nhật declaration cho hybrid scrapers.
 - `docs/deprecation-plan.md` — cập nhật status tracker và mapping.
 - `src/scrapers/facebook/index.js` — thêm `@deprecated` header.
 - `tests/scrapers/facebook-*.test.js` — đánh dấu `@deprecated` hoặc migrate.
@@ -386,7 +386,7 @@ Trong `src/scrapers/index.js` [dòng 157-328]:
 
 - `src/scrapers/social/facebook/adapter.js` — adapter `scrapeFacebook(action, options)` để `src/scrapers/index.js` gọi mà không đụng logic legacy.
 - `tests/scrapers/social/facebook/caller-migration.test.js` — ATDD tests cho AC-1..AC-13.
-- `src/cli/commands/actions.js` — (nếu chưa có) `xactions actions --platform facebook` để list action (tùy CLI roadmap).
+- `src/cli/commands/actions.js` — (nếu chưa có) `medirus actions --platform facebook` để list action (tùy CLI roadmap).
 
 ## Testing Requirements
 
@@ -404,8 +404,8 @@ Trong `src/scrapers/index.js` [dòng 157-328]:
   - `x_facebook_marketplace` → `FacebookCrawler.start({ action: 'marketplace' })`
   - `x_facebook_automate` `like` → `FacebookCrawler.start({ action: 'like' })`
 - **CLI tests:**
-  - `xactions scrape --platform facebook --action marketplace --query macbook --auth-cookie '{"c_user":"...","xs":"..."}'` chạy hybrid.
-  - `xactions automate --platform facebook --action like --urls ... --auth-cookie ...` chạy hybrid.
+  - `medirus scrape --platform facebook --action marketplace --query macbook --auth-cookie '{"c_user":"...","xs":"..."}'` chạy hybrid.
+  - `medirus automate --platform facebook --action like --urls ... --auth-cookie ...` chạy hybrid.
 - **Type & verification:**
   - `npx vitest run tests/scrapers/social/facebook/`
   - `npx tsc --noEmit`
@@ -452,7 +452,7 @@ Trong `src/scrapers/index.js` [dòng 157-328]:
 - `src/mcp/server.js` đã có fail-fast validation trước khi gọi legacy; giữ pattern này và chỉ thay implementation sau validation.
 - `api/routes/facebook.js` đã hỗ trợ đầy đủ body fields cho `marketplace` (`categoryId`, `lat`, `lng`, `radiusKm`, v.v.) nhưng service chưa dùng hết.
 - `src/scrapers/index.js` `platforms.facebook` import legacy; việc chuyển sang hybrid cần đảm bảo default export vẫn tương thích (Twitter backward compat).
-- `package.json` `exports` thiếu `./scrapers/social` — consumer không thể `import { FacebookCrawler } from 'xactions/scrapers/social'`.
+- `package.json` `exports` thiếu `./scrapers/social` — consumer không thể `import { FacebookCrawler } from 'medirus/scrapers/social'`.
 
 ## Git Intelligence Summary
 
@@ -479,12 +479,12 @@ Trong `src/scrapers/index.js` [dòng 157-328]:
 - `src/core/base-client.js` — `AbstractApiClient`, proxy resolution, error codes `XACT_5030` / `XACT_4010` / `XACT_4290`.
 - `src/core/adaptive-governor.js` — `canAccountRequest()` / `recordRequest()`.
 - `src/types/facebook.d.ts` — `FacebookOptions` / `FacebookMarketplaceListing` / `FacebookProxyDescriptor`.
-- `src/types/xactions.d.ts` — `XActionsOptions`.
+- `src/types/medirus.d.ts` — `MedirusOptions`.
 
 ## Dev Agent Guardrails
 
 - **KHÔNG xóa** file `src/scrapers/facebook/**` trong 13.10 — chỉ đánh dấu deprecated.
-- **KHÔNG đổi tên** MCP tool (`x_facebook_*`) hoặc CLI command (`xactions scrape`/`automate`).
+- **KHÔNG đổi tên** MCP tool (`x_facebook_*`) hoặc CLI command (`medirus scrape`/`automate`).
 - **KHÔNG** cho phép `dryRun` mặc định `false`; phải giữ `dryRun === false ? false : true`.
 - **KHÔNG log** `c_user`, `xs`, account cookie, hoặc token.
 - **KHÔNG import** `api/services/facebookAutomation.js` trong code mới; nếu cần tạm dùng legacy cho tool chưa có action, ghi rõ `TODO(13.x)`.
@@ -536,7 +536,7 @@ Các caller surface cần migrate:
 
 ## Notes and Caveats
 
-- Architecture spine `xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` có trạng thái `superseded` nhưng vẫn là tài liệu tham khảo hữu ích về `AccountPool`, `AdaptiveGovernor`, sticky proxy, read-vs-write risk profiles. Các quy tắc AD-FB-* vẫn được tôn trọng thông qua `AbstractCrawler` + `FacebookClient`.
+- Architecture spine `medirus-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md` có trạng thái `superseded` nhưng vẫn là tài liệu tham khảo hữu ích về `AccountPool`, `AdaptiveGovernor`, sticky proxy, read-vs-write risk profiles. Các quy tắc AD-FB-* vẫn được tôn trọng thông qua `AbstractCrawler` + `FacebookClient`.
 - `x_facebook_schedule_post` là DB-only scheduler; không có action `schedule` trong `FacebookCrawler`, nên nó **nằm ngoài phạm vi 13.10** hoặc được xử lý trong story riêng.
 - `x_facebook_warmup_scroll` / `x_facebook_warmup_account` / `x_facebook_cancel_friend_requests` đã có action tương ứng trong `FacebookCrawler` và được migrate sang hybrid trong follow-up này. `schedule_post` và `list_accounts` vẫn nằm ngoài phạm vi.
 - `x_facebook_posts` cần resolve URL để chọn `page_posts` hay `group_posts`; nếu URL không chứa `/groups/`, mặc định `page_posts`.

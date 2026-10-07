@@ -33,14 +33,14 @@ related_ads:
 
 ## Business & Architecture Context
 
-- **Bối cảnh kiến trúc (AD-10 & FR-87):** XActions đóng vai trò là Universal Scraping Microservice cho hệ sinh thái Nowing và các AI Agents. Dữ liệu thô (raw crawl posts và comments) thu thập về `Post` và `Comment` có vòng đời hữu hạn (TTL = 30 ngày). Nowing chịu trách nhiệm trích xuất và lưu trữ vĩnh viễn các Enriched Leads, Verified Contacts, và Vector Embeddings. XActions chỉ đóng vai trò data lake đệm tạm thời.
+- **Bối cảnh kiến trúc (AD-10 & FR-87):** Medirus đóng vai trò là Universal Scraping Microservice cho hệ sinh thái Nowing và các AI Agents. Dữ liệu thô (raw crawl posts và comments) thu thập về `Post` và `Comment` có vòng đời hữu hạn (TTL = 30 ngày). Nowing chịu trách nhiệm trích xuất và lưu trữ vĩnh viễn các Enriched Leads, Verified Contacts, và Vector Embeddings. Medirus chỉ đóng vai trò data lake đệm tạm thời.
 - **Vấn đề hiện tại:** Sau khi triển khai Story 10.2 (`Post`, `Comment`, `CrawlCheckpoint` schema), các bảng này đã có cột `crawledAt DateTime @default(now())` cùng các index `@@index([crawledAt])`, nhưng hệ thống chưa có background job, cron worker hay API/CLI nào định kỳ quét và xóa dữ liệu `crawledAt < NOW() - 30 days`. Nếu không có cơ chế dọn dẹp, database sẽ nhanh chóng phình to hàng chục triệu bản ghi, gây suy giảm hiệu năng query và tốn chi phí hạ tầng.
 - **Giải pháp:**
   1. Xây dựng module lõi `RetentionCleaner` trong `src/store/retention-cleaner.js` hỗ trợ purge dữ liệu theo chunk/batch (ví dụ 1,000 bản ghi/lô), có delay giữa các batch để giải phóng lock và CPU.
   2. Quản lý dọn dẹp an toàn cho mối quan hệ `Post` ↔ `Comment`: Dù `Comment.postId` có `onDelete: Cascade`, việc xóa lượng lớn `Post` cùng lúc có thể gây cascade lock và deadlock. Module sẽ hỗ trợ cơ chế xóa chunked `Comment` trước hoặc xóa `Post` theo ID chunked có giới hạn transaction nhỏ.
   3. Dọn dẹp `CrawlCheckpoint` đã kết thúc (`completed` hoặc `failed` có `errorCount >= threshold`) sau 90 ngày (`DATA_RETENTION_DAYS_CHECKPOINT=90`), giữ nguyên các checkpoint đang hoạt động (`running`, `paused`).
   4. Hỗ trợ chế độ `--dry-run` để ước tính số lượng bản ghi hết hạn mà không thực hiện thao tác xóa vật lý.
-  5. Tích hợp background cron job trong `api/services/retentionScheduler.js` (hoặc khởi chạy trong `api/server.js`), đồng thời cung cấp REST API endpoint `/api/admin/retention/cleanup` và CLI command `xactions retention run`.
+  5. Tích hợp background cron job trong `api/services/retentionScheduler.js` (hoặc khởi chạy trong `api/server.js`), đồng thời cung cấp REST API endpoint `/api/admin/retention/cleanup` và CLI command `medirus retention run`.
 
 ---
 
@@ -115,15 +115,15 @@ related_ads:
   ```
 - **And** nếu người dùng không có quyền admin, trả về `403 Forbidden` hoặc `401 Unauthorized`.
 
-### AC6 — CLI Operational Command (`xactions retention run` & `xactions retention status`)
-- **Given** công cụ dòng lệnh `unfollowx` / `xactions` CLI
+### AC6 — CLI Operational Command (`medirus retention run` & `medirus retention status`)
+- **Given** công cụ dòng lệnh `unfollowx` / `medirus` CLI
 - **When** chạy các lệnh CLI:
-  - `xactions retention run [--days <n>] [--batch-size <n>] [--dry-run] [--include-checkpoints]`: Thực thi dọn dẹp trực tiếp từ terminal.
-  - `xactions retention status`: Hiển thị bảng tóm tắt số lượng bản ghi `Post`, `Comment`, `CrawlCheckpoint` quá hạn 30 ngày / 90 ngày.
+  - `medirus retention run [--days <n>] [--batch-size <n>] [--dry-run] [--include-checkpoints]`: Thực thi dọn dẹp trực tiếp từ terminal.
+  - `medirus retention status`: Hiển thị bảng tóm tắt số lượng bản ghi `Post`, `Comment`, `CrawlCheckpoint` quá hạn 30 ngày / 90 ngày.
 - **Then** CLI in ra kết quả trực quan, hiển thị tiến độ từng batch hoặc kết quả dry-run rõ ràng, exit code `0` khi thành công và non-zero khi thất bại.
 
 ### AC7 — Zero Regression & Unit / Integration Test Coverage
-- **Given** bộ test suite của XActions
+- **Given** bộ test suite của Medirus
 - **When** chạy `npm run test` hoặc `vitest run tests/store/retention-cleaner.test.js`
 - **Then** tất cả các test cases pass 100%:
   - Test xóa `Post` và `Comment` cũ đúng mốc thời gian `crawledAt`.
@@ -160,8 +160,8 @@ related_ads:
 
 - [x] **Task 4: CLI Command Extension (`src/cli/commands/retention.js` & `src/cli/index.js`)**
   - [x] 4.1 Tạo file `src/cli/commands/retention.js` với Commander.js.
-  - [x] 4.2 Định nghĩa subcommand `xactions retention run [options]` với `--days`, `--batch-size`, `--dry-run`, `--checkpoints`.
-  - [x] 4.3 Định nghĩa subcommand `xactions retention status` hiển thị bảng dữ liệu.
+  - [x] 4.2 Định nghĩa subcommand `medirus retention run [options]` với `--days`, `--batch-size`, `--dry-run`, `--checkpoints`.
+  - [x] 4.3 Định nghĩa subcommand `medirus retention status` hiển thị bảng dữ liệu.
   - [x] 4.4 Đăng ký subcommand vào `src/cli/index.js`.
 
 - [x] **Task 5: Unit & Integration Tests (`tests/store/retention-cleaner.test.js` & `tests/api/retention-routes.test.js`)**
@@ -278,7 +278,7 @@ related_ads:
 - Đã tạo hoàn thiện toàn bộ các file theo spec:
   - `src/store/retention-cleaner.js`: RetentionCleaner module với `cleanRawCrawlData`, `cleanCheckpoints`, `getRetentionStats`, `runRetentionPipeline`.
   - `api/services/retentionScheduler.js`: Daily cron service với cờ mutex `isProcessing` và graceful start/stop.
-  - `src/cli/commands/retention.js`: CLI subcommands `xactions retention run` và `xactions retention status`.
+  - `src/cli/commands/retention.js`: CLI subcommands `medirus retention run` và `medirus retention status`.
   - `tests/store/retention-cleaner.test.js`: 10 integration test cases pass 100%.
   - `src/store/index.js`, `api/server.js`, `api/routes/admin.js`, `src/cli/index.js` đã được tích hợp đầy đủ.
 

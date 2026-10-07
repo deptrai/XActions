@@ -1,6 +1,6 @@
-# Platform Listings Checklist for XActions
+# Platform Listings Checklist for Medirus
 
-> Every platform where XActions should be listed to build entity recognition signals for Google Knowledge Graph.
+> Every platform where Medirus should be listed to build entity recognition signals for Google Knowledge Graph.
 
 ---
 
@@ -14,12 +14,12 @@
 - **Time:** 30 minutes
 
 ### npm
-- **URL:** https://www.npmjs.com/package/xactions
+- **URL:** https://www.npmjs.com/package/medirus
 - **Status:** [x] Already published
 - **Optimize:**
   - [ ] Ensure `description` in package.json is keyword-rich
   - [ ] Add all relevant `keywords`
-  - [ ] Set `homepage` to https://xactions.app
+  - [ ] Set `homepage` to https://medirus.online
   - [ ] Add `repository` URL
   - [ ] Verify README renders correctly on npm
 
@@ -38,7 +38,7 @@
 - **URL:** https://www.producthunt.com/posts/new
 - **Status:** [ ] Not started
 - **Listing details:**
-  - Name: XActions
+  - Name: Medirus
   - Tagline: "Free X/Twitter automation — scrapers, MCP server, CLI. No API fees."
   - Description: Full feature breakdown with screenshots
   - Topics: Developer Tools, Twitter, Automation, Open Source, AI
@@ -73,11 +73,11 @@
 - **Status:** [ ] Not started
 - **Profile type:** Product (or Organization)
 - **Details:**
-  - Name: XActions
+  - Name: Medirus
   - Founded: 2024
   - Category: Developer Tools, Social Media
   - Description: Full description
-  - Website: https://xactions.app
+  - Website: https://medirus.online
   - GitHub: https://github.com/nirholas/XActions
 - **Impact:** Google uses Crunchbase as an authoritative source
 
@@ -97,8 +97,8 @@
   - [ ] https://github.com/punkpeye/awesome-mcp-servers (30k+ stars)
   - [ ] https://github.com/wong2/awesome-mcp-servers
   - [ ] https://github.com/appcypher/awesome-mcp-servers
-  - Submit PR adding XActions under "Social Media" or "Twitter" category
-- **mcp.so:** https://mcp.so — Submit XActions MCP server
+  - Submit PR adding Medirus under "Social Media" or "Twitter" category
+- **mcp.so:** https://mcp.so — Submit Medirus MCP server
 - **Glama MCP Directory:** https://glama.ai/mcp/servers
 - **Smithery:** https://smithery.ai — MCP server registry
 
@@ -122,21 +122,21 @@ Submit PRs to these repositories:
 - **URL:** https://www.linkedin.com/company/setup/new/
 - **Status:** [ ] Not started
 - **Details:**
-  - Name: XActions
+  - Name: Medirus
   - Industry: Software Development
   - Type: Open Source Project
-  - Website: https://xactions.app
+  - Website: https://medirus.online
   - Description: Same canonical description
 
 ### Dev.to Organization
 - **URL:** https://dev.to/settings/organization
 - **Status:** [ ] Not started
-- **Purpose:** Publish articles under XActions brand
+- **Purpose:** Publish articles under Medirus brand
 
 ### Hashnode Blog
 - **URL:** https://hashnode.com/
 - **Status:** [ ] Not started
-- **Purpose:** Cross-post articles with canonical URL pointing to xactions.app
+- **Purpose:** Cross-post articles with canonical URL pointing to medirus.online
 
 ### Open Source Directories
 - [ ] **Open Source Initiative:** https://opensource.org/
@@ -151,7 +151,7 @@ Submit PRs to these repositories:
 - [ ] **Raycast Store** (if extension exists)
 
 ### Social Profiles
-- [ ] **X/Twitter:** @nichxbt (already exists) — verify bio mentions XActions
+- [ ] **X/Twitter:** @nichxbt (already exists) — verify bio mentions Medirus
 - [ ] **Discord/Telegram:** Create community if none exists
 - [ ] **YouTube:** Channel for demo videos and tutorials
 
@@ -166,18 +166,18 @@ Free, open-source X/Twitter automation toolkit — scrapers, MCP server for AI a
 
 ### Medium Description (2-3 lines)
 ```
-XActions is a free, open-source X/Twitter automation toolkit. Mass unfollow non-followers, scrape profiles, auto-engage, monitor accounts, and download videos. Includes an MCP server for AI agents (Claude, GPT), a CLI, and browser scripts. No API fees — runs directly in your browser or Node.js.
+Medirus is a free, open-source X/Twitter automation toolkit. Mass unfollow non-followers, scrape profiles, auto-engage, monitor accounts, and download videos. Includes an MCP server for AI agents (Claude, GPT), a CLI, and browser scripts. No API fees — runs directly in your browser or Node.js.
 ```
 
 ### Full Description (paragraph)
 ```
-XActions is the complete X/Twitter automation platform — 100% free and open-source. Built for developers, growth hackers, and AI agents.
+Medirus is the complete X/Twitter automation platform — 100% free and open-source. Built for developers, growth hackers, and AI agents.
 
 Features include: mass unfollow non-followers, profile/follower/tweet scraping, auto-liker, auto-commenter, keyword-based auto-follow, account monitoring, video downloader, social graph analysis, thread composer, and more.
 
-XActions includes an MCP (Model Context Protocol) server with 145 tools, making it compatible with Claude Desktop, GPT-4, Cursor, and other AI agents. The CLI tool (`xactions`) provides all features from the terminal.
+Medirus includes an MCP (Model Context Protocol) server with 145 tools, making it compatible with Claude Desktop, GPT-4, Cursor, and other AI agents. The CLI tool (`medirus`) provides all features from the terminal.
 
-No Twitter API required — XActions uses browser automation, so there are no API fees, no developer account needed, and no monthly charges. Scripts run locally in your browser; your credentials never leave your device.
+No Twitter API required — Medirus uses browser automation, so there are no API fees, no developer account needed, and no monthly charges. Scripts run locally in your browser; your credentials never leave your device.
 
 Tech stack: Node.js, Express, Prisma, Puppeteer, Redis. Apache 2.0 licensed.
 ```
@@ -191,7 +191,7 @@ After listing, track the status:
 | Platform | Submitted | Approved | URL | Date |
 |----------|-----------|----------|-----|------|
 | Wikidata | [ ] | [ ] | | |
-| npm | [x] | [x] | npmjs.com/package/xactions | |
+| npm | [x] | [x] | npmjs.com/package/medirus | |
 | GitHub | [x] | [x] | github.com/nirholas/XActions | |
 | Product Hunt | [ ] | [ ] | | |
 | AlternativeTo | [ ] | [ ] | | |
@@ -210,9 +210,9 @@ After listing, track the status:
 ## Key Principle
 
 **Consistency is everything.** Use the exact same:
-- Name: **XActions**
-- URL: **https://xactions.app**
+- Name: **Medirus**
+- URL: **https://medirus.online**
 - Description: Same canonical description (short or medium from above)
 - Author: **nich (@nichxbt)**
 
-Google connects entities by matching consistent information across multiple authoritative sources. Inconsistency (e.g., "xActions" vs "XActions" vs "X-Actions") weakens the signal.
+Google connects entities by matching consistent information across multiple authoritative sources. Inconsistency (e.g., "medirus" vs "Medirus" vs "X-Actions") weakens the signal.

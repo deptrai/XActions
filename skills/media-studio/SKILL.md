@@ -27,22 +27,22 @@ Browser console scripts for X's Media Studio (`studio.x.com`).
 ## mediaStudio.js — Available Functions
 
 ```js
-XActions.mediaStudio.navigate()          // Navigate to studio.x.com
-XActions.mediaStudio.listMedia()         // List all uploaded media (up to maxMediaToScan)
-XActions.mediaStudio.uploadMedia(file)   // Upload a media file
-XActions.mediaStudio.viewAnalytics()     // View media analytics (views, engagement)
-XActions.mediaStudio.monetizationSettings() // Open monetization config
-XActions.mediaStudio.liveStream()        // Open live streaming management
+Medirus.mediaStudio.navigate()          // Navigate to studio.x.com
+Medirus.mediaStudio.listMedia()         // List all uploaded media (up to maxMediaToScan)
+Medirus.mediaStudio.uploadMedia(file)   // Upload a media file
+Medirus.mediaStudio.viewAnalytics()     // View media analytics (views, engagement)
+Medirus.mediaStudio.monetizationSettings() // Open monetization config
+Medirus.mediaStudio.liveStream()        // Open live streaming management
 ```
 
 ## videoCaptions.js — Available Functions
 
 ```js
-XActions.captions.addToCurrentVideo()    // Add captions to video on current page
-XActions.captions.upload('file.srt')     // Upload an SRT caption file
-XActions.captions.generate()             // Trigger auto-caption generation (Premium)
-XActions.captions.download()             // Download existing captions
-XActions.captions.remove()               // Remove captions from a video
+Medirus.captions.addToCurrentVideo()    // Add captions to video on current page
+Medirus.captions.upload('file.srt')     // Upload an SRT caption file
+Medirus.captions.generate()             // Trigger auto-caption generation (Premium)
+Medirus.captions.download()             // Download existing captions
+Medirus.captions.remove()               // Remove captions from a video
 ```
 
 ## Configuration (`mediaStudio.js`)

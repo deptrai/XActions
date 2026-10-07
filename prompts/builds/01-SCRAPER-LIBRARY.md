@@ -1,6 +1,6 @@
 # Track 01 — Programmatic Scraper Class
 
-> Build a clean, typed `Scraper` class that wraps Twitter's internal GraphQL API. No Puppeteer required. This is the #1 feature that 4,000+ star repos (twikit, twitter-scraper) provide that XActions lacks.
+> Build a clean, typed `Scraper` class that wraps Twitter's internal GraphQL API. No Puppeteer required. This is the #1 feature that 4,000+ star repos (twikit, twitter-scraper) provide that Medirus lacks.
 
 ---
 
@@ -48,7 +48,7 @@ The Scraper class delegates to `src/client/auth/` for authentication and `src/cl
 ### Prompt 1: Scraper Class Skeleton
 
 ```
-You are building the XActions programmatic Scraper class at src/client/Scraper.js.
+You are building the Medirus programmatic Scraper class at src/client/Scraper.js.
 
 Create the file src/client/Scraper.js with:
 
@@ -571,8 +571,8 @@ Update package.json exports map to add:
   "./client": "./src/client/index.js",
 
 So users can do either:
-  import { Scraper } from 'xactions';           // from root
-  import { Scraper } from 'xactions/client';     // explicit client import
+  import { Scraper } from 'medirus';           // from root
+  import { Scraper } from 'medirus/client';     // explicit client import
 
 Also update types/index.d.ts to add TypeScript declarations for the Scraper class. Add:
 
@@ -843,7 +843,7 @@ Add these new MCP tools that use the HTTP-only Scraper (faster, no browser neede
 Add a helper function at the top that creates and authenticates a Scraper instance:
 async function getAuthenticatedScraper() {
   const scraper = new Scraper();
-  const cookiePath = path.join(os.homedir(), '.xactions', 'cookies.json');
+  const cookiePath = path.join(os.homedir(), '.medirus', 'cookies.json');
   if (await fileExists(cookiePath)) {
     await scraper.loadCookies(cookiePath);
   }
@@ -862,31 +862,31 @@ Read the existing CLI file to understand the Commander.js command pattern.
 
 Add these new commands under a "client" command group:
 
-1. xactions client login
+1. medirus client login
    - Prompts for username, password, email using inquirer
-   - Creates Scraper, calls login(), saves cookies to ~/.xactions/cookies.json
+   - Creates Scraper, calls login(), saves cookies to ~/.medirus/cookies.json
    - Prints success message with authenticated username
 
-2. xactions client profile <username>
+2. medirus client profile <username>
    - Loads cookies, creates Scraper, calls getProfile()
    - Prints formatted profile info (name, bio, followers, following, etc.)
 
-3. xactions client tweet <tweetId>
+3. medirus client tweet <tweetId>
    - Gets and displays a single tweet
 
-4. xactions client search <query> --count 20 --mode Latest
+4. medirus client search <query> --count 20 --mode Latest
    - Searches tweets, displays results in formatted table
 
-5. xactions client post "<text>"
+5. medirus client post "<text>"
    - Posts a tweet, displays the created tweet URL
 
-6. xactions client followers <username> --count 100
+6. medirus client followers <username> --count 100
    - Lists followers
 
-7. xactions client trends
+7. medirus client trends
    - Shows current trending topics
 
-8. xactions client whoami
+8. medirus client whoami
    - Shows authenticated user profile (calls me())
 
 Each command:

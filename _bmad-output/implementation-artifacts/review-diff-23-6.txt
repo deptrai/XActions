@@ -9,12 +9,12 @@ package.json:
 
 src/scrapers/bluesky/index.js:
 - Added `// LEGACY — see docs/deprecation-plan.md`
-- Updated title to "XActions Bluesky Scrapers (Legacy)"
+- Updated title to "Medirus Bluesky Scrapers (Legacy)"
 - Added `@deprecated` JSDoc pointing to `src/scrapers/social/bluesky/index.js`
 
 src/scrapers/mastodon/index.js:
 - Added `// LEGACY — see docs/deprecation-plan.md`
-- Updated title to "XActions Mastodon Scrapers (Legacy)"
+- Updated title to "Medirus Mastodon Scrapers (Legacy)"
 - Added `@deprecated` JSDoc pointing to `src/scrapers/social/mastodon/index.js`
 
 src/scrapers/social/index.js:

@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Content Calendar &amp; Tweet Scheduler — Free X/Twitter Script | XActions</title>
+  <title>Content Calendar &amp; Tweet Scheduler — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Plan and visualize your posting schedule. Tracks">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, content, calendar, posting">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, content, calendar, posting">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Content Calendar &amp; Tweet Scheduler — XActions">
+  <meta property="og:title" content="Content Calendar &amp; Tweet Scheduler — Medirus">
   <meta property="og:description" content="Plan and visualize your posting schedule. Tracks">
-  <meta property="og:url" content="https://xactions.app/scripts/content-calendar">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/content-calendar">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Content Calendar &amp; Tweet Scheduler — XActions">
+  <meta name="twitter:title" content="Content Calendar &amp; Tweet Scheduler — Medirus">
   <meta name="twitter:description" content="Plan and visualize your posting schedule. Tracks">
 
-  <link rel="canonical" href="https://xactions.app/scripts/content-calendar">
+  <link rel="canonical" href="https://medirus.online/scripts/content-calendar">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Content Calendar & Tweet Scheduler — Free X/Twitter Script | XActions",
+    "headline": "Content Calendar & Tweet Scheduler — Free X/Twitter Script | Medirus",
     "description": "Plan and visualize your posting schedule. Tracks",
-    "url": "https://xactions.app/scripts/content-calendar",
+    "url": "https://medirus.online/scripts/content-calendar",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Posting",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, content, calendar, posting"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, content, calendar, posting"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Posting", "item": "https://xactions.app/scripts#posting" },
-      { "@type": "ListItem", "position": 4, "name": "Content Calendar & Tweet Scheduler", "item": "https://xactions.app/scripts/content-calendar" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Posting", "item": "https://medirus.online/scripts#posting" },
+      { "@type": "ListItem", "position": 4, "name": "Content Calendar & Tweet Scheduler", "item": "https://medirus.online/scripts/content-calendar" }
     ]
   }
   </script>
@@ -190,9 +190,9 @@
  *   2. Paste and run → analyzes visible timeline
  *
  * MODE 2 — Manage content queue:
- *   window.XActions.addTweet({ text: '...', scheduledFor: '2026-02-25T14:00' })
- *   window.XActions.viewQueue()
- *   window.XActions.clearQueue()
+ *   window.Medirus.addTweet({ text: '...', scheduledFor: '2026-02-25T14:00' })
+ *   window.Medirus.viewQueue()
+ *   window.Medirus.clearQueue()
  * ============================================================
  */
 (() =&gt; {
@@ -204,7 +204,7 @@
     scrollDelay: 2000,
   };
 
-  const STORAGE_KEY = 'xactions_content_calendar';
+  const STORAGE_KEY = 'medirus_content_calendar';
   const sleep = (ms) =&gt; new Promise(r =&gt; setTimeout(r, ms));
 
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -451,11 +451,11 @@
   };
 
   // ── Controls ───────────────────────────────────────────────
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
-  window.XActions.addTweet = (item) =&gt; {
+  window.Medirus.addTweet = (item) =&gt; {
     if (!item || !item.text) {
-      console.log('❌ Usage: XActions.addTweet({ text: &quot;...&quot;, scheduledFor: &quot;2026-02-25T14:00&quot;, tags: [&quot;thread&quot;] })');
+      console.log('❌ Usage: Medirus.addTweet({ text: &quot;...&quot;, scheduledFor: &quot;2026-02-25T14:00&quot;, tags: [&quot;thread&quot;] })');
       return;
     }
     const queue = loadQueue();
@@ -471,10 +471,10 @@
     console.log(`✅ Added to queue (${queue.length} total). Scheduled: ${item.scheduledFor || 'unscheduled'}`);
   };
 
-  window.XActions.viewQueue = () =&gt; {
+  window.Medirus.viewQueue = () =&gt; {
     const queue = loadQueue();
     if (queue.length === 0) {
-      console.log('📭 Queue is empty. Use XActions.addTweet({ text: &quot;...&quot; }) to add.');
+      console.log('📭 Queue is empty. Use Medirus.addTweet({ text: &quot;...&quot; }) to add.');
       return;
     }
 
@@ -494,16 +494,16 @@
     }
   };
 
-  window.XActions.clearQueue = () =&gt; {
+  window.Medirus.clearQueue = () =&gt; {
     localStorage.removeItem(STORAGE_KEY);
     console.log('🗑️ Queue cleared.');
   };
 
-  window.XActions.exportQueue = () =&gt; {
+  window.Medirus.exportQueue = () =&gt; {
     const queue = loadQueue();
     const blob = new Blob([JSON.stringify(queue, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `xactions-content-queue-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-content-queue-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     console.log(`📥 Exported ${queue.length} items.`);
   };
@@ -517,7 +517,7 @@
     console.log('╚' + '═'.repeat(W) + '╝');
 
     if (CONFIG.mode === 'queue') {
-      window.XActions.viewQueue();
+      window.Medirus.viewQueue();
       return;
     }
 
@@ -552,8 +552,8 @@
       console.log('  💡 You\'re posting a LOT. Quality &gt; quantity — focus on high-engagement times.');
     }
 
-    console.log('  💡 Use XActions.addTweet({ text: &quot;...&quot;, scheduledFor: &quot;...&quot; }) to plan ahead.');
-    console.log('  💡 Use XActions.viewQueue() to see your content queue.\n');
+    console.log('  💡 Use Medirus.addTweet({ text: &quot;...&quot;, scheduledFor: &quot;...&quot; }) to plan ahead.');
+    console.log('  💡 Use Medirus.viewQueue() to see your content queue.\n');
 
     // Export
     const data = {
@@ -570,7 +570,7 @@
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `xactions-content-calendar-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-content-calendar-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     console.log('📥 Analysis exported.');
   };
@@ -582,7 +582,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -595,12 +595,12 @@
         <a href="/scripts/article-publisher">📰 Article Publisher - Create and manage long-form articles</a>
 <a href="/scripts/create-poll">📊 Create Poll</a>
 <a href="/scripts/edit-post">✏️ Edit Post</a>
-<a href="/scripts/pin-tweet">📌 Pin Tweet - XActions</a>
+<a href="/scripts/pin-tweet">📌 Pin Tweet - Medirus</a>
 <a href="/scripts/pin-tweet-manager">📌 Pin Tweet Manager</a>
 <a href="/scripts/poll-creator">📊 Poll Creator - Create and manage polls</a>
 <a href="/scripts/post-composer">✏️ Post Composer - Full content creation automation</a>
 <a href="/scripts/post-thread">🧵 Post Thread</a>
-<a href="/scripts/post-tweet">✍️ Post Tweet - XActions</a>
+<a href="/scripts/post-tweet">✍️ Post Tweet - Medirus</a>
 <a href="/scripts/publish-article">📰 Publish Article</a>
       </div>
       <div class="sidebar-card">

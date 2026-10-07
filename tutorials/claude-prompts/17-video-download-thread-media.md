@@ -1,10 +1,10 @@
 # Tutorial: Video Downloading, Thread Unrolling & Media Export with Claude
 
-You are my X/Twitter media specialist. I want to use XActions to download videos, unroll threads into readable content, export media, and build a content archive. Help me save the best content from X.
+You are my X/Twitter media specialist. I want to use Medirus to download videos, unroll threads into readable content, export media, and build a content archive. Help me save the best content from X.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with video downloading (`x_download_video`, `src/scrapers/videoDownloader.js`), thread unrolling (`scripts/threadUnroller.js`, `src/scrapers/threadUnroller.js`), media scraping, and content export.
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with video downloading (`x_download_video`, `src/scrapers/videoDownloader.js`), thread unrolling (`scripts/threadUnroller.js`, `src/scrapers/threadUnroller.js`), media scraping, and content export.
 
 ## What I Need You To Do
 
@@ -46,7 +46,7 @@ I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twit
 5. **Via CLI:**
    ```bash
    # If implemented in CLI
-   xactions download-video "https://x.com/user/status/123456"
+   medirus download-video "https://x.com/user/status/123456"
    ```
 
 ### Part 2: Thread Unrolling
@@ -77,13 +77,13 @@ Save threads as clean, readable content:
 4. **Via CLI:**
    ```bash
    # Unroll to terminal
-   xactions thread "https://x.com/user/status/123456"
+   medirus thread "https://x.com/user/status/123456"
    
    # Save as markdown
-   xactions thread "https://x.com/user/status/123456" --format markdown --output thread.md
+   medirus thread "https://x.com/user/status/123456" --format markdown --output thread.md
    
    # Save as JSON with metadata
-   xactions thread "https://x.com/user/status/123456" --format json --output thread.json
+   medirus thread "https://x.com/user/status/123456" --format json --output thread.json
    ```
 
 5. **What's captured per tweet in a thread:**
@@ -100,7 +100,7 @@ Export all media from any profile:
 
 1. **Via CLI:**
    ```bash
-   xactions media USERNAME --limit 100 --format json --output media.json
+   medirus media USERNAME --limit 100 --format json --output media.json
    ```
 
 2. **Via browser script** (`scripts/scrapeMedia.js`):
@@ -119,7 +119,7 @@ Export all media from any profile:
 4. **Bulk download media:**
    ```bash
    # Export URLs then download
-   xactions media photographer1 --format json | jq -r '.[].urls[]' > urls.txt
+   medirus media photographer1 --format json | jq -r '.[].urls[]' > urls.txt
    
    # Download all with wget
    wget -i urls.txt -P downloads/
@@ -138,7 +138,7 @@ Build a personal content library from X:
    ```
    or
    ```bash
-   xactions bookmarks --limit 500 --format json --output my-bookmarks.json
+   medirus bookmarks --limit 500 --format json --output my-bookmarks.json
    ```
 
 2. **Export likes:**
@@ -237,7 +237,7 @@ Save content from X Spaces:
    - Get speaker lists
    - Track topics and categories
 
-3. **Note:** Recording actual Space audio requires different tools — XActions captures metadata and participant info.
+3. **Note:** Recording actual Space audio requires different tools — Medirus captures metadata and participant info.
 
 ### Part 10: Export Workflows
 
@@ -246,16 +246,16 @@ Complete export workflows for different purposes:
 #### Archive Your Entire Account
 ```bash
 # Profile
-xactions profile myusername --format json --output archive/profile.json
+medirus profile myusername --format json --output archive/profile.json
 
 # All tweets
-xactions tweets myusername --limit 5000 --format json --output archive/tweets.json
+medirus tweets myusername --limit 5000 --format json --output archive/tweets.json
 
 # Followers snapshot
-xactions followers myusername --limit 10000 --format json --output archive/followers.json
+medirus followers myusername --limit 10000 --format json --output archive/followers.json
 
 # Following snapshot
-xactions following myusername --limit 5000 --format json --output archive/following.json
+medirus following myusername --limit 5000 --format json --output archive/following.json
 
 # Bookmarks (via MCP or browser script)
 # DMs (via browser script)
@@ -264,20 +264,20 @@ xactions following myusername --limit 5000 --format json --output archive/follow
 #### Research a Topic
 ```bash
 # Search tweets
-xactions search "topic" --limit 200 --format json --output research/tweets.json
+medirus search "topic" --limit 200 --format json --output research/tweets.json
 
 # Top voices (extract from tweets)
 cat research/tweets.json | jq 'group_by(.author) | map({author: .[0].author, count: length}) | sort_by(-.count) | .[:20]'
 
 # Save key threads
-xactions thread "URL1" --format markdown --output research/thread1.md
-xactions thread "URL2" --format markdown --output research/thread2.md
+medirus thread "URL1" --format markdown --output research/thread1.md
+medirus thread "URL2" --format markdown --output research/thread2.md
 ```
 
 #### Content Inspiration Database
 ```bash
 # Viral tweets in niche
-xactions search "topic min_faves:500" --limit 100 --format json --output inspo/viral.json
+medirus search "topic min_faves:500" --limit 100 --format json --output inspo/viral.json
 
 # Bookmark exports
 # Thread unrolls of best content

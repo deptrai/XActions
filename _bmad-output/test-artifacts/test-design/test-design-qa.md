@@ -1,8 +1,8 @@
-# XActions — System-Level Test Design: QA Strategy
+# Medirus — System-Level Test Design: QA Strategy
 
 **Purpose:** Test execution recipe. Defines HOW to test, what scenarios to cover, and execution strategy. Cross-references Architecture doc for risk rationale.
 
-**Project:** XActions | **Mode:** System-Level | **Date:** 2026-08-12 | **Author:** Murat (TEA)
+**Project:** Medirus | **Mode:** System-Level | **Date:** 2026-08-12 | **Author:** Murat (TEA)
 
 ---
 

@@ -209,9 +209,9 @@ export class StreamAlertEngine {
 
           const typedAlert = /** @type {{ alert: string }} */ (alertPayload);
           await this.#transporter.sendMail({
-            from: process.env.ALERT_EMAIL_FROM || 'alerts@xactions.app',
+            from: process.env.ALERT_EMAIL_FROM || 'alerts@medirus.online',
             to: emailRecipients,
-            subject: `[XActions Alert] ${typedAlert.alert.toUpperCase()} breached threshold`,
+            subject: `[Medirus Alert] ${typedAlert.alert.toUpperCase()} breached threshold`,
             text: JSON.stringify(alertPayload, null, 2),
           });
         }

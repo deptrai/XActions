@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Playground - server
+ * Medirus Playground - server
  *
  * A deliberately small service: no database, no accounts, no API keys, no
  * session cookies anywhere in the process. It answers guest-tier X queries
@@ -304,7 +304,7 @@ const apiLimiter = rateLimit({
   message: {
     error: 'Rate limited',
     code: 'RATE_LIMITED',
-    hint: 'The playground allows 60 queries per 5 minutes per address. Install the CLI for unlimited local use: npx xactions profile nasa',
+    hint: 'The playground allows 60 queries per 5 minutes per address. Install the CLI for unlimited local use: npx medirus profile nasa',
   },
 });
 
@@ -323,7 +323,7 @@ app.get(
   route(async (req, res) => {
     res.json({
       status: 'ok',
-      service: 'xactions-playground',
+      service: 'medirus-playground',
       tier: 'guest',
       queries: Object.keys(QUERIES),
       cache: { entries: cache.size, ttlMs: CACHE_TTL_MS },
@@ -460,7 +460,7 @@ app.use((error, req, res, _next) => {
     INVALID_INPUT: 'X usernames are 1 to 15 characters of letters, numbers and underscores.',
     NOT_FOUND: 'Check the spelling. Suspended, renamed and deleted accounts all return nothing.',
     AUTH_REQUIRED:
-      'X serves this endpoint to logged-in sessions only, so the playground cannot run it. Install the CLI and run `xactions connect` to use your own session.',
+      'X serves this endpoint to logged-in sessions only, so the playground cannot run it. Install the CLI and run `medirus connect` to use your own session.',
     RATE_LIMITED: 'X is throttling the shared guest token. Try again shortly, or run it locally with the CLI.',
     UPSTREAM_TIMEOUT: 'X did not answer in time. This is usually transient.',
   };
@@ -475,7 +475,7 @@ app.use((error, req, res, _next) => {
 // Started directly rather than imported by a test.
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
   app.listen(PORT, () => {
-    console.log(`XActions playground listening on :${PORT}`);
+    console.log(`Medirus playground listening on :${PORT}`);
     console.log(`  UI      http://localhost:${PORT}/playground`);
     console.log(`  Health  http://localhost:${PORT}/api/playground/health`);
   });

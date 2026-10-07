@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced Settings — Free X/Twitter Script | XActions</title>
+  <title>Advanced Settings — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="src/advancedSettings.js">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, advanced, settings, other tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, advanced, settings, other tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Advanced Settings — XActions">
+  <meta property="og:title" content="Advanced Settings — Medirus">
   <meta property="og:description" content="src/advancedSettings.js">
-  <meta property="og:url" content="https://xactions.app/scripts/advanced-settings">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/advanced-settings">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Advanced Settings — XActions">
+  <meta name="twitter:title" content="Advanced Settings — Medirus">
   <meta name="twitter:description" content="src/advancedSettings.js">
 
-  <link rel="canonical" href="https://xactions.app/scripts/advanced-settings">
+  <link rel="canonical" href="https://medirus.online/scripts/advanced-settings">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Advanced Settings — Free X/Twitter Script | XActions",
+    "headline": "Advanced Settings — Free X/Twitter Script | Medirus",
     "description": "src/advancedSettings.js",
-    "url": "https://xactions.app/scripts/advanced-settings",
+    "url": "https://medirus.online/scripts/advanced-settings",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Other Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, advanced, settings, other tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, advanced, settings, other tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://xactions.app/scripts#other-tools" },
-      { "@type": "ListItem", "position": 4, "name": "Advanced Settings", "item": "https://xactions.app/scripts/advanced-settings" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://medirus.online/scripts#other-tools" },
+      { "@type": "ListItem", "position": 4, "name": "Advanced Settings", "item": "https://medirus.online/scripts/advanced-settings" }
     ]
   }
   </script>
@@ -418,7 +418,7 @@
     }
 
     console.log('ℹ️ 2FA methods: sms, app, key');
-    console.log('ℹ️ Usage: XActions.advancedSettings.setup2FA(&quot;app&quot;)');
+    console.log('ℹ️ Usage: Medirus.advancedSettings.setup2FA(&quot;app&quot;)');
   };
 
   // ---------------------------------------------------------------------------
@@ -882,7 +882,7 @@
       if (selects.length &gt; 0) {
         const current = selects[0];
         console.log(`   Current display language: ${current.options[current.selectedIndex]?.text || 'unknown'}`);
-        console.log('ℹ️ Usage: XActions.advancedSettings.manageLanguages(&quot;English&quot;)');
+        console.log('ℹ️ Usage: Medirus.advancedSettings.manageLanguages(&quot;English&quot;)');
       }
       if (links.length &gt; 0) {
         console.log('   Content language links found:');
@@ -941,7 +941,7 @@
     if (Object.keys(options).length === 0) {
       console.log('📋 Audience and tagging toggles:');
       toggles.forEach(t =&gt; console.log(`   - ${t.label.substring(0, 80)} [${t.enabled ? 'ON' : 'OFF'}]`));
-      console.log('ℹ️ Usage: XActions.advancedSettings.manageAudienceTagging({ protectTweets: true, photoTagging: &quot;followers&quot; })');
+      console.log('ℹ️ Usage: Medirus.advancedSettings.manageAudienceTagging({ protectTweets: true, photoTagging: &quot;followers&quot; })');
     }
 
     console.log(`✅ Audience and tagging updated. ${changed} change(s) made.`);
@@ -976,7 +976,7 @@
     }
 
     if (Object.keys(options).length === 0) {
-      console.log('ℹ️ Usage: XActions.advancedSettings.manageDiscoverability({ findByEmail: false, findByPhone: false })');
+      console.log('ℹ️ Usage: Medirus.advancedSettings.manageDiscoverability({ findByEmail: false, findByPhone: false })');
     }
 
     console.log(`✅ Discoverability settings updated. ${changed} change(s) made.`);
@@ -1004,7 +1004,7 @@
     } else if (toggles.length &gt; 0) {
       console.log('📋 Spaces-related toggles:');
       toggles.forEach(t =&gt; console.log(`   - ${t.label.substring(0, 80)} [${t.enabled ? 'ON' : 'OFF'}]`));
-      console.log('ℹ️ Usage: XActions.advancedSettings.manageSpacesActivity(false) — to hide listening activity');
+      console.log('ℹ️ Usage: Medirus.advancedSettings.manageSpacesActivity(false) — to hide listening activity');
     } else {
       console.log('⚠️ No Spaces toggles found on this page. Spaces settings may be located elsewhere.');
     }
@@ -1082,16 +1082,16 @@
         const current = selects[0];
         console.log(`   Current: ${current.options[current.selectedIndex]?.text || 'unknown'}`);
       }
-      console.log('ℹ️ Usage: XActions.advancedSettings.manageCountry(&quot;United States&quot;)');
+      console.log('ℹ️ Usage: Medirus.advancedSettings.manageCountry(&quot;United States&quot;)');
     }
   };
 
   // ---------------------------------------------------------------------------
-  // Expose on window.XActions.advancedSettings
+  // Expose on window.Medirus.advancedSettings
   // ---------------------------------------------------------------------------
 
-  window.XActions = window.XActions || {};
-  window.XActions.advancedSettings = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.advancedSettings = {
     changePassword,
     changeEmail,
     changePhone,
@@ -1120,7 +1120,7 @@
 
   console.log('');
   console.log('╔══════════════════════════════════════════════════════════════╗');
-  console.log('║           XActions — Advanced Settings Manager              ║');
+  console.log('║           Medirus — Advanced Settings Manager              ║');
   console.log('║                      by nichxbt                             ║');
   console.log('╠══════════════════════════════════════════════════════════════╣');
   console.log('║  Account                                                    ║');
@@ -1155,8 +1155,8 @@
   console.log('║  19. deactivateAccount()       — with safety prompt        ║');
   console.log('║  20. manageCountry(countryName?)                            ║');
   console.log('╠══════════════════════════════════════════════════════════════╣');
-  console.log('║  Access: XActions.advancedSettings.&lt;functionName&gt;(...)      ║');
-  console.log('║  Example: XActions.advancedSettings.manageDisplay({         ║');
+  console.log('║  Access: Medirus.advancedSettings.&lt;functionName&gt;(...)      ║');
+  console.log('║  Example: Medirus.advancedSettings.manageDisplay({         ║');
   console.log('║    theme: &quot;dark&quot;, color: &quot;blue&quot; })                          ║');
   console.log('╚══════════════════════════════════════════════════════════════╝');
   console.log('');
@@ -1167,7 +1167,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

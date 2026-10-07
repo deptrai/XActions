@@ -98,7 +98,7 @@ router.post('/send', async (req, res) => {
       type: 'sendNotification',
       config: {
         webhookUrl: webhookUrl || null,
-        event: event || 'xactions.notification',
+        event: event || 'medirus.notification',
         data: data || {},
         channel,
       },
@@ -132,12 +132,12 @@ router.post('/test', async (req, res) => {
   try {
     const response = await fetch(webhookUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-XActions-Event': 'test', 'User-Agent': 'XActions/1.0' },
+      headers: { 'Content-Type': 'application/json', 'X-Medirus-Event': 'test', 'User-Agent': 'Medirus/1.0' },
       body: JSON.stringify({
-        event: 'xactions.test',
-        message: 'XActions webhook test — if you see this, the connection works! ✅',
+        event: 'medirus.test',
+        message: 'Medirus webhook test — if you see this, the connection works! ✅',
         timestamp: new Date().toISOString(),
-        source: 'xactions-ai-api',
+        source: 'medirus-ai-api',
       }),
       signal: AbortSignal.timeout(10000),
     });

@@ -59,9 +59,9 @@ So that **các truy vấn on-demand thời gian thực từ Nowing AI Hub và Ch
 * **When** request chứa header `X-Consumer-Id` (ví dụ `nowing`, `chainlens`, `internal`) và `Authorization: Bearer <token>`
 * **Then** middleware/daemon trích xuất và xác thực:
   - `consumerId`: chuẩn hóa về `nowing` | `chainlens` | `internal` (mặc định `internal` nếu không truyền)
-  - `apiKey`: đối soát với biến môi trường `XACTIONS_MCP_API_KEY` / `XACTIONS_API_TOKEN` (nếu có cấu hình)
+  - `apiKey`: đối soát với biến môi trường `MEDIRUS_MCP_API_KEY` / `MEDIRUS_API_TOKEN` (nếu có cấu hình)
 * **And** gán ngữ cảnh `{ consumerId, pool: isRealtime ? 'realtime' : 'bulk' }` vào request context cho BaseClient và Governor xử lý.
-* **And** nếu `XACTIONS_MCP_API_KEY` / `XACTIONS_API_TOKEN` được cấu hình nhưng Bearer token không khớp thì từ chối request với `XACT_4010` (`type: 'auth_expired'`, `suggestedAction: 'relogin'`).
+* **And** nếu `MEDIRUS_MCP_API_KEY` / `MEDIRUS_API_TOKEN` được cấu hình nhưng Bearer token không khớp thì từ chối request với `XACT_4010` (`type: 'auth_expired'`, `suggestedAction: 'relogin'`).
 * **And** với MCP Stdio transport (Claude Desktop, v.v.) không có HTTP header, `consumerId` mặc định là `internal` và không áp dụng quota gate (chỉ HTTP/SSE transport mới có thể nhận `X-Consumer-Id`).
 
 ### AC-4: Dedicated Consumer Quota Enforcement (ChainLens 10 RPM & Nowing Workspace Plan)
@@ -87,21 +87,21 @@ So that **các truy vấn on-demand thời gian thực từ Nowing AI Hub và Ch
 ### AC-6: MCP Server & HTTP Middleware Quota Gate with Standard Error Envelope
 * **Given** MCP tools được gọi qua `src/mcp/server.js` (HTTP/SSE Streamable)
 * **When** AI Agent hoặc downstream service (ChainLens / Nowing) thực thi tool (`x_search_tweets`, `x_facebook_group_posts`, `x_shopee_search`, v.v.)
-* **Then** Express middleware `identifyConsumer` trích xuất `X-Consumer-Id` và `Authorization` từ `req.headers` trước khi MCP handler chạy, gán vào `req.xactionsConsumer`.
-* **And** `CallToolRequestSchema` handler lấy `consumerId` từ transport context. Với HTTP/SSE, lấy từ `req.xactionsConsumer.consumerId`; với Stdio mặc định là `internal`.
+* **Then** Express middleware `identifyConsumer` trích xuất `X-Consumer-Id` và `Authorization` từ `req.headers` trước khi MCP handler chạy, gán vào `req.medirusConsumer`.
+* **And** `CallToolRequestSchema` handler lấy `consumerId` từ transport context. Với HTTP/SSE, lấy từ `req.medirusConsumer.consumerId`; với Stdio mặc định là `internal`.
 * **And** kiểm tra `governor.canConsumerRequest(consumerId)`; nếu vượt quota, trả về `PlatformError` chuẩn, sau đó `wrapToolError` chuyển thành 3-Layer JSON Envelope với `ErrorTypes.RATE_LIMIT` và `suggestedAction: 'reduce_rate'`.
 * **And** nếu `StreamableHTTPServerTransport` không expose `req` trong context thì override `app.all('/mcp', ...)` để gán `consumerId` vào `transport.consumerContext` hoặc truyền qua module-level `AsyncLocalStorage`.
 * **And** error envelope shape phải tuân theo AD-14: `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`.
 
 ### AC-7: Dual-Pool Observability in Status API, Governor & Admin Endpoints
 * **Given** `StatusApi`, `AdaptiveRateGovernor`, và `ProxyIpPool`
-* **When** gọi `GET /governor/status`, CLI `xactions status`, hoặc `GET /api/admin/proxies`
+* **When** gọi `GET /governor/status`, CLI `medirus status`, hoặc `GET /api/admin/proxies`
 * **Then** response trả về chi tiết phân vùng và hạn ngạch:
   - `dualPool`: `{ realtime: { total, healthy, quarantined }, bulk: { total, healthy, quarantined }, yieldedCount }`
   - `consumerQuotas`: `{ [consumerId]: { rpmLimit, usedInWindow, remaining, isThrottled } }`
 * **And** `GovernorStatus` typedef trong `src/core/types.js` và `types/core.d.ts` được mở rộng để include `dualPool` và `consumerQuotas`.
 * **And** `GET /api/admin/proxies` vẫn trả về `proxies` array như cũ, nhưng bổ sung top-level `dualPool` (không thay thế `healthyCount`/`totalCount` để tránh phá vỡ dashboard hiện tại).
-* **And** CLI `xactions status` (hoặc `xactions governor status` nếu tách file) hiển thị trực quan tỷ lệ phân bổ 30/70 và tình trạng quota của từng consumer.
+* **And** CLI `medirus status` (hoặc `medirus governor status` nếu tách file) hiển thị trực quan tỷ lệ phân bổ 30/70 và tình trạng quota của từng consumer.
 
 ### AC-8: Strict TypeScript Definitions & Zero-Mock Verification
 * **Given** `types/proxy.d.ts`, `types/core.d.ts`, và `types/index.d.ts`
@@ -154,7 +154,7 @@ So that **các truy vấn on-demand thời gian thực từ Nowing AI Hub và Ch
   - [x] 3.6 Không làm phá vỡ `getStickyProxy` cho `requiresAuth`: nếu `pool === 'realtime'` và account đã có sticky proxy ở Bulk, vẫn cho phép yield tạm thời, không xóa binding.
 
 - [x] **Task 4: MCP Daemon & HTTP Middleware Consumer Quota Integration (`src/mcp/server.js`, `api/middleware/auth.js`)**
-  - [x] 4.1 Tạo middleware `identifyConsumer` trong `src/mcp/server.js` (hoặc `src/mcp/consumer-context.js`) trích xuất `X-Consumer-Id` và Bearer token từ `req.headers`, xác thực với `XACTIONS_MCP_API_KEY`, gán `req.xactionsConsumer = { consumerId, apiKeyValid }`.
+  - [x] 4.1 Tạo middleware `identifyConsumer` trong `src/mcp/server.js` (hoặc `src/mcp/consumer-context.js`) trích xuất `X-Consumer-Id` và Bearer token từ `req.headers`, xác thực với `MEDIRUS_MCP_API_KEY`, gán `req.medirusConsumer = { consumerId, apiKeyValid }`.
   - [x] 4.2 Tích hợp `identifyConsumer` vào `app.all('/mcp', ...)` **trước** khi `StreamableHTTPServerTransport.handleRequest` chạy; nếu token không khớp thì trả 401 JSON theo AD-14.
   - [x] 4.3 Trong `CallToolRequestSchema` handler, lấy `consumerId` từ context. Nếu `StreamableHTTPServerTransport` không expose `req`, dùng `AsyncLocalStorage` để propagate context từ Express middleware xuống handler, hoặc thêm `consumerContext` vào transport wrapper.
   - [x] 4.4 Gọi `governor.canConsumerRequest(consumerId)` trước `executeTool`; nếu fail, throw `RateLimitError` để `wrapToolError` trả về 3-Layer JSON Envelope `XACT_4291`.
@@ -164,7 +164,7 @@ So that **các truy vấn on-demand thời gian thực từ Nowing AI Hub và Ch
 - [x] **Task 5: StatusApi & Admin API Updates (`src/core/status-api.js`, `api/routes/admin.js`, `src/cli/commands/status.js`)**
   - [x] 5.1 Cập nhật `StatusApi.getGovernorStatus()` để bao gồm `dualPool` (lấy từ `proxyPool.getPoolStats()`) và `consumerQuotas` (lấy từ `governor.getConsumerStatus()` cho `chainlens`, `nowing`, `internal`).
   - [x] 5.2 Cập nhật `GET /api/admin/proxies` để trả về thêm `dualPool` object (giữ nguyên `proxies`, `healthyCount`, `totalCount` cho backward compatibility với dashboard).
-  - [x] 5.3 Nếu CLI `xactions status` chưa có, thêm hoặc cập nhật để in phần `dualPool` và `consumerQuotas` dưới dạng bảng.
+  - [x] 5.3 Nếu CLI `medirus status` chưa có, thêm hoặc cập nhật để in phần `dualPool` và `consumerQuotas` dưới dạng bảng.
   - [x] 5.4 Cập nhật `types/core.d.ts` cho `GovernorStatus` bao gồm `dualPool` và `consumerQuotas`.
 
 - [x] **Task 6: TypeScript Types Synchronization (`types/core.d.ts`, `types/proxy.d.ts`)**
@@ -255,9 +255,9 @@ const bulkCount = total - realtimeCount;
   - `X-Consumer-Id: chainlens` ➔ ChainLens Research Agent.
   - `X-Consumer-Id: nowing` ➔ Nowing Platform Orchestrator.
   - `X-Consumer-Id: internal` (hoặc omitted) ➔ Internal CLI/Dashboard.
-  - `Authorization: Bearer <token>` ➔ Khớp với `process.env.XACTIONS_MCP_API_KEY` hoặc `XACTIONS_API_TOKEN` nếu được cấu hình.
+  - `Authorization: Bearer <token>` ➔ Khớp với `process.env.MEDIRUS_MCP_API_KEY` hoặc `MEDIRUS_API_TOKEN` nếu được cấu hình.
 * Xác thực:
-  - Nếu `XACTIONS_MCP_API_KEY` / `XACTIONS_API_TOKEN` không được set thì bỏ qua Bearer validation (dev/local mode).
+  - Nếu `MEDIRUS_MCP_API_KEY` / `MEDIRUS_API_TOKEN` không được set thì bỏ qua Bearer validation (dev/local mode).
   - Nếu được set và Bearer token không khớp: trả `XACT_4010` `auth_expired` với `suggestedAction: 'relogin'`.
   - Nếu `X-Consumer-Id` không hợp lệ (không nằm trong `['nowing','chainlens','internal']`): chuẩn hóa về `internal` hoặc từ chối tùy config.
 * Mã lỗi chuẩn khi vi phạm quota (AD-14 / `src/core/error-envelope.js`):
@@ -327,7 +327,7 @@ const bulkCount = total - realtimeCount;
 * `src/core/types.js` (UPDATED — PoolName, DualPoolStats, ConsumerQuotaConfig, ConsumerStatus typedefs; GovernorStatus & ErrorEnvelope extended)
 * `src/mcp/consumer-context.js` (NEW — VALID_CONSUMER_IDS, normalizeConsumerId, extractBearerToken, identifyConsumer, AsyncLocalStorage runWithConsumerContext/getConsumerContext)
 * `src/mcp/server.js` (UPDATED — /mcp consumer identification + 401 XACT_4010 envelope, AsyncLocalStorage context propagation, CallToolRequestSchema quota gate XACT_4291, startHttpTransport Promise + PORT=0 support, export startHttpTransport)
-* `src/cli/commands/info.js` (UPDATED — `xactions status` prints Dual-Pool line and Consumer Quotas table)
+* `src/cli/commands/info.js` (UPDATED — `medirus status` prints Dual-Pool line and Consumer Quotas table)
 * `api/routes/admin.js` (UPDATED — GET /api/admin/proxies adds additive top-level `dualPool`)
 * `types/proxy.d.ts` (UPDATED — PoolName, DualPoolStats, ProxyIpPoolOptions ratios, ProxyRequestOptions pool/consumerId/yieldFromBulk, ProxyIpPool dual-pool methods)
 * `types/core.d.ts` (UPDATED — ConsumerQuotaConfig, ConsumerStatus, GovernorStatus dualPool/consumerQuotas, ErrorEnvelope consumerId, AdaptiveRateGovernor consumer methods, AbstractApiClient.resolveProxy 4-arg)
@@ -383,7 +383,7 @@ const bulkCount = total - realtimeCount;
   [`src/core/status-api.js:1`](../../src/core/status-api.js#L1)
 - Admin endpoint returns additive `dualPool` field.
   [`api/routes/admin.js:393`](../../api/routes/admin.js#L393)
-- CLI `xactions status` renders dual-pool and consumer quotas.
+- CLI `medirus status` renders dual-pool and consumer quotas.
   [`src/cli/commands/info.js:76`](../../src/cli/commands/info.js#L76)
 
 **Types**
@@ -414,8 +414,8 @@ const bulkCount = total - realtimeCount;
   - **Task 1:** `ProxyIpPool` phân vùng ảo theo index (`realtimeRatio` mặc định 0.30, validate XACT_4001), `getProxy({ pool, accountId, requiresResidential, yieldFromBulk })`, `getRealtimeProxy`, `getBulkProxy` (bulk không bao giờ mượn realtime), `yieldFromBulk` tăng `#yieldedCount` cumulative (proxy không rời bulk partition), `getPoolStats()`, edge cases total=0/1, `listProxies()` gắn `pool` per entry. `getStickyProxy(accountId, requiresResidential, { pool })` giữ nguyên legacy khi bỏ `pool`; sticky binding được tôn trọng xuyên partition khi yield.
   - **Task 2:** `AdaptiveRateGovernor` sliding window 60s in-memory (`#consumerRequestTimestamps`, `#consumerQuotas`), default chainlens=10/nowing=`NOWING_RATE_LIMIT_RPM`||60/internal=Infinity, `setConsumerQuota` (validate XACT_4001), `canConsumerRequest`, `recordConsumerRequest` (không throw, unknown → internal), `getConsumerStatus`, `getConsumerRetryAfterSeconds` (+1s buffer, min 1), `getStatus()` trả `dualPool` + `consumerQuotas`.
   - **Task 3:** `AbstractApiClient` — `RequestOptions.pool/consumerId`; consumer→pool inference (nowing/chainlens→realtime, internal→bulk, explicit `opts.pool` wins, no consumer→legacy); consumer quota gate trước account gate, record trước dispatch; `resolveProxy(accountId, requiresResidential, requiresAuth, options)` truyền pool/consumerId xuống pool; sticky bindings không bị phá vỡ.
-  - **Task 4:** `src/mcp/consumer-context.js` (mới) — `identifyConsumer(req)` trích xuất `X-Consumer-Id` + Bearer, validate `XACTIONS_MCP_API_KEY`/`XACTIONS_API_TOKEN`; `app.all('/mcp')` trả 401 XACT_4010 envelope khi token sai; context propagate qua `AsyncLocalStorage` (`runWithConsumerContext` bọc cả hai nhánh `transport.handleRequest`); `CallToolRequestSchema` gate + record chỉ khi tool bắt đầu thực thi; Stdio không context → internal, bỏ qua gate.
-  - **Task 5:** `StatusApi` fallback + `GET /api/admin/proxies` (`dualPool` additive) + `xactions status` CLI in Dual-Pool & Consumer Quotas table.
+  - **Task 4:** `src/mcp/consumer-context.js` (mới) — `identifyConsumer(req)` trích xuất `X-Consumer-Id` + Bearer, validate `MEDIRUS_MCP_API_KEY`/`MEDIRUS_API_TOKEN`; `app.all('/mcp')` trả 401 XACT_4010 envelope khi token sai; context propagate qua `AsyncLocalStorage` (`runWithConsumerContext` bọc cả hai nhánh `transport.handleRequest`); `CallToolRequestSchema` gate + record chỉ khi tool bắt đầu thực thi; Stdio không context → internal, bỏ qua gate.
+  - **Task 5:** `StatusApi` fallback + `GET /api/admin/proxies` (`dualPool` additive) + `medirus status` CLI in Dual-Pool & Consumer Quotas table.
   - **Task 6:** `types/proxy.d.ts`, `types/core.d.ts`, `src/core/types.js`, `src/proxy/proxy-pool.d.ts` đồng bộ (`PoolName`, `DualPoolStats`, `ConsumerQuotaConfig`, `ConsumerStatus`, method signatures, `ErrorEnvelope.consumerId`); `npx tsc --noEmit` — 0 lỗi phát sinh mới (toàn bộ lỗi còn lại trong `api/`/`src/scrapers/` đã tồn tại trước story, xác minh bằng `git show HEAD`).
   - **Task 7:** 4 test file mới (zero-mock, real instances; test clock qua `vi.setSystemTime`): `tests/proxy/dual-pool-proxy.test.js` (36 tests khi gộp run), `tests/core/consumer-quota-governor.test.js`, `tests/core/base-client-dual-pool.test.js`, `tests/mcp/mcp-consumer-quota.test.js` (e2e HTTP thật trên ephemeral port, SSE + JSON parsing).
   - **Verification:** `npx vitest run tests/proxy tests/core` → 20 files / 320 tests passed; `npx vitest run tests/mcp` → 14 files / 202 tests passed (tổng 522 passed, 0 failed). `npx tsc --noEmit` — không có lỗi mới liên quan story (fix kèm: `proxy-pool.d.ts` bổ sung `getPoolStats`/`listProxies` signatures; `base-client-request.test.js` afterAll done→Promise cho Vitest 4).

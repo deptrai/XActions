@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions doctor` - find out what actually works before you need it to.
+ * `medirus doctor` - find out what actually works before you need it to.
  *
  * Almost every issue filed against this project is one of six things, and all
  * six are detectable in a few seconds: an old Node, a missing session, a
@@ -23,7 +23,7 @@ import os from 'node:os';
 
 import { VERSION } from '../../version.js';
 
-const CONFIG_DIR = path.join(os.homedir(), '.xactions');
+const CONFIG_DIR = path.join(os.homedir(), '.medirus');
 const COOKIE_FILE = path.join(CONFIG_DIR, 'cookies.json');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
@@ -83,7 +83,7 @@ async function checkGuestTier() {
       return {
         status: 'warn',
         detail: 'X is rate limiting the guest token',
-        fix: 'Wait a few minutes. Connecting a session with `xactions connect` raises the ceiling considerably.',
+        fix: 'Wait a few minutes. Connecting a session with `medirus connect` raises the ceiling considerably.',
       };
     }
     if (/Query not found/i.test(error.message)) {
@@ -138,19 +138,19 @@ async function checkSessionStored() {
     const jar = JSON.parse(await fs.readFile(COOKIE_FILE, 'utf-8'));
     const cookies = Object.fromEntries(jar.map((c) => [c.name, c.value]));
     if (!cookies.auth_token) {
-      return { status: 'fail', detail: 'Cookie jar exists but has no auth_token', fix: 'Run `xactions connect`.' };
+      return { status: 'fail', detail: 'Cookie jar exists but has no auth_token', fix: 'Run `medirus connect`.' };
     }
     if (!cookies.ct0) {
       return {
         status: 'fail',
         detail: 'Session has auth_token but no ct0',
-        fix: 'X treats a session without ct0 as logged out, so search, followers and DMs all fail with a bare 404. Run `xactions connect` to capture both.',
+        fix: 'X treats a session without ct0 as logged out, so search, followers and DMs all fail with a bare 404. Run `medirus connect` to capture both.',
         cookies,
       };
     }
     return { status: 'ok', detail: `Both cookies present in ${COOKIE_FILE}`, cookies };
   } catch {
-    // Fall back to the values `xactions login` writes.
+    // Fall back to the values `medirus login` writes.
     try {
       const config = JSON.parse(await fs.readFile(CONFIG_FILE, 'utf-8'));
       if (!config.authToken) throw new Error('no token');
@@ -158,7 +158,7 @@ async function checkSessionStored() {
         return {
           status: 'fail',
           detail: 'config.json has auth_token but no ct0',
-          fix: 'Run `xactions connect` to capture both in one step.',
+          fix: 'Run `medirus connect` to capture both in one step.',
         };
       }
       return { status: 'ok', detail: `Both cookies present in ${CONFIG_FILE}` };
@@ -166,7 +166,7 @@ async function checkSessionStored() {
       return {
         status: 'warn',
         detail: 'No session saved, so only the guest tier is available',
-        fix: 'Run `xactions connect` to unlock search, followers, following, likes, bookmarks and DMs.',
+        fix: 'Run `medirus connect` to unlock search, followers, following, likes, bookmarks and DMs.',
       };
     }
   }
@@ -196,7 +196,7 @@ async function checkSessionLive(stored) {
     return {
       status: 'fail',
       detail: `Session did not authenticate: ${error.message}`,
-      fix: 'The session has probably expired or been revoked. Run `xactions connect` again.',
+      fix: 'The session has probably expired or been revoked. Run `medirus connect` again.',
     };
   }
 }
@@ -215,7 +215,7 @@ async function checkBrowser() {
     return {
       status: 'warn',
       detail: 'Chromium is not installed',
-      fix: 'Run `npx puppeteer browsers install chrome`. Only `xactions connect` and the posting commands need it; every read works without it.',
+      fix: 'Run `npx puppeteer browsers install chrome`. Only `medirus connect` and the posting commands need it; every read works without it.',
     };
   }
 }
@@ -236,7 +236,7 @@ async function checkMcp() {
     return {
       status: 'fail',
       detail: `MCP server failed to load: ${error.message}`,
-      fix: 'Reinstall with `npm install -g xactions`, or open an issue with this output.',
+      fix: 'Reinstall with `npm install -g medirus`, or open an issue with this output.',
     };
   }
 }
@@ -257,7 +257,7 @@ function printCheck(name, result) {
  * @returns {Promise<void>}
  */
 export async function doctorCommand() {
-  console.log(chalk.cyan(`\n⚡ XActions doctor  ${chalk.gray(`v${VERSION}`)}\n`));
+  console.log(chalk.cyan(`\n⚡ Medirus doctor  ${chalk.gray(`v${VERSION}`)}\n`));
 
   const results = [];
 

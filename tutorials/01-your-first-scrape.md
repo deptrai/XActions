@@ -4,14 +4,14 @@
 
 By the end of this you will have pulled real data off X from a terminal and from
 a Node.js program, and you will understand the one distinction that explains
-most XActions questions: which reads need a login and which do not.
+most Medirus questions: which reads need a login and which do not.
 
 ---
 
 ## Step 1 — Run it without installing anything
 
 ```bash
-npx xactions profile nasa
+npx medirus profile nasa
 ```
 
 ```
@@ -34,15 +34,15 @@ and reading a rendered page.
 Try a few more:
 
 ```bash
-npx xactions profile github
-npx xactions profile vercel --json
+npx medirus profile github
+npx medirus profile vercel --json
 ```
 
 `--json` gives you the full object, which is what you want when piping into
 something else:
 
 ```bash
-npx xactions profile nasa --json | jq '.followersCount'
+npx medirus profile nasa --json | jq '.followersCount'
 ```
 
 ---
@@ -50,14 +50,14 @@ npx xactions profile nasa --json | jq '.followersCount'
 ## Step 2 — Pull a timeline
 
 ```bash
-npx xactions tweets nasa --limit 10
+npx medirus tweets nasa --limit 10
 ```
 
 That streams posts as it pages, then prints them as JSON. To save instead:
 
 ```bash
-npx xactions tweets nasa --limit 100 --output nasa.json
-npx xactions tweets nasa --limit 100 --output nasa.csv
+npx medirus tweets nasa --limit 100 --output nasa.json
+npx medirus tweets nasa --limit 100 --output nasa.csv
 ```
 
 The extension decides the format. `.csv` and `.xlsx` both work, which matters
@@ -70,7 +70,7 @@ when you are handing results to someone who lives in a spreadsheet.
 Now try a search:
 
 ```bash
-npx xactions search "mars rover"
+npx medirus search "mars rover"
 ```
 
 That fails, and the error tells you why:
@@ -99,7 +99,7 @@ is broken. You just need a session.
 ## Step 4 — Log in
 
 ```bash
-npx xactions login
+npx medirus login
 ```
 
 It asks for two cookie values. Get them from a browser where you are already
@@ -122,9 +122,9 @@ setup mistake with this tool.
 Now search works:
 
 ```bash
-npx xactions search "mars rover" --limit 20
-npx xactions followers nasa --limit 100 --output followers.csv
-npx xactions non-followers YOUR_USERNAME
+npx medirus search "mars rover" --limit 20
+npx medirus followers nasa --limit 100 --output followers.csv
+npx medirus non-followers YOUR_USERNAME
 ```
 
 ---
@@ -137,13 +137,13 @@ The CLI is a thin wrapper over a library you can use directly.
 mkdir first-scrape && cd first-scrape
 npm init -y
 npm pkg set type=module
-npm install xactions
+npm install medirus
 ```
 
 `scrape.js`:
 
 ```js
-import { Scraper } from 'xactions/client';
+import { Scraper } from 'medirus/client';
 
 const scraper = new Scraper();
 

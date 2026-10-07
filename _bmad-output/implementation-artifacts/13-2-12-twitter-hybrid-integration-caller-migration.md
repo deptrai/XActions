@@ -32,7 +32,7 @@ Status: done
 
 ## Story
 
-As a **XActions Platform Engineer**,  
+As a **Medirus Platform Engineer**,  
 I want **`scrape('twitter'|'x', ...)`, `src/scrapers/index.js`, `package.json` exports, và callers chuyển hoàn toàn sang sử dụng `TwitterCrawler`/`TwitterClient` hybrid mới**,  
 so that **toàn bộ người dùng cuối, API, CLI, và MCP tools không còn phụ thuộc vào legacy Twitter Puppeteer/HTTP modules**.
 
@@ -60,7 +60,7 @@ Story 13.2.12 là **cột mốc tích hợp cuối cùng của Epic 13.2** (Twit
 
 - `_bmad-output/planning-artifacts/epics.md` — Story 13.2.12 [dòng 576-589], Story 13.2 [dòng 361-372]
 - `_bmad-output/planning-artifacts/prd.md` — FR-71, NFR-11/12/15/16/18 [dòng 79, 114-120]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2, AD-3, AD-11, AD-14, AD-18
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2, AD-3, AD-11, AD-14, AD-18
 - `src/scrapers/index.js` — unified dispatcher
 - `src/scrapers/social/twitter/index.js` — hybrid module entry
 - `src/scrapers/social/twitter/crawler.js` — hybrid crawler

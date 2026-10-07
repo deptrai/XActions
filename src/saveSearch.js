@@ -35,7 +35,7 @@
 
     // ── Search Query ─────────────────────────────────────────
     query: '',                       // The search query to save/run
-    // e.g. 'xactions OR "twitter automation" -is:retweet'
+    // e.g. 'medirus OR "twitter automation" -is:retweet'
 
     // ── Delete ───────────────────────────────────────────────
     deleteQuery: '',                 // Query text of the saved search to delete
@@ -292,7 +292,7 @@
     console.log(`📋 Action: ${CONFIG.action}`);
     if (CONFIG.query) console.log(`📋 Query: "${CONFIG.query}"`);
 
-    const sessionKey = 'xactions_saveSearch';
+    const sessionKey = 'medirus_saveSearch';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     const actions = {

@@ -32,13 +32,13 @@ The canonical extraction function lives in `src/automation/core.js`. Load it fir
 
 ```javascript
 // ============================================
-// XActions - Robust User Extraction (Core Module)
+// Medirus - Robust User Extraction (Core Module)
 // Author: nich (@nichxbt)
 // Prerequisite: paste src/automation/core.js first
 // ============================================
 
 (() => {
-  const { extractUserFromCell, SELECTORS } = window.XActions.Core;
+  const { extractUserFromCell, SELECTORS } = window.Medirus.Core;
 
   // Get all user cells currently rendered on the page
   const cells = document.querySelectorAll(SELECTORS.userCell);
@@ -74,7 +74,7 @@ Each extracted user object looks like this:
 {
   username: "nichxbt",          // handle (lowercase, no @)
   displayName: "nich",          // display name
-  bio: "Building XActions...",  // bio text (may be empty)
+  bio: "Building Medirus...",  // bio text (may be empty)
   followers: 12500,             // parsed follower count (number)
   isFollowing: true,            // you follow this user
   followsYou: true,             // this user follows you
@@ -95,7 +95,7 @@ If you don't want to load the full core module, here's a self-contained extracti
 
 ```javascript
 // ============================================
-// XActions - Standalone User Extraction
+// Medirus - Standalone User Extraction
 // Author: nich (@nichxbt)
 // Go to: x.com/YOUR_USERNAME/following (or /followers)
 // Open console (F12), paste this
@@ -204,7 +204,7 @@ If you don't want to load the full core module, here's a self-contained extracti
   };
 
   // --- Main ---
-  console.log('🎯 XActions - Standalone User Extraction');
+  console.log('🎯 Medirus - Standalone User Extraction');
   console.log('=========================================');
 
   const cells = document.querySelectorAll('[data-testid="UserCell"]');
@@ -248,13 +248,13 @@ Follow these steps to verify extraction is working on your account:
 ```
 1. Go to x.com/YOUR_USERNAME/following
 2. Open console (F12 → Console tab)
-3. Paste the contents of src/automation/core.js → you should see "✅ XActions Core loaded!"
+3. Paste the contents of src/automation/core.js → you should see "✅ Medirus Core loaded!"
 4. Run:
 ```
 
 ```javascript
-const cells = document.querySelectorAll(window.XActions.Core.SELECTORS.userCell);
-const sample = window.XActions.Core.extractUserFromCell(cells[0]);
+const cells = document.querySelectorAll(window.Medirus.Core.SELECTORS.userCell);
+const sample = window.Medirus.Core.extractUserFromCell(cells[0]);
 console.log(JSON.stringify(sample, null, 2));
 ```
 
@@ -297,7 +297,7 @@ The bio extraction uses a cascading fallback — it tries each strategy in order
 
 ## ⚠️ Notes
 
-- Always load `core.js` before other automation scripts — it sets up `window.XActions.Core` which other modules depend on
+- Always load `core.js` before other automation scripts — it sets up `window.Medirus.Core` which other modules depend on
 - The `_meta` field is for debugging only — if you see `"fallback"` or `"span-scan"` frequently, Twitter may have changed their DOM and selectors may need updating
 - Test with small samples first before running on large lists
 - Results may vary across different X/Twitter page types (following, followers, search results, list members)

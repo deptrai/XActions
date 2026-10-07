@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
-  "description": "Standalone MTProto Telegram Relay Service for XActions",
+  "description": "Standalone MTProto Telegram Relay Service for Medirus",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning src/main.js",
     "login": "node src/login.js",

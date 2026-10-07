@@ -1,5 +1,5 @@
 #!/bin/bash
-# Generate all XActions demo recordings
+# Generate all Medirus demo recordings
 # Requires: vhs (https://github.com/charmbracelet/vhs)
 
 set -e
@@ -7,7 +7,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-echo "🎬 Generating XActions demo recordings..."
+echo "🎬 Generating Medirus demo recordings..."
 echo ""
 
 # Check for vhs

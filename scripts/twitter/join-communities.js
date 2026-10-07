@@ -85,7 +85,7 @@ var CONFIG = {
   // State tracking (persists across page navigations)
   const getJoinedCommunities = () => {
     try {
-      return JSON.parse(sessionStorage.getItem('xactions_joined_communities') || '[]');
+      return JSON.parse(sessionStorage.getItem('medirus_joined_communities') || '[]');
     } catch { return []; }
   };
   
@@ -93,16 +93,16 @@ var CONFIG = {
     const joined = getJoinedCommunities();
     if (!joined.find(c => c.id === id)) {
       joined.push({ id, status, timestamp: Date.now() });
-      sessionStorage.setItem('xactions_joined_communities', JSON.stringify(joined));
+      sessionStorage.setItem('medirus_joined_communities', JSON.stringify(joined));
     }
   };
   
   const getCurrentIndex = () => {
-    return parseInt(sessionStorage.getItem('xactions_join_index') || '0', 10);
+    return parseInt(sessionStorage.getItem('medirus_join_index') || '0', 10);
   };
   
   const setCurrentIndex = (idx) => {
-    sessionStorage.setItem('xactions_join_index', idx.toString());
+    sessionStorage.setItem('medirus_join_index', idx.toString());
   };
   
   console.log(`📋 Communities to join: ${CONFIG.communities.length}`);
@@ -132,8 +132,8 @@ var CONFIG = {
       console.log(`   ❌ Failed: ${failed}`);
       
       // Cleanup
-      sessionStorage.removeItem('xactions_joined_communities');
-      sessionStorage.removeItem('xactions_join_index');
+      sessionStorage.removeItem('medirus_joined_communities');
+      sessionStorage.removeItem('medirus_join_index');
       return;
     }
     

@@ -1,4 +1,4 @@
-# Post-Update Reviewer Gate — XActions Hybrid Scraping Architecture
+# Post-Update Reviewer Gate — Medirus Hybrid Scraping Architecture
 
 **Target:** `ARCHITECTURE-SPINE.md` (updated 2026-08-18)  
 **Reviewer:** Winston / BMad Architecture Agent  
@@ -65,4 +65,4 @@ No remaining incompatibilities found at this altitude.
 
 Before Story 10.2 (Prisma migration), generate the raw SQL migration for GIN/expression indexes from the stub in section 4.
 
-Before Story 14.3/14.4, resolve the open question on `intent_tag` ownership in a Nowing-XActions integration contract.
+Before Story 14.3/14.4, resolve the open question on `intent_tag` ownership in a Nowing-Medirus integration contract.

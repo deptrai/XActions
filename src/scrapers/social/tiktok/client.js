@@ -203,7 +203,7 @@ export class TikTokClient extends AbstractApiClient {
     this.guestTokenRing = deps.guestTokenRing || new PreSignedTokenRing({ capacity: 50 });
     this.signerBridge = deps.signerBridge || null;
     this.proxy = deps.proxy || null;
-    this.adapterName = deps.adapterName || process.env.XACTIONS_SCRAPER_ADAPTER || 'playwright';
+    this.adapterName = deps.adapterName || process.env.MEDIRUS_SCRAPER_ADAPTER || 'playwright';
     this.headless = deps.headless !== false;
 
     // Eagerly create an owned bridge if none is injected but Playwright signing is enabled.

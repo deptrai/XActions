@@ -67,7 +67,7 @@ describe('Story 12.1 — QR Code Utility (src/utils/qrcode.js)', () => {
     });
 
     it('[P2] should preserve backward compatibility with renderTerminalQr(text, options)', async () => {
-      const output = await renderTerminalQr('https://xactions.app');
+      const output = await renderTerminalQr('https://medirus.online');
       expect(output).toBeDefined();
       expect(typeof output).toBe('string');
     });

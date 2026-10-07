@@ -30,7 +30,7 @@ if (title) {
 ## 📦 Node.js Module
 
 ```javascript
-import { publishArticle, saveDraft, getArticles } from 'xactions';
+import { publishArticle, saveDraft, getArticles } from 'medirus';
 
 // Publish an article
 await publishArticle(page, {

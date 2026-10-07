@@ -97,7 +97,7 @@ export class GitHubClient extends AbstractApiClient {
     const headers = {
       'Accept': 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': this.options?.userAgent || 'xactions-osint/1.0',
+      'User-Agent': this.options?.userAgent || 'medirus-osint/1.0',
     };
     if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
     return headers;

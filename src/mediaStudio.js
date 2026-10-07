@@ -10,7 +10,7 @@
 // 1. Go to studio.x.com or x.com
 // 2. Open Developer Console (F12)
 // 3. Paste this script and press Enter
-// 4. Use window.XActions.mediaStudio.<function>() to run features
+// 4. Use window.Medirus.mediaStudio.<function>() to run features
 //
 // Last Updated: 30 March 2026
 (() => {
@@ -20,7 +20,7 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
 
-  const STORAGE_KEY = 'xactions_media_studio';
+  const STORAGE_KEY = 'medirus_media_studio';
 
   const SEL = {
     primaryColumn: '[data-testid="primaryColumn"]',
@@ -729,10 +729,10 @@
   };
 
   // ─────────────────────────────────────────────────
-  // Expose on window.XActions.mediaStudio
+  // Expose on window.Medirus.mediaStudio
   // ─────────────────────────────────────────────────
-  window.XActions = window.XActions || {};
-  window.XActions.mediaStudio = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.mediaStudio = {
     navigateToStudio,
     uploadMedia,
     manageLibrary,
@@ -747,7 +747,7 @@
   // ─────────────────────────────────────────────────
   const W = 68;
   console.log('╔' + '═'.repeat(W) + '╗');
-  console.log('║  🎬 MEDIA STUDIO — XActions' + ' '.repeat(W - 30) + '║');
+  console.log('║  🎬 MEDIA STUDIO — Medirus' + ' '.repeat(W - 30) + '║');
   console.log('║  by nichxbt' + ' '.repeat(W - 14) + '║');
   console.log('╠' + '═'.repeat(W) + '╣');
   console.log('║  Available commands:' + ' '.repeat(W - 22) + '║');
@@ -773,6 +773,6 @@
   console.log('║  7.  liveStreaming({ action, maxStreams })' + ' '.repeat(W - 44) + '║');
   console.log('║      List past streams (action: list|settings)' + ' '.repeat(W - 49) + '║');
   console.log('║' + ' '.repeat(W) + '║');
-  console.log('║  Usage: XActions.mediaStudio.navigateToStudio()' + ' '.repeat(W - 50) + '║');
+  console.log('║  Usage: Medirus.mediaStudio.navigateToStudio()' + ' '.repeat(W - 50) + '║');
   console.log('╚' + '═'.repeat(W) + '╝');
 })();

@@ -3,42 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title id="page-title">Thread Reader — Read &amp; Summarize Twitter Threads | XActions</title>
-  <meta name="description" id="page-description" content="Read, unroll, and summarize any Twitter/X thread. AI-powered summaries, clean reading experience. Free, no login required. By XActions.">
-  <meta name="keywords" content="twitter thread reader, unroll twitter thread, x thread reader, thread unroller, read twitter thread, twitter thread summary, ai thread summary, xactions thread reader">
+  <title id="page-title">Thread Reader — Read &amp; Summarize Twitter Threads | Medirus</title>
+  <meta name="description" id="page-description" content="Read, unroll, and summarize any Twitter/X thread. AI-powered summaries, clean reading experience. Free, no login required. By Medirus.">
+  <meta name="keywords" content="twitter thread reader, unroll twitter thread, x thread reader, thread unroller, read twitter thread, twitter thread summary, ai thread summary, medirus thread reader">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <!-- Open Graph -->
   <meta property="og:type" content="article">
-  <meta property="og:title" id="og-title" content="Thread Reader — XActions">
+  <meta property="og:title" id="og-title" content="Thread Reader — Medirus">
   <meta property="og:description" id="og-description" content="Read, unroll, and AI-summarize any Twitter/X thread. Free and open source.">
-  <meta property="og:url" id="og-url" content="https://xactions.app/thread">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-thread-reader.png">
+  <meta property="og:url" id="og-url" content="https://medirus.online/thread">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-thread-reader.png">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
   <meta name="twitter:creator" content="@nichxbt">
-  <meta name="twitter:title" id="tw-title" content="Thread Reader — XActions">
+  <meta name="twitter:title" id="tw-title" content="Thread Reader — Medirus">
   <meta name="twitter:description" id="tw-description" content="Read, unroll, and AI-summarize any Twitter/X thread.">
 
-  <link rel="canonical" id="canonical-link" href="https://xactions.app/thread">
+  <link rel="canonical" id="canonical-link" href="https://medirus.online/thread">
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <!-- Structured Data -->
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://xactions.app"},{"@type":"ListItem","position":2,"name":"Thread Reader","item":"https://xactions.app/thread"}]}
+  {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://medirus.online"},{"@type":"ListItem","position":2,"name":"Thread Reader","item":"https://medirus.online/thread"}]}
   </script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    "name": "XActions Thread Reader",
+    "name": "Medirus Thread Reader",
     "description": "Read, unroll, and AI-summarize any Twitter/X thread. Free, no login required.",
-    "url": "https://xactions.app/thread",
+    "url": "https://medirus.online/thread",
     "applicationCategory": "UtilityApplication",
     "operatingSystem": "Web Browser",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -48,7 +48,7 @@
   <link rel="stylesheet" href="/css/common.css" />
   <style>
     /* ================================================================
-       Design Tokens (matches XActions dashboard theme)
+       Design Tokens (matches Medirus dashboard theme)
        ================================================================ */
     :root {
       --bg-primary: #000000;
@@ -744,7 +744,7 @@
       <div class="bookmarklet-section" id="bookmarklet-section">
         <h3>⚡ Bookmarklet</h3>
         <p>Drag this to your bookmarks bar. Click it on any X/Twitter thread to read it here.</p>
-        <a class="bookmarklet-link" href="javascript:void(window.open('https://xactions.app/thread?url='+encodeURIComponent(location.href)))" onclick="event.preventDefault();">
+        <a class="bookmarklet-link" href="javascript:void(window.open('https://medirus.online/thread?url='+encodeURIComponent(location.href)))" onclick="event.preventDefault();">
           📖 Read Thread
         </a>
       </div>
@@ -1068,7 +1068,7 @@
     // Theme Toggle
     // ================================================================
     const themeToggle = $('#theme-toggle');
-    const savedTheme = localStorage.getItem('xactions-theme') || 'dark';
+    const savedTheme = localStorage.getItem('medirus-theme') || 'dark';
     if (savedTheme === 'light') {
       document.documentElement.setAttribute('data-theme', 'light');
       themeToggle.textContent = '🌙';
@@ -1079,11 +1079,11 @@
       if (isLight) {
         document.documentElement.removeAttribute('data-theme');
         themeToggle.textContent = '☀️';
-        localStorage.setItem('xactions-theme', 'dark');
+        localStorage.setItem('medirus-theme', 'dark');
       } else {
         document.documentElement.setAttribute('data-theme', 'light');
         themeToggle.textContent = '🌙';
-        localStorage.setItem('xactions-theme', 'light');
+        localStorage.setItem('medirus-theme', 'light');
       }
     });
 
@@ -1175,7 +1175,7 @@
 
     function updateMeta(thread) {
       const preview = (thread.tweets[0]?.text || '').slice(0, 100);
-      const title = `Thread by @${thread.author.username}: ${preview} | XActions Thread Reader`;
+      const title = `Thread by @${thread.author.username}: ${preview} | Medirus Thread Reader`;
 
       document.title = title;
       const setContent = (id, val) => { const el = document.getElementById(id); if (el) el.setAttribute('content', val); };

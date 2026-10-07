@@ -1,13 +1,13 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 /**
- * XActions Facebook Scrapers (Legacy)
+ * Medirus Facebook Scrapers (Legacy)
  * Puppeteer-based scrapers for Facebook (facebook.com)
  *
  * Uses the same Puppeteer stealth approach as Twitter and Threads scrapers.
  *
  * @deprecated Use `src/scrapers/social/facebook/index.js` (`FacebookCrawler`, `FacebookClient`) instead. See docs/deprecation-plan.md.
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license BSL 1.1
  */
 

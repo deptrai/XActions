@@ -31,11 +31,11 @@ export const DEFAULT_REDDIT_OAUTH_URL = 'https://www.reddit.com/api/v1/access_to
  * @returns {string}
  */
 export function buildRedditUserAgent(username) {
-  const app = 'xactions:reddit-scraper:v1.0.0';
+  const app = 'medirus:reddit-scraper:v1.0.0';
   if (username && /^[a-zA-Z0-9_-]+$/.test(username)) {
     return `${app} by u/${username}`;
   }
-  return 'xactions/1.0';
+  return 'medirus/1.0';
 }
 
 export function createRedditClient(options = {}) {
@@ -350,7 +350,7 @@ export class RedditClient extends AbstractApiClient {
 
     /** @type {Record<string, string>} */
     const headers = {
-      'user-agent': this.userAgent ?? 'xactions/1.0',
+      'user-agent': this.userAgent ?? 'medirus/1.0',
       'accept': 'application/json',
       ...(options.headers || {}),
     };
@@ -509,7 +509,7 @@ export class RedditClient extends AbstractApiClient {
       const rawRes = await this.request('GET', url, {
         ...options,
         headers: {
-          'user-agent': this.userAgent ?? 'xactions/1.0',
+          'user-agent': this.userAgent ?? 'medirus/1.0',
           'accept': 'application/atom+xml,application/rss+xml,application/xml;q=0.9,*/*;q=0.8',
         },
         requiresAuth: false,
@@ -770,7 +770,7 @@ export class RedditClient extends AbstractApiClient {
     const token = isOAuth ? null : await this.ensureToken();
     /** @type {Record<string, string>} */
     const headers = {
-      'user-agent': this.userAgent ?? 'xactions/1.0',
+      'user-agent': this.userAgent ?? 'medirus/1.0',
       'accept': 'application/json',
       ...(typeof options.headers === 'object' && options.headers !== null ? /** @type {Record<string, string>} */ (options.headers) : {}),
     };

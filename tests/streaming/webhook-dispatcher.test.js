@@ -318,17 +318,17 @@ describe('Story 29.2: Dispatcher Delivery, Signing, Retries & DLQ', () => {
     expect(receivedRequests).toHaveLength(1);
     const req = receivedRequests[0];
     expect(req.url).toBe('/webhook-bluesky');
-    expect(req.headers['x-xactions-event']).toBe('bluesky');
-    expect(req.headers['x-xactions-signature']).toMatch(/^sha256=[a-f0-9]{64}$/);
+    expect(req.headers['x-medirus-event']).toBe('bluesky');
+    expect(req.headers['x-medirus-signature']).toMatch(/^sha256=[a-f0-9]{64}$/);
     // Timestamp header is sent and bound into the signature (Story 31 fix —
     // replay protection). Verify the signature over `<timestamp>.<body>`.
-    const ts = req.headers['x-xactions-timestamp'];
+    const ts = req.headers['x-medirus-timestamp'];
     expect(ts).toBeDefined();
     expect(Number.isFinite(Number(ts))).toBe(true);
     const expectedSig = createSignature(req.body, 'bluesky-secret-key', Number(ts));
-    expect(req.headers['x-xactions-signature']).toBe(expectedSig);
+    expect(req.headers['x-medirus-signature']).toBe(expectedSig);
     // And it round-trips through verifySignature with freshness.
-    expect(verifySignature(req.body, 'bluesky-secret-key', req.headers['x-xactions-signature'], { timestamp: ts })).toBe(true);
+    expect(verifySignature(req.body, 'bluesky-secret-key', req.headers['x-medirus-signature'], { timestamp: ts })).toBe(true);
   });
 
   it('delivers to wildcard subscription for any platform (AC2)', async () => {
@@ -354,7 +354,7 @@ describe('Story 29.2: Dispatcher Delivery, Signing, Retries & DLQ', () => {
 
     expect(receivedRequests).toHaveLength(1);
     expect(receivedRequests[0].url).toBe('/webhook-wildcard');
-    expect(receivedRequests[0].headers['x-xactions-event']).toBe('threads');
+    expect(receivedRequests[0].headers['x-medirus-event']).toBe('threads');
   });
 
   it('skips non-matching subscriptions', async () => {

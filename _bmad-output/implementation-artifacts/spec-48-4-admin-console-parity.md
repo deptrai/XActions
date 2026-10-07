@@ -7,7 +7,7 @@ baseline_commit: '27a7d6123e48efdc68c17345ee562f2a45c31c50'
 review_loop_iteration: 0
 route: 'dispatch'
 context:
-  - '{project-root}/_bmad-output/planning-artifacts/architecture/xactions-web-foundation-epic48/ARCHITECTURE-SPINE.md'
+  - '{project-root}/_bmad-output/planning-artifacts/architecture/medirus-web-foundation-epic48/ARCHITECTURE-SPINE.md'
   - '{project-root}/dashboard/admin.html'
   - '{project-root}/apps/web/app/admin/page.tsx'
   - '{project-root}/apps/web/lib/api.ts'

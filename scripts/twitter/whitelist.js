@@ -18,7 +18,7 @@
  * • Maintains a list of protected accounts
  * • Never unfollow whitelisted users
  * • Never block/mute whitelisted users
- * • Other XActions scripts can check this list
+ * • Other Medirus scripts can check this list
  * 
  * ============================================================
  * 📋 USAGE INSTRUCTIONS:
@@ -27,7 +27,7 @@
  * 1. Open any X page
  * 2. Open Chrome DevTools (F12)
  * 3. Paste this script and press Enter
- * 4. Use XActions.Whitelist commands
+ * 4. Use Medirus.Whitelist commands
  * 
  * ============================================================
  * ⚙️ CONFIGURATION
@@ -38,7 +38,7 @@
 // DevTools tab throws "already been declared" instead of re-running.
 var CONFIG = {
   // Storage key
-  storageKey: 'xactions_whitelist',
+  storageKey: 'medirus_whitelist',
   
   // Pre-populate with important accounts
   defaultWhitelist: [
@@ -89,9 +89,9 @@ var CONFIG = {
   
   init();
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Whitelist = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Whitelist = {
     
     // Add user to whitelist
     add: (username, reason = '') => {
@@ -118,7 +118,7 @@ var CONFIG = {
     addBulk: (usernames) => {
       let added = 0;
       usernames.forEach(u => {
-        if (window.XActions.Whitelist.add(u, 'bulk')) added++;
+        if (window.Medirus.Whitelist.add(u, 'bulk')) added++;
       });
       console.log(`✅ Added ${added} users to whitelist.`);
     },
@@ -149,7 +149,7 @@ var CONFIG = {
     },
     
     // Alias for includes
-    has: (username) => window.XActions.Whitelist.includes(username),
+    has: (username) => window.Medirus.Whitelist.includes(username),
     
     // Get all whitelisted users
     getAll: () => {
@@ -224,7 +224,7 @@ var CONFIG = {
         }
       }
       
-      window.XActions.Whitelist.addBulk(usernamesArray);
+      window.Medirus.Whitelist.addBulk(usernamesArray);
     },
     
     // Collect from current page (following list, etc.)
@@ -245,7 +245,7 @@ var CONFIG = {
       if (users.length > 0) {
         const add = confirm(`Add ${users.length} users to whitelist?`);
         if (add) {
-          window.XActions.Whitelist.addBulk(users);
+          window.Medirus.Whitelist.addBulk(users);
         }
       }
       
@@ -257,22 +257,22 @@ var CONFIG = {
       console.log('');
       console.log('📋 WHITELIST COMMANDS:');
       console.log('');
-      console.log('   XActions.Whitelist.add("username")');
-      console.log('   XActions.Whitelist.add("user", "reason")');
-      console.log('   XActions.Whitelist.addBulk(["u1", "u2"])');
-      console.log('   XActions.Whitelist.remove("username")');
-      console.log('   XActions.Whitelist.has("username")');
-      console.log('   XActions.Whitelist.list()');
-      console.log('   XActions.Whitelist.count()');
-      console.log('   XActions.Whitelist.export()');
-      console.log('   XActions.Whitelist.import([...])');
-      console.log('   XActions.Whitelist.collectFromPage()');
-      console.log('   XActions.Whitelist.clear()');
+      console.log('   Medirus.Whitelist.add("username")');
+      console.log('   Medirus.Whitelist.add("user", "reason")');
+      console.log('   Medirus.Whitelist.addBulk(["u1", "u2"])');
+      console.log('   Medirus.Whitelist.remove("username")');
+      console.log('   Medirus.Whitelist.has("username")');
+      console.log('   Medirus.Whitelist.list()');
+      console.log('   Medirus.Whitelist.count()');
+      console.log('   Medirus.Whitelist.export()');
+      console.log('   Medirus.Whitelist.import([...])');
+      console.log('   Medirus.Whitelist.collectFromPage()');
+      console.log('   Medirus.Whitelist.clear()');
       console.log('');
     }
   };
   
   console.log(`✅ Whitelist Manager loaded! (${getWhitelist().length} users)`);
-  console.log('   Run XActions.Whitelist.help() for commands.');
+  console.log('   Run Medirus.Whitelist.help() for commands.');
   console.log('');
 })();

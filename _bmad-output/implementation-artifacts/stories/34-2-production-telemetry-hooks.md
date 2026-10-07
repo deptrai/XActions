@@ -12,7 +12,7 @@ baseline_commit: '9ac9b319'
 context:
   - _bmad-output/specs/spec-scraper-benchmark/SPEC.md
   - _bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md
-  - _bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md
   - _bmad-output/planning-artifacts/epics.md#epic-34
   - _bmad-output/planning-artifacts/backlog-epic-34.md
   - src/core/base-crawler.js

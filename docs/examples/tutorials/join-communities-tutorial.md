@@ -1,14 +1,14 @@
 ---
 title: "Join Communities on X (Twitter) — Tutorial"
-description: "Discover and join X Communities by keyword using XActions browser scripts."
-keywords: ["join twitter community", "find x communities", "xactions join community", "twitter community automation", "bulk join communities x"]
+description: "Discover and join X Communities by keyword using Medirus browser scripts."
+keywords: ["join twitter community", "find x communities", "medirus join community", "twitter community automation", "bulk join communities x"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Join Communities — Tutorial
 
-> Step-by-step guide to discovering and joining X Communities by keyword using XActions browser scripts.
+> Step-by-step guide to discovering and joining X Communities by keyword using Medirus browser scripts.
 
 **Works on:** Browser Console
 **Difficulty:** Beginner
@@ -86,7 +86,7 @@ const CONFIG = {
 Paste the script:
 
 ```
-JOIN COMMUNITIES - XActions by nichxbt
+JOIN COMMUNITIES - Medirus by nichxbt
 DRY RUN MODE - Set CONFIG.dryRun = false to actually join
 Keywords: web3, defi, ethereum
    Would join: Web3 Builders Community

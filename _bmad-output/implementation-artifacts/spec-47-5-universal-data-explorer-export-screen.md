@@ -18,7 +18,7 @@ deferred: []
 
 ## Intent
 
-**Problem:** XActions sở hữu hơn 25 crawler dữ liệu đa ngành (việc làm, bất động sản, mã số thuế, mạng xã hội) nhưng người dùng và chuyên viên nghiên cứu thị trường không có một cổng tra cứu thống nhất để xem trước dữ liệu dạng bảng và xuất báo cáo CSV phục vụ phân tích.
+**Problem:** Medirus sở hữu hơn 25 crawler dữ liệu đa ngành (việc làm, bất động sản, mã số thuế, mạng xã hội) nhưng người dùng và chuyên viên nghiên cứu thị trường không có một cổng tra cứu thống nhất để xem trước dữ liệu dạng bảng và xuất báo cáo CSV phục vụ phân tích.
 
 **Approach:** Xây dựng màn hình Universal Data Explorer tại `apps/web/app/explorer/page.tsx` cho phép chọn ngành/lĩnh vực (Việc làm, Bất động sản, Doanh nghiệp, Mạng xã hội), bộ lọc thích ứng linh hoạt theo từng danh mục, bảng dữ liệu kết quả chi tiết (Tiêu đề, Giá/Lương, Công ty/Tác giả, Ngày đăng, Nguồn gốc), và nút **Export CSV** tải file chuẩn UTF-8 với 1 cú click.
 
@@ -40,7 +40,7 @@ deferred: []
 | Truy cập `/explorer` | Mở trang | Hiển thị bảng dữ liệu việc làm mặc định kèm dropdown chuyển ngành | Render dữ liệu |
 | Đổi ngành | Chọn 'Bất động sản' | Cột và dữ liệu chuyển sang giá bán, diện tích, địa điểm | Chuyển đổi trạng thái tức thì |
 | Tìm kiếm | Nhập từ khóa 'Senior' | Lọc dữ liệu theo từ khóa | Client-side filter |
-| Bấm Export CSV | Click nút Export | Tải file `xactions-data-export.csv` xuống máy | Client-side Blob download |
+| Bấm Export CSV | Click nút Export | Tải file `medirus-data-export.csv` xuống máy | Client-side Blob download |
 
 </intent-contract>
 

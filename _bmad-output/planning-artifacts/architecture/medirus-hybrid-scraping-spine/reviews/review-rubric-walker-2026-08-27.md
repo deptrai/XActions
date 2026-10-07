@@ -1,12 +1,12 @@
 # Architecture Review: Good-Spine Checklist Audit (Rubric Walker)
 
-**Review Target:** `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (Amended on 2026-08-27: Action-Level Granular Authentication & Proxy Strategy)  
+**Review Target:** `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (Amended on 2026-08-27: Action-Level Granular Authentication & Proxy Strategy)  
 **Reference Proposal:** `_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-27.md`  
-**Parent Spine:** `../nowing/_bmad-output/planning-artifacts/architecture/architecture-xactions-social-integration-2026-08-15/ARCHITECTURE-SPINE.md`  
+**Parent Spine:** `../nowing/_bmad-output/planning-artifacts/architecture/architecture-medirus-social-integration-2026-08-15/ARCHITECTURE-SPINE.md`  
 **Reviewer Role:** Architecture Reviewer Gate — Rubric Walker Subagent  
 **Date:** 2026-08-27  
 **Verdict:** **PASS-WITH-FINDINGS**  
-**Review Target File:** `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/reviews/review-rubric-walker-2026-08-27.md`
+**Review Target File:** `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/reviews/review-rubric-walker-2026-08-27.md`
 
 ---
 
@@ -56,7 +56,7 @@ The strategic direction of the amendment is **exceptional**: it eliminates unnec
 * **Evidence & Analysis:**
   - `ARCHITECTURE-SPINE.md:447-453` (Section 5 Deferred & Out-of-Scope):
     - Defers unassigned platforms (Instagram, Amazon, Muaban.net, ITviec, public-procurement B2B) and explicitly forbids creating `src/scrapers/` directories for them.
-    - Defers phone context extraction in comments to Nowing NLP, forbidding premature implementation in XActions without a new AD.
+    - Defers phone context extraction in comments to Nowing NLP, forbidding premature implementation in Medirus without a new AD.
     - Defers 8s signer timeout tuning until 100-request benchmark is reached.
   - None of these deferred items allow independent teams in Epics 10–18 to build incompatible solutions.
 
@@ -88,7 +88,7 @@ The strategic direction of the amendment is **exceptional**: it eliminates unnec
 * **Evaluation:** **FULLY SATISFIED (PASS)**
 * **Evidence & Analysis:**
   - `AD-SOC-1` (Scraping Delegation): Fully satisfied via Daemon MCP and Redis Stream (`AD-7`).
-  - `AD-SOC-2` (Stealth Anti-Detection & Fingerprint): Delegated to XActions. Action-level rotation strengthens stealth by preventing high-volume public scraping from reusing single account IPs.
+  - `AD-SOC-2` (Stealth Anti-Detection & Fingerprint): Delegated to Medirus. Action-level rotation strengthens stealth by preventing high-volume public scraping from reusing single account IPs.
   - `AD-SOC-3` (Sticky SOCKS5 & Resilient Proxy Pool): Preserves 5-minute auto-quarantine (`AD-3 Rule 4`) and sticky proxy for authenticated sessions while routing public traffic to rotating residential proxies.
   - `AD-SOC-8` (3-Tier Gap-Filling Protocol): Supported by `AD-10` and `AD-12` (`CrawlCheckpoint`).
   - No new AD weakens or contradicts any inherited parent invariant.

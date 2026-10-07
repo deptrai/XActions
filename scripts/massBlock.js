@@ -172,7 +172,7 @@
   };
 
   const run = async () => {
-    console.log('🚫 MASS BLOCK — XActions by nichxbt');
+    console.log('🚫 MASS BLOCK — Medirus by nichxbt');
     console.log(`⚙️ Mode: ${CONFIG.mode} | Dry run: ${CONFIG.dryRun} | Max: ${CONFIG.maxBlocks}`);
 
     if (CONFIG.mode === 'list') await blockByList();
@@ -181,7 +181,7 @@
     console.log(`\n✅ Done! Blocked: ${blocked} | Skipped: ${results.skipped.length} | Failed: ${results.failed.length}`);
 
     if (results.blocked.length > 0) {
-      download(results, `xactions-blocked-${new Date().toISOString().slice(0, 10)}.json`);
+      download(results, `medirus-blocked-${new Date().toISOString().slice(0, 10)}.json`);
     }
   };
 

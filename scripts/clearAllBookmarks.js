@@ -32,7 +32,7 @@
   };
 
   const run = async () => {
-    console.log('🔖 CLEAR ALL BOOKMARKS — XActions by nichxbt');
+    console.log('🔖 CLEAR ALL BOOKMARKS — Medirus by nichxbt');
     console.log(CONFIG.dryRun ? '🔍 DRY RUN — preview only' : '⚠️ LIVE MODE — bookmarks WILL be removed!');
 
     if (!window.location.href.includes('/bookmarks')) {
@@ -120,7 +120,7 @@
     if (removedLog.length > 0) {
       download(
         { stats: { removed, kept, dryRun: CONFIG.dryRun }, bookmarks: removedLog },
-        `xactions-bookmarks-cleared-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-bookmarks-cleared-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
 

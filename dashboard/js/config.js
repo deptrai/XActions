@@ -1,5 +1,5 @@
 /**
- * XActions Dashboard Configuration
+ * Medirus Dashboard Configuration
  * 
  * This file provides API configuration for all dashboard pages.
  * Include this file in any page that makes API calls.

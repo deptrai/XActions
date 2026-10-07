@@ -1,14 +1,14 @@
 ---
 title: "Follow & Unfollow Topics on X (Twitter) — Tutorial"
-description: "Browse, follow, and unfollow X Topics to customize your timeline using XActions browser scripts."
-keywords: ["twitter topics", "follow topics x", "unfollow topics twitter", "xactions topic manager", "manage twitter topics"]
+description: "Browse, follow, and unfollow X Topics to customize your timeline using Medirus browser scripts."
+keywords: ["twitter topics", "follow topics x", "unfollow topics twitter", "medirus topic manager", "manage twitter topics"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Follow/Unfollow Topics — Tutorial
 
-> Step-by-step guide to browsing, following, and unfollowing X Topics using XActions browser scripts.
+> Step-by-step guide to browsing, following, and unfollowing X Topics using Medirus browser scripts.
 
 **Works on:** Browser Console
 **Difficulty:** Beginner
@@ -198,11 +198,11 @@ Discovered 5 topics
 
 ```js
 // Check progress
-window.XActions.status();
+window.Medirus.status();
 // Output: Followed: 5 | Unfollowed: 0 | Listed: 0 | 23s
 
 // Stop the script
-window.XActions.abort();
+window.Medirus.abort();
 ```
 
 ---

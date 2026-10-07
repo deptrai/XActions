@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 👥 Scrape Followers - XActions
+ * 👥 Scrape Followers - Medirus
  * ============================================
  *
  * @name         scrape-followers
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to x.com/<user>/followers (for your own list: x.com/<you>/followers)
@@ -154,8 +154,8 @@
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  👥 SCRAPE FOLLOWERS - XActions                          ║
-║  🌐 https://xactions.app                                 ║
+║  👥 SCRAPE FOLLOWERS - Medirus                          ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

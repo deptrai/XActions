@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Search API
+ * Medirus Client — Search API
  *
  * Search tweets and profiles via Twitter's internal GraphQL SearchTimeline endpoint.
  * All functions take an HTTP client as the first parameter.

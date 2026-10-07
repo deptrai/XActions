@@ -337,7 +337,7 @@
         username,
         token: CONFIG.tokenId || `${CONFIG.network}/${CONFIG.poolAddress}`,
         generatedAt: new Date().toISOString(),
-        source: 'XActions tweet-price correlation (inspired by tweet-price-charts)',
+        source: 'Medirus tweet-price correlation (inspired by tweet-price-charts)',
         credit: 'https://github.com/rohunvora/tweet-price-charts',
       },
       stats,

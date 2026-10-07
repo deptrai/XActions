@@ -4,11 +4,11 @@
 
 - [x] [Done] `warmup`/`cancel` tools (`x_facebook_warmup_scroll`, `x_facebook_warmup_account`, `x_facebook_cancel_friend_requests`) migrated to `FacebookCrawler` hybrid actions `warmup_scroll`, `warmup_account`, `cancel_friend_requests`. Callers in `src/mcp/server.js` and `api/routes/facebook.js` now route through `scrape('facebook', ...)`; legacy `runWithFacebookBrowser` and `facebookAutomation.js` paths removed for these actions.
 - [x] [Review][Done] POST /api/facebook/automate (like/comment/post/share/join-groups/batch-post-groups/send-friend-requests/messenger-share) now routes through `scrape()` to `FacebookCrawler` [api/routes/facebook.js, api/services/facebookAutomation.js]
-- [x] [Review][Done] CLI `xactions automate` now routes like/comment/post/share/join-group/send-friend-request through `scrape()` [src/cli/commands/automate.js]
+- [x] [Review][Done] CLI `medirus automate` now routes like/comment/post/share/join-group/send-friend-request through `scrape()` [src/cli/commands/automate.js]
 - [x] [Review][Done] MCP `executeFacebookAutomateTool` / `executeFacebookEpic4Tool` now dispatch to `FacebookCrawler` for like/comment/post/messenger/share/join/post_to_groups/friend_requests [src/mcp/server.js]
 - [x] [Review][Done] `api/services/facebookAccountPool.js:runBatch` now supports `hybrid: true` mode using `FacebookClient`/`FacebookCrawler` per account context [api/services/facebookAccountPool.js:23, 142-337]
 - [x] [Review][Done] `api/services/facebookHealth.js` now uses `FacebookClient` for HTTP health checks [api/services/facebookHealth.js]
-- [x] [Review][Done] Added `FacebookCrawler`/`FacebookClient`/`FacebookActions` type declarations to `types/index.d.ts` and `src/types/xactions.d.ts` [AC-9]
+- [x] [Review][Done] Added `FacebookCrawler`/`FacebookClient`/`FacebookActions` type declarations to `types/index.d.ts` and `src/types/medirus.d.ts` [AC-9]
 - [x] [Review][Done] Added `@deprecated` headers to legacy `src/scrapers/facebook/*.js` files (marketplace.js, posts.js, comments.js, search.js, group-search.js, followers.js, profile.js) [AC-10]
 - [x] [Review][Done] Triaged `src/scrapers/index.js` `facebook`/`fb` branch: removed `marketplace` dead-code mapping, restored legacy page-based fallback for callers that pass `options.page`, and documented the hybrid production path [src/scrapers/index.js:420-476]
 
@@ -93,7 +93,7 @@
 ## Deferred from: code review of 14-2-mcp-tool-exporters-daemon-http-sse-server (2026-08-28)
 
 - [x] [Review][Defer] `extractRecords` heuristic ưu tiên `comments` over `posts` khi object có cả hai — pre-existing design choice, sẽ cần revisit khi thêm mixed-payload crawlers
-- [x] [Review][Defer] `x_actions_list` chỉ cover Facebook + Threads — spec ghi rõ skip platform chưa migrate; sẽ mở rộng khi Twitter/Bluesky/Mastodon crawlers migrate sang AbstractCrawler
+- [x] [Review][Defer] `medirus_list` chỉ cover Facebook + Threads — spec ghi rõ skip platform chưa migrate; sẽ mở rộng khi Twitter/Bluesky/Mastodon crawlers migrate sang AbstractCrawler
 
 ## Deferred from: code review of 11-9-dual-pool-consumer-quota (2026-09-02)
 
@@ -157,7 +157,7 @@
   evidence: `executeTool` → `executeAnalyticsTool` case `x_analytics_buzzwords` — input validated before calling `extractKeywordFrequency`. Full MCP call chain testing is out of scope for this story.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-14-4-real-time-n-gram-keyword-hashtag-frequency-analytics-engine.md`
-  summary: CLI `xactions analytics buzzwords` has no test — thin wrapper over `extractKeywordFrequency`
+  summary: CLI `medirus analytics buzzwords` has no test — thin wrapper over `extractKeywordFrequency`
   evidence: `filePath`/`stdin` input handling is trivial; Commander option parsing is framework-tested.
 
 ## Deferred from: code review of spec-29-1 (2026-09-16)
@@ -265,5 +265,5 @@
 
 ## Deferred from: code review of spec-53-6-telemetry-dims-pooled-poolbackend-poolwaitms-spike-gate.md (2026-10-04)
 
-- **Gate không xác minh telemetry dims được emit thực tế**: `evaluateGateConditions` chỉ check fatal/isolation/failed — không assert rằng `pooled`/`poolBackend`/`poolWaitMs` thực sự xuất hiện đúng trong payload khi `XACTIONS_BROWSER_BACKEND_METRICS=1`. Gate scope hiện tại là pool correctness; telemetry assertion ngoài scope, cần spec mới nếu muốn e2e verify dims.
+- **Gate không xác minh telemetry dims được emit thực tế**: `evaluateGateConditions` chỉ check fatal/isolation/failed — không assert rằng `pooled`/`poolBackend`/`poolWaitMs` thực sự xuất hiện đúng trong payload khi `MEDIRUS_BROWSER_BACKEND_METRICS=1`. Gate scope hiện tại là pool correctness; telemetry assertion ngoài scope, cần spec mới nếu muốn e2e verify dims.
 - **Spike script dùng `SpikeBrowserPool` local thay vì production `BrowserPool`**: `scripts/browser-pool-spike.mjs` test hành vi tạo BrowserContext của Chrome binary, không test `src/scraping/browserPool.js`. Đây là thiết kế spike cố ý từ Epic 53 — chuyển sang production pool là quyết định kiến trúc.

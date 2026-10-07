@@ -1,6 +1,6 @@
 # Notifications
 
-Multi-channel notification hub for XActions alerts. Send notifications via Email, Slack, Discord, and Telegram when events occur — follower changes, workflow completions, scheduled job results, and more.
+Multi-channel notification hub for Medirus alerts. Send notifications via Email, Slack, Discord, and Telegram when events occur — follower changes, workflow completions, scheduled job results, and more.
 
 ## Architecture
 
@@ -9,17 +9,17 @@ src/notifications/
 └── notifier.js   # Multi-channel notification sender
 ```
 
-**Configuration:** `~/.xactions/config.json` under the `notifications` key.
+**Configuration:** `~/.medirus/config.json` under the `notifications` key.
 
 ## Quick Start
 
 ### Node.js
 
 ```javascript
-import { Notifier } from 'xactions/src/notifications/notifier.js';
+import { Notifier } from 'medirus/src/notifications/notifier.js';
 
 const notifier = new Notifier();
-await notifier.load();  // Load config from ~/.xactions/config.json
+await notifier.load();  // Load config from ~/.medirus/config.json
 
 // Configure channels
 notifier.configure({
@@ -42,9 +42,9 @@ await notifier.send({
 ### CLI
 
 ```bash
-xactions notify send "Test notification" --title "Hello" --severity info
-xactions notify test slack
-xactions notify configure
+medirus notify send "Test notification" --title "Hello" --severity info
+medirus notify test slack
+medirus notify configure
 ```
 
 ## REST API
@@ -80,7 +80,7 @@ curl -X POST http://localhost:3001/api/notifications/test/slack
   email: {
     enabled: true,
     to: 'you@example.com',
-    from: 'xactions@example.com',     // optional
+    from: 'medirus@example.com',     // optional
     smtp: {
       host: 'smtp.gmail.com',
       port: 587,

@@ -215,7 +215,7 @@ In live mode (`dryRun: false`), navigating to your profile/notifications kills t
 
 Each paste picks up exactly where you left off. Stats accumulate across phases.
 
-**Reset:** `sessionStorage.removeItem('xactions_natural_flow')`
+**Reset:** `sessionStorage.removeItem('medirus_natural_flow')`
 
 ---
 
@@ -229,8 +229,8 @@ Each paste picks up exactly where you left off. Stats accumulate across phases.
 - **Cooldown escalation** — delays increase ~3% per action so the session naturally slows
 - **Session history** — warns you if you ran less than 2 hours ago (uses localStorage)
 - **Probability-based** — not every match gets liked; randomness is built in
-- **Abort anytime** — `XActions.stop()` in console, or click 🛑 on the HUD
-- **Pause/resume** — `XActions.pause()` in console, or click ⏸ on the HUD
+- **Abort anytime** — `Medirus.stop()` in console, or click 🛑 on the HUD
+- **Pause/resume** — `Medirus.pause()` in console, or click ⏸ on the HUD
 - **Session log export** — JSON file auto-downloads with every action timestamped
 - **Dry run mode** — preset 5 previews the entire session without clicking anything
 
@@ -257,5 +257,5 @@ Each paste picks up exactly where you left off. Stats accumulate across phases.
 6. **Review the log** — check the exported JSON to see what was engaged with.
 7. **Use the HUD** — pause the session if someone messages you, resume after.
 8. **Session history** — the script remembers past sessions in localStorage. If it warns you about running too soon, listen to it.
-9. **Clear state** — `sessionStorage.removeItem('xactions_natural_flow')` to reset a stuck session.
-10. **Clear history** — `localStorage.removeItem('xactions_nf_history')` to reset session history.
+9. **Clear state** — `sessionStorage.removeItem('medirus_natural_flow')` to reset a stuck session.
+10. **Clear history** — `localStorage.removeItem('medirus_nf_history')` to reset session history.

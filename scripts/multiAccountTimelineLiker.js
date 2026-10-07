@@ -41,8 +41,8 @@
 
   // ── Abort handle ───────────────────────────────────────────
   let aborted = false;
-  window.XActions = window.XActions || {};
-  window.XActions.stop = () => { aborted = true; console.log('🛑 Stopping after current tweet...'); };
+  window.Medirus = window.Medirus || {};
+  window.Medirus.stop = () => { aborted = true; console.log('🛑 Stopping after current tweet...'); };
 
   const isRateLimited = () => {
     for (const el of document.querySelectorAll(`${SEL.toast}, [role="alert"]`)) {
@@ -161,11 +161,11 @@
   const run = async () => {
     console.log('╔════════════════════════════════════════════════╗');
     console.log('║  🔄 MULTI-ACCOUNT TIMELINE LIKER              ║');
-    console.log('║  by nichxbt — XActions                         ║');
+    console.log('║  by nichxbt — Medirus                         ║');
     console.log('╚════════════════════════════════════════════════╝');
     console.log(`   Accounts: ${TARGETS.map(t => `@${t.username} (${t.maxLikes})`).join(', ')}`);
     console.log(`   Dry run: ${CONFIG.dryRun}`);
-    console.log(`   ℹ️ Type XActions.stop() to abort at any time\n`);
+    console.log(`   ℹ️ Type Medirus.stop() to abort at any time\n`);
 
     const results = [];
 
@@ -209,7 +209,7 @@
   // After navigation, the script context is lost.
   // For multi-account, we use sessionStorage to track progress.
 
-  const STATE_KEY = 'xactions_multi_liker';
+  const STATE_KEY = 'medirus_multi_liker';
 
   const getState = () => {
     try { return JSON.parse(sessionStorage.getItem(STATE_KEY)); }
@@ -243,12 +243,12 @@
 
     console.log('╔════════════════════════════════════════════════╗');
     console.log('║  🔄 MULTI-ACCOUNT TIMELINE LIKER              ║');
-    console.log('║  by nichxbt — XActions                         ║');
+    console.log('║  by nichxbt — Medirus                         ║');
     console.log('╚════════════════════════════════════════════════╝');
     console.log(`   Accounts: ${TARGETS.map(t => `@${t.username} (${t.maxLikes})`).join(', ')}`);
     console.log(`   Dry run: ${CONFIG.dryRun}`);
     console.log(`   Progress: ${state.currentIndex}/${TARGETS.length} accounts done`);
-    console.log(`   ℹ️ Type XActions.stop() to abort\n`);
+    console.log(`   ℹ️ Type Medirus.stop() to abort\n`);
 
     if (state.currentIndex >= TARGETS.length) {
       console.log('🎉 All accounts already processed! Call clearState() or clear sessionStorage to restart.');

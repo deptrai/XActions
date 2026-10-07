@@ -10,7 +10,7 @@ story: 45.3
 
 ## User Story
 
-As a content creator using XActions,
+As a content creator using Medirus,
 I want content generation to leverage viral DNA stats from my niche on the target platform,
 So that generated content follows proven viral patterns rather than generic templates.
 

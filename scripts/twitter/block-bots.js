@@ -87,7 +87,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🤖 XActions — Block Bots                                    ║
+║  🤖 Medirus — Block Bots                                    ║
 ║  Detect and block bot accounts                               ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked             ║' : '║  🔴 LIVE MODE - Accounts WILL be blocked                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -318,7 +318,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
   }
 
   // Save results
-  const storageKey = 'xactions_blocked_bots';
+  const storageKey = 'medirus_blocked_bots';
   const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
   const newEntries = suspectedBots.map(b => ({
     username: b.username,

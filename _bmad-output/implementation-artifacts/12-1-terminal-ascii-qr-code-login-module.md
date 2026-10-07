@@ -46,15 +46,15 @@ so that **tôi không cần copy-paste token, không để lộ credential, và 
 
 ### AC-3: Hỗ trợ Non-TTY fallback (`--qr-url`, `--push`, `--cdp`)
 
-* **Given** user chạy `xactions login --qr` trong môi trường non-TTY (CI, server, pipe)
+* **Given** user chạy `medirus login --qr` trong môi trường non-TTY (CI, server, pipe)
 * **When** `process.stdout.isTTY === false`
 * **Then** thay vì render QR, CLI in URL + short code ra stdout:
   * `Open this URL on your phone: https://x.com/i/qr?code=abc123`
   * `Short code: ABC-123`
 * **And** với `--push`, hệ thống gửi notification/short code đến configured push provider (stub/fallback log nếu provider chưa cấu hình)
-* **And** với `--cdp`, chuyển sang flow CDP attach của Story 12.2 thay vì QR (re-use `xactions auth --launch-chrome`)
+* **And** với `--cdp`, chuyển sang flow CDP attach của Story 12.2 thay vì QR (re-use `medirus auth --launch-chrome`)
 
-### AC-4: CLI `xactions login --qr` với flags mở rộng
+### AC-4: CLI `medirus login --qr` với flags mở rộng
 
 * **Given** `src/cli/index.js` đã có command `login` hỏi `auth_token` + `ct0` thủ công
 * **When** refactor command `login` thành `program.command('login').option('--qr', 'Use QR code login').option('--qr-url <url>', 'Provide pre-generated QR URL').option('--push', 'Send push notification for non-TTY').option('--cdp', 'Use CDP attach instead of QR').option('--platform <platform>', 'Platform to authenticate', 'twitter').option('--timeout <seconds>', 'QR timeout', '120')`
@@ -67,14 +67,14 @@ so that **tôi không cần copy-paste token, không để lộ credential, và 
 * **Given** `src/core/base-login.js` có class `AbstractLogin` trừu tượng
 * **When** tạo `src/core/login/terminal-qr.js` với `class TerminalQrLogin extends AbstractLogin`
 * **Then** `TerminalQrLogin` implement `async login()` trả về `LoginResult = { accountId, cookies, tokens, expiresAt }` theo `src/core/types.js`
-* **And** constructor nhận `{ platform, requiredCookies, getQrCode, checkLoginState, cookiePath }` — nếu `getQrCode/checkLoginState` chưa có, default dùng file `~/.xactions/cookies.json` hoặc `~/.xactions/cookies-<platform>.json`
+* **And** constructor nhận `{ platform, requiredCookies, getQrCode, checkLoginState, cookiePath }` — nếu `getQrCode/checkLoginState` chưa có, default dùng file `~/.medirus/cookies.json` hoặc `~/.medirus/cookies-<platform>.json`
 * **And** `src/core/login/terminal-qr.js` cung cấp `generateShortCode()` để tạo mã 6 ký tự cho non-TTY
 
 ### AC-6: Tự động lưu cookie vào session storage sau khi quét
 
 * **Given** user đã quét QR và `checkLoginState()` trả về `true`
 * **When** `TerminalQrLogin.login()` phát hiện đủ required cookies
-* **Then** đọc cookies từ nguồn (file hoặc callback), lưu vào `~/.xactions/cookies.json` với `mode 0o600`
+* **Then** đọc cookies từ nguồn (file hoặc callback), lưu vào `~/.medirus/cookies.json` với `mode 0o600`
 * **And** gọi `SessionManager.set(accountId, loginResult)` để các crawler/API client sau này có thể lấy session
 * **And** đối với Twitter, nếu có `auth_token` và `ct0`, tùy chọn verify bằng `Scraper.me()` (nếu không có network, skip verify và log warning)
 
@@ -120,7 +120,7 @@ so that **tôi không cần copy-paste token, không để lộ credential, và 
   - [x] 3.2 Điều phối TTY vs non-TTY
   - [x] 3.3 Giữ flow nhập cookie thủ công khi không có `--qr`
 - [x] **Task 4: Tích hợp `SessionManager` và cookie storage** (AC-6)
-  - [x] 4.1 Đọc/ghi `~/.xactions/cookies.json` với fs `mode 0o600`
+  - [x] 4.1 Đọc/ghi `~/.medirus/cookies.json` với fs `mode 0o600`
   - [x] 4.2 Map platform → required cookies (`twitter: auth_token, ct0`; `facebook: c_user, xs`)
   - [x] 4.3 Optional verify bằng `Scraper.me()` cho Twitter
 - [x] **Task 5: Xử lý lỗi theo convention** (AC-7)
@@ -172,7 +172,7 @@ Antigravity (SWE-Agent) + Serena LSP context.
 * ✅ Implemented `TerminalQrLogin` extending `AbstractLogin` with 120s timeout, countdown timer, zero dangling timer leaks, and platform checkpoint handling.
 * ✅ Implemented secure shortcode generator using `crypto.randomInt`.
 * ✅ Added safe cookie file storage with file mode `0o600` and `SessionManager` integration.
-* ✅ Updated CLI `xactions login` with `--qr`, `--qr-url`, `--push`, `--cdp`, `--platform`, `--timeout`.
+* ✅ Updated CLI `medirus login` with `--qr`, `--qr-url`, `--push`, `--cdp`, `--platform`, `--timeout`.
 * ✅ All 18 ATDD unit and integration tests passing cleanly with 0 mocks.
 
 ### File List

@@ -24,14 +24,14 @@ updated: '2026-10-04'
 **3 phát hiện then chốt:**
 
 1. **GramJS đủ cho cả 2 use case** — mmomarket dùng cho bot interaction (send/press/collect), nhưng cùng `TelegramClient` đó support `getMessages(entity)` + `NewMessage` events cho channel reading. Không cần thêm lib.
-2. **Relay-service pattern bắt buộc** — MTProto session giữ state (auth key, update state) → không thể nhúng vào process chính có multi-instance. Standalone service + HTTP interface = cách mmomarket giải, XActions nên copy y hệt (kể cả Dockerfile pattern).
+2. **Relay-service pattern bắt buộc** — MTProto session giữ state (auth key, update state) → không thể nhúng vào process chính có multi-instance. Standalone service + HTTP interface = cách mmomarket giải, Medirus nên copy y hệt (kể cả Dockerfile pattern).
 3. **Error taxonomy đã được enumerate** — FLOOD_WAIT_N (parse → cooldown), SESSION_BANNED (terminal), isBusy single-flight. Không phải reinvent.
 
 ---
 
 ## 1. Stack đã verify trong production
 
-| Thành phần | mmomarket implementation | Dùng lại cho XActions? |
+| Thành phần | mmomarket implementation | Dùng lại cho Medirus? |
 |---|---|---|
 | Library | `telegram@2.26.22` (GramJS, pure JS, no native deps) | ✅ Copy version pin |
 | Session | `StringSession` — string env var `TELEGRAM_SESSION` | ✅ Copy |
@@ -64,7 +64,7 @@ if (isBusy) return 503 "RELAY_BUSY";
 
 ## 3. Khác biệt use case: bot-interaction → channel-reading
 
-mmomarket đọc **bot conversations** (send command → collect replies, `getMessages(entity, {limit})` đã dùng trong code+tests). XActions Story 54.6 cần **channel/group reading**:
+mmomarket đọc **bot conversations** (send command → collect replies, `getMessages(entity, {limit})` đã dùng trong code+tests). Medirus Story 54.6 cần **channel/group reading**:
 
 | Cần thêm (GramJS API, không cần research thêm) | Mục đích |
 |---|---|
@@ -129,7 +129,7 @@ mmomarket đọc **bot conversations** (send command → collect replies, `getMe
 | [5] | timingSafeEqual auth, /health 3-state | `main.js` | high |
 | [6] | Node22-alpine + disable-warning flag | `docker/Dockerfile.telegram-relay` | high |
 | [7] | Epic 6 done status 2026-09-20 | `docs/features/epic-06-telegram-relay-sync.md` | high |
-| [8] | NewMessage events, iterDialogs, GetFullChannel | GramJS public API (not yet in mmomarket code — first use for XActions) | medium |
+| [8] | NewMessage events, iterDialogs, GetFullChannel | GramJS public API (not yet in mmomarket code — first use for Medirus) | medium |
 
 ## 9. Staleness Map
 

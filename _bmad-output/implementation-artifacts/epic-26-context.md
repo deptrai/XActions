@@ -4,7 +4,7 @@
 
 ## Goal
 
-Epic 26 là bước cuối cùng trong lộ trình chuẩn hóa kiến trúc Universal Scraping Engine (Epics 23–26). Sau khi Epic 25 đã biến `scrape()` thành thin dispatcher duy nhất, di chuyển toàn bộ caller nội bộ sang hybrid surface (`src/scrapers/social/`), và verify các API surface, Epic 26 tiến hành kiểm tra parity lần cuối, tạo git tag an toàn và rollback plan (Story 26.1), sau đó dỡ bỏ vĩnh viễn toàn bộ các module scraper legacy (`src/client/Scraper.js`, `src/scrapers/twitter/`, `src/scrapers/facebook/`, `src/scrapers/threads/index.js`, `src/scrapers/bluesky/index.js`, `src/scrapers/mastodon/index.js`) để XActions chỉ còn duy nhất một kiến trúc `AbstractCrawler` + `AbstractApiClient` (NFR-18).
+Epic 26 là bước cuối cùng trong lộ trình chuẩn hóa kiến trúc Universal Scraping Engine (Epics 23–26). Sau khi Epic 25 đã biến `scrape()` thành thin dispatcher duy nhất, di chuyển toàn bộ caller nội bộ sang hybrid surface (`src/scrapers/social/`), và verify các API surface, Epic 26 tiến hành kiểm tra parity lần cuối, tạo git tag an toàn và rollback plan (Story 26.1), sau đó dỡ bỏ vĩnh viễn toàn bộ các module scraper legacy (`src/client/Scraper.js`, `src/scrapers/twitter/`, `src/scrapers/facebook/`, `src/scrapers/threads/index.js`, `src/scrapers/bluesky/index.js`, `src/scrapers/mastodon/index.js`) để Medirus chỉ còn duy nhất một kiến trúc `AbstractCrawler` + `AbstractApiClient` (NFR-18).
 
 ## Stories
 
@@ -13,7 +13,7 @@ Epic 26 là bước cuối cùng trong lộ trình chuẩn hóa kiến trúc Uni
 
 ## Requirements & Constraints
 
-- **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions kế thừa `AbstractCrawler` và `AbstractApiClient`. Không còn module scraper nào nằm ngoài `src/scrapers/social/<platform>/` hoặc các domain directories chuẩn (`src/scrapers/{ecom,realestate,recruitment,procurement}/`).
+- **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong Medirus kế thừa `AbstractCrawler` và `AbstractApiClient`. Không còn module scraper nào nằm ngoài `src/scrapers/social/<platform>/` hoặc các domain directories chuẩn (`src/scrapers/{ecom,realestate,recruitment,procurement}/`).
 - **NFR-16 (Backward Compatibility):** Các lệnh CLI `unfollowx` và MCP tools không bị vỡ giao diện; các tham số cũ được map sang `CrawlerCommand` hoặc trả về error envelope chuẩn (`PlatformError`, `statusCode: 400`, `code: 'XACT_4001'`).
 - **Git Tagging:** Tạo git tag `pre-decommission-YYYY-MM-DD` từ `main` trước khi xóa bất kỳ file nào.
 - **Rollback SLA:** Rollback window trong 48h; cơ chế rollback là `git revert` commit decommission hoặc restore từ tag backup.

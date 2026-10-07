@@ -1,8 +1,8 @@
 ---
 title: "Access X Pro (TweetDeck) — Tutorial"
-description: "Navigate to X Pro, set up multi-column monitoring, and manage columns for real-time Twitter monitoring using XActions."
-keywords: ["x pro tweetdeck", "twitter multi column view", "tweetdeck setup", "x pro columns", "xactions x pro"]
-canonical: "https://xactions.app/examples/x-pro"
+description: "Navigate to X Pro, set up multi-column monitoring, and manage columns for real-time Twitter monitoring using Medirus."
+keywords: ["x pro tweetdeck", "twitter multi column view", "tweetdeck setup", "x pro columns", "medirus x pro"]
+canonical: "https://medirus.online/examples/x-pro"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
@@ -50,7 +50,7 @@ const CONFIG = {
   ],
   searchTerms: [             // Search columns to add
     // 'from:nichxbt',
-    // '#xactions',
+    // '#medirus',
   ],
   showColumnInfo: true,      // Display info about existing columns
   delayBetweenActions: 2000, // ms between UI actions
@@ -75,7 +75,7 @@ const CONFIG = {
 (async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('📊 X PRO (TWEETDECK) - XActions by nichxbt\n');
+  console.log('📊 X PRO (TWEETDECK) - Medirus by nichxbt\n');
 
   // Check access
   const isPro = window.location.hostname.includes('pro.x.com');
@@ -137,7 +137,7 @@ const CONFIG = {
 
 ```javascript
 (() => {
-  console.log('📊 SCAN X PRO COLUMNS - XActions by nichxbt\n');
+  console.log('📊 SCAN X PRO COLUMNS - Medirus by nichxbt\n');
 
   const columns = document.querySelectorAll(
     '[data-testid="column"], [class*="column"], section[aria-label]'
@@ -165,7 +165,7 @@ const CONFIG = {
     columnData.push({ index: i, name, tweetCount: tweets.length });
   });
 
-  sessionStorage.setItem('xactions_xpro', JSON.stringify({
+  sessionStorage.setItem('medirus_xpro', JSON.stringify({
     scannedAt: new Date().toISOString(),
     columns: columnData,
   }));
@@ -230,7 +230,7 @@ const CONFIG = {
 ### Expected Console Output
 
 ```
-📊 X PRO (TWEETDECK) - XActions by nichxbt
+📊 X PRO (TWEETDECK) - Medirus by nichxbt
 
 ✅ X Pro link found — you have access.
 
@@ -300,5 +300,5 @@ const CONFIG = {
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

@@ -23,10 +23,10 @@
  * 3. Paste and run
  *
  * Controls:
- *   XActions.setTarget(2.0)        — target ratio (followers/following)
- *   XActions.track()               — take a ratio snapshot
- *   XActions.history()             — view ratio over time
- *   XActions.plan()                — get a plan to reach target
+ *   Medirus.setTarget(2.0)        — target ratio (followers/following)
+ *   Medirus.track()               — take a ratio snapshot
+ *   Medirus.history()             — view ratio over time
+ *   Medirus.plan()                — get a plan to reach target
  * ============================================================
  */
 (() => {
@@ -39,7 +39,7 @@
     exportResults: true,
   };
 
-  const STORAGE_KEY = 'xactions_ratio_history';
+  const STORAGE_KEY = 'medirus_ratio_history';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   const parseNum = (text) => {
@@ -226,7 +226,7 @@
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-ratio-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-ratio-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Ratio data exported.');
     }
@@ -235,19 +235,19 @@
   };
 
   // ── Controls ───────────────────────────────────────────────
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
-  window.XActions.setTarget = (ratio) => {
+  window.Medirus.setTarget = (ratio) => {
     if (typeof ratio !== 'number' || ratio < 0.1) { console.log('❌ Target must be a positive number.'); return; }
     CONFIG.targetRatio = ratio;
     console.log(`🎯 Target ratio set to ${ratio}:1`);
   };
 
-  window.XActions.track = analyze;
+  window.Medirus.track = analyze;
 
-  window.XActions.history = () => {
+  window.Medirus.history = () => {
     const history = loadHistory();
-    if (history.length === 0) { console.log('📭 No history. Run XActions.track() first.'); return; }
+    if (history.length === 0) { console.log('📭 No history. Run Medirus.track() first.'); return; }
     console.log(`\n📊 RATIO HISTORY (${history.length} snapshots):\n`);
     for (const snap of history) {
       const date = new Date(snap.timestamp).toLocaleString();
@@ -255,12 +255,12 @@
     }
   };
 
-  window.XActions.plan = () => {
+  window.Medirus.plan = () => {
     console.log('📊 Re-analyzing...');
     analyze();
   };
 
-  window.XActions.reset = () => {
+  window.Medirus.reset = () => {
     localStorage.removeItem(STORAGE_KEY);
     console.log('🗑️ Ratio history cleared.');
   };

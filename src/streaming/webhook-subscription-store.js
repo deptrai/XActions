@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * WebhookSubscriptionStore — Redis-backed subscription store for outbound webhooks.
- * Persists subscriptions to Redis hash `xactions:webhook:subscriptions`.
+ * Persists subscriptions to Redis hash `medirus:webhook:subscriptions`.
  *
  * @author nich (@nichxbt)
  * @license Apache-2.0
@@ -9,7 +9,7 @@
 
 import crypto from 'crypto';
 
-export const WEBHOOK_SUBSCRIPTIONS_KEY = 'xactions:webhook:subscriptions';
+export const WEBHOOK_SUBSCRIPTIONS_KEY = 'medirus:webhook:subscriptions';
 
 /**
  * Validate that a URL is a well-formed HTTP/HTTPS URL string.

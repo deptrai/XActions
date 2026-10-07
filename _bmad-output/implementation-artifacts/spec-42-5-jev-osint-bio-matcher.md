@@ -13,7 +13,7 @@ context: []
 
 ## Intent
 
-**Problem:** `EntityResolver` chỉ match bằng tín hiệu cứng (username exact, Jaro-Winkler tên, avatar pHash, cross-link literal). Hai profile cùng một người ở 2 platform khác nhau nhưng viết bio khác câu chữ — "Building AI tools @ XActions" vs "Founder, dev tools. Prev: Cognition" — không có signal nào chạm ngưỡng merge (≥40), cluster tách thành 2 identity khác nhau.
+**Problem:** `EntityResolver` chỉ match bằng tín hiệu cứng (username exact, Jaro-Winkler tên, avatar pHash, cross-link literal). Hai profile cùng một người ở 2 platform khác nhau nhưng viết bio khác câu chữ — "Building AI tools @ Medirus" vs "Founder, dev tools. Prev: Cognition" — không có signal nào chạm ngưỡng merge (≥40), cluster tách thành 2 identity khác nhau.
 
 **Approach:** Thêm Jev semantic second-opinion cho bio pairs: async pre-pass `prefetchBioScores()` trước `resolveIdentities` (cùng seam `prefetchAvatarHashes` của Story 41.3 — `scorePair` sync không gọi được Jev), qua `JevBioMatcher` mới: `decide({bio1,bio2}, {samePerson: Score(0-3)})`. Cặp đạt `score ≥ 2 && confidence ≥ 0.85` được `scorePair` cộng **+35 signal `bio_semantic`**. Strict Option D (AD-45): mọi tính toán in-memory per-request, không persist bio/cluster.
 

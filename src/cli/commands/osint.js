@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { executeSocialFindProfiles } from '../../mcp/osint-find-profiles.js';
 
 /**
- * `xactions osint` command group — OSINT find profiles fan-out.
+ * `medirus osint` command group — OSINT find profiles fan-out.
  * @param {import('commander').Command} program
  */
 export function registerOsintCommand(program) {
@@ -11,7 +11,7 @@ export function registerOsintCommand(program) {
     .command('osint')
     .description('OSINT find profiles — fan-out query across platforms (Epic 36)');
 
-  // xactions osint find-profiles
+  // medirus osint find-profiles
   osint
     .command('find-profiles')
     .description('Execute OSINT find profiles fan-out query')
@@ -78,7 +78,7 @@ export function registerOsintCommand(program) {
       }
     });
 
-  // xactions osint platforms
+  // medirus osint platforms
   osint
     .command('platforms')
     .description('List supported platforms for OSINT queries')

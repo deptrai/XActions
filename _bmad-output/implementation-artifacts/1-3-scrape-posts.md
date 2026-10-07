@@ -14,7 +14,7 @@ Status: done
 
 ## Story
 
-As a growth marketer using XActions,
+As a growth marketer using Medirus,
 I want to scrape recent posts from a Facebook profile/page with a configurable limit,
 so that I can collect Facebook content for cross-platform analysis.
 
@@ -124,7 +124,7 @@ Facebook differences:
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 1.3]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md#FR-2, NFR1, NFR4, NFR5]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-08/prd.md#FR-2, NFR1, NFR4, NFR5]
 - [Source: _bmad-output/planning-artifacts/architecture.md#Addendum A.4 Normalized Shape]
 - [Source: src/scrapers/threads/index.js#scrapeTweets lines 128-219 — clone template]
 - [Source: src/scrapers/facebook/index.js#scrapeProfile — handle normalization to extract, normalizer pattern to mirror]

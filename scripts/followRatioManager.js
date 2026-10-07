@@ -17,7 +17,7 @@
   };
   // =============================================
 
-  const STORAGE_KEY = 'xactions_ratio_history';
+  const STORAGE_KEY = 'medirus_ratio_history';
 
   const download = (data, filename) => {
     const a = document.createElement('a');
@@ -130,19 +130,19 @@
         target: CONFIG.targetRatio,
         history: history.slice(-30),
         analyzedAt: new Date().toISOString(),
-      }, `xactions-ratio-${new Date().toISOString().slice(0, 10)}.json`);
+      }, `medirus-ratio-${new Date().toISOString().slice(0, 10)}.json`);
     }
   };
 
-  window.XActions = window.XActions || {};
-  window.XActions.track = analyze;
-  window.XActions.setTarget = (r) => { CONFIG.targetRatio = r; console.log(`🎯 Target: ${r}:1`); };
-  window.XActions.history = () => {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.track = analyze;
+  window.Medirus.setTarget = (r) => { CONFIG.targetRatio = r; console.log(`🎯 Target: ${r}:1`); };
+  window.Medirus.history = () => {
     const h = loadHistory();
-    if (h.length === 0) { console.log('📭 No history. Run XActions.track() first.'); return; }
+    if (h.length === 0) { console.log('📭 No history. Run Medirus.track() first.'); return; }
     h.forEach(s => console.log(`  ${new Date(s.timestamp).toLocaleString()} — ${s.ratio.toFixed(2)}:1 (${s.grade}) [${s.followers}/${s.following}]`));
   };
-  window.XActions.reset = () => { localStorage.removeItem(STORAGE_KEY); console.log('🗑️ History cleared.'); };
+  window.Medirus.reset = () => { localStorage.removeItem(STORAGE_KEY); console.log('🗑️ History cleared.'); };
 
   analyze();
 })();

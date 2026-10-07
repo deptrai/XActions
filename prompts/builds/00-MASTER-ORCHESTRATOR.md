@@ -1,6 +1,6 @@
-# XActions — Master Build Orchestrator
+# Medirus — Master Build Orchestrator
 
-> This document coordinates 11 build tracks that close every gap between XActions and the top X/Twitter repos (twikit 4k★, twitter-scraper 4k★, agent-twitter-client 415★, twitter-mcp 359★). Each track has its own prompt file with 15 agent-executable prompts. Every prompt produces production code — no mocks, no stubs, no placeholders.
+> This document coordinates 11 build tracks that close every gap between Medirus and the top X/Twitter repos (twikit 4k★, twitter-scraper 4k★, agent-twitter-client 415★, twitter-mcp 359★). Each track has its own prompt file with 15 agent-executable prompts. Every prompt produces production code — no mocks, no stubs, no placeholders.
 
 ---
 
@@ -80,7 +80,7 @@ src/
     types/
       index.d.ts              ← TypeScript definitions for Scraper class
   python/                     ← NEW: Python SDK
-    xactions/
+    medirus/
       __init__.py
       client.py
       auth.py
@@ -108,7 +108,7 @@ i18n/                         ← NEW: Translated READMEs
 - All new code is ESM (`import`/`export`), consistent with existing codebase
 - The `Scraper` class wraps Twitter's internal GraphQL API (same as twikit / agent-twitter-client)
 - Puppeteer scrapers in `src/scrapers/` remain untouched — the new `src/client/` is a parallel HTTP-only approach
-- The `Scraper` class is exported from the package root: `import { Scraper } from 'xactions'`
+- The `Scraper` class is exported from the package root: `import { Scraper } from 'medirus'`
 - Every file has `@author nich (@nichxbt)` and `@license Apache-2.0`
 - No external API keys required for core functionality; v2 API is opt-in
 - Real HTTP intercepts against Twitter's GraphQL endpoints, not mock data
@@ -167,7 +167,7 @@ When all 11 tracks are complete:
 
 ```javascript
 // This "hello world" must work — matching twikit/agent-twitter-client UX:
-import { Scraper } from 'xactions';
+import { Scraper } from 'medirus';
 
 const scraper = new Scraper();
 await scraper.login({ username: 'user', password: 'pass', email: 'e@mail.com' });
@@ -180,7 +180,7 @@ for await (const tweet of scraper.searchTweets('#nodejs', 100)) {
   console.log(tweet.text);
 }
 
-await scraper.sendTweet('Hello from XActions!', { media: ['photo.jpg'] });
+await scraper.sendTweet('Hello from Medirus!', { media: ['photo.jpg'] });
 await scraper.like('1234567890');
 await scraper.follow('elonmusk');
 
@@ -190,7 +190,7 @@ await scraper.v2.createPoll('Best language?', ['JS', 'Python', 'Rust'], 120);
 
 ```python
 # Python SDK must also work:
-from xactions import Scraper
+from medirus import Scraper
 
 scraper = Scraper()
 scraper.login(username='user', password='pass', email='e@mail.com')

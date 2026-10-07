@@ -35,7 +35,7 @@
   };
 
   const run = async () => {
-    console.log('📊 HASHTAG ANALYTICS - XActions by nichxbt');
+    console.log('📊 HASHTAG ANALYTICS - Medirus by nichxbt');
 
     // Extract hashtag from URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -161,7 +161,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `xactions-hashtag-${hashtag}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-hashtag-${hashtag}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       console.log('\n📥 Report downloaded as JSON');
     }

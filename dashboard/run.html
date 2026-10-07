@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>One-Click X/Twitter Automation Scripts — Run Instantly | XActions</title>
+  <title>One-Click X/Twitter Automation Scripts — Run Instantly | Medirus</title>
   <meta name="description" content="Run X/Twitter automation scripts with one click. Mass unfollow, auto-liker, scrapers, video downloader — paste and run in your browser console. Free.">
-  <meta name="keywords" content="twitter automation scripts, one-click twitter bot, browser console twitter, paste and run twitter, mass unfollow script, auto liker script, twitter scraper script, run twitter automation, xactions scripts">
+  <meta name="keywords" content="twitter automation scripts, one-click twitter bot, browser console twitter, paste and run twitter, mass unfollow script, auto liker script, twitter scraper script, run twitter automation, medirus scripts">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="One-Click X/Twitter Scripts — Run Them Instantly | XActions">
+  <meta property="og:title" content="One-Click X/Twitter Scripts — Run Them Instantly | Medirus">
   <meta property="og:description" content="Copy-paste Twitter automation scripts. Mass unfollow, auto-liker, scrapers & more. Run directly in your browser — free.">
-  <meta property="og:url" content="https://xactions.app/run">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-run.png">
+  <meta property="og:url" content="https://medirus.online/run">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-run.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:locale" content="en_US">
@@ -24,11 +24,11 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
   <meta name="twitter:creator" content="@nichxbt">
-  <meta name="twitter:title" content="One-Click X/Twitter Automation Scripts | XActions">
+  <meta name="twitter:title" content="One-Click X/Twitter Automation Scripts | Medirus">
   <meta name="twitter:description" content="Paste-and-run Twitter scripts. Mass unfollow, scrapers, auto-liker. Free, no setup needed.">
-  <meta name="twitter:image" content="https://xactions.app/og-run.png">
+  <meta name="twitter:image" content="https://medirus.online/og-run.png">
 
-  <link rel="canonical" href="https://xactions.app/run">
+  <link rel="canonical" href="https://medirus.online/run">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
   <link rel="manifest" href="/manifest.json">
 
@@ -37,9 +37,9 @@
   {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    "name": "XActions Script Runner",
+    "name": "Medirus Script Runner",
     "description": "One-click X/Twitter automation scripts. Run mass unfollow, auto-liker, scrapers directly in your browser.",
-    "url": "https://xactions.app/run",
+    "url": "https://medirus.online/run",
     "applicationCategory": "BrowserApplication",
     "operatingSystem": "Web Browser",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -50,8 +50,8 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Run Scripts", "item": "https://xactions.app/run" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Run Scripts", "item": "https://medirus.online/run" }
     ]
   }
   </script>
@@ -678,7 +678,7 @@
           <p>Find out who unfollowed you by comparing snapshots of your followers.</p>
           <div class="where">📍 Run on: x.com/YOUR_USERNAME/followers</div>
           <div class="script-actions">
-            <a class="bookmarklet" href="javascript:(function(){const sleep=ms=>new Promise(r=>setTimeout(r,ms));const followers=new Set();async function scrape(){let retries=0;while(retries<5){document.querySelectorAll('[data-testid=%22UserCell%22] a[href^=%22/%22]').forEach(a=>{const u=a.getAttribute('href')?.replace('/','');if(u)followers.add(u.toLowerCase())});window.scrollTo(0,document.body.scrollHeight);await sleep(1500);retries++}}async function run(){await scrape();const prev=JSON.parse(localStorage.getItem('xactions_followers')||'[]');const current=Array.from(followers);if(prev.length){const lost=prev.filter(u=>!followers.has(u));const gained=current.filter(u=>!prev.includes(u));console.log('❌ Unfollowed you:',lost);console.log('✅ New followers:',gained);alert('Lost: '+lost.length+' | Gained: '+gained.length)}localStorage.setItem('xactions_followers',JSON.stringify(current));alert('Saved '+current.length+' followers. Run again later to compare!')}run()})();">⚡ Check Unfollowers</a>
+            <a class="bookmarklet" href="javascript:(function(){const sleep=ms=>new Promise(r=>setTimeout(r,ms));const followers=new Set();async function scrape(){let retries=0;while(retries<5){document.querySelectorAll('[data-testid=%22UserCell%22] a[href^=%22/%22]').forEach(a=>{const u=a.getAttribute('href')?.replace('/','');if(u)followers.add(u.toLowerCase())});window.scrollTo(0,document.body.scrollHeight);await sleep(1500);retries++}}async function run(){await scrape();const prev=JSON.parse(localStorage.getItem('medirus_followers')||'[]');const current=Array.from(followers);if(prev.length){const lost=prev.filter(u=>!followers.has(u));const gained=current.filter(u=>!prev.includes(u));console.log('❌ Unfollowed you:',lost);console.log('✅ New followers:',gained);alert('Lost: '+lost.length+' | Gained: '+gained.length)}localStorage.setItem('medirus_followers',JSON.stringify(current));alert('Saved '+current.length+' followers. Run again later to compare!')}run()})();">⚡ Check Unfollowers</a>
             <button class="copy-btn" data-script="detectUnfollowers">📋 Copy Script</button>
           </div>
           <a href="/tutorials/monitoring#unfollowers" class="tutorial-link">📚 Full Tutorial →</a>
@@ -693,7 +693,7 @@
           <p>Track changes to any public account - new tweets, follower changes, bio updates.</p>
           <div class="where">📍 Run on: Any profile page (x.com/username)</div>
           <div class="script-actions">
-            <a class="bookmarklet" href="javascript:(function(){const user=location.pathname.split('/')[1];if(!user){alert('Go to a profile page first!');return}const data={user,followers:document.querySelector('[href$=%22/followers%22]')?.textContent||'0',following:document.querySelector('[href$=%22/following%22]')?.textContent||'0',bio:document.querySelector('[data-testid=%22UserDescription%22]')?.textContent||'',time:new Date().toISOString()};const key='xactions_monitor_'+user;const prev=JSON.parse(localStorage.getItem(key)||'null');localStorage.setItem(key,JSON.stringify(data));if(prev){const changes=[];if(prev.followers!==data.followers)changes.push('Followers: '+prev.followers+' → '+data.followers);if(prev.following!==data.following)changes.push('Following: '+prev.following+' → '+data.following);if(prev.bio!==data.bio)changes.push('Bio changed!');alert(changes.length?'Changes detected:\\n'+changes.join('\\n'):'No changes since last check')}else{alert('Snapshot saved for @'+user+'. Run again later to detect changes!')}})();">⚡ Monitor Account</a>
+            <a class="bookmarklet" href="javascript:(function(){const user=location.pathname.split('/')[1];if(!user){alert('Go to a profile page first!');return}const data={user,followers:document.querySelector('[href$=%22/followers%22]')?.textContent||'0',following:document.querySelector('[href$=%22/following%22]')?.textContent||'0',bio:document.querySelector('[data-testid=%22UserDescription%22]')?.textContent||'',time:new Date().toISOString()};const key='medirus_monitor_'+user;const prev=JSON.parse(localStorage.getItem(key)||'null');localStorage.setItem(key,JSON.stringify(data));if(prev){const changes=[];if(prev.followers!==data.followers)changes.push('Followers: '+prev.followers+' → '+data.followers);if(prev.following!==data.following)changes.push('Following: '+prev.following+' → '+data.following);if(prev.bio!==data.bio)changes.push('Bio changed!');alert(changes.length?'Changes detected:\\n'+changes.join('\\n'):'No changes since last check')}else{alert('Snapshot saved for @'+user+'. Run again later to detect changes!')}})();">⚡ Monitor Account</a>
             <button class="copy-btn" data-script="monitorAccount">📋 Copy Script</button>
           </div>
           <a href="/tutorials/monitoring#monitor" class="tutorial-link">📚 Full Tutorial →</a>
@@ -716,7 +716,7 @@
           <p>Leave every X/Twitter community you've joined. Clean slate.</p>
           <div class="where">📍 Run on: x.com/YOUR_USERNAME (your profile)</div>
           <div class="script-actions">
-            <a class="bookmarklet" href="javascript:(function(){const sleep=ms=>new Promise(r=>setTimeout(r,ms));const processed=JSON.parse(sessionStorage.getItem('xactions_communities')||'[]');async function run(){const communityLinks=Array.from(document.querySelectorAll('a[href^=%22/i/communities/%22]')).map(a=>a.href).filter((v,i,a)=>a.indexOf(v)===i%26%26!processed.includes(v));if(!communityLinks.length){const nav=document.querySelector('a[aria-label=%22Communities%22]');if(nav%26%26!location.pathname.includes('/communities')){nav.click();await sleep(2000);return run()}alert('No communities found or all processed!');return}const url=communityLinks[0];processed.push(url);sessionStorage.setItem('xactions_communities',JSON.stringify(processed));window.location.href=url}if(location.pathname.includes('/i/communities/')){setTimeout(async()=>{const joined=document.querySelector('button[aria-label^=%22Joined%22]');if(joined){joined.click();await sleep(500);const leave=Array.from(document.querySelectorAll('[role=%22menuitem%22]')).find(el=>el.textContent.includes('Leave'));leave?.click();await sleep(500);document.querySelector('[data-testid=%22confirmationSheetConfirm%22]')?.click();await sleep(1000)}history.back()},1000)}else{run()}})();">⚡ Leave All Communities</a>
+            <a class="bookmarklet" href="javascript:(function(){const sleep=ms=>new Promise(r=>setTimeout(r,ms));const processed=JSON.parse(sessionStorage.getItem('medirus_communities')||'[]');async function run(){const communityLinks=Array.from(document.querySelectorAll('a[href^=%22/i/communities/%22]')).map(a=>a.href).filter((v,i,a)=>a.indexOf(v)===i%26%26!processed.includes(v));if(!communityLinks.length){const nav=document.querySelector('a[aria-label=%22Communities%22]');if(nav%26%26!location.pathname.includes('/communities')){nav.click();await sleep(2000);return run()}alert('No communities found or all processed!');return}const url=communityLinks[0];processed.push(url);sessionStorage.setItem('medirus_communities',JSON.stringify(processed));window.location.href=url}if(location.pathname.includes('/i/communities/')){setTimeout(async()=>{const joined=document.querySelector('button[aria-label^=%22Joined%22]');if(joined){joined.click();await sleep(500);const leave=Array.from(document.querySelectorAll('[role=%22menuitem%22]')).find(el=>el.textContent.includes('Leave'));leave?.click();await sleep(500);document.querySelector('[data-testid=%22confirmationSheetConfirm%22]')?.click();await sleep(1000)}history.back()},1000)}else{run()}})();">⚡ Leave All Communities</a>
             <button class="copy-btn" data-script="leaveAllCommunities">📋 Copy Script</button>
           </div>
           <a href="/tutorials/communities" class="tutorial-link">📚 Full Tutorial →</a>
@@ -1168,7 +1168,7 @@
   }
   
   const currentFollowers = Array.from(followers);
-  const prevFollowers = JSON.parse(localStorage.getItem('xactions_followers_snapshot') || '[]');
+  const prevFollowers = JSON.parse(localStorage.getItem('medirus_followers_snapshot') || '[]');
   
   if (prevFollowers.length > 0) {
     const unfollowed = prevFollowers.filter(u => !followers.has(u));
@@ -1183,7 +1183,7 @@
     alert(\`Unfollowed: \${unfollowed.length}\\nNew followers: \${newFollowers.length}\`);
   }
   
-  localStorage.setItem('xactions_followers_snapshot', JSON.stringify(currentFollowers));
+  localStorage.setItem('medirus_followers_snapshot', JSON.stringify(currentFollowers));
   console.log(\`\\n💾 Saved \${currentFollowers.length} followers. Run again later to detect changes!\`);
   
   if (prevFollowers.length === 0) {
@@ -1211,7 +1211,7 @@
     timestamp: new Date().toISOString(),
   };
   
-  const storageKey = 'xactions_monitor_' + user.toLowerCase();
+  const storageKey = 'medirus_monitor_' + user.toLowerCase();
   const prev = JSON.parse(localStorage.getItem(storageKey) || 'null');
   
   localStorage.setItem(storageKey, JSON.stringify(data));
@@ -1251,7 +1251,7 @@
 
 (async () => {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const processed = JSON.parse(sessionStorage.getItem('xactions_left_communities') || '[]');
+  const processed = JSON.parse(sessionStorage.getItem('medirus_left_communities') || '[]');
   
   // If on a community page, leave it
   if (location.pathname.includes('/i/communities/')) {
@@ -1305,7 +1305,7 @@
     
     console.log('✅ All done! Left all communities.');
     alert('Finished! Left all communities (or none found).');
-    sessionStorage.removeItem('xactions_left_communities');
+    sessionStorage.removeItem('medirus_left_communities');
     return;
   }
   
@@ -1314,7 +1314,7 @@
   // Visit first community
   const nextUrl = communityLinks[0];
   processed.push(nextUrl);
-  sessionStorage.setItem('xactions_left_communities', JSON.stringify(processed));
+  sessionStorage.setItem('medirus_left_communities', JSON.stringify(processed));
   
   window.location.href = nextUrl;
 })();`,

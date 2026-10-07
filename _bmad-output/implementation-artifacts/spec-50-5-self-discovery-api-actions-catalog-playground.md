@@ -1,4 +1,4 @@
-# Story 50.5 — Self-Discovery: GET /api/actions + openapi.json + x_actions_list syncCapable + Public Catalog + Gateway Playground
+# Story 50.5 — Self-Discovery: GET /api/actions + openapi.json + medirus_list syncCapable + Public Catalog + Gateway Playground
 
 **Epic 50 — Public Scrape Gateway** · status: done · author: nich (@nichxbt) + Claude
 
@@ -11,8 +11,8 @@ So that **my adapter knows what's callable — whichever discovery surface I hit
 ## Boundaries
 
 **IN:**
-- `GET /api/actions` — unauthenticated REST introspection, cached (<100ms on warm cache), payload ≡ MCP `x_actions_list` via shared `executeActionListTool` (UX-1: REST and MCP consumers on equal footing).
-- `x_actions_list` output gains `syncCapable: boolean` per action from descriptor `syncCapableActions`.
+- `GET /api/actions` — unauthenticated REST introspection, cached (<100ms on warm cache), payload ≡ MCP `medirus_list` via shared `executeActionListTool` (UX-1: REST and MCP consumers on equal footing).
+- `medirus_list` output gains `syncCapable: boolean` per action from descriptor `syncCapableActions`.
 - `api/openapi.json` documents `POST /api/platform/{platform}/scrape` (platform enum, body schema `{action, mode, options}`, unified envelope + 202 degrade, Bearer + x402 securitySchemes, `X-Consumer-Id` marked observability-only per UX-5).
 - Catalog `apps/web/app/actions/page.tsx` — category-grouped platform cards, drill-in actions, search, deep-link `/actions?platform=reddit&action=search`, status badges (stable/beta/coming_soon), Try-it→playground.
 - Playground `apps/web/app/gateway/page.tsx` — platform/action selectors, mode radio, Bearer input, options JSON editor, send→envelope render, error.kind badges, copy-as-curl, recent-calls localStorage(20), degrade banner, "Show me XACT_4029" rate-limit trigger.
@@ -43,7 +43,7 @@ So that **my adapter knows what's callable — whichever discovery surface I hit
 - `api/routes/actions.js` — **CREATE** — `GET /` → `executeActionListTool({platform, category, detailLevel})` → `{success:true, data, count, categories, generatedAt}`; 60s TTL in-memory cache keyed by filter tuple; `Cache-Control: public, max-age=60`.
 - `api/server.js` — **PATCH** — `app.use('/api/actions', actionsRoutes)` mounted BEFORE `x402Middleware` gate and before any auth middleware; verify path isn't swallowed by `/api/ai` or global auth guards.
 - `src/scrapers/social/actions-list.js` — **PATCH** — per action add `syncCapable: boolean` (lookup `DESCRIPTORS[platform].syncCapableActions`, matched against the action's mapped/canonical name) and `status: 'stable'|'beta'|'coming_soon'` (coming_soon when `no_crawler`).
-- `src/mcp/server.js` — **PATCH** — `x_actions_list` description mentions `syncCapable` field (schema already open).
+- `src/mcp/server.js` — **PATCH** — `medirus_list` description mentions `syncCapable` field (schema already open).
 - `api/openapi.json` — **PATCH** — add `/api/actions` GET + `POST /api/platform/{platform}/scrape` operations with full schema/securitySchemes (BearerAuth, X402Header) + `X-Consumer-Id` header param annotated "observability hint only".
 - `docs/canonical-action-matrix.md`, `docs/canonical-action-matrix.json` — regenerate via `npm run docs:matrix`; includes syncCapable column if generator supports it (else patch `scripts/` generator).
 - `apps/web/app/actions/layout.tsx` — **CREATE** — `generateMetadata` with title/description/OpenGraph for SEO.
@@ -67,8 +67,8 @@ So that **my adapter knows what's callable — whichever discovery surface I hit
 ## Acceptance Criteria
 
 1. `GET /api/actions` unauthenticated returns every (platform, action, syncCapable, requiredArgs, category, description) triple in <100ms warm.
-2. Payload ≡ `x_actions_list` output (shared executor — structural equality).
-3. `x_actions_list` shows `syncCapable` per action sourced from descriptor manifest.
+2. Payload ≡ `medirus_list` output (shared executor — structural equality).
+3. `medirus_list` shows `syncCapable` per action sourced from descriptor manifest.
 4. openapi.json documents the scrape route fully (envelope, 202, securitySchemes, X-Consumer-Id hint).
 5. Catalog renders grouped grid, drill-in, search, deep-link pre-open, status badges, Try-it links.
 6. Playground: platform/action pickers, mode picker, Bearer + X-Consumer-Id inputs (hint tooltip), options editor, unified envelope render, error-kind color badges, copy-as-curl, recent calls, degrade banner, XACT_4029 demo button.

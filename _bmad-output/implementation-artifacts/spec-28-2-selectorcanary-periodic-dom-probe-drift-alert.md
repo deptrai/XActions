@@ -15,7 +15,7 @@ context:
 
 ## Intent
 
-**Problem:** XActions scrapers depend on live DOM selectors (`data-testid`, `role`, semantic structure) that platforms change without notice. Today drift is discovered only when a production scrape silently returns empty data — after downstream consumers already stored garbage. There is no early-warning signal.
+**Problem:** Medirus scrapers depend on live DOM selectors (`data-testid`, `role`, semantic structure) that platforms change without notice. Today drift is discovered only when a production scrape silently returns empty data — after downstream consumers already stored garbage. There is no early-warning signal.
 
 **Approach:** A `SelectorCanary` background service periodically probes a declared set of public test targets per platform with a lightweight stealth browser (Obscura primary, Chrome fallback). Each probe walks the documented fallback selector chain, records `successRate`/`usedFallback`/`driftDetected`/`lastWorkingSelector`, and when a platform's success rate stays below `0.8` for two consecutive runs it fires an alert via the existing `AlertDispatcher` and exposes `platformDrift[platform]` through `AdaptiveRateGovernor.getStatus()` / `status-api`, surfaced as a green/red drift badge on `dashboard/admin.html`.
 

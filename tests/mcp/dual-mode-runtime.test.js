@@ -4,7 +4,7 @@
  *
  * Validates mode resolution (CLI flags, env vars, dynamic switcher),
  * tool catalog filtering, and ListToolsRequestSchema responses.
- * Follows the no-mock pattern of the XActions test suite.
+ * Follows the no-mock pattern of the Medirus test suite.
  */
 
 import { describe, it, beforeAll, beforeEach, afterEach } from 'vitest';
@@ -31,7 +31,7 @@ describe('Story 52.2: Dual-Mode Runtime Engine & CLI Flags', () => {
   const originalEnvMode = process.env.MCP_TOOL_MODE;
 
   beforeAll(async () => {
-    process.env.XACTIONS_MODE = 'local';
+    process.env.MEDIRUS_MODE = 'local';
     await initializeBackend();
   });
 
@@ -353,7 +353,7 @@ describe('Story 52.2: Dual-Mode Runtime Engine & CLI Flags', () => {
   });
 
   describe('MCP Protocol: Resource Integration', () => {
-    it('xactions://system/status resource returns toolMode and activeToolCount', async () => {
+    it('medirus://system/status resource returns toolMode and activeToolCount', async () => {
       setToolMode('compact');
       const srv = createMcpServer();
       const readHandler = srv._requestHandlers?.get(ReadResourceRequestSchema.shape.method.value);
@@ -361,7 +361,7 @@ describe('Story 52.2: Dual-Mode Runtime Engine & CLI Flags', () => {
 
       const result = await readHandler({
         method: 'resources/read',
-        params: { uri: 'xactions://system/status' },
+        params: { uri: 'medirus://system/status' },
       });
       assert.ok(result.contents && result.contents[0]);
       const statusData = JSON.parse(result.contents[0].text);
@@ -373,7 +373,7 @@ describe('Story 52.2: Dual-Mode Runtime Engine & CLI Flags', () => {
       setToolMode('full');
       const resultFull = await readHandler({
         method: 'resources/read',
-        params: { uri: 'xactions://system/status' },
+        params: { uri: 'medirus://system/status' },
       });
       const statusDataFull = JSON.parse(resultFull.contents[0].text);
       assert.equal(statusDataFull.toolMode, 'full');

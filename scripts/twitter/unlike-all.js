@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================================================
- * 💔 Unlike All Tweets - XActions
+ * 💔 Unlike All Tweets - Medirus
  * ============================================================================
  * 
  * @name        unlike-all.js
@@ -73,7 +73,7 @@
   console.clear();
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  💔 UNLIKE ALL TWEETS - XActions                             ║
+║  💔 UNLIKE ALL TWEETS - Medirus                             ║
 ║  by nichxbt                                                  ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -205,7 +205,7 @@
 ╚══════════════════════════════════════════════════════════════╝
   `);
 
-  console.log('👋 Thanks for using XActions! Follow @nichxbt for updates.');
+  console.log('👋 Thanks for using Medirus! Follow @nichxbt for updates.');
   
   return stats;
 })();

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Agent Setup Wizard
+// Medirus — Agent Setup Wizard
 // Interactive first-time configuration for the Thought Leader Agent
 // by nichxbt
 
@@ -298,7 +298,7 @@ async function step8_summary(config) {
 
 async function run() {
   log('');
-  log('⚡ XActions Thought Leader Agent — Setup Wizard');
+  log('⚡ Medirus Thought Leader Agent — Setup Wizard');
   log('═══════════════════════════════════════════════');
   log('');
 

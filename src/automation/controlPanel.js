@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Control Panel — Floating UI for Browser Automations
+// Medirus Control Panel — Floating UI for Browser Automations
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -15,7 +15,7 @@
 // by nichxbt
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
@@ -26,7 +26,7 @@
     return;
   }
 
-  const { log, sleep, randomDelay, scrollBy, clickElement, SELECTORS, storage, rateLimit } = window.XActions.Core;
+  const { log, sleep, randomDelay, scrollBy, clickElement, SELECTORS, storage, rateLimit } = window.Medirus.Core;
 
   // ========================================================================
   // PANEL STATE
@@ -198,7 +198,7 @@
   function buildHTML() {
     return `
     <div id="xa-panel-header">
-      <div class="xa-title"><span>⚡</span> XActions Panel</div>
+      <div class="xa-title"><span>⚡</span> Medirus Panel</div>
       <div style="display:flex;gap:4px">
         <button class="xa-close" id="xa-minimize" title="Minimize">─</button>
         <button class="xa-close" id="xa-close-panel" title="Close">✕</button>
@@ -601,7 +601,7 @@
         if (followed >= limit) break;
         await checkPauseAbort(signal);
 
-        const user = window.XActions.Core.extractUserFromCell(cell);
+        const user = window.Medirus.Core.extractUserFromCell(cell);
         if (!user || !user.username || processed.has(user.username)) continue;
         processed.add(user.username);
         if (user.isFollowing) continue;
@@ -663,7 +663,7 @@
         if (unfollowed >= limit) break;
         await checkPauseAbort(signal);
 
-        const user = window.XActions.Core.extractUserFromCell(cell);
+        const user = window.Medirus.Core.extractUserFromCell(cell);
         if (!user || !user.username || processed.has(user.username)) continue;
         processed.add(user.username);
 
@@ -720,7 +720,7 @@
       const cells = document.querySelectorAll(SELECTORS.userCell);
       for (const cell of cells) {
         if (collected.length >= limit) break;
-        const user = window.XActions.Core.extractUserFromCell(cell);
+        const user = window.Medirus.Core.extractUserFromCell(cell);
         if (!user || !user.username || seen.has(user.username)) continue;
         seen.add(user.username);
         collected.push(user);
@@ -800,7 +800,7 @@
           if (!tid || seen.has(tid)) continue;
           seen.add(tid);
 
-          const info = window.XActions.Core.extractTweetInfo(tw);
+          const info = window.Medirus.Core.extractTweetInfo(tw);
           if (!info?.text) continue;
 
           // Like (35% chance)
@@ -923,7 +923,7 @@
           let pFollows = 0;
           for (const cell of cells) {
             if (pFollows >= 5) break;
-            const user = window.XActions.Core.extractUserFromCell(cell);
+            const user = window.Medirus.Core.extractUserFromCell(cell);
             if (!user?.username || user.isFollowing) continue;
             if (bioKw.length > 0 && user.bio) {
               const bl = user.bio.toLowerCase();
@@ -1104,7 +1104,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions_export_${Date.now()}.${ext}`;
+    a.download = `medirus_export_${Date.now()}.${ext}`;
     a.click();
     URL.revokeObjectURL(url);
     panelLog(`📤 Exported ${PANEL.results.length} results as ${ext.toUpperCase()}`, 'success');
@@ -1228,7 +1228,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions_log_${Date.now()}.txt`;
+    a.download = `medirus_log_${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   });
@@ -1245,7 +1245,7 @@
     if (PANEL.pauseResolve) { PANEL.pauseResolve(); PANEL.pauseResolve = null; }
     panel.remove();
     style.remove();
-    delete window.XActions.Panel;
+    delete window.Medirus.Panel;
     panelLog('Panel closed', 'info');
   });
 
@@ -1257,7 +1257,7 @@
   renderQueue();
 
   // Expose to namespace
-  window.XActions.Panel = {
+  window.Medirus.Panel = {
     PANEL,
     TASK_QUEUE,
     AUTOMATIONS,
@@ -1271,8 +1271,8 @@
     close: () => { $('#xa-close-panel').click(); },
   };
 
-  panelLog('⚡ XActions Panel ready!', 'success');
-  console.log('⚡ XActions Panel injected. Use window.XActions.Panel to control programmatically.');
+  panelLog('⚡ Medirus Panel ready!', 'success');
+  console.log('⚡ Medirus Panel injected. Use window.Medirus.Panel to control programmatically.');
   console.log('');
   console.log('QUICK START:');
   console.log('  1. Pick an automation from the dropdown');
@@ -1280,8 +1280,8 @@
   console.log('  3. Click Start — or Add to Queue for multi-target runs');
   console.log('');
   console.log('MULTI-TARGET EXAMPLE (programmatic):');
-  console.log('  XActions.Panel.addTask("like-timeline", { target: "nichxbt", limit: 500, keywords: "" });');
-  console.log('  XActions.Panel.addTask("like-timeline", { target: "doi", limit: 500, keywords: "" });');
-  console.log('  XActions.Panel.runQueue();');
+  console.log('  Medirus.Panel.addTask("like-timeline", { target: "nichxbt", limit: 500, keywords: "" });');
+  console.log('  Medirus.Panel.addTask("like-timeline", { target: "doi", limit: 500, keywords: "" });');
+  console.log('  Medirus.Panel.runQueue();');
 
 })();

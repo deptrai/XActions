@@ -17,13 +17,13 @@ dependencies:
   - redis-stream (Bull queue infrastructure)
   - prisma-schema (PostgreSQL)
 spec_reference: '_bmad-output/specs/spec-scraper-benchmark/'
-architecture_spine: '_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md'
+architecture_spine: '_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md'
 change_proposal: '_bmad-output/planning-artifacts/sprint-change-proposal-2026-09-08-benchmark-v2.md'
 ---
 
 ## Business Context
 
-Nowing (B2B Lead Hub) depends on XActions to scrape 15+ platform sources (Twitter, Facebook, Threads, Shopee, TikTok Shop, TopCV, Masothue, F&B, Healthcare, etc.). Without a benchmark suite, there's no objective way to measure:
+Nowing (B2B Lead Hub) depends on Medirus to scrape 15+ platform sources (Twitter, Facebook, Threads, Shopee, TikTok Shop, TopCV, Masothue, F&B, Healthcare, etc.). Without a benchmark suite, there's no objective way to measure:
 - **Stability**: Which scrapers fail silently (False 200s, login walls, Cloudflare challenges)?
 - **Quality**: Which scrapers return incomplete or schema-invalid data?
 - **Noise**: Which scrapers produce duplicates, spam, or false leads?
@@ -91,6 +91,6 @@ Nowing needs a **Health Score (0-100)** and **Tier (A/B/C)** per scraper to prio
 
 - Spec: `_bmad-output/specs/spec-scraper-benchmark/SPEC.md`
 - Metrics Catalog: `_bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md`
-- Architecture Spine: `_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md`
+- Architecture Spine: `_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md`
 - Change Proposal: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-09-08-benchmark-v2.md`
 - Review Synthesis: `_bmad-output/planning-artifacts/review-epic34-synthesis-2026-09-08.md`

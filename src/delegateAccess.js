@@ -23,7 +23,7 @@
   };
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  const STORAGE_KEY = 'xactions_delegates';
+  const STORAGE_KEY = 'medirus_delegates';
 
   const SELECTORS = {
     delegateSettings: 'a[href="/settings/delegate"]',
@@ -212,7 +212,7 @@
 
   const run = async () => {
     console.log('═══════════════════════════════════════════');
-    console.log('🔑 XActions — Delegate Access');
+    console.log('🔑 Medirus — Delegate Access');
     console.log('═══════════════════════════════════════════\n');
 
     if (CONFIG.showPermissionsInfo) {

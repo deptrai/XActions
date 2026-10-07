@@ -1,10 +1,10 @@
 # Skill: A2A Multi-Agent Orchestration
 
-> Turn XActions into an A2A-compatible agent that can discover, communicate with, and delegate tasks to other AI agents using Google's Agent-to-Agent protocol.
+> Turn Medirus into an A2A-compatible agent that can discover, communicate with, and delegate tasks to other AI agents using Google's Agent-to-Agent protocol.
 
 ## When to Use
 
-- User wants to connect XActions with external AI agents
+- User wants to connect Medirus with external AI agents
 - User needs multi-agent orchestration (decompose → delegate → aggregate)
 - User asks about A2A protocol, agent cards, or inter-agent communication
 - User wants to run the A2A server or manage agent discovery
@@ -123,7 +123,7 @@ curl 'http://localhost:3100/a2a/skills?query=scrape'
 Every A2A agent publishes a JSON document at `/.well-known/agent.json` describing its capabilities, skills, and supported protocols.
 
 ### Skills
-XActions converts its 145 MCP tools into A2A skills, each with a unique ID (`xactions.<tool_name>`), description, input schema, and category tags.
+Medirus converts its 145 MCP tools into A2A skills, each with a unique ID (`medirus.<tool_name>`), description, input schema, and category tags.
 
 ### Task Lifecycle
 ```
@@ -166,7 +166,7 @@ operation is one of the endpoints in the table above.
 node src/a2a/server.js
 
 # Or on another port, with a session attached
-A2A_PORT=3200 XACTIONS_SESSION_COOKIE=your_auth_token node src/a2a/server.js
+A2A_PORT=3200 MEDIRUS_SESSION_COOKIE=your_auth_token node src/a2a/server.js
 ```
 
 ```bash

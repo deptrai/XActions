@@ -42,7 +42,7 @@
 
   // ── MAIN ──────────────────────────────────────────────────
   (async () => {
-    console.log('🚀 ENGAGEMENT BOOSTER — XActions by nichxbt');
+    console.log('🚀 ENGAGEMENT BOOSTER — Medirus by nichxbt');
     console.log(`   Mode: ${CONFIG.dryRun ? '🔍 DRY RUN' : '⚡ LIVE'} | Max: ${CONFIG.maxInteractions}`);
     console.log(`   Actions: ${CONFIG.actions.like ? '❤️ Like' : ''} ${CONFIG.actions.reply ? '💬 Reply' : ''}\n`);
 

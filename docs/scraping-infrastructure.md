@@ -10,7 +10,7 @@ The scraping infrastructure (`src/scraping/`) provides three production-grade mo
 - **StealthBrowser** — Anti-detection Puppeteer wrapper with fingerprint randomization
 - **PaginationEngine** — Smart scroll-based pagination with deduplication, checkpointing, and retry
 
-These modules power all XActions scrapers internally and are also available as standalone imports.
+These modules power all Medirus scrapers internally and are also available as standalone imports.
 
 ---
 
@@ -24,17 +24,17 @@ src/scraping/
 ```
 
 Data directories:
-- `~/.xactions/datasets/` — Stored scraping datasets
-- `~/.xactions/scrape-checkpoints/` — Pagination checkpoints for resume
+- `~/.medirus/datasets/` — Stored scraping datasets
+- `~/.medirus/scrape-checkpoints/` — Pagination checkpoints for resume
 
 ---
 
 ## Quick Start
 
 ```javascript
-import { ProxyManager } from 'xactions/src/scraping/proxyManager.js';
-import { launchStealthBrowser, createStealthPage } from 'xactions/src/scraping/stealthBrowser.js';
-import { PaginationEngine, RetryPolicy } from 'xactions/src/scraping/paginationEngine.js';
+import { ProxyManager } from 'medirus/src/scraping/proxyManager.js';
+import { launchStealthBrowser, createStealthPage } from 'medirus/src/scraping/stealthBrowser.js';
+import { PaginationEngine, RetryPolicy } from 'medirus/src/scraping/paginationEngine.js';
 
 // 1. Set up proxies (optional)
 const proxies = new ProxyManager(['http://proxy1:8080', 'http://proxy2:8080']);
@@ -75,7 +75,7 @@ await browser.close();
 ### Creating
 
 ```javascript
-import { ProxyManager } from 'xactions/src/scraping/proxyManager.js';
+import { ProxyManager } from 'medirus/src/scraping/proxyManager.js';
 
 // From array
 const pm = new ProxyManager([
@@ -91,7 +91,7 @@ await pm2.loadFromFile('/path/to/proxies.txt');
 // From environment variables
 const pm3 = new ProxyManager();
 pm3.loadFromEnv();
-// Reads: XACTIONS_PROXIES (comma-separated) and XACTIONS_PROXY_FILE
+// Reads: MEDIRUS_PROXIES (comma-separated) and MEDIRUS_PROXY_FILE
 ```
 
 ### Rotation Strategies
@@ -162,7 +162,7 @@ Anti-detection Puppeteer wrapper that evades bot detection.
 ### Launch Browser
 
 ```javascript
-import { launchStealthBrowser, createStealthPage } from 'xactions/src/scraping/stealthBrowser.js';
+import { launchStealthBrowser, createStealthPage } from 'medirus/src/scraping/stealthBrowser.js';
 
 const browser = await launchStealthBrowser({
   proxy: 'http://proxy:8080',   // Optional
@@ -200,7 +200,7 @@ Handles infinite-scroll pages with deduplication, error recovery, and checkpoint
 ### Basic Usage
 
 ```javascript
-import { PaginationEngine } from 'xactions/src/scraping/paginationEngine.js';
+import { PaginationEngine } from 'medirus/src/scraping/paginationEngine.js';
 
 const engine = new PaginationEngine({
   maxPages: 100,        // Max scroll iterations
@@ -234,7 +234,7 @@ Save progress and resume later:
 ```javascript
 // Save checkpoint mid-scrape
 const checkpointPath = await engine.saveCheckpoint('my-scrape-001');
-// Saved to ~/.xactions/scrape-checkpoints/my-scrape-001.json
+// Saved to ~/.medirus/scrape-checkpoints/my-scrape-001.json
 
 // Resume from checkpoint
 const engine2 = new PaginationEngine({ maxItems: 5000 });
@@ -271,7 +271,7 @@ console.log(stats);
 Standalone retry utility with exponential backoff.
 
 ```javascript
-import { RetryPolicy } from 'xactions/src/scraping/paginationEngine.js';
+import { RetryPolicy } from 'medirus/src/scraping/paginationEngine.js';
 
 const retry = new RetryPolicy({
   maxRetries: 3,
@@ -302,20 +302,20 @@ const result = await retry.execute(async () => {
 
 ## Dataset Storage
 
-The PaginationEngine stores results in `~/.xactions/datasets/` as JSON files, compatible with the Apify dataset format.
+The PaginationEngine stores results in `~/.medirus/datasets/` as JSON files, compatible with the Apify dataset format.
 
 ### CLI
 
 ```bash
 # List datasets
-xactions dataset list
+medirus dataset list
 
 # Export a dataset
-xactions dataset export my-scrape --format json --output data.json
-xactions dataset export my-scrape --format csv --output data.csv
+medirus dataset export my-scrape --format json --output data.json
+medirus dataset export my-scrape --format csv --output data.csv
 
 # Delete
-xactions dataset delete my-scrape
+medirus dataset delete my-scrape
 ```
 
 ### API
@@ -331,7 +331,7 @@ DELETE /api/datasets/:name
 
 ## Scraper Adapters
 
-XActions includes adapter wrappers for multiple scraping backends (`src/scrapers/adapters/`):
+Medirus includes adapter wrappers for multiple scraping backends (`src/scrapers/adapters/`):
 
 | Adapter | Uses | Best For |
 |---------|------|----------|
@@ -345,7 +345,7 @@ XActions includes adapter wrappers for multiple scraping backends (`src/scrapers
 All adapters implement the same `BaseScraper` interface:
 
 ```javascript
-import { createScraper } from 'xactions/src/scrapers/adapters/index.js';
+import { createScraper } from 'medirus/src/scrapers/adapters/index.js';
 
 const scraper = createScraper('puppeteer'); // or 'playwright', 'cheerio', etc.
 await scraper.init();
@@ -357,7 +357,7 @@ await scraper.close();
 
 ## Cross-Platform Scrapers
 
-XActions scrapers support multiple social platforms:
+Medirus scrapers support multiple social platforms:
 
 | Platform | Module | Features |
 |----------|--------|----------|
@@ -367,17 +367,17 @@ XActions scrapers support multiple social platforms:
 | Threads | `src/scrapers/threads/` | Profiles, followers, posts |
 
 ```javascript
-import scrapers from 'xactions/scrapers';
+import scrapers from 'medirus/scrapers';
 
 // Twitter (default)
 const profile = await scrapers.scrapeProfile(page, 'nichxbt');
 
 // Bluesky
-import bluesky from 'xactions/scrapers/bluesky';
+import bluesky from 'medirus/scrapers/bluesky';
 const bskyProfile = await bluesky.getProfile('nichxbt.bsky.social');
 
 // Mastodon
-import mastodon from 'xactions/scrapers/mastodon';
+import mastodon from 'medirus/scrapers/mastodon';
 const mastoProfile = await mastodon.getProfile('user', 'https://mastodon.social');
 ```
 
@@ -387,9 +387,9 @@ const mastoProfile = await mastodon.getProfile('user', 'https://mastodon.social'
 
 | Variable | Description |
 |----------|-------------|
-| `XACTIONS_PROXIES` | Comma-separated proxy list |
-| `XACTIONS_PROXY_FILE` | Path to proxy list file |
-| `XACTIONS_SESSION_COOKIE` | Default X/Twitter auth token |
+| `MEDIRUS_PROXIES` | Comma-separated proxy list |
+| `MEDIRUS_PROXY_FILE` | Path to proxy list file |
+| `MEDIRUS_SESSION_COOKIE` | Default X/Twitter auth token |
 | `PUPPETEER_EXECUTABLE_PATH` | Custom Chrome path |
 
 ---

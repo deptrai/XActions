@@ -11,7 +11,7 @@ context:
   - _bmad-output/implementation-artifacts/spec-46-2-zod-schemas-uniform-response-envelopes.md
   - _bmad-output/implementation-artifacts/spec-46-1-swagger-ui-openapi-3-1-json-endpoint.md
   - _bmad-output/implementation-artifacts/spec-46-3-cli-generator-typescript-api-client.md
-  - _bmad-output/planning-artifacts/architecture/xactions-api-contract-epic46/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/medirus-api-contract-epic46/ARCHITECTURE-SPINE.md
 warnings: []
 deferred: []
 ---
@@ -22,7 +22,7 @@ deferred: []
 
 **Problem:** Story 46.2 đã giao foundation + 6 pilot mounts (`/api/viral`, `/api/crm`, `/api/optimizer`, `/api/checkpoints`, `/api/session`, `/api/auth`). Nhưng 17 mounts social và user-facing cốt lõi (`/api/twitter`, `/api/facebook`, `/api/facebook/accounts`, `/api/platform`, `/api/posting`, `/api/messages`, `/api/engagement`, `/api/thread`, `/api/spaces`, `/api/unfollowers`, `/api/graph`, `/api/profile`, `/api/settings`, `/api/user`, `/api/creator`, `/api/discovery`, `/api/bookmarks`) vẫn chưa có Zod schema declarations trong OpenAPI registry, chưa validate request qua `validate.js`, và response chưa standardize theo canonical envelope.
 
-**Approach:** Triển khai schema modules cho toàn bộ 17 social & user-facing mounts, đăng ký các operations vào `api/schemas/registry.js`, tích hợp validation middleware (`validate.js`), và đảm bảo mọi mutation operation trên tài khoản thật được đánh dấu `x-tryitout: false`. Sau đó build lại `api/openapi.json` và regenerate `@xactions/api-client` để toàn bộ endpoints mới có typed client methods tự động.
+**Approach:** Triển khai schema modules cho toàn bộ 17 social & user-facing mounts, đăng ký các operations vào `api/schemas/registry.js`, tích hợp validation middleware (`validate.js`), và đảm bảo mọi mutation operation trên tài khoản thật được đánh dấu `x-tryitout: false`. Sau đó build lại `api/openapi.json` và regenerate `@medirus/api-client` để toàn bộ endpoints mới có typed client methods tự động.
 
 ## Boundaries & Constraints
 
@@ -71,7 +71,7 @@ deferred: []
 - Export và load toàn bộ schemas trong `api/schemas/index.js`
 - Tích hợp `validate` middleware vào các route handlers chính trong `api/routes/posting.js`, `api/routes/engagement.js`, `api/routes/bookmarks.js`, `api/routes/twitter.js`
 - Chạy `npm run build:openapi` để cập nhật `api/openapi.json`
-- Chạy `npm run generate:api-client` để tái tạo `@xactions/api-client` với toàn bộ method stubs mới
+- Chạy `npm run generate:api-client` để tái tạo `@medirus/api-client` với toàn bộ method stubs mới
 - Viết test suite `tests/api/contract/social-routes.test.js` xác nhận contract validation và response envelopes
 
 **Acceptance Criteria:**
@@ -100,7 +100,7 @@ Nhóm các schemas theo domain logic (Posting, Engagement, Account, Discovery, F
 ## Auto Run Result
 
 **Status:** done
-**Summary:** Rolled out Zod schemas and OpenAPI contract declarations for all 17 social and user-facing mount groups: `/api/posting`, `/api/thread`, `/api/engagement`, `/api/messages`, `/api/bookmarks`, `/api/twitter`, `/api/unfollowers`, `/api/profile`, `/api/settings`, `/api/user`, `/api/creator`, `/api/discovery`, `/api/spaces`, `/api/graph`, `/api/platform`, `/api/facebook`, `/api/facebook/accounts`. Created 5 domain-grouped schema modules in `api/schemas/` registering 25+ new operations with explicit security and `x-tryitout: false` flags on real-account mutations. Rebuilt `api/openapi.json` (now 361 paths, 364 operations) and regenerated `@xactions/api-client` cleanly with 0 TypeScript compilation errors.
+**Summary:** Rolled out Zod schemas and OpenAPI contract declarations for all 17 social and user-facing mount groups: `/api/posting`, `/api/thread`, `/api/engagement`, `/api/messages`, `/api/bookmarks`, `/api/twitter`, `/api/unfollowers`, `/api/profile`, `/api/settings`, `/api/user`, `/api/creator`, `/api/discovery`, `/api/spaces`, `/api/graph`, `/api/platform`, `/api/facebook`, `/api/facebook/accounts`. Created 5 domain-grouped schema modules in `api/schemas/` registering 25+ new operations with explicit security and `x-tryitout: false` flags on real-account mutations. Rebuilt `api/openapi.json` (now 361 paths, 364 operations) and regenerated `@medirus/api-client` cleanly with 0 TypeScript compilation errors.
 
 **Files changed:**
 - `api/schemas/social-posting.js` *(new)* — schemas for posting & threads

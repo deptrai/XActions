@@ -4,7 +4,7 @@ type: architecture-spine
 purpose: build-substrate
 altitude: epic
 paradigm: 'hexagonal + two-tier telemetry (raw stream → aggregated store) + single-writer tier state machine'
-scope: 'Scraper health measurement across all XActions platforms (15+), serving Nowing Lead Hub'
+scope: 'Scraper health measurement across all Medirus platforms (15+), serving Nowing Lead Hub'
 status: draft
 created: '2026-09-08'
 updated: '2026-09-08'
@@ -36,7 +36,7 @@ flowchart TD
     E --> K[(PostgreSQL<br/>ScraperCanaryRun)]
     L[canary-runner<br/>node-cron hourly] --> A
     M[requalification<br/>worker] --> S
-    F --> N[Operator CLI / Dashboard<br/>xactions benchmark]
+    F --> N[Operator CLI / Dashboard<br/>medirus benchmark]
     S --> O[stream:alerts]
 ```
 
@@ -98,7 +98,7 @@ flowchart TD
 - **Binds:** CAP-4, FR-101, Story 34.6
 - **Prevents:** Automatic ingestion cutoff silently starving Nowing; engineers wiring enrichment into the wrong extension point (`MetadataSchemaRegistry` or `prisma-store.js`); sync contract violation in `formatPayload()`
 - **Rule:**
-  1. Tier C scrapers emit `benchmark_health: "C"` and `benchmark_alert: true` on thin events to `stream:social:raw_posts`, plus an alert event to `stream:alerts`. Nowing ingestion continues; the flag is informational for operator review. No automatic gating is implemented in XActions.
+  1. Tier C scrapers emit `benchmark_health: "C"` and `benchmark_alert: true` on thin events to `stream:social:raw_posts`, plus an alert event to `stream:alerts`. Nowing ingestion continues; the flag is informational for operator review. No automatic gating is implemented in Medirus.
   2. **Extension points:** `benchmark_health` + `benchmark_alert` are added to the `ThinEvent` typedef in `src/core/types.js` and emitted by `RedisStreamPublisher` — never via `MetadataSchemaRegistry` (which validates `Post.metadata` JSON in PostgreSQL, not stream payloads) and never in `prisma-store.js` (which contains no Redis publish logic; publishing lives in `store-with-redis.js` + per-crawler pipelines).
   3. `RedisStreamPublisher.formatPayload()` remains **synchronous**. Tier enrichment happens inside `publish()` (async) by merging `healthTierCache.get(scraperId)` into the payload before `XADD` — or the caller passes the tier on the item. `formatPayload` only maps fields already present on the item.
   4. `ThinEvent` gains optional `scraperId` — crawlers pass `this.scraperId` so `hash:scraper:health_tier` lookup uses the scraper key, not `platform` (a platform may run multiple variants).
@@ -222,7 +222,7 @@ api/
       alerting.js             # stream:alerts + webhook push (Story 34.8)
       retention-cleaner.js    # node-cron daily cleanup for ScraperHealthScore/ScraperCanaryRun (AD-36)
 src/cli/commands/
-    benchmark.js              # xactions benchmark registerBenchmarkCommand (AD convention)
+    benchmark.js              # medirus benchmark registerBenchmarkCommand (AD convention)
 dashboard/
     benchmark/index.html      # Health matrix view (Story 34.5)
 tests/
@@ -251,7 +251,7 @@ prisma/
 - **Deployment topology** — benchmark consumer runs as part of existing `npm run worker` process; no separate service needed yet.
 - **Alerting transport** — Slack/Telegram webhook URLs are config, not architecture; `stream:alerts` payload shape is fixed.
 - **Re-qualification automation scope** — state machine rules fixed by AD-31; operator-facing UX beyond `benchmark_alert` deferred to Story 34.8.
-- **Nowing-side consumption** — XActions emits `benchmark_health`; Nowing implements filtering/alerting on its side.
+- **Nowing-side consumption** — Medirus emits `benchmark_health`; Nowing implements filtering/alerting on its side.
 - **Per-item vs. per-run sampling** — NFR-21: MVP satisfies it via one `telemetry:run` + bounded `telemetry:request` events per batch (not per item); probabilistic per-item sampling deferred to Phase 2.
 - **`metricsSnapshot` GIN indexing** — Phase 2, only if queries filter inside the JSON column.
 - **Canary credential isolation** — dedicated probe accounts/proxies chosen per platform in Story 34.7; the governor bypass contract (`isCanary`) is fixed by AD-33.

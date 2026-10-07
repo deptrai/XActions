@@ -70,7 +70,7 @@ deferred: []
 - `src/mcp/entity-resolver.js` — **READ-ONLY** precedent style (pure-JS confidence-scored resolution, JSDoc-heavy). KHÔNG reuse/re-export — persons-only theo epic spine.
 - `src/scrapers/crypto/dexscreener/normalizer.js:213` — `normalizeTokenLookup` cho thấy real response shape: `pairs[]` với `liquidity_usd`, `volume_24h`, `base_symbol`, `pair_address` (flat, verified spike 54.0).
 - `src/scrapers/crypto/dexscreener/descriptor.js:67` — `mapArgs`: `chain|chainId|network`→`chainId`, `token|address|mint`→`tokenAddress`. Resolver injectable gọi `scrape('dexscreener','token_lookup',{chainId,tokenAddress})` từ `src/scrapers/index.js`.
-- `src/analytics/historyStore.js` — SQLite `~/.xactions/analytics.db` (better-sqlite3, WAL). Spike 54.0 quyết định enrichment **cached qua historyStore** — nếu dùng, tạo table riêng (username-keyed tables hiện có không reuse được, AD-2).
+- `src/analytics/historyStore.js` — SQLite `~/.medirus/analytics.db` (better-sqlite3, WAL). Spike 54.0 quyết định enrichment **cached qua historyStore** — nếu dùng, tạo table riêng (username-keyed tables hiện có không reuse được, AD-2).
 - `_bmad-output/implementation-artifacts/spike-54-coverage-report.md` — verdict GO cho 54.1: cashtag hit 1.00, contract 1.00; contract-address search KHÔNG mù (decision fork not triggered).
 - `_bmad-output/implementation-artifacts/epic-54-context.md` — AD-1 canonicalId grammar, AD-4 dedup key `(canonicalId, platform, platformId)` (downstream), conventions `sentimentScore` lexicon-at-ingest.
 

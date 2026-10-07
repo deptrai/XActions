@@ -17,7 +17,7 @@ async function updateLiveProxy() {
 
   console.log(`✅ Đã cập nhật live residential proxy (VNPT HCMC) cho ${updated.count} Facebook Account trong Database!`);
 
-  const xactionsDir = path.join(os.homedir(), '.xactions');
+  const medirusDir = path.join(os.homedir(), '.medirus');
   const proxyConfig = {
     provider: 'socksnode',
     gatewayUrl: proxyUrl,
@@ -33,8 +33,8 @@ async function updateLiveProxy() {
     updatedAt: new Date().toISOString(),
   };
 
-  fs.writeFileSync(path.join(xactionsDir, 'proxy-config.json'), JSON.stringify(proxyConfig, null, 2));
-  console.log(`✅ Đã đồng bộ cấu hình vào ${path.join(xactionsDir, 'proxy-config.json')}`);
+  fs.writeFileSync(path.join(medirusDir, 'proxy-config.json'), JSON.stringify(proxyConfig, null, 2));
+  console.log(`✅ Đã đồng bộ cấu hình vào ${path.join(medirusDir, 'proxy-config.json')}`);
 }
 
 updateLiveProxy()

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Social Graph — Main Entry Point
+ * Medirus Social Graph — Main Entry Point
  *
  * Usage:
  *   import graph from './graph/index.js';
@@ -43,7 +43,7 @@ import os from 'os';
 // Storage
 // ============================================================================
 
-const GRAPHS_DIR = path.join(os.homedir(), '.xactions', 'graphs');
+const GRAPHS_DIR = path.join(os.homedir(), '.medirus', 'graphs');
 
 async function ensureDir() {
   await fs.mkdir(GRAPHS_DIR, { recursive: true });

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions plugin` — manage plugins.
+ * `medirus plugin` — manage plugins.
  *
  * @author nich (@nichxbt)
  * @license MIT
@@ -17,7 +17,7 @@ import ora from 'ora';
 export function registerPluginCommand(program) {
   const pluginCmd = program
     .command('plugin')
-    .description('Manage XActions plugins');
+    .description('Manage Medirus plugins');
 
   pluginCmd
     .command('install <name>')
@@ -64,7 +64,7 @@ export function registerPluginCommand(program) {
 
         if (plugins.length === 0) {
           console.log(chalk.gray('\n  No plugins installed.'));
-          console.log(chalk.gray('  Install one with: xactions plugin install <name>\n'));
+          console.log(chalk.gray('  Install one with: medirus plugin install <name>\n'));
           return;
         }
 
@@ -110,7 +110,7 @@ export function registerPluginCommand(program) {
 
   pluginCmd
     .command('discover')
-    .description('Discover XActions plugins in node_modules')
+    .description('Discover Medirus plugins in node_modules')
     .action(async () => {
       const spinner = ora('Scanning node_modules...').start();
       try {
@@ -118,14 +118,14 @@ export function registerPluginCommand(program) {
         const found = await discoverPlugins();
 
         if (found.length === 0) {
-          spinner.info('No XActions plugins found in node_modules.');
-          console.log(chalk.gray('  Install plugins with: npm install xactions-plugin-<name>'));
+          spinner.info('No Medirus plugins found in node_modules.');
+          console.log(chalk.gray('  Install plugins with: npm install medirus-plugin-<name>'));
         } else {
           spinner.succeed(`Found ${found.length} plugin(s):`);
           for (const name of found) {
             console.log(chalk.cyan(`  • ${name}`));
           }
-          console.log(chalk.gray('\n  Install with: xactions plugin install <name>'));
+          console.log(chalk.gray('\n  Install with: medirus plugin install <name>'));
         }
       } catch (error) {
         spinner.fail('Failed to discover plugins');

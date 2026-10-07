@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * TypeScript Type Declarations for XActions Store Adapter.
+ * TypeScript Type Declarations for Medirus Store Adapter.
  * @author nich (@nichxbt)
  * @license MIT
  */

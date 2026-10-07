@@ -11,7 +11,7 @@ inputDocuments:
   - knowledge/test-levels-framework.md
 ---
 
-# XActions Test Suite Quality Review
+# Medirus Test Suite Quality Review
 
 ## Suite Overview
 

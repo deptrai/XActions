@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 📌 Pin Tweet - XActions
+ * 📌 Pin Tweet - Medirus
  * ============================================
  *
  * @name         pin-tweet
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to your profile page (x.com/YOUR_USERNAME)
@@ -116,9 +116,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📌 PIN TWEET - XActions                                 ║
+║  📌 PIN TWEET - Medirus                                 ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

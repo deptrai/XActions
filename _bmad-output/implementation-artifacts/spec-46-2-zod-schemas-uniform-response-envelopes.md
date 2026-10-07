@@ -8,7 +8,7 @@ route: 'dispatch'
 review_loop_iteration: 1
 context:
   - _bmad-output/implementation-artifacts/epic-46-context.md
-  - _bmad-output/planning-artifacts/architecture/xactions-api-contract-epic46/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/medirus-api-contract-epic46/ARCHITECTURE-SPINE.md
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">

@@ -1,14 +1,14 @@
 ---
 title: "View & Manage Notifications on X (Twitter) — Tutorial"
-description: "Scrape, filter, mute, and manage notification preferences on X/Twitter using XActions scripts."
-keywords: ["twitter notifications", "manage notifications x", "mute twitter users", "xactions notifications", "twitter notification filter", "mute words twitter"]
+description: "Scrape, filter, mute, and manage notification preferences on X/Twitter using Medirus scripts."
+keywords: ["twitter notifications", "manage notifications x", "mute twitter users", "medirus notifications", "twitter notification filter", "mute words twitter"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # View & Manage Notifications — Tutorial
 
-> Step-by-step guide to scraping, filtering, muting users/keywords, and managing notification preferences on X/Twitter using XActions scripts.
+> Step-by-step guide to scraping, filtering, muting users/keywords, and managing notification preferences on X/Twitter using Medirus scripts.
 
 **Works on:** Node.js (Puppeteer)
 **Difficulty:** Beginner
@@ -19,9 +19,9 @@ date: "2026-03-30"
 
 ## Prerequisites
 
-- Node.js >= 18 installed with XActions dependencies (`npm install`)
+- Node.js >= 18 installed with Medirus dependencies (`npm install`)
 - A Puppeteer page authenticated with your X session cookie
-- Set `XACTIONS_SESSION_COOKIE` in your `.env` file
+- Set `MEDIRUS_SESSION_COOKIE` in your `.env` file
 
 ---
 
@@ -239,7 +239,7 @@ for (const keyword of spamKeywords) {
 | "page.click is not a function" | Make sure you are passing a Puppeteer page instance |
 | Settings page shows no toggles | The notification settings page may have changed. Navigate manually to check |
 | Muted word not saving | The muted keywords page may require scrolling to find the "Add" button |
-| Session expired mid-script | Re-authenticate by setting a fresh `XACTIONS_SESSION_COOKIE` |
+| Session expired mid-script | Re-authenticate by setting a fresh `MEDIRUS_SESSION_COOKIE` |
 
 ---
 

@@ -12,7 +12,7 @@ baseline_commit: 'd6ea5754'
 context:
   - _bmad-output/specs/spec-scraper-benchmark/SPEC.md
   - _bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md
-  - _bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md
   - _bmad-output/planning-artifacts/epics.md#epic-34
   - _bmad-output/planning-artifacts/backlog-epic-34.md
   - _bmad-output/planning-artifacts/sprint-change-proposal-2026-09-08-benchmark-v2.md
@@ -26,7 +26,7 @@ context:
 
 ## Intent
 
-**Problem:** Nowing (B2B Lead Hub) phụ thuộc vào dữ liệu trích xuất từ 15+ nền tảng của XActions nhưng hiện chưa có hạ tầng telemetry chuẩn mực để đo lường định lượng và khách quan 4 trụ cột: độ ổn định (stability), chất lượng dữ liệu (quality), độ nhiễu (noise), và chi phí tài nguyên (cost). Nếu ghi trực tiếp dữ liệu thô của từng lượt scrape vào PostgreSQL sẽ gây hiện tượng write amplification và cạn kiệt connection pool nghiêm trọng. Đồng thời, đường dẫn trả về dữ liệu (return path) của crawler đòi hỏi độ trễ cực thấp (< 1% overhead theo NFR-19), không được phép bị block bởi việc gửi dữ liệu giám sát.
+**Problem:** Nowing (B2B Lead Hub) phụ thuộc vào dữ liệu trích xuất từ 15+ nền tảng của Medirus nhưng hiện chưa có hạ tầng telemetry chuẩn mực để đo lường định lượng và khách quan 4 trụ cột: độ ổn định (stability), chất lượng dữ liệu (quality), độ nhiễu (noise), và chi phí tài nguyên (cost). Nếu ghi trực tiếp dữ liệu thô của từng lượt scrape vào PostgreSQL sẽ gây hiện tượng write amplification và cạn kiệt connection pool nghiêm trọng. Đồng thời, đường dẫn trả về dữ liệu (return path) của crawler đòi hỏi độ trễ cực thấp (< 1% overhead theo NFR-19), không được phép bị block bởi việc gửi dữ liệu giám sát.
 
 **Approach:**
 1. **Kiến trúc lưu trữ 2 tầng (Two-Tier Storage Architecture - AD-23):**
@@ -99,9 +99,9 @@ context:
 
 ## User Story
 
-As an **XActions Platform Operator & Nowing Data Consumer**,  
+As an **Medirus Platform Operator & Nowing Data Consumer**,  
 I want **a robust two-tier telemetry schema, non-blocking emitter with circuit breaker, Redis Stream consumer with rolling 7-day retention, and PostgreSQL storage layer**,  
-So that **XActions can reliably capture scraper stability, quality, noise, and cost metrics with <1% latency overhead (NFR-19) and store aggregated health rollups for 15+ platforms without database write amplification or scrape pipeline blockage**.
+So that **Medirus can reliably capture scraper stability, quality, noise, and cost metrics with <1% latency overhead (NFR-19) and store aggregated health rollups for 15+ platforms without database write amplification or scrape pipeline blockage**.
 
 ---
 

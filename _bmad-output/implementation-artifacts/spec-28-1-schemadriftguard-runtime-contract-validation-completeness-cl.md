@@ -13,7 +13,7 @@ context: []
 
 ## Intent
 
-**Problem:** Crawler XActions hiện chỉ kiểm tra tối thiểu `id`/`platform`/`category` trong `AbstractCrawler.validateItem` — một item thiếu trường bắt buộc (`authorId`, `content`) hoặc sai kiểu (`likesCount` là string) vẫn được lưu xuống store, khiến downstream nhận dữ liệu rỗng/malformed một cách âm thầm.
+**Problem:** Crawler Medirus hiện chỉ kiểm tra tối thiểu `id`/`platform`/`category` trong `AbstractCrawler.validateItem` — một item thiếu trường bắt buộc (`authorId`, `content`) hoặc sai kiểu (`likesCount` là string) vẫn được lưu xuống store, khiến downstream nhận dữ liệu rỗng/malformed một cách âm thầm.
 
 **Approach:** Thêm `SchemaDriftGuard` (`src/core/schema-drift-guard.js`) — validate runtime item `PostItem`/`ProfileItem`/`CommentItem` theo JSON Schema, chấm điểm completeness `[0,100]` deterministic và phân loại `complete | degraded | corrupted`. `degraded` lưu kèm `dataQuality` metadata; `corrupted` ném `PlatformError` mới `ErrorTypes.DEGRADED_DATA`. Wire vào `AbstractCrawler.validateItem` — tái dùng `validateSchemaNode` engine có sẵn, **zero new dependencies**.
 

@@ -190,11 +190,11 @@
   // FLOATING HUD — on-page stats overlay
   // =============================================
   const createHUD = () => {
-    const existing = document.getElementById('xactions-hud');
+    const existing = document.getElementById('medirus-hud');
     if (existing) existing.remove();
 
     const hud = document.createElement('div');
-    hud.id = 'xactions-hud';
+    hud.id = 'medirus-hud';
     hud.innerHTML = `
       <div style="
         position: fixed; bottom: 20px; right: 20px; z-index: 999999;
@@ -251,7 +251,7 @@
   };
 
   const removeHUD = () => {
-    const hud = document.getElementById('xactions-hud');
+    const hud = document.getElementById('medirus-hud');
     if (hud) hud.remove();
   };
 
@@ -261,16 +261,16 @@
   let aborted = false;
   let paused = false;
 
-  window.XActions = window.XActions || {};
-  window.XActions.stop = () => { aborted = true; console.log('🛑 Stopping...'); };
-  window.XActions.pause = () => { paused = !paused; console.log(paused ? '⏸ Paused' : '▶ Resumed'); };
+  window.Medirus = window.Medirus || {};
+  window.Medirus.stop = () => { aborted = true; console.log('🛑 Stopping...'); };
+  window.Medirus.pause = () => { paused = !paused; console.log(paused ? '⏸ Paused' : '▶ Resumed'); };
 
   const stats = { liked: 0, replied: 0, retweeted: 0, bookmarked: 0, followed: 0, scrolled: 0, skipped: 0 };
   const actionLog = [];
   const seen = new Set();
 
-  const STATE_KEY = 'xactions_natural_flow';
-  const HISTORY_KEY = 'xactions_nf_history';
+  const STATE_KEY = 'medirus_natural_flow';
+  const HISTORY_KEY = 'medirus_nf_history';
 
   const getState = () => { try { return JSON.parse(sessionStorage.getItem(STATE_KEY)); } catch { return null; } };
   const setState = (s) => sessionStorage.setItem(STATE_KEY, JSON.stringify(s));
@@ -738,7 +738,7 @@
         const blob = new Blob([JSON.stringify(actionLog, null, 2)], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `xactions-natural-flow-${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `medirus-natural-flow-${new Date().toISOString().slice(0, 10)}.json`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -756,7 +756,7 @@
     const W = 52;
     console.log('╔' + '═'.repeat(W) + '╗');
     console.log('║  🌊 NATURAL FLOW — Human-Like Session        ║');
-    console.log('║  by nichxbt — XActions                        ║');
+    console.log('║  by nichxbt — Medirus                        ║');
     console.log('╚' + '═'.repeat(W) + '╝');
     console.log('\n🏃 DRY RUN — previewing the full session.\n');
 
@@ -786,10 +786,10 @@
     const W = 52;
     console.log('╔' + '═'.repeat(W) + '╗');
     console.log('║  🌊 NATURAL FLOW — Human-Like Session        ║');
-    console.log('║  by nichxbt — XActions                        ║');
+    console.log('║  by nichxbt — Medirus                        ║');
     console.log('╚' + '═'.repeat(W) + '╝');
     console.log(`\n⚠️ LIVE MODE — Phase ${state.phase}/4`);
-    console.log(`   ℹ️ XActions.stop() or click 🛑 to abort\n`);
+    console.log(`   ℹ️ Medirus.stop() or click 🛑 to abort\n`);
 
     createHUD();
     updateHUD('phase', `Phase ${state.phase}/4`);

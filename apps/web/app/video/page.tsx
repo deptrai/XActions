@@ -64,7 +64,7 @@ export default function VideoPage() {
         const blob = await res.blob();
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `xactions-video-${quality.label.replace(' ', '-')}.mp4`;
+        a.download = `medirus-video-${quality.label.replace(' ', '-')}.mp4`;
         a.click();
         URL.revokeObjectURL(a.href);
         setDownloaded((prev) => new Set(prev).add(quality.label));

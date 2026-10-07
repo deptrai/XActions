@@ -1,10 +1,10 @@
 # Tutorial: Unfollow Non-Followers & Follower Cleanup with Claude
 
-You are my X/Twitter account manager. I want to clean up my following list using XActions. Help me identify who doesn't follow me back and strategically unfollow them. Be methodical and give me full control over the process.
+You are my X/Twitter account manager. I want to clean up my following list using Medirus. Help me identify who doesn't follow me back and strategically unfollow them. Be methodical and give me full control over the process.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter automation toolkit. It has both an MCP server (for Claude Desktop) and browser console scripts for follower management.
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter automation toolkit. It has both an MCP server (for Claude Desktop) and browser console scripts for follower management.
 
 ## What I Need You To Do
 
@@ -48,11 +48,11 @@ Help me create an unfollow plan:
 
 ### Phase 3: Browser Console Script Alternative
 
-If I prefer the browser console method, walk me through the XActions unfollowback script:
+If I prefer the browser console method, walk me through the Medirus unfollowback script:
 
 1. Have me navigate to `https://x.com/MY_USERNAME/following`
 2. Tell me to open DevTools (F12 or Cmd+Option+I)
-3. Give me the script to paste. The standard XActions unfollow script uses these selectors:
+3. Give me the script to paste. The standard Medirus unfollow script uses these selectors:
    - `[data-testid$="-unfollow"]` for unfollow buttons
    - `[data-testid="confirmationSheetConfirm"]` for the confirmation dialog
    - `[data-testid="userFollowIndicator"]` to detect who follows you back

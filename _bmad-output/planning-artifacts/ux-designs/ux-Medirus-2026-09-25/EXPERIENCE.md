@@ -1,13 +1,13 @@
 ---
-name: XActions
+name: Medirus
 status: final
 updated: 2026-09-25
-product: XActions Dashboard
+product: Medirus Dashboard
 sources:
   - components/sidebar.tsx (audit)
 ---
 
-# XActions — Experience Spine
+# Medirus — Experience Spine
 
 > Internal social-intelligence & automation dashboard. Single-surface responsive web, desktop-first. Next.js 15 + Tailwind + lucide-react. `DESIGN.md` owns visual identity; this spine owns *how it works* — the information architecture, behaviors, states, and flows.
 
@@ -17,7 +17,7 @@ Desktop-web console for a small internal team (not SaaS). Left sidebar + top bar
 
 ## Information Architecture
 
-The 37 routes collapse into **6 task-oriented groups**. Grouping is by *what the user is trying to do*, not by platform — XActions is X-first; non-X scrapers live as sub-items under Intelligence → Universal Explorer.
+The 37 routes collapse into **6 task-oriented groups**. Grouping is by *what the user is trying to do*, not by platform — Medirus is X-first; non-X scrapers live as sub-items under Intelligence → Universal Explorer.
 
 | Group | Route(s) | Purpose |
 |---|---|---|

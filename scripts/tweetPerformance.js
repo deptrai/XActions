@@ -146,7 +146,7 @@
         rankings: { byEngagement: byEng.slice(0, 10), byRate: byRate.slice(0, 10) },
         allTweets: tweets,
         analyzedAt: new Date().toISOString(),
-      }, `xactions-performance-${new Date().toISOString().slice(0, 10)}.json`);
+      }, `medirus-performance-${new Date().toISOString().slice(0, 10)}.json`);
       console.log('\n📥 Results exported as JSON.');
     }
   };

@@ -1,6 +1,6 @@
 # Undo Post -- Tutorial
 
-> Step-by-step guide to undoing a recently posted tweet using XActions browser scripts.
+> Step-by-step guide to undoing a recently posted tweet using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser

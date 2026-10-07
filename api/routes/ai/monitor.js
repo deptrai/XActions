@@ -77,7 +77,7 @@ router.use(async (req, res, next) => {
       error: 'SESSION_REQUIRED',
       code: 'E_SESSION_MISSING',
       message: 'X/Twitter session cookie is required for monitoring',
-      docs: 'https://xactions.app/docs/ai-api#authentication',
+      docs: 'https://medirus.online/docs/ai-api#authentication',
     });
   }
   

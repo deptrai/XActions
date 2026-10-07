@@ -186,7 +186,7 @@
   // ── Main ──
   const run = async () => {
     console.log('═══════════════════════════════════════');
-    console.log('🎬 XActions — Video Captions Uploader');
+    console.log('🎬 Medirus — Video Captions Uploader');
     console.log('═══════════════════════════════════════');
 
     await uploadCaptions();

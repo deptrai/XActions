@@ -41,10 +41,10 @@ For detailed algorithms, controls, configurations, and DOM selectors for each sc
 ### Cleaning a bloated following list
 
 1. Run `src/followRatioManager.js` on your profile to assess current ratio
-2. Use `XActions.plan()` to see how many unfollows are needed
+2. Use `Medirus.plan()` to see how many unfollows are needed
 3. Run `src/unfollowback.js` to remove non-followers first (safest)
 4. If more cleanup needed, use `src/unfollowEveryone.js` with abort when satisfied
-5. Re-check ratio with `XActions.track()`
+5. Re-check ratio with `Medirus.track()`
 
 ### Maintaining a healthy ratio over time
 

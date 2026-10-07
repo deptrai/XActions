@@ -10,16 +10,16 @@ inputDocuments:
   - src/scrapers/facebook/shareLinkByUid.js
   - api/services/facebookAutomation.js
   - api/routes/facebook.js
-project_name: XActions
+project_name: Medirus
 date: 2026-08-12
 status: comprehensive
 ---
 
-# XActions — Facebook Platform Complete Epic & Story Catalog
+# Medirus — Facebook Platform Complete Epic & Story Catalog
 
 ## Overview
 
-Comprehensive epic and story breakdown for ALL Facebook features in XActions — covering 7 epics and 48 stories. Epics 1-5 were implemented first and spec'd retroactively from code + story files. Epic 5b covers features added without formal spec (marketplace, share-link-uid v2, headless, Chrome path). Epic 6 covers anti-detection countermeasures planned from research report.
+Comprehensive epic and story breakdown for ALL Facebook features in Medirus — covering 7 epics and 48 stories. Epics 1-5 were implemented first and spec'd retroactively from code + story files. Epic 5b covers features added without formal spec (marketplace, share-link-uid v2, headless, Chrome path). Epic 6 covers anti-detection countermeasures planned from research report.
 
 ## Requirements Inventory
 
@@ -334,7 +334,7 @@ N/A — Technical infrastructure, no UX spec needed.
 
 ### Story 1.1: Facebook Adapter Scaffold + Login + Dispatcher Registration
 
-As a developer using XActions,
+As a developer using Medirus,
 I want a Facebook adapter module registered in the platform dispatcher with login support,
 So that I have a working foundation to build scrape functions on.
 

@@ -36,7 +36,7 @@ const prof = (platform, over = {}) => ({
   ...over,
 });
 
-const BIO_A = 'Building AI tools @ XActions — open-source scrapers & agents.';
+const BIO_A = 'Building AI tools @ Medirus — open-source scrapers & agents.';
 const BIO_B = 'Founder, dev tools. Previously at Cognition. AI agent infra.';
 const BIO_C = 'Weekend baker, amateur astronomer, tea over coffee always.';
 
@@ -216,7 +216,7 @@ describe('prefetchBioScores — qualify gates', () => {
 
     const { state, questions } = callLog[0];
     expect(Object.keys(state).sort()).toEqual(['bio1', 'bio2']);
-    expect(state.bio1 + state.bio2).toContain('XActions');
+    expect(state.bio1 + state.bio2).toContain('Medirus');
     // Deterministic payload: bio1/bio2 sent in sorted order regardless of
     // which profile was `a` vs `b` in the pair.
     expect(state.bio1 <= state.bio2).toBe(true);

@@ -1,8 +1,8 @@
 ---
 title: "Who Unfollowed Me on X (Twitter) — Free Tracker 2026"
 description: "Find out exactly who unfollowed you on X/Twitter. Free browser script — no app, no API. Tracks new followers too."
-keywords: ["who unfollowed me on twitter", "detect unfollowers twitter", "twitter unfollower tracker free", "who unfollowed me X 2026", "see who unfollowed you twitter", "track unfollowers twitter free", "twitter follower changes", "find who unfollowed X", "check unfollowers twitter no app", "xactions detect unfollowers"]
-canonical: "https://xactions.app/examples/detect-unfollowers"
+keywords: ["who unfollowed me on twitter", "detect unfollowers twitter", "twitter unfollower tracker free", "who unfollowed me X 2026", "see who unfollowed you twitter", "track unfollowers twitter free", "twitter follower changes", "find who unfollowed X", "check unfollowers twitter no app", "medirus detect unfollowers"]
+canonical: "https://medirus.online/examples/detect-unfollowers"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You posted a hot take last Friday. It got 200 likes — but your follower count dropped from **1,247 to 1,239**. Eight people unfollowed you. Who were they? Was it that brand you were pitching? Your ex-colleague? Random bots? X doesn't tell you. Third-party "unfollower tracker" apps want your login credentials (sketchy) or charge $5/month for something that should take 30 seconds.
 
-XActions solves this with a two-run workflow: **Run 1** saves a snapshot of your followers to `localStorage`. **Run 2** (hours or days later) compares the new list against the old one and tells you exactly who left and who joined. No app install, no login sharing, no fees.
+Medirus solves this with a two-run workflow: **Run 1** saves a snapshot of your followers to `localStorage`. **Run 2** (hours or days later) compares the new list against the old one and tells you exactly who left and who joined. No app install, no login sharing, no fees.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -46,7 +46,7 @@ XActions solves this with a two-run workflow: **Run 1** saves a snapshot of your
 └─────────────────────────────────────────────────────┘
 ```
 
-**After XActions:**
+**After Medirus:**
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -172,20 +172,20 @@ XActions solves this with a two-run workflow: **Run 1** saves a snapshot of your
 
 ```javascript
 // ============================================
-// XActions - Detect Unfollowers on X/Twitter
-// by nichxbt — https://xactions.app
+// Medirus - Detect Unfollowers on X/Twitter
+// by nichxbt — https://medirus.online
 // Go to: x.com/YOUR_USERNAME/followers
 // Open console (F12 → Console), paste, Enter
 // Run once to snapshot, again later to compare
 // ============================================
 
 (async () => {
-  const STORAGE_KEY = 'xactions_followers_snapshot';
+  const STORAGE_KEY = 'medirus_followers_snapshot';
   const SCROLL_DELAY = 1500;
   const MAX_SCROLL_RETRIES = 10;
 
   console.log('');
-  console.log('🔍 XActions - DETECT UNFOLLOWERS');
+  console.log('🔍 Medirus - DETECT UNFOLLOWERS');
   console.log('════════════════════════════════════════');
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -345,7 +345,7 @@ XActions solves this with a two-run workflow: **Run 1** saves a snapshot of your
 ### ✅ Expected Output — First Run (Snapshot)
 
 ```
-🔍 XActions - DETECT UNFOLLOWERS
+🔍 Medirus - DETECT UNFOLLOWERS
 ════════════════════════════════════════
 📍 Monitoring: @nichxbt
 
@@ -373,7 +373,7 @@ XActions solves this with a two-run workflow: **Run 1** saves a snapshot of your
 ### ✅ Expected Output — Second Run (Comparison)
 
 ```
-🔍 XActions - DETECT UNFOLLOWERS
+🔍 Medirus - DETECT UNFOLLOWERS
 ════════════════════════════════════════
 📍 Monitoring: @nichxbt
 
@@ -439,17 +439,17 @@ XActions solves this with a two-run workflow: **Run 1** saves a snapshot of your
 **Best for:** Scheduled daily checks, historical tracking, large accounts.
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Take a follower snapshot
-npx xactions followers snapshot --username nichxbt
+npx medirus followers snapshot --username nichxbt
 
 # Check for unfollowers (compares with last snapshot)
-npx xactions followers check --username nichxbt
+npx medirus followers check --username nichxbt
 
 # Compare two specific snapshots
-npx xactions followers compare \
+npx medirus followers compare \
   --old ./snapshots/2026-02-20.json \
   --new ./snapshots/2026-02-24.json
 ```
@@ -457,7 +457,7 @@ npx xactions followers compare \
 ### ✅ CLI Output Preview
 
 ```
-⚡ XActions v3.5.0
+⚡ Medirus v3.5.0
 
 🔍 DETECT UNFOLLOWERS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -485,7 +485,7 @@ npx xactions followers compare \
 
 ```bash
 # Run every day at 9 AM
-0 9 * * * cd /path/to/project && npx xactions followers check --username nichxbt >> /var/log/unfollower-check.log 2>&1
+0 9 * * * cd /path/to/project && npx medirus followers check --username nichxbt >> /var/log/unfollower-check.log 2>&1
 ```
 
 ### CLI Configuration Table
@@ -510,9 +510,9 @@ npx xactions followers compare \
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions", "mcp"]
+      "args": ["-y", "medirus", "mcp"]
     }
   }
 }
@@ -587,16 +587,16 @@ The script uses a **snapshot-diff** pattern:
 │                                @new_fan          🎉 NEW  │
 │  @dave ─────────────────────── @dave             ✅ Same │
 │                                                          │
-│  localStorage key: "xactions_followers_snapshot"         │
+│  localStorage key: "medirus_followers_snapshot"         │
 │  Format: { username, followers[], count, timestamp }     │
 │                                                          │
 └──────────────────────────────────────────────────────────┘
 ```
 
-Data is stored in `localStorage` under the key `xactions_followers_snapshot`. To reset and start fresh:
+Data is stored in `localStorage` under the key `medirus_followers_snapshot`. To reset and start fresh:
 
 ```javascript
-localStorage.removeItem('xactions_followers_snapshot');
+localStorage.removeItem('medirus_followers_snapshot');
 ```
 
 ---
@@ -654,7 +654,7 @@ localStorage.removeItem('xactions_followers_snapshot');
 - **Scroll-loading limits** — For accounts with 10,000+ followers, the browser may not load all of them. X throttles infinite scroll. The script retries up to 10 times with no new data.
 - **Suspended/deleted accounts** — If someone's account gets suspended between scans, they'll appear as an unfollower. They didn't choose to unfollow — their account simply no longer exists.
 - **Rate limits** — The script only scrolls and reads DOM data (no API calls), so there's no rate limiting. It's purely passive scraping.
-- **Clearing localStorage resets history** — If you clear browser data or run `localStorage.removeItem('xactions_followers_snapshot')`, your baseline is gone and you start fresh.
+- **Clearing localStorage resets history** — If you clear browser data or run `localStorage.removeItem('medirus_followers_snapshot')`, your baseline is gone and you start fresh.
 
 ---
 
@@ -673,13 +673,13 @@ localStorage.removeItem('xactions_followers_snapshot');
 ## ❓ FAQ
 
 ### Q: How do I see who unfollowed me on Twitter / X?
-**A:** Go to `x.com/YOUR_USERNAME/followers`, open browser console (F12 → Console), and paste the XActions detect-unfollowers script. On the first run, it saves a snapshot of your followers. Run it again days later from the same browser — it compares the new list against the saved one and shows exactly who unfollowed you and who's new. No app, no API, completely free.
+**A:** Go to `x.com/YOUR_USERNAME/followers`, open browser console (F12 → Console), and paste the Medirus detect-unfollowers script. On the first run, it saves a snapshot of your followers. Run it again days later from the same browser — it compares the new list against the saved one and shows exactly who unfollowed you and who's new. No app, no API, completely free.
 
 ### Q: Does X / Twitter notify you when someone unfollows?
 **A:** No — X does not send any notification when someone unfollows you. The only way to know is to compare your follower list over time, which is exactly what this script does. It takes before/after snapshots and shows the diff.
 
 ### Q: Can I track who unfollowed me without any app?
-**A:** Yes — the XActions browser script runs entirely in your browser console. It doesn't require downloading any app, giving login credentials to third parties, or installing extensions. Just paste and run.
+**A:** Yes — the Medirus browser script runs entirely in your browser console. It doesn't require downloading any app, giving login credentials to third parties, or installing extensions. Just paste and run.
 
 ### Q: How far back can I track unfollowers?
 **A:** The script compares your current followers against the most recent saved snapshot. It cannot retroactively tell you who unfollowed before the first snapshot. For historical tracking, use the CLI version which saves dated JSON files that you can compare over time.
@@ -690,5 +690,5 @@ localStorage.removeItem('xactions_followers_snapshot');
 ---
 
 <footer>
-Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

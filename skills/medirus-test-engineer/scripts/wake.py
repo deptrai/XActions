@@ -23,7 +23,7 @@ import json
 import sys
 from pathlib import Path
 
-SKILL_NAME = "xactions-test-engineer"
+SKILL_NAME = "medirus-test-engineer"
 
 # Load order — the "become yourself" set.
 IDENTITY_FILES = [
@@ -46,7 +46,7 @@ def emit(path: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Load the xactions-test-engineer sanctum or route to First Breath."
+        description="Load the medirus-test-engineer sanctum or route to First Breath."
     )
     parser.add_argument(
         "project_root",

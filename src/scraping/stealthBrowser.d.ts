@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * TypeScript declarations for the XActions stealth browser (Story 27.1, 27.4).
+ * TypeScript declarations for the Medirus stealth browser (Story 27.1, 27.4).
  * @author nich (@nichxbt)
  * @license MIT
  */

@@ -10,25 +10,25 @@ Map and analyze X/Twitter social networks. Build graphs from seed accounts, dete
 
 ```bash
 # Build a graph from a seed account (2 degrees deep, max 500 accounts)
-xactions graph build --username elonmusk --depth 2 --max-nodes 500
+medirus graph build --username elonmusk --depth 2 --max-nodes 500
 
 # List saved graphs
-xactions graph list
+medirus graph list
 
 # Analyze a graph
-xactions graph analyze <graph-id>
+medirus graph analyze <graph-id>
 
 # Get follow recommendations
-xactions graph recommend <graph-id>
+medirus graph recommend <graph-id>
 
 # Export visualization
-xactions graph visualize <graph-id> --format html
+medirus graph visualize <graph-id> --format html
 ```
 
 ### Node.js
 
 ```js
-import * as graph from 'xactions/graph';
+import * as graph from 'medirus/graph';
 
 // Build graph from seed user
 const g = await graph.build('elonmusk', { depth: 2, maxNodes: 500 });
@@ -184,7 +184,7 @@ Categorizes your network into concentric circles:
 
 ## Graph Persistence
 
-Graphs are saved to `~/.xactions/graphs/` as JSON files. Each graph contains:
+Graphs are saved to `~/.medirus/graphs/` as JSON files. Each graph contains:
 
 ```json
 {

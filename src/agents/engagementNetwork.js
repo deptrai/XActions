@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions — Engagement Network
+ * Medirus — Engagement Network
  * Multi-agent coordination with ethical guidelines
  *
  * ⚠️  ETHICAL WARNING: This module is for coordinating CONTENT DISCOVERY

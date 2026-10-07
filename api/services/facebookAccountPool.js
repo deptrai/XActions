@@ -299,8 +299,8 @@ export async function runBatch(tasks, options = {}) {
 
             usage[ctx.id].tasks += 1;
 
-            if (page?.__xactions_browser || browser) {
-              await (page?.__xactions_browser || browser).close().catch(() => {});
+            if (page?.__medirus_browser || browser) {
+              await (page?.__medirus_browser || browser).close().catch(() => {});
             }
 
             return result;

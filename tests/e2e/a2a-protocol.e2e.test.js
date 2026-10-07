@@ -25,7 +25,7 @@ describe('A2A — Agent-to-Agent Protocol Delegation E2E', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data).toBeDefined();
-    expect(res.body.data.agent).toBe('XActions');
+    expect(res.body.data.agent).toBe('Medirus');
     expect(Array.isArray(res.body.data.skills)).toBe(true);
     expect(res.body.data.skills.length).toBeGreaterThan(0);
     expect(res.body.data.taskEndpoint).toBe('/api/a2a/task');
@@ -39,7 +39,7 @@ describe('A2A — Agent-to-Agent Protocol Delegation E2E', () => {
     const res = await request(app)
       .post('/api/a2a/task')
       .send({
-        skill: 'xactions.x_unfollow_non_followers',
+        skill: 'medirus.x_unfollow_non_followers',
         input: 'not-an-object',
       });
 
@@ -51,7 +51,7 @@ describe('A2A — Agent-to-Agent Protocol Delegation E2E', () => {
     const res = await request(app)
       .post('/api/a2a/task')
       .send({
-        skill: 'xactions.x_unfollow_non_followers',
+        skill: 'medirus.x_unfollow_non_followers',
         input: { count: 5 },
         callbackUrl: 'invalid-url-scheme',
       });
@@ -64,7 +64,7 @@ describe('A2A — Agent-to-Agent Protocol Delegation E2E', () => {
     const res = await request(app)
       .post('/api/a2a/task')
       .send({
-        skill: 'xactions.unknown_non_existent_skill_xyz',
+        skill: 'medirus.unknown_non_existent_skill_xyz',
         input: { test: true },
       });
 

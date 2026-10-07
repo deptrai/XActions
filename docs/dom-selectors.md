@@ -2,7 +2,7 @@
 
 > **Last verified: February 2026.** Twitter frequently changes their DOM — always verify selectors before use.
 >
-> This is the **canonical reference** for all known X/Twitter DOM selectors used across the XActions project. Check here before writing new selectors.
+> This is the **canonical reference** for all known X/Twitter DOM selectors used across the Medirus project. Check here before writing new selectors.
 
 ---
 
@@ -577,7 +577,7 @@ const bioEl = [...cell.querySelectorAll('[dir="auto"]')]
 Browser console scripts **stop when the page navigates**. Use `sessionStorage` to persist state:
 ```javascript
 const getProcessed = () => {
-  try { return JSON.parse(sessionStorage.getItem('xactions_key') || '[]'); }
+  try { return JSON.parse(sessionStorage.getItem('medirus_key') || '[]'); }
   catch { return []; }
 };
 ```
@@ -615,7 +615,7 @@ X/Twitter frequently updates their DOM. If a selector stops working:
 
 ## Selector Architecture
 
-The XActions codebase uses a **fallback chain pattern** for resilient selector matching.
+The Medirus codebase uses a **fallback chain pattern** for resilient selector matching.
 
 ### Canonical Source Files
 
@@ -654,7 +654,7 @@ When writing new selectors:
 
 ## Selector Canary & Drift Detection (Story 28.2)
 
-To proactively detect DOM changes across supported platforms before scrapers break in production, XActions runs a background `SelectorCanary` probe service.
+To proactively detect DOM changes across supported platforms before scrapers break in production, Medirus runs a background `SelectorCanary` probe service.
 
 ### Configuration (`config/canary-targets.json`)
 

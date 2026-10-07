@@ -36,7 +36,7 @@ See exactly who engaged with any tweet by liking it:
 
 ```javascript
 // ============================================
-// XActions - Tweet Likes Scraper (Browser Console)
+// Medirus - Tweet Likes Scraper (Browser Console)
 // Step 1: Go to any tweet on x.com
 // Step 2: Click on the "Likes" count to open likes modal
 // Step 3: Open console (F12), paste this, press Enter
@@ -49,7 +49,7 @@ See exactly who engaged with any tweet by liking it:
   const MAX_RETRIES = 15;      // Stop if no new users found after this many tries
   
   console.log('');
-  console.log('❤️  XActions - Tweet Likes Scraper');
+  console.log('❤️  Medirus - Tweet Likes Scraper');
   console.log('====================================');
   console.log(`🎯 Target: ${TARGET_COUNT} likers`);
   console.log('');
@@ -290,7 +290,7 @@ Save as `scrape-tweet-likes.js`:
 
 ```javascript
 // ============================================
-// XActions - Tweet Likes Scraper (Node.js)
+// Medirus - Tweet Likes Scraper (Node.js)
 // Save as: scrape-tweet-likes.js
 // Run: node scrape-tweet-likes.js https://x.com/username/status/123456
 // Author: nich (@nichxbt)
@@ -329,7 +329,7 @@ async function scrapeTweetLikes(tweetUrl, options = {}) {
   const tweetId = tweetIdMatch[1];
 
   console.log('');
-  console.log('❤️  XActions - Tweet Likes Scraper');
+  console.log('❤️  Medirus - Tweet Likes Scraper');
   console.log('====================================');
   console.log(`🔗 Tweet: ${tweetUrl}`);
   console.log(`🆔 Tweet ID: ${tweetId}`);
@@ -650,7 +650,7 @@ const args = process.argv.slice(2);
 
 if (args.length === 0) {
   console.log('');
-  console.log('❤️  XActions - Tweet Likes Scraper');
+  console.log('❤️  Medirus - Tweet Likes Scraper');
   console.log('====================================');
   console.log('');
   console.log('Usage:');
@@ -715,7 +715,7 @@ X_AUTH_TOKEN=your_token_here node scrape-tweet-likes.js https://x.com/user/statu
 
 **Output:**
 ```
-❤️  XActions - Tweet Likes Scraper
+❤️  Medirus - Tweet Likes Scraper
 ====================================
 🔗 Tweet: https://x.com/elonmusk/status/1234567890123456789
 🆔 Tweet ID: 1234567890123456789
@@ -905,7 +905,7 @@ const humans = result.likers.filter(u =>
 
 ## 🌐 Website Alternative
 
-Don't want to code? Use [xactions.app](https://xactions.app):
+Don't want to code? Use [medirus.online](https://medirus.online):
 
 1. 🔐 Login with your X account
 2. 🔗 Paste any tweet URL

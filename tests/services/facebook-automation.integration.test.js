@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
-// XActions — Facebook Automation Integration Tests (likeSinglePost real stack)
+// Medirus — Facebook Automation Integration Tests (likeSinglePost real stack)
 // by nichxbt
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';

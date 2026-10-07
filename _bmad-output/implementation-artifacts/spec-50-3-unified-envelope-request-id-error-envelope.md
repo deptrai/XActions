@@ -22,8 +22,8 @@ deferred:
     severity: medium (unverified)
 context:
   - _bmad-output/implementation-artifacts/epic-50-context.md
-  - _bmad-output/specs/spec-xactions-public-scrape-gateway/SPEC.md
-  - _bmad-output/planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md
+  - _bmad-output/specs/spec-medirus-public-scrape-gateway/SPEC.md
+  - _bmad-output/planning-artifacts/architecture/architecture-medirus-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md
   - _bmad-output/implementation-artifacts/stories/50-1-service-auth-lane-bearer-consumer-derivation.md
   - _bmad-output/implementation-artifacts/spec-50-2-sync-async-mode-dispatch-202-degrade.md
   - api/routes/platform.js

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Tests for xactions admin stream metrics/alerts/test CLI commands (Stories 14.3 & 19.4.5)
+ * Tests for medirus admin stream metrics/alerts/test CLI commands (Stories 14.3 & 19.4.5)
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -14,7 +14,7 @@ function stripAnsi(str) {
   return str.replace(/\x1B\[[0-9;]*m/g, '');
 }
 
-describe('Story 14.3 & 19.4.5: CLI xactions admin stream commands', () => {
+describe('Story 14.3 & 19.4.5: CLI medirus admin stream commands', () => {
   it('registers admin stream command tree with metrics, alerts, and test subcommands', () => {
     const program = new Command();
     registerAdminCommand(program);

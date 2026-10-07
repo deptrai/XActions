@@ -2,15 +2,15 @@
 
 /**
  * Browser-side typed API helper for client components.
- * Uses `import type` only from @xactions/api-client to prevent bundling
+ * Uses `import type` only from @medirus/api-client to prevent bundling
  * the entire node/browser client runtime down to the browser.
  *
  * All requests route through the same-origin BFF (/api/*).
  * Returns the canonical ApiResult<T> union ({ok, status, data|error})
- * defined by @xactions/api-client — matching XActionsClient.request() semantics.
+ * defined by @medirus/api-client — matching MedirusClient.request() semantics.
  */
 
-import type { ApiResult } from '@xactions/api-client';
+import type { ApiResult } from '@medirus/api-client';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
 
@@ -33,7 +33,7 @@ interface BackendEnvelope<T> {
  * @param method HTTP verb
  * @param path Endpoint path, e.g. '/api/health' or '/api/crm/tag'
  * @param opts Options including body, headers, search params, and abort signal
- * @returns ApiResult<T> union ({ok, status, data|error}) from @xactions/api-client
+ * @returns ApiResult<T> union ({ok, status, data|error}) from @medirus/api-client
  */
 export async function api<T = unknown>(
   method: HttpMethod,

@@ -191,7 +191,7 @@ export class TelemetryEmitter {
    */
   emitRun(payload) {
     const finalPayload = /** @type {Record<string, unknown>} */ ({ ...payload, type: 'telemetry:run' });
-    if (process.env.XACTIONS_BROWSER_BACKEND_METRICS !== '1') {
+    if (process.env.MEDIRUS_BROWSER_BACKEND_METRICS !== '1') {
       delete finalPayload.browserBackend;
       delete finalPayload.pooled;
       delete finalPayload.poolBackend;

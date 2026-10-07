@@ -10,11 +10,11 @@ index 00000000..10005009
 +
 +## Goal
 +
-+Expose `scrape()` dispatcher (Epic 25) thành service-to-service contract cho multi-consumer (Nowing, ChainLens, AI agents). Control plane qua MCP `x_scrape` tool, data plane qua Redis Stream `stream:social:raw_posts` (snake_case ThinEvent), discovery qua `x_actions_list`. Nowing đã wire phía mình nhưng bị block bởi 4 gaps trong XActions (REQ-X1..X4).
++Expose `scrape()` dispatcher (Epic 25) thành service-to-service contract cho multi-consumer (Nowing, ChainLens, AI agents). Control plane qua MCP `x_scrape` tool, data plane qua Redis Stream `stream:social:raw_posts` (snake_case ThinEvent), discovery qua `medirus_list`. Nowing đã wire phía mình nhưng bị block bởi 4 gaps trong Medirus (REQ-X1..X4).
 +
 +## Stories
 +
-+- Story 20.1: Multi-Consumer Service Contract (x_scrape + x_actions_list + Action Matrix)
++- Story 20.1: Multi-Consumer Service Contract (x_scrape + medirus_list + Action Matrix)
 +- Story 20.2: Universal Stream-Publish Hook (snake_case ThinEvent + mapToThinEvent)
 +- Story 20.3: [EXTERNAL — Nowing repo] Shadow-Run Validation
 +- Story 20.4: [EXTERNAL — Nowing repo] Legacy Decommissioning
@@ -26,7 +26,7 @@ index 00000000..10005009
 +- `dryRun=true` → KHÔNG emit stream events
 +- Pre-validate requiredArgs → trả `XACT_4002` + `missing[]` + `example`
 +- "Did You Mean?" suggestion khi action không tồn tại
-+- `x_actions_list` enumerate toàn bộ 24 platform descriptors; platform chưa có crawler → flag `"no_crawler": true`, không silent-skip
++- `medirus_list` enumerate toàn bộ 24 platform descriptors; platform chưa có crawler → flag `"no_crawler": true`, không silent-skip
 +- Lọc bỏ `checkpointResolver` khỏi `ActionDescriptor` trước khi trả (function ref, không serialize)
 +- Filter theo `category` + `detailLevel: 'summary'|'full'`
 +- `b2b-registry-extended` dùng `index.js` không phải `crawler.js` — loader cần xử lý
@@ -57,7 +57,7 @@ index 00000000..50245221
 +++ b/_bmad-output/implementation-artifacts/spec-20-1-multi-consumer-service-contract.md
 @@ -0,0 +1,512 @@
 +---
-+title: 'Multi-Consumer Service Contract (x_scrape + x_actions_list + Action Matrix)'
++title: 'Multi-Consumer Service Contract (x_scrape + medirus_list + Action Matrix)'
 +type: 'feature'
 +created: '2026-09-15'
 +status: 'ready-for-dev'
@@ -71,7 +71,7 @@ index 00000000..50245221
 +
 +# Spec — Story 20.1: Multi-Consumer Service Contract
 +
-+> **Story:** `20-1-multi-consumer-service-contract-x-scrape-x-actions`
++> **Story:** `20-1-multi-consumer-service-contract-x-scrape-medirus-`
 +> **Status:** `draft`
 +> **Epic:** Epic 20 — Multi-Consumer Scraping Platform Service Contract
 +> **Effort:** ~2 dev days
@@ -82,14 +82,14 @@ index 00000000..50245221
 +
 +## User Intent
 +
-+Expose `scrape()` dispatcher (Epic 25) thành service-to-service contract cho multi-consumer qua MCP `x_scrape` tool, mở rộng `x_actions_list` cho toàn bộ 24 platforms, fix `envelope.js` extractRecords cho VN crawlers, và generate canonical action matrix doc.
++Expose `scrape()` dispatcher (Epic 25) thành service-to-service contract cho multi-consumer qua MCP `x_scrape` tool, mở rộng `medirus_list` cho toàn bộ 24 platforms, fix `envelope.js` extractRecords cho VN crawlers, và generate canonical action matrix doc.
 +
-+Nowing đã wire phía mình (`XActionsMcpClient` + Celery beat + stream consumer) theo REQ-X1..X4 nhưng bị block vì `x_scrape` không tồn tại và `x_actions_list` thiếu 6 platforms.
++Nowing đã wire phía mình (`MedirusMcpClient` + Celery beat + stream consumer) theo REQ-X1..X4 nhưng bị block vì `x_scrape` không tồn tại và `medirus_list` thiếu 6 platforms.
 +
 +<frozen-after-approval>
 +**Scope cốt lõi (REQ-X1 + X3 + X4):**
 +1. `x_scrape` MCP tool — generic scrape(platform, action, args) với context envelope, unified response envelope
-+2. `x_actions_list` mở rộng — enumerate toàn bộ 24 DESCRIPTORS registry
++2. `medirus_list` mở rộng — enumerate toàn bộ 24 DESCRIPTORS registry
 +3. `envelope.js` `extractRecords()` — thêm `listings`, `products`, `jobs`
 +4. Canonical action/arg matrix doc — auto-generated `.md` + `.json`
 +</frozen-after-approval>
@@ -110,7 +110,7 @@ index 00000000..50245221
 +
 +| File | Purpose |
 +|------|---------|
-+| `scripts/generate-action-matrix.js` | Script generate `docs/canonical-action-matrix.md` + `.json` từ `x_actions_list` |
++| `scripts/generate-action-matrix.js` | Script generate `docs/canonical-action-matrix.md` + `.json` từ `medirus_list` |
 +| `docs/canonical-action-matrix.md` | Human-readable action/arg matrix (auto-generated) |
 +| `docs/canonical-action-matrix.json` | Machine-readable action/arg matrix (auto-generated, cho Nowing CI) |
 +
@@ -145,22 +145,22 @@ index 00000000..50245221
 +
 +**File:** `src/mcp/server.js`
 +
-+1.1. Add `x_scrape` to `TOOLS` array (after `x_actions_list`, before `x_crawl_post`):
++1.1. Add `x_scrape` to `TOOLS` array (after `medirus_list`, before `x_crawl_post`):
 +
 +```javascript
 +{
 +  name: 'x_scrape',
-+  description: 'Generic scrape dispatcher — calls scrape(platform, action, args). Use x_actions_list to discover available platforms/actions/args. Data flows through Redis Stream when REDIS_STREAM_ENABLED=true (returns preview only).',
++  description: 'Generic scrape dispatcher — calls scrape(platform, action, args). Use medirus_list to discover available platforms/actions/args. Data flows through Redis Stream when REDIS_STREAM_ENABLED=true (returns preview only).',
 +  inputSchema: {
 +    type: 'object',
 +    properties: {
 +      platform: {
 +        type: 'string',
-+        description: 'Canonical platform key from DESCRIPTORS (e.g. masothue, chotot, shopee, facebook). Run x_actions_list to discover.',
++        description: 'Canonical platform key from DESCRIPTORS (e.g. masothue, chotot, shopee, facebook). Run medirus_list to discover.',
 +      },
 +      action: {
 +        type: 'string',
-+        description: 'Canonical action name from ActionDescriptor. Run x_actions_list to discover.',
++        description: 'Canonical action name from ActionDescriptor. Run medirus_list to discover.',
 +      },
 +      args: {
 +        type: 'object',
@@ -263,7 +263,7 @@ index 00000000..50245221
 +}
 +```
 +
-+1.3. Add to `executeTool` dispatch (near `x_actions_list` handler):
++1.3. Add to `executeTool` dispatch (near `medirus_list` handler):
 +
 +```javascript
 +if (name === 'x_scrape') {
@@ -273,7 +273,7 @@ index 00000000..50245221
 +
 +1.4. Export `executeScrapeTool` in module exports (line ~6437).
 +
-+### Task 2: Extend `x_actions_list` for all 24 platforms
++### Task 2: Extend `medirus_list` for all 24 platforms
 +
 +**File:** `src/scrapers/social/actions-list.js`
 +
@@ -329,7 +329,7 @@ index 00000000..50245221
 +}
 +```
 +
-+2.3. Update `x_actions_list` tool inputSchema in `server.js`:
++2.3. Update `medirus_list` tool inputSchema in `server.js`:
 +
 +```javascript
 +// Add to properties:
@@ -362,7 +362,7 @@ index 00000000..50245221
 +```javascript
 +#!/usr/bin/env node
 +/**
-+ * Generate canonical action/arg matrix from x_actions_list.
++ * Generate canonical action/arg matrix from medirus_list.
 + * Usage: npm run docs:matrix
 + * Output: docs/canonical-action-matrix.md + docs/canonical-action-matrix.json
 + */
@@ -470,9 +470,9 @@ index 00000000..50245221
 +- **When** crawl completes
 +- **Then** `REDIS_STREAM_ENABLED` check in base hook (Story 20.2) prevents stream emission — `x_scrape` response has `mode: 'direct'` regardless of env var
 +
-+### AC-4: `x_actions_list` covers all 24 platforms
++### AC-4: `medirus_list` covers all 24 platforms
 +
-+- **Given** `x_actions_list` called
++- **Given** `medirus_list` called
 +- **Then** response includes actions for all 24 platforms: twitter, bluesky, mastodon, threads, facebook, tiktok, tiktokshop, reddit, medium, instagram, youtube, zalo, shopee, topcv, vietnamworks, linkedin, chotot, batdongsan, masothue, b2b_registry_extended, automotive, fnb, healthcare, ipvietnam/legal
 +- **And** platforms without crawler → `no_crawler: true` flag
 +- **And** `checkpointResolver` filtered out from all ActionDescriptors
@@ -507,7 +507,7 @@ index 00000000..50245221
 +### AC-10: `b2b-registry-extended` loader works
 +
 +- **Given** `b2b-registry-extended` uses `index.js` not `crawler.js`
-+- **When** `x_actions_list` runs
++- **When** `medirus_list` runs
 +- **Then** `B2BRegistryExtendedCrawler` instantiated successfully (via `index.js` import)
 +
 +---
@@ -549,7 +549,7 @@ index 00000000..50245221
 +| `x_scrape` requiredArgs validation | `tests/mcp/x-scrape-tool.test.js` | `XACT_4002` + `missing[]` + `example` |
 +| `x_scrape` envelope shape | `tests/mcp/x-scrape-tool.test.js` | Unified envelope: `mode`, `stream`, `preview`, `data` |
 +| `x_scrape` context forwarding | `tests/mcp/x-scrape-tool.test.js` | `context` → `scrapeOptions.context` |
-+| `x_actions_list` 24 platforms | `tests/mcp/actions-list-complete.test.js` | All 24 platforms enumerated, `no_crawler` flag, `checkpointResolver` filtered |
++| `medirus_list` 24 platforms | `tests/mcp/actions-list-complete.test.js` | All 24 platforms enumerated, `no_crawler` flag, `checkpointResolver` filtered |
 +| `extractRecords` VN keys | `tests/mcp/envelope.test.js` | `listings`, `products`, `jobs` extracted correctly |
 +| Action matrix generation | `tests/docs/matrix-generation.test.js` | `npm run docs:matrix` generates `.md` + `.json` |
 +| `b2b-registry-extended` loader | `tests/scrapers/crawler-instantiation.test.js` | `B2BRegistryExtendedCrawler` instantiated via `index.js` |
@@ -577,10 +577,10 @@ index 5b98109e..d340833d 100644
    epic-19-retrospective: done
  
 -  epic-20: backlog
--  20-1-multi-consumer-service-contract-x-scrape-x-actions: 
+-  20-1-multi-consumer-service-contract-x-scrape-medirus-: 
 -    backlog
 +  epic-20: in-progress
-+  20-1-multi-consumer-service-contract-x-scrape-x-actions: review
++  20-1-multi-consumer-service-contract-x-scrape-medirus-: review
    20-2-universal-stream-publish-hook-snake-case-thin-event: 
      backlog
    epic-20-retrospective: optional
@@ -915,7 +915,7 @@ index 00000000..3a70e6b0
 +            "dryRun"
 +          ],
 +          "example": {
-+            "text": "Hello XActions",
++            "text": "Hello Medirus",
 +            "mediaIds": [
 +              "123"
 +            ],
@@ -980,7 +980,7 @@ index 00000000..3a70e6b0
 +            "dryRun"
 +          ],
 +          "example": {
-+            "text": "Hello future XActions",
++            "text": "Hello future Medirus",
 +            "publishAt": "2026-09-01T12:00:00Z",
 +            "dryRun": false
 +          },
@@ -1898,7 +1898,7 @@ index 00000000..3a70e6b0
 +            "maxBatch"
 +          ],
 +          "example": {
-+            "text": "Hello Facebook from XActions Hybrid Crawler!"
++            "text": "Hello Facebook from Medirus Hybrid Crawler!"
 +          },
 +          "outputType": "{ results: { targetUrl: string, postId?: string, error?: string }[], dryRun: boolean }",
 +          "requiresAuth": true
@@ -3881,10 +3881,10 @@ index 00000000..3a229db2
 +| twitter | social | spaces | query | limit, cursor, state | `{"query":"crypto","limit":20}` |
 +| twitter | social | media | — | username, tweetId, type, limit, cursor | `{"username":"elonmusk","type":"video","limit":20}` |
 +| twitter | social | download_video | tweetId | quality, destPath | `{"tweetId":"1234567890123456789","destPath":"/tmp/video.mp4"}` |
-+| twitter | social | post | text | mediaIds, premium, sensitive, dryRun | `{"text":"Hello XActions","mediaIds":["123"],"dryRun":false}` |
++| twitter | social | post | text | mediaIds, premium, sensitive, dryRun | `{"text":"Hello Medirus","mediaIds":["123"],"dryRun":false}` |
 +| twitter | social | reply | tweetId, text | mediaIds, premium, sensitive, dryRun | `{"tweetId":"1900000000000000000","text":"Nice","dryRun":false}` |
 +| twitter | social | quote | tweetId, text | mediaIds, premium, sensitive, dryRun | `{"tweetId":"1900000000000000000","text":"Agree","dryRun":false}` |
-+| twitter | social | schedule | text, publishAt | mediaIds, premium, sensitive, dryRun | `{"text":"Hello future XActions","publishAt":"2026-09-01T12:00:00Z","dryRun":false}` |
++| twitter | social | schedule | text, publishAt | mediaIds, premium, sensitive, dryRun | `{"text":"Hello future Medirus","publishAt":"2026-09-01T12:00:00Z","dryRun":false}` |
 +| twitter | social | like | tweetId | dryRun | `{"tweetId":"1900000000000000000","dryRun":false}` |
 +| twitter | social | unlike | tweetId | dryRun | `{"tweetId":"1900000000000000000","dryRun":false}` |
 +| twitter | social | retweet | tweetId | dryRun | `{"tweetId":"1900000000000000000","dryRun":false}` |
@@ -3933,7 +3933,7 @@ index 00000000..3a229db2
 +| facebook | social | marketplace | query | location, category, categoryId, minPrice, maxPrice, limit, cursor, after, radiusKm, latitude, longitude, dryRun, priceMin, priceMax | `{"query":"macbook pro 14","location":"Ho Chi Minh City","minPrice":800,"maxPrice":1200,"limit":20}` |
 +| facebook | social | like | postUrl | postUrls, dryRun, delayMin, delayMax, maxBatch | `{"postUrl":"https://www.facebook.com/zuck/posts/1011565502"}` |
 +| facebook | social | comment | postUrl, text | postUrls, dryRun, delayMin, delayMax, maxBatch | `{"postUrl":"https://www.facebook.com/zuck/posts/1011565502","text":"Great update!"}` |
-+| facebook | social | post | text | mediaUrls, groupUrl, groupUrls, groupIds, profileUrl, profileUrls, dryRun, delayMin, delayMax, maxBatch | `{"text":"Hello Facebook from XActions Hybrid Crawler!"}` |
++| facebook | social | post | text | mediaUrls, groupUrl, groupUrls, groupIds, profileUrl, profileUrls, dryRun, delayMin, delayMax, maxBatch | `{"text":"Hello Facebook from Medirus Hybrid Crawler!"}` |
 +| facebook | social | share | postUrl | postUrls, message, dryRun, delayMin, delayMax, maxBatch | `{"postUrl":"https://www.facebook.com/zuck/posts/1011565502"}` |
 +| facebook | social | messenger_share | postUrl, recipientUids | recipientNames, message, dryRun, delayMin, delayMax, maxBatch | `{"postUrl":"https://www.facebook.com/zuck/posts/1011565502","recipientUids":["100001234567890"]}` |
 +| facebook | social | share_link_uid | postUrl, recipientUid | message, dryRun, delayMin, delayMax | `{"postUrl":"https://www.facebook.com/zuck/posts/1011565502","recipientUid":"100001234567890"}` |
@@ -4073,7 +4073,7 @@ index 00000000..c9308993
 @@ -0,0 +1,62 @@
 +#!/usr/bin/env node
 +/**
-+ * Generate canonical action/arg matrix from x_actions_list.
++ * Generate canonical action/arg matrix from medirus_list.
 + * Usage: npm run docs:matrix
 + * Output: docs/canonical-action-matrix.md + docs/canonical-action-matrix.json
 + */
@@ -4274,17 +4274,17 @@ index 9988fc97..12c5525c 100755
    },
 +  {
 +    name: 'x_scrape',
-+    description: 'Generic scrape dispatcher — calls scrape(platform, action, args). Use x_actions_list to discover available platforms/actions/args. Data flows through Redis Stream when REDIS_STREAM_ENABLED=true (returns preview only).',
++    description: 'Generic scrape dispatcher — calls scrape(platform, action, args). Use medirus_list to discover available platforms/actions/args. Data flows through Redis Stream when REDIS_STREAM_ENABLED=true (returns preview only).',
 +    inputSchema: {
 +      type: 'object',
 +      properties: {
 +        platform: {
 +          type: 'string',
-+          description: 'Canonical platform key from DESCRIPTORS (e.g. masothue, chotot, shopee, facebook). Run x_actions_list to discover.',
++          description: 'Canonical platform key from DESCRIPTORS (e.g. masothue, chotot, shopee, facebook). Run medirus_list to discover.',
 +        },
 +        action: {
 +          type: 'string',
-+          description: 'Canonical action name from ActionDescriptor. Run x_actions_list to discover.',
++          description: 'Canonical action name from ActionDescriptor. Run medirus_list to discover.',
 +        },
 +        args: {
 +          type: 'object',
@@ -5090,7 +5090,7 @@ index 00000000..eb45850e
 @@ -0,0 +1,76 @@
 +// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 +/**
-+ * Tests for complete 24-platform coverage in x_actions_list (Story 20.1).
++ * Tests for complete 24-platform coverage in medirus_list (Story 20.1).
 + */
 +
 +import { describe, it } from 'vitest';
@@ -5277,12 +5277,12 @@ index 00000000..f868906a
 +    assert.ok(props.artifactFormat, 'artifactFormat prop required');
 +  });
 +
-+  it('updates x_actions_list schema with category and detailLevel', () => {
-+    const tool = TOOLS.find((t) => t.name === 'x_actions_list');
-+    assert.ok(tool, 'x_actions_list tool should be registered');
++  it('updates medirus_list schema with category and detailLevel', () => {
++    const tool = TOOLS.find((t) => t.name === 'medirus_list');
++    assert.ok(tool, 'medirus_list tool should be registered');
 +    const props = tool.inputSchema.properties;
-+    assert.ok(props.category, 'category property should be added to x_actions_list');
-+    assert.ok(props.detailLevel, 'detailLevel property should be added to x_actions_list');
++    assert.ok(props.category, 'category property should be added to medirus_list');
++    assert.ok(props.detailLevel, 'detailLevel property should be added to medirus_list');
 +    assert.deepEqual(props.detailLevel.enum, ['summary', 'full']);
 +  });
 +});

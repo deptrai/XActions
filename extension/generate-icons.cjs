@@ -1,4 +1,4 @@
-// Generate placeholder PNG icons for XActions extension
+// Generate placeholder PNG icons for Medirus extension
 // Run: node generate-icons.js
 
 const fs = require('fs');

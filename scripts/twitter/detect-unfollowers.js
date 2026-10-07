@@ -48,7 +48,7 @@ var CONFIG = {
   autoDownload: true,
   
   // Storage key for snapshot
-  storageKey: 'xactions_my_followers'
+  storageKey: 'medirus_my_followers'
 };
 
 /**

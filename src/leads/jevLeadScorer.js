@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Jev Lead ICP Scorer (Story 42.7)
+// Medirus — Jev Lead ICP Scorer (Story 42.7)
 // High-throughput batch lead qualification via Jev typed decision.
 // by nichxbt
 

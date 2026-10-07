@@ -200,7 +200,7 @@ export class MastodonCrawler extends AbstractCrawler {
       requiredArgs: ['text'],
       optionalArgs: ['status', 'media_ids', 'visibility', 'instance', 'dryRun', 'accessToken'],
       outputType: '{ status: any, success: boolean }',
-      example: { text: 'Hello Mastodon from XActions', dryRun: false },
+      example: { text: 'Hello Mastodon from Medirus', dryRun: false },
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.post(args, session),
     });
 

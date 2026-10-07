@@ -188,7 +188,7 @@ export const AnalyticsDashboard = ({
           zIndex: 1,
         }}>
           <span style={{ fontSize: 18, color: theme.textMuted }}>
-            Powered by XActions — free Twitter analytics • xactions.app
+            Powered by Medirus — free Twitter analytics • medirus.online
           </span>
         </FadeIn>
       </Sequence>

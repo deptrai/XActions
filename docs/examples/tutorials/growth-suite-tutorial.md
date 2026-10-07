@@ -1,8 +1,8 @@
 ---
 title: "Growth Automation Suite on X (Twitter) — Free 2026"
 description: "All-in-one Twitter growth automation: keyword follow, auto-like, and smart unfollow in one script. Free, no API key needed."
-keywords: ["twitter growth automation suite", "all in one twitter growth script", "twitter auto follow like unfollow", "twitter growth bot free 2026", "automated twitter growth strategy", "twitter growth hacking script", "xactions growth suite", "twitter follow like unfollow automation", "complete twitter growth tool free", "twitter audience growth automation"]
-canonical: "https://xactions.app/examples/growth-suite"
+keywords: ["twitter growth automation suite", "all in one twitter growth script", "twitter auto follow like unfollow", "twitter growth bot free 2026", "automated twitter growth strategy", "twitter growth hacking script", "medirus growth suite", "twitter follow like unfollow automation", "complete twitter growth tool free", "twitter audience growth automation"]
+canonical: "https://medirus.online/examples/growth-suite"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You want to grow your X account from 500 followers to 5,000. You've read all the growth hacking guides — they all say the same thing: *follow relevant people in your niche, engage with their content, then unfollow the ones who don't follow back after a few days.* But executing this strategy manually means running three separate scripts (keyword follow, auto-liker, smart unfollow) every day and keeping track of who you followed and when.
 
-XActions' Growth Suite combines all three strategies into one automated session. You define your niche keywords (like "web3 developer," "DeFi builder"), target accounts, and limits. The script runs a 3-phase campaign: Phase 1 (keyword follow) searches for and follows relevant users, Phase 2 (timeline like) engages with your feed, Phase 3 (smart unfollow) cleans up non-followers past your grace period. One script, one paste, one session — then come back tomorrow and do it again.
+Medirus' Growth Suite combines all three strategies into one automated session. You define your niche keywords (like "web3 developer," "DeFi builder"), target accounts, and limits. The script runs a 3-phase campaign: Phase 1 (keyword follow) searches for and follows relevant users, Phase 2 (timeline like) engages with your feed, Phase 3 (smart unfollow) cleans up non-followers past your grace period. One script, one paste, one session — then come back tomorrow and do it again.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -49,7 +49,7 @@ XActions' Growth Suite combines all three strategies into one automated session.
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**After XActions Growth Suite:**
+**After Medirus Growth Suite:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -157,7 +157,7 @@ The Growth Suite runs 3 automated phases in sequence, with session duration and 
 
 ### Step 1: Paste `core.js` first
 
-> Open DevTools Console (`F12` → Console). Paste the contents of [`src/automation/core.js`](https://github.com/nichxbt/xactions/blob/main/src/automation/core.js) and press Enter. You'll see `✅ XActions Core loaded`.
+> Open DevTools Console (`F12` → Console). Paste the contents of [`src/automation/core.js`](https://github.com/nichxbt/xactions/blob/main/src/automation/core.js) and press Enter. You'll see `✅ Medirus Core loaded`.
 
 ### Step 2: Configure your strategy and paste
 
@@ -165,20 +165,20 @@ Edit `KEYWORDS`, `TARGET_ACCOUNTS`, and `LIMITS` below, then paste:
 
 ```javascript
 // ============================================
-// XActions - Growth Automation Suite
-// by nichxbt — https://xactions.app
+// Medirus - Growth Automation Suite
+// by nichxbt — https://medirus.online
 // REQUIRES: Paste core.js first!
 // All-in-one: keyword follow + auto-like + smart unfollow
 // ============================================
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
   const { log, sleep, randomDelay, scrollBy, clickElement,
-          waitForElement, storage, rateLimit, SELECTORS } = window.XActions.Core;
+          waitForElement, storage, rateLimit, SELECTORS } = window.Medirus.Core;
 
   // ============================================
   // GROWTH STRATEGY — edit this!
@@ -403,7 +403,7 @@ Edit `KEYWORDS`, `TARGET_ACCOUNTS`, and `LIMITS` below, then paste:
   const run = async () => {
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  🚀 XActions Growth Automation Suite                      ║
+║  🚀 Medirus Growth Automation Suite                      ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Keywords: ${STRATEGY.KEYWORDS.slice(0, 3).join(', ').substring(0, 30).padEnd(30)}  ║
 ║  Session:  ${STRATEGY.TIMING.SESSION_DURATION_MINUTES} minutes                                 ║
@@ -447,7 +447,7 @@ Edit `KEYWORDS`, `TARGET_ACCOUNTS`, and `LIMITS` below, then paste:
 
 ```
 ╔═══════════════════════════════════════════════════════════╗
-║  🚀 XActions Growth Automation Suite                      ║
+║  🚀 Medirus Growth Automation Suite                      ║
 ║  Keywords: web3 developer, solidity eng...                ║
 ║  Session:  30 minutes                                     ║
 ║  Limits:   Follows: 20   | Likes: 30                     ║
@@ -581,5 +581,5 @@ Yes. Set `ACTIONS.FOLLOW: false`, `ACTIONS.LIKE: false`, or `ACTIONS.UNFOLLOW: f
 
 <p align="center">
   <b>Built with ❤️ by <a href="https://x.com/nichxbt">@nichxbt</a></b><br>
-  <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+  <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </p>

@@ -1,15 +1,15 @@
 ---
 title: "Protect Account (Private Posts) — Tutorial"
-description: "Toggle protected tweets and manage privacy settings on X/Twitter using XActions browser automation. No API needed."
-keywords: ["protect twitter account", "private tweets x", "twitter privacy settings script", "toggle protected account", "xactions settings manager"]
-canonical: "https://xactions.app/examples/protect-account"
+description: "Toggle protected tweets and manage privacy settings on X/Twitter using Medirus browser automation. No API needed."
+keywords: ["protect twitter account", "private tweets x", "twitter privacy settings script", "toggle protected account", "medirus settings manager"]
+canonical: "https://medirus.online/examples/protect-account"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Protect Account (Private Posts) — Tutorial
 
-> Step-by-step guide to toggling protected tweets and managing privacy settings using XActions.
+> Step-by-step guide to toggling protected tweets and managing privacy settings using Medirus.
 
 **Works on:** Browser Console | Node.js (Puppeteer)
 **Difficulty:** Beginner
@@ -77,7 +77,7 @@ Wait for the page to load fully.
 (async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('🔒 PROTECT ACCOUNT - XActions by nichxbt');
+  console.log('🔒 PROTECT ACCOUNT - Medirus by nichxbt');
   console.log('');
 
   // Find the switch toggle
@@ -113,7 +113,7 @@ Wait for the page to load fully.
 ### Expected Console Output
 
 ```
-🔒 PROTECT ACCOUNT - XActions by nichxbt
+🔒 PROTECT ACCOUNT - Medirus by nichxbt
 
 📋 Current state: 🌐 Public
 🔄 Confirming change...
@@ -164,7 +164,7 @@ await browser.close();
 (async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('🔐 PRIVACY SETTINGS OVERVIEW - XActions by nichxbt');
+  console.log('🔐 PRIVACY SETTINGS OVERVIEW - Medirus by nichxbt');
 
   // Navigate to privacy settings
   window.location.href = 'https://x.com/settings/privacy_and_safety';
@@ -237,5 +237,5 @@ await browser.close();
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

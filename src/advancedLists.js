@@ -11,7 +11,7 @@
 // 1. Go to x.com (any page, or a specific list page for targeted actions)
 // 2. Open the Developer Console (F12)
 // 3. Paste this into the Developer Console and run it
-// 4. Use window.XActions.advancedLists.<function>() to run features
+// 4. Use window.Medirus.advancedLists.<function>() to run features
 //
 // Last Updated: 30 March 2026
 (() => {
@@ -438,14 +438,14 @@
       const blob = new Blob([csv], { type: 'text/csv' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `xactions-list-timeline-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `medirus-list-timeline-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       console.log('📥 Exported as CSV');
     } else {
       const blob = new Blob([JSON.stringify(tweets, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `xactions-list-timeline-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-list-timeline-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       console.log('📥 Exported as JSON');
     }
@@ -506,7 +506,7 @@
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `xactions-list-subscribers-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-list-subscribers-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     console.log('📥 Subscribers exported as JSON');
 
@@ -567,7 +567,7 @@
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `xactions-lists-youre-on-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-lists-youre-on-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     console.log('📥 Lists exported as JSON');
 
@@ -635,10 +635,10 @@
   };
 
   // ─────────────────────────────────────────────────
-  // Expose on window.XActions.advancedLists
+  // Expose on window.Medirus.advancedLists
   // ─────────────────────────────────────────────────
-  window.XActions = window.XActions || {};
-  window.XActions.advancedLists = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.advancedLists = {
     deleteList,
     editList,
     removeMember,
@@ -656,7 +656,7 @@
   // ─────────────────────────────────────────────────
   const W = 62;
   console.log('╔' + '═'.repeat(W) + '╗');
-  console.log('║  📋 ADVANCED LIST MANAGEMENT — XActions' + ' '.repeat(W - 41) + '║');
+  console.log('║  📋 ADVANCED LIST MANAGEMENT — Medirus' + ' '.repeat(W - 41) + '║');
   console.log('║  by nichxbt' + ' '.repeat(W - 14) + '║');
   console.log('╠' + '═'.repeat(W) + '╣');
   console.log('║  Available commands:' + ' '.repeat(W - 22) + '║');
@@ -691,6 +691,6 @@
   console.log('║  10. shareList({ method: "clipboard"|"dm" })' + ' '.repeat(W - 47) + '║');
   console.log('║      Copy list URL or share via DM' + ' '.repeat(W - 37) + '║');
   console.log('║' + ' '.repeat(W) + '║');
-  console.log('║  Usage: XActions.advancedLists.followList()' + ' '.repeat(W - 46) + '║');
+  console.log('║  Usage: Medirus.advancedLists.followList()' + ' '.repeat(W - 46) + '║');
   console.log('╚' + '═'.repeat(W) + '╝');
 })();

@@ -8,16 +8,16 @@
 
 ## 1. Metadata Schema Ownership
 
-**Question:** Does XActions own all JSON schemas, or does Nowing contribute schemas for its own categories?
+**Question:** Does Medirus own all JSON schemas, or does Nowing contribute schemas for its own categories?
 
-**Decision:** **XActions owns and publishes all `metadata` JSON schemas.**
+**Decision:** **Medirus owns and publishes all `metadata` JSON schemas.**
 
 **Rationale:**
 - `ARCHITECTURE-SPINE.md` AD-18 Rule 1 states: *"Mỗi platform/category phải publish JSON Schema cho `metadata` tại `schemas/<platform>/<category>.json`"* and binds `src/scrapers/**`, `src/store/**`, `src/mcp/**`, `src/api/**`.
 - The platform scraper is the source of truth for the shape of raw data it produces.
-- Nowing can **suggest** schema changes via the integration contract, but XActions is the publisher.
+- Nowing can **suggest** schema changes via the integration contract, but Medirus is the publisher.
 
-**Impact:** Story 10.5 scope remains XActions-side; Nowing consumes via `GET /schemas/:platform/:category`.
+**Impact:** Story 10.5 scope remains Medirus-side; Nowing consumes via `GET /schemas/:platform/:category`.
 
 ---
 
@@ -39,7 +39,7 @@
 
 **Question:** Is this a legal/compliance requirement or a cost optimization?
 
-**Decision:** **Cost optimization to keep the XActions raw-data DB under 5GB; not a legal/compliance requirement.**
+**Decision:** **Cost optimization to keep the Medirus raw-data DB under 5GB; not a legal/compliance requirement.**
 
 **Rationale:**
 - `prd.md` section 5 explicitly states: *"Lưu trữ tạm thời với Hot Cache TTL: 30 ngày"* and *"Tự động dọn dẹp sau 30 ngày (Giữ DB < 5GB)"*.
@@ -95,22 +95,22 @@
 
 ## 7. Intent Tagging (AD-SOC-5)
 
-**Question:** Who assigns `intent_tag` (`sell`, `buy`, `hiring`, `seeking`) — XActions or Nowing?
+**Question:** Who assigns `intent_tag` (`sell`, `buy`, `hiring`, `seeking`) — Medirus or Nowing?
 
 **Decision:** **Nowing owns intent classification.**
 
 **Rationale:**
 - `ARCHITECTURE-SPINE.md` AD-SOC-5 is an inherited invariant and is still listed as an open question.
-- XActions is a raw-data scraper; intent classification is an AI/NLP enrichment task better suited to Nowing.
-- XActions sends Thin Event with `content` and `metadata`; Nowing computes `intent_tag` and stores it permanently.
+- Medirus is a raw-data scraper; intent classification is an AI/NLP enrichment task better suited to Nowing.
+- Medirus sends Thin Event with `content` and `metadata`; Nowing computes `intent_tag` and stores it permanently.
 
-**Impact:** No `Post.intentTag` field added to XActions schema. Nowing integration contract must document that intent tags are enriched downstream.
+**Impact:** No `Post.intentTag` field added to Medirus schema. Nowing integration contract must document that intent tags are enriched downstream.
 
 ---
 
 ## 8. MCP over HTTP/SSE Auth
 
-**Question:** What auth method between Nowing and XActions daemon — Bearer token, mTLS, or network isolation only?
+**Question:** What auth method between Nowing and Medirus daemon — Bearer token, mTLS, or network isolation only?
 
 **Decision:** **Bearer token via `Authorization: Bearer <token>` for MVP, using existing `src/a2a/auth.js` token validation.** mTLS is a future hardening item.
 
@@ -119,7 +119,7 @@
 - `src/a2a/auth.js` has JWT/Bearer token validation and API key support; no need to introduce mTLS for MVP.
 - Network isolation can be added at infrastructure level.
 
-**Impact:** Nowing client sends `Authorization: Bearer <xactions-token>` to `http://xactions:3001/mcp`. mTLS to be revisited before production hardening.
+**Impact:** Nowing client sends `Authorization: Bearer <medirus-token>` to `http://medirus:3001/mcp`. mTLS to be revisited before production hardening.
 
 ---
 

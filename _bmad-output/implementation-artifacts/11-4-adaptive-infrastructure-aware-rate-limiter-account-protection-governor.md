@@ -63,7 +63,7 @@ so that **the pipeline never overloads the proxy rotation and eliminates the ris
 * **Given** the API server, CLI, and MCP server are wired to the same `StatusApi`
 * **When** an operator calls any of:
   * `GET /governor/status`
-  * `xactions status`
+  * `medirus status`
   * MCP tool `x_governor_status`
 * **Then** the response contains the exact status shape `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }` (for the HTTP API, the shape lives inside the `status` field of the standard `{ success, status }` response envelope)
 * **And** all three surfaces read from the same `globalStatusApi` singleton backed by `globalAdaptiveRateGovernor`
@@ -123,7 +123,7 @@ so that **the pipeline never overloads the proxy rotation and eliminates the ris
 ### 11.3 code-review findings that directly shape 11.4
 
 1. **Wrong `hibernateAccount` argument order in `base-client.js:348-350`.** The method signature is `hibernateAccount(accountId, reason, durationMs, platform)`. `base-client.js` currently passes `this.platform` as `reason` and `'rate_limit'` as `platform`, which can create a wrong hibernation key. `accountPool.markUnavailable` already hibernates the correct key. Either remove the extra governor call or replace it with `governor.recordRateLimit(currentAccountId, this.platform, this.rateLimitHibernationMs)`.
-2. **`AdaptiveRateGovernor` has no public status surface wired to HTTP/CLI/MCP.** The class and `StatusApi` exist, but `GET /governor/status`, `xactions status`, and `x_governor_status` are not implemented.
+2. **`AdaptiveRateGovernor` has no public status surface wired to HTTP/CLI/MCP.** The class and `StatusApi` exist, but `GET /governor/status`, `medirus status`, and `x_governor_status` are not implemented.
 3. **`redisConsumerLag` is set only by `updateState(state)` and never refreshed from an actual Redis Stream.** A `StreamMetricsReader` is needed so `AdaptiveRateGovernor.refreshFromRedis()` or `updateRedisConsumerLag()` can be called periodically.
 4. **Type declarations are out of sync with the JS class.** `recordRateLimit`, `wakeAccount`, and the `StatusApi` constructor are missing or incomplete in `types/core.d.ts`.
 
@@ -154,7 +154,7 @@ so that **the pipeline never overloads the proxy rotation and eliminates the ris
 * **Binds:** `src/mcp/**`, `src/api/**`, `src/cli/**`, `src/core/error-envelope.js`, `src/core/status-api.js`
 * **Relevant rules:**
   1. Error envelope shape: `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`.
-  3. Governor Status API: `GET /governor/status` and CLI `xactions status` return `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
+  3. Governor Status API: `GET /governor/status` and CLI `medirus status` return `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 
 **11.4 compliance:**
 
@@ -178,12 +178,12 @@ so that **the pipeline never overloads the proxy rotation and eliminates the ris
 
 * **Relevant rules:**
   3. Data sources: `/governor/status`, `/admin/proxies`, `/admin/accounts`, `/admin/checkpoints`, `/admin/stream/metrics`.
-  6. Admin CLI: `xactions admin`, `xactions checkpoints`, `xactions stream`.
+  6. Admin CLI: `medirus admin`, `medirus checkpoints`, `medirus stream`.
 
 **11.4 compliance:**
 
 * `GET /governor/status` is public to the operator surface (internal API key optional; keep consistent with `/api/proxies/status` which is currently unauthenticated).
-* `xactions status` is a top-level CLI command, not nested under `admin`.
+* `medirus status` is a top-level CLI command, not nested under `admin`.
 * MCP tool `x_governor_status` takes no arguments and returns the status.
 
 ### AD-2 — Unified Base Scraper & Client Interfaces
@@ -454,7 +454,7 @@ This makes `GET /governor/status` available, matching AD-14.
 
 ---
 
-### 5. CLI `xactions status`
+### 5. CLI `medirus status`
 
 Add to `src/cli/index.js` before `program.parse()`:
 
@@ -579,7 +579,7 @@ export declare const globalStatusApi: StatusApi;
 
 #### 7.2 `types/index.d.ts`
 
-Re-export from the core module so external consumers can import from `'xactions'`:
+Re-export from the core module so external consumers can import from `'medirus'`:
 
 ```ts
 export {
@@ -629,7 +629,7 @@ if (this.governor && typeof this.governor.recordRateLimit === 'function') {
 - [x] [Review][Patch] Add hysteresis mechanism (10,000 threshold, 5,000 recovery) for Redis lag backpressure [`src/core/adaptive-governor.js`]
 - [x] [Review][Patch] Set default `durationMs` for `recordBotChallenge` to 20 minutes [`src/core/adaptive-governor.js`]
 - [x] [Review][Patch] Standardize `GET /governor/status` payload and error handling [`api/routes/governor.js`]
-- [x] [Review][Patch] Refine CLI `xactions status` color coding and use `process.exitCode = 1` [`src/cli/index.js`]
+- [x] [Review][Patch] Refine CLI `medirus status` color coding and use `process.exitCode = 1` [`src/cli/index.js`]
 - [x] [Review][Patch] Prune empty timestamp arrays in `#accountRequestTimestamps` to prevent memory leak [`src/core/adaptive-governor.js`]
 - [x] [Review][Patch] Remove `any` JSDoc annotations in `StreamMetricsReader` [`src/utils/stream-metrics.js`]
 - [x] [Review][Patch] Add null/undefined guard to `updateState()` [`src/core/adaptive-governor.js`]
@@ -638,7 +638,7 @@ if (this.governor && typeof this.governor.recordRateLimit === 'function') {
 ### Additional Review Findings (Resolved — final code review pass)
 
 - [x] [Review][Patch] `tests/utils/stream-metrics.test.js` sử dụng mock Redis client object, vi phạm quy tắc **"No mocks, stubs, or fakes"**. Đã refactor: tách `extractPendingCount` thành pure function, test bằng real `redis` client kết nối unreachable, và `refreshGovernorConsumerLag` dùng `StreamMetricsReader` thật. [`tests/utils/stream-metrics.test.js`, `src/utils/stream-metrics.js`]
-- [x] [Review][Patch] `GET /governor/status`, CLI `xactions status` và MCP `x_governor_status` không làm mới `redisConsumerLag`. Đã wire `refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader)` vào cả 3 surfaces. [`api/routes/governor.js`, `src/cli/index.js`, `src/mcp/server.js`]
+- [x] [Review][Patch] `GET /governor/status`, CLI `medirus status` và MCP `x_governor_status` không làm mới `redisConsumerLag`. Đã wire `refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader)` vào cả 3 surfaces. [`api/routes/governor.js`, `src/cli/index.js`, `src/mcp/server.js`]
 - [x] [Review][Decision] `GET /governor/status` trả về `{ success, status, data }`. Quyết định: giữ envelope `{ success, status }` nhất quán với API khác, bỏ `data` dư thừa, cập nhật AC-6 để `status` field chứa đúng shape. [`api/routes/governor.js`]
 - [x] [Review][Patch] `AdaptiveRateGovernor.updateState()` chưa validate kiểu số. Đã thêm `typeof === 'number'`, `Number.isFinite`, và `Math.max(0, ...)` cho `healthyProxyCount`/`totalProxyCount`. [`src/core/adaptive-governor.js`]
 - [x] [Review][Patch] `src/core/base-client.js` gọi đồng thời `accountPool.markUnavailable()` và `governor.recordRateLimit()`. Đã bỏ `governor.recordRateLimit()`; `AccountPool` đã forward hibernation đến governor. [`src/core/base-client.js`]
@@ -749,7 +749,7 @@ Create `tests/utils/stream-metrics.test.js` (optional, skip if no Redis server):
 4. Fixed governor hibernation call in `src/core/base-client.js`.
 5. Implemented `StreamMetricsReader` in `src/utils/stream-metrics.js`.
 6. Created `api/routes/governor.js` (`GET /governor/status`) and mounted in `api/server.js`.
-7. Added `xactions status` command in `src/cli/index.js`.
+7. Added `medirus status` command in `src/cli/index.js`.
 8. Added `x_governor_status` MCP tool in `src/mcp/server.js`.
 9. Updated TypeScript declarations in `types/core.d.ts` and `types/index.d.ts`.
 10. Unskipped and verified all 18 tests in `tests/core/adaptive-governor.test.js` & `tests/core/status-api.test.js` (100% green).

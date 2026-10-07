@@ -1,4 +1,4 @@
-# XActions - Installation Guide
+# Medirus - Installation Guide
 # Run with: vhs install.tape
 
 Output install.gif
@@ -13,26 +13,26 @@ Set Padding 20
 Set Framerate 30
 
 # Title
-Type "# 📦 Installing XActions"
+Type "# 📦 Installing Medirus"
 Enter
 Sleep 500ms
 Enter
 
 # NPM install
-Type "npm install -g xactions"
+Type "npm install -g medirus"
 Enter
 Sleep 1s
 
 Type@30ms "
 added 1 package in 2s
 
-xactions@1.0.0 installed!
+medirus@1.0.0 installed!
 "
 Enter
 Sleep 1s
 
 # Verify installation
-Type "xactions --version"
+Type "medirus --version"
 Enter
 Sleep 500ms
 Type "1.0.0"
@@ -45,12 +45,12 @@ Type "# Or use directly with npx (no install needed):"
 Enter
 Sleep 500ms
 
-Type "npx xactions --help"
+Type "npx medirus --help"
 Enter
 Sleep 1s
 
 Type@30ms "
-🚀 XActions - X/Twitter Automation Toolkit
+🚀 Medirus - X/Twitter Automation Toolkit
    No API keys required. 100% free.
 
 Commands: unfollow, scrape, monitor, mcp, detect

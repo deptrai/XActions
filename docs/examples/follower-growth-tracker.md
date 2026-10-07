@@ -136,7 +136,7 @@ This script provides the following capabilities:
     console.log(`📊 Current: ${fmt(snapshot.followers)} followers | ${fmt(snapshot.following)} following | ratio: ${snapshot.ratio}`);
 
     // Load history
-    const storageKey = `xactions_growth_${snapshot.username}`;
+    const storageKey = `medirus_growth_${snapshot.username}`;
     let history = [];
     try {
       history = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -268,7 +268,7 @@ This script provides the following capabilities:
 
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' }));
-      a.download = `xactions-growth-${snapshot.username}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-growth-${snapshot.username}-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
     }
 
@@ -280,8 +280,8 @@ This script provides the following capabilities:
   // Auto-schedule if configured
   if (CONFIG.autoSchedule) {
     console.log(`\n⏰ Auto-snapshot scheduled every ${CONFIG.intervalMs / 60000} minutes.`);
-    console.log('   Keep this tab open. Kill with: clearInterval(window._xactionsGrowthInterval)');
-    window._xactionsGrowthInterval = setInterval(run, CONFIG.intervalMs);
+    console.log('   Keep this tab open. Kill with: clearInterval(window._medirusGrowthInterval)');
+    window._medirusGrowthInterval = setInterval(run, CONFIG.intervalMs);
   }
 })();
 
@@ -341,14 +341,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -386,4 +386,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

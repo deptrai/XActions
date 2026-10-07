@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Reputation Monitoring
+ * Medirus Reputation Monitoring
  * 
  * Tracks sentiment over time for a username or keyword.
  * Scrapes mentions/search periodically, computes rolling averages,

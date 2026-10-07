@@ -18,7 +18,7 @@ context:
 
 ## Story
 
-As a **XActions Platform Engineer**,
+As a **Medirus Platform Engineer**,
 I want **`src/scrapers/index.js` trở thành một thin dispatcher duy nhất cho mọi platform**,
 so that **không còn logic scraper nào nằm ngoài `<platform>/` module dirs và `scrape(platform, action, args)` là entry point duy nhất**.
 

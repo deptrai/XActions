@@ -51,7 +51,7 @@ import {
   resumeEvergreen,
   getEvergreenStats,
   varyTweet
-} from 'xactions/src/automation/evergreenRecycler.js';
+} from 'medirus/src/automation/evergreenRecycler.js';
 
 // Find candidates
 const { candidates } = await analyzeEvergreenCandidates('nichxbt', {
@@ -116,7 +116,7 @@ To avoid X's duplicate-detection:
 
 ### 3. Queue & Scheduling
 
-Queue saved to `~/.xactions/evergreen-queue.json`:
+Queue saved to `~/.medirus/evergreen-queue.json`:
 
 ```json
 {

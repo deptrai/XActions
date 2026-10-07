@@ -113,7 +113,7 @@
   };
 
   const run = async () => {
-    console.log('🏆 COMPETITOR ANALYSIS - XActions by nichxbt');
+    console.log('🏆 COMPETITOR ANALYSIS - Medirus by nichxbt');
 
     if (CONFIG.accounts.length === 0) {
       console.error('❌ No accounts to analyze! Edit CONFIG.accounts array.');
@@ -158,7 +158,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `xactions-competitor-analysis-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-competitor-analysis-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       console.log('📥 Full report downloaded as JSON');
     }

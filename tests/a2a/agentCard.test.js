@@ -19,11 +19,11 @@ afterEach(() => {
 describe('generateAgentCard', () => {
   it('returns a valid agent card object', () => {
     const card = generateAgentCard({ baseUrl: 'http://localhost:3100' });
-    expect(card.name).toBe('XActions Agent');
+    expect(card.name).toBe('Medirus Agent');
     expect(card.url).toBe('http://localhost:3100');
     expect(card.version).toBe(VERSION);
     expect(card.provider).toBeDefined();
-    expect(card.provider.organization).toContain('XActions');
+    expect(card.provider.organization).toContain('Medirus');
     expect(Array.isArray(card.skills)).toBe(true);
     expect(card.capabilities).toBeDefined();
   });
@@ -49,12 +49,12 @@ describe('generateAgentCard', () => {
     expect(card.capabilities.pushNotifications).toBe(true);
   });
 
-  it('always uses XActions Agent as the name', () => {
-    // generateAgentCard hardcodes name to 'XActions Agent'
+  it('always uses Medirus Agent as the name', () => {
+    // generateAgentCard hardcodes name to 'Medirus Agent'
     const card = generateAgentCard({
       baseUrl: 'http://test.com',
     });
-    expect(card.name).toBe('XActions Agent');
+    expect(card.name).toBe('Medirus Agent');
   });
 });
 
@@ -98,7 +98,7 @@ describe('diffCards', () => {
 
 describe('clearCardCache', () => {
   it('clears so regeneration works', () => {
-    // generateAgentCard always uses 'XActions Agent' as the name,
+    // generateAgentCard always uses 'Medirus Agent' as the name,
     // but clearCardCache ensures the card is regenerated fresh
     generateAgentCard({ baseUrl: 'http://localhost:3100' });
     clearCardCache();

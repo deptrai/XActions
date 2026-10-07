@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Keyword Liker — Free X/Twitter Script | XActions</title>
+  <title>Keyword Liker — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="scripts/keywordLiker.js">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, keyword, liker, engagement">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, keyword, liker, engagement">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Keyword Liker — XActions">
+  <meta property="og:title" content="Keyword Liker — Medirus">
   <meta property="og:description" content="scripts/keywordLiker.js">
-  <meta property="og:url" content="https://xactions.app/scripts/keyword-liker">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/keyword-liker">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Keyword Liker — XActions">
+  <meta name="twitter:title" content="Keyword Liker — Medirus">
   <meta name="twitter:description" content="scripts/keywordLiker.js">
 
-  <link rel="canonical" href="https://xactions.app/scripts/keyword-liker">
+  <link rel="canonical" href="https://medirus.online/scripts/keyword-liker">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Keyword Liker — Free X/Twitter Script | XActions",
+    "headline": "Keyword Liker — Free X/Twitter Script | Medirus",
     "description": "scripts/keywordLiker.js",
-    "url": "https://xactions.app/scripts/keyword-liker",
+    "url": "https://medirus.online/scripts/keyword-liker",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Engagement",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, keyword, liker, engagement"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, keyword, liker, engagement"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://xactions.app/scripts#engagement" },
-      { "@type": "ListItem", "position": 4, "name": "Keyword Liker", "item": "https://xactions.app/scripts/keyword-liker" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://medirus.online/scripts#engagement" },
+      { "@type": "ListItem", "position": 4, "name": "Keyword Liker", "item": "https://medirus.online/scripts/keyword-liker" }
     ]
   }
   </script>
@@ -237,18 +237,18 @@
 
   // ── Abort handle ───────────────────────────────────────────
   let aborted = false;
-  window.XActions = window.XActions || {};
-  window.XActions.stop = () =&gt; { aborted = true; console.log('🛑 Stopping after current tweet...'); };
+  window.Medirus = window.Medirus || {};
+  window.Medirus.stop = () =&gt; { aborted = true; console.log('🛑 Stopping after current tweet...'); };
 
   const run = async () =&gt; {
     console.log('╔════════════════════════════════════════════╗');
     console.log('║  🔑 KEYWORD LIKER                         ║');
-    console.log('║  by nichxbt — XActions                     ║');
+    console.log('║  by nichxbt — Medirus                     ║');
     console.log('╚════════════════════════════════════════════╝');
     console.log(`   Keywords: ${keywords.join(', ')}`);
     console.log(`   Max likes: ${CONFIG.maxLikes}`);
     console.log(`   Dry run: ${CONFIG.dryRun}`);
-    console.log(`   ℹ️ Type XActions.stop() to abort early\n`);
+    console.log(`   ℹ️ Type Medirus.stop() to abort early\n`);
 
     for (let round = 0; round &lt; CONFIG.scrollRounds &amp;&amp; !aborted; round++) {
       const articles = document.querySelectorAll(SEL.tweet);
@@ -328,7 +328,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -341,7 +341,7 @@
         <a href="/scripts/auto-commenter">💬 Auto Commenter</a>
 <a href="/scripts/auto-engage">⚡ Auto Engage</a>
 <a href="/scripts/auto-liker">❤️ Auto Liker</a>
-<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - XActions</a>
+<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - Medirus</a>
 <a href="/scripts/auto-repost">🔁 Auto Repost</a>
 <a href="/scripts/auto-plug-replies">🔌 Auto-Plug Replies</a>
 <a href="/scripts/auto-reply">💬 Auto-Reply / Auto-Respond</a>

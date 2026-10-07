@@ -6,7 +6,7 @@
 
 ## Overview
 
-XActions includes a stealth scraping layer that wraps Puppeteer with:
+Medirus includes a stealth scraping layer that wraps Puppeteer with:
 
 - **Proxy rotation** — round-robin, random selection, health tracking, auto-blacklisting
 - **Stealth browser** — puppeteer-extra with stealth plugin + custom fingerprint patches
@@ -23,7 +23,7 @@ Available via: **Node.js library**.
 ### Proxy Manager
 
 ```javascript
-import ProxyManager from 'xactions/src/scraping/proxyManager.js';
+import ProxyManager from 'medirus/src/scraping/proxyManager.js';
 
 const pm = new ProxyManager([
   'http://user:pass@proxy1.example.com:8080',
@@ -33,7 +33,7 @@ const pm = new ProxyManager([
 
 // Or load from file / environment
 await pm.loadFromFile('./proxies.txt');
-pm.loadFromEnv(); // reads XACTIONS_PROXIES or XACTIONS_PROXY_FILE
+pm.loadFromEnv(); // reads MEDIRUS_PROXIES or MEDIRUS_PROXY_FILE
 
 // Get next proxy (round-robin)
 const proxy = pm.getNext();
@@ -56,7 +56,7 @@ import {
   createStealthPage,
   stealthClick,
   stealthType
-} from 'xactions/src/scraping/stealthBrowser.js';
+} from 'medirus/src/scraping/stealthBrowser.js';
 
 // Launch with proxy
 const browser = await launchStealthBrowser({
@@ -82,8 +82,8 @@ await browser.close();
 ### Combined Usage
 
 ```javascript
-import ProxyManager from 'xactions/src/scraping/proxyManager.js';
-import { launchStealthBrowser, createStealthPage } from 'xactions/src/scraping/stealthBrowser.js';
+import ProxyManager from 'medirus/src/scraping/proxyManager.js';
+import { launchStealthBrowser, createStealthPage } from 'medirus/src/scraping/stealthBrowser.js';
 
 const pm = new ProxyManager();
 await pm.loadFromFile('./proxies.txt');
@@ -127,7 +127,7 @@ src/scraping/
 | Method | Description |
 |---|---|
 | `loadFromFile(path)` | Load proxies from text file (one per line) |
-| `loadFromEnv()` | Load from `XACTIONS_PROXIES` (comma-separated) or `XACTIONS_PROXY_FILE` |
+| `loadFromEnv()` | Load from `MEDIRUS_PROXIES` (comma-separated) or `MEDIRUS_PROXY_FILE` |
 | `getNext()` | Round-robin selection (skips blacklisted) |
 | `getRandom()` | Random selection from healthy proxies |
 | `markFailed(proxy)` | Record failure — 3 consecutive → 10min blacklist |
@@ -140,8 +140,8 @@ src/scraping/
 
 | Variable | Description |
 |---|---|
-| `XACTIONS_PROXIES` | Comma-separated proxy URLs |
-| `XACTIONS_PROXY_FILE` | Path to proxy file |
+| `MEDIRUS_PROXIES` | Comma-separated proxy URLs |
+| `MEDIRUS_PROXY_FILE` | Path to proxy file |
 
 ---
 
@@ -192,7 +192,7 @@ Human-like typing: random inter-key delay (50–150ms), occasional pauses.
 
 ## FingerprintManager (Story 27.1)
 
-`FingerprintManager` (`src/core/fingerprint-manager.js`) manages a pool of *complete*, internally-consistent browser fingerprints and binds them to a geo-consistent proxy region so platforms cannot fingerprint XActions via TLS/JA4 mismatch, inconsistent timezone/locale, or proxy-UA mismatch.
+`FingerprintManager` (`src/core/fingerprint-manager.js`) manages a pool of *complete*, internally-consistent browser fingerprints and binds them to a geo-consistent proxy region so platforms cannot fingerprint Medirus via TLS/JA4 mismatch, inconsistent timezone/locale, or proxy-UA mismatch.
 
 ### `getForAccount(platform, accountId, { proxy })`
 

@@ -218,8 +218,8 @@ export class AbstractCrawler {
     const id = item.id || `${platform}:${externalId}`;
     const crawledAt = toIsoDate(/** @type {any} */ (item.crawledAt || item.crawled_at));
     const storageRef = item.storageRef || item.storage_ref || item.id;
-    const source = item.source || `org.xactions.crawler.${platform}`;
-    const type = item.type || 'org.xactions.scrape.completed';
+    const source = item.source || `org.medirus.crawler.${platform}`;
+    const type = item.type || 'org.medirus.scrape.completed';
     const specversion = '1.0';
     const datacontenttype = 'application/json';
     const time = toIsoDate(/** @type {any} */ (item.time || crawledAt));

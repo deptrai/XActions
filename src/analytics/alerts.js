@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Alert System
+ * Medirus Alert System
  * 
  * Threshold alerts (sentiment drops below configurable value)
  * Volume alerts (unusual spike in mentions)
@@ -224,7 +224,7 @@ async function _deliverAlert(alert, config) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          event: 'xactions.alert',
+          event: 'medirus.alert',
           alert,
         }),
       });

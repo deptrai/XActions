@@ -36,7 +36,7 @@ This powerful feature enables you to monitor follower/following activity on any 
 
 ```javascript
 // ============================================
-// XActions - Monitor Any Account (Browser Console)
+// Medirus - Monitor Any Account (Browser Console)
 // Author: nich (@nichxbt)
 // Go to: x.com/ANY_USERNAME/followers OR /following
 // Open console (F12), paste this
@@ -44,11 +44,11 @@ This powerful feature enables you to monitor follower/following activity on any 
 
 (async () => {
   // Configuration
-  const STORAGE_PREFIX = 'xactions_monitor_';
+  const STORAGE_PREFIX = 'medirus_monitor_';
   const SCROLL_DELAY = 1500;          // Time between scrolls (ms)
   const MAX_SCROLL_RETRIES = 8;       // Stop if no new users found
   
-  console.log('🔭 XActions - Monitor Any Account');
+  console.log('🔭 Medirus - Monitor Any Account');
   console.log('===================================');
   
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -311,7 +311,7 @@ npm install puppeteer-extra puppeteer-extra-plugin-stealth
 
 ```javascript
 // ============================================
-// XActions - Monitor Any Account (Node.js)
+// Medirus - Monitor Any Account (Node.js)
 // Author: nich (@nichxbt)
 // 
 // Usage:
@@ -347,7 +347,7 @@ async function monitorAccount(username, type = 'followers', options = {}) {
   } = options;
 
   console.log('');
-  console.log('🔭 XActions - Monitor Any Account');
+  console.log('🔭 Medirus - Monitor Any Account');
   console.log('═'.repeat(50));
   console.log(`📍 Target: @${username}`);
   console.log(`📋 Type: ${type}`);
@@ -611,7 +611,7 @@ const authToken = authTokenArg ? authTokenArg.split('=')[1] : null;
 
 if (!username) {
   console.log(`
-🔭 XActions - Monitor Any Account
+🔭 Medirus - Monitor Any Account
 ═══════════════════════════════════════════════════
 
 Track followers/following changes on ANY public X account.
@@ -696,8 +696,8 @@ Set up automated daily monitoring:
 crontab -e
 
 # Add daily monitoring at 9 AM
-0 9 * * * cd /path/to/xactions && node monitor-account.js elonmusk followers >> logs/elonmusk.log 2>&1
-0 9 * * * cd /path/to/xactions && node monitor-account.js naval following >> logs/naval.log 2>&1
+0 9 * * * cd /path/to/medirus && node monitor-account.js elonmusk followers >> logs/elonmusk.log 2>&1
+0 9 * * * cd /path/to/medirus && node monitor-account.js naval following >> logs/naval.log 2>&1
 ```
 
 ---
@@ -772,7 +772,7 @@ done
 
 ## 🌐 Website Alternative
 
-Don't want to run scripts? Use **[xactions.app](https://xactions.app)** for:
+Don't want to run scripts? Use **[medirus.online](https://medirus.online)** for:
 
 - ✅ Visual dashboard for monitoring multiple accounts
 - ✅ Automatic scheduled monitoring

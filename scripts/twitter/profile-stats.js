@@ -27,7 +27,7 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  📊 XActions — Profile Stats                                 ║
+║  📊 Medirus — Profile Stats                                 ║
 ║  Get comprehensive profile statistics                        ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -275,7 +275,7 @@
   }
 
   // Save to localStorage
-  const storageKey = `xactions_profile_${username}`;
+  const storageKey = `medirus_profile_${username}`;
   const history = JSON.parse(localStorage.getItem(storageKey) || '[]');
   history.push(stats);
   // Keep last 30 snapshots

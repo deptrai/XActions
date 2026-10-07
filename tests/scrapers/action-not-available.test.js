@@ -33,9 +33,9 @@ describe('Story 25.4 — actionNotAvailable error envelope', () => {
     expect(err.type).toBe(ErrorTypes.INVALID_ARGS);
   });
 
-  it('defaults suggestedAction to use_x_actions_list when omitted', () => {
+  it('defaults suggestedAction to use_medirus_list when omitted', () => {
     const err = actionNotAvailable('threads', 'gone', ['search']);
-    expect(err.suggestedAction).toBe('use_x_actions_list');
+    expect(err.suggestedAction).toBe('use_medirus_list');
   });
 
   it('DEPRECATED type is defined for forward-compat (Epic 26 wires the producer)', () => {
@@ -90,10 +90,10 @@ describe('Story 25.4 — DEPRECATED branch (Epic 26 producer, mechanism wired no
     expect(err.suggestedAction).toBe('relogin');
   });
 
-  it('non-deprecated action stays INVALID_ARGS with use_x_actions_list', () => {
+  it('non-deprecated action stays INVALID_ARGS with use_medirus_list', () => {
     const err = actionNotAvailable('fb', 'nope', ['search']);
     expect(err.type).toBe(ErrorTypes.INVALID_ARGS);
-    expect(err.suggestedAction).toBe('use_x_actions_list');
+    expect(err.suggestedAction).toBe('use_medirus_list');
   });
 
   it('DEPRECATED_ACTIONS registry exists, is frozen, and is keyed platform:action', async () => {

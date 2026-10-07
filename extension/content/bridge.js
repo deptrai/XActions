@@ -1,12 +1,12 @@
-// XActions Extension — Content Script Bridge
+// Medirus Extension — Content Script Bridge
 // Injected into x.com/twitter.com pages
 // Bridges popup ↔ page context via chrome.runtime messaging
 // by nichxbt
 
 (() => {
   // Prevent double-injection
-  if (window.__xactions_bridge_loaded) return;
-  window.__xactions_bridge_loaded = true;
+  if (window.__medirus_bridge_loaded) return;
+  window.__medirus_bridge_loaded = true;
 
   // ============================================
   // INJECT AUTOMATION CODE INTO PAGE CONTEXT
@@ -32,7 +32,7 @@
   // Listen for messages from injected page script
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
-    if (!event.data || event.data.source !== 'xactions-page') return;
+    if (!event.data || event.data.source !== 'medirus-page') return;
 
     const msg = event.data;
 
@@ -93,7 +93,7 @@
     switch (message.type) {
       case 'RUN_AUTOMATION':
         window.postMessage({
-          source: 'xactions-extension',
+          source: 'medirus-extension',
           type: 'RUN_AUTOMATION',
           automationId: message.automationId,
           settings: message.settings,
@@ -103,7 +103,7 @@
 
       case 'STOP_AUTOMATION':
         window.postMessage({
-          source: 'xactions-extension',
+          source: 'medirus-extension',
           type: 'STOP_AUTOMATION',
           automationId: message.automationId,
         }, '*');
@@ -112,7 +112,7 @@
 
       case 'STOP_ALL':
         window.postMessage({
-          source: 'xactions-extension',
+          source: 'medirus-extension',
           type: 'STOP_ALL',
         }, '*');
         sendResponse({ success: true });
@@ -120,7 +120,7 @@
 
       case 'PAUSE_ALL':
         window.postMessage({
-          source: 'xactions-extension',
+          source: 'medirus-extension',
           type: 'PAUSE_ALL',
         }, '*');
         sendResponse({ success: true });
@@ -128,7 +128,7 @@
 
       case 'RESUME_ALL':
         window.postMessage({
-          source: 'xactions-extension',
+          source: 'medirus-extension',
           type: 'RESUME_ALL',
         }, '*');
         sendResponse({ success: true });
@@ -136,7 +136,7 @@
 
       case 'GET_ACCOUNT_INFO':
         window.postMessage({
-          source: 'xactions-extension',
+          source: 'medirus-extension',
           type: 'GET_ACCOUNT_INFO',
         }, '*');
         sendResponse({ success: true });
@@ -152,5 +152,5 @@
     return true;
   });
 
-  console.log('🔌 XActions bridge loaded');
+  console.log('🔌 Medirus bridge loaded');
 })();

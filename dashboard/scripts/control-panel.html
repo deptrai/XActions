@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Control Panel — Free X/Twitter Script | XActions</title>
-  <meta name="description" content="XActions Control Panel — Floating UI for Browser Automations">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, control, panel, automation">
+  <title>Control Panel — Free X/Twitter Script | Medirus</title>
+  <meta name="description" content="Medirus Control Panel — Floating UI for Browser Automations">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, control, panel, automation">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Control Panel — XActions">
-  <meta property="og:description" content="XActions Control Panel — Floating UI for Browser Automations">
-  <meta property="og:url" content="https://xactions.app/scripts/control-panel">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:title" content="Control Panel — Medirus">
+  <meta property="og:description" content="Medirus Control Panel — Floating UI for Browser Automations">
+  <meta property="og:url" content="https://medirus.online/scripts/control-panel">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Control Panel — XActions">
-  <meta name="twitter:description" content="XActions Control Panel — Floating UI for Browser Automations">
+  <meta name="twitter:title" content="Control Panel — Medirus">
+  <meta name="twitter:description" content="Medirus Control Panel — Floating UI for Browser Automations">
 
-  <link rel="canonical" href="https://xactions.app/scripts/control-panel">
+  <link rel="canonical" href="https://medirus.online/scripts/control-panel">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Control Panel — Free X/Twitter Script | XActions",
-    "description": "XActions Control Panel — Floating UI for Browser Automations",
-    "url": "https://xactions.app/scripts/control-panel",
+    "headline": "Control Panel — Free X/Twitter Script | Medirus",
+    "description": "Medirus Control Panel — Floating UI for Browser Automations",
+    "url": "https://medirus.online/scripts/control-panel",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Automation",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, control, panel, automation"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, control, panel, automation"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Automation", "item": "https://xactions.app/scripts#automation" },
-      { "@type": "ListItem", "position": 4, "name": "Control Panel", "item": "https://xactions.app/scripts/control-panel" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Automation", "item": "https://medirus.online/scripts#automation" },
+      { "@type": "ListItem", "position": 4, "name": "Control Panel", "item": "https://medirus.online/scripts/control-panel" }
     ]
   }
   </script>
@@ -129,7 +129,7 @@
           <span>by <a href="https://x.com/nichxbt" rel="noopener">@nichxbt</a></span>
         </div>
 
-        <p>XActions Control Panel — Floating UI for Browser Automations</p>
+        <p>Medirus Control Panel — Floating UI for Browser Automations</p>
 
         
 
@@ -152,7 +152,7 @@
           <div class="code-block">
             <button class="copy-btn" onclick="navigator.clipboard.writeText(this.nextElementSibling.querySelector('code').textContent).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Script',2000)})">Copy Script</button>
             <pre><code>// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Control Panel — Floating UI for Browser Automations
+// Medirus Control Panel — Floating UI for Browser Automations
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -168,7 +168,7 @@
 // by nichxbt
 
 (() =&gt; {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
@@ -179,7 +179,7 @@
     return;
   }
 
-  const { log, sleep, randomDelay, scrollBy, clickElement, SELECTORS, storage, rateLimit } = window.XActions.Core;
+  const { log, sleep, randomDelay, scrollBy, clickElement, SELECTORS, storage, rateLimit } = window.Medirus.Core;
 
   // ========================================================================
   // PANEL STATE
@@ -351,7 +351,7 @@
   function buildHTML() {
     return `
     &lt;div id=&quot;xa-panel-header&quot;&gt;
-      &lt;div class=&quot;xa-title&quot;&gt;&lt;span&gt;⚡&lt;/span&gt; XActions Panel&lt;/div&gt;
+      &lt;div class=&quot;xa-title&quot;&gt;&lt;span&gt;⚡&lt;/span&gt; Medirus Panel&lt;/div&gt;
       &lt;div style=&quot;display:flex;gap:4px&quot;&gt;
         &lt;button class=&quot;xa-close&quot; id=&quot;xa-minimize&quot; title=&quot;Minimize&quot;&gt;─&lt;/button&gt;
         &lt;button class=&quot;xa-close&quot; id=&quot;xa-close-panel&quot; title=&quot;Close&quot;&gt;✕&lt;/button&gt;
@@ -754,7 +754,7 @@
         if (followed &gt;= limit) break;
         await checkPauseAbort(signal);
 
-        const user = window.XActions.Core.extractUserFromCell(cell);
+        const user = window.Medirus.Core.extractUserFromCell(cell);
         if (!user || !user.username || processed.has(user.username)) continue;
         processed.add(user.username);
         if (user.isFollowing) continue;
@@ -816,7 +816,7 @@
         if (unfollowed &gt;= limit) break;
         await checkPauseAbort(signal);
 
-        const user = window.XActions.Core.extractUserFromCell(cell);
+        const user = window.Medirus.Core.extractUserFromCell(cell);
         if (!user || !user.username || processed.has(user.username)) continue;
         processed.add(user.username);
 
@@ -873,7 +873,7 @@
       const cells = document.querySelectorAll(SELECTORS.userCell);
       for (const cell of cells) {
         if (collected.length &gt;= limit) break;
-        const user = window.XActions.Core.extractUserFromCell(cell);
+        const user = window.Medirus.Core.extractUserFromCell(cell);
         if (!user || !user.username || seen.has(user.username)) continue;
         seen.add(user.username);
         collected.push(user);
@@ -953,7 +953,7 @@
           if (!tid || seen.has(tid)) continue;
           seen.add(tid);
 
-          const info = window.XActions.Core.extractTweetInfo(tw);
+          const info = window.Medirus.Core.extractTweetInfo(tw);
           if (!info?.text) continue;
 
           // Like (35% chance)
@@ -1076,7 +1076,7 @@
           let pFollows = 0;
           for (const cell of cells) {
             if (pFollows &gt;= 5) break;
-            const user = window.XActions.Core.extractUserFromCell(cell);
+            const user = window.Medirus.Core.extractUserFromCell(cell);
             if (!user?.username || user.isFollowing) continue;
             if (bioKw.length &gt; 0 &amp;&amp; user.bio) {
               const bl = user.bio.toLowerCase();
@@ -1257,7 +1257,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions_export_${Date.now()}.${ext}`;
+    a.download = `medirus_export_${Date.now()}.${ext}`;
     a.click();
     URL.revokeObjectURL(url);
     panelLog(`📤 Exported ${PANEL.results.length} results as ${ext.toUpperCase()}`, 'success');
@@ -1381,7 +1381,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions_log_${Date.now()}.txt`;
+    a.download = `medirus_log_${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   });
@@ -1398,7 +1398,7 @@
     if (PANEL.pauseResolve) { PANEL.pauseResolve(); PANEL.pauseResolve = null; }
     panel.remove();
     style.remove();
-    delete window.XActions.Panel;
+    delete window.Medirus.Panel;
     panelLog('Panel closed', 'info');
   });
 
@@ -1410,7 +1410,7 @@
   renderQueue();
 
   // Expose to namespace
-  window.XActions.Panel = {
+  window.Medirus.Panel = {
     PANEL,
     TASK_QUEUE,
     AUTOMATIONS,
@@ -1424,8 +1424,8 @@
     close: () =&gt; { $('#xa-close-panel').click(); },
   };
 
-  panelLog('⚡ XActions Panel ready!', 'success');
-  console.log('⚡ XActions Panel injected. Use window.XActions.Panel to control programmatically.');
+  panelLog('⚡ Medirus Panel ready!', 'success');
+  console.log('⚡ Medirus Panel injected. Use window.Medirus.Panel to control programmatically.');
   console.log('');
   console.log('QUICK START:');
   console.log('  1. Pick an automation from the dropdown');
@@ -1433,9 +1433,9 @@
   console.log('  3. Click Start — or Add to Queue for multi-target runs');
   console.log('');
   console.log('MULTI-TARGET EXAMPLE (programmatic):');
-  console.log('  XActions.Panel.addTask(&quot;like-timeline&quot;, { target: &quot;nichxbt&quot;, limit: 500, keywords: &quot;&quot; });');
-  console.log('  XActions.Panel.addTask(&quot;like-timeline&quot;, { target: &quot;doi&quot;, limit: 500, keywords: &quot;&quot; });');
-  console.log('  XActions.Panel.runQueue();');
+  console.log('  Medirus.Panel.addTask(&quot;like-timeline&quot;, { target: &quot;nichxbt&quot;, limit: 500, keywords: &quot;&quot; });');
+  console.log('  Medirus.Panel.addTask(&quot;like-timeline&quot;, { target: &quot;doi&quot;, limit: 500, keywords: &quot;&quot; });');
+  console.log('  Medirus.Panel.runQueue();');
 
 })();
 </code></pre>
@@ -1443,7 +1443,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -1460,7 +1460,7 @@
 <a href="/scripts/quota-supervisor">⚠️ Quota Supervisor</a>
 <a href="/scripts/rate-limiter">⏱️ Rate Limiter</a>
 <a href="/scripts/session-logger">📋 Session Logger</a>
-<a href="/scripts/rss-monitor">📡 XActions RSS &amp; Webhook Content Ingestion</a>
+<a href="/scripts/rss-monitor">📡 Medirus RSS &amp; Webhook Content Ingestion</a>
       </div>
       <div class="sidebar-card">
         <h3>🔗 Quick Links</h3>

@@ -478,13 +478,13 @@ export class AccountPool {
 }
 
 /**
- * Load saved accounts and sessions from ~/.xactions/config.json into AccountPool & SessionManager.
+ * Load saved accounts and sessions from ~/.medirus/config.json into AccountPool & SessionManager.
  * @param {AccountPool} [pool=globalAccountPool]
  * @param {import('./session-manager.js').SessionManager} [sessionManager=globalSessionManager]
  */
 export function loadSavedAccounts(pool = globalAccountPool, sessionManager = globalSessionManager) {
   try {
-    const configPath = path.join(os.homedir(), '.xactions', 'config.json');
+    const configPath = path.join(os.homedir(), '.medirus', 'config.json');
     if (!fs.existsSync(configPath)) return;
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 

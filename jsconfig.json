@@ -9,8 +9,8 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "xactions": ["./src/index.js"],
-      "xactions/*": ["./src/*"]
+      "medirus": ["./src/index.js"],
+      "medirus/*": ["./src/*"]
     }
   },
   "include": ["src/**/*.js", "api/**/*.js", "tests/**/*.js", "types/**/*.d.ts"],

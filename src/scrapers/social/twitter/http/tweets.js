@@ -63,7 +63,7 @@ function cleanSource(raw) {
 // ---------------------------------------------------------------------------
 
 /**
- * Transform Twitter's raw GraphQL tweet object into the clean XActions
+ * Transform Twitter's raw GraphQL tweet object into the clean Medirus
  * tweet format.
  *
  * Handles `__typename`: `'Tweet'`, `'TweetWithVisibilityResults'`,

@@ -53,7 +53,7 @@
   };
 
   const run = async () => {
-    console.log('✏️ UPDATE PROFILE - XActions by nichxbt');
+    console.log('✏️ UPDATE PROFILE - Medirus by nichxbt');
 
     // Validate
     if (CONFIG.bio && CONFIG.bio.length > 160) {

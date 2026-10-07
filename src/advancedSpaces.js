@@ -243,7 +243,7 @@
   const inviteUsers = async (usernames = []) => {
     if (!usernames || usernames.length === 0) {
       console.log('❌ No usernames provided');
-      console.log('💡 Usage: window.XActions.advancedSpaces.inviteUsers(["user1", "user2"])');
+      console.log('💡 Usage: window.Medirus.advancedSpaces.inviteUsers(["user1", "user2"])');
       return { success: false, error: 'No usernames provided' };
     }
 
@@ -349,7 +349,7 @@
   const manageCoHost = async (username, action = 'add') => {
     if (!username) {
       console.log('❌ No username provided');
-      console.log('💡 Usage: window.XActions.advancedSpaces.manageCoHost("user", "add")');
+      console.log('💡 Usage: window.Medirus.advancedSpaces.manageCoHost("user", "add")');
       return { success: false, error: 'No username provided' };
     }
 
@@ -838,11 +838,11 @@
   };
 
   // ──────────────────────────────────────────────────────────────
-  // Expose on window.XActions.advancedSpaces
+  // Expose on window.Medirus.advancedSpaces
   // ──────────────────────────────────────────────────────────────
 
-  window.XActions = window.XActions || {};
-  window.XActions.advancedSpaces = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.advancedSpaces = {
     joinSpace,
     leaveSpace,
     requestToSpeak,
@@ -861,11 +861,11 @@
 
   const W = 64;
   console.log('╔' + '═'.repeat(W) + '╗');
-  console.log('║  🎙️ ADVANCED SPACES — XActions' + ' '.repeat(W - 33) + '║');
+  console.log('║  🎙️ ADVANCED SPACES — Medirus' + ' '.repeat(W - 33) + '║');
   console.log('║  by nichxbt — v1.0' + ' '.repeat(W - 21) + '║');
   console.log('╚' + '═'.repeat(W) + '╝');
   console.log('');
-  console.log('Available commands (via window.XActions.advancedSpaces):');
+  console.log('Available commands (via window.Medirus.advancedSpaces):');
   console.log('');
   console.log('  1.  joinSpace(spaceUrl?)          — Join a Space as a listener');
   console.log('  2.  leaveSpace()                   — Leave/exit the current Space');
@@ -879,8 +879,8 @@
   console.log('  10. downloadRecording(spaceUrl?)    — Download Space recording');
   console.log('');
   console.log('Example:');
-  console.log('  await window.XActions.advancedSpaces.joinSpace("https://x.com/i/spaces/abc123")');
-  console.log('  await window.XActions.advancedSpaces.sendReaction("🔥")');
+  console.log('  await window.Medirus.advancedSpaces.joinSpace("https://x.com/i/spaces/abc123")');
+  console.log('  await window.Medirus.advancedSpaces.sendReaction("🔥")');
   console.log('');
   console.log('✅ Advanced Spaces loaded — all commands ready');
 })();

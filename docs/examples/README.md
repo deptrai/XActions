@@ -1,6 +1,6 @@
-# 📚 XActions — Complete Script Catalog
+# 📚 Medirus — Complete Script Catalog
 
-Guides for every automation XActions ships: what each one does, how to configure
+Guides for every automation Medirus ships: what each one does, how to configure
 it, and what to watch out for. Each page includes working code, the settings
 worth changing, and the failure modes worth knowing about.
 
@@ -286,7 +286,7 @@ Grok AI, MCP server, and developer integrations.
 
 | Example | Description |
 |---------|-------------|
-| [MCP Server](mcp-server.md) | Integrate XActions with AI agents via MCP |
+| [MCP Server](mcp-server.md) | Integrate Medirus with AI agents via MCP |
 | [Grok AI](grok-ai.md) | X's built-in Grok AI features |
 | [Grok Integration](grok-integration.md) | Programmatic Grok AI interaction |
 
@@ -329,11 +329,11 @@ Search, trends, and explore automation.
 ## 🚀 Quick Start
 
 ```bash
-# Install XActions
-npm install -g xactions
+# Install Medirus
+npm install -g medirus
 
 # Run any example
-npx xactions <command> [options]
+npx medirus <command> [options]
 ```
 
 Or just paste any script directly into your browser console on x.com — no installation required!
@@ -472,5 +472,5 @@ Step-by-step tutorials with real-world scenarios, ASCII diagrams, multiple metho
 
 <p align="center">
   <b>Built with ❤️ by <a href="https://x.com/nichxbt">@nichxbt</a></b><br>
-  <a href="https://github.com/nirholas/XActions">⭐ Star on GitHub</a> · <a href="https://xactions.app">🌐 Website</a>
+  <a href="https://github.com/nirholas/XActions">⭐ Star on GitHub</a> · <a href="https://medirus.online">🌐 Website</a>
 </p>

@@ -196,7 +196,7 @@
         tweets: tweets.map(t => ({ date: t.date.toISOString(), day: DAYS[t.dayOfWeek], hour: t.hour, engagement: t.engagement })),
         analyzedAt: new Date().toISOString(),
       };
-      download(report, `xactions-content-calendar-${new Date().toISOString().slice(0, 10)}.json`);
+      download(report, `medirus-content-calendar-${new Date().toISOString().slice(0, 10)}.json`);
     }
 
     console.log('\n✅ Content calendar analysis complete.');

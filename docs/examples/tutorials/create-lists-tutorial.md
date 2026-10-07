@@ -1,14 +1,14 @@
 ---
 title: "Create Lists on X (Twitter) — Tutorial"
-description: "Create X Lists, add members, and export list data using XActions browser scripts."
-keywords: ["twitter create list", "x list management", "xactions list manager", "add members twitter list", "export list members twitter"]
+description: "Create X Lists, add members, and export list data using Medirus browser scripts."
+keywords: ["twitter create list", "x list management", "medirus list manager", "add members twitter list", "export list members twitter"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Create Lists — Tutorial
 
-> Step-by-step guide to creating X Lists, adding members, and exporting list data using XActions browser scripts.
+> Step-by-step guide to creating X Lists, adding members, and exporting list data using Medirus browser scripts.
 
 **Works on:** Browser Console
 **Difficulty:** Beginner
@@ -43,7 +43,7 @@ const CONFIG = {
   createList: {
     enabled: false,
     name: 'My List',
-    description: 'Created by XActions',
+    description: 'Created by Medirus',
     isPrivate: true,
   },
   // Add users to an existing list (navigate to list page first)
@@ -68,7 +68,7 @@ const CONFIG = {
 |--------|------|---------|-------------|
 | `createList.enabled` | `boolean` | `false` | Enable list creation |
 | `createList.name` | `string` | `'My List'` | Name of the new list |
-| `createList.description` | `string` | `'Created by XActions'` | Description of the new list |
+| `createList.description` | `string` | `'Created by Medirus'` | Description of the new list |
 | `createList.isPrivate` | `boolean` | `true` | Whether the list is private (only you can see it) |
 | `addUsers.enabled` | `boolean` | `true` | Enable adding users to a list |
 | `addUsers.usernames` | `string[]` | `[]` | Usernames (without @) to add |
@@ -213,7 +213,7 @@ This creates the list first, then adds members to it.
 - **Private lists are invisible to others.** Use private lists for research and competitive analysis.
 - **Operations run in order.** Create -> Add Members -> Export. Enable only the ones you need.
 - **Increase delays for large batches.** When adding many users, increase `actionDelay` to 3000-4000ms to avoid rate limits.
-- **Export downloads automatically.** The export creates a JSON file named `xactions-list-members-YYYY-MM-DD.json` and triggers a download.
+- **Export downloads automatically.** The export creates a JSON file named `medirus-list-members-YYYY-MM-DD.json` and triggers a download.
 - **Users are not notified when added to private lists.** Public list additions may send notifications.
 
 ---

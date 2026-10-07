@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>X Video Downloader — Free X/Twitter Script | XActions</title>
+  <title>X Video Downloader — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="X Video Downloader — Free browser console script for X/Twitter automation. No API keys needed.">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, video, downloader, content tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, video, downloader, content tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="X Video Downloader — XActions">
+  <meta property="og:title" content="X Video Downloader — Medirus">
   <meta property="og:description" content="X Video Downloader — Free browser console script for X/Twitter automation. No API keys needed.">
-  <meta property="og:url" content="https://xactions.app/scripts/video-downloader">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/video-downloader">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="X Video Downloader — XActions">
+  <meta name="twitter:title" content="X Video Downloader — Medirus">
   <meta name="twitter:description" content="X Video Downloader — Free browser console script for X/Twitter automation. No API keys needed.">
 
-  <link rel="canonical" href="https://xactions.app/scripts/video-downloader">
+  <link rel="canonical" href="https://medirus.online/scripts/video-downloader">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "X Video Downloader — Free X/Twitter Script | XActions",
+    "headline": "X Video Downloader — Free X/Twitter Script | Medirus",
     "description": "X Video Downloader — Free browser console script for X/Twitter automation. No API keys needed.",
-    "url": "https://xactions.app/scripts/video-downloader",
+    "url": "https://medirus.online/scripts/video-downloader",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Content Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, video, downloader, content tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, video, downloader, content tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Content Tools", "item": "https://xactions.app/scripts#content-tools" },
-      { "@type": "ListItem", "position": 4, "name": "X Video Downloader", "item": "https://xactions.app/scripts/video-downloader" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Content Tools", "item": "https://medirus.online/scripts#content-tools" },
+      { "@type": "ListItem", "position": 4, "name": "X Video Downloader", "item": "https://medirus.online/scripts/video-downloader" }
     ]
   }
   </script>
@@ -276,7 +276,7 @@
 
   // Method 3: Check network requests (if interceptor was set up)
   const findVideoInNetwork = () =&gt; {
-    return window.__XACTIONS_VIDEO_URLS || [];
+    return window.__MEDIRUS_VIDEO_URLS || [];
   };
 
   // Method 4: Look in window.__NEXT_DATA__ or similar
@@ -297,9 +297,9 @@
 
   // Set up network interceptor for future requests
   const setupInterceptor = () =&gt; {
-    if (window.__XACTIONS_INTERCEPTOR_ACTIVE) return;
+    if (window.__MEDIRUS_INTERCEPTOR_ACTIVE) return;
     
-    window.__XACTIONS_VIDEO_URLS = window.__XACTIONS_VIDEO_URLS || [];
+    window.__MEDIRUS_VIDEO_URLS = window.__MEDIRUS_VIDEO_URLS || [];
     
     // Intercept fetch
     const originalFetch = window.fetch;
@@ -307,7 +307,7 @@
       const url = args[0]?.toString?.() || args[0]?.url || args[0];
       
       if (url &amp;&amp; (url.includes('.mp4') || url.includes('.m3u8') || url.includes('video.twimg'))) {
-        window.__XACTIONS_VIDEO_URLS.push({
+        window.__MEDIRUS_VIDEO_URLS.push({
           url,
           quality: 'intercepted',
           type: url.includes('.m3u8') ? 'm3u8' : 'mp4',
@@ -323,7 +323,7 @@
     const originalXHR = window.XMLHttpRequest.prototype.open;
     window.XMLHttpRequest.prototype.open = function(method, url, ...rest) {
       if (url &amp;&amp; (url.includes('.mp4') || url.includes('.m3u8') || url.includes('video.twimg'))) {
-        window.__XACTIONS_VIDEO_URLS.push({
+        window.__MEDIRUS_VIDEO_URLS.push({
           url,
           quality: 'xhr',
           type: url.includes('.m3u8') ? 'm3u8' : 'mp4',
@@ -334,7 +334,7 @@
       return originalXHR.call(this, method, url, ...rest);
     };
 
-    window.__XACTIONS_INTERCEPTOR_ACTIVE = true;
+    window.__MEDIRUS_INTERCEPTOR_ACTIVE = true;
     console.log('🔍 Video interceptor activated');
   };
 
@@ -537,7 +537,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -556,7 +556,7 @@
 <a href="/scripts/clear-all-reposts">🗑️ Clear All Reposts</a>
 <a href="/scripts/clear-all-retweets">🗑️ Clear All Retweets</a>
 <a href="/scripts/content-repurposer">♻️ Content Repurposer</a>
-<a href="/scripts/delete-tweets">🗑️ Delete Tweets - XActions</a>
+<a href="/scripts/delete-tweets">🗑️ Delete Tweets - Medirus</a>
       </div>
       <div class="sidebar-card">
         <h3>🔗 Quick Links</h3>

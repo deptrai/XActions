@@ -9,7 +9,7 @@ The graph system crawls follower/following relationships and constructs a social
 - **Analyzed** — Find clusters (label propagation), bridges (betweenness centrality), influence scores (PageRank), ghost followers, mutual connections
 - **Visualized** — Export as interactive HTML (force-directed D3.js), GEXF (Gephi), or D3 JSON
 - **Queried** — Get follow/unfollow/engage recommendations based on graph structure
-- **Persisted** — Saved to `~/.xactions/graphs/` for reuse
+- **Persisted** — Saved to `~/.medirus/graphs/` for reuse
 
 ## Quick Start
 
@@ -17,25 +17,25 @@ The graph system crawls follower/following relationships and constructs a social
 
 ```bash
 # Build a graph (depth 1 = followers + following)
-xactions graph build @username --depth 1
+medirus graph build @username --depth 1
 
 # Build deeper graph (followers of followers)
-xactions graph build @username --depth 2 --max 500
+medirus graph build @username --depth 2 --max 500
 
 # Analyze an existing graph
-xactions graph analyze <graph-id>
+medirus graph analyze <graph-id>
 
 # Get recommendations
-xactions graph recommend <graph-id> --for @username
+medirus graph recommend <graph-id> --for @username
 
 # Export as HTML visualization
-xactions graph export <graph-id> --format html --output graph.html
+medirus graph export <graph-id> --format html --output graph.html
 
 # List saved graphs
-xactions graph list
+medirus graph list
 
 # Delete a graph
-xactions graph delete <graph-id>
+medirus graph delete <graph-id>
 ```
 
 ### Node.js API
@@ -228,7 +228,7 @@ const html = graph.visualize(loaded, 'html');
 await graph.delete(graphId);
 ```
 
-Graphs are stored as JSON in `~/.xactions/graphs/`.
+Graphs are stored as JSON in `~/.medirus/graphs/`.
 
 ## API Endpoints
 

@@ -1,14 +1,14 @@
 ---
 title: "View For You & Following Timelines on X (Twitter) — Tutorial"
-description: "Switch between For You and Following timelines, auto-collect posts, and export timeline data using XActions."
-keywords: ["twitter timeline", "for you timeline x", "following timeline twitter", "xactions timeline viewer", "export twitter timeline", "twitter feed scraper"]
+description: "Switch between For You and Following timelines, auto-collect posts, and export timeline data using Medirus."
+keywords: ["twitter timeline", "for you timeline x", "following timeline twitter", "medirus timeline viewer", "export twitter timeline", "twitter feed scraper"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # View For You & Following Timelines — Tutorial
 
-> Step-by-step guide to switching between For You and Following timelines, auto-collecting posts, and exporting timeline data using XActions browser scripts.
+> Step-by-step guide to switching between For You and Following timelines, auto-collecting posts, and exporting timeline data using Medirus browser scripts.
 
 **Works on:** Browser Console
 **Difficulty:** Beginner
@@ -92,7 +92,7 @@ The script will:
 **Output:**
 
 ```
-XActions -- Timeline Viewer
+Medirus -- Timeline Viewer
 
 Current timeline: following
 Target timeline: for-you
@@ -112,7 +112,7 @@ TIMELINE SUMMARY (50 posts)
 
 Top 5 by views:
    1. @elonmusk: "Just deployed the new feature..." (2,450,000 views)
-   2. @nichxbt: "XActions v2.0 is here..." (125,000 views)
+   2. @nichxbt: "Medirus v2.0 is here..." (125,000 views)
    ...
 
 Most frequent accounts in timeline:
@@ -191,7 +191,7 @@ The JSON export contains:
     {
       "username": "nichxbt",
       "displayName": "nich",
-      "text": "XActions v2.0 is here...",
+      "text": "Medirus v2.0 is here...",
       "views": 125000,
       "likes": 450,
       "retweets": 89,
@@ -231,8 +231,8 @@ Each post includes:
 
 - **For You vs Following.** "For You" shows algorithmic recommendations. "Following" shows chronological posts from accounts you follow.
 - **Increase `maxPosts` for larger samples.** For meaningful analytics, collect 200+ posts.
-- **Data is also saved to `sessionStorage`.** Access it programmatically with `JSON.parse(sessionStorage.getItem('xactions_timeline'))`.
-- **The JSON file downloads automatically.** File name format: `xactions_timeline_{timeline}_{date}.json`.
+- **Data is also saved to `sessionStorage`.** Access it programmatically with `JSON.parse(sessionStorage.getItem('medirus_timeline'))`.
+- **The JSON file downloads automatically.** File name format: `medirus_timeline_{timeline}_{date}.json`.
 - **`maxScrollRetries` prevents infinite scrolling.** After 8 scrolls with no new posts, the script stops. Increase this if you have a fast connection.
 - **Metric parsing handles abbreviations.** "125K" becomes `125000`, "1.2M" becomes `1200000`.
 

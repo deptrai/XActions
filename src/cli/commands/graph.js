@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions graph` — build and analyze social network graphs.
+ * `medirus graph` — build and analyze social network graphs.
  *
  * @author nich (@nichxbt)
  * @license MIT
@@ -44,7 +44,7 @@ export function registerGraphCommand(program) {
         });
 
         spinner.succeed(`Graph built: ${result.nodes?.length || 0} nodes, ${result.edges?.length || 0} edges (ID: ${result.id?.slice(0, 8)}...)`);
-        console.log(chalk.gray(`  Saved to ~/.xactions/graphs/${result.id}.json`));
+        console.log(chalk.gray(`  Saved to ~/.medirus/graphs/${result.id}.json`));
       } catch (error) {
         spinner.fail('Failed to build graph');
         console.error(chalk.red(error.message));
@@ -194,7 +194,7 @@ export function registerGraphCommand(program) {
         const graphs = await graph.list();
 
         if (graphs.length === 0) {
-          console.log(chalk.gray('\n  No graphs found. Build one with: xactions graph build @username\n'));
+          console.log(chalk.gray('\n  No graphs found. Build one with: medirus graph build @username\n'));
           return;
         }
 

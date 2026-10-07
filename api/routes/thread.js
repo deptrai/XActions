@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Thread Reader API Routes
+ * Medirus Thread Reader API Routes
  * 
  * POST /api/thread/unroll   — Extract/unroll a Twitter thread from URL
  * POST /api/thread/summarize — Summarize a thread with AI

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Token Manager
+ * Medirus Client — Token Manager
  *
  * Coordinates bearer token, guest token, and CSRF token for Twitter API requests.
  * Twitter requires two tokens for unauthenticated (guest) access:

@@ -17,7 +17,7 @@ deferred: []
 
 **Problem:** Token sentiment coverage hiện chỉ có X/Twitter — signals thường bùng nổ trên Telegram crypto channels trước X; skeleton `src/scrapers/social/telegram/` (Story 50.8) mọi method đều throw `XACT_4001` vì chưa có transport impl.
 
-**Approach:** Build standalone MTProto relay service `services/telegram-relay/` (GramJS `telegram@2.26.22` + StringSession, copy mmomarket relay pattern) giữ một `TelegramClient` dùng `TELEGRAM_SESSION`; phía XActions lấp seam `TelegramClient` transport `'mtproto'` = HTTP client gọi relay; normalize messages → PostItem feed `TokenMentionPipeline` (platform seam `tg:`) + publish `stream:social:raw_posts`; channel registry config-driven; expose `x_telegram_channels`/`x_telegram_search` qua MCP dispatcher; `tgDegraded` flag riêng khỏi X degraded.
+**Approach:** Build standalone MTProto relay service `services/telegram-relay/` (GramJS `telegram@2.26.22` + StringSession, copy mmomarket relay pattern) giữ một `TelegramClient` dùng `TELEGRAM_SESSION`; phía Medirus lấp seam `TelegramClient` transport `'mtproto'` = HTTP client gọi relay; normalize messages → PostItem feed `TokenMentionPipeline` (platform seam `tg:`) + publish `stream:social:raw_posts`; channel registry config-driven; expose `x_telegram_channels`/`x_telegram_search` qua MCP dispatcher; `tgDegraded` flag riêng khỏi X degraded.
 
 ## Boundaries & Constraints
 
@@ -28,7 +28,7 @@ deferred: []
 - Channel reading: `getEntity(channel)` → `getMessages(entity,{limit,minId})` poll; `iterDialogs()` discovery; `GetFullChannel` cho `member_count`; `NewMessage` event handler cho realtime subscribe.
 - `PostItem` shape: `{platform:'telegram', id, author, text, ts, channelId, forwardFrom: msg.fwdFrom}` → `source_id = tg:<channelId>:<msgId>` (AD-4).
 - `TELEGRAM_SESSION` là password-grade secret: env-only, không log, dedicated phone/account (không account chính). `RELAY_AUTH_TOKEN` ≥32 hex. Relay bind internal-only.
-- Governor: relay tự giới hạn; phía XActions dùng `globalAdaptiveRateGovernor.setPlatformLimit('telegram', ...)` cho poll scheduling — không viết throttle riêng (AD Epic 11).
+- Governor: relay tự giới hạn; phía Medirus dùng `globalAdaptiveRateGovernor.setPlatformLimit('telegram', ...)` cho poll scheduling — không viết throttle riêng (AD Epic 11).
 - MCP exposure theo AD-6: actions qua dispatcher (`x_scrape` platform descriptor + dedicated thin-wrapper nếu cần), KHÔNG tạo standalone tool mới ngoài pattern hiện có.
 - `tgDegraded` flag riêng, không đụng vào `degraded` X hiện có.
 - TypeScript strict mode; không `any`, không `@ts-ignore`; không mock.

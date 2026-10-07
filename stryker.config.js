@@ -1,12 +1,12 @@
 /**
- * Stryker base config for XActions.
+ * Stryker base config for Medirus.
  *
  * Per-module configs (stryker.{module}.config.js) override `mutate` and `testFiles`
  * for focused mutation runs. Run with:
  *   npx stryker run                           # uses this base config
  *   npx stryker run stryker.{module}.config.js
  *
- * XActions P0 modules (gate applies): session/cookie handling, rate-limit guards,
+ * Medirus P0 modules (gate applies): session/cookie handling, rate-limit guards,
  * billing/payments, data integrity, MCP tool contracts.
  *
  * @type {import('@stryker-mutator/core/core/StrykerOptions').StrykerOptions}

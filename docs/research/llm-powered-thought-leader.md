@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document describes the architecture for running the XActions Thought Leader system **24/7** with **LLM/AI model support** built in. Instead of pasting scripts into a browser console, this system uses headless browser automation (Puppeteer/Playwright) orchestrated by a Node.js agent that leverages LLMs for intelligent decision-making.
+This document describes the architecture for running the Medirus Thought Leader system **24/7** with **LLM/AI model support** built in. Instead of pasting scripts into a browser console, this system uses headless browser automation (Puppeteer/Playwright) orchestrated by a Node.js agent that leverages LLMs for intelligent decision-making.
 
 ---
 
@@ -84,7 +84,7 @@ This document describes the architecture for running the XActions Thought Leader
 | **Database** | SQLite (better-sqlite3) | Action log, state, metrics |
 | **Scheduler** | node-cron + custom variance | Circadian rhythm simulation |
 | **Process Mgmt** | PM2 / Docker | 24/7 uptime, auto-restart |
-| **Monitoring** | XActions Dashboard / Webhooks | Alerts, metrics visualization |
+| **Monitoring** | Medirus Dashboard / Webhooks | Alerts, metrics visualization |
 
 ---
 

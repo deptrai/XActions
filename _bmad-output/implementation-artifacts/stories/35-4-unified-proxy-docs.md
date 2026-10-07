@@ -23,7 +23,7 @@ Ensure all new scrapers (Reddit, Medium, Instagram) can inject `ProxyProvider` u
 
 ## Story
 
-As an XActions maintainer,
+As an Medirus maintainer,
 I want all new social scrapers to support `ProxyProvider` injection,
 So that proxy management is consistent across platforms and easy to configure.
 

@@ -4,7 +4,7 @@
  *
  * Unauthenticated introspection route returning every registered
  * (platform, action, syncCapable, requiredArgs, category, description) triple
- * via the shared `executeActionListTool` — REST and MCP (`x_actions_list`)
+ * via the shared `executeActionListTool` — REST and MCP (`medirus_list`)
  * consumers get the identical payload (UX-1).
  *
  * Query params (all optional):

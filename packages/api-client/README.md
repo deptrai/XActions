@@ -1,22 +1,22 @@
-# @xactions/api-client
+# @medirus/api-client
 
-Typed TypeScript client for the [XActions](https://xactions.app) API — generated from the committed OpenAPI 3.1 spec (`api/openapi.json`).
+Typed TypeScript client for the [Medirus](https://medirus.online) API — generated from the committed OpenAPI 3.1 spec (`api/openapi.json`).
 
 ## Install
 
 ```bash
 # As a workspace/file dep
-npm install @xactions/api-client@file:packages/api-client
+npm install @medirus/api-client@file:packages/api-client
 ```
 
 ## Usage
 
 ```ts
-import { XActionsClient, isPaymentRequired } from '@xactions/api-client';
-import type { paths, operations } from '@xactions/api-client/schema';
+import { MedirusClient, isPaymentRequired } from '@medirus/api-client';
+import type { paths, operations } from '@medirus/api-client/schema';
 
-const client = new XActionsClient({
-  baseUrl: 'https://xactions.app',
+const client = new MedirusClient({
+  baseUrl: 'https://medirus.online',
   sessionCookie: process.env.X_SESSION_COOKIE,   // for /api/viral, /api/crm, ...
   bearerToken: process.env.JWT,                  // for /api/auth, /api/user, ...
   x402Payment: process.env.X402_PAYMENT_HEADER,  // for /api/ai/*

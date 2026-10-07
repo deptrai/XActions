@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions A2A — HTTP Server
+ * Medirus A2A — HTTP Server
  *
  * Express server implementing the A2A protocol endpoints.
  * Can run standalone (`node src/a2a/server.js`) or be mounted into
@@ -120,7 +120,7 @@ export function createA2AServer(options = {}) {
     enableLogging = true,
     rateLimit = 100,
     mode = 'local',
-    apiUrl = process.env.XACTIONS_API_URL || 'http://localhost:3000',
+    apiUrl = process.env.MEDIRUS_API_URL || 'http://localhost:3000',
     baseUrl = process.env.A2A_BASE_URL || `http://localhost:${port}`,
   } = options;
 
@@ -182,7 +182,7 @@ export function createA2AServer(options = {}) {
     const stats = taskStore.getStats();
     res.json({
       status: 'healthy',
-      agent: 'XActions A2A Agent',
+      agent: 'Medirus A2A Agent',
       version: '1.0.0',
       uptime: process.uptime(),
       tasks: stats,
@@ -350,7 +350,7 @@ export function createA2AServer(options = {}) {
     const p = customPort || port;
     return new Promise((resolve) => {
       server = app.listen(p, () => {
-        console.log(`⚡ XActions A2A Agent listening on port ${p}`);
+        console.log(`⚡ Medirus A2A Agent listening on port ${p}`);
         console.log(`   Agent Card: http://localhost:${p}/.well-known/agent.json`);
         console.log(`   Health:     http://localhost:${p}/a2a/health`);
         console.log(`   Skills:     http://localhost:${p}/a2a/skills`);

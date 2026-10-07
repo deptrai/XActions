@@ -309,7 +309,7 @@ This script provides the following capabilities:
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-performance-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-performance-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Full results exported as JSON.');
     }
@@ -376,14 +376,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -421,4 +421,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

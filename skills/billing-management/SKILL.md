@@ -1,6 +1,6 @@
 ---
 name: billing-management
-description: Manage XActions subscriptions and billing — view plans, start a Stripe checkout, open the billing portal, or cancel a subscription. Use when users want to upgrade, downgrade, or manage their XActions subscription.
+description: Manage Medirus subscriptions and billing — view plans, start a Stripe checkout, open the billing portal, or cancel a subscription. Use when users want to upgrade, downgrade, or manage their Medirus subscription.
 license: Apache-2.0
 metadata:
   author: nichxbt
@@ -9,7 +9,7 @@ metadata:
 
 # Billing Management
 
-Stripe-powered subscription and billing management for XActions.
+Stripe-powered subscription and billing management for Medirus.
 
 ## Entry Points
 
@@ -67,7 +67,7 @@ Returns a Stripe Customer Portal URL where users can update payment methods, vie
 
 ## Notes
 
-- Billing is handled entirely by Stripe — XActions does not store payment details
+- Billing is handled entirely by Stripe — Medirus does not store payment details
 - Subscription status is synced via Stripe webhooks
 - Downgrade takes effect at the end of the current billing period
 - Credits (for pay-per-use operations) are separate from subscriptions
@@ -76,4 +76,4 @@ Returns a Stripe Customer Portal URL where users can update payment methods, vie
 
 - **teams-management** — Manage team members on your plan
 - **x402-payments** — Alternative crypto-based payment via x402 protocol
-- **xactions-cli** — Check plan status via CLI
+- **medirus-cli** — Check plan status via CLI

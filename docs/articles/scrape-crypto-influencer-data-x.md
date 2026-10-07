@@ -16,7 +16,7 @@ This guide covers the mechanics of pulling influencer data from X: authenticatin
 
 "Scraping" in the X API context means programmatic data collection via official endpoints — not crawling HTML or bypassing rate limits. Using the User Lookup and Timelines endpoints is compliant with X's developer terms at the appropriate access tier.
 
-For browser-based scraping without API costs, tools like [XActions](https://xactions.app) offer pay-per-request access to X profile and timeline data.
+For browser-based scraping without API costs, tools like [Medirus](https://medirus.online) offer pay-per-request access to X profile and timeline data.
 
 ---
 

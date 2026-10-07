@@ -29,7 +29,7 @@ deferred: []
 - Khi `queryType` là `phone` (hoặc `auto` detect được VN phone), chuẩn hoá số Việt Nam (`0xxx…` / `+84xxx…` / `84xxx…` → dạng `0xxxxxxxxx` 10 số) trước khi dispatch sang các platform VN (chotot, zalo, masothue). Tái sử dụng logic `parseVnPhone` (regex VN_PHONE_RE + prefix map) — trích ra shared util.
 - Trả về envelope `{ success, query, queryType, platformsQueried, totalProfiles, profiles: ProfileItem[], platformStatus: [{ platform, status, count, error? , durationMs }] , durationMs }`.
 - Validate args đầu vào; throw `PlatformError` (`XACT_4001`, `ErrorTypes.INVALID_ARGS`, `SuggestedActions.USE_ACTIONS_LIST`) khi thiếu `query` hoặc `platforms` không hợp lệ, theo đúng pattern `executeScrapeTool`.
-- Test dùng `XACTIONS_TEST_FAST_DELAYS=1`, no mocks — dispatch vào local loopback handlers / descriptor stubs thật.
+- Test dùng `MEDIRUS_TEST_FAST_DELAYS=1`, no mocks — dispatch vào local loopback handlers / descriptor stubs thật.
 
 **Never:**
 - Không persist person entity, không tạo Prisma model `PersonEntity`/`GoldenContact`, không lưu PII.
@@ -132,7 +132,7 @@ deferred: []
   - `[false]` `[reject]` timeout counted as platform failure for circuit — intended: a timeout is a failure signal for the breaker; correct behavior.
   - `[false]` `[reject]` platformStatus lacks `reason` for `unsupported` — spec only requires `reason` on `skipped`; unsupported is self-explanatory. No bad outcome.
   - `[low]` `[reject]` buildScrapeArgs sets `companyName` for linkedin `lead_profile` — descriptor ignores it for lead_profile (reads profileUrl/username); harmless.
-  - `[false]` `[reject]` XACTIONS_TEST_FAST_DELAYS not read by module — tests pass explicit `timeoutMs`; env flag is a convenience, not required for correctness.
+  - `[false]` `[reject]` MEDIRUS_TEST_FAST_DELAYS not read by module — tests pass explicit `timeoutMs`; env flag is a convenience, not required for correctness.
   - `[low]` `[reject]` metadata.raw duplicates the source object — larger payload but preserves data; not a correctness defect.
 
 ## Auto Run Result

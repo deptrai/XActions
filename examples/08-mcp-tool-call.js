@@ -2,7 +2,7 @@
 /**
  * 08 — Drive the MCP server the way an AI agent does
  *
- * Claude, Cursor, and Windsurf talk to XActions over MCP: they spawn the
+ * Claude, Cursor, and Windsurf talk to Medirus over MCP: they spawn the
  * server, exchange JSON-RPC over stdio, and call tools. This example does
  * exactly that, in about 60 lines, so you can see the wire format and verify
  * your setup without an AI client in the loop.
@@ -14,7 +14,7 @@
  *   node examples/08-mcp-tool-call.js x_get_profile github
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 
@@ -38,7 +38,7 @@ const serverPath = path.join(
 // what keeps the protocol stream clean. Inherit stderr so you can see it.
 const server = spawn(process.execPath, [serverPath], {
   stdio: ['pipe', 'pipe', 'inherit'],
-  env: { ...process.env, XACTIONS_SESSION_COOKIE: process.env.X_AUTH_TOKEN || '' },
+  env: { ...process.env, MEDIRUS_SESSION_COOKIE: process.env.X_AUTH_TOKEN || '' },
 });
 
 const pending = new Map();
@@ -80,7 +80,7 @@ try {
   const init = await call('initialize', {
     protocolVersion: '2024-11-05',
     capabilities: {},
-    clientInfo: { name: 'xactions-example', version: '1.0.0' },
+    clientInfo: { name: 'medirus-example', version: '1.0.0' },
   });
   console.log(`\nConnected to ${init.result.serverInfo.name} v${init.result.serverInfo.version}`);
 

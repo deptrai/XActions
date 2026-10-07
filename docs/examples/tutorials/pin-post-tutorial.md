@@ -1,6 +1,6 @@
 # Pin Post to Profile -- Tutorial
 
-> Step-by-step guide to pinning, unpinning, and auto-pinning your best post on X using XActions browser scripts.
+> Step-by-step guide to pinning, unpinning, and auto-pinning your best post on X using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser

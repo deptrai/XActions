@@ -2,7 +2,7 @@
 /**
  * CLI action discovery tests (Story 14.2)
  *
- * Spawns the real `xactions actions` command and validates the JSON output.
+ * Spawns the real `medirus actions` command and validates the JSON output.
  * No mocks — the CLI runs end-to-end through executeActionListTool.
  */
 
@@ -14,7 +14,7 @@ import { promisify } from 'node:util';
 const execFileAsync = promisify(execFile);
 const CLI = new URL('../../src/cli/index.js', import.meta.url).pathname;
 
-describe('xactions actions', () => {
+describe('medirus actions', () => {
   it('lists actions for a specific platform', async () => {
     const { stdout, stderr } = await execFileAsync('node', [CLI, 'actions', '--platform', 'threads']);
     assert.equal(stderr, '');

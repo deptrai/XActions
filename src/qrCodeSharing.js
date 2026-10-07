@@ -24,7 +24,7 @@
   };
 
   const run = async () => {
-    console.log('📱 QR CODE SHARING - XActions by nichxbt');
+    console.log('📱 QR CODE SHARING - Medirus by nichxbt');
 
     let username = CONFIG.username;
     if (!username) {
@@ -54,14 +54,14 @@
 
     // Create a floating overlay with the QR code
     const overlay = document.createElement('div');
-    overlay.id = 'xactions-qr-overlay';
+    overlay.id = 'medirus-qr-overlay';
     overlay.innerHTML = `
       <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:pointer;">
         <div style="background:white;border-radius:16px;padding:32px;text-align:center;max-width:400px;">
           <h2 style="margin:0 0 8px 0;font-size:20px;color:#000;">@${username}</h2>
           <p style="margin:0 0 16px 0;color:#666;font-size:14px;">Scan to visit profile</p>
           <img src="${qrUrl}" alt="QR Code" style="width:${CONFIG.size}px;height:${CONFIG.size}px;border:2px solid #eee;border-radius:8px;">
-          <p style="margin:16px 0 0 0;color:#999;font-size:12px;">Click anywhere to close • XActions by nichxbt</p>
+          <p style="margin:16px 0 0 0;color:#999;font-size:12px;">Click anywhere to close • Medirus by nichxbt</p>
         </div>
       </div>
     `;

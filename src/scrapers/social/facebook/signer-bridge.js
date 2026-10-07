@@ -652,7 +652,7 @@ export class FacebookBrowserBridge {
    */
   constructor(options = {}) {
     this.baseUrl = options.baseUrl ? options.baseUrl.replace(/\/+$/, '') : 'https://www.facebook.com';
-    this.adapterName = options.adapterName || process.env.XACTIONS_SCRAPER_ADAPTER || 'playwright';
+    this.adapterName = options.adapterName || process.env.MEDIRUS_SCRAPER_ADAPTER || 'playwright';
     this.adapter = options.adapter || null;
     this.cdpUrl = options.cdpUrl || null;
     this.launchChrome = Boolean(options.launchChrome);
@@ -902,7 +902,7 @@ export class FacebookBrowserBridge {
   /**
    * Extract Facebook tokens from the live page context.
    * Creates a fresh BrowserContext per call (Playwright) so different accounts never share
-   * cookies. Callers using `XACTIONS_SCRAPER_ADAPTER=puppeteer` must use one bridge per account
+   * cookies. Callers using `MEDIRUS_SCRAPER_ADAPTER=puppeteer` must use one bridge per account
    * because the current PuppeteerAdapter does not create incognito contexts.
    * @param {string} [accountId='fb-guest']
    * @param {string | Record<string, string> | Array<{ name: string, value: string }>} [cookies='']

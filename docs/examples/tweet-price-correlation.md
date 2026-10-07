@@ -381,7 +381,7 @@ This script provides the following capabilities:
         username,
         token: CONFIG.tokenId || `${CONFIG.network}/${CONFIG.poolAddress}`,
         generatedAt: new Date().toISOString(),
-        source: 'XActions tweet-price correlation (inspired by tweet-price-charts)',
+        source: 'Medirus tweet-price correlation (inspired by tweet-price-charts)',
         credit: 'https://github.com/rohunvora/tweet-price-charts',
       },
       stats,
@@ -476,14 +476,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -521,4 +521,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

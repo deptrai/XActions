@@ -161,7 +161,7 @@
   // PERSISTENT SESSION HISTORY (localStorage)
   // ═══════════════════════════════════════════════════════════
 
-  const STORAGE_KEY = 'xactions_engagement_history';
+  const STORAGE_KEY = 'medirus_engagement_history';
 
   const loadHistory = () => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
@@ -632,7 +632,7 @@
     document.getElementById('xeb-exportHistory')?.addEventListener('click', () => {
       const blob = new Blob([JSON.stringify(loadHistory(), null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-engagement-history-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-engagement-history-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
     });
     document.getElementById('xeb-clearHistory')?.addEventListener('click', () => {
@@ -1170,7 +1170,7 @@
       const dateStr = new Date().toISOString().slice(0, 10);
       // JSON
       const jsonBlob = new Blob([JSON.stringify(STATE.results, null, 2)], { type: 'application/json' });
-      downloadBlob(jsonBlob, `xactions-engagement-${dateStr}.json`);
+      downloadBlob(jsonBlob, `medirus-engagement-${dateStr}.json`);
       // CSV
       const headers = ['timestamp', 'author', 'text', 'score', 'actions'];
       const rows = STATE.results.map(r =>
@@ -1178,7 +1178,7 @@
       );
       const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
       const csvBlob = new Blob([csv], { type: 'text/csv' });
-      downloadBlob(csvBlob, `xactions-engagement-${dateStr}.csv`);
+      downloadBlob(csvBlob, `medirus-engagement-${dateStr}.csv`);
       addLog('📥 Results exported (JSON + CSV)');
     }
 
@@ -1319,8 +1319,8 @@
   });
 
   // Expose API for console access
-  window.XActions = window.XActions || {};
-  window.XActions.engagementBooster = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.engagementBooster = {
     pause: () => { STATE.paused = true; STATE.status = 'paused'; addLog('⏸ Paused'); },
     resume: () => { STATE.paused = false; STATE.status = 'running'; addLog('▶ Resumed'); },
     abort: () => { STATE.aborted = true; addLog('🛑 Aborting...'); },
@@ -1335,7 +1335,7 @@
   console.log('╔══════════════════════════════════════════╗');
   console.log('║  🚀 ENGAGEMENT BOOSTER v2                ║');
   console.log('║  by nichxbt — floating panel active      ║');
-  console.log('║  Console: XActions.engagementBooster.*    ║');
+  console.log('║  Console: Medirus.engagementBooster.*    ║');
   console.log('╚══════════════════════════════════════════╝');
 
 })();

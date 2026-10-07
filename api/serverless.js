@@ -37,7 +37,7 @@ app.use(helmet({ contentSecurityPolicy: false }));
 
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? /** @type {string[]} */ (['https://xactions.app', 'https://x-actions.vercel.app', process.env.FRONTEND_URL].filter((o) => typeof o === 'string'))
+    ? /** @type {string[]} */ (['https://medirus.online', 'https://medirus-.vercel.app', process.env.FRONTEND_URL].filter((o) => typeof o === 'string'))
     : true,
   credentials: true
 }));
@@ -59,7 +59,7 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'xactions-api', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', service: 'medirus-api', timestamp: new Date().toISOString() });
 });
 
 // x402 discovery endpoints — public scanner contract; allow any origin
@@ -124,7 +124,7 @@ function x402Gate(req, res, next) {
   const dollarAmount = parseFloat(price.replace('$', ''));
   const maxAmount = Math.round(dollarAmount * 1_000_000).toString();
 
-  const url = `https://xactions.app${req.path}`;
+  const url = `https://medirus.online${req.path}`;
   const method = req.method;
   const asset = /** @type {Record<string, string>} */ (USDC_ADDRESSES)[NETWORK] || USDC_ADDRESSES['eip155:8453'];
 
@@ -133,7 +133,7 @@ function x402Gate(req, res, next) {
     resource: {
       url,
       method,
-      description: `XActions AI API — ${operation || 'ai operation'}`,
+      description: `Medirus AI API — ${operation || 'ai operation'}`,
       mimeType: 'application/json',
     },
     accepts: [
@@ -162,7 +162,7 @@ function x402Gate(req, res, next) {
 // AI API — free info endpoints
 app.get('/api/ai/health', /** @type {import('express').RequestHandler} */ ((req, res) => {
   res.json({
-    service: 'XActions AI API',
+    service: 'Medirus AI API',
     status: 'operational',
     timestamp: new Date().toISOString(),
     x402: {

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — POST /api/ai/moderation/jev-check Route Test (Story 43.2)
+// Medirus — POST /api/ai/moderation/jev-check Route Test (Story 43.2)
 // by nichxbt
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';

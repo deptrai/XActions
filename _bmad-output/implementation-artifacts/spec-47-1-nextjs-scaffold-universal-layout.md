@@ -17,7 +17,7 @@ deferred: []
 
 ## Intent
 
-**Problem:** XActions hiện tại đang dùng 51 file HTML rời rạc trong `dashboard/` (Vanilla JS, script tags, CSS lặp lại). Không có routing hiện đại, không có component reusability, không có dark/light mode nhất quán, và không thể tận dụng TypeScript API client `@xactions/api-client` đã ship ở Epic 46.
+**Problem:** Medirus hiện tại đang dùng 51 file HTML rời rạc trong `dashboard/` (Vanilla JS, script tags, CSS lặp lại). Không có routing hiện đại, không có component reusability, không có dark/light mode nhất quán, và không thể tận dụng TypeScript API client `@medirus/api-client` đã ship ở Epic 46.
 
 **Approach:** Khởi tạo ứng dụng web hiện đại tại `apps/web/` sử dụng Next.js 15 (App Router), TypeScript, Tailwind CSS, Lucide Icons. Xây dựng Universal Layout hoàn chỉnh gồm: Collapsible Sidebar điều hướng thông minh (liên kết đến Dashboard, Viral Miner, CRM, Optimizer, Data Explorer, API Docs), Top Header với Dark/Light Mode toggle, và Backend Connection Health Badge (tự động ping `http://localhost:3001/api/health` để báo trạng thái online/offline).
 
@@ -29,7 +29,7 @@ deferred: []
 - Tailwind CSS cho styling hiện đại, responsive.
 - Hỗ trợ Dark Mode và Light Mode chuyển đổi mượt mà.
 - Hiển thị badge kết nối backend (Live: xanh lá khi `http://localhost:3001/api/health` 200, Offline: xám/đỏ khi mất kết nối).
-- Tích hợp dependency `@xactions/api-client` (file-dep: `file:../../packages/api-client`).
+- Tích hợp dependency `@medirus/api-client` (file-dep: `file:../../packages/api-client`).
 - Thêm root npm scripts: `"web:dev": "npm --prefix apps/web run dev"` và `"web:build": "npm --prefix apps/web run build"`.
 
 **Never:**
@@ -50,7 +50,7 @@ deferred: []
 
 ## Code Map
 
-- `apps/web/package.json` *(new)* — Dependencies: `next@^15`, `react@^19`, `react-dom@^19`, `lucide-react`, `clsx`, `tailwind-merge`, `@xactions/api-client`
+- `apps/web/package.json` *(new)* — Dependencies: `next@^15`, `react@^19`, `react-dom@^19`, `lucide-react`, `clsx`, `tailwind-merge`, `@medirus/api-client`
 - `apps/web/tsconfig.json` *(new)* — Next.js TypeScript config
 - `apps/web/tailwind.config.js` *(new)* — Tailwind styling configuration
 - `apps/web/postcss.config.mjs` *(new)* — PostCSS configuration
@@ -86,10 +86,10 @@ deferred: []
 ## Auto Run Result
 
 **Status:** done
-**Summary:** Scaffolded modern Next.js 15 App Router web application under `apps/web/` with TypeScript, Tailwind CSS, and Lucide Icons. Built Universal Layout including Collapsible Sidebar with navigation across all XActions modules (Viral Miner, Follower CRM, Optimizer, Explorer, API Docs), Top Header with Dark/Light Mode switcher (persisting to localStorage), and Backend Connection Status badge (realtime health polling against `http://localhost:3001/api/health`). Built Dashboard Overview screen. Integrated `@xactions/api-client` as workspace file dependency. Production build succeeds cleanly in 2.4s.
+**Summary:** Scaffolded modern Next.js 15 App Router web application under `apps/web/` with TypeScript, Tailwind CSS, and Lucide Icons. Built Universal Layout including Collapsible Sidebar with navigation across all Medirus modules (Viral Miner, Follower CRM, Optimizer, Explorer, API Docs), Top Header with Dark/Light Mode switcher (persisting to localStorage), and Backend Connection Status badge (realtime health polling against `http://localhost:3001/api/health`). Built Dashboard Overview screen. Integrated `@medirus/api-client` as workspace file dependency. Production build succeeds cleanly in 2.4s.
 
 **Files changed:**
-- `apps/web/package.json` *(new)* — Next.js 15, React 19, Lucide, Tailwind, @xactions/api-client
+- `apps/web/package.json` *(new)* — Next.js 15, React 19, Lucide, Tailwind, @medirus/api-client
 - `apps/web/tsconfig.json` *(new)* — Next.js TypeScript config
 - `apps/web/tailwind.config.js` *(new)* — Tailwind dark-mode configuration
 - `apps/web/postcss.config.mjs` *(new)* — PostCSS configuration

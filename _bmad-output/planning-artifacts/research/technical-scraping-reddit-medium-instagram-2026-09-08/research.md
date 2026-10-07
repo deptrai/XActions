@@ -2,7 +2,7 @@
 title: 'technical research: scraping-reddit-medium-instagram'
 type: 'technical'
 topic: 'scraping-reddit-medium-instagram'
-decision: 'Assess feasibility and integration approach for adding Reddit, Medium, and Instagram scrapers to XActions'
+decision: 'Assess feasibility and integration approach for adding Reddit, Medium, and Instagram scrapers to Medirus'
 source: 'native-run'
 status: complete
 preset: 'standard'
@@ -13,7 +13,7 @@ updated: '2026-09-09'
 
 # technical research: scraping-reddit-medium-instagram
 
-**Decision this research serves:** Assess feasibility and integration approach for adding Reddit, Medium, and Instagram scrapers to XActions
+**Decision this research serves:** Assess feasibility and integration approach for adding Reddit, Medium, and Instagram scrapers to Medirus
 
 _Sections are appended per the approved research plan; the executive summary is written last and placed here, first._
 
@@ -80,8 +80,8 @@ _Sections are appended per the approved research plan; the executive summary is 
 ### Reddit
 - **Auth**: OAuth2 (client_id, client_secret, user_agent). Read-only mode đủ cho public data scraping [4].
 - **Protocol**: REST JSON — endpoints `https://api.reddit.com` hoặc `https://www.reddit.com` với `?raw_json=1`. Public `.json` endpoints frequently return HTTP 403 from non-residential / unauthenticated IPs; RSS fallback (`/r/{sub}/new.rss`) and Puppeteer stealth bridge are both needed for production resilience.
-- **Rate limit**: dynamic theo response headers; PRAW tự handle backoff. XActions cần implement rate limiter tương tự trong `client.js` [3][6].
-- **Format**: `children[]` listing, `kind` discriminator (`t1` comment, `t3` post, `t5` subreddit) — dễ normalize vào XActions `PostItem`.
+- **Rate limit**: dynamic theo response headers; PRAW tự handle backoff. Medirus cần implement rate limiter tương tự trong `client.js` [3][6].
+- **Format**: `children[]` listing, `kind` discriminator (`t1` comment, `t3` post, `t5` subreddit) — dễ normalize vào Medirus `PostItem`.
 
 ### Instagram
 - **Auth**: private API dùng username/password hoặc sessionid. Session persistence bắt buộc để tránh login spam [8][10].
@@ -92,11 +92,11 @@ _Sections are appended per the approved research plan; the executive summary is 
 ### Medium
 - **Auth**: không cần auth cho public content; RSS feed hoặc HTML scraping.
 - **Protocol**: RSS XML (`https://medium.com/@user/feed`) hoặc HTML qua `https://medium.com/@user`.
-- **Rate limit**: không công khai; thực tế cần 1–3s delay giữa các request như XActions pattern hiện tại.
+- **Rate limit**: không công khai; thực tế cần 1–3s delay giữa các request như Medirus pattern hiện tại.
 - **Format**: RSS item → title, link, pubDate, content snippet. HTML scraping cho full text cần Puppeteer/Playwright.
 
-### XActions integration pattern
-- Mỗi platform mới cần: `client.js` (HTTP wrapper + auth), `crawler.js` (orchestration), `normalizer.js` (→ XActions `PostItem`/`ProfileItem`), `validator.js` (schema checks), `index.js` barrel.
+### Medirus integration pattern
+- Mỗi platform mới cần: `client.js` (HTTP wrapper + auth), `crawler.js` (orchestration), `normalizer.js` (→ Medirus `PostItem`/`ProfileItem`), `validator.js` (schema checks), `index.js` barrel.
 - Reddit: HTTP-first client với RSS fallback và Puppeteer stealth bridge (đã triển khai RSS fallback trong `client.js` qua `fast-xml-parser`).
 - Instagram: cần `puppeteer`/`playwright` adapter vì private API phức tạp; hoặc port `instagrapi` sang Node.js.
 - Medium: HTTP-only hoặc cheerio adapter đủ.
@@ -113,7 +113,7 @@ _Sections are appended per the approved research plan; the executive summary is 
 
 ## 3. Architecture patterns in practice
 
-### XActions pattern hiện tại
+### Medirus pattern hiện tại
 - `src/scrapers/social/<platform>/` với `client.js`, `crawler.js`, `normalizer.js`, `validator.js`, `index.js`.
 - `src/scrapers/adapters/` hỗ trợ `http`, `puppeteer`, `playwright`, `cheerio`, `got-jsdom`, `crawlee`, `selenium`.
 - `BaseAdapter` abstract interface — mọi adapter implement `launch`, `newPage`, `goto`, `evaluate`, `checkDependencies`.
@@ -138,19 +138,19 @@ _Sections are appended per the approved research plan; the executive summary is 
 - **Normalizer**: RSS item → `PostItem` (title, link, pubDate, categories). HTML scraping cho `content` full.
 - **Validator**: `guid`, `title`, `creator`, `categories`, `content:encoded`.
 
-### Proxy availability in XActions
+### Proxy availability in Medirus
 - `.env` có sẵn `PROXY_URL` / `PROXY_URLS` (custom, Vietnam-located) [17].
 - `FacebookAccount.encryptedProxy` field lưu proxy per account; encrypted bằng AES-256-GCM với `SESSION_SECRET`/`JWT_SECRET` [18].
 - Hiện tại DB có 1 Facebook account với proxy đã giải mã thành `http://snkidcjf24qjp5-country-vn:...` [19].
 - Proxy này là **country-vn** — không dùng được nếu Reddit/Medium chặn IP Vietnam hoặc cần US residential.
 
 ### Sources
-- XActions source structure — `src/scrapers/social/*/index.js`, `src/scrapers/adapters/base.js`
-- [15] XActions proxy index — `src/proxy/index.js`
-- [16] XActions proxy providers — `src/proxy/providers.js`
-- [17] XActions `.env` proxy config
-- [18] XActions `api/routes/facebookAccounts.js` encryption
-- [19] XActions `FacebookAccount` table — decrypted proxy check
+- Medirus source structure — `src/scrapers/social/*/index.js`, `src/scrapers/adapters/base.js`
+- [15] Medirus proxy index — `src/proxy/index.js`
+- [16] Medirus proxy providers — `src/proxy/providers.js`
+- [17] Medirus `.env` proxy config
+- [18] Medirus `api/routes/facebookAccounts.js` encryption
+- [19] Medirus `FacebookAccount` table — decrypted proxy check
 
 ---
 
@@ -161,21 +161,21 @@ _Sections are appended per the approved research plan; the executive summary is 
 - **Tooling**: Node.js `fetch`/`got`/`undici` là đủ. Nếu cần PRAW, cần Python subprocess hoặc port.
 - **Operational burden**: trung bình — cần OAuth app (cho scale) hoặc RSS fallback (không auth), user_agent compliance, rate limit backoff; residential proxy nếu muốn tránh Cloudflare bot challenge trên `.json` endpoints.
 - **Risk**: API pricing changes (2023 crisis); cần monitor `r/redditdev` và support docs.
-- **XActions fit**: cao — phù hợp `http` adapter với RSS fallback, có thể thêm Puppeteer stealth bridge nếu cần full data.
+- **Medirus fit**: cao — phù hợp `http` adapter với RSS fallback, có thể thêm Puppeteer stealth bridge nếu cần full data.
 
 ### Instagram
 - **Learning curve**: cao — private API không docs, thường xuyên thay đổi, cần reverse engineering.
 - **Tooling**: `instagrapi` là lựa chọn duy nhất realistic; port sang Node.js là việc lớn.
 - **Operational burden**: rất cao — cần proxy pool, account warmup, challenge handling, device emulation, session persistence [9][10].
 - **Risk**: cao — account bans, IP bans, legal ToS violation. Instagram aggressive với automation.
-- **XActions fit**: trung bình — cần adapter `puppeteer`/`playwright` + bridge Python hoặc viết lại bằng Node.
+- **Medirus fit**: trung bình — cần adapter `puppeteer`/`playwright` + bridge Python hoặc viết lại bằng Node.
 
 ### Medium
 - **Learning curve**: rất thấp — RSS hoặc HTML scraping đơn giản.
 - **Tooling**: `rss-parser`, `cheerio`, `undici`.
 - **Operational burden**: thấp — không cần auth, không có rate limit cứng.
 - **Risk**: thấp — Medium không aggressive anti-bot; nhưng API deprecated nên không có support chính thức.
-- **XActions fit**: cao — phù hợp `http` hoặc `cheerio` adapter.
+- **Medirus fit**: cao — phù hợp `http` hoặc `cheerio` adapter.
 
 ### Sources
 - [3] PRAW ratelimits docs — `https://github.com/praw-dev/praw/blob/main/docs/getting_started/ratelimits.md`
@@ -214,7 +214,7 @@ _Sections are appended per the approved research plan; the executive summary is 
 
 ## Executive summary
 
-**Decision**: Thêm Reddit, Medium, Instagram scrapers vào XActions.
+**Decision**: Thêm Reddit, Medium, Instagram scrapers vào Medirus.
 
 **Findings**:
 
@@ -225,18 +225,18 @@ _Sections are appended per the approved research plan; the executive summary is 
 **Recommended approach**:
 1. **Reddit** — implement `src/scrapers/social/reddit/` với `client.js` (HTTP + OAuth + RSS fallback + Puppeteer bridge tùy chọn), `crawler.js`, `normalizer.js`, `validator.js`. Dùng RSS fallback cho public data không cần auth; OAuth2 read-only hoặc Puppeteer stealth cho đầy đủ metadata.
 2. **Medium** — implement `src/scrapers/social/medium/` với `client.js` (HTTP/RSS), `crawler.js`, `normalizer.js`, `validator.js`. RSS feed là đủ cho public posts.
-3. **Instagram** — cân nhắc hai options: (a) viết `src/scrapers/social/instagram/` dựa trên `instagrapi` Python bridge hoặc port; (b) không implement trong XActions, recommend external service. Nếu implement, cần proxy pool, session persistence, và rủi ro account ban cao.
+3. **Instagram** — cân nhắc hai options: (a) viết `src/scrapers/social/instagram/` dựa trên `instagrapi` Python bridge hoặc port; (b) không implement trong Medirus, recommend external service. Nếu implement, cần proxy pool, session persistence, và rủi ro account ban cao.
 
 **Proxy / Vietnam IP note**:
-- XActions đã có `src/proxy/` (`ProxyIpPool`, `providers.js`) và `PROXY_URL` trong `.env` [15][16][17].
+- Medirus đã có `src/proxy/` (`ProxyIpPool`, `providers.js`) và `PROXY_URL` trong `.env` [15][16][17].
 - DB có 1 Facebook account với proxy `country-vn` (SocksNode) [19].
 - Proxy này **không phù hợp** nếu Reddit/Medium chặn IP Vietnam hoặc cần US residential; cần đổi sang `country-us`/`country-gb` hoặc dùng provider khác (brightdata, smartproxy, iproyal, kuaidaili, custom).
 - `ProxyIpPool` chưa được tích hợp mặc định cho mọi scraper — Facebook/Twitter đang dùng riêng. Nên refactor để mọi `Client` nhận `ProxyProvider` từ constructor.
 
 **Open questions**:
-- XActions có cần Instagram private API không, hay chỉ public web scraping đủ?
+- Medirus có cần Instagram private API không, hay chỉ public web scraping đủ?
 - Có cần Python bridge cho `instagrapi`, hay viết lại bằng Node.js (lớn hơn nhiều)?
-- Reddit API pricing có phù hợp với roadmap XActions không?
+- Reddit API pricing có phù hợp với roadmap Medirus không?
 - Có nên tạo bảng `Proxy` chung trong schema thay vì gắn proxy vào `FacebookAccount`?
 - [x] Có nên đổi proxy default từ `country-vn` sang `country-us` cho các scraper mới?
 - Có cần triển khai Puppeteer stealth bridge song song với RSS fallback cho Reddit không?

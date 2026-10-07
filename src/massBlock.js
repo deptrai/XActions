@@ -30,7 +30,7 @@
  *   3. Paste and run
  *
  * 🎮 CONTROLS:
- *   window.XActions.pause()  / .resume() / .abort() / .status()
+ *   window.Medirus.pause()  / .resume() / .abort() / .status()
  * ============================================================
  */
 (() => {
@@ -73,7 +73,7 @@
   const results = { blocked: [], failed: [], skipped: [] };
   const whitelistSet = new Set(CONFIG.whitelist.map(u => u.toLowerCase().replace(/^@/, '')));
 
-  window.XActions = {
+  window.Medirus = {
     pause()  { paused = true;  console.log('⏸️ Paused.'); },
     resume() { paused = false; console.log('▶️ Resumed.'); },
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
@@ -253,7 +253,7 @@
     if (CONFIG.exportOnComplete && results.blocked.length > 0) {
       const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-blocked-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-blocked-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Results exported.');
     }

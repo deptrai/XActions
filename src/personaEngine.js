@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
 /**
- * XActions Persona Engine
+ * Medirus Persona Engine
  * 
  * Defines, stores, and manages persona configurations for algorithm building.
  * A persona is a complete identity: niche, topics, tone, engagement style,
@@ -20,7 +20,7 @@ import { homedir } from 'os';
 // Constants
 // ============================================================================
 
-const PERSONAS_DIR = join(homedir(), '.xactions', 'personas');
+const PERSONAS_DIR = join(homedir(), '.medirus', 'personas');
 
 /** @type {Record<string, string>} */
 const DEFAULT_MODELS = {
@@ -33,7 +33,7 @@ const DEFAULT_MODELS = {
 // Preset Niches — quick-start persona templates
 // ============================================================================
 
-/** @type {Record<string, import('./types/xactions.js').PersonaNiche>} */
+/** @type {Record<string, import('./types/medirus.js').PersonaNiche>} */
 const NICHE_PRESETS = {
   'crypto-degen': {
     name: 'Crypto Degen',
@@ -111,7 +111,7 @@ const NICHE_PRESETS = {
 // Activity Pattern Presets — simulate different human schedules
 // ============================================================================
 
-/** @type {Record<string, import('./types/xactions.js').PersonaActivityPattern>} */
+/** @type {Record<string, import('./types/medirus.js').PersonaActivityPattern>} */
 const ACTIVITY_PATTERNS = {
   'night-owl': {
     name: 'Night Owl',
@@ -155,7 +155,7 @@ const ACTIVITY_PATTERNS = {
 // Engagement Strategies
 // ============================================================================
 
-/** @type {Record<string, import('./types/xactions.js').PersonaStrategy>} */
+/** @type {Record<string, import('./types/medirus.js').PersonaStrategy>} */
 const ENGAGEMENT_STRATEGIES = {
   'aggressive': {
     preset: 'aggressive',
@@ -213,8 +213,8 @@ const ENGAGEMENT_STRATEGIES = {
 
 /**
  * Create a new persona configuration
- * @param {import('./types/xactions.js').PersonaOptions} [options]
- * @returns {import('./types/xactions.js').Persona}
+ * @param {import('./types/medirus.js').PersonaOptions} [options]
+ * @returns {import('./types/medirus.js').Persona}
  */
 function createPersona(options = {}) {
   const preset = NICHE_PRESETS[options.preset || 'custom'];
@@ -313,7 +313,7 @@ function createPersona(options = {}) {
 
 /**
  * Build the LLM system prompt from persona config
- * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/medirus.js').Persona} persona
  * @returns {string}
  */
 function buildPersonaSystemPrompt(persona) {
@@ -359,7 +359,7 @@ WHAT MAKES A GREAT COMMENT:
 
 /**
  * Build a comment generation prompt for a specific tweet
- * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/medirus.js').Persona} persona
  * @param {string} tweetText
  * @param {string} tweetAuthor
  * @returns {string}
@@ -376,8 +376,8 @@ Respond with ONLY the comment text, nothing else.`;
 
 /**
  * Build a post generation prompt
- * @param {import('./types/xactions.js').Persona} persona
- * @param {import('./types/xactions.js').XActionsOptions} [context]
+ * @param {import('./types/medirus.js').Persona} persona
+ * @param {import('./types/medirus.js').MedirusOptions} [context]
  * @returns {string}
  */
 function buildPostPrompt(persona, context = {}) {
@@ -399,7 +399,7 @@ Keep it under ${persona.voice.maxPostLength} characters. Write ONLY the tweet te
 
 /**
  * Build a reply prompt for a specific conversation
- * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/medirus.js').Persona} persona
  * @param {Record<string, string>} originalTweet
  * @param {Record<string, string>} replyTo
  * @returns {string}
@@ -431,7 +431,7 @@ function ensureDir() {
 
 /**
  * Save persona to disk
- * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/medirus.js').Persona} persona
  * @returns {string}
  */
 function savePersona(persona) {
@@ -452,7 +452,7 @@ function savePersona(persona) {
 /**
  * Load persona from disk
  * @param {string} id
- * @returns {import('./types/xactions.js').Persona}
+ * @returns {import('./types/medirus.js').Persona}
  */
 function loadPersona(id) {
   const filePath = join(PERSONAS_DIR, `${id}.json`);
@@ -462,7 +462,7 @@ function loadPersona(id) {
   const data = JSON.parse(readFileSync(filePath, 'utf-8'));
   // Restore Set from array
   data.state.engagedPosts = new Set(/** @type {string[]} */ (data.state.engagedPosts || []));
-  return /** @type {import('./types/xactions.js').Persona} */ (data);
+  return /** @type {import('./types/medirus.js').Persona} */ (data);
 }
 
 /**
@@ -514,7 +514,7 @@ function deletePersona(id) {
 
 /**
  * Determine if the persona should be active right now
- * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/medirus.js').Persona} persona
  * @returns {boolean}
  */
 function shouldBeActive(persona) {
@@ -532,7 +532,7 @@ function shouldBeActive(persona) {
 /**
  * Get the intensity multiplier for the current time
  * Peak hours = more activity, off-peak = less
- * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/medirus.js').Persona} persona
  * @returns {number}
  */
 function getActivityIntensity(persona) {
@@ -561,7 +561,7 @@ function getActivityIntensity(persona) {
 
 /**
  * Calculate how long the next session should be (in minutes)
- * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/medirus.js').Persona} persona
  * @returns {number}
  */
 function getSessionDuration(persona) {
@@ -575,7 +575,7 @@ function getSessionDuration(persona) {
 
 /**
  * Calculate delay until next session (in minutes)
- * @param {import('./types/xactions.js').Persona} persona
+ * @param {import('./types/medirus.js').Persona} persona
  * @returns {number}
  */
 function getDelayUntilNextSession(persona) {
@@ -595,8 +595,8 @@ function getDelayUntilNextSession(persona) {
 /**
  * Choose what actions to perform this session
  * Returns a shuffled activity plan
- * @param {import('./types/xactions.js').Persona} persona
- * @returns {import('./types/xactions.js').ActivityPlan}
+ * @param {import('./types/medirus.js').Persona} persona
+ * @returns {import('./types/medirus.js').ActivityPlan}
  */
 function planSession(persona) {
   const strategy = persona.strategy;
@@ -607,7 +607,7 @@ function planSession(persona) {
   const avgSessions = (strategy.sessionsPerDay.min + strategy.sessionsPerDay.max) / 2;
   const scale = (1 / avgSessions) * intensity;
 
-  /** @type {import('./types/xactions.js').ActivityPlan} */
+  /** @type {import('./types/medirus.js').ActivityPlan} */
   const plan = {
     duration,
     activities: [],

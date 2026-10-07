@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions schedule` command group.
+ * `medirus schedule` command group.
  */
 import chalk from 'chalk';
 import ora from 'ora';
@@ -75,9 +75,9 @@ schedCmd.command('run <name>').description('Run a job immediately').action(async
 // dryRun:false can persist a Schedule row without the dashboard signup flow.
 async function resolveCliUserId() {
   const config = await loadConfig();
-  const sessionCookie = config.sessionCookie || process.env.XACTIONS_SESSION_COOKIE;
+  const sessionCookie = config.sessionCookie || process.env.MEDIRUS_SESSION_COOKIE;
   if (!sessionCookie) {
-    throw new Error('No Twitter session cookie found — run `xactions login` or set XACTIONS_SESSION_COOKIE');
+    throw new Error('No Twitter session cookie found — run `medirus login` or set MEDIRUS_SESSION_COOKIE');
   }
   const existing = await prisma.user.findFirst({ where: { sessionCookie } });
   if (existing) return existing.id;

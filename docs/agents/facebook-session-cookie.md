@@ -1,11 +1,11 @@
 # Facebook Session Cookie (`c_user` + `xs`)
 
-> Hướng dẫn cách lấy cặp cookie Facebook để dùng cho XActions Facebook adapter. Áp dụng cho CLI, MCP, REST API và Library.
+> Hướng dẫn cách lấy cặp cookie Facebook để dùng cho Medirus Facebook adapter. Áp dụng cho CLI, MCP, REST API và Library.
 > Verified June 2026 — Facebook auth cookies are stable; format không đổi từ ~2018.
 
 ## Tổng quan
 
-XActions Facebook adapter dùng **cặp cookie session** thay cho username/password:
+Medirus Facebook adapter dùng **cặp cookie session** thay cho username/password:
 
 | Cookie | Vai trò | Format |
 |---|---|---|
@@ -53,18 +53,18 @@ document.cookie
 Lệnh login tương tác (sẽ thêm trong Story 3.1 của Epic 3):
 
 ```bash
-xactions login --platform facebook
+medirus login --platform facebook
 # Nhập c_user khi được hỏi
 # Nhập xs khi được hỏi
-# Lưu vào ~/.xactions/config.json (chmod 600)
+# Lưu vào ~/.medirus/config.json (chmod 600)
 ```
 
 Hoặc set env trực tiếp:
 
 ```bash
-export XACTIONS_FB_C_USER="100012345678901"
-export XACTIONS_FB_XS="12%3AabCdEf..."
-xactions scrape --platform facebook --profile zuck
+export MEDIRUS_FB_C_USER="100012345678901"
+export MEDIRUS_FB_XS="12%3AabCdEf..."
+medirus scrape --platform facebook --profile zuck
 ```
 
 ### MCP server
@@ -74,12 +74,12 @@ Trong cấu hình MCP của Claude Desktop / agent (`claude_desktop_config.json`
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "node",
-      "args": ["/path/to/xactions/src/mcp/server.js"],
+      "args": ["/path/to/medirus/src/mcp/server.js"],
       "env": {
-        "XACTIONS_FB_C_USER": "100012345678901",
-        "XACTIONS_FB_XS": "12%3AabCdEf..."
+        "MEDIRUS_FB_C_USER": "100012345678901",
+        "MEDIRUS_FB_XS": "12%3AabCdEf..."
       }
     }
   }
@@ -89,13 +89,13 @@ Trong cấu hình MCP của Claude Desktop / agent (`claude_desktop_config.json`
 ### Node.js Library
 
 ```js
-import { scrape } from 'xactions/scrapers';
+import { scrape } from 'medirus/scrapers';
 
 const profile = await scrape('facebook', 'profile', {
   username: 'zuck',
   authCookie: {
-    c_user: process.env.XACTIONS_FB_C_USER,
-    xs: process.env.XACTIONS_FB_XS,
+    c_user: process.env.MEDIRUS_FB_C_USER,
+    xs: process.env.MEDIRUS_FB_XS,
   },
 });
 ```
@@ -125,11 +125,11 @@ Cookie được lưu vào DB qua user profile (encrypted at rest), giống Twitt
 - Bạn log out từ **bất kỳ thiết bị nào** dùng cùng session — Facebook share session token.
 - Một số trường hợp đổi địa lý/IP đột ngột.
 
-**Khi cookie hết hạn:** XActions sẽ trả lỗi rõ ràng (FR-10 yêu cầu) — bạn cần lặp lại Bước 1-3 để lấy cookie mới. Không có cơ chế tự refresh.
+**Khi cookie hết hạn:** Medirus sẽ trả lỗi rõ ràng (FR-10 yêu cầu) — bạn cần lặp lại Bước 1-3 để lấy cookie mới. Không có cơ chế tự refresh.
 
 ## Security
 
-XActions tuân thủ Security Architecture §7 và NFR3:
+Medirus tuân thủ Security Architecture §7 và NFR3:
 
 - **Không log:** Cookie không bao giờ xuất hiện trong console output, log file, error message, response API. Có redaction ở mọi entrypoint (theo FR-10).
 - **Không echo trong response:** API response không bao giờ trả về giá trị cookie, kể cả cho user sở hữu.
@@ -155,6 +155,6 @@ Bạn nên:
 ## Tham chiếu chéo
 
 - Architecture: `_bmad-output/planning-artifacts/architecture.md` Addendum A.3 (wiring), A.5 (ADR-006/007), A.6 (risks).
-- PRD: `_bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md` §3 Glossary, FR-10, NFR3.
+- PRD: `_bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-08/prd.md` §3 Glossary, FR-10, NFR3.
 - Story implement: Epic 1 Story 1.1 (`epics.md`).
 - Selector docs: `docs/agents/selectors-facebook.md`.

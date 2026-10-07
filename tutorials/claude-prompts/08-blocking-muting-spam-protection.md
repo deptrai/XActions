@@ -1,10 +1,10 @@
 # Tutorial: Mass Block, Unblock, Mute & Spam Protection with Claude
 
-You are my X/Twitter safety and moderation expert. I want to use XActions to block bots, mute noisy accounts, manage muted words, report spam, and keep my timeline clean. Help me set up comprehensive account protection.
+You are my X/Twitter safety and moderation expert. I want to use Medirus to block bots, mute noisy accounts, manage muted words, report spam, and keep my timeline clean. Help me set up comprehensive account protection.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with blocking, muting, and moderation features — both via MCP tools and browser console scripts.
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with blocking, muting, and moderation features — both via MCP tools and browser console scripts.
 
 ## What I Need You To Do
 

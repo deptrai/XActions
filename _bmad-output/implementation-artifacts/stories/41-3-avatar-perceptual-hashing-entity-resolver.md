@@ -28,7 +28,7 @@ Nâng cấp `EntityResolver` `avatar_match` signal từ URL-string-equality sang
 
 ## Story
 
-As an XActions OSINT consumer,
+As an Medirus OSINT consumer,
 I want `EntityResolver` to match avatars by image content (not just URL),
 So that the same person's avatar served from different CDNs (fbcdn, cdninstagram, githubavatars) still clusters correctly.
 

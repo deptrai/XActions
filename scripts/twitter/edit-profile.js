@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 📝 Edit Profile - XActions
+ * 📝 Edit Profile - Medirus
  * ============================================
  *
  * @name         edit-profile
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to x.com/settings/profile
@@ -19,7 +19,7 @@
  *
  * Example:
  *   Set name: "Ada Lovelace", bio: "Building on Solana. gm.", location: "London",
- *   website: "https://xactions.app", birthdate: null. Running it opens the Edit
+ *   website: "https://medirus.online", birthdate: null. Running it opens the Edit
  *   profile dialog, fills only those four fields, leaves your birthdate alone, and
  *   clicks Save. Only the fields you set are changed.
  *
@@ -207,9 +207,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📝 EDIT PROFILE - XActions                              ║
+║  📝 EDIT PROFILE - Medirus                              ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

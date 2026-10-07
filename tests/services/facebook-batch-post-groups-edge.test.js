@@ -44,7 +44,7 @@ function makePostFn({ throwOn = null } = {}) {
 
 const URL_A = 'https://www.facebook.com/groups/aaa';
 const URL_B = 'https://www.facebook.com/groups/bbb';
-const CONTENT = 'Hello from XActions 🎉';
+const CONTENT = 'Hello from Medirus 🎉';
 
 // ── NFR-6 delay floor — invalid / boundary inputs ────────────────────────────
 

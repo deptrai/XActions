@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Tests for complete 24-platform coverage in x_actions_list (Story 20.1).
+ * Tests for complete 24-platform coverage in medirus_list (Story 20.1).
  */
 
 import { describe, it } from 'vitest';

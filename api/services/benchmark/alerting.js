@@ -52,7 +52,7 @@ export class AlertDispatcher {
     if (!token || !chatId) return false;
 
     const text =
-      `🚨 *[XActions Benchmark Alert]* 🚨\n\n` +
+      `🚨 *[Medirus Benchmark Alert]* 🚨\n\n` +
       `*Scraper:* \`${payload.scraper_id}\` (${payload.platform})\n` +
       `*Tier:* ${payload.previous_tier} ➔ *${payload.current_tier}*\n` +
       `*Health Score:* ${payload.health_score?.toFixed(1) ?? 'N/A'}/100\n` +
@@ -87,7 +87,7 @@ export class AlertDispatcher {
     if (!webhookUrl) return false;
 
     const body = {
-      text: `🚨 *[XActions Benchmark Alert]*: Scraper \`${payload.scraper_id}\` degraded to Tier ${payload.current_tier} (${payload.reason})`,
+      text: `🚨 *[Medirus Benchmark Alert]*: Scraper \`${payload.scraper_id}\` degraded to Tier ${payload.current_tier} (${payload.reason})`,
       blocks: [
         {
           type: 'header',

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation - Don't Unfollow Active Users
+// Medirus Automation - Don't Unfollow Active Users
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -12,12 +12,12 @@
 // 3. Use with smartUnfollow.js - it will respect the protected list
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, sleep, scrollBy, storage, SELECTORS } = window.XActions.Core;
+  const { log, sleep, scrollBy, storage, SELECTORS } = window.Medirus.Core;
 
   // ============================================
   // CONFIGURATION
@@ -53,7 +53,7 @@
   // ============================================
   // STATE
   // ============================================
-  const KEY = 'xactions_protected_users';
+  const KEY = 'medirus_protected_users';
   
   const state = {
     postsScanned: 0,
@@ -237,7 +237,7 @@
   const run = async () => {
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  🛡️ XActions - Protect Active Users                      ║
+║  🛡️ Medirus - Protect Active Users                      ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Posts to scan: ${String(CONFIG.POSTS_TO_SCAN).padEnd(5)}                                ║
 ║  Lookback: ${String(CONFIG.LOOKBACK_DAYS).padEnd(5)} days                               ║
@@ -360,7 +360,7 @@
     return false;
   };
 
-  window.XActions.ActiveUsers = {
+  window.Medirus.ActiveUsers = {
     getProtected: getProtectedList,
     isProtected: (u) => {
       const list = getProtectedList();

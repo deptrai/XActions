@@ -1,6 +1,6 @@
-# XActions Core Module Reference (`core.js`)
+# Medirus Core Module Reference (`core.js`)
 
-> The foundation of every XActions browser automation. Always paste this first.
+> The foundation of every Medirus browser automation. Always paste this first.
 
 **Source:** [`src/automation/core.js`](../../src/automation/core.js) (521 lines)
 
@@ -25,9 +25,9 @@
 
 ## Overview
 
-`core.js` creates `window.XActions.Core` — a namespace containing every shared utility that automation scripts need. It's an IIFE (immediately-invoked function expression) that returns a public API object.
+`core.js` creates `window.Medirus.Core` — a namespace containing every shared utility that automation scripts need. It's an IIFE (immediately-invoked function expression) that returns a public API object.
 
-Every other automation script checks for `window.XActions?.Core` at the top. If it's not loaded, the script aborts with:
+Every other automation script checks for `window.Medirus?.Core` at the top. If it's not loaded, the script aborts with:
 
 ```
 ❌ Core module not loaded! Paste core.js first.
@@ -36,7 +36,7 @@ Every other automation script checks for `window.XActions?.Core` at the top. If 
 When successfully loaded, you'll see:
 
 ```
-✅ XActions Core loaded! Ready for automation scripts.
+✅ Medirus Core loaded! Ready for automation scripts.
 ```
 
 ---
@@ -50,7 +50,7 @@ When successfully loaded, you'll see:
 // 3. Press Enter
 
 // Verify it loaded:
-window.XActions.Core.log('Hello!', 'success');
+window.Medirus.Core.log('Hello!', 'success');
 // Output: ✅ [12:34:56] Hello!
 ```
 
@@ -69,12 +69,12 @@ const CONFIG = {
   DELAY_BETWEEN_ACTIONS: 2000,
 
   // Rate limits
-  MAX_ACTIONS_PER_HOUR: 50,
+  MAMEDIRUS_PER_HOUR: 50,
   MAX_FOLLOWS_PER_DAY: 100,
   MAX_LIKES_PER_DAY: 200,
 
   // Storage
-  STORAGE_PREFIX: 'xactions_',
+  STORAGE_PREFIX: 'medirus_',
 
   // Debug
   DEBUG: true,
@@ -85,13 +85,13 @@ const CONFIG = {
 
 ```javascript
 // Slow down all actions
-window.XActions.Core.CONFIG.DELAY_BETWEEN_ACTIONS = 5000;
+window.Medirus.Core.CONFIG.DELAY_BETWEEN_ACTIONS = 5000;
 
 // Disable debug logging
-window.XActions.Core.CONFIG.DEBUG = false;
+window.Medirus.Core.CONFIG.DEBUG = false;
 
 // Increase daily follow limit
-window.XActions.Core.CONFIG.MAX_FOLLOWS_PER_DAY = 150;
+window.Medirus.Core.CONFIG.MAX_FOLLOWS_PER_DAY = 150;
 ```
 
 > **Note:** Individual scripts override these with their own `OPTIONS` or `STRATEGY` objects. Changing CONFIG affects only scripts that read from it directly.
@@ -130,7 +130,7 @@ CSS selectors for X/Twitter DOM elements. These use `data-testid` attributes (Re
 ### Usage
 
 ```javascript
-const { SELECTORS } = window.XActions.Core;
+const { SELECTORS } = window.Medirus.Core;
 
 // Find all tweets on current page
 document.querySelectorAll(SELECTORS.tweet);
@@ -201,7 +201,7 @@ Core.scrollBy(-400);      // Scroll up 400px
 
 ## Storage System
 
-localStorage wrapper with automatic JSON serialization. All keys are prefixed with `xactions_`.
+localStorage wrapper with automatic JSON serialization. All keys are prefixed with `medirus_`.
 
 ### `storage.get(key)`
 
@@ -209,7 +209,7 @@ Read a value. Returns `null` if not found.
 
 ```javascript
 const users = Core.storage.get('followed_users');
-// Reads localStorage key "xactions_followed_users"
+// Reads localStorage key "medirus_followed_users"
 // Returns: parsed JSON object, or null
 ```
 
@@ -219,7 +219,7 @@ Write a value. Returns `true` on success.
 
 ```javascript
 Core.storage.set('followed_users', { alice: { followedAt: Date.now() } });
-// Writes JSON to "xactions_followed_users"
+// Writes JSON to "medirus_followed_users"
 ```
 
 ### `storage.remove(key)`
@@ -232,7 +232,7 @@ Core.storage.remove('followed_users');
 
 ### `storage.list()`
 
-List all XActions storage keys (without prefix).
+List all Medirus storage keys (without prefix).
 
 ```javascript
 Core.storage.list();
@@ -241,11 +241,11 @@ Core.storage.list();
 
 ### `storage.clear()`
 
-Delete all XActions data from localStorage.
+Delete all Medirus data from localStorage.
 
 ```javascript
 Core.storage.clear();
-// Removes everything with 'xactions_' prefix
+// Removes everything with 'medirus_' prefix
 ```
 
 ### Common Storage Keys
@@ -266,9 +266,9 @@ Core.storage.clear();
 ### Inspecting All Stored Data
 
 ```javascript
-// View everything XActions has stored
+// View everything Medirus has stored
 Object.keys(localStorage)
-  .filter(k => k.startsWith('xactions_'))
+  .filter(k => k.startsWith('medirus_'))
   .forEach(k => console.log(k, JSON.parse(localStorage.getItem(k))));
 ```
 
@@ -311,7 +311,7 @@ Types text character-by-character into a contenteditable element, dispatching `I
 
 ```javascript
 const textarea = await Core.waitForElement('[data-testid="tweetTextarea_0"]');
-await Core.typeText(textarea, 'Hello from XActions!');
+await Core.typeText(textarea, 'Hello from Medirus!');
 ```
 
 > **Why character-by-character?** X uses React controlled inputs that don't respond to `.value =` or `.textContent =` directly. The synthetic InputEvents trigger React's state updates.
@@ -467,7 +467,7 @@ console.log(`${remaining} follows left today`);
 
 ### How It Works
 
-- Counters are stored in localStorage as `xactions_ratelimit_{action}_{period}`
+- Counters are stored in localStorage as `medirus_ratelimit_{action}_{period}`
 - Each entry stores `{ count, timestamp }`
 - When the period expires (1 hour or 24 hours), the counter auto-resets to 0
 - Periods: `'hour'` (3,600,000ms) or `'day'` (86,400,000ms)
@@ -508,7 +508,7 @@ Get the number of pending actions.
 
 ## Full Public API
 
-Everything exposed by `window.XActions.Core`:
+Everything exposed by `window.Medirus.Core`:
 
 ```javascript
 {

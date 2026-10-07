@@ -29,7 +29,7 @@
   };
 
   const run = async () => {
-    console.log('🧵 POST THREAD — XActions by nichxbt');
+    console.log('🧵 POST THREAD — Medirus by nichxbt');
 
     if (CONFIG.thread.length === 0) {
       console.log('❌ No thread content! Edit CONFIG.thread array.');

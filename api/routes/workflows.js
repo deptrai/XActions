@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Workflow API Routes
+ * Medirus Workflow API Routes
  * CRUD for workflows + run/history endpoints
  * 
  * Routes:
@@ -25,10 +25,10 @@ import express from 'express';
  */
 /**
  * @typedef {import('../../src/workflows/index.js').WorkflowsModule} WorkflowsModule
- * @typedef {import('../../src/types/xactions.js').Workflow} Workflow
- * @typedef {import('../../src/types/xactions.js').WorkflowStep} WorkflowStep
- * @typedef {import('../../src/types/xactions.js').WorkflowTrigger} WorkflowTrigger
- * @typedef {import('../../src/types/xactions.js').WorkflowRunOptions} WorkflowRunOptions
+ * @typedef {import('../../src/types/medirus.js').Workflow} Workflow
+ * @typedef {import('../../src/types/medirus.js').WorkflowStep} WorkflowStep
+ * @typedef {import('../../src/types/medirus.js').WorkflowTrigger} WorkflowTrigger
+ * @typedef {import('../../src/types/medirus.js').WorkflowRunOptions} WorkflowRunOptions
  */
 
 const router = express.Router();

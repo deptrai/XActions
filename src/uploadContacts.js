@@ -213,7 +213,7 @@
 
     console.log(`📋 Action: ${CONFIG.action}`);
 
-    const sessionKey = 'xactions_uploadContacts';
+    const sessionKey = 'medirus_uploadContacts';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     const actions = {

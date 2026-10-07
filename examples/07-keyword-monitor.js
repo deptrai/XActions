@@ -17,7 +17,7 @@
  * Stop with Ctrl+C.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 
@@ -25,7 +25,7 @@ import { analyzeSentiment } from '../src/analytics/index.js';
 import { SearchMode } from '../src/client/index.js';
 import { openAuthenticatedScraper, heading } from './auth.js';
 
-const query = process.argv[2] || 'xactions';
+const query = process.argv[2] || 'medirus';
 const intervalSeconds = Number(process.argv[3] || 60);
 const webhook = process.env.ALERT_WEBHOOK || null;
 const PER_POLL = 25;

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions A2A — Protocol Bridge (A2A ↔ MCP)
+ * Medirus A2A — Protocol Bridge (A2A ↔ MCP)
  *
  * Translates A2A task messages into MCP tool calls, executes them,
  * and converts responses back to A2A artifact parts.
@@ -94,7 +94,7 @@ const NL_PATTERNS = [
  * @param {object} [options={}]
  * @param {'local'|'remote'} [options.mode='local']
  * @param {string} [options.sessionCookie]
- * @param {string} [options.apiUrl='https://api.xactions.app']
+ * @param {string} [options.apiUrl='https://api.medirus.online']
  * @param {number} [options.timeout=60000]
  * @returns {object} Bridge with execute(), parseNaturalLanguage(), etc.
  */
@@ -102,7 +102,7 @@ export function createBridge(options = {}) {
   const {
     mode = 'local',
     sessionCookie,
-    apiUrl = 'https://api.xactions.app',
+    apiUrl = 'https://api.medirus.online',
     timeout = 60000,
   } = options;
 
@@ -131,7 +131,7 @@ export function createBridge(options = {}) {
     /**
      * Execute a skill by ID, converting A2A parts to MCP params and back.
      *
-     * @param {string} skillId - A2A skill ID (e.g. 'xactions.x_get_profile')
+     * @param {string} skillId - A2A skill ID (e.g. 'medirus.x_get_profile')
      * @param {Array<object>} inputParts - A2A message parts
      * @returns {Promise<{ success: boolean, artifacts: object[], error?: string, duration: number }>}
      */
@@ -143,7 +143,7 @@ export function createBridge(options = {}) {
         let params = {};
 
         if (skillId) {
-          toolName = skillId.replace(/^xactions\./, '');
+          toolName = skillId.replace(/^medirus\./, '');
         }
 
         // Extract params from input parts
@@ -188,7 +188,7 @@ export function createBridge(options = {}) {
         }
 
         // Validate tool exists
-        const skill = getSkillById(`xactions.${toolName}`) || getSkillById(toolName);
+        const skill = getSkillById(`medirus.${toolName}`) || getSkillById(toolName);
         if (!skill && !toolName.startsWith('x_')) {
           return {
             success: false,
@@ -239,7 +239,7 @@ export function createBridge(options = {}) {
         const { routeTaskIntent } = await import('./jevRouter.js');
         const routed = await routeTaskIntent(text, options);
         if (routed.skillId && !routed.disambiguationNeeded) {
-          const tool = routed.skillId.replace(/^xactions\./, '');
+          const tool = routed.skillId.replace(/^medirus\./, '');
           return { tool, params: {} };
         }
       } catch (_) {
@@ -268,7 +268,7 @@ export function createBridge(options = {}) {
      * @returns {{ valid: boolean, errors: string[] }}
      */
     validateToolParams(toolName, params) {
-      const skill = getSkillById(`xactions.${toolName}`);
+      const skill = getSkillById(`medirus.${toolName}`);
       if (!skill) return { valid: false, errors: [`Unknown tool: ${toolName}`] };
 
       const schema = skill.inputSchema;

@@ -5,7 +5,7 @@
  * ============================================================
  * 
  * @name        filter-manager.js
- * @description Configure filters for XActions automation
+ * @description Configure filters for Medirus automation
  * @author      nichxbt (https://x.com/nichxbt)
  * @version     1.0.0
  * @date        2026-01-26
@@ -30,7 +30,7 @@
  * 1. Open any X page
  * 2. Open Chrome DevTools (F12)
  * 3. Paste this script and press Enter
- * 4. Configure filters with XActions.Filters
+ * 4. Configure filters with Medirus.Filters
  * 
  * ============================================================
  */
@@ -48,7 +48,7 @@
   console.log('╚════════════════════════════════════════════════════════════╝');
   console.log('');
   
-  const STORAGE_KEY = 'xactions_filters';
+  const STORAGE_KEY = 'medirus_filters';
   
   // Default filter configuration
   const defaultFilters = {
@@ -154,9 +154,9 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Filters = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Filters = {
     
     // Get current filters
     get: () => getFilters(),
@@ -416,23 +416,23 @@
       console.log('');
       console.log('📋 FILTER MANAGER COMMANDS:');
       console.log('');
-      console.log('   XActions.Filters.show()           - Show current config');
-      console.log('   XActions.Filters.get()            - Get filters object');
-      console.log('   XActions.Filters.set(cat,key,val) - Set specific filter');
-      console.log('   XActions.Filters.enable("bio")    - Enable filter');
-      console.log('   XActions.Filters.disable("bio")   - Disable filter');
+      console.log('   Medirus.Filters.show()           - Show current config');
+      console.log('   Medirus.Filters.get()            - Get filters object');
+      console.log('   Medirus.Filters.set(cat,key,val) - Set specific filter');
+      console.log('   Medirus.Filters.enable("bio")    - Enable filter');
+      console.log('   Medirus.Filters.disable("bio")   - Disable filter');
       console.log('');
       console.log('📦 PRESETS:');
-      console.log('   XActions.Filters.presets.quality()');
-      console.log('   XActions.Filters.presets.influencers()');
-      console.log('   XActions.Filters.presets.small()');
-      console.log('   XActions.Filters.presets.antiSpam()');
-      console.log('   XActions.Filters.presets.none()');
+      console.log('   Medirus.Filters.presets.quality()');
+      console.log('   Medirus.Filters.presets.influencers()');
+      console.log('   Medirus.Filters.presets.small()');
+      console.log('   Medirus.Filters.presets.antiSpam()');
+      console.log('   Medirus.Filters.presets.none()');
       console.log('');
       console.log('📤 EXPORT/IMPORT:');
-      console.log('   XActions.Filters.export()');
-      console.log('   XActions.Filters.import(json)');
-      console.log('   XActions.Filters.reset()');
+      console.log('   Medirus.Filters.export()');
+      console.log('   Medirus.Filters.import(json)');
+      console.log('   Medirus.Filters.reset()');
       console.log('');
     }
   };
@@ -441,7 +441,7 @@
   const enabledCount = Object.values(filters).filter(f => f.enabled).length;
   
   console.log(`⚙️ Filter Manager loaded! (${enabledCount} filters enabled)`);
-  console.log('   Run XActions.Filters.help() for commands.');
-  console.log('   Run XActions.Filters.show() to see current config.');
+  console.log('   Run Medirus.Filters.help() for commands.');
+  console.log('   Run Medirus.Filters.show() to see current config.');
   console.log('');
 })();

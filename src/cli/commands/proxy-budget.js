@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { globalProxyBudgetGovernor } from '../../core/proxy-budget-governor.js';
 
 /**
- * `xactions proxy budget` command group — cost-aware proxy escalation & budget ceiling.
+ * `medirus proxy budget` command group — cost-aware proxy escalation & budget ceiling.
  * @param {import('commander').Command} program
  */
 export function registerProxyBudgetCommand(program) {
@@ -11,7 +11,7 @@ export function registerProxyBudgetCommand(program) {
     .command('proxy')
     .description('Proxy management — pool, budget, tier, escalation');
 
-  // xactions proxy budget
+  // medirus proxy budget
   const budget = proxy
     .command('budget')
     .description('Show current proxy budget status and tier costs')
@@ -63,7 +63,7 @@ export function registerProxyBudgetCommand(program) {
       }
     });
 
-  // xactions proxy budget reset
+  // medirus proxy budget reset
   budget
     .command('reset')
     .description('Reset daily proxy budget (admin only)')

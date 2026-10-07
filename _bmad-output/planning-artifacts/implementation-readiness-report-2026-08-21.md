@@ -1,13 +1,13 @@
 ---
 stepsCompleted: [1, 2, 3, 4, 5, 6]
 date: 2026-08-21
-project: XActions
+project: Medirus
 ---
 
 # Implementation Readiness Assessment Report
 
 **Date:** 2026-08-21
-**Project:** XActions
+**Project:** Medirus
 
 ## Step 1: Document Discovery
 
@@ -19,15 +19,15 @@ Tôi đã quét toàn bộ tài liệu trong `_bmad-output/planning-artifacts/`.
 - `prd.md` (15,725 bytes, 2026-08-20 14:18) — PRD cho Epics 10–20.
 
 **Sharded Documents:**
-- Folder: `prds/prd-XActions-2026-06-08/`
+- Folder: `prds/prd-Medirus-2026-06-08/`
   - `prd.md` (20,456 bytes, 2026-08-20) — Facebook Platform Extension.
   - `.decision-log.md`
-- Folder: `prds/prd-XActions-2026-06-10-epic4/`
+- Folder: `prds/prd-Medirus-2026-06-10-epic4/`
   - `prd.md` (18,279 bytes, 2026-08-20) — Epic 4 Growth Automation.
-- Folder: `prds/prd-XActions-2026-08-14-epic7/`
+- Folder: `prds/prd-Medirus-2026-08-14-epic7/`
   - `prd.md` (16,220 bytes, 2026-08-20) — Epic 7 Advanced Scraping.
   - `validation-report.md`
-- Folder: `prds/prd-XActions-2026-08-18-universal-scraping-engine/`
+- Folder: `prds/prd-Medirus-2026-08-18-universal-scraping-engine/`
   - `prd.md` (13,131 bytes, 2026-08-20) — Universal Scraping Engine.
 
 ### Architecture Documents
@@ -36,7 +36,7 @@ Tôi đã quét toàn bộ tài liệu trong `_bmad-output/planning-artifacts/`.
 - `architecture.md` (46,292 bytes, 2026-08-20 14:18) — Architecture tổng hợp.
 
 **Sharded Documents:**
-- Folder: `architecture/xactions-hybrid-scraping-spine/`
+- Folder: `architecture/medirus-hybrid-scraping-spine/`
   - `ARCHITECTURE-SPINE.md` (38,376 bytes, 2026-08-20) — Architecture spine r3.
   - `ARCHITECTURE-UX-REVIEW-2026-08-18.md` (8,102 bytes, 2026-08-19)
   - `ARCHITECTURE-DEV-REVIEW-2026-08-18.md`
@@ -48,7 +48,7 @@ Tôi đã quét toàn bộ tài liệu trong `_bmad-output/planning-artifacts/`.
   - `.memlog.md`
 
 **Research / Supplemental:**
-- `research/technical-mediacrawler-architecture-for-xactions-research-2026-08-18.md`
+- `research/technical-mediacrawler-architecture-for-medirus-research-2026-08-18.md`
 
 ### Epics & Stories Documents
 
@@ -63,7 +63,7 @@ Tôi đã quét toàn bộ tài liệu trong `_bmad-output/planning-artifacts/`.
 - `ux/EXPERIENCE.md` (11,494 bytes, 2026-08-08 21:16) — Experience flows (Facebook/X).
 
 **Sharded / Review:**
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` (8,102 bytes, 2026-08-19) — UX findings từ kiến trúc.
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` (8,102 bytes, 2026-08-19) — UX findings từ kiến trúc.
 
 ## Issues Found
 
@@ -71,7 +71,7 @@ Tôi đã quét toàn bộ tài liệu trong `_bmad-output/planning-artifacts/`.
 
 Tìm thấy cả `prd.md` (whole) và 4 bản PRD trong `prds/` (sharded). Các bản này có overlap nội dung:
 - `prd.md` mới nhất (2026-08-19 approved) và có FR-85..88 / NFR-17.
-- `prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md` là bản nháp trước đó.
+- `prds/prd-Medirus-2026-08-18-universal-scraping-engine/prd.md` là bản nháp trước đó.
 - Các bản cũ hơn (`2026-06-08`, `2026-06-10`, `2026-08-14`) chứa FR cho Epics 1–9.
 
 Cần bạn xác nhận bản canonical cho từng phạm vi:
@@ -80,7 +80,7 @@ Cần bạn xác nhận bản canonical cho từng phạm vi:
 
 ### ⚠️ CRITICAL: Architecture whole vs sharded
 
-Tìm thấy cả `architecture.md` (whole, 46K) và `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (sharded, 38K). Cần chọn canonical.
+Tìm thấy cả `architecture.md` (whole, 46K) và `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (sharded, 38K). Cần chọn canonical.
 
 ### ⚠️ WARNING: UX docs lỗi thời
 
@@ -109,10 +109,10 @@ Tôi đã đọc toàn bộ các PRD sau:
 | PRD | FR Range | NFR Range | Ghi chú |
 |---|---|---|---|
 | `prd.md` | FR-64..FR-84 + FR-85..FR-88 (Appendix) | NFR-11..NFR-17 | Canonical cho Epics 10–20; approved 2026-08-19. |
-| `prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md` | FR-64..FR-84 | NFR-11..NFR-16 | Bản nháp trước; thiếu FR-85..88 / NFR-17. |
-| `prds/prd-XActions-2026-08-14-epic7/prd.md` | FR-55..FR-63 | NFR-10..NFR-15 | Epic 7; FR-62 được defer Phase 3. |
-| `prds/prd-XActions-2026-06-10-epic4/prd.md` | FR-15..FR-23 | NFR-6..NFR-10 | Epic 4 (Facebook growth automation). |
-| `prds/prd-XActions-2026-06-08/prd.md` | FR-1..FR-14 | — | Facebook Platform Extension v1. |
+| `prds/prd-Medirus-2026-08-18-universal-scraping-engine/prd.md` | FR-64..FR-84 | NFR-11..NFR-16 | Bản nháp trước; thiếu FR-85..88 / NFR-17. |
+| `prds/prd-Medirus-2026-08-14-epic7/prd.md` | FR-55..FR-63 | NFR-10..NFR-15 | Epic 7; FR-62 được defer Phase 3. |
+| `prds/prd-Medirus-2026-06-10-epic4/prd.md` | FR-15..FR-23 | NFR-6..NFR-10 | Epic 4 (Facebook growth automation). |
+| `prds/prd-Medirus-2026-06-08/prd.md` | FR-1..FR-14 | — | Facebook Platform Extension v1. |
 
 ### Functional Requirements Extracted
 
@@ -218,7 +218,7 @@ Tôi đã đọc toàn bộ các PRD sau:
 
 | ID | Requirement |
 |---|---|
-| NFR-10 | Không lưu trữ — XActions chỉ trả JSON. |
+| NFR-10 | Không lưu trữ — Medirus chỉ trả JSON. |
 | NFR-11 | Health check nhanh < 2s, không mở browser. |
 | NFR-12 | Concurrency cap mặc định 4, tối đa 8. |
 | NFR-13 | Privacy — cookie/token không log/echo. |
@@ -255,14 +255,14 @@ Tôi đã đọc toàn bộ các PRD sau:
 1. **Khoảng trống FR-24..FR-54:** Không tìm thấy PRD cho Epics 5, 5b, 6. `epics-full.md` đề cập FR-24..FR-54 nhưng thiếu PRD source.
 2. **Xung đột số NFR:** NFR-10 xuất hiện ở cả Epic 4 (Không thu thập PII) và Epic 7 (Không lưu trữ). NFR-11..NFR-15 cũng xuất hiện ở cả Epic 7 và Epics 10–20 với nội dung khác nhau.
 3. **FR-66 / FR-66B / FR-73A / FR-73B:** Có sub-label `A`/`B` nhưng chưa có quy ước rõ ràng trong master register.
-4. **FR-62 GraphQL replay:** Được defer nhưng vẫn xuất hiện trong `epics-full.md` và `prd-XActions-2026-08-14-epic7/prd.md`; cần quyết định implement hoặc loại bỏ.
-5. **Duplicate PRD:** `prd.md` và `prd-XActions-2026-08-18-universal-scraping-engine/prd.md` gần như giống nhau, bản cũ thiếu appendix FR-85..88 / NFR-17.
+4. **FR-62 GraphQL replay:** Được defer nhưng vẫn xuất hiện trong `epics-full.md` và `prd-Medirus-2026-08-14-epic7/prd.md`; cần quyết định implement hoặc loại bỏ.
+5. **Duplicate PRD:** `prd.md` và `prd-Medirus-2026-08-18-universal-scraping-engine/prd.md` gần như giống nhau, bản cũ thiếu appendix FR-85..88 / NFR-17.
 
 ### PRD Analysis Summary
 
 - **Tổng FR tracked:** 88 (FR-1..FR-88, với FR-24..FR-54 thiếu source).
 - **Tổng NFR tracked:** 17 (NFR-1..NFR-17, với xung đột NFR-10..NFR-15).
-- **Canonical PRD:** `prd.md` cho Epics 10–20; `prd-XActions-2026-08-14-epic7` cho Epic 7; `prd-XActions-2026-06-10-epic4` cho Epic 4; `prd-XActions-2026-06-08` cho Epics 1–3.
+- **Canonical PRD:** `prd.md` cho Epics 10–20; `prd-Medirus-2026-08-14-epic7` cho Epic 7; `prd-Medirus-2026-06-10-epic4` cho Epic 4; `prd-Medirus-2026-06-08` cho Epics 1–3.
 - **Trạng thái:** Cần khắc phục khoảng trống FR-24..FR-54 và xung đột NFR trước khi đánh giá epic coverage.
 
 **Step 2 hoàn tất. Tiếp tục Epic Coverage Validation.**
@@ -446,7 +446,7 @@ Tôi đã đọc toàn bộ các PRD sau:
 
 - `ux/DESIGN.md` — Tồn tại (draft, 2026-06-19). Design tokens, components cho dashboard X/Twitter + Facebook.
 - `ux/EXPERIENCE.md` — Tồn tại (draft, 2026-06-19). User flows cho Facebook automation, account warmup, friend requests.
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` — Tồn tại (2026-08-18). 10 UX findings (F1–F10) từ kiến trúc r3.
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` — Tồn tại (2026-08-18). 10 UX findings (F1–F10) từ kiến trúc r3.
 
 ### UX ↔ PRD Alignment
 
@@ -465,11 +465,11 @@ Tôi đã đọc toàn bộ các PRD sau:
 
 | Architecture Decision | UX Implication | Tình trạng |
 |---|---|---|
-| AD-7 MCP HTTP/SSE daemon (port 3001) | Cần `xactions daemon start/status/stop` và dashboard tile (F1). | ❌ Chưa cover |
+| AD-7 MCP HTTP/SSE daemon (port 3001) | Cần `medirus daemon start/status/stop` và dashboard tile (F1). | ❌ Chưa cover |
 | AD-5 Terminal QR Login | Cần non-TTY fallback, timeout message, URL/short code (F2). | ❌ Chưa cover |
-| AD-13 Adaptive Rate Governor | Cần public status API + CLI `xactions status` + dashboard view (F3). | ❌ Chưa cover |
-| AD-10/AD-12 CrawlCheckpoint | Cần API/CLI `xactions checkpoints list` + dashboard table (F4). | ❌ Chưa cover |
-| AD-11 Platform registry | Cần `listActions()` và `xactions actions --platform <p>` (F5). | ❌ Chưa cover |
+| AD-13 Adaptive Rate Governor | Cần public status API + CLI `medirus status` + dashboard view (F3). | ❌ Chưa cover |
+| AD-10/AD-12 CrawlCheckpoint | Cần API/CLI `medirus checkpoints list` + dashboard table (F4). | ❌ Chưa cover |
+| AD-11 Platform registry | Cần `listActions()` và `medirus actions --platform <p>` (F5). | ❌ Chưa cover |
 | AD-9 Error taxonomy | Cần error envelope `{ code, type, message, retryAfter, suggestedAction }` (F6). | ❌ Chưa cover |
 | AD-7 Redis Stream `stream:social:raw_posts` | Cần metrics panel `eventsPerSecond`, `pendingMessages`, `droppedEvents`, `lastAckTime` (F7). | ❌ Chưa cover |
 | AD-4 `Post.metadata` Json | Cần schema discovery UX `x_schema_get --platform shopee --category ecom` (F8). | ❌ Chưa cover |
@@ -515,7 +515,7 @@ Tôi đã đọc toàn bộ các PRD sau:
 |---|---|---|
 | **Story 11.5 phụ thuộc 11.4 + 11.7** | AC 11.5 yêu cầu `governor`, `PlatformResponseValidator` — là output của 11.4 và 11.7. | 🔴 Critical — forward reference trong epic. |
 | **Story 11.6 phụ thuộc 11.5 + 11.4** | AC 11.6 yêu cầu `AbstractApiClient pipeline đã chạy` và `governor.hibernateAccount` — phụ thuộc 11.5/11.4. | 🔴 Critical — forward reference. |
-| **Story 20.1 phụ thuộc Epics 15–18** | AC: "Given XActions đã hoàn thành các crawler đa nền tảng (Social, Ecom, BĐS, Tuyển dụng) từ Epic 15–18". | 🔴 Critical — forward cross-epic dependency. |
+| **Story 20.1 phụ thuộc Epics 15–18** | AC: "Given Medirus đã hoàn thành các crawler đa nền tảng (Social, Ecom, BĐS, Tuyển dụng) từ Epic 15–18". | 🔴 Critical — forward cross-epic dependency. |
 | **Story 18.3 phụ thuộc 12.2** | LinkedIn CDP attach cần Epic 12.2 hoàn thành. | 🟠 Major — cross-epic dependency, cần map rõ. |
 | **Thiếu Cross-Epic Dependency Map** | `epics.md` không còn phần "Cross-Epic Dependency & Sequence Map". | 🔴 Critical — khó kiểm soát thứ tự và blocker. |
 
@@ -592,7 +592,7 @@ Dự án có PRD, Architecture, Epics, và UX docs, nhưng tồn tại nhiều c
 ### Critical Issues Requiring Immediate Action
 
 1. **Canonical PRD & FR/NFR Numbering Conflicts**
-   - `prd.md` (whole) và `prd-XActions-2026-08-18-universal-scraping-engine/prd.md` gần như trùng lặp.
+   - `prd.md` (whole) và `prd-Medirus-2026-08-18-universal-scraping-engine/prd.md` gần như trùng lặp.
    - `FR-66` / `FR-66B`, `FR-73` / `FR-73A` / `FR-73B` — chưa có quy ước rõ ràng.
    - NFR-10, NFR-11–NFR-15 xuất hiện ở nhiều PRD với nghĩa khác nhau.
    - Thiếu PRD source cho FR-24..FR-54 (Epics 5, 5b, 6).
@@ -621,7 +621,7 @@ Dự án có PRD, Architecture, Epics, và UX docs, nhưng tồn tại nhiều c
 1. **Declare canonical docs:**
    - `prd.md` canonical cho Epics 10–20.
    - `ARCHITECTURE-SPINE.md` canonical architecture.
-   - Đánh dấu `architecture.md` và `prd-XActions-2026-08-18-universal-scraping-engine/prd.md` deprecated.
+   - Đánh dấu `architecture.md` và `prd-Medirus-2026-08-18-universal-scraping-engine/prd.md` deprecated.
 
 2. **Tạo FR/NFR master register:**
    - Giải quyết xung đột NFR-10..NFR-15 bằng cách thêm prefix phạm vi (FB-, E7-, U-).
@@ -652,7 +652,7 @@ Assessment này xác định **5 nhóm vấn đề critical** (canonicalization,
 
 - **Assessor:** AI Product Manager (nirholas)
 - **Date:** 2026-08-21
-- **Project:** XActions
+- **Project:** Medirus
 - **Report file:** `_bmad-output/planning-artifacts/implementation-readiness-report-2026-08-21.md`
 
 Workflow complete.

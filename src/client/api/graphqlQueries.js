@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — GraphQL Query ID Registry
+ * Medirus Client — GraphQL Query ID Registry
  * Twitter's internal GraphQL endpoints with query IDs from the web client bundle.
  *
  * Query IDs are embedded in Twitter's public JavaScript and used by all scrapers

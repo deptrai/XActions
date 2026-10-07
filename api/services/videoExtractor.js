@@ -283,7 +283,7 @@ async function extractViaFxTwitter(tweetId, username) {
 
   const response = await fetch(url, {
     headers: {
-      'User-Agent': 'XActions/1.0 (+https://github.com/nirholas/XActions)',
+      'User-Agent': 'Medirus/1.0 (+https://github.com/nirholas/XActions)',
       'Accept': 'application/json',
     },
     signal: AbortSignal.timeout(10000),

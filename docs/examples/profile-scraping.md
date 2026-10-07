@@ -18,7 +18,7 @@ Scrape complete profile information from any X/Twitter user.
 
 ```javascript
 // ============================================
-// XActions - Profile Scraper (Browser Console)
+// Medirus - Profile Scraper (Browser Console)
 // Go to any profile page, open console (F12), paste this
 // ============================================
 
@@ -118,7 +118,7 @@ Scrape complete profile information from any X/Twitter user.
 
 ```javascript
 // ============================================
-// XActions - Profile Scraper (Node.js)
+// Medirus - Profile Scraper (Node.js)
 // Save as: scrape-profile.js
 // Run: node scrape-profile.js elonmusk
 // ============================================
@@ -340,7 +340,7 @@ try {
 
 ## Website Alternative
 
-Don't want to code? Use [xactions.app](https://xactions.app):
+Don't want to code? Use [medirus.online](https://medirus.online):
 1. Login with your X account
 2. Enter any username
 3. Click "Scrape Profile"

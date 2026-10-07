@@ -1,9 +1,9 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions A2A — Skill Registry
+ * Medirus A2A — Skill Registry
  *
  * Bridges MCP tool definitions to A2A skill descriptors. Maintains a
- * searchable, categorized registry of all capabilities the XActions agent
+ * searchable, categorized registry of all capabilities the Medirus agent
  * can advertise to other A2A agents.
  *
  * @author nich (@nichxbt)
@@ -221,7 +221,7 @@ let _initialized = false;
  * @returns {object} A2A skill
  */
 export function convertMcpToolToA2aSkill(tool) {
-  const id = `xactions.${tool.name}`;
+  const id = `medirus.${tool.name}`;
   const nameParts = tool.name.replace(/^x_/, '').split('_');
   const displayName = nameParts.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
@@ -306,7 +306,7 @@ export function getSkillCategories() {
   ensureInitialized();
   const categoryMap = {};
   for (const skill of _skills.values()) {
-    const toolName = skill.id.replace('xactions.', '');
+    const toolName = skill.id.replace('medirus.', '');
     for (const [cat, pattern] of Object.entries(CATEGORY_PATTERNS)) {
       if (pattern.test(toolName)) {
         if (!categoryMap[cat]) categoryMap[cat] = [];
@@ -349,7 +349,7 @@ export function searchSkills(queryOrOpts = '', tagsArg = []) {
       match = true;
     }
     if (category) {
-      const toolName = skill.id.replace('xactions.', '');
+      const toolName = skill.id.replace('medirus.', '');
       const pattern = CATEGORY_PATTERNS[category];
       if (pattern && pattern.test(toolName)) {
         match = true;
@@ -367,7 +367,7 @@ export function searchSkills(queryOrOpts = '', tagsArg = []) {
 /**
  * Get a single skill by its A2A skill ID.
  *
- * @param {string} skillId - e.g. 'xactions.x_get_profile'
+ * @param {string} skillId - e.g. 'medirus.x_get_profile'
  * @returns {object|null}
  */
 export function getSkillById(skillId) {

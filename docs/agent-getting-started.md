@@ -4,7 +4,7 @@
 >
 > Author: nich ([@nichxbt](https://x.com/nichxbt))
 
-The Thought Leader Agent is XActions' flagship automation system. It runs continuously in the background, engaging with your niche community, building your persona, and growing your audience — all while mimicking natural human behavior.
+The Thought Leader Agent is Medirus' flagship automation system. It runs continuously in the background, engaging with your niche community, building your persona, and growing your audience — all while mimicking natural human behavior.
 
 ---
 
@@ -92,7 +92,7 @@ All activities are scored by an LLM for relevance before engagement. The agent n
 ```bash
 # 1. Clone and install
 git clone https://github.com/nirholas/XActions.git
-cd XActions
+cd Medirus
 npm install
 
 # 2. Run the interactive setup wizard
@@ -245,8 +245,8 @@ node src/agents/thoughtLeaderAgent.js --login
 
 ```bash
 npm install -g pm2
-pm2 start src/agents/thoughtLeaderAgent.js --name "xactions-agent"
-pm2 logs xactions-agent
+pm2 start src/agents/thoughtLeaderAgent.js --name "medirus-agent"
+pm2 logs medirus-agent
 pm2 save  # persist across reboots
 ```
 
@@ -256,7 +256,7 @@ pm2 save  # persist across reboots
 docker run -d \
   -v $(pwd)/data:/app/data \
   -e OPENROUTER_API_KEY=sk-or-v1-... \
-  xactions/agent
+  medirus/agent
 ```
 
 ---
@@ -265,7 +265,7 @@ docker run -d \
 
 ### Dashboard
 
-Visit `/agent` on your XActions server to see real-time metrics:
+Visit `/agent` on your Medirus server to see real-time metrics:
 - Activity heatmap
 - Follower growth chart
 - LLM cost tracker
@@ -324,7 +324,7 @@ curl -X POST http://localhost:3001/api/agent/stop
 ### PM2
 
 ```bash
-pm2 stop xactions-agent
+pm2 stop medirus-agent
 ```
 
 ---

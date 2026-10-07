@@ -1,6 +1,6 @@
 # Track 06 — Media Upload Pipeline
 
-> agent-twitter-client supports media upload (images, video, GIF) via Twitter's chunked media upload API. XActions has zero media upload support — all posting is text-only. This track adds a complete media pipeline: Buffer-based upload, MIME detection, chunked upload for video, alt-text, and media attachment to tweets.
+> agent-twitter-client supports media upload (images, video, GIF) via Twitter's chunked media upload API. Medirus has zero media upload support — all posting is text-only. This track adds a complete media pipeline: Buffer-based upload, MIME detection, chunked upload for video, alt-text, and media attachment to tweets.
 
 ---
 
@@ -757,21 +757,21 @@ Each tool:
 ```
 Add media commands to src/cli/ (Commander.js):
 
-xactions media upload <file> [--alt-text "description"]
+medirus media upload <file> [--alt-text "description"]
   → Upload file, print mediaId
   → Show progress bar for video uploads
 
-xactions media info <file>
+medirus media info <file>
   → Show MIME type, dimensions, size, validation result
 
-xactions tweet "text" --media <file1> [<file2>] [--alt-text "desc1" "desc2"]
+medirus tweet "text" --media <file1> [<file2>] [--alt-text "desc1" "desc2"]
   → Post tweet with media attachments
 
-xactions media download <tweetUrl> [--output-dir ./media]
+medirus media download <tweetUrl> [--output-dir ./media]
   → Download all media from a tweet URL
   → Parse tweet ID from URL
 
-xactions media download-profile <username> [--output-dir ./avatars]
+medirus media download-profile <username> [--output-dir ./avatars]
   → Download user avatar and banner
 
 Implementation:

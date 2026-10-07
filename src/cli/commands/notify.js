@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions notify` command group.
+ * `medirus notify` command group.
  */
 import chalk from 'chalk';
 import inquirer from 'inquirer';
@@ -22,7 +22,7 @@ notifyCmd.command('test <channel>').description('Send a test notification').acti
   } catch (error) { console.error(chalk.red(`❌ ${error.message}`)); }
 });
 
-notifyCmd.command('send <message>').description('Send notification to all channels').option('-t, --title <title>', 'Notification title', 'XActions Alert').option('-s, --severity <level>', 'info, warning, critical', 'info').action(async (message, options) => {
+notifyCmd.command('send <message>').description('Send notification to all channels').option('-t, --title <title>', 'Notification title', 'Medirus Alert').option('-s, --severity <level>', 'info, warning, critical', 'info').action(async (message, options) => {
   try {
     const { getNotifier } = await import('../../notifications/notifier.js');
     const notifier = await getNotifier();

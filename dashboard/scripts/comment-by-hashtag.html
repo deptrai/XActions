@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XActions - Comment By Hashtag — Free X/Twitter Script | XActions</title>
+  <title>Medirus - Comment By Hashtag — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Search for tweets with specific hashtags and automatically">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, comment, hashtag, engagement">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, comment, hashtag, engagement">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="XActions - Comment By Hashtag — XActions">
+  <meta property="og:title" content="Medirus - Comment By Hashtag — Medirus">
   <meta property="og:description" content="Search for tweets with specific hashtags and automatically">
-  <meta property="og:url" content="https://xactions.app/scripts/comment-by-hashtag">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/comment-by-hashtag">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="XActions - Comment By Hashtag — XActions">
+  <meta name="twitter:title" content="Medirus - Comment By Hashtag — Medirus">
   <meta name="twitter:description" content="Search for tweets with specific hashtags and automatically">
 
-  <link rel="canonical" href="https://xactions.app/scripts/comment-by-hashtag">
+  <link rel="canonical" href="https://medirus.online/scripts/comment-by-hashtag">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "XActions - Comment By Hashtag — Free X/Twitter Script | XActions",
+    "headline": "Medirus - Comment By Hashtag — Free X/Twitter Script | Medirus",
     "description": "Search for tweets with specific hashtags and automatically",
-    "url": "https://xactions.app/scripts/comment-by-hashtag",
+    "url": "https://medirus.online/scripts/comment-by-hashtag",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Engagement",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, comment, hashtag, engagement"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, comment, hashtag, engagement"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://xactions.app/scripts#engagement" },
-      { "@type": "ListItem", "position": 4, "name": "XActions - Comment By Hashtag", "item": "https://xactions.app/scripts/comment-by-hashtag" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://medirus.online/scripts#engagement" },
+      { "@type": "ListItem", "position": 4, "name": "Medirus - Comment By Hashtag", "item": "https://medirus.online/scripts/comment-by-hashtag" }
     ]
   }
   </script>
@@ -112,9 +112,9 @@
 
     <main class="main-content" id="main-content">
       <header class="main-header">
-        <h1>💬 XActions - Comment By Hashtag</h1>
+        <h1>💬 Medirus - Comment By Hashtag</h1>
         <div class="breadcrumb">
-          <a href="/">Home</a> › <a href="/scripts">Scripts</a> › <a href="/scripts#engagement">Engagement</a> › XActions - Comment By Hashtag
+          <a href="/">Home</a> › <a href="/scripts">Scripts</a> › <a href="/scripts#engagement">Engagement</a> › Medirus - Comment By Hashtag
         </div>
       </header>
 
@@ -184,7 +184,7 @@
             <pre><code>// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * =============================================================================
- * XActions - Comment By Hashtag
+ * Medirus - Comment By Hashtag
  * =============================================================================
  * 
  * @name        Comment By Hashtag
@@ -193,7 +193,7 @@
  * @author      nichxbt
  * @version     1.0.0
  * @date        2026-01-26
- * @website     https://xactions.app
+ * @website     https://medirus.online
  * 
  * Usage:
  *   1. Go to x.com and make sure you're logged in
@@ -270,12 +270,12 @@
       error: 'color: #E0245E; font-weight: bold;',
       warn: 'color: #FFAD1F; font-weight: bold;'
     };
-    console.log(`%c[XActions] ${msg}`, styles[type] || styles.info);
+    console.log(`%c[Medirus] ${msg}`, styles[type] || styles.info);
   };
 
   const getProcessedTweets = () =&gt; {
     try {
-      return JSON.parse(sessionStorage.getItem('xactions_commented_tweets') || '[]');
+      return JSON.parse(sessionStorage.getItem('medirus_commented_tweets') || '[]');
     } catch {
       return [];
     }
@@ -285,7 +285,7 @@
     const tweets = getProcessedTweets();
     if (!tweets.includes(tweetId)) {
       tweets.push(tweetId);
-      sessionStorage.setItem('xactions_commented_tweets', JSON.stringify(tweets));
+      sessionStorage.setItem('medirus_commented_tweets', JSON.stringify(tweets));
     }
   };
 
@@ -444,7 +444,7 @@
   console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║   🏷️  XACTIONS - COMMENT BY HASHTAG                          ║
+║   🏷️  MEDIRUS - COMMENT BY HASHTAG                          ║
 ║                                                               ║
 ║   Automatically comment on tweets with specific hashtags      ║
 ║                                                               ║
@@ -496,7 +496,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -509,7 +509,7 @@
         <a href="/scripts/auto-commenter">💬 Auto Commenter</a>
 <a href="/scripts/auto-engage">⚡ Auto Engage</a>
 <a href="/scripts/auto-liker">❤️ Auto Liker</a>
-<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - XActions</a>
+<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - Medirus</a>
 <a href="/scripts/auto-repost">🔁 Auto Repost</a>
 <a href="/scripts/auto-plug-replies">🔌 Auto-Plug Replies</a>
 <a href="/scripts/auto-reply">💬 Auto-Reply / Auto-Respond</a>

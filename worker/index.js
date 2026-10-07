@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Cloudflare Worker entry for xactions.app
+ * Cloudflare Worker entry for medirus.online
  *
  * Serves the whole site from Workers static assets (see
  * scripts/build-cloudflare.mjs) and handles the dynamic surface natively:
@@ -22,8 +22,8 @@
 import { Buffer } from 'node:buffer';
 
 const ALLOWED_ORIGINS = new Set([
-  'https://xactions.app',
-  'https://www.xactions.app',
+  'https://medirus.online',
+  'https://www.medirus.online',
 ]);
 
 // x402-config.js and openapi.js read process.env at module scope, so they are
@@ -44,7 +44,7 @@ function loadApiModules(env) {
 
 function corsHeaders(request) {
   const origin = request.headers.get('origin');
-  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : 'https://xactions.app';
+  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : 'https://medirus.online';
   return {
     'access-control-allow-origin': allowed,
     'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
@@ -90,7 +90,7 @@ function x402Gate(request, url, api) {
     resource: {
       url: `${url.origin}${path}`,
       method: request.method,
-      description: `XActions AI API - ${operation}`,
+      description: `Medirus AI API - ${operation}`,
       mimeType: 'application/json',
     },
     accepts: [
@@ -137,10 +137,10 @@ function extensionResponse(request) {
       error: 'account_action_requires_extension',
       message:
         'X account actions (follow, unfollow, like, reply, post) run in the ' +
-        'XActions browser extension, in your own logged-in session — the ' +
+        'Medirus browser extension, in your own logged-in session — the ' +
         'hosted service never stores your X credentials or acts on your ' +
         'account server-side.',
-      extension: 'https://xactions.app/extension',
+      extension: 'https://medirus.online/extension',
       docs: 'https://github.com/nirholas/XActions/blob/main/docs/extension.md',
     },
     501,
@@ -212,7 +212,7 @@ export default {
       return json(
         {
           status: 'ok',
-          service: 'xactions-api',
+          service: 'medirus-api',
           edge: 'cloudflare',
           timestamp: new Date().toISOString(),
         },
@@ -224,7 +224,7 @@ export default {
     if (path === '/api/ai/health') {
       return json(
         {
-          service: 'XActions AI API',
+          service: 'Medirus AI API',
           status: 'operational',
           timestamp: new Date().toISOString(),
           x402: {

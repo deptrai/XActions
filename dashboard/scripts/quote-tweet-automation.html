@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quote Tweet Automation — Free X/Twitter Script | XActions</title>
+  <title>Quote Tweet Automation — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Auto-retweet with quote using customizable">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, quote, tweet, automation, engagement">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, quote, tweet, automation, engagement">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Quote Tweet Automation — XActions">
+  <meta property="og:title" content="Quote Tweet Automation — Medirus">
   <meta property="og:description" content="Auto-retweet with quote using customizable">
-  <meta property="og:url" content="https://xactions.app/scripts/quote-tweet-automation">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/quote-tweet-automation">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Quote Tweet Automation — XActions">
+  <meta name="twitter:title" content="Quote Tweet Automation — Medirus">
   <meta name="twitter:description" content="Auto-retweet with quote using customizable">
 
-  <link rel="canonical" href="https://xactions.app/scripts/quote-tweet-automation">
+  <link rel="canonical" href="https://medirus.online/scripts/quote-tweet-automation">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Quote Tweet Automation — Free X/Twitter Script | XActions",
+    "headline": "Quote Tweet Automation — Free X/Twitter Script | Medirus",
     "description": "Auto-retweet with quote using customizable",
-    "url": "https://xactions.app/scripts/quote-tweet-automation",
+    "url": "https://medirus.online/scripts/quote-tweet-automation",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Engagement",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, quote, tweet, automation, engagement"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, quote, tweet, automation, engagement"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://xactions.app/scripts#engagement" },
-      { "@type": "ListItem", "position": 4, "name": "Quote Tweet Automation", "item": "https://xactions.app/scripts/quote-tweet-automation" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://medirus.online/scripts#engagement" },
+      { "@type": "ListItem", "position": 4, "name": "Quote Tweet Automation", "item": "https://medirus.online/scripts/quote-tweet-automation" }
     ]
   }
   </script>
@@ -289,10 +289,10 @@
   let paused = false;
   const results = [];
 
-  window.XActions = window.XActions || {};
-  window.XActions.pause = () =&gt; { paused = true; console.log('⏸️ Paused.'); };
-  window.XActions.resume = () =&gt; { paused = false; console.log('▶️ Resumed.'); };
-  window.XActions.abort = () =&gt; { aborted = true; console.log('🛑 Aborting...'); };
+  window.Medirus = window.Medirus || {};
+  window.Medirus.pause = () =&gt; { paused = true; console.log('⏸️ Paused.'); };
+  window.Medirus.resume = () =&gt; { paused = false; console.log('▶️ Resumed.'); };
+  window.Medirus.abort = () =&gt; { aborted = true; console.log('🛑 Aborting...'); };
 
   const waitForUnpause = async () =&gt; {
     while (paused &amp;&amp; !aborted) await sleep(500);
@@ -458,7 +458,7 @@
       console.log('   Set CONFIG.dryRun = false to post for real.\n');
     } else {
       console.log('\n⚠️  LIVE MODE — tweets will actually be posted!');
-      console.log('   Use XActions.abort() to stop at any time.\n');
+      console.log('   Use Medirus.abort() to stop at any time.\n');
     }
 
     console.log('🔍 Collecting target tweets...\n');
@@ -514,7 +514,7 @@
     if (results.length &gt; 0) {
       const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-quote-tweets-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-quote-tweets-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Results exported.');
     }
@@ -527,7 +527,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -540,7 +540,7 @@
         <a href="/scripts/auto-commenter">💬 Auto Commenter</a>
 <a href="/scripts/auto-engage">⚡ Auto Engage</a>
 <a href="/scripts/auto-liker">❤️ Auto Liker</a>
-<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - XActions</a>
+<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - Medirus</a>
 <a href="/scripts/auto-repost">🔁 Auto Repost</a>
 <a href="/scripts/auto-plug-replies">🔌 Auto-Plug Replies</a>
 <a href="/scripts/auto-reply">💬 Auto-Reply / Auto-Respond</a>

@@ -155,7 +155,7 @@
         hashtags: hashtags.slice(0, 50),
         topByEngagement: byAvgEng.slice(0, 20),
         allPosts: postsArr,
-      }, `xactions-hashtag-analytics-${new Date().toISOString().slice(0, 10)}.json`);
+      }, `medirus-hashtag-analytics-${new Date().toISOString().slice(0, 10)}.json`);
       console.log('\n📥 Report exported as JSON.');
     }
   };

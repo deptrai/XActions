@@ -1,8 +1,8 @@
 ---
 title: "Natural Flow Engagement on X (Twitter) — Free 2026"
 description: "Simulate human-like browsing on X/Twitter with auto likes, replies, retweets, bookmarks, and follows. Free script, no API needed."
-keywords: ["twitter natural engagement script", "human like twitter automation", "auto engage twitter naturally", "twitter browsing simulation", "natural flow twitter bot", "twitter engagement autopilot 2026", "simulate real twitter user", "twitter like reply retweet script", "xactions natural flow", "organic twitter growth automation"]
-canonical: "https://xactions.app/examples/natural-flow"
+keywords: ["twitter natural engagement script", "human like twitter automation", "auto engage twitter naturally", "twitter browsing simulation", "natural flow twitter bot", "twitter engagement autopilot 2026", "simulate real twitter user", "twitter like reply retweet script", "medirus natural flow", "organic twitter growth automation"]
+canonical: "https://medirus.online/examples/natural-flow"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -26,7 +26,7 @@ You're a crypto founder trying to build thought leadership on X. You know the al
 
 Natural Flow solves this. It runs a complete 4-phase session that mimics how a real person uses X: scroll timeline and engage → visit your own profile → check notifications → return home. Every action has randomized delays that **escalate over time** (just like a human getting tired), context-aware replies that match tweet topics, and a live HUD showing your progress. You choose a preset (Lurker, Friendly, Growth) and let it run.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -48,7 +48,7 @@ Natural Flow solves this. It runs a complete 4-phase session that mimics how a r
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**After XActions Natural Flow:**
+**After Medirus Natural Flow:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -90,7 +90,7 @@ Natural Flow runs a complete **4-phase browsing session** that mirrors how real 
 - 🚫 **Skip filters** — ignores promoted content, giveaways, sponsors
 - 🔖 **Multi-action** — likes, replies, retweets, bookmarks, and follows in one session
 - 🎛️ **Floating HUD** — real-time overlay showing likes/replies/RTs/bookmarks/follows/skips
-- ⏸️ **Pause/Stop controls** — click buttons in the HUD or call `XActions.pause()` / `XActions.stop()`
+- ⏸️ **Pause/Stop controls** — click buttons in the HUD or call `Medirus.pause()` / `Medirus.stop()`
 - 📦 **Session resume** — if the page reloads, re-paste the script and it picks up where you left off
 - ⚠️ **Recent session warning** — warns you if you ran it less than 2 hours ago (reduces detection risk)
 - 📥 **Auto-export** — downloads a JSON log of every action taken
@@ -170,7 +170,7 @@ Natural Flow runs a complete **4-phase browsing session** that mirrors how real 
 │  ❤️ 89,210  🔄 18,920  💬 5,340                               │
 │                                                              │
 │  👤 @nichxbt                                                 │
-│  "Just shipped Natural Flow v2 for XActions 🌊              │
+│  "Just shipped Natural Flow v2 for Medirus 🌊              │
 │   4-phase human-like session simulation"                     │
 │  ❤️ 247  🔄 68  💬 41                                         │
 │                                                              │
@@ -192,8 +192,8 @@ The script will show an **interactive setup dialog** — pick a preset, enter op
 
 ```javascript
 // ============================================
-// XActions - Natural Flow 🌊
-// by nichxbt — https://xactions.app
+// Medirus - Natural Flow 🌊
+// by nichxbt — https://medirus.online
 // Go to: x.com/home
 // Open console (F12 → Console), paste, Enter
 // ============================================
@@ -352,11 +352,11 @@ The script will show an **interactive setup dialog** — pick a preset, enter op
 
   // ── Floating HUD ──
   const createHUD = () => {
-    const existing = document.getElementById('xactions-hud');
+    const existing = document.getElementById('medirus-hud');
     if (existing) existing.remove();
 
     const hud = document.createElement('div');
-    hud.id = 'xactions-hud';
+    hud.id = 'medirus-hud';
     hud.innerHTML = `
       <div style="
         position:fixed;bottom:20px;right:20px;z-index:999999;
@@ -401,22 +401,22 @@ The script will show an **interactive setup dialog** — pick a preset, enter op
 
   const updateHUD = (field, value) => { const el = document.getElementById(`xhud-${field}`); if (el) el.textContent = value; };
   const updateProgress = (current, max) => { const bar = document.getElementById('xhud-bar'); if (bar) bar.style.width = `${Math.min(100, (current / max) * 100)}%`; };
-  const removeHUD = () => { const hud = document.getElementById('xactions-hud'); if (hud) hud.remove(); };
+  const removeHUD = () => { const hud = document.getElementById('medirus-hud'); if (hud) hud.remove(); };
 
   // ── State & History ──
   let aborted = false;
   let paused = false;
 
-  window.XActions = window.XActions || {};
-  window.XActions.stop  = () => { aborted = true; console.log('🛑 Stopping...'); };
-  window.XActions.pause = () => { paused = !paused; console.log(paused ? '⏸ Paused' : '▶ Resumed'); };
+  window.Medirus = window.Medirus || {};
+  window.Medirus.stop  = () => { aborted = true; console.log('🛑 Stopping...'); };
+  window.Medirus.pause = () => { paused = !paused; console.log(paused ? '⏸ Paused' : '▶ Resumed'); };
 
   const stats = { liked: 0, replied: 0, retweeted: 0, bookmarked: 0, followed: 0, scrolled: 0, skipped: 0 };
   const actionLog = [];
   const seen = new Set();
 
-  const STATE_KEY = 'xactions_natural_flow';
-  const HISTORY_KEY = 'xactions_nf_history';
+  const STATE_KEY = 'medirus_natural_flow';
+  const HISTORY_KEY = 'medirus_nf_history';
 
   const getHistory = () => { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; } };
   const addHistory = (entry) => {
@@ -691,7 +691,7 @@ The script will show an **interactive setup dialog** — pick a preset, enter op
         const blob = new Blob([JSON.stringify(actionLog, null, 2)], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `xactions-natural-flow-${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `medirus-natural-flow-${new Date().toISOString().slice(0, 10)}.json`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -710,7 +710,7 @@ The script will show an **interactive setup dialog** — pick a preset, enter op
     const W = 52;
     console.log('╔' + '═'.repeat(W) + '╗');
     console.log('║  🌊 NATURAL FLOW — Human-Like Session        ║');
-    console.log('║  by nichxbt — XActions                        ║');
+    console.log('║  by nichxbt — Medirus                        ║');
     console.log('╚' + '═'.repeat(W) + '╝');
     console.log(`\n⚠️ ${config.dryRun ? 'DRY RUN' : 'LIVE MODE'} — ${config.dryRun ? 'previewing' : 'executing'} session.\n`);
 
@@ -825,9 +825,9 @@ The script detects tweet topics and picks relevant reply templates:
 
 | Control | How |
 |---------|-----|
-| **Pause** | Click `⏸ Pause` in HUD, or run `XActions.pause()` in console |
-| **Resume** | Click `▶ Resume` in HUD, or run `XActions.pause()` again |
-| **Stop** | Click `⏹ Stop` in HUD, or run `XActions.stop()` in console |
+| **Pause** | Click `⏸ Pause` in HUD, or run `Medirus.pause()` in console |
+| **Resume** | Click `▶ Resume` in HUD, or run `Medirus.pause()` again |
+| **Stop** | Click `⏹ Stop` in HUD, or run `Medirus.stop()` in console |
 
 ---
 
@@ -887,5 +887,5 @@ Dry Run stays on the current page and simulates all actions without actually cli
 
 <p align="center">
   <b>Built with ❤️ by <a href="https://x.com/nichxbt">@nichxbt</a></b><br>
-  <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+  <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </p>

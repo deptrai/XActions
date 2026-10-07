@@ -43,7 +43,7 @@ Scrape all tweets using a specific hashtag from X/Twitter with full metadata, en
 
 ```javascript
 // ============================================
-// XActions - Hashtag Scraper (Browser Console)
+// Medirus - Hashtag Scraper (Browser Console)
 // Go to: x.com/search?q=%23YOUR_HASHTAG
 // Open console (F12), paste this
 // Author: nich (@nichxbt)
@@ -373,7 +373,7 @@ Create a file called `hashtag-scraper.js`:
 
 ```javascript
 // ============================================
-// XActions - Hashtag Scraper (Node.js + Puppeteer)
+// Medirus - Hashtag Scraper (Node.js + Puppeteer)
 // Production-ready hashtag scraping script
 // Author: nich (@nichxbt)
 // ============================================
@@ -415,7 +415,7 @@ function buildSearchUrl(hashtag, filter) {
 
 // Main scraper function
 async function scrapeHashtag() {
-  console.log('#️⃣ XActions Hashtag Scraper');
+  console.log('#️⃣ Medirus Hashtag Scraper');
   console.log('================================');
   console.log(`🏷️ Hashtag: ${CONFIG.hashtag}`);
   console.log(`📋 Filter: ${CONFIG.filter}`);
@@ -997,7 +997,7 @@ const recentTweets = tweets.filter(t => {
 
 Don't want to run scripts? Use our web app:
 
-### [xactions.app](https://xactions.app)
+### [medirus.online](https://medirus.online)
 
 - ✅ No coding required
 - ✅ Visual hashtag search interface
@@ -1024,7 +1024,7 @@ Don't want to run scripts? Use our web app:
 ## 🔗 Resources
 
 - [Twitter Search Docs](https://help.x.com/en/using-x/x-advanced-search)
-- [XActions Documentation](https://xactions.app/docs)
+- [Medirus Documentation](https://medirus.online/docs)
 - [Puppeteer Setup Guide](../troubleshooting.md#puppeteer)
 
 ---

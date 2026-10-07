@@ -2,7 +2,7 @@
 /**
  * Agent-to-Agent (A2A) Task Delegation Routes
  *
- * Allows external AI agents to discover XActions skills and submit tasks
+ * Allows external AI agents to discover Medirus skills and submit tasks
  * using the A2A protocol task envelope format.
  *
  * Routes:
@@ -91,7 +91,7 @@ router.post('/send', (req, res) => {
 
 /**
  * GET /api/a2a/skills
- * Returns the XActions skill registry for agent discovery.
+ * Returns the Medirus skill registry for agent discovery.
  * Free — no x402 payment required.
  */
 router.get('/skills', async (req, res) => {
@@ -101,12 +101,12 @@ router.get('/skills', async (req, res) => {
     return res.json({
       success: true,
       data: {
-        agent: 'XActions',
+        agent: 'Medirus',
         version: '2.0.0',
         skills,
         count: skills.length,
         taskEndpoint: '/api/a2a/task',
-        docs: 'https://xactions.app/docs/a2a',
+        docs: 'https://medirus.online/docs/a2a',
       },
     });
   } catch (err) {
@@ -120,7 +120,7 @@ router.get('/skills', async (req, res) => {
  *
  * Body (A2A Task Envelope):
  *   id          {string}  optional  Client-supplied idempotency key
- *   skill       {string}  required  A2A skill ID (e.g. 'xactions.x_unfollow_non_followers')
+ *   skill       {string}  required  A2A skill ID (e.g. 'medirus.x_unfollow_non_followers')
  *   input       {object}  required  Skill input parameters (sessionCookie, config, …)
  *   callbackUrl {string}  optional  Webhook URL — result is POSTed here on completion
  *   contextId   {string}  optional  Conversation/thread ID for multi-step workflows
@@ -200,7 +200,7 @@ router.post('/task', async (req, res) => {
 
 /**
  * Map an A2A skill ID to a Bull job type name.
- * Convention: 'xactions.x_unfollow_non_followers' → 'unfollowNonFollowers'
+ * Convention: 'medirus.x_unfollow_non_followers' → 'unfollowNonFollowers'
  */
 /**
  * @param {string} skillId
@@ -208,7 +208,7 @@ router.post('/task', async (req, res) => {
  */
 function skillToJobType(skillId) {
   const raw = skillId
-    .replace(/^xactions\.x_/, '')   // strip 'xactions.x_' prefix
+    .replace(/^medirus\.x_/, '')   // strip 'medirus.x_' prefix
     .replace(/^x_/, '');            // strip plain 'x_' prefix
   return raw.replace(/_([a-z])/g, (/** @type {string} */ _, /** @type {string} */ c) => c.toUpperCase());
 }

@@ -48,7 +48,7 @@ const fetch = wrapFetchWithPayment(globalThis.fetch, {
 });
 
 // Each call pays automatically if the endpoint requires x402 payment
-const data = await fetch('https://xactions.app/api/twitter/search?q=$SOL&limit=50');
+const data = await fetch('https://medirus.online/api/twitter/search?q=$SOL&limit=50');
 const tweets = await data.json();
 ```
 
@@ -124,7 +124,7 @@ async function enrichTweetWithContext(tweetId) {
   if (cached) return JSON.parse(cached);
 
   // Pay-per-use call for enrichment
-  const context = await fetchWithPayment(`https://xactions.app/api/twitter/tweet/${tweetId}/context`);
+  const context = await fetchWithPayment(`https://medirus.online/api/twitter/tweet/${tweetId}/context`);
   await redis.setex(`tweet:context:${tweetId}`, 3600, JSON.stringify(context));
   return context;
 }

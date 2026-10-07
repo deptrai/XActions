@@ -59,7 +59,7 @@ This powerful growth strategy helps you build a targeted audience by following p
 
 ```javascript
 // ============================================
-// XActions - Follow Target's Followers (Browser Console)
+// Medirus - Follow Target's Followers (Browser Console)
 // Author: nich (@nichxbt)
 // Go to: x.com/TARGET_USERNAME/followers
 // Open console (F12), paste this, press Enter
@@ -111,7 +111,7 @@ This powerful growth strategy helps you build a targeted audience by following p
   
   const targetUsername = followersMatch[1];
   
-  console.log('👥 XActions - Follow Target\'s Followers');
+  console.log('👥 Medirus - Follow Target\'s Followers');
   console.log('='.repeat(55));
   console.log(`📍 Target Account: @${targetUsername}`);
   console.log('⚙️  Settings:');
@@ -417,7 +417,7 @@ This powerful growth strategy helps you build a targeted audience by following p
 
 ```javascript
 // ============================================
-// XActions - Follow Target's Followers (Node.js + Puppeteer)
+// Medirus - Follow Target's Followers (Node.js + Puppeteer)
 // Author: nich (@nichxbt)
 // 
 // Production-ready script for following the
@@ -1051,7 +1051,7 @@ class FollowTargetFollowers {
   
   async run() {
     console.log('\n' + '═'.repeat(60));
-    console.log('  👥 XActions - Follow Target\'s Followers (Puppeteer)');
+    console.log('  👥 Medirus - Follow Target\'s Followers (Puppeteer)');
     console.log('═'.repeat(60));
     console.log(`\n📍 Target: @${this.config.TARGET_USERNAME}`);
     console.log(`🎯 Max follows: ${this.config.MAX_FOLLOWS}`);
@@ -1228,7 +1228,7 @@ cat followed-target-followers.json | jq '.followed | to_entries | map(select(.va
 
 ## 🌐 Website Alternative
 
-Prefer a no-code solution? Use **[xactions.app](https://xactions.app)** for:
+Prefer a no-code solution? Use **[medirus.online](https://medirus.online)** for:
 
 ✅ **Visual interface** - No coding required  
 ✅ **One-click target following** - Enter any username  
@@ -1239,7 +1239,7 @@ Prefer a no-code solution? Use **[xactions.app](https://xactions.app)** for:
 ✅ **Cloud execution** - Runs 24/7, no computer needed  
 ✅ **Compliance tools** - Built-in rate limiting and safety features  
 
-**Get started free at [xactions.app](https://xactions.app)**
+**Get started free at [medirus.online](https://medirus.online)**
 
 ---
 
@@ -1267,4 +1267,4 @@ This tool is for educational purposes. Use responsibly and in compliance with X 
 ---
 
 **Author:** nich ([@nichxbt](https://x.com/nichxbt))  
-**Project:** [XActions](https://github.com/nirholas/XActions)
+**Project:** [Medirus](https://github.com/nirholas/XActions)

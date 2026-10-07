@@ -18,7 +18,7 @@ So that I can query "which hook type performs best on LinkedIn for SaaS niche" o
 
 ### AC1: Stats Aggregation
 - **Given** a `PostViralProfile[]` corpus has been generated (from Story 45.1)
-- **When** I run stats aggregation (auto-triggered after mining OR via `xactions viral-stats --platform {platform} --niche {niche}`)
+- **When** I run stats aggregation (auto-triggered after mining OR via `medirus viral-stats --platform {platform} --niche {niche}`)
 - **Then** the system computes `ViralStats`:
   - platform: string (18 supported platforms)
   - category: string (social|recruitment|realestate|ecom)
@@ -62,8 +62,8 @@ So that I can query "which hook type performs best on LinkedIn for SaaS niche" o
 
 ### CLI
 ```bash
-xactions viral-stats --platform twitter --niche web3
-xactions viral-stats --list
+medirus viral-stats --platform twitter --niche web3
+medirus viral-stats --list
 ```
 
 ## Test Plan
@@ -81,4 +81,4 @@ xactions viral-stats --list
 - Load stats → verify structure
 
 ### E2E Tests
-- `xactions viral-mine` then `xactions viral-stats` → verify stats generated
+- `medirus viral-mine` then `medirus viral-stats` → verify stats generated

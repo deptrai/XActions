@@ -34,11 +34,11 @@ const DEFAULT_LIMIT = 1000;
 const PAGE_COUNT = 20;
 
 // ---------------------------------------------------------------------------
-// User data parser (inline, consistent with XActions format)
+// User data parser (inline, consistent with Medirus format)
 // ---------------------------------------------------------------------------
 
 /**
- * Parse a raw GraphQL user result into the XActions user format.
+ * Parse a raw GraphQL user result into the Medirus user format.
  *
  * This is intentionally self-contained so relationships.js has no circular
  * dependency on profile.js. The output shape matches the Puppeteer scrapers.
@@ -300,7 +300,7 @@ function getNestedValue(obj, path) {
  * @param {number} [options.limit=1000] - Maximum followers to scrape
  * @param {string|null} [options.cursor=null] - Resume pagination from cursor
  * @param {ProgressCallback} [options.onProgress] - Progress callback `({ fetched, limit, page })`
- * @returns {Promise<Raw[]>} - Array of user objects in XActions format
+ * @returns {Promise<Raw[]>} - Array of user objects in Medirus format
  * @throws {AuthError} if client is not authenticated
  * @throws {NotFoundError} if username doesn't exist
  *
@@ -335,7 +335,7 @@ export async function scrapeFollowers(client, username, options = {}) {
  * @param {number} [options.limit=1000] - Maximum accounts to scrape
  * @param {string|null} [options.cursor=null] - Resume pagination from cursor
  * @param {ProgressCallback} [options.onProgress] - Progress callback `({ fetched, limit, page })`
- * @returns {Promise<Raw[]>} - Array of user objects in XActions format
+ * @returns {Promise<Raw[]>} - Array of user objects in Medirus format
  * @throws {AuthError} if client is not authenticated
  * @throws {NotFoundError} if username doesn't exist
  */
@@ -360,7 +360,7 @@ export async function scrapeFollowing(client, username, options = {}) {
 /**
  * Detect users you follow who don't follow you back.
  *
- * This is XActions' most popular feature. It scrapes both follower and following
+ * This is Medirus' most popular feature. It scrapes both follower and following
  * lists, then performs a set comparison.
  *
  * @param {import('./client.js').TwitterHttpClient} client - TwitterHttpClient instance (authenticated)

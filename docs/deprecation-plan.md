@@ -5,7 +5,7 @@
 
 ## 1. Goal
 
-Lập kế hoạch gỡ bỏ an toàn các implementation cũ (legacy) trong XActions sau khi hybrid crawlers (`src/scrapers/social/<platform>/`) đạt đủ parity. Tránh tình trạng 2–3 implementation cùng platform tồn tại song song, giảm rủi ro bảo trì và bundle size.
+Lập kế hoạch gỡ bỏ an toàn các implementation cũ (legacy) trong Medirus sau khi hybrid crawlers (`src/scrapers/social/<platform>/`) đạt đủ parity. Tránh tình trạng 2–3 implementation cùng platform tồn tại song song, giảm rủi ro bảo trì và bundle size.
 
 ## 2. Deprecation Criteria
 
@@ -28,8 +28,8 @@ Một module legacy chỉ được xoá khi thỏa mãn **tất cả** các đi�
 | **Threads** | `src/scrapers/threads/index.js` | `src/scrapers/social/threads/index.js` | `getUserFeed(username)`, `search(query)`, `get_post_comments(postId)` | Hoàn thành ở Story 15.1; profile/followers/following → 15.1.1, post detail → 15.1.2, search/comments doc_id hardening → 15.1.3, integration → 15.1.4. |
 | **Bluesky** | `src/scrapers/bluesky/index.js` | `src/scrapers/social/bluesky/index.js` | AT Protocol XRPC hybrid crawler (`BlueskyCrawler`, `BlueskyClient`) | Hoàn thành ở Story 23.2; response validator → 23.5, caller migration & package exports → 23.6. |
 | **Mastodon** | `src/scrapers/mastodon/index.js` | `src/scrapers/social/mastodon/index.js` | Federated REST hybrid crawler (`MastodonCrawler`, `MastodonClient`) | Hoàn thành ở Story 23.4; response validator → 23.5, caller migration & package exports → 23.6. |
-| **Admin CLI** | `src/cli/commands/checkpoints.js` (partial) | `src/cli/commands/admin.js` | Unified `xactions admin ...` | Giữ `xactions checkpoints` như alias tạm thời, xoá ở Epic 20.2. |
-| **Admin CLI** | `src/cli/commands/stream.js` (partial) | `src/cli/commands/admin.js` | Unified `xactions admin stream ...` | Giữ `xactions stream` như alias tạm thời, xoá ở Epic 20.2. |
+| **Admin CLI** | `src/cli/commands/checkpoints.js` (partial) | `src/cli/commands/admin.js` | Unified `medirus admin ...` | Giữ `medirus checkpoints` như alias tạm thời, xoá ở Epic 20.2. |
+| **Admin CLI** | `src/cli/commands/stream.js` (partial) | `src/cli/commands/admin.js` | Unified `medirus admin stream ...` | Giữ `medirus stream` như alias tạm thời, xoá ở Epic 20.2. |
 
 ## 4. Removal Sequence
 
@@ -78,7 +78,7 @@ Xoá theo thứ tự:
 ## 5. Backward Compatibility
 
 - **NFR-16** yêu cầu giữ backward compatibility với `unfollowx` và MCP tools. Do đó, CLI/MCP sẽ không xoá command/tool names, mà redirect sang hybrid implementation.
-- `unfollowx` commands được map vào `CrawlerCommand` hoặc trả error `suggestedAction: 'use_x_actions_list'` cho đến khi mapping hoàn tất.
+- `unfollowx` commands được map vào `CrawlerCommand` hoặc trả error `suggestedAction: 'use_medirus_list'` cho đến khi mapping hoàn tất.
 
 ## 6. Status Tracker
 
@@ -114,7 +114,7 @@ Xoá theo thứ tự:
 | Threads Puppeteer (`src/scrapers/threads/index.js`) | `removed` | Phase 1 (Epic 15.1, 15.1.1, 15.1.2, 15.1.3, 15.1.4) — hybrid caller migration and package exports in Story 15.1.4 | DEV |
 | Bluesky Legacy (`src/scrapers/bluesky/index.js`) | `removed` | Phase 1 (Story 23.6) | DEV |
 | Mastodon Legacy (`src/scrapers/mastodon/index.js`) | `removed` | Phase 1 (Story 23.6) | DEV |
-| `xactions checkpoints` / `xactions stream` (legacy admin CLI) | `deprecated-planned` | Phase 2–3 | TBD |
+| `medirus checkpoints` / `medirus stream` (legacy admin CLI) | `deprecated-planned` | Phase 2–3 | TBD |
 
 ### Legacy Threads Functions → Hybrid Actions
 
@@ -232,16 +232,16 @@ Bảng mapping **subpath export → module đích** sau khi Epic 25 hoàn tất.
 
 | `package.json` export key | Module đích | Trạng thái | Ghi chú |
 |---|---|---|---|
-| `xactions` (`.`) | `src/index.js` | stable | Entry chính |
-| `xactions/scrapers` | `src/scrapers/index.js` | stable | **Unified `scrape()` dispatcher** (Story 25.1) |
-| `xactions/scrapers/social` | `src/scrapers/social/index.js` | stable | Barrel mọi social platform + descriptors |
-| `xactions/scrapers/social/<platform>` | `src/scrapers/social/<platform>/index.js` | stable | `XClient`, `XCrawler`, validator, descriptor |
-| `xactions/scrapers/twitter` | `src/scrapers/twitter/index.js` | **legacy-shim** | Puppeteer function API; `@deprecated` → dùng `social/twitter` |
-| `xactions/scrapers/bluesky` | `src/scrapers/bluesky/index.js` | **legacy-shim** | `@deprecated` → `social/bluesky` |
-| `xactions/scrapers/mastodon` | `src/scrapers/mastodon/index.js` | **legacy-shim** | `@deprecated` → `social/mastodon` |
-| `xactions/scrapers/threads` | `src/scrapers/threads/index.js` | **legacy-shim** | `@deprecated` → `social/threads` |
-| `xactions/scrapers/twitter/http` | `src/scrapers/twitter/http/index.js` | **legacy-shim** | HTTP client; giữ shim — vẫn được `social/twitter/client.js` & `adapters/http.js` import nội bộ |
-| `xactions/scrapers/{ecom,recruitment,realestate}/<p>` | `src/scrapers/{ecom,recruitment,realestate}/<p>/index.js` | stable | Đã trỏ đúng cấu trúc mới |
+| `medirus` (`.`) | `src/index.js` | stable | Entry chính |
+| `medirus/scrapers` | `src/scrapers/index.js` | stable | **Unified `scrape()` dispatcher** (Story 25.1) |
+| `medirus/scrapers/social` | `src/scrapers/social/index.js` | stable | Barrel mọi social platform + descriptors |
+| `medirus/scrapers/social/<platform>` | `src/scrapers/social/<platform>/index.js` | stable | `XClient`, `XCrawler`, validator, descriptor |
+| `medirus/scrapers/twitter` | `src/scrapers/twitter/index.js` | **legacy-shim** | Puppeteer function API; `@deprecated` → dùng `social/twitter` |
+| `medirus/scrapers/bluesky` | `src/scrapers/bluesky/index.js` | **legacy-shim** | `@deprecated` → `social/bluesky` |
+| `medirus/scrapers/mastodon` | `src/scrapers/mastodon/index.js` | **legacy-shim** | `@deprecated` → `social/mastodon` |
+| `medirus/scrapers/threads` | `src/scrapers/threads/index.js` | **legacy-shim** | `@deprecated` → `social/threads` |
+| `medirus/scrapers/twitter/http` | `src/scrapers/twitter/http/index.js` | **legacy-shim** | HTTP client; giữ shim — vẫn được `social/twitter/client.js` & `adapters/http.js` import nội bộ |
+| `medirus/scrapers/{ecom,recruitment,realestate}/<p>` | `src/scrapers/{ecom,recruitment,realestate}/<p>/index.js` | stable | Đã trỏ đúng cấu trúc mới |
 
 > **Lý do giữ shim (không redirect cứng):** các legacy `index.js` export **function API** (`scrapeProfile`, `createBrowser`, `createPage`…) khác hình dạng với `social/` barrel (**class API** `XClient`/`XCrawler`). Redirect cứng `./scrapers/<p>` → `social/` sẽ đổi export shape và break consumer — vi phạm NFR-16 "giữ mapping ít nhất 1 release cycle". Vì vậy 25.2 **xác nhận `./scrapers` & `./scrapers/social` trỏ đúng** và **giữ nguyên 4 flat key + `twitter/http`** làm shim cho tới Epic 26.
 

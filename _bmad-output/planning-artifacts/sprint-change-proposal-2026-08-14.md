@@ -6,7 +6,7 @@ status: approved
 related:
   - epic-3-retrospective.md
   - epic-7-retrospective.md
-  - prd-XActions-2026-08-14-epic7/prd.md
+  - prd-Medirus-2026-08-14-epic7/prd.md
 ---
 
 # Sprint Change Proposal — Facebook Post-Completion Improvements

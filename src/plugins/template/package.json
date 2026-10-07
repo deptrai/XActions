@@ -1,12 +1,12 @@
 {
-  "name": "xactions-plugin-example",
+  "name": "medirus-plugin-example",
   "version": "1.0.0",
-  "description": "Example XActions plugin — trending topics scraper + MCP tool",
+  "description": "Example Medirus plugin — trending topics scraper + MCP tool",
   "type": "module",
   "main": "index.js",
   "keywords": [
-    "xactions",
-    "xactions-plugin",
+    "medirus",
+    "medirus-plugin",
     "twitter",
     "x",
     "automation",
@@ -19,6 +19,6 @@
     "url": "https://github.com/nirholas/xactions"
   },
   "peerDependencies": {
-    "xactions": ">=3.0.0"
+    "medirus": ">=3.0.0"
   }
 }

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Social Graph Analyzer
+ * Medirus Social Graph Analyzer
  * Graph algorithms for social network analysis
  *
  * Computes: mutual connections, bridge accounts, clusters,

@@ -6,7 +6,7 @@ import { CommandPalette } from '@/components/command-palette';
 import { Breadcrumb } from '@/components/breadcrumb';
 
 export const metadata: Metadata = {
-  title: 'XActions — Modern Social Intelligence & Automation Dashboard',
+  title: 'Medirus — Modern Social Intelligence & Automation Dashboard',
   description: 'AI-powered Twitter & social automation, viral pattern mining, and follower intelligence.',
 };
 

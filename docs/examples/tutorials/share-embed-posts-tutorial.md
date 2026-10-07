@@ -1,6 +1,6 @@
 # Share & Embed Posts -- Tutorial
 
-> Step-by-step guide to copying post links and getting embed codes on X using XActions browser scripts.
+> Step-by-step guide to copying post links and getting embed codes on X using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -138,7 +138,7 @@ Collected 50 links so far...
 Collected 78 links so far...
 
 78 links copied to clipboard!
-Saved to sessionStorage (key: "xactions_bulk_links")
+Saved to sessionStorage (key: "medirus_bulk_links")
 
 Collected Links:
   1. https://x.com/user1/status/111
@@ -149,14 +149,14 @@ Collected Links:
 **Step 4:** Links are also saved to sessionStorage. Retrieve them later:
 
 ```js
-JSON.parse(sessionStorage.getItem('xactions_bulk_links'));
+JSON.parse(sessionStorage.getItem('medirus_bulk_links'));
 ```
 
 ## Tips & Tricks
 
 - **Bulk copy from search results** is great for content curation. Search for a topic, then bulk-copy all the post links.
 - **The embed URL fallback** (`publish.twitter.com`) always works even if the in-page embed dialog fails.
-- **Links are saved to sessionStorage** under `xactions_bulk_links`, so you can access them programmatically.
+- **Links are saved to sessionStorage** under `medirus_bulk_links`, so you can access them programmatically.
 - **Clipboard access** requires the page to have focus. If copying fails, the links are still printed in the console.
 - **Use bulk copy on a profile page** to quickly get all recent post URLs from a specific user.
 

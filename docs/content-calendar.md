@@ -51,7 +51,7 @@ Click any day cell to open the event creator:
 Events created in the calendar can be linked to the cron scheduler:
 
 ```javascript
-import { getScheduler } from 'xactions/src/scheduler/scheduler.js';
+import { getScheduler } from 'medirus/src/scheduler/scheduler.js';
 
 const scheduler = getScheduler();
 scheduler.addJob({
@@ -75,7 +75,7 @@ src/scheduler/
 
 ### Data Storage
 
-Calendar events are stored in `localStorage` under the key `xactions-calendar-events`:
+Calendar events are stored in `localStorage` under the key `medirus-calendar-events`:
 
 ```json
 [

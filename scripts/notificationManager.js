@@ -40,7 +40,7 @@
   };
 
   const run = async () => {
-    console.log('🔔 NOTIFICATION MANAGER — XActions by nichxbt\n');
+    console.log('🔔 NOTIFICATION MANAGER — Medirus by nichxbt\n');
 
     if (!window.location.href.includes('/notifications')) {
       console.error('❌ Navigate to x.com/notifications first!');
@@ -108,7 +108,7 @@
       const date = new Date().toISOString().slice(0, 10);
       download(
         { exportedAt: new Date().toISOString(), filter: CONFIG.filterType, total: all.length, byType, notifications: all },
-        `xactions-notifications-${date}.json`
+        `medirus-notifications-${date}.json`
       );
     }
 

@@ -1,5 +1,5 @@
 /**
- * Remotion configuration for XActions videos.
+ * Remotion configuration for Medirus videos.
  * Docs: https://remotion.dev/docs/config
  */
 

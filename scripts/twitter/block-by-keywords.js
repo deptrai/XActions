@@ -65,7 +65,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🚫 XActions — Block By Keywords                             ║
+║  🚫 Medirus — Block By Keywords                             ║
 ║  Block users with specific bio keywords                      ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked             ║' : '║  🔴 LIVE MODE - Accounts WILL be blocked                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -192,7 +192,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
   }
 
   // Save log
-  const storageKey = 'xactions_keyword_blocks';
+  const storageKey = 'medirus_keyword_blocks';
   const log = matches.map(m => ({
     username: m.username,
     keywords: m.keywords,

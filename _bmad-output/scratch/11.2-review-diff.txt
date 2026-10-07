@@ -42,8 +42,8 @@ index 2eed432..ec4eaac 100644
 @@ -1,8 +1,18 @@
  // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
  /**
-- * XActions Proxy — proxy pool and anti-leak utilities.
-+ * XActions Proxy — proxy pool, providers, and anti-leak utilities.
+- * Medirus Proxy — proxy pool and anti-leak utilities.
++ * Medirus Proxy — proxy pool, providers, and anti-leak utilities.
   * @author nich (@nichxbt)
   * @license MIT
   */

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Mention Stream
+ * Medirus Mention Stream
  * Watches mentions of a username and emits new ones.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas

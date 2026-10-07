@@ -1,8 +1,8 @@
 ---
 title: "Follow a Competitor's Followers on X (Twitter) — Free 2026"
 description: "Steal your competitor's audience on X/Twitter. Auto-follow their followers with smart filters. Free browser script, no API key."
-keywords: ["follow competitor followers twitter", "steal twitter audience", "follow target followers X", "twitter follower growth hack", "auto follow competitor fans", "twitter follow target users script", "grow twitter by following competitors", "xactions follow target followers", "twitter audience stealing 2026", "follow niche audience twitter free"]
-canonical: "https://xactions.app/examples/follow-target-followers"
+keywords: ["follow competitor followers twitter", "steal twitter audience", "follow target followers X", "twitter follower growth hack", "auto follow competitor fans", "twitter follow target users script", "grow twitter by following competitors", "medirus follow target followers", "twitter audience stealing 2026", "follow niche audience twitter free"]
+canonical: "https://medirus.online/examples/follow-target-followers"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You're launching a DeFi protocol and you need to build a Twitter audience fast. You know that the followers of @vitalikbuterin, @naval, and @aaboronkov are exactly the type of people who would be interested in your project — they're crypto-native, technically savvy, and actively engaged. But manually visiting each competitor's followers page and clicking "Follow" hundreds of times would take **hours** and you'd have no way to filter out bots, inactive accounts, or mega-influencers who never follow back.
 
-XActions' Follow Target Followers script navigates to any account's follower or following list, applies smart filters (minimum followers, bio keywords, ratio checks), and follows matching users automatically with 3s+ delays. You configure your target accounts, set your filters, and let the script build your audience while you focus on shipping features.
+Medirus' Follow Target Followers script navigates to any account's follower or following list, applies smart filters (minimum followers, bio keywords, ratio checks), and follows matching users automatically with 3s+ delays. You configure your target accounts, set your filters, and let the script build your audience while you focus on shipping features.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -48,11 +48,11 @@ XActions' Follow Target Followers script navigates to any account's follower or 
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**After XActions:**
+**After Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Growing Your Twitter Audience (XActions)                    │
+│  Growing Your Twitter Audience (Medirus)                    │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  9:00 AM  Configure script: targets = naval, vitalik         │
@@ -142,7 +142,7 @@ XActions' Follow Target Followers script navigates to any account's follower or 
 
 ### Step 1: Paste `core.js` first
 
-> Navigate to `x.com/home`. Open DevTools Console (`F12` → Console). Paste the contents of [`src/automation/core.js`](https://github.com/nichxbt/xactions/blob/main/src/automation/core.js) and press Enter. You'll see `✅ XActions Core loaded`.
+> Navigate to `x.com/home`. Open DevTools Console (`F12` → Console). Paste the contents of [`src/automation/core.js`](https://github.com/nichxbt/xactions/blob/main/src/automation/core.js) and press Enter. You'll see `✅ Medirus Core loaded`.
 
 ### Step 2: Configure and paste the script
 
@@ -150,19 +150,19 @@ Edit the `CONFIG` section to add your target accounts and filters, then paste:
 
 ```javascript
 // ============================================
-// XActions - Follow Target's Followers
-// by nichxbt — https://xactions.app
+// Medirus - Follow Target's Followers
+// by nichxbt — https://medirus.online
 // REQUIRES: Paste core.js first!
 // ============================================
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
   const { log, sleep, randomDelay, scrollBy, clickElement,
-          waitForElement, storage, SELECTORS, extractUserFromCell } = window.XActions.Core;
+          waitForElement, storage, SELECTORS, extractUserFromCell } = window.Medirus.Core;
 
   // ============================================
   // CONFIGURATION — edit these!
@@ -321,7 +321,7 @@ Edit the `CONFIG` section to add your target accounts and filters, then paste:
   const run = async () => {
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  👥 XActions - Follow Target's Followers                  ║
+║  👥 Medirus - Follow Target's Followers                  ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Targets: ${String(CONFIG.TARGET_ACCOUNTS.length).padEnd(5)} accounts                            ║
 ║  List type: ${CONFIG.LIST_TYPE.padEnd(12)}                             ║
@@ -372,7 +372,7 @@ The script automatically navigates between target accounts' follower lists. You'
 
 ```
 ╔═══════════════════════════════════════════════════════════╗
-║  👥 XActions - Follow Target's Followers                  ║
+║  👥 Medirus - Follow Target's Followers                  ║
 ║  Targets: 2     accounts                                  ║
 ║  List type: followers                                     ║
 ║  Max per account: 20                                      ║
@@ -464,5 +464,5 @@ No. You can't see the followers of private/protected accounts. The script will s
 
 <p align="center">
   <b>Built with ❤️ by <a href="https://x.com/nichxbt">@nichxbt</a></b><br>
-  <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+  <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </p>

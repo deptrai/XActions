@@ -355,7 +355,7 @@ async function handleFailedPayment(invoice) {
 }
 
 /**
- * Map Stripe subscription status to internal XActions status.
+ * Map Stripe subscription status to internal Medirus status.
  * @param {string} status
  * @returns {string}
  */

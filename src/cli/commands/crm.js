@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions crm` command group.
+ * `medirus crm` command group.
  */
 import chalk from 'chalk';
 import ora from 'ora';

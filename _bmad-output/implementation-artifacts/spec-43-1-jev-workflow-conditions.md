@@ -63,7 +63,7 @@ deferred: []
 - `src/workflows/conditions.js` — MODIFY: thêm `evaluateConditionAsync` (async wrapper) + `jev` branch; `evaluateCondition` sync giữ nguyên.
 - `src/workflows/engine.js` — MODIFY: `evaluateCondition(step.condition, context)` → `await evaluateConditionAsync(step.condition, context)` (1 call site, inside async `runWorkflow`).
 - `src/workflows/conditions.d.ts` — check if exists, add types.
-- `src/types/xactions.js` — check WorkflowCondition typedef, add `jev` field.
+- `src/types/medirus.js` — check WorkflowCondition typedef, add `jev` field.
 - `tests/workflows/conditions.jev.test.js` — NEW: mock fetch + JevBrain, cover matrix.
 - `tests/workflows/conditions.test.js` — check existing, add async wrapper regression test.
 
@@ -72,7 +72,7 @@ deferred: []
 **Execution:**
 - `src/workflows/conditions.js` — thêm `evaluateConditionAsync` + `jev` evaluation branch.
 - `src/workflows/engine.js` — `await evaluateConditionAsync` thay `evaluateCondition`.
-- `src/types/xactions.js` — check/add `jev` to `WorkflowCondition` typedef nếu cần.
+- `src/types/medirus.js` — check/add `jev` to `WorkflowCondition` typedef nếu cần.
 - `tests/workflows/conditions.jev.test.js` — NEW: noul/choice/score paths, degraded, state path resolution.
 - `tests/workflows/conditions.test.js` — verify sync `evaluateCondition` unchanged + `evaluateConditionAsync` delegates correctly.
 
@@ -92,7 +92,7 @@ deferred: []
 **Auto Run Result (2026-09-22)**
 - `src/workflows/conditions.js`: thêm `evaluateJevCondition` (noul/choice/score semantics, degraded→passed:false) + `evaluateConditionAsync` (async wrapper — delegates non-jev → sync `evaluateCondition`); lazy `_jevBrain` singleton; state path resolution qua `resolveValue`.
 - `src/workflows/engine.js`: `await evaluateConditionAsync` thay `evaluateCondition` (1 call site); import cập nhật.
-- `src/types/xactions.d.ts`: `WorkflowCondition.jev` field thêm `{question, state?, type?, threshold?, choices?}`.
+- `src/types/medirus.d.ts`: `WorkflowCondition.jev` field thêm `{question, state?, type?, threshold?, choices?}`.
 - `tests/workflows/conditions.jev.test.js` (new, 11 tests): noul pass/fail, choice ∈/∉ choices, choice default non-ignore, score pass/fail, degraded conservative, state path resolution, sync delegation (no fetch), string expression.
 - Verify: 148/148 workflow tests pass (137 existing + 11 new jev). Sync `evaluateCondition` API unchanged — zero regression.
 

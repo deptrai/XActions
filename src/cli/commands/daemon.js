@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions daemon` lifecycle command.
+ * `medirus daemon` lifecycle command.
  *
  * Start, status, and stop the persistent MCP HTTP/SSE daemon on port 3001.
  *
@@ -110,7 +110,7 @@ export function registerDaemonCommand(program) {
       const state = await loadDaemonState();
 
       if (!state?.pid) {
-        console.log(chalk.yellow('⚠️  No daemon PID stored. Run `xactions daemon start` first.'));
+        console.log(chalk.yellow('⚠️  No daemon PID stored. Run `medirus daemon start` first.'));
         return;
       }
 
@@ -126,7 +126,7 @@ export function registerDaemonCommand(program) {
       // Verify the PID actually belongs to our daemon before killing.
       const command = getProcessCommand(pid);
       if (!command.includes('src/mcp/server.js') && !command.includes('mcp/server.js')) {
-        console.log(chalk.yellow(`⚠️  PID ${pid} is not an XActions daemon. Cleaning up stale state.`));
+        console.log(chalk.yellow(`⚠️  PID ${pid} is not an Medirus daemon. Cleaning up stale state.`));
         await fs.unlink(DAEMON_FILE).catch(() => {});
         return;
       }

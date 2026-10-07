@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Agent API Routes
+ * Medirus Agent API Routes
  * 
  * GET  /api/agent/status          — agent running status & uptime
  * GET  /api/agent/metrics          — daily metrics (followers, engagement, LLM)

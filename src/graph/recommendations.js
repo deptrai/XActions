@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Social Graph Recommendations
+ * Medirus Social Graph Recommendations
  * Actionable insights derived from graph analysis
  *
  * @author nich (@nichxbt) - https://github.com/nirholas

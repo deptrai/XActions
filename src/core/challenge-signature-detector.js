@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions — ChallengeSignatureDetector (Story 27.3)
+ * Medirus — ChallengeSignatureDetector (Story 27.3)
  *
  * Single source of truth for bot-detection / challenge-page signatures.
  * Used by both AbstractApiClient (HTTP response body/headers/status) and

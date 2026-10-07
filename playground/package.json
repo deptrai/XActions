@@ -1,8 +1,8 @@
 {
-  "name": "xactions-playground",
+  "name": "medirus-playground",
   "version": "1.0.0",
   "private": true,
-  "description": "Guest-tier XActions demo service: runs real X queries with no login, no key and no database.",
+  "description": "Guest-tier Medirus demo service: runs real X queries with no login, no key and no database.",
   "type": "module",
   "main": "server.mjs",
   "scripts": {

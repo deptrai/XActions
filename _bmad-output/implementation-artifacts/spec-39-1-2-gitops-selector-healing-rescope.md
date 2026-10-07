@@ -29,7 +29,7 @@
 
 | Component | Purpose | Status |
 |---|---|---|
-| `xactions canary heal` CLI | Orchestrate healing workflow | 🔲 Net-new |
+| `medirus canary heal` CLI | Orchestrate healing workflow | 🔲 Net-new |
 | `CanaryHealer` service | Detect → Investigate → Validate → Patch → PR | 🔲 Net-new |
 | `SelectorSandbox` | Validate candidates in isolated page | 🔲 Net-new |
 | Unified-diff generation | Patch file for `canary-targets.json` | 🔲 Net-new |
@@ -49,7 +49,7 @@ Per `docs/architecture.md` §13.1 Invariant 4 (GitOps-Driven DOM Drift Healing):
 Therefore, the healing flow is strictly:
 
 ```
-Drift Detected (alert) → Manual `xactions canary heal` → 
+Drift Detected (alert) → Manual `medirus canary heal` → 
 Investigate candidates → Sandbox validate → Generate diff → 
 Create Draft PR → Human review → Merge → Deploy
 ```
@@ -73,7 +73,7 @@ Create Draft PR → Human review → Merge → Deploy
 ### 3.1. New Files
 
 ```
-src/cli/commands/canary.js          # CLI: xactions canary {status|probe|heal}
+src/cli/commands/canary.js          # CLI: medirus canary {status|probe|heal}
 src/services/canary-healer.js       # Orchestration service
 src/services/selector-sandbox.js    # Candidate validation sandbox
 src/utils/unified-diff.js           # Diff generation for JSON configs
@@ -94,12 +94,12 @@ docs/architecture.md                # AD-44: GitOps healing flow details
 ### 3.3. CLI Commands
 
 ```bash
-xactions canary status              # Show platformDrift status from governor
-xactions canary probe               # Run manual probe (dry-run, no alert)
-xactions canary heal                # Full healing workflow
-xactions canary heal --preview      # Show diff without creating PR
-xactions canary heal --platform twitter --target twitter-profile
-xactions canary heal --output patch.patch  # Write patch file instead of PR
+medirus canary status              # Show platformDrift status from governor
+medirus canary probe               # Run manual probe (dry-run, no alert)
+medirus canary heal                # Full healing workflow
+medirus canary heal --preview      # Show diff without creating PR
+medirus canary heal --platform twitter --target twitter-profile
+medirus canary heal --output patch.patch  # Write patch file instead of PR
 ```
 
 ### 3.4. CanaryHealer Service
@@ -202,8 +202,8 @@ The `expectedShape` is optional — if absent, sandbox validation falls back to 
 
 ## 5. Acceptance Criteria (Story 39.2)
 
-- [ ] AC-1: `xactions canary status` displays current drift status for all platforms.
-- [ ] AC-2: `xactions canary heal --platform twitter --target twitter-profile` runs full workflow.
+- [ ] AC-1: `medirus canary status` displays current drift status for all platforms.
+- [ ] AC-2: `medirus canary heal --platform twitter --target twitter-profile` runs full workflow.
 - [ ] AC-3: `--preview` flag outputs unified-diff without creating PR.
 - [ ] AC-4: `--output` flag writes `.patch` file instead of PR.
 - [ ] AC-5: Sandbox validation rejects candidates that don't match `expectedShape`.

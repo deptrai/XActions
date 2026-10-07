@@ -1,14 +1,14 @@
 ---
 title: "Send Direct Messages on X (Twitter) — Tutorial"
-description: "Send personalized DMs to one or multiple users on X/Twitter using XActions browser scripts and Node.js library."
-keywords: ["twitter dm automation", "send direct messages twitter", "bulk dm twitter", "xactions dm", "twitter dm script", "mass dm x"]
+description: "Send personalized DMs to one or multiple users on X/Twitter using Medirus browser scripts and Node.js library."
+keywords: ["twitter dm automation", "send direct messages twitter", "bulk dm twitter", "medirus dm", "twitter dm script", "mass dm x"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Send Direct Messages — Tutorial
 
-> Step-by-step guide to sending single and bulk direct messages on X/Twitter using XActions browser scripts and the Node.js library.
+> Step-by-step guide to sending single and bulk direct messages on X/Twitter using Medirus browser scripts and the Node.js library.
 
 **Works on:** Browser Console | Node.js (Puppeteer)
 **Difficulty:** Beginner
@@ -129,9 +129,9 @@ The `dmManager.js` module provides Puppeteer-based functions for more advanced D
 import { sendDM } from './src/dmManager.js';
 
 // Assumes you have a Puppeteer page already authenticated
-const result = await sendDM(page, 'nichxbt', 'Hello from XActions!');
+const result = await sendDM(page, 'nichxbt', 'Hello from Medirus!');
 console.log(result);
-// { success: true, recipient: 'nichxbt', message: 'Hello from XActions!', timestamp: '...' }
+// { success: true, recipient: 'nichxbt', message: 'Hello from Medirus!', timestamp: '...' }
 ```
 
 **List conversations:**
@@ -180,8 +180,8 @@ await updateDMSettings(page, { allowDMsFrom: 'everyone' });
 - **Always dry run first.** Set `dryRun: true` and check the console output before sending real messages.
 - **Use personalization.** The `{username}` placeholder makes messages feel less spammy.
 - **Increase delays for safety.** X rate-limits DMs aggressively. Use at least 30 seconds between messages. For larger batches, 45-60 seconds is safer.
-- **DM history is tracked.** The browser script uses `localStorage` key `xactions_dm_sent` to track who you have already messaged, so re-running the script will skip previously messaged users.
-- **Clear DM history tracking.** Run `localStorage.removeItem('xactions_dm_sent')` in the console to reset the sent history.
+- **DM history is tracked.** The browser script uses `localStorage` key `medirus_dm_sent` to track who you have already messaged, so re-running the script will skip previously messaged users.
+- **Clear DM history tracking.** Run `localStorage.removeItem('medirus_dm_sent')` in the console to reset the sent history.
 - **Keep batches small.** Limit to 10-20 DMs per session to avoid account restrictions.
 
 ---

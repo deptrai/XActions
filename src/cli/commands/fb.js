@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions fb` command group.
+ * `medirus fb` command group.
  * Facebook utilities: capture GraphQL doc_ids from a live session, inspect the
  * captured store, and trigger headless refreshes when Facebook rotates them.
  *
@@ -141,7 +141,7 @@ export function registerFbCommand(program) {
         if (stats.total === 0) {
           console.log(
             chalk.gray('Store trong. Chay ') +
-              chalk.cyan('xactions fb capture-docids') +
+              chalk.cyan('medirus fb capture-docids') +
               chalk.gray(' de capture tu mot session that.')
           );
           return;

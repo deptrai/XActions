@@ -45,7 +45,7 @@ Tracks new followers with display names. Generates welcome message templates. Al
 ### followerGrowthTracker.js
 Records follower count snapshots over time with timestamps. Calculates daily/weekly/monthly growth rates. Projects future milestones. Visual growth chart in console.
 
-**Controls:** `XActions.track()`, `XActions.history()`, `XActions.project(target)`
+**Controls:** `Medirus.track()`, `Medirus.history()`, `Medirus.project(target)`
 
 ### audienceDemographics.js
 Scrapes follower profiles and classifies by niche, account size, bot likelihood, and verified status. Visual distribution charts.
@@ -53,17 +53,17 @@ Scrapes follower profiles and classifies by niche, account size, bot likelihood,
 ### followRatioManager.js
 Navigate to profile page. Monitors follower/following ratio with letter grades. Generates improvement plans.
 
-**Controls:** `XActions.track()`, `XActions.plan()`, `XActions.history()`
+**Controls:** `Medirus.track()`, `Medirus.plan()`, `Medirus.history()`
 
 ## Storage Keys
 
 | Script | localStorage Key |
 |--------|-----------------|
-| detectUnfollowers | `xactions_my_followers` |
-| monitorAccount | `xactions_monitor_{username}_{type}` |
-| newFollowersAlert | `xactions_new_followers` |
-| followerGrowthTracker | `xactions_follower_growth` |
-| followRatioManager | `xactions_ratio_history` |
+| detectUnfollowers | `medirus_my_followers` |
+| monitorAccount | `medirus_monitor_{username}_{type}` |
+| newFollowersAlert | `medirus_new_followers` |
+| followerGrowthTracker | `medirus_follower_growth` |
+| followRatioManager | `medirus_ratio_history` |
 
 ## Strategy Guide
 
@@ -74,16 +74,16 @@ Navigate to profile page. Monitors follower/following ratio with letter grades. 
 4. Check back periodically for alerts
 
 ### Weekly follower health check
-1. `src/followerGrowthTracker.js` -> `XActions.track()` to log this week
-2. `src/followRatioManager.js` -> `XActions.track()` for ratio snapshot
+1. `src/followerGrowthTracker.js` -> `Medirus.track()` to log this week
+2. `src/followRatioManager.js` -> `Medirus.track()` for ratio snapshot
 3. `src/auditFollowers.js` to check for new bot followers
 4. `src/audienceDemographics.js` to verify audience quality
 
 ### Resetting data
 ```javascript
-localStorage.removeItem('xactions_my_followers')
-localStorage.removeItem('xactions_follower_growth')
-localStorage.removeItem('xactions_ratio_history')
+localStorage.removeItem('medirus_my_followers')
+localStorage.removeItem('medirus_follower_growth')
+localStorage.removeItem('medirus_ratio_history')
 ```
 
 ## Notes

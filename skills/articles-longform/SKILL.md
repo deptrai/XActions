@@ -41,13 +41,13 @@ Assists with article composition on X's article editor.
 4. Use controls to compose
 
 ### Controls
-- `XActions.setTitle(text)` -- Set article title
-- `XActions.setSubtitle(text)` -- Set subtitle
-- `XActions.addParagraph(text)` -- Add body paragraph
-- `XActions.addHeading(text, level)` -- Add heading (h2, h3)
-- `XActions.addImage(url, alt)` -- Insert image
-- `XActions.preview()` -- Preview formatted article
-- `XActions.publish()` -- Publish (with confirmation prompt)
+- `Medirus.setTitle(text)` -- Set article title
+- `Medirus.setSubtitle(text)` -- Set subtitle
+- `Medirus.addParagraph(text)` -- Add body paragraph
+- `Medirus.addHeading(text, level)` -- Add heading (h2, h3)
+- `Medirus.addImage(url, alt)` -- Insert image
+- `Medirus.preview()` -- Preview formatted article
+- `Medirus.publish()` -- Publish (with confirmation prompt)
 
 ## DOM Selectors
 
@@ -64,13 +64,13 @@ Assists with article composition on X's article editor.
 
 ### Thread-to-Article pipeline
 1. Run `src/tweetPerformance.js` to find your best-performing threads
-2. Run `src/contentRepurposer.js` -> `XActions.toBlog(i)` to generate article outline
+2. Run `src/contentRepurposer.js` -> `Medirus.toBlog(i)` to generate article outline
 3. Navigate to `x.com/compose/article`
 4. Use `src/articlePublisher.js` to format and publish
 5. Share the article link as a tweet for promotion
 
 ### SEO and reach optimization
-- Use `src/contentRepurposer.js` -> `XActions.toBlog(i)` for keyword suggestions
+- Use `src/contentRepurposer.js` -> `Medirus.toBlog(i)` for keyword suggestions
 - Articles get indexed by Google (unlike regular tweets)
 - Include 1-2 images per 500 words for better engagement
 - Link back to your profile and other articles

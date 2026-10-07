@@ -102,8 +102,8 @@ describe('Story 23.2: Universal scrape() Dispatcher Integration for Bluesky', ()
     expect(typeof platforms.bluesky.BlueskyClient).toBe('function');
     expect(typeof platforms.mastodon.MastodonCrawler).toBe('function');
 
-    expect(warnSpy).toHaveBeenCalledWith('DEPRECATED: xactions/scrapers/bluesky/BlueskyClient is deprecated. Use xactions/scrapers/social/bluesky instead.');
-    expect(warnSpy).toHaveBeenCalledWith('DEPRECATED: xactions/scrapers/mastodon/MastodonCrawler is deprecated. Use xactions/scrapers/social/mastodon instead.');
+    expect(warnSpy).toHaveBeenCalledWith('DEPRECATED: medirus/scrapers/bluesky/BlueskyClient is deprecated. Use medirus/scrapers/social/bluesky instead.');
+    expect(warnSpy).toHaveBeenCalledWith('DEPRECATED: medirus/scrapers/mastodon/MastodonCrawler is deprecated. Use medirus/scrapers/social/mastodon instead.');
 
     expect(platforms.bluesky).toBe(platforms.bsky);
     expect(platforms.mastodon).toBe(platforms.masto);

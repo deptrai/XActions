@@ -24,10 +24,10 @@
  * 4. Paste and run
  *
  * 🎮 CONTROLS:
- *   window.XActions.pause()   — Pause after current action
- *   window.XActions.resume()  — Resume
- *   window.XActions.abort()   — Stop permanently
- *   window.XActions.status()  — Show progress
+ *   window.Medirus.pause()   — Pause after current action
+ *   window.Medirus.resume()  — Resume
+ *   window.Medirus.abort()   — Stop permanently
+ *   window.Medirus.status()  — Show progress
  * ============================================================
  */
 (() => {
@@ -90,7 +90,7 @@
   const whitelistSet = new Set(CONFIG.whitelist.map(u => u.toLowerCase().replace(/^@/, '')));
 
   // Load previously processed from localStorage
-  const STORAGE_KEY = 'xactions_unfollowback';
+  const STORAGE_KEY = 'medirus_unfollowback';
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     if (saved.processed) saved.processed.forEach(u => processedUsers.add(u));
@@ -107,8 +107,8 @@
   };
 
   // ── Controls ──────────────────────────────────────────────
-  window.XActions = {
-    pause()  { paused = true;  console.log('⏸️ Paused. Call XActions.resume() to continue.'); },
+  window.Medirus = {
+    pause()  { paused = true;  console.log('⏸️ Paused. Call Medirus.resume() to continue.'); },
     resume() { paused = false; console.log('▶️ Resumed.'); },
     abort()  { aborted = true; console.log('🛑 Aborting after current action...'); },
     status() {
@@ -297,7 +297,7 @@
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `xactions-unfollowback-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-unfollowback-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Results exported as JSON.');
     }

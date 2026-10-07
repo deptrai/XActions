@@ -15,9 +15,9 @@ import {
 
 export const DEFAULT_STREAM_KEY = 'stream:social:raw_posts';
 export const DEFAULT_CONSUMER_GROUP = 'webhook-dispatcher';
-export const DLQ_REDIS_KEY = 'xactions:webhook:dlq';
-export const METRICS_KEY_PREFIX = 'xactions:webhook:metrics:';
-export const DELIVERY_LOGS_KEY = 'xactions:webhook:delivery_logs';
+export const DLQ_REDIS_KEY = 'medirus:webhook:dlq';
+export const METRICS_KEY_PREFIX = 'medirus:webhook:metrics:';
+export const DELIVERY_LOGS_KEY = 'medirus:webhook:delivery_logs';
 
 /**
  * Generate HMAC-SHA256 signature formatted as `sha256=<hex>`.
@@ -37,7 +37,7 @@ export function createSignature(payload, secret, timestamp) {
     : (payload === undefined || payload === null ? '' : JSON.stringify(payload));
   // Sign `<timestamp>.<body>` (Stripe/GitHub convention) so the timestamp is
   // bound into the MAC — a captured delivery cannot be replayed by rewriting
-  // the X-XActions-Timestamp header to the present. When no timestamp is given
+  // the X-Medirus-Timestamp header to the present. When no timestamp is given
   // the signature covers the body alone (backward-compat for tests/verifiers
   // that haven't migrated yet).
   const signed = Number.isFinite(Number(timestamp))
@@ -80,7 +80,7 @@ export function verifySignature(payload, secretOrSignature, signatureOrSecret, o
 
   // When a timestamp is supplied it is part of the signed payload — verify it
   // for freshness too (rejects captured-delivery replays). `options.timestamp`
-  // carries the value of the X-XActions-Timestamp header; `toleranceSeconds`
+  // carries the value of the X-Medirus-Timestamp header; `toleranceSeconds`
   // bounds how old a delivery may be (default 300s; <=0 disables the window).
   const timestamp = options.timestamp;
   const hasTimestamp = Number.isFinite(Number(timestamp));
@@ -613,19 +613,19 @@ export class OutboundWebhookDispatcher {
     /** @type {Record<string, string>} */
     const headers = {
       'Content-Type': 'application/json',
-      'User-Agent': 'XActions-Webhook-Dispatcher/1.0',
-      'X-XActions-Delivery': `del_${crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 16) : Math.random().toString(36).slice(2, 12)}`,
-      'X-XActions-Event': platform,
-      'X-XActions-Timestamp': String(timestamp),
+      'User-Agent': 'Medirus-Webhook-Dispatcher/1.0',
+      'X-Medirus-Delivery': `del_${crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 16) : Math.random().toString(36).slice(2, 12)}`,
+      'X-Medirus-Event': platform,
+      'X-Medirus-Timestamp': String(timestamp),
     };
-    if (options.isReplay || options.headers?.['X-XActions-Replay']) {
-      headers['X-XActions-Replay'] = 'true';
+    if (options.isReplay || options.headers?.['X-Medirus-Replay']) {
+      headers['X-Medirus-Replay'] = 'true';
     }
     if (options.headers) {
       Object.assign(headers, options.headers);
     }
     if (signature) {
-      headers['X-XActions-Signature'] = signature;
+      headers['X-Medirus-Signature'] = signature;
     }
 
     let lastError = null;
@@ -795,7 +795,7 @@ export class OutboundWebhookDispatcher {
   }
 
   /**
-   * Push failed event to DLQ (Redis list `xactions:webhook:dlq`).
+   * Push failed event to DLQ (Redis list `medirus:webhook:dlq`).
    * @param {Object} data
    * @param {string} data.subscriptionId
    * @param {string} data.url
@@ -878,7 +878,7 @@ export class OutboundWebhookDispatcher {
   }
 
   /**
-   * Update delivery metrics for subscription in Redis hash `xactions:webhook:metrics:{subId}`.
+   * Update delivery metrics for subscription in Redis hash `medirus:webhook:metrics:{subId}`.
    * @param {string} subscriptionId
    * @param {Object} update
    * @param {boolean} update.success
@@ -1202,7 +1202,7 @@ export class OutboundWebhookDispatcher {
   }
 
   /**
-   * Dispatch replay events to a specific subscription with X-XActions-Replay: true header.
+   * Dispatch replay events to a specific subscription with X-Medirus-Replay: true header.
    *
    * @param {Array<Record<string, unknown>>} events - Array of events to replay
    * @param {string | Record<string, unknown>} subscriptionOrId - Subscription ID or object

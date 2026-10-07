@@ -1,4 +1,4 @@
-# IA & Usability Review — XActions UX Spine
+# IA & Usability Review — Medirus UX Spine
 
 ## Overall verdict
 The 6-group task-based IA is a clear, correct fix for the 38-item overload and matches how an internal team actually thinks about the work. Findability improves via groups + ⌘K. Residual risks: a few ambiguous placements (Explorer vs OSINT, agent under System, playground under Content), accordion one-open may annoy when a task spans groups, and deep-link/breadcrumb behavior is unspecified.

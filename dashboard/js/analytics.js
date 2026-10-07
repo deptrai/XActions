@@ -1,5 +1,5 @@
 /**
- * XActions Analytics Dashboard — Client-side JavaScript
+ * Medirus Analytics Dashboard — Client-side JavaScript
  * 
  * Enhanced with: sentiment gauge, comparison mode, donut charts,
  * toast notifications, export, auto-refresh, search/filter, keyboard shortcuts.
@@ -852,7 +852,7 @@ function initSocket() {
       showToast(`${icon} ${alert.type}`, alert.message, alert.severity === 'critical' ? 'error' : 'warning', 6000);
 
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(`XActions Alert: ${alert.type}`, { body: alert.message });
+        new Notification(`Medirus Alert: ${alert.type}`, { body: alert.message });
       }
     });
   } catch (err) {

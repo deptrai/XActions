@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Tweet Stream
+ * Medirus Tweet Stream
  * Watches a user's tweets and emits new ones via callback.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas

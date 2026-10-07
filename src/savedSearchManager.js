@@ -501,9 +501,9 @@
     }
 
     console.log(`\n✅ Scraped ${tweets.length} tweets for ${tag}`);
-    console.log('💡 Access full data: window.XActions.savedSearch._lastResults');
+    console.log('💡 Access full data: window.Medirus.savedSearch._lastResults');
 
-    window.XActions.savedSearch._lastResults = tweets;
+    window.Medirus.savedSearch._lastResults = tweets;
     return tweets;
   };
 
@@ -563,9 +563,9 @@
     }
 
     console.log(`\n✅ Scraped ${tweets.length} tweets from For You timeline`);
-    console.log('💡 Access full data: window.XActions.savedSearch._lastResults');
+    console.log('💡 Access full data: window.Medirus.savedSearch._lastResults');
 
-    window.XActions.savedSearch._lastResults = tweets;
+    window.Medirus.savedSearch._lastResults = tweets;
     return tweets;
   };
 
@@ -624,17 +624,17 @@
     }
 
     console.log(`\n✅ Scraped ${tweets.length} tweets from Following timeline`);
-    console.log('💡 Access full data: window.XActions.savedSearch._lastResults');
+    console.log('💡 Access full data: window.Medirus.savedSearch._lastResults');
 
-    window.XActions.savedSearch._lastResults = tweets;
+    window.Medirus.savedSearch._lastResults = tweets;
     return tweets;
   };
 
   // ──────────────────────────────────────────────────────────────
-  // Expose on window.XActions.savedSearch
+  // Expose on window.Medirus.savedSearch
   // ──────────────────────────────────────────────────────────────
-  window.XActions = window.XActions || {};
-  window.XActions.savedSearch = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.savedSearch = {
     saveSearch,
     deleteSavedSearch,
     viewSavedSearches,
@@ -658,32 +658,32 @@
   console.log('📋 Available commands:');
   console.log('');
   console.log('  1. Save a search:');
-  console.log('     await window.XActions.savedSearch.saveSearch("your query")');
+  console.log('     await window.Medirus.savedSearch.saveSearch("your query")');
   console.log('');
   console.log('  2. Delete a saved search:');
-  console.log('     await window.XActions.savedSearch.deleteSavedSearch("query text")');
+  console.log('     await window.Medirus.savedSearch.deleteSavedSearch("query text")');
   console.log('');
   console.log('  3. View saved searches:');
-  console.log('     await window.XActions.savedSearch.viewSavedSearches()');
+  console.log('     await window.Medirus.savedSearch.viewSavedSearches()');
   console.log('');
   console.log('  4. Trending for location:');
-  console.log('     await window.XActions.savedSearch.trendingForLocation("New York")');
-  console.log('     await window.XActions.savedSearch.trendingForLocation()  // current location');
+  console.log('     await window.Medirus.savedSearch.trendingForLocation("New York")');
+  console.log('     await window.Medirus.savedSearch.trendingForLocation()  // current location');
   console.log('');
   console.log('  5. Scrape hashtag page:');
-  console.log('     await window.XActions.savedSearch.scrapeHashtag("AI", 50)');
+  console.log('     await window.Medirus.savedSearch.scrapeHashtag("AI", 50)');
   console.log('');
   console.log('  6. Scrape For You timeline:');
-  console.log('     await window.XActions.savedSearch.scrapeForYou(100)');
+  console.log('     await window.Medirus.savedSearch.scrapeForYou(100)');
   console.log('');
   console.log('  7. Scrape Following timeline:');
-  console.log('     await window.XActions.savedSearch.scrapeFollowing(100)');
+  console.log('     await window.Medirus.savedSearch.scrapeFollowing(100)');
   console.log('');
   console.log('  🛑 Abort any running operation:');
-  console.log('     window.XActions.savedSearch.abort()');
+  console.log('     window.Medirus.savedSearch.abort()');
   console.log('');
   console.log('  📦 Access last scrape results:');
-  console.log('     window.XActions.savedSearch._lastResults');
+  console.log('     window.Medirus.savedSearch._lastResults');
   console.log('');
   console.log('✅ Ready! Use the commands above in the console.');
 })();

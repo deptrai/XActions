@@ -16,7 +16,7 @@ generatedTestFiles:
   - "tests/scrapers/social/facebook/caller-migration.test.js"
 inputDocuments:
   - "_bmad-output/implementation-artifacts/13-10-facebook-hybrid-integration-caller-migration.md"
-  - "_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md"
+  - "_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md"
   - "src/scrapers/index.js"
   - "api/services/facebookScrape.js"
   - "src/mcp/server.js"
@@ -41,8 +41,8 @@ inputDocuments:
 | **TS-13.10-07** | Scrape Service | `facebookScrape.runSearchAllParallel()` fans out 4 search categories using `FacebookCrawler` | P0 | `tests/scrapers/social/facebook/caller-migration.test.js` | AC-3, TR-2 |
 | **TS-13.10-08** | MCP Scrapers | `executeFacebookScrapeTool` routes `x_facebook_marketplace` to `FacebookCrawler.marketplace()` | P0 | `tests/scrapers/social/facebook/caller-migration.test.js` | AC-5, TR-3 |
 | **TS-13.10-09** | MCP Automation | `executeFacebookEpic4Tool` routes `share`, `join_groups`, `post_to_groups`, `send_friend_requests` to hybrid | P0 | `tests/scrapers/social/facebook/caller-migration.test.js` | AC-6, TR-3 |
-| **TS-13.10-10** | CLI Scrape | `xactions scrape` supports extended actions: `marketplace`, `group_posts`, `group_comments` | P1 | `tests/scrapers/social/facebook/caller-migration.test.js` | AC-7, TR-4 |
-| **TS-13.10-11** | CLI Automate | `xactions automate` supports `share`, `join-group`, `send-friend-request`, `messenger-share` | P1 | `tests/scrapers/social/facebook/caller-migration.test.js` | AC-7, TR-4 |
+| **TS-13.10-10** | CLI Scrape | `medirus scrape` supports extended actions: `marketplace`, `group_posts`, `group_comments` | P1 | `tests/scrapers/social/facebook/caller-migration.test.js` | AC-7, TR-4 |
+| **TS-13.10-11** | CLI Automate | `medirus automate` supports `share`, `join-group`, `send-friend-request`, `messenger-share` | P1 | `tests/scrapers/social/facebook/caller-migration.test.js` | AC-7, TR-4 |
 | **TS-13.10-12** | Action Discovery | `FacebookCrawler.listActions()` returns all registered actions with accurate `requiresAuth` | P1 | `tests/scrapers/social/facebook/caller-migration.test.js` | AC-8 |
 | **TS-13.10-13** | Module Exports | `package.json` exports include `./scrapers/social` and `./scrapers/social/facebook` | P0 | `tests/scrapers/social/facebook/caller-migration.test.js` | AC-9, TR-5 |
 | **TS-13.10-14** | Deprecation | Legacy `src/scrapers/facebook/index.js` has `@deprecated` banner | P2 | `tests/scrapers/social/facebook/caller-migration.test.js` | AC-10, TR-7 |

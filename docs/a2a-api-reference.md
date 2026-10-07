@@ -1,6 +1,6 @@
-# A2A API Reference — XActions
+# A2A API Reference — Medirus
 
-> Complete HTTP API reference for the XActions A2A server.
+> Complete HTTP API reference for the Medirus A2A server.
 
 Base URL: `http://localhost:3100` (default)
 
@@ -15,11 +15,11 @@ Returns the Agent Card describing this agent's capabilities and skills.
 **Response:**
 ```json
 {
-  "name": "XActions Agent",
+  "name": "Medirus Agent",
   "description": "X/Twitter automation agent...",
   "url": "http://localhost:3100",
   "version": "1.0.0",
-  "provider": { "organization": "XActions by @nichxbt", "url": "https://xactions.app" },
+  "provider": { "organization": "Medirus by @nichxbt", "url": "https://medirus.online" },
   "capabilities": { "streaming": true, "pushNotifications": true, "stateTransitionHistory": true },
   "authentication": { "schemes": ["Bearer", "ApiKey"] },
   "defaultInputModes": ["text", "data"],
@@ -38,7 +38,7 @@ Returns the Agent Card describing this agent's capabilities and skills.
 ```json
 {
   "status": "healthy",
-  "agent": "XActions A2A Agent",
+  "agent": "Medirus A2A Agent",
   "version": "1.0.0",
   "uptime": 142.5,
   "tasks": { "total": 5, "submitted": 0, "working": 1, "completed": 3, "failed": 1, "canceled": 0 },
@@ -66,7 +66,7 @@ List all available skills.
 {
   "skills": [
     {
-      "id": "xactions.x_get_profile",
+      "id": "medirus.x_get_profile",
       "name": "x_get_profile",
       "description": "Get a Twitter profile by username",
       "tags": ["scraping"],
@@ -201,9 +201,9 @@ Get an execution plan without running it.
 ```json
 {
   "steps": [
-    { "step": 1, "skill": "xactions.x_get_profile", "label": "Profile: @nichxbt", "deps": [], "agent": "XActions (self)" },
-    { "step": 2, "skill": "xactions.x_get_profile", "label": "Profile: @elonmusk", "deps": [], "agent": "XActions (self)" },
-    { "step": 3, "skill": "xactions.x_compare_accounts", "label": "Compare accounts", "deps": ["$step1","$step2"], "agent": "XActions (self)" }
+    { "step": 1, "skill": "medirus.x_get_profile", "label": "Profile: @nichxbt", "deps": [], "agent": "Medirus (self)" },
+    { "step": 2, "skill": "medirus.x_get_profile", "label": "Profile: @elonmusk", "deps": [], "agent": "Medirus (self)" },
+    { "step": 3, "skill": "medirus.x_compare_accounts", "label": "Compare accounts", "deps": ["$step1","$step2"], "agent": "Medirus (self)" }
   ],
   "parallel": [[1, 2]],
   "sequential": [3],

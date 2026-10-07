@@ -17,7 +17,7 @@
  * NFR4: no cookie/token/account metadata logged.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  */
 
 import { humanScroll, humanMoveMouse } from './human.js';

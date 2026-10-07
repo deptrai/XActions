@@ -36,10 +36,10 @@ Export, manage, and automate X/Twitter Direct Messages.
 ## 📦 Node.js Module
 
 ```javascript
-import { sendDM, getConversations, exportDMs } from 'xactions';
+import { sendDM, getConversations, exportDMs } from 'medirus';
 
 // Send a DM
-await sendDM(page, 'username', 'Hello from XActions!');
+await sendDM(page, 'username', 'Hello from Medirus!');
 
 // List conversations
 const convos = await getConversations(page, { limit: 20 });

@@ -1,14 +1,14 @@
 ---
 title: "Join Spaces on X (Twitter) — Tutorial"
-description: "Find and join live X Spaces by topic, keyword, or specific host using XActions browser scripts."
-keywords: ["join twitter space", "find x spaces", "xactions join space", "twitter spaces search", "live spaces twitter"]
+description: "Find and join live X Spaces by topic, keyword, or specific host using Medirus browser scripts."
+keywords: ["join twitter space", "find x spaces", "medirus join space", "twitter spaces search", "live spaces twitter"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Join Spaces — Tutorial
 
-> Step-by-step guide to finding and joining live X Spaces by keyword, topic, or specific host using XActions browser scripts.
+> Step-by-step guide to finding and joining live X Spaces by keyword, topic, or specific host using Medirus browser scripts.
 
 **Works on:** Browser Console
 **Difficulty:** Beginner
@@ -149,11 +149,11 @@ While the script is running:
 
 ```js
 // Check progress
-window.XActions.status();
+window.Medirus.status();
 // Output: Found: 5 | Matched: 2 | Joined: false | 15s
 
 // Stop scanning
-window.XActions.abort();
+window.Medirus.abort();
 ```
 
 ---

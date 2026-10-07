@@ -1,15 +1,15 @@
 ---
 title: "Affiliate Benefits — Tutorial"
-description: "Explore affiliate program benefits, referral rewards, and creator monetization features on X/Twitter using XActions."
-keywords: ["x affiliate program", "twitter affiliate benefits", "x premium referral", "creator monetization x", "xactions affiliate"]
-canonical: "https://xactions.app/examples/affiliate-benefits"
+description: "Explore affiliate program benefits, referral rewards, and creator monetization features on X/Twitter using Medirus."
+keywords: ["x affiliate program", "twitter affiliate benefits", "x premium referral", "creator monetization x", "medirus affiliate"]
+canonical: "https://medirus.online/examples/affiliate-benefits"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Affiliate Benefits — Tutorial
 
-> Step-by-step guide to understanding and leveraging X's affiliate program, referral benefits, and creator monetization features using XActions.
+> Step-by-step guide to understanding and leveraging X's affiliate program, referral benefits, and creator monetization features using Medirus.
 
 **Works on:** Browser Console | Node.js (Puppeteer)
 **Difficulty:** Intermediate
@@ -54,7 +54,7 @@ import { getAccountAnalytics, getRevenue } from './src/creatorStudio.js';
 
 ```javascript
 (() => {
-  console.log('🤝 AFFILIATE BENEFITS - XActions by nichxbt\n');
+  console.log('🤝 AFFILIATE BENEFITS - Medirus by nichxbt\n');
 
   console.log('══════════════════════════════════════════════════');
   console.log('🤝 X AFFILIATE & REFERRAL PROGRAMS');
@@ -122,7 +122,7 @@ import { getAccountAnalytics, getRevenue } from './src/creatorStudio.js';
 
 ```javascript
 (() => {
-  console.log('🔍 CHECKING ELIGIBILITY - XActions by nichxbt\n');
+  console.log('🔍 CHECKING ELIGIBILITY - Medirus by nichxbt\n');
 
   // Check Premium status
   const isVerified = !!document.querySelector('[data-testid="icon-verified"]');
@@ -243,7 +243,7 @@ await browser.close();
 ### Expected Console Output
 
 ```
-🤝 AFFILIATE BENEFITS - XActions by nichxbt
+🤝 AFFILIATE BENEFITS - Medirus by nichxbt
 
 ══════════════════════════════════════════════════
 🤝 X AFFILIATE & REFERRAL PROGRAMS
@@ -257,7 +257,7 @@ await browser.close();
      you earn a commission on their subscription
    • Commissions are paid out via Stripe
 
-🔍 CHECKING ELIGIBILITY - XActions by nichxbt
+🔍 CHECKING ELIGIBILITY - Medirus by nichxbt
 
 📋 Eligibility Checklist:
 ─────────────────────────────────────────────
@@ -314,5 +314,5 @@ await browser.close();
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

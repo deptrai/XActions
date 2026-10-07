@@ -94,7 +94,7 @@ export function detectPlatform(toolName, args = {}, rawResult) {
   if (toolName.startsWith('x_threads_')) return 'threads';
   if (toolName.startsWith('x_bluesky_')) return 'bluesky';
   if (toolName.startsWith('x_mastodon_')) return 'mastodon';
-  if (toolName === 'x_actions_list') return 'universal';
+  if (toolName === 'medirus_list') return 'universal';
   if (toolName === 'x_list_platforms') return 'universal';
   if (toolName === 'x_scrape') return typeof args?.platform === 'string' ? args.platform : 'universal';
   if (toolName.startsWith('x_')) return 'twitter';

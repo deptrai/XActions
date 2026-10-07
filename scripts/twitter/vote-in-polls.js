@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 🗳️ Vote In Polls - XActions
+ * 🗳️ Vote In Polls - Medirus
  * ============================================
  *
  * @name         vote-in-polls
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to a timeline or search results page that surfaces polls
@@ -167,9 +167,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🗳️  VOTE IN POLLS - XActions                            ║
+║  🗳️  VOTE IN POLLS - Medirus                            ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

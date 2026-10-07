@@ -1,4 +1,4 @@
-# XActions Actions Library Reference (`actions.js`)
+# Medirus Actions Library Reference (`actions.js`)
 
 > The complete X/Twitter actions library — 2,100+ lines, 12 namespaces, 100+ functions covering every available user action.
 
@@ -11,24 +11,24 @@
 - [Overview](#overview)
 - [Loading](#loading)
 - [Extended Selectors (SEL)](#extended-selectors-sel)
-- [XActions.tweet — Post Management](#xactionstweet--post-management)
-- [XActions.engage — Engagement Actions](#xactionsengage--engagement-actions)
-- [XActions.user — User Interactions](#xactionsuser--user-interactions)
-- [XActions.dm — Direct Messages](#xactionsdm--direct-messages)
-- [XActions.search — Search & Discovery](#xactionssearch--search--discovery)
-- [XActions.nav — Navigation](#xactionsnav--navigation)
-- [XActions.lists — List Management](#xactionslists--list-management)
-- [XActions.settings — Account Settings](#xactionssettings--account-settings)
-- [XActions.profile — Profile Editing](#xactionsprofile--profile-editing)
-- [XActions.utils — Power Utilities](#xactionsutils--power-utilities)
-- [XActions.spaces — Twitter Spaces](#xactionsspaces--twitter-spaces)
-- [XActions.communities — Communities](#xactionscommunities--communities)
+- [Medirus.tweet — Post Management](#medirustweet--post-management)
+- [Medirus.engage — Engagement Actions](#medirusengage--engagement-actions)
+- [Medirus.user — User Interactions](#medirususer--user-interactions)
+- [Medirus.dm — Direct Messages](#medirusdm--direct-messages)
+- [Medirus.search — Search & Discovery](#medirussearch--search--discovery)
+- [Medirus.nav — Navigation](#medirusnav--navigation)
+- [Medirus.lists — List Management](#mediruslists--list-management)
+- [Medirus.settings — Account Settings](#medirussettings--account-settings)
+- [Medirus.profile — Profile Editing](#medirusprofile--profile-editing)
+- [Medirus.utils — Power Utilities](#medirusutils--power-utilities)
+- [Medirus.spaces — Twitter Spaces](#medirusspaces--twitter-spaces)
+- [Medirus.communities — Communities](#mediruscommunities--communities)
 
 ---
 
 ## Overview
 
-`actions.js` replaces `window.XActions` with a complete action library. It requires `core.js` to be loaded first — it destructures Core's utilities at the top:
+`actions.js` replaces `window.Medirus` with a complete action library. It requires `core.js` to be loaded first — it destructures Core's utilities at the top:
 
 ```javascript
 const { sleep, randomDelay, log, storage, waitForElement, waitForElements, clickElement, typeText } = Core;
@@ -38,10 +38,10 @@ When loaded successfully, you'll see a banner showing all 12 sections:
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
-║  📦 XActions Library - COMPLETE (All 9 Sections)                     ║
+║  📦 Medirus Library - COMPLETE (All 9 Sections)                     ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  ✅ XActions.tweet       - Post, reply, quote, delete, pin, thread   ║
-║  ✅ XActions.engage      - Like, RT, bookmark, share, highlight      ║
+║  ✅ Medirus.tweet       - Post, reply, quote, delete, pin, thread   ║
+║  ✅ Medirus.engage      - Like, RT, bookmark, share, highlight      ║
 ║  ...                                                                   ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
@@ -56,17 +56,17 @@ When loaded successfully, you'll see a banner showing all 12 sections:
 // 2. Then paste actions.js
 
 // Verify:
-await XActions.tweet.post("Test!"); // Posts a tweet
-XActions.utils.getCurrentUser();     // Returns your username
+await Medirus.tweet.post("Test!"); // Posts a tweet
+Medirus.utils.getCurrentUser();     // Returns your username
 ```
 
-> **Important:** After loading actions.js, `window.XActions.Core` is still accessible via the Core reference inside the closure, but `window.XActions` now points to the actions library (tweet, engage, user, etc.), not Core. Access Core directly via `window.XActions.Core` if needed.
+> **Important:** After loading actions.js, `window.Medirus.Core` is still accessible via the Core reference inside the closure, but `window.Medirus` now points to the actions library (tweet, engage, user, etc.), not Core. Access Core directly via `window.Medirus.Core` if needed.
 
 ---
 
 ## Extended Selectors (SEL)
 
-`actions.js` defines its own extended selector map (`SEL`) that goes beyond what Core provides. These are used internally but you can access them via `XActions.SEL`:
+`actions.js` defines its own extended selector map (`SEL`) that goes beyond what Core provides. These are used internally but you can access them via `Medirus.SEL`:
 
 ### Compose/Input
 | Key | Selector | Element |
@@ -129,15 +129,15 @@ XActions.utils.getCurrentUser();     // Returns your username
 
 ---
 
-## XActions.tweet — Post Management
+## Medirus.tweet — Post Management
 
 ### `tweet.post(text, options)`
 
 Post a new tweet.
 
 ```javascript
-await XActions.tweet.post("Hello world!");
-await XActions.tweet.post("Check this out!", { draft: true }); // Don't auto-send
+await Medirus.tweet.post("Hello world!");
+await Medirus.tweet.post("Check this out!", { draft: true }); // Don't auto-send
 ```
 
 **Options:**
@@ -151,8 +151,8 @@ await XActions.tweet.post("Check this out!", { draft: true }); // Don't auto-sen
 Reply to a specific tweet.
 
 ```javascript
-const tweets = XActions.tweet.getAll();
-await XActions.tweet.reply(tweets[0], "Great point!");
+const tweets = Medirus.tweet.getAll();
+await Medirus.tweet.reply(tweets[0], "Great point!");
 ```
 
 ### `tweet.quote(tweetElement, text)`
@@ -160,8 +160,8 @@ await XActions.tweet.reply(tweets[0], "Great point!");
 Quote-tweet with your commentary.
 
 ```javascript
-const tweets = XActions.tweet.getAll();
-await XActions.tweet.quote(tweets[0], "This is exactly what I've been saying");
+const tweets = Medirus.tweet.getAll();
+await Medirus.tweet.quote(tweets[0], "This is exactly what I've been saying");
 ```
 
 ### `tweet.delete(tweetElement)`
@@ -169,8 +169,8 @@ await XActions.tweet.quote(tweets[0], "This is exactly what I've been saying");
 Delete one of your tweets. Opens ⋯ menu → Delete → Confirm.
 
 ```javascript
-const tweets = XActions.tweet.getAll();
-await XActions.tweet.delete(tweets[0]);
+const tweets = Medirus.tweet.getAll();
+await Medirus.tweet.delete(tweets[0]);
 ```
 
 ### `tweet.pin(tweetElement)`
@@ -178,7 +178,7 @@ await XActions.tweet.delete(tweets[0]);
 Pin a tweet to your profile. Opens ⋯ menu → Pin → Confirm.
 
 ```javascript
-await XActions.tweet.pin(tweetElement);
+await Medirus.tweet.pin(tweetElement);
 ```
 
 ### `tweet.getId(tweetElement)`
@@ -186,7 +186,7 @@ await XActions.tweet.pin(tweetElement);
 Extract the tweet ID from an element.
 
 ```javascript
-const id = XActions.tweet.getId(tweetElement);
+const id = Medirus.tweet.getId(tweetElement);
 // Returns: '1234567890123456789'
 ```
 
@@ -195,7 +195,7 @@ const id = XActions.tweet.getId(tweetElement);
 Get all visible tweet elements on the current page.
 
 ```javascript
-const tweets = XActions.tweet.getAll();
+const tweets = Medirus.tweet.getAll();
 console.log(`${tweets.length} tweets visible`);
 ```
 
@@ -204,7 +204,7 @@ console.log(`${tweets.length} tweets visible`);
 Post a thread of multiple tweets.
 
 ```javascript
-await XActions.tweet.thread([
+await Medirus.tweet.thread([
   "Thread 🧵 Here's what I learned about AI agents...",
   "1/ First, they need clear goals and constraints...",
   "2/ Second, context management is everything...",
@@ -214,16 +214,16 @@ await XActions.tweet.thread([
 
 ---
 
-## XActions.engage — Engagement Actions
+## Medirus.engage — Engagement Actions
 
 ### `engage.like(tweetElement)` / `engage.unlike(tweetElement)`
 
 Like or unlike a tweet.
 
 ```javascript
-const tweets = XActions.tweet.getAll();
-await XActions.engage.like(tweets[0]);
-await XActions.engage.unlike(tweets[1]);
+const tweets = Medirus.tweet.getAll();
+await Medirus.engage.like(tweets[0]);
+await Medirus.engage.unlike(tweets[1]);
 ```
 
 ### `engage.retweet(tweetElement)` / `engage.unretweet(tweetElement)`
@@ -231,7 +231,7 @@ await XActions.engage.unlike(tweets[1]);
 Retweet or undo a retweet (clicks confirm dialog).
 
 ```javascript
-await XActions.engage.retweet(tweetElement);
+await Medirus.engage.retweet(tweetElement);
 ```
 
 ### `engage.bookmark(tweetElement)` / `engage.unbookmark(tweetElement)`
@@ -239,7 +239,7 @@ await XActions.engage.retweet(tweetElement);
 Bookmark via the share menu.
 
 ```javascript
-await XActions.engage.bookmark(tweetElement);
+await Medirus.engage.bookmark(tweetElement);
 ```
 
 ### `engage.addToList(tweetElement, listName)`
@@ -247,7 +247,7 @@ await XActions.engage.bookmark(tweetElement);
 Add the tweet's author to a list via the ⋯ menu.
 
 ```javascript
-await XActions.engage.addToList(tweetElement, 'AI Accounts');
+await Medirus.engage.addToList(tweetElement, 'AI Accounts');
 ```
 
 ### `engage.report(tweetElement, reason)`
@@ -255,7 +255,7 @@ await XActions.engage.addToList(tweetElement, 'AI Accounts');
 Open the report dialog for a tweet.
 
 ```javascript
-await XActions.engage.report(tweetElement);
+await Medirus.engage.report(tweetElement);
 // Opens dialog — complete manually
 ```
 
@@ -268,7 +268,7 @@ Copy the tweet's link to clipboard via share menu.
 Share a tweet to someone via DM.
 
 ```javascript
-await XActions.engage.shareViaDM(tweetElement, 'friendUsername');
+await Medirus.engage.shareViaDM(tweetElement, 'friendUsername');
 ```
 
 ### `engage.embed(tweetElement)`
@@ -289,16 +289,16 @@ Highlight a tweet (X Premium feature).
 
 ---
 
-## XActions.user — User Interactions
+## Medirus.user — User Interactions
 
 ### `user.follow(target)` / `user.unfollow(target)`
 
 Follow or unfollow. Accepts a username string or DOM element.
 
 ```javascript
-await XActions.user.follow('username');     // Navigate + click follow
-await XActions.user.follow(userCellElement); // Click follow in existing cell
-await XActions.user.unfollow('username');   // Navigate + click unfollow + confirm
+await Medirus.user.follow('username');     // Navigate + click follow
+await Medirus.user.follow(userCellElement); // Click follow in existing cell
+await Medirus.user.unfollow('username');   // Navigate + click unfollow + confirm
 ```
 
 ### `user.block(username)` / `user.unblock(username)`
@@ -306,8 +306,8 @@ await XActions.user.unfollow('username');   // Navigate + click unfollow + confi
 Block or unblock a user. Navigates to profile → ... menu → Block → Confirm.
 
 ```javascript
-await XActions.user.block('spambot123');
-await XActions.user.unblock('spambot123');
+await Medirus.user.block('spambot123');
+await Medirus.user.unblock('spambot123');
 ```
 
 ### `user.mute(username)` / `user.unmute(username)`
@@ -315,7 +315,7 @@ await XActions.user.unblock('spambot123');
 Mute or unmute a user.
 
 ```javascript
-await XActions.user.mute('annoying_account');
+await Medirus.user.mute('annoying_account');
 ```
 
 ### `user.report(username)`
@@ -327,7 +327,7 @@ Open the report dialog for a user.
 Add a user to a specific list.
 
 ```javascript
-await XActions.user.addToList('alice', 'AI People');
+await Medirus.user.addToList('alice', 'AI People');
 ```
 
 ### `user.notifyOn(username)` / `user.notifyOff(username)`
@@ -335,7 +335,7 @@ await XActions.user.addToList('alice', 'AI People');
 Toggle post notifications for a user.
 
 ```javascript
-await XActions.user.notifyOn('vitalikbuterin'); // Get notified of their posts
+await Medirus.user.notifyOn('vitalikbuterin'); // Get notified of their posts
 ```
 
 ### `user.restrict(username)`
@@ -347,7 +347,7 @@ Restrict a user's interactions with your content.
 Check if a user follows you. Navigates to their profile and checks for the badge.
 
 ```javascript
-const follows = await XActions.user.followsYou('someuser');
+const follows = await Medirus.user.followsYou('someuser');
 // Returns: true/false
 ```
 
@@ -356,7 +356,7 @@ const follows = await XActions.user.followsYou('someuser');
 Get structured user information.
 
 ```javascript
-const info = await XActions.user.getInfo('elonmusk');
+const info = await Medirus.user.getInfo('elonmusk');
 // Returns: {
 //   username: 'elonmusk',
 //   displayName: 'Elon Musk',
@@ -374,27 +374,27 @@ const info = await XActions.user.getInfo('elonmusk');
 All navigate to specific user pages:
 
 ```javascript
-await XActions.user.viewFollowers('username');
-await XActions.user.viewFollowing('username');
-await XActions.user.viewLikes('username');
-await XActions.user.viewMedia('username');
-await XActions.user.viewReplies('username');
-await XActions.user.viewHighlights('username');
-await XActions.user.viewArticles('username');
-await XActions.user.viewTopics('username');
-await XActions.user.viewLists('username');
+await Medirus.user.viewFollowers('username');
+await Medirus.user.viewFollowing('username');
+await Medirus.user.viewLikes('username');
+await Medirus.user.viewMedia('username');
+await Medirus.user.viewReplies('username');
+await Medirus.user.viewHighlights('username');
+await Medirus.user.viewArticles('username');
+await Medirus.user.viewTopics('username');
+await Medirus.user.viewLists('username');
 ```
 
 ---
 
-## XActions.dm — Direct Messages
+## Medirus.dm — Direct Messages
 
 ### `dm.send(username, message)`
 
 Send a DM to a user. Navigates to Messages → New → Search → Type → Send.
 
 ```javascript
-await XActions.dm.send('friendUsername', 'Hey, check out this project!');
+await Medirus.dm.send('friendUsername', 'Hey, check out this project!');
 ```
 
 ### `dm.open(username)`
@@ -402,7 +402,7 @@ await XActions.dm.send('friendUsername', 'Hey, check out this project!');
 Open an existing DM conversation, or start a new one.
 
 ```javascript
-await XActions.dm.open('friendUsername');
+await Medirus.dm.open('friendUsername');
 ```
 
 ### `dm.getConversations()`
@@ -410,7 +410,7 @@ await XActions.dm.open('friendUsername');
 Get all visible DM conversations.
 
 ```javascript
-const convos = await XActions.dm.getConversations();
+const convos = await Medirus.dm.getConversations();
 // Returns: [{ element, text }, ...]
 ```
 
@@ -427,7 +427,7 @@ Leave a group DM (must be viewing the group).
 Create a group DM with multiple users.
 
 ```javascript
-await XActions.dm.createGroup(['alice', 'bob', 'charlie']);
+await Medirus.dm.createGroup(['alice', 'bob', 'charlie']);
 ```
 
 ### `dm.sendImage()` / `dm.sendGif(searchTerm)`
@@ -435,7 +435,7 @@ await XActions.dm.createGroup(['alice', 'bob', 'charlie']);
 Send media in DMs.
 
 ```javascript
-await XActions.dm.sendGif('celebration');
+await Medirus.dm.sendGif('celebration');
 // Opens GIF picker, searches 'celebration', clicks first result
 ```
 
@@ -444,42 +444,42 @@ await XActions.dm.sendGif('celebration');
 React to a message with an emoji.
 
 ```javascript
-await XActions.dm.react(messageElement, '❤️');
+await Medirus.dm.react(messageElement, '❤️');
 ```
 
 ---
 
-## XActions.search — Search & Discovery
+## Medirus.search — Search & Discovery
 
 ### `search.query(query, filter)`
 
 Run a search with optional filter.
 
 ```javascript
-await XActions.search.query('AI agents', 'top');
-await XActions.search.query('AI agents', 'live');  // Latest
-await XActions.search.query('AI agents', 'user');  // People
-await XActions.search.query('AI agents', 'image'); // Photos
-await XActions.search.query('AI agents', 'video'); // Videos
+await Medirus.search.query('AI agents', 'top');
+await Medirus.search.query('AI agents', 'live');  // Latest
+await Medirus.search.query('AI agents', 'user');  // People
+await Medirus.search.query('AI agents', 'image'); // Photos
+await Medirus.search.query('AI agents', 'video'); // Videos
 ```
 
 ### Shortcut Methods
 
 ```javascript
-await XActions.search.top('AI agents');
-await XActions.search.latest('AI agents');
-await XActions.search.people('AI agents');
-await XActions.search.photos('AI agents');
-await XActions.search.videos('AI agents');
+await Medirus.search.top('AI agents');
+await Medirus.search.latest('AI agents');
+await Medirus.search.people('AI agents');
+await Medirus.search.photos('AI agents');
+await Medirus.search.videos('AI agents');
 ```
 
 ### Operator Search
 
 ```javascript
-await XActions.search.from('elonmusk');     // Tweets FROM user
-await XActions.search.to('elonmusk');       // Tweets TO user
-await XActions.search.mentions('elonmusk'); // Tweets mentioning user
-await XActions.search.hashtag('web3');      // Search hashtag
+await Medirus.search.from('elonmusk');     // Tweets FROM user
+await Medirus.search.to('elonmusk');       // Tweets TO user
+await Medirus.search.mentions('elonmusk'); // Tweets mentioning user
+await Medirus.search.hashtag('web3');      // Search hashtag
 ```
 
 ### `search.advanced(options)`
@@ -487,7 +487,7 @@ await XActions.search.hashtag('web3');      // Search hashtag
 Build complex search queries using X's undocumented operators.
 
 ```javascript
-await XActions.search.advanced({
+await Medirus.search.advanced({
   words: 'AI agents',              // Contains these words
   exactPhrase: 'large language',   // Contains exact phrase
   anyWords: 'GPT Claude Gemini',   // Contains any of these
@@ -526,76 +526,76 @@ from:username min_faves:100 since:2025-01-01 filter:verified filter:media lang:e
 Get current tweet elements from search results.
 
 ```javascript
-const results = XActions.search.getResults();
+const results = Medirus.search.getResults();
 // Returns: Array of tweet DOM elements
 ```
 
 ---
 
-## XActions.nav — Navigation
+## Medirus.nav — Navigation
 
 ### Core Navigation
 
 ```javascript
-await XActions.nav.home();           // Home timeline
-await XActions.nav.explore();        // Explore page
-await XActions.nav.notifications();  // Notifications
-await XActions.nav.messages();       // DMs
-await XActions.nav.bookmarks();      // Bookmarks
-await XActions.nav.lists();          // Your lists
-await XActions.nav.communities();    // Communities
-await XActions.nav.premium();        // Premium signup
-await XActions.nav.profile('user');  // User profile
-await XActions.nav.settings();       // Settings
+await Medirus.nav.home();           // Home timeline
+await Medirus.nav.explore();        // Explore page
+await Medirus.nav.notifications();  // Notifications
+await Medirus.nav.messages();       // DMs
+await Medirus.nav.bookmarks();      // Bookmarks
+await Medirus.nav.lists();          // Your lists
+await Medirus.nav.communities();    // Communities
+await Medirus.nav.premium();        // Premium signup
+await Medirus.nav.profile('user');  // User profile
+await Medirus.nav.settings();       // Settings
 ```
 
 ### Timeline Tabs
 
 ```javascript
-await XActions.nav.forYou();         // "For You" tab
-await XActions.nav.following();      // "Following" tab
+await Medirus.nav.forYou();         // "For You" tab
+await Medirus.nav.following();      // "Following" tab
 ```
 
 ### Notification Tabs
 
 ```javascript
-await XActions.nav.notifyAll();      // All notifications
-await XActions.nav.notifyVerified(); // Verified only
-await XActions.nav.notifyMentions(); // Mentions only
+await Medirus.nav.notifyAll();      // All notifications
+await Medirus.nav.notifyVerified(); // Verified only
+await Medirus.nav.notifyMentions(); // Mentions only
 ```
 
 ### Explore Page Tabs
 
 ```javascript
-await XActions.nav.trending();        // Trending
-await XActions.nav.forYouExplore();   // For You
-await XActions.nav.news();            // News
-await XActions.nav.sports();          // Sports
-await XActions.nav.entertainment();   // Entertainment
-await XActions.nav.spaces();          // Spaces
+await Medirus.nav.trending();        // Trending
+await Medirus.nav.forYouExplore();   // For You
+await Medirus.nav.news();            // News
+await Medirus.nav.sports();          // Sports
+await Medirus.nav.entertainment();   // Entertainment
+await Medirus.nav.spaces();          // Spaces
 ```
 
 ### Scroll & History
 
 ```javascript
-XActions.nav.scrollToTop();    // Smooth scroll up
-XActions.nav.scrollToBottom(); // Smooth scroll down
-XActions.nav.scrollBy(500);    // Scroll by px
-XActions.nav.back();           // Browser back
-XActions.nav.forward();        // Browser forward
-XActions.nav.refresh();        // Refresh page
+Medirus.nav.scrollToTop();    // Smooth scroll up
+Medirus.nav.scrollToBottom(); // Smooth scroll down
+Medirus.nav.scrollBy(500);    // Scroll by px
+Medirus.nav.back();           // Browser back
+Medirus.nav.forward();        // Browser forward
+Medirus.nav.refresh();        // Refresh page
 ```
 
 ---
 
-## XActions.lists — List Management
+## Medirus.lists — List Management
 
 ### `lists.create(name, description, isPrivate)`
 
 Create a new list.
 
 ```javascript
-await XActions.lists.create('AI Researchers', 'Top AI/ML accounts', true);
+await Medirus.lists.create('AI Researchers', 'Top AI/ML accounts', true);
 ```
 
 ### `lists.delete(listId)` / `lists.edit(listId, name, description)`
@@ -603,8 +603,8 @@ await XActions.lists.create('AI Researchers', 'Top AI/ML accounts', true);
 Delete or edit a list.
 
 ```javascript
-await XActions.lists.edit('123456', 'New List Name', 'Updated description');
-await XActions.lists.delete('123456');
+await Medirus.lists.edit('123456', 'New List Name', 'Updated description');
+await Medirus.lists.delete('123456');
 ```
 
 ### `lists.follow(listId)` / `lists.unfollow(listId)`
@@ -620,7 +620,7 @@ Toggle list pin on your sidebar.
 Get all your lists.
 
 ```javascript
-const myLists = await XActions.lists.getAll();
+const myLists = await Medirus.lists.getAll();
 // Returns: [{ element, text }, ...]
 ```
 
@@ -630,22 +630,22 @@ Navigate to list member/follower pages.
 
 ---
 
-## XActions.settings — Account Settings
+## Medirus.settings — Account Settings
 
 Navigation functions to settings pages:
 
 ```javascript
-await XActions.settings.account();         // Account settings
-await XActions.settings.security();        // Security
-await XActions.settings.privacy();         // Privacy & safety
-await XActions.settings.notifications();   // Notification settings
-await XActions.settings.accessibility();   // Accessibility
-await XActions.settings.monetization();    // Monetization
-await XActions.settings.creatorSubs();     // Creator subscriptions
-await XActions.settings.premium();         // Premium settings
-await XActions.settings.mutedAccounts();   // Muted accounts list
-await XActions.settings.mutedWords();      // Muted words list
-await XActions.settings.blockedAccounts(); // Blocked accounts list
+await Medirus.settings.account();         // Account settings
+await Medirus.settings.security();        // Security
+await Medirus.settings.privacy();         // Privacy & safety
+await Medirus.settings.notifications();   // Notification settings
+await Medirus.settings.accessibility();   // Accessibility
+await Medirus.settings.monetization();    // Monetization
+await Medirus.settings.creatorSubs();     // Creator subscriptions
+await Medirus.settings.premium();         // Premium settings
+await Medirus.settings.mutedAccounts();   // Muted accounts list
+await Medirus.settings.mutedWords();      // Muted words list
+await Medirus.settings.blockedAccounts(); // Blocked accounts list
 ```
 
 ### `settings.addMutedWord(word, options)`
@@ -653,7 +653,7 @@ await XActions.settings.blockedAccounts(); // Blocked accounts list
 Mute a word/phrase.
 
 ```javascript
-await XActions.settings.addMutedWord('spoiler');
+await Medirus.settings.addMutedWord('spoiler');
 ```
 
 ### `settings.downloadData()`
@@ -666,7 +666,7 @@ Navigate to the account deactivation page (proceed with caution).
 
 ---
 
-## XActions.profile — Profile Editing
+## Medirus.profile — Profile Editing
 
 ### `profile.edit()`
 
@@ -677,10 +677,10 @@ Open the profile edit modal.
 Update profile fields.
 
 ```javascript
-await XActions.profile.updateName('Alice Builder');
-await XActions.profile.updateBio('Building the future of web3 🚀');
-await XActions.profile.updateLocation('San Francisco, CA');
-await XActions.profile.updateWebsite('https://alice.dev');
+await Medirus.profile.updateName('Alice Builder');
+await Medirus.profile.updateBio('Building the future of web3 🚀');
+await Medirus.profile.updateLocation('San Francisco, CA');
+await Medirus.profile.updateWebsite('https://alice.dev');
 ```
 
 ### `profile.updateAvatar()` / `profile.updateHeader()`
@@ -693,14 +693,14 @@ Start the professional account conversion flow.
 
 ---
 
-## XActions.utils — Power Utilities
+## Medirus.utils — Power Utilities
 
 ### `utils.getCurrentUser()`
 
 Get your current username.
 
 ```javascript
-const me = XActions.utils.getCurrentUser();
+const me = Medirus.utils.getCurrentUser();
 // Returns: 'myusername'
 ```
 
@@ -709,7 +709,7 @@ const me = XActions.utils.getCurrentUser();
 Check if you're logged in.
 
 ```javascript
-XActions.utils.isLoggedIn(); // true/false
+Medirus.utils.isLoggedIn(); // true/false
 ```
 
 ### `utils.getTokens()`
@@ -717,7 +717,7 @@ XActions.utils.isLoggedIn(); // true/false
 Get authentication tokens from cookies (for API use).
 
 ```javascript
-const tokens = XActions.utils.getTokens();
+const tokens = Medirus.utils.getTokens();
 // Returns: { ct0: 'csrf_token_here', authToken: 'auth_token_here' }
 ```
 
@@ -728,10 +728,10 @@ const tokens = XActions.utils.getTokens();
 Extract IDs from URLs.
 
 ```javascript
-XActions.utils.getTweetIdFromUrl('https://x.com/user/status/1234567');
+Medirus.utils.getTweetIdFromUrl('https://x.com/user/status/1234567');
 // Returns: '1234567'
 
-XActions.utils.getUsernameFromUrl('https://x.com/elonmusk');
+Medirus.utils.getUsernameFromUrl('https://x.com/elonmusk');
 // Returns: 'elonmusk'
 ```
 
@@ -744,7 +744,7 @@ Wait for the main content column to appear.
 Scroll to load more content.
 
 ```javascript
-await XActions.utils.loadMore(5); // Scroll 5 times with 2s pauses
+await Medirus.utils.loadMore(5); // Scroll 5 times with 2s pauses
 ```
 
 ### `utils.exportBookmarks(maxItems)`
@@ -752,7 +752,7 @@ await XActions.utils.loadMore(5); // Scroll 5 times with 2s pauses
 Scroll through bookmarks and collect them.
 
 ```javascript
-const bookmarks = await XActions.utils.exportBookmarks(200);
+const bookmarks = await Medirus.utils.exportBookmarks(200);
 // Returns: [{ link: 'https://x.com/.../status/...', text: 'Tweet text...' }, ...]
 ```
 
@@ -761,7 +761,7 @@ const bookmarks = await XActions.utils.exportBookmarks(200);
 Export a user's liked tweets.
 
 ```javascript
-const likes = await XActions.utils.exportLikes('myusername', 100);
+const likes = await Medirus.utils.exportLikes('myusername', 100);
 // Returns: ['https://x.com/.../status/...', ...]
 ```
 
@@ -782,7 +782,7 @@ Clear all X-related data from localStorage (broader than `Core.storage.clear()`)
 Visual DOM inspector — outlines all `data-testid` elements in red with tooltip labels.
 
 ```javascript
-XActions.utils.devMode();
+Medirus.utils.devMode();
 // Every data-testid element gets a red outline and hover tooltip
 ```
 
@@ -791,31 +791,31 @@ XActions.utils.devMode();
 Get all `data-testid` values currently on the page.
 
 ```javascript
-const selectors = XActions.utils.getAllSelectors();
+const selectors = Medirus.utils.getAllSelectors();
 // Returns: ['SearchBox_Search_Input', 'SideNav_AccountSwitcher_Button', 'tweet', ...]
 ```
 
 ---
 
-## XActions.spaces — Twitter Spaces
+## Medirus.spaces — Twitter Spaces
 
 ```javascript
-await XActions.spaces.browse();               // Browse live spaces
-await XActions.spaces.join('spaceId');         // Join a space
-await XActions.spaces.leave();                 // Leave current space
-await XActions.spaces.requestToSpeak();        // Request to speak
-await XActions.spaces.setReminder('spaceId');  // Set reminder for scheduled space
-await XActions.spaces.share();                 // Copy space link
+await Medirus.spaces.browse();               // Browse live spaces
+await Medirus.spaces.join('spaceId');         // Join a space
+await Medirus.spaces.leave();                 // Leave current space
+await Medirus.spaces.requestToSpeak();        // Request to speak
+await Medirus.spaces.setReminder('spaceId');  // Set reminder for scheduled space
+await Medirus.spaces.share();                 // Copy space link
 ```
 
 ---
 
-## XActions.communities — Communities
+## Medirus.communities — Communities
 
 ```javascript
-await XActions.communities.browse();                    // Browse communities
-await XActions.communities.view('communityId');          // View a community
-await XActions.communities.join('communityId');           // Join
-await XActions.communities.leave('communityId');          // Leave
-await XActions.communities.post('communityId', 'Hello!'); // Post in community
+await Medirus.communities.browse();                    // Browse communities
+await Medirus.communities.view('communityId');          // View a community
+await Medirus.communities.join('communityId');           // Join
+await Medirus.communities.leave('communityId');          // Leave
+await Medirus.communities.post('communityId', 'Hello!'); // Post in community
 ```

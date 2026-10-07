@@ -15,7 +15,7 @@ baseline_commit: 'e24ebd4df5d3f15c2510e8d8d7fd335e80f51797'
 
 **Problem:** Crawlers extract `PostItem[]`/`CommentItem[]` but there is no built-in text analytics to surface trending keywords and hashtags. Callers must implement their own tokenization or wait for downstream NLP pipelines.
 
-**Approach:** Build `src/analytics/word-frequency.js` — a pure, dependency-free N-gram frequency analyzer with Vietnamese compound-word support via bigram-of-syllables fallback, Unicode-aware hashtag extraction, and surfaces via MCP tool `x_analytics_buzzwords`, CLI `xactions analytics buzzwords`, and opt-in `includeBuzzwords` on `AbstractCrawler` that injects `summary.buzzwords` into crawl results.
+**Approach:** Build `src/analytics/word-frequency.js` — a pure, dependency-free N-gram frequency analyzer with Vietnamese compound-word support via bigram-of-syllables fallback, Unicode-aware hashtag extraction, and surfaces via MCP tool `x_analytics_buzzwords`, CLI `medirus analytics buzzwords`, and opt-in `includeBuzzwords` on `AbstractCrawler` that injects `summary.buzzwords` into crawl results.
 
 ## Boundaries & Constraints
 
@@ -85,7 +85,7 @@ baseline_commit: 'e24ebd4df5d3f15c2510e8d8d7fd335e80f51797'
 - Given `includeBuzzwords:true`, when crawl returns `{posts:[...]}`, then `result.summary.buzzwords` has frequency analysis of first 500 items.
 - Given `includeBuzzwords:false` (default), then `result.summary` has no `buzzwords` key.
 - Given MCP `x_analytics_buzzwords` with `{items:[...]}`, returns `KeywordFrequencyResult`.
-- Given `xactions analytics buzzwords --file posts.json`, prints top keywords/hashtags.
+- Given `medirus analytics buzzwords --file posts.json`, prints top keywords/hashtags.
 - Given hashtags `#CàPhê`,`#Tech_VN`,`#123`,`https://ex.com#frag`, only `càphê` and `tech_vn` appear (lowercased, NFC).
 - Given `npm test -- tests/analytics/word-frequency.test.js`, all pass, no mocks.
 - Given `npm run typecheck`, `tsc --noEmit` exits 0.
@@ -123,4 +123,4 @@ Post/Comment models lack `scrapeId`/`runId`; `Operation.result` is opaque JSON. 
 
 - [x] [Review][Patch] Hashtag regex matches URL fragments and emails — `HASHTAG_RE` lacked negative lookbehind, so `example.com#frag` and `user@domain#tag` produced false positives [src/analytics/word-frequency.js:49] — fixed in 550d3a59 by adding `(?<![\w.])` prefix
 - [x] [Review][Defer] MCP tool `x_analytics_buzzwords` dispatch has no test — dispatch is a thin pass-through to `extractKeywordFrequency`; the handler validates input and returns error envelopes. Testing the full MCP call chain is out of scope for this story.
-- [x] [Review][Defer] CLI `xactions analytics buzzwords` has no test — thin wrapper over `extractKeywordFrequency`; the `filePath`/`stdin` input handling is trivial.
+- [x] [Review][Defer] CLI `medirus analytics buzzwords` has no test — thin wrapper over `extractKeywordFrequency`; the `filePath`/`stdin` input handling is trivial.

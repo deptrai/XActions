@@ -17,7 +17,7 @@ Full setup for programmatic scraping:
 import { createBrowser, createPage, loginWithCookie, scrapeProfile,
   scrapeFollowers, scrapeFollowing, scrapeTweets, searchTweets,
   scrapeHashtag, scrapeThread, scrapeMedia, exportToJSON, exportToCSV
-} from 'xactions';
+} from 'medirus';
 
 const browser = await createBrowser();
 const page = await createPage(browser);

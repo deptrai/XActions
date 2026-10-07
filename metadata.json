@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "xactions",
-  "displayName": "XActions",
+  "name": "medirus",
+  "displayName": "Medirus",
   "tagline": "The Complete X/Twitter Automation Platform",
   "description": "Free, open-source X/Twitter automation tools. Mass unfollow non-followers, auto-engage, grow followers, monitor accounts — all without expensive API fees. Supports browser scripts, CLI, and self-hosted SaaS.",
   "version": "3.0.0",
@@ -11,12 +11,12 @@
     "twitter": "@nichxbt",
     "url": "https://github.com/nirholas"
   },
-  "homepage": "https://xactions.app",
+  "homepage": "https://medirus.online",
   "repository": "https://github.com/nirholas/xactions",
-  "documentation": "https://xactions.app/docs",
+  "documentation": "https://medirus.online/docs",
   "license": "Apache-2.0",
   "keywords": [
-    "xactions",
+    "medirus",
     "twitter automation",
     "twitter unfollow tool",
     "mass unfollow twitter",
@@ -172,10 +172,10 @@
     "Twitter follower management"
   ],
   "links": {
-    "website": "https://xactions.app",
+    "website": "https://medirus.online",
     "github": "https://github.com/nirholas/xactions",
-    "documentation": "https://xactions.app/docs",
+    "documentation": "https://medirus.online/docs",
     "twitter": "https://x.com/nichxbt",
-    "support": "support@xactions.app"
+    "support": "support@medirus.online"
   }
 }

@@ -17,7 +17,7 @@ Status: ready-for-dev
 
 ## ⚠️ Critical Constraints / Architecture Variance
 
-1. **Extend Existing `xactions admin proxies` Group** — Story 19.4 already created the `proxies list` subcommand in `src/cli/commands/admin.js`. This story adds `quarantine` and `release` subcommands under `xactions admin proxies`, plus a friendly alias command group `xactions admin proxy <quarantine|release|list>` so operators can use either singular or plural naturally (`admin proxies ...` or `admin proxy ...`).
+1. **Extend Existing `medirus admin proxies` Group** — Story 19.4 already created the `proxies list` subcommand in `src/cli/commands/admin.js`. This story adds `quarantine` and `release` subcommands under `medirus admin proxies`, plus a friendly alias command group `medirus admin proxy <quarantine|release|list>` so operators can use either singular or plural naturally (`admin proxies ...` or `admin proxy ...`).
 2. **REST-First with In-Process Fallback** — Follow the pattern established in 19.4 and 19.4.1:
    - **URL Encoding for Proxy Keys**: Proxy keys contain protocols, ports, and colons (e.g. `http://1.2.3.4:8080`). When calling REST endpoints, ALWAYS use `encodeURIComponent(proxyKey)` for path parameters (`/api/admin/proxies/${encodeURIComponent(proxyKey)}/quarantine`), matching `safeDecode` on the server (`api/routes/admin.js:439`). Alternatively, pass `{ proxy: proxyKey, durationMs, reason }` in the POST JSON body to `/api/admin/proxies/quarantine`.
    - For `quarantine`: Call `POST /api/admin/proxies/${encodeURIComponent(proxyKey)}/quarantine` (or `/api/admin/proxies/quarantine` with body `{ proxy: proxyKey, durationMs, reason }`). If remote is unreachable or `--url` was not explicitly provided, fall back to in-process `globalProxyPool.quarantine(proxyKey, durationMs)`.
@@ -42,7 +42,7 @@ Status: ready-for-dev
 ## Story
 
 As an **Internal Automation Operator**,  
-I want **the commands `xactions admin proxies quarantine <proxyKey>` and `xactions admin proxies release <proxyKey>` (along with `xactions admin proxy ...` aliases)**,  
+I want **the commands `medirus admin proxies quarantine <proxyKey>` and `medirus admin proxies release <proxyKey>` (along with `medirus admin proxy ...` aliases)**,  
 so that **I can inspect, quarantine, and release proxies from the command line when an IP is rate-limited, blocked, or restored**.
 
 ---
@@ -51,8 +51,8 @@ so that **I can inspect, quarantine, and release proxies from the command line w
 
 ### AC-1: CLI Command Registration & Help Contract
 
-- **Given** the `xactions admin` command group
-- **When** the operator runs `xactions admin proxies --help` or `xactions admin proxy --help`
+- **Given** the `medirus admin` command group
+- **When** the operator runs `medirus admin proxies --help` or `medirus admin proxy --help`
 - **Then** the output lists:
   - `list`: List all registered proxies with status, partition, and failure count
   - `quarantine <proxyKey>`: Manually quarantine a proxy by its key
@@ -63,7 +63,7 @@ so that **I can inspect, quarantine, and release proxies from the command line w
 ### AC-2: Quarantine Proxy via REST or In-Process Pool
 
 - **Given** a registered proxy key (e.g., `http://1.2.3.4:8080`)
-- **When** the operator runs `xactions admin proxies quarantine http://1.2.3.4:8080` (or `admin proxy quarantine ...`)
+- **When** the operator runs `medirus admin proxies quarantine http://1.2.3.4:8080` (or `admin proxy quarantine ...`)
 - **Then** the command attempts `POST /api/admin/proxies/:key/quarantine` with optional `durationMs` and Bearer token
 - **And** on success, prints a confirmation with the quarantined key, remaining healthy count, and total count
 - **And** if `--json` is passed, outputs `{ success: true, quarantined: "...", healthyCount: N, totalCount: M }`
@@ -72,7 +72,7 @@ so that **I can inspect, quarantine, and release proxies from the command line w
 ### AC-3: Release Proxy via REST or In-Process Pool
 
 - **Given** a quarantined proxy key
-- **When** the operator runs `xactions admin proxies release http://1.2.3.4:8080` (or `admin proxy release ...`)
+- **When** the operator runs `medirus admin proxies release http://1.2.3.4:8080` (or `admin proxy release ...`)
 - **Then** the command attempts `POST /api/admin/proxies/:key/release` with optional Bearer token
 - **And** on success, prints a confirmation that the proxy was released from quarantine along with current healthy count
 - **And** if `--json` is passed, outputs `{ success: true, released: true, proxy: "...", healthyCount: N, totalCount: M }`
@@ -136,8 +136,8 @@ proxiesCmd
 ## Testing Plan
 
 1. **Unit & CLI Verification (`tests/cli/admin-proxies.test.js`)**:
-   - Verify `xactions admin proxies --help` lists `list`, `quarantine`, and `release`.
-   - Verify `xactions admin proxy --help` works identically.
+   - Verify `medirus admin proxies --help` lists `list`, `quarantine`, and `release`.
+   - Verify `medirus admin proxy --help` works identically.
    - Execute in-process fallback for `quarantine` on an in-memory `ProxyPool` fixture.
    - Execute in-process fallback for `release` and verify the proxy status transitions from `quarantined` back to `healthy`.
    - Test `--json` flag formats valid JSON output for both actions.

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Jev Brain Module
+// Medirus — Jev Brain Module
 // Typed-Decision Engine powered by TypeSafe Jev (System One)
 // by nichxbt
 

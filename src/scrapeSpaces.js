@@ -21,7 +21,7 @@
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   const run = async () => {
-    console.log('🎙️ SCRAPE SPACES - XActions by nichxbt');
+    console.log('🎙️ SCRAPE SPACES - Medirus by nichxbt');
     console.log('📊 Scanning for X Spaces...\n');
 
     const spaces = new Map();
@@ -104,7 +104,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `xactions-spaces-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-spaces-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       console.log('\n📥 Spaces data exported as JSON');
     }

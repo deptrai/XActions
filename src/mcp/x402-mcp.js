@@ -2,7 +2,7 @@
 /**
  * x402 Payment Middleware for MCP HTTP Transport
  *
- * Per-tool-call micropayments for the XActions HTTP MCP server.
+ * Per-tool-call micropayments for the Medirus HTTP MCP server.
  * Free tools (x_login, tools/list, x_get_settings, etc.) pass through
  * without any payment. Priced tools require a USDC x402 micropayment
  * sent via the X-PAYMENT or payment-signature header.
@@ -206,7 +206,7 @@ async function getHttpServer() {
           payTo: PAY_TO_ADDRESS,
           maxTimeoutSeconds: 300,
         }],
-        description: 'XActions MCP — per-tool micropayment',
+        description: 'Medirus MCP — per-tool micropayment',
       };
 
       const httpSrv = new x402HTTPResourceServer(resourceServer, {
@@ -411,7 +411,7 @@ export function mcpPricingHandler(_req, res) {
   const recommended = networks.find(n => n.recommended) || networks[0];
 
   res.json({
-    service: 'XActions MCP',
+    service: 'Medirus MCP',
     x402: {
       enabled: configured,
       version: 2,

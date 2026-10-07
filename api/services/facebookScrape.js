@@ -83,7 +83,7 @@ export async function run(action, args = {}) {
     // search with type: 'all' and parallel: true fans out to 4 sub-tasks.
     if (action === 'search' && rest.type === 'all' && rest.parallel === true) {
       return runSearchAllParallel(
-        /** @type {import('../../src/types/xactions.js').XActionsOptions} */ ({
+        /** @type {import('../../src/types/medirus.js').MedirusOptions} */ ({
           ...rest,
           ...(resolved.c_user ? { authCookie: { c_user: resolved.c_user, xs: resolved.xs } } : {}),
           ...(browserOptions ? { browserOptions } : {}),
@@ -114,7 +114,7 @@ export async function run(action, args = {}) {
  * Run search with type: 'all' and parallel: true — fan out to 4 sub-tasks.
  * For multi-account runs the pool creates one FacebookCrawler per account and reuses it.
  *
- * @param {import('../../src/types/xactions.js').XActionsOptions} baseArgs - Base scrape args (authCookie, browserOptions, etc.)
+ * @param {import('../../src/types/medirus.js').MedirusOptions} baseArgs - Base scrape args (authCookie, browserOptions, etc.)
  * @param {Record<string, unknown>} rest - Action-specific params (query, location, limit, etc.)
  * @param {string} [_userId] - User ID for account resolution (unused; kept for call-site signature).
  * @param {Record<string, unknown>} [browserOptions] - Browser options.

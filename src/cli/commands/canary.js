@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions canary` command group — selector drift detection & GitOps healing.
+ * `medirus canary` command group — selector drift detection & GitOps healing.
  * Subcommands: status | probe | heal.
  *
  * @author nich (@nichxbt)
@@ -47,7 +47,7 @@ export function registerCanaryCommand(program) {
         }
         const platforms = Object.keys(drift);
         if (platforms.length === 0) {
-          console.log(chalk.dim('No platformDrift entries — run `xactions canary probe` first.'));
+          console.log(chalk.dim('No platformDrift entries — run `medirus canary probe` first.'));
           return;
         }
         console.log(chalk.bold('\n🐤 Selector Canary — Drift Status\n'));

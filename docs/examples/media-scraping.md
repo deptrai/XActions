@@ -20,7 +20,7 @@ Extract images and videos from any X/Twitter user's media tab with full resoluti
 
 ```javascript
 // ============================================
-// XActions - Media Scraper (Browser Console)
+// Medirus - Media Scraper (Browser Console)
 // Go to: x.com/USERNAME/media
 // Open console (F12), paste this, press Enter
 // Author: nich (@nichxbt)
@@ -261,7 +261,7 @@ Extract images and videos from any X/Twitter user's media tab with full resoluti
 
 ```javascript
 // ============================================
-// XActions - Media Scraper (Node.js + Puppeteer)
+// Medirus - Media Scraper (Node.js + Puppeteer)
 // Save as: scrape-media.js
 // Run: node scrape-media.js NASA
 // Run: node scrape-media.js NASA --download
@@ -625,7 +625,7 @@ const targetCount = (() => {
 
 if (!username) {
   console.log(`
-📸 XActions Media Scraper
+📸 Medirus Media Scraper
 ========================
 
 Usage: node scrape-media.js <username> [options]
@@ -794,7 +794,7 @@ try {
 
 ## 🌐 Website Alternative
 
-Don't want to code? Use [xactions.app](https://xactions.app):
+Don't want to code? Use [medirus.online](https://medirus.online):
 
 1. 🔐 Login with your X account
 2. 👤 Enter any username

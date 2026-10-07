@@ -18,7 +18,7 @@ Scrape the complete followers list from any public X/Twitter account.
 
 ```javascript
 // ============================================
-// XActions - Followers Scraper (Browser Console)
+// Medirus - Followers Scraper (Browser Console)
 // Go to: x.com/USERNAME/followers
 // Open console (F12), paste this
 // ============================================
@@ -158,7 +158,7 @@ Scrape the complete followers list from any public X/Twitter account.
 
 ```javascript
 // ============================================
-// XActions - Followers Scraper (Node.js)
+// Medirus - Followers Scraper (Node.js)
 // Save as: scrape-followers.js
 // Run: node scrape-followers.js elonmusk 1000
 // ============================================
@@ -488,7 +488,7 @@ const followers = await scrapeFollowers('bigaccount', {
 
 ## Website Alternative
 
-Don't want to code? Use [xactions.app](https://xactions.app):
+Don't want to code? Use [medirus.online](https://medirus.online):
 1. Login with your X account
 2. Enter any username
 3. Click "Scrape Followers"

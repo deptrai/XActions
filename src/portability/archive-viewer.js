@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Archive Viewer Generator
+ * Medirus Archive Viewer Generator
  * Generates a self-contained HTML file that displays an exported Twitter account.
  * Single file, zero dependencies, works offline.
  * Dark theme, card-based tweet display, pagination, profile header with stats, search.
@@ -37,7 +37,7 @@ export function generateArchiveHTML(data) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>@${handle} — XActions Archive</title>
+<title>@${handle} — Medirus Archive</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#000;--surface:#16181c;--border:#2f3336;--text:#e7e9ea;--text2:#71767b;--accent:#1d9bf0;--green:#00ba7c;--red:#f4212e;--card:#16181c}
@@ -148,7 +148,7 @@ footer{text-align:center;padding:20px;color:var(--text2);font-size:12px;border-t
         ${profile.website ? `<span>🔗 ${esc(profile.website)}</span>` : ''}
         ${profile.joined ? `<span>📅 ${esc(profile.joined)}</span>` : ''}
       </div>
-      <div class="export-badge">Exported via XActions · ${new Date().toLocaleDateString()}</div>
+      <div class="export-badge">Exported via Medirus · ${new Date().toLocaleDateString()}</div>
     </div>
   </div>
 </header>
@@ -176,7 +176,7 @@ footer{text-align:center;padding:20px;color:var(--text2);font-size:12px;border-t
 </main>
 
 <footer>
-  <a href="https://github.com/nirholas/XActions" target="_blank">⚡ XActions</a> — Open-source X/Twitter toolkit · by <a href="https://x.com/nichxbt" target="_blank">@nichxbt</a>
+  <a href="https://github.com/nirholas/XActions" target="_blank">⚡ Medirus</a> — Open-source X/Twitter toolkit · by <a href="https://x.com/nichxbt" target="_blank">@nichxbt</a>
 </footer>
 
 <script>

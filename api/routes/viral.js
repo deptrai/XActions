@@ -58,7 +58,7 @@ const generateJobId = () => `viral-${Date.now()}-${crypto.randomBytes(4).toStrin
  * (the shim only fills the header when it is absent). Dev fallback preserved.
  */
 const requireSession = (req, _res, next) => {
-  const session = req.body?.sessionCookie || req.headers['x-session-cookie'] || process.env.XACTIONS_SESSION_COOKIE || 'dev-session-cookie';
+  const session = req.body?.sessionCookie || req.headers['x-session-cookie'] || process.env.MEDIRUS_SESSION_COOKIE || 'dev-session-cookie';
   if (!session && process.env.NODE_ENV === 'production') {
     return next(new ApiError('SESSION_REQUIRED', 401, 'Session required'));
   }

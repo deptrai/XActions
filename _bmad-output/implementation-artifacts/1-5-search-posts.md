@@ -14,7 +14,7 @@ Status: done
 
 ## Story
 
-As a growth marketer using XActions,
+As a growth marketer using Medirus,
 I want to search Facebook posts by query,
 so that I can discover content and conversations relevant to my niche.
 
@@ -116,7 +116,7 @@ Note: search result shape has `author` (the result is from another account) and 
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 1.5]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md#FR-4, NFR1/4/5]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-08/prd.md#FR-4, NFR1/4/5]
 - [Source: src/scrapers/threads/index.js#searchTweets lines 228-295 — clone template]
 - [Source: src/scrapers/facebook/index.js#scrapeTweets — delay seam + bounded loop to mirror; scrapeFollowers NON_PROFILE anchor logic for author]
 - [Source: src/scrapers/index.js#actionMap line 174 — search→searchTweets already mapped]

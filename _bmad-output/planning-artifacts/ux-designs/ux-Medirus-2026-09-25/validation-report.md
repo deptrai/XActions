@@ -1,7 +1,7 @@
-# Validation Report — XActions
+# Validation Report — Medirus
 
-- **DESIGN.md:** `_bmad-output/planning-artifacts/ux-designs/ux-XActions-2026-09-25/DESIGN.md`
-- **EXPERIENCE.md:** `_bmad-output/planning-artifacts/ux-designs/ux-XActions-2026-09-25/EXPERIENCE.md`
+- **DESIGN.md:** `_bmad-output/planning-artifacts/ux-designs/ux-Medirus-2026-09-25/DESIGN.md`
+- **EXPERIENCE.md:** `_bmad-output/planning-artifacts/ux-designs/ux-Medirus-2026-09-25/EXPERIENCE.md`
 - **Run at:** 2026-09-25T13:15
 
 ## Overall verdict

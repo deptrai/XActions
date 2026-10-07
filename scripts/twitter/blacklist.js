@@ -19,7 +19,7 @@
  * • Never follow blacklisted users
  * • Never like/RT blacklisted users' content
  * • Skip blacklisted users in automation
- * • Other XActions scripts can check this list
+ * • Other Medirus scripts can check this list
  * 
  * ============================================================
  * 📋 USAGE INSTRUCTIONS:
@@ -28,7 +28,7 @@
  * 1. Open any X page
  * 2. Open Chrome DevTools (F12)
  * 3. Paste this script and press Enter
- * 4. Use XActions.Blacklist commands
+ * 4. Use Medirus.Blacklist commands
  * 
  * ============================================================
  * ⚙️ CONFIGURATION
@@ -39,7 +39,7 @@
 // DevTools tab throws "already been declared" instead of re-running.
 var CONFIG = {
   // Storage key
-  storageKey: 'xactions_blacklist',
+  storageKey: 'medirus_blacklist',
   
   // Pre-populate with accounts to avoid
   defaultBlacklist: [
@@ -90,9 +90,9 @@ var CONFIG = {
   
   init();
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Blacklist = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Blacklist = {
     
     // Add user to blacklist
     add: (username, reason = '') => {
@@ -156,7 +156,7 @@ var CONFIG = {
     },
     
     // Alias for includes
-    has: (username) => window.XActions.Blacklist.includes(username),
+    has: (username) => window.Medirus.Blacklist.includes(username),
     
     // Get all blacklisted users
     getAll: () => {
@@ -239,7 +239,7 @@ var CONFIG = {
         }
       }
       
-      window.XActions.Blacklist.addBulk(usernamesArray, 'import');
+      window.Medirus.Blacklist.addBulk(usernamesArray, 'import');
     },
     
     // Block current user (from profile page)
@@ -248,7 +248,7 @@ var CONFIG = {
       if (urlMatch && urlMatch[1]) {
         const username = urlMatch[1];
         if (!['home', 'explore', 'notifications', 'messages', 'i', 'settings'].includes(username)) {
-          window.XActions.Blacklist.add(username, 'from profile');
+          window.Medirus.Blacklist.add(username, 'from profile');
           return true;
         }
       }
@@ -276,23 +276,23 @@ var CONFIG = {
       console.log('');
       console.log('📋 BLACKLIST COMMANDS:');
       console.log('');
-      console.log('   XActions.Blacklist.add("username")');
-      console.log('   XActions.Blacklist.add("user", "spam")');
-      console.log('   XActions.Blacklist.addBulk(["u1", "u2"])');
-      console.log('   XActions.Blacklist.remove("username")');
-      console.log('   XActions.Blacklist.has("username")');
-      console.log('   XActions.Blacklist.list()');
-      console.log('   XActions.Blacklist.search("pattern")');
-      console.log('   XActions.Blacklist.count()');
-      console.log('   XActions.Blacklist.export()');
-      console.log('   XActions.Blacklist.import([...])');
-      console.log('   XActions.Blacklist.blockCurrentUser()');
-      console.log('   XActions.Blacklist.clear()');
+      console.log('   Medirus.Blacklist.add("username")');
+      console.log('   Medirus.Blacklist.add("user", "spam")');
+      console.log('   Medirus.Blacklist.addBulk(["u1", "u2"])');
+      console.log('   Medirus.Blacklist.remove("username")');
+      console.log('   Medirus.Blacklist.has("username")');
+      console.log('   Medirus.Blacklist.list()');
+      console.log('   Medirus.Blacklist.search("pattern")');
+      console.log('   Medirus.Blacklist.count()');
+      console.log('   Medirus.Blacklist.export()');
+      console.log('   Medirus.Blacklist.import([...])');
+      console.log('   Medirus.Blacklist.blockCurrentUser()');
+      console.log('   Medirus.Blacklist.clear()');
       console.log('');
     }
   };
   
   console.log(`🚫 Blacklist Manager loaded! (${getBlacklist().length} users)`);
-  console.log('   Run XActions.Blacklist.help() for commands.');
+  console.log('   Run Medirus.Blacklist.help() for commands.');
   console.log('');
 })();

@@ -133,7 +133,7 @@ index 00000000..dbc63d3a
 +
 +## Goal
 +
-+Thay mô hình scrape **launch-per-job** (mỗi Bull job spawn một browser process riêng, ~300–500MB Chrome / ~30MB Obscura — lý do concurrency bị kẹt ở 2) bằng một **`BrowserPool` dùng chung**: N job đồng thời acquire page/context từ browser sẵn có. Đây là enabler thực sự duy nhất cho các mục tiêu RAM ≥85% và tốc độ 5–10x ở worker layer. Toàn bộ tính năng **opt-in qua `XACTIONS_BROWSER_POOL_SIZE` (default 0 = off)** — flag tắt thì hành vi byte-identical hiện tại, không đổi default, không rollback epic nào.
++Thay mô hình scrape **launch-per-job** (mỗi Bull job spawn một browser process riêng, ~300–500MB Chrome / ~30MB Obscura — lý do concurrency bị kẹt ở 2) bằng một **`BrowserPool` dùng chung**: N job đồng thời acquire page/context từ browser sẵn có. Đây là enabler thực sự duy nhất cho các mục tiêu RAM ≥85% và tốc độ 5–10x ở worker layer. Toàn bộ tính năng **opt-in qua `MEDIRUS_BROWSER_POOL_SIZE` (default 0 = off)** — flag tắt thì hành vi byte-identical hiện tại, không đổi default, không rollback epic nào.
 +
 +## Stories
 +
@@ -151,7 +151,7 @@ index 00000000..dbc63d3a
 +- Pool phải có queue/backpressure khi hết slot, `drain()` cho shutdown, `stats()` cho observability.
 +- Post-auth jobs vẫn reject `obscura` backend (guard `requiresAuth===true` từ AD-23); pooled post-auth dùng isolated chrome context per account.
 +- Crash containment: pool detect browser chết → respawn; chỉ in-flight jobs trên browser đó fail, Bull `attempts`/`backoff` re-queue — không silent loss.
-+- Telemetry: `emitRun` thêm `pooled`, `poolBackend`, `poolWaitMs` khi `XACTIONS_BROWSER_BACKEND_METRICS=1`.
++- Telemetry: `emitRun` thêm `pooled`, `poolBackend`, `poolWaitMs` khi `MEDIRUS_BROWSER_BACKEND_METRICS=1`.
 +- Spike (`scripts/browser-pool-spike.mjs`) được promote thành verify gate pre-release.
 +
 +## Technical Decisions
@@ -168,7 +168,7 @@ index 00000000..dbc63d3a
 +
 +**Teardown contract** (AD-23 vẫn binding): `browser.__backend === 'obscura'` → `disconnect()`; `chrome` → `close()`. Pool sở hữu browser lifecycle; adapter trả handle, không close browser.
 +
-+**Touchpoints** (đã ghi trong AD-24): `src/scraping/browserPool.js` (new), `src/scraping/stealthBrowser.js` (`pooled` opt), `src/scrapers/adapters/puppeteer.js` (`launch` pooled), `api/services/jobQueue.js` (thread `pooled` từ `job.data.pooled`/`XACTIONS_BROWSER_POOL_SIZE`), `api/services/scrapeDispatch.js` (clamp + propagate pool size hints).
++**Touchpoints** (đã ghi trong AD-24): `src/scraping/browserPool.js` (new), `src/scraping/stealthBrowser.js` (`pooled` opt), `src/scrapers/adapters/puppeteer.js` (`launch` pooled), `api/services/jobQueue.js` (thread `pooled` từ `job.data.pooled`/`MEDIRUS_BROWSER_POOL_SIZE`), `api/services/scrapeDispatch.js` (clamp + propagate pool size hints).
 +
 +## Cross-Story Dependencies
 +
@@ -198,7 +198,7 @@ index 00000000..0d0a7484
 +
 +**Problem:** Scrape jobs hiện launch một browser process riêng mỗi job (~300–500MB Chrome), kẹt concurrency ở 2 và chặn mục tiêu RAM/tốc độ (NFR-11/12). Cần một pool chia sẻ browser phục vụ N job qua page/context — nhưng nền (core pool) phải đúng isolation contract trước khi adapter/jobQueue được nối vào (53.2+).
 +
-+**Approach:** Tạo `src/scraping/browserPool.js` — class `BrowserPool` per-backend với `acquire()` trả page trong **isolated `browserContext`** mặc định, `release()` chỉ đóng context/page (không đụng browser), FIFO queue khi cạn slot, `drain()`, `stats()`. Kèm `SharedContextPool` opt-in tường minh cho anonymous public scraping. Opt-in toàn bộ qua `XACTIONS_BROWSER_POOL_SIZE` (default 0 = không dùng).
++**Approach:** Tạo `src/scraping/browserPool.js` — class `BrowserPool` per-backend với `acquire()` trả page trong **isolated `browserContext`** mặc định, `release()` chỉ đóng context/page (không đụng browser), FIFO queue khi cạn slot, `drain()`, `stats()`. Kèm `SharedContextPool` opt-in tường minh cho anonymous public scraping. Opt-in toàn bộ qua `MEDIRUS_BROWSER_POOL_SIZE` (default 0 = không dùng).
 +
 +## Boundaries & Constraints
 +
@@ -249,7 +249,7 @@ index 00000000..0d0a7484
 +- [x] `src/scraping/browserPool.d.ts` — type stub theo convention (`stealthBrowser.d.ts`, `paginationEngine.d.ts` tồn tại)
 +
 +**Acceptance Criteria:**
-+- Given `XACTIONS_BROWSER_POOL_SIZE=0` (hoặc không set), when code path hiện có chạy, then không file nào import browserPool — zero behavior change.
++- Given `MEDIRUS_BROWSER_POOL_SIZE=0` (hoặc không set), when code path hiện có chạy, then không file nào import browserPool — zero behavior change.
 +- Given pool size N, when N+1 acquire đồng thời, then acquire thứ N+1 block cho tới khi có release, và slot được trao theo thứ tự FIFO.
 +- Given `release(page)`, when gọi xong, then shared browser vẫn sống và acquire tiếp được (Q5).
 +- Given 2 isolated context, when job A ghi cookie/localStorage, then job B không đọc được (Q1, spike-verified).
@@ -289,7 +289,7 @@ index 45701dbd..13d69e0f 100644
  generated: "2026-08-27 06:00"
 -last_updated: "10-03-2026 02:58"
 +last_updated: "10-03-2026 03:10"
- project: XActions
+ project: Medirus
  project_key: XACT
  tracking_system: file-system
 @@ -458,13 +458,13 @@ epic-50:
@@ -316,7 +316,7 @@ index 00000000..b078ad87
 @@ -0,0 +1,78 @@
 +// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 +/**
-+ * TypeScript declarations for the XActions Browser Page Pool (Story 53.1, AD-24).
++ * TypeScript declarations for the Medirus Browser Page Pool (Story 53.1, AD-24).
 + * @author nich (@nichxbt)
 + * @license MIT
 + */
@@ -326,7 +326,7 @@ index 00000000..b078ad87
 +import type { StealthBrowserOptions } from './stealthBrowser.js';
 +
 +export interface BrowserPoolOptions {
-+  /** Max concurrent slots (default env `XACTIONS_BROWSER_POOL_SIZE`, then 4). */
++  /** Max concurrent slots (default env `MEDIRUS_BROWSER_POOL_SIZE`, then 4). */
 +  size?: number;
 +  /** Isolated-context ceiling per browser before spawning another (default 5 chrome / 3 obscura). */
 +  contextsPerBrowser?: number;
@@ -400,7 +400,7 @@ index 00000000..4af5569f
 @@ -0,0 +1,362 @@
 +// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 +/**
-+ * XActions Browser Page Pool (Epic 53 / AD-24)
++ * Medirus Browser Page Pool (Epic 53 / AD-24)
 + *
 + * One shared browser process serves N concurrent scrape jobs via per-job
 + * pages/contexts — replaces launch-per-job (~300–500MB/job → ~9MB).
@@ -410,7 +410,7 @@ index 00000000..4af5569f
 + * - Backend-aware context ceiling (AD-24 Rule 3): chrome ~5 contexts/browser
 + *   (spike knee @ N=8 on context-create serialization), obscura ~3
 + *   (nav/render is the bottleneck — sharding across processes is 53.4).
-+ * - Opt-in only: `XACTIONS_BROWSER_POOL_SIZE` (0/undefined = caller stays on
++ * - Opt-in only: `MEDIRUS_BROWSER_POOL_SIZE` (0/undefined = caller stays on
 + *   launch-per-job; this module is never imported into default paths).
 + * - Teardown honors AD-23 via `closeStealthBrowser` (obscura→disconnect,
 + *   chrome→close). `release()` closes the job's page+context only — the
@@ -424,7 +424,7 @@ index 00000000..4af5569f
 +
 +/**
 + * @typedef {object} BrowserPoolOptions
-+ * @property {number} [size] - max concurrent slots (default env `XACTIONS_BROWSER_POOL_SIZE`, then 4).
++ * @property {number} [size] - max concurrent slots (default env `MEDIRUS_BROWSER_POOL_SIZE`, then 4).
 + * @property {number} [contextsPerBrowser] - isolated-context ceiling per browser before spawning another (default 5 chrome / 3 obscura).
 + * @property {number} [acquireTimeoutMs] - max wait for a slot; 0 = forever.
 + * @property {string} [backend] - 'chrome' | 'obscura'.
@@ -478,8 +478,8 @@ index 00000000..4af5569f
 +export class BrowserPool {
 +  /** @param {BrowserPoolOptions} [options] */
 +  constructor(options = {}) {
-+    this._size = Number(options.size ?? process.env.XACTIONS_BROWSER_POOL_SIZE ?? 4) || 4;
-+    this._backend = options.backend || process.env.XACTIONS_BROWSER_BACKEND || 'chrome';
++    this._size = Number(options.size ?? process.env.MEDIRUS_BROWSER_POOL_SIZE ?? 4) || 4;
++    this._backend = options.backend || process.env.MEDIRUS_BROWSER_BACKEND || 'chrome';
 +    this._contextsPerBrowser = Number(
 +      options.contextsPerBrowser ?? (this._backend === 'obscura' ? 3 : 5)
 +    );

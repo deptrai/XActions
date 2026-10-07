@@ -2,7 +2,7 @@
 /**
  * Scheduler HTTP API Routes — /api/schedule.
  * Uses supertest against the real Express app, real admin JWT, and the real
- * Scheduler singleton (jobs are persisted to ~/.xactions and cleaned up).
+ * Scheduler singleton (jobs are persisted to ~/.medirus and cleaned up).
  * @author nich (@nichxbt)
  * @license MIT
  */

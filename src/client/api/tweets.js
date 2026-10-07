@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Tweets API
+ * Medirus Client — Tweets API
  *
  * Tweet-related API calls: get, send, delete, like, retweet.
  * All functions take an HTTP client as the first parameter.

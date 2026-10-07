@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Apify/Phantombuster Export Compatibility
+ * Medirus Apify/Phantombuster Export Compatibility
  * Import/export adapters for migrating data between tools.
  *
  * Kills: Lock-in for Apify and Phantombuster users

@@ -1,6 +1,6 @@
 # Block Accounts -- Tutorial
 
-> Step-by-step guide to blocking, unblocking, and auto-blocking bot accounts on X using XActions browser scripts.
+> Step-by-step guide to blocking, unblocking, and auto-blocking bot accounts on X using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -213,10 +213,10 @@ RESULTS
 **Step 4:** Controls while running:
 
 ```js
-window.XActions.pause();
-window.XActions.resume();
-window.XActions.abort();
-window.XActions.status();
+window.Medirus.pause();
+window.Medirus.resume();
+window.Medirus.abort();
+window.Medirus.status();
 ```
 
 ## Tips & Tricks

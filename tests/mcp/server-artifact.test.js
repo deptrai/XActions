@@ -17,8 +17,8 @@ import { exportArtifact } from '../../src/mcp/artifact-exporter.js';
 let baseDir;
 
 beforeAll(async () => {
-  baseDir = await fs.mkdtemp(path.join(os.tmpdir(), 'xactions-artifact-'));
-  process.env.XACTIONS_ARTIFACT_DIR = baseDir;
+  baseDir = await fs.mkdtemp(path.join(os.tmpdir(), 'medirus-artifact-'));
+  process.env.MEDIRUS_ARTIFACT_DIR = baseDir;
 });
 
 afterEach(async () => {
@@ -28,7 +28,7 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  delete process.env.XACTIONS_ARTIFACT_DIR;
+  delete process.env.MEDIRUS_ARTIFACT_DIR;
   await fs.rm(baseDir, { recursive: true, force: true });
 });
 

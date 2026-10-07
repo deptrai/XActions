@@ -1,11 +1,11 @@
-# XActions — Claude Code Plugin
+# Medirus — Claude Code Plugin
 
 > Complete X/Twitter automation toolkit for Claude Code. 68 MCP tools for scraping, posting, engagement, analytics, and more. No API fees.
 
 ## What This Plugin Provides
 
 ### MCP Server (68 tools)
-Connects Claude to X/Twitter via the XActions MCP server. Tools cover:
+Connects Claude to X/Twitter via the Medirus MCP server. Tools cover:
 - **Profiles & Social Graph**: Get profiles, followers, following, follow/unfollow
 - **Tweets & Content**: Post tweets, threads, polls; schedule posts; delete tweets
 - **Engagement**: Like, retweet, reply, auto-like by keyword
@@ -31,16 +31,16 @@ Connects Claude to X/Twitter via the XActions MCP server. Tools cover:
 - **scrape**: Data scraping — profiles, followers, tweets, export to JSON/CSV
 
 ### Commands (4)
-- `/xactions:scrape-profile` — Scrape a user's profile
-- `/xactions:unfollow-nonfollowers` — Unfollow non-followers
-- `/xactions:grow` — Run growth engagement
-- `/xactions:analytics` — Get account analytics
+- `/medirus:scrape-profile` — Scrape a user's profile
+- `/medirus:unfollow-nonfollowers` — Unfollow non-followers
+- `/medirus:grow` — Run growth engagement
+- `/medirus:analytics` — Get account analytics
 
 ## Setup
 
-### 1. Install XActions
+### 1. Install Medirus
 ```bash
-npm install xactions
+npm install medirus
 ```
 
 ### 2. Get Your Auth Token
@@ -49,9 +49,9 @@ npm install xactions
 3. Copy the value of `auth_token`
 
 ### 3. Configure Environment
-Set the `XACTIONS_SESSION_COOKIE` environment variable:
+Set the `MEDIRUS_SESSION_COOKIE` environment variable:
 ```bash
-export XACTIONS_SESSION_COOKIE="your_auth_token_here"
+export MEDIRUS_SESSION_COOKIE="your_auth_token_here"
 ```
 
 Or pass it to the MCP server via the plugin's env configuration.
@@ -64,8 +64,8 @@ Or pass it to the MCP server via the plugin's env configuration.
 
 ## Links
 
-- **Homepage**: [xactions.app](https://xactions.app)
+- **Homepage**: [medirus.online](https://medirus.online)
 - **Repository**: [github.com/nirholas/xactions](https://github.com/nirholas/xactions)
-- **npm**: [npmjs.com/package/xactions](https://www.npmjs.com/package/xactions)
+- **npm**: [npmjs.com/package/medirus](https://www.npmjs.com/package/medirus)
 - **Author**: [@nichxbt](https://x.com/nichxbt)
 - **License**: Apache-2.0

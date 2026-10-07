@@ -31,7 +31,7 @@
   };
 
   const run = async () => {
-    console.log('💔 UNLIKE ALL POSTS — XActions by nichxbt');
+    console.log('💔 UNLIKE ALL POSTS — Medirus by nichxbt');
     console.log(CONFIG.dryRun ? '🔍 DRY RUN — preview only' : '⚠️ LIVE MODE — posts WILL be unliked!');
 
     if (!window.location.href.includes('/likes')) {
@@ -102,7 +102,7 @@
     if (unlikedLog.length > 0) {
       download(
         { stats: { unliked, skipped, dryRun: CONFIG.dryRun }, posts: unlikedLog },
-        `xactions-unliked-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-unliked-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
 

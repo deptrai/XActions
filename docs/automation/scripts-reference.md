@@ -1,4 +1,4 @@
-# XActions Automation Scripts — Complete Reference
+# Medirus Automation Scripts — Complete Reference
 
 > Every automation script in `src/automation/`, explained with config options, usage, and examples.
 
@@ -42,13 +42,13 @@ Every browser automation script follows the same pattern:
 ```javascript
 (() => {
   // 1. Check for Core
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
   // 2. Destructure needed utilities
-  const { log, sleep, randomDelay, ... } = window.XActions.Core;
+  const { log, sleep, randomDelay, ... } = window.Medirus.Core;
 
   // 3. Define OPTIONS (user configures these)
   const OPTIONS = { ... };
@@ -106,7 +106,7 @@ const OPTIONS = {
 1. Scans visible tweets for keyword/user matches
 2. Skips already-liked tweets, replies, and ads
 3. Clicks the like button, optionally retweets
-4. Tracks liked tweet IDs in localStorage (`xactions_liked_tweets`)
+4. Tracks liked tweet IDs in localStorage (`medirus_liked_tweets`)
 5. Scrolls down and repeats until limits are reached
 6. Respects daily rate limit (200 likes/day)
 
@@ -151,7 +151,7 @@ const OPTIONS = {
 3. Filters by age, keyword, and comment history
 4. Picks a random comment from the pool
 5. Clicks Reply → types comment → clicks Post
-6. Saves commented tweet IDs to localStorage (`xactions_commented_tweets`)
+6. Saves commented tweet IDs to localStorage (`medirus_commented_tweets`)
 7. Schedules next check after the interval
 8. Keeps the tab open and running
 
@@ -194,7 +194,7 @@ const OPTIONS = {
 2. Uses `extractUserFromCell()` to get user data (with multi-strategy extraction)
 3. Applies all filters (followers, bio, following status)
 4. Clicks Follow button and records with timestamp
-5. Stores to localStorage (`xactions_followed_users`) with format:
+5. Stores to localStorage (`medirus_followed_users`) with format:
    ```json
    { "username": { "followedAt": 1708000000000, "followedBack": false, "checkedAt": null } }
    ```
@@ -275,7 +275,7 @@ const CONFIG = {
 1. Determines target posts (current page, URLs, or profile posts)
 2. For each post, navigates to likers/retweeters/quoters list
 3. Scrolls through the list, filtering users
-4. Follows matching users and tracks in localStorage (`xactions_engager_followed`)
+4. Follows matching users and tracks in localStorage (`medirus_engager_followed`)
 5. Prints a detailed session summary with skip reasons
 
 #### Stop Function
@@ -287,9 +287,9 @@ window.stopEngager();
 #### Exposed API
 
 ```javascript
-window.XActions.Engager.state();    // Current session stats
-window.XActions.Engager.tracked();  // All tracked users
-window.XActions.Engager.config;     // Current config
+window.Medirus.Engager.state();    // Current session stats
+window.Medirus.Engager.tracked();  // All tracked users
+window.Medirus.Engager.config;     // Current config
 ```
 
 ---
@@ -349,9 +349,9 @@ The session auto-stops when:
 #### Exposed API
 
 ```javascript
-window.XActions.Growth.state();     // { follows, likes, unfollows, ... }
-window.XActions.Growth.tracked();   // All tracked users
-window.XActions.Growth.strategy;    // Current strategy config
+window.Medirus.Growth.state();     // { follows, likes, unfollows, ... }
+window.Medirus.Growth.tracked();   // All tracked users
+window.Medirus.Growth.strategy;    // Current strategy config
 ```
 
 ---
@@ -386,11 +386,11 @@ const OPTIONS = {
 **Step 1 — Scrape followers** (on your `/followers` page):
 1. Scrolls through your follower list
 2. Collects all follower usernames
-3. Saves to localStorage (`xactions_my_followers`)
+3. Saves to localStorage (`medirus_my_followers`)
 
 **Step 2 — Unfollow** (on your `/following` page):
 1. Loads the follower list from Step 1
-2. Compares against `xactions_followed_users` (from keywordFollow/growthSuite)
+2. Compares against `medirus_followed_users` (from keywordFollow/growthSuite)
 3. Finds users past the grace period who didn't follow back
 4. Scrolls through the Following page and clicks Unfollow → Confirm
 5. Removes unfollowed users from tracked data
@@ -433,7 +433,7 @@ const CONFIG = {
 
 1. Scrolls through your recent posts
 2. For each post, checks likers and commenters
-3. Builds a protected list in localStorage (`xactions_protected_users`)
+3. Builds a protected list in localStorage (`medirus_protected_users`)
 4. `smartUnfollow.js` reads this list and skips protected users
 
 ---
@@ -603,7 +603,7 @@ const CONFIG = {
 
 ```javascript
 // View session log
-window.XActions.Core.storage.get('session_log');
+window.Medirus.Core.storage.get('session_log');
 ```
 
 ---
@@ -746,7 +746,7 @@ Identifies top-performing tweets and schedules re-posts.
 - Analyzes tweet performance metrics
 - Filters out time-sensitive content (detects words like "breaking", "today", "live now")
 - Ranks evergreen candidates by engagement
-- Maintains a repost queue in `~/.xactions/evergreen-queue.json`
+- Maintains a repost queue in `~/.medirus/evergreen-queue.json`
 
 #### Usage
 
@@ -771,7 +771,7 @@ Monitor RSS feeds and auto-create tweet drafts.
 - Add/remove RSS feeds to monitor
 - Configurable templates: `📰 {title}\n\n{link}`
 - Auto-post or save as drafts
-- Tracks seen items in `~/.xactions/rss-seen.json`
+- Tracks seen items in `~/.medirus/rss-seen.json`
 - Configurable check intervals and filters
 
 #### Usage

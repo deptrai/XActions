@@ -8,7 +8,7 @@ Status: complete
 
 ## Story
 
-As an AI agent using the XActions MCP server,
+As an AI agent using the Medirus MCP server,
 I want to call Facebook scrape and automate actions with the same schema as other platforms,
 So that I don't need platform-specific handling.
 

@@ -15,7 +15,7 @@ context:
 
 ## Intent
 
-**Problem:** `AdaptiveRateGovernor` hiện tại quản lý rate limit per-consumer (`chainlens`, `nowing`, `internal`) và per-account trong bộ nhớ cục bộ (`#consumerRequestTimestamps`, `#accountRequestTimestamps` dùng Map RAM). Khi XActions scale ngang (nhiều workers/processes/pods), bộ nhớ RAM không đồng bộ khiến tổng request vượt quá hạn mức an toàn của proxy và API upstream.
+**Problem:** `AdaptiveRateGovernor` hiện tại quản lý rate limit per-consumer (`chainlens`, `nowing`, `internal`) và per-account trong bộ nhớ cục bộ (`#consumerRequestTimestamps`, `#accountRequestTimestamps` dùng Map RAM). Khi Medirus scale ngang (nhiều workers/processes/pods), bộ nhớ RAM không đồng bộ khiến tổng request vượt quá hạn mức an toàn của proxy và API upstream.
 
 **Approach:** Xây dựng `DistributedTokenBucket` tại `src/core/distributed-token-bucket.js`:
 - Thuật toán Token Bucket phân tán chạy bằng Redis Lua script (atomic sliding-window / token refill), fallback sang in-memory token bucket khi Redis không khả dụng.

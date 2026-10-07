@@ -37,7 +37,7 @@
   const backupData = {
     meta: {
       createdAt: new Date().toISOString(),
-      source: 'XActions Backup Tool',
+      source: 'Medirus Backup Tool',
       version: '2.0.0',
       url: window.location.href,
     },
@@ -129,7 +129,7 @@
   };
 
   const run = async () => {
-    console.log('💾 BACKUP ACCOUNT - XActions by nichxbt');
+    console.log('💾 BACKUP ACCOUNT - Medirus by nichxbt');
     console.log('ℹ️ This backs up visible data from the browser.\n');
 
     const username = window.location.pathname.replace('/', '').split('/')[0];
@@ -164,7 +164,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `xactions-backup-${username}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-backup-${username}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       console.log('\n📥 Backup downloaded as JSON');
     }

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Scrapers — Platform Module Registry (Story 25.1)
+ * Medirus Scrapers — Platform Module Registry (Story 25.1)
  *
  * Owns the `platforms` map + `getPlatform()` lookup so `src/scrapers/index.js`
  * can stay a thin dispatcher with zero legacy module imports.
@@ -12,7 +12,7 @@
  * removed in Story 26.2.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 

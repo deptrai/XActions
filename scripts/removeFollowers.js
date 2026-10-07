@@ -171,7 +171,7 @@
     if (CONFIG.exportOnComplete && removedList.length > 0) {
       download(
         { removed: removedList, stats: { removed, scanned, skipped, dryRun: CONFIG.dryRun }, exportedAt: new Date().toISOString() },
-        `xactions-removed-followers-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-removed-followers-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
 

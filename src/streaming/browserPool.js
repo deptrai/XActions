@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Browser Pool
+ * Medirus Browser Pool
  * Manages a pool of Puppeteer browser instances for streaming.
  * Max 3 browsers, shared across all active streams.
  *
@@ -17,7 +17,7 @@
 
 import { createBrowser, createPage, loginWithCookie } from '../scrapers/index.js';
 
-const MAX_BROWSERS = parseInt(process.env.XACTIONS_MAX_BROWSERS || '3', 10);
+const MAX_BROWSERS = parseInt(process.env.MEDIRUS_MAX_BROWSERS || '3', 10);
 const MAX_PAGES_PER_BROWSER = 5;
 const MAX_BROWSER_AGE_MS = 30 * 60 * 1000; // 30 min — recycle to prevent memory leaks
 const ACQUIRE_TIMEOUT_MS = 30_000; // 30s max wait

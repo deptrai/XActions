@@ -24,7 +24,7 @@ context: []
 - Use `undici` WebSocket (already a dependency) for Jetstream — no new packages
 - Use `undici` request streaming for Mastodon SSE — no new packages
 - All adapters extend `BasePushAdapter` — shared: reconnect, exponential backoff, cursor persistence, event emission
-- Cursor persisted to Redis at `xactions:adapter_cursor:{streamId}`
+- Cursor persisted to Redis at `medirus:adapter_cursor:{streamId}`
 - Stream types extended: `jetstream`, `mastodon_sse`, `cdc` added to `STREAM_TYPES`
 - `createStream()` accepts `options` object for adapter-specific config
 - Jetstream post events normalized via new `normalizeJetstreamCommit()` (did-only, no author.handle)
@@ -205,7 +205,7 @@ createStream({ type, username, interval, authToken, userId, options })
 - [x] [Review][Patch] **CDC `_consumeLoop` advances cursor while paused → data loss** [src/streaming/adapters/cdc.js:109-129] — loop doesn't check `_paused`, continues `XREAD` and sets `this._cursor` — events dropped by `_emitEvent` but cursor already advanced.
 - [x] [Review][Patch] **Blocking `XREAD BLOCK` on shared Redis client** [src/streaming/adapters/cdc.js:42-49] — `_getSourceRedis` falls back to `_getRedisClient()` (shared singleton) → `XREAD BLOCK 5000` ties up connection for concurrent ops.
 - [x] [Review][Patch] **Cursor not persisted on crash** [src/streaming/adapters/base-adapter.js] — `saveCursor` only called in `disconnect()`; `_cursor` updated in-memory on each event but never flushed to Redis until graceful shutdown.
-- [x] [Review][Patch] **Orphaned cursor keys in Redis** [src/streaming/streamManager.js:375-385] — `stopStream` deletes `stateKey`/`historyKey`/`metaKey`/`lockKey` but not `xactions:adapter_cursor:{streamId}`.
+- [x] [Review][Patch] **Orphaned cursor keys in Redis** [src/streaming/streamManager.js:375-385] — `stopStream` deletes `stateKey`/`historyKey`/`metaKey`/`lockKey` but not `medirus:adapter_cursor:{streamId}`.
 - [x] [Review][Patch] **Unthrottled `saveMeta` per event** [src/streaming/streamManager.js:304-306] — every adapter event → `meta.eventCount++` → `await saveMeta(id, meta)` — Jetstream firehose generates hundreds/sec → Redis I/O contention.
 - [x] [Review][Patch] **Dead Redis client reference on CDC reconnect** [src/streaming/adapters/cdc.js:43-49] — `_sourceRedis` cached, not reset when `_scheduleReconnect` fires → reconnect reuses dead client.
 - [x] [Review][Patch] **Missing `bodyTimeout: 0` for SSE** [src/streaming/adapters/mastodon-sse.js:85-89] — undici default 300s body timeout → low-volume SSE streams disconnect after 5 min inactivity.

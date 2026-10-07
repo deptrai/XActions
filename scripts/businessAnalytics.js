@@ -11,7 +11,7 @@
   // CONFIGURE BRAND MONITORING
   // =============================================
   const CONFIG = {
-    brand: '',          // e.g., 'XActions' or '@nichxbt' — empty scrapes current page
+    brand: '',          // e.g., 'Medirus' or '@nichxbt' — empty scrapes current page
     maxMentions: 50,
     includeSentiment: true,
   };
@@ -31,7 +31,7 @@
   };
 
   const run = async () => {
-    console.log('💼 XActions Business Analytics');
+    console.log('💼 Medirus Business Analytics');
     console.log('==============================');
 
     // If brand is specified, search for it

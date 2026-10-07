@@ -142,7 +142,7 @@
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
     if (plugHistory.length > 0) {
-      download(plugHistory, `xactions-plug-history-${Date.now()}.json`);
+      download(plugHistory, `medirus-plug-history-${Date.now()}.json`);
     }
   };
 

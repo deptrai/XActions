@@ -1,8 +1,8 @@
 ---
 title: "Auto-Follow by Keyword on X (Twitter) — Free 2026"
 description: "Auto-follow users who tweet about specific keywords on X/Twitter. Free browser script with smart filters. No API key needed."
-keywords: ["twitter auto follow by keyword", "follow users by interest twitter", "keyword follow twitter bot", "auto follow niche twitter 2026", "twitter search and follow script", "grow twitter followers by keyword", "xactions keyword follow", "twitter follow from search results", "targeted follow twitter free", "auto follow twitter users by topic"]
-canonical: "https://xactions.app/examples/keyword-follow"
+keywords: ["twitter auto follow by keyword", "follow users by interest twitter", "keyword follow twitter bot", "auto follow niche twitter 2026", "twitter search and follow script", "grow twitter followers by keyword", "medirus keyword follow", "twitter follow from search results", "targeted follow twitter free", "auto follow twitter users by topic"]
+canonical: "https://medirus.online/examples/keyword-follow"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You're building a SaaS tool for Solidity developers and you want to connect with people who actually tweet about your niche. You could manually search "web3 developer" on X, scroll through results, and click Follow on each relevant profile — but that takes forever and you'll inevitably follow spam accounts with no bio and 3 followers.
 
-XActions' Keyword Follow searches X for your niche keywords (like "web3 developer," "solidity engineer," "DeFi builder"), navigates to the People tab, and follows users who match your filters. It skips users without bios, accounts you already follow, and profiles outside your follower range. You configure 3–5 keywords, set your limits, and let it run.
+Medirus' Keyword Follow searches X for your niche keywords (like "web3 developer," "solidity engineer," "DeFi builder"), navigates to the People tab, and follows users who match your filters. It skips users without bios, accounts you already follow, and profiles outside your follower range. You configure 3–5 keywords, set your limits, and let it run.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -47,11 +47,11 @@ XActions' Keyword Follow searches X for your niche keywords (like "web3 develope
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**After XActions Keyword Follow:**
+**After Medirus Keyword Follow:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Finding Your Niche on Twitter (XActions)                    │
+│  Finding Your Niche on Twitter (Medirus)                    │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  9:00 AM  Set keywords: web3 developer, solidity, defi       │
@@ -136,7 +136,7 @@ XActions' Keyword Follow searches X for your niche keywords (like "web3 develope
 
 ### Step 1: Paste `core.js` first
 
-> Navigate to `x.com/home`. Open DevTools Console (`F12` → Console). Paste the contents of [`src/automation/core.js`](https://github.com/nichxbt/xactions/blob/main/src/automation/core.js) and press Enter. You'll see `✅ XActions Core loaded`.
+> Navigate to `x.com/home`. Open DevTools Console (`F12` → Console). Paste the contents of [`src/automation/core.js`](https://github.com/nichxbt/xactions/blob/main/src/automation/core.js) and press Enter. You'll see `✅ Medirus Core loaded`.
 
 ### Step 2: Configure keywords and paste
 
@@ -144,20 +144,20 @@ Edit `KEYWORDS` and filters below, then paste:
 
 ```javascript
 // ============================================
-// XActions - Keyword Search & Follow
-// by nichxbt — https://xactions.app
+// Medirus - Keyword Search & Follow
+// by nichxbt — https://medirus.online
 // REQUIRES: Paste core.js first!
 // ============================================
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
   const { log, sleep, randomDelay, scrollBy, clickElement,
           waitForElement, storage, rateLimit, SELECTORS,
-          extractUserFromCell, parseCount } = window.XActions.Core;
+          extractUserFromCell, parseCount } = window.Medirus.Core;
 
   // ============================================
   // CONFIGURATION — edit these!
@@ -408,5 +408,5 @@ Not with this script alone, but the [Growth Suite](growth-suite-tutorial.md) com
 
 <p align="center">
   <b>Built with ❤️ by <a href="https://x.com/nichxbt">@nichxbt</a></b><br>
-  <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+  <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </p>

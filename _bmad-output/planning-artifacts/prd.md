@@ -1,37 +1,37 @@
 ---
-title: "PRD: Epics 10–20 + 23–26 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform"
+title: "PRD: Epics 10–20 + 23–26 — Medirus Universal Hybrid Scraping & Intelligence Microservice Platform"
 created: 2026-08-18
 updated: 2026-09-09
 status: approved
 canonical: true
 supersedes:
-  - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-06-08/prd.md
-  - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-06-10-epic4/prd.md
-  - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-08-14-epic7/prd.md
-  - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md
+  - _bmad-output/planning-artifacts/archive/prds/prd-Medirus-2026-06-08/prd.md
+  - _bmad-output/planning-artifacts/archive/prds/prd-Medirus-2026-06-10-epic4/prd.md
+  - _bmad-output/planning-artifacts/archive/prds/prd-Medirus-2026-08-14-epic7/prd.md
+  - _bmad-output/planning-artifacts/archive/prds/prd-Medirus-2026-08-18-universal-scraping-engine/prd.md
 note: "Canonical PRD cho Epics 10–20, Phase 4 extension Epics 23–26 (Bluesky/Mastodon, utility/adapters consolidation, dispatcher unification, legacy decommission), và Vietnam Market Pivot Epics 21–22, 33 (B2B registry, automotive, F&B, healthcare, legal, Zalo, YouTube VN). Các PRD cũ trong `archive/prds/` được đánh dấu deprecated. FR-24..FR-54 xem `prd-facebook-epics-5-6-2026-08-21.md`. FR-62 xem `FUTURE-WORK.md`."
 author: "John (BMad Product Manager) & Winston (BMad System Architect)"
 epics: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 23, 24, 25, 26]
 prd_ref:
-  - prd-XActions-2026-06-08
-  - prd-XActions-2026-06-10-epic4
-  - prd-XActions-2026-08-14-epic7
+  - prd-Medirus-2026-06-08
+  - prd-Medirus-2026-06-10-epic4
+  - prd-Medirus-2026-08-14-epic7
 ---
 
-# PRD: Epics 10–20 + 23–26 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform
+# PRD: Epics 10–20 + 23–26 — Medirus Universal Hybrid Scraping & Intelligence Microservice Platform
 
-*Chuyển đổi toàn diện XActions thành Nền tảng Động cơ Cào Dữ liệu Toàn Năng (Universal Scraping Microservice) đa ngành: Mạng Xã Hội (X, Facebook, Threads, TikTok, Instagram, Bluesky, Mastodon, **Reddit, Medium**), Thương Mại Điện Tử (Shopee, TikTok Shop), Bất Động Sản (Chợ Tốt bóc tách SĐT, Batdongsan.com.vn), và Tuyển Dụng (TopCV, VietnamWorks, LinkedIn).*
+*Chuyển đổi toàn diện Medirus thành Nền tảng Động cơ Cào Dữ liệu Toàn Năng (Universal Scraping Microservice) đa ngành: Mạng Xã Hội (X, Facebook, Threads, TikTok, Instagram, Bluesky, Mastodon, **Reddit, Medium**), Thương Mại Điện Tử (Shopee, TikTok Shop), Bất Động Sản (Chợ Tốt bóc tách SĐT, Batdongsan.com.vn), và Tuyển Dụng (TopCV, VietnamWorks, LinkedIn).*
 
 ---
 
 ## 0. Mục Đích & Bối Cảnh Tài Liệu
 
-Tài liệu PRD này là bước nhảy vọt chiến lược tiếp nối từ `prd-XActions-2026-08-14-epic7` (Epics 1–9). PRD này chính thức định nghĩa kiến trúc và yêu cầu sản phẩm cho **Epics 10 đến 20**, cùng **Phase 4 extension Epics 23–26**:
-1. **Chuyển dịch sang mô hình Microservice Engine:** XActions trở thành Động cơ Cào dữ liệu chuyên trách (Dedicated Scraping Microservice) cho hệ sinh thái **Nowing (AI Lead & Research Hub)** và nền tảng SaaS / CLI / AI MCP độc lập.
+Tài liệu PRD này là bước nhảy vọt chiến lược tiếp nối từ `prd-Medirus-2026-08-14-epic7` (Epics 1–9). PRD này chính thức định nghĩa kiến trúc và yêu cầu sản phẩm cho **Epics 10 đến 20**, cùng **Phase 4 extension Epics 23–26**:
+1. **Chuyển dịch sang mô hình Microservice Engine:** Medirus trở thành Động cơ Cào dữ liệu chuyên trách (Dedicated Scraping Microservice) cho hệ sinh thái **Nowing (AI Lead & Research Hub)** và nền tảng SaaS / CLI / AI MCP độc lập.
 2. **Áp dụng Đột Phá Kỹ Thuật "Tiered Hybrid Browser-Signer Engine":** Kết hợp Pre-Signed Token Ring Buffer O(1) và Signer Worker Page Pool giải mã chữ ký JS (`a_bogus`, `x-client-transaction-id`), chuyển 100% việc fetch dữ liệu sang Async HTTP Client (`got-scraping`/`undici`), giúp giảm **85% RAM**, tăng tốc độ **5–10x**, và tiết kiệm 90% tài nguyên server.
 3. **Hợp Nhất Cơ Sở Dữ Liệu trên PostgreSQL (Prisma ORM):** Loại bỏ hoàn toàn sự phân mảnh của SQLite, quy chuẩn hóa dữ liệu đa ngành vào PostgreSQL với quy ước Namespaced ID `${platform}:${externalId}` và cột `metadata Json?` có GIN Index.
 4. **Cơ Chế Khai Thác Dữ Liệu 3 Tầng (3-Tier Incremental Gap-Filling):** Chỉ cào bù khoảng trống dữ liệu mới (Delta Gap), triệt tiêu 100% việc cào trùng lặp và tiết kiệm 90% chi phí proxy.
-5. **Kế Hoạch Bàn Giao & Dọn Dẹp (Nowing Cutover & Decommissioning):** Thay thế toàn bộ 20+ scraper cũ bên Nowing bằng XActions MCP Client, giảm dung lượng Docker image của Nowing từ 4GB xuống còn <500MB.
+5. **Kế Hoạch Bàn Giao & Dọn Dẹp (Nowing Cutover & Decommissioning):** Thay thế toàn bộ 20+ scraper cũ bên Nowing bằng Medirus MCP Client, giảm dung lượng Docker image của Nowing từ 4GB xuống còn <500MB.
 6. **Hoàn thiện kiến trúc Universal AbstractCrawler (Epics 23–26):** Đưa Bluesky, Mastodon, Reddit, Medium, Instagram, utility scripts, adapter layer, và dispatcher về cùng một `AbstractCrawler` / `AbstractApiClient` / `CrawlerCommand`, sau đó xóa bỏ toàn bộ legacy scraper modules.
 
 ---
@@ -81,7 +81,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-70 (Topological Comment Tree Extraction):** Trích xuất toàn bộ cây bình luận đa tầng (`maxDepth: 3`, `maxComments: 500`), chống tham chiếu vòng, và lưu vào DB theo thứ tự Topological Sort (Root trước, SubComments sau).
 * **FR-73 (MCP Daemon & CLI Integration + Streaming Dataset Exporter):** Cung cấp 80+ MCP tools trả về 3-Layer JSON Envelope có cơ chế Auto-Artifact khi payload >100 records. Hỗ trợ xuất dữ liệu ra định dạng JSONL/CSV stream với backpressure.
 * **FR-83 (Realtime Thin Event Redis Stream Ingest):** Phát luồng sự kiện tinh gọn (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 1000000` hoặc `MINID`, configurable).
-* **FR-84 (Nowing Adapter Cutover & Legacy Scraper Decommissioning):** Nâng cấp adapter bên Nowing kết nối sang XActions MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
+* **FR-84 (Nowing Adapter Cutover & Legacy Scraper Decommissioning):** Nâng cấp adapter bên Nowing kết nối sang Medirus MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
 
 ### Nhóm 5: Mạng Xã Hội Trending (Epic 15)
 * **FR-74 (Threads Meta GraphQL Scraper):** Cào bài viết, timeline và replies trên Threads qua internal Meta GraphQL (LSD token + DocID).
@@ -114,19 +114,19 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-96 (Vietnam F&B, Healthcare & Legal Directory Crawler):** Cào danh bạ nhà hàng/quán cafe (PasGo, Foody, Riviu), phòng khám/nhà thuốc (Medpro, YouMed, Thuocsi), và đơn đăng ký nhãn hiệu (IP Vietnam `wipo.ipvietnam.gov.vn`). Chuẩn hóa `PostItem` (`category: 'fnb_merchant' | 'healthcare' | 'legal'`). (Epic 22.1–22.3)
 * **FR-97 (Zalo OA & YouTube VN Crawler):** Cào Zalo Official Account posts/followers qua Zalo OA API v3.0 (`openapi.zalo.me`) và YouTube VN channels/videos/comments qua YouTube Data API v3 với `regionCode: 'VN'`. HTML fallback khi API quota exhausted. Chuẩn hóa `PostItem` (`platform: 'zalo' | 'youtube'`). (Epic 33)
 * **FR-101 (Unified Social Account Storage):** Cung cấp `SocialAccount` và `SocialAccountHealth` Prisma models để lưu trữ session/cookie/proxy dùng chung cho mọi social platform (Reddit, Medium, Instagram, và các platform tương lai). Hỗ trợ `encryptedCookie`, `encryptedProxy`, `metadata Json?`, và quan hệ `User → SocialAccount[]`. Encryption dùng AES-256-GCM với key derivation từ `SESSION_SECRET`/`JWT_SECRET`. (Epic 35.4)
-* **FR-102 (Pluggable Browser Backend — Obscura for Public Scraping):** Hỗ trợ `launchStealthBrowser` chọn backend `chrome` (default) | `obscura` (CDP, opt-in) qua `options.backend` hoặc `XACTIONS_BROWSER_BACKEND`. `obscura` CHỈ phục vụ public/guest-visible scraping; post-auth actions (`post`/`like`/`reply`/`dm`/`spaces`) reject `obscura` bằng `PlatformError{ type: INVALID_ARGS }`. Primary/fallback qua `XACTIONS_BROWSER_BACKEND` + `XACTIONS_BROWSER_BACKEND_FALLBACK` (`obscura→chrome` luôn được phép; `chrome→obscura` chỉ trên public-scraping path). Mọi navigation trên `obscura` dùng `waitUntil:'networkidle0'` — `networkidle2` không được hỗ trợ (Obscura 0.2.x). Watch → Verify → Promote gate theo `docs/obscura-watch.md` — `obscura-for-auth` chỉ mở opt-in sau spike-verify, không bao giờ default. (Epic 27.4, AD-23)
+* **FR-102 (Pluggable Browser Backend — Obscura for Public Scraping):** Hỗ trợ `launchStealthBrowser` chọn backend `chrome` (default) | `obscura` (CDP, opt-in) qua `options.backend` hoặc `MEDIRUS_BROWSER_BACKEND`. `obscura` CHỈ phục vụ public/guest-visible scraping; post-auth actions (`post`/`like`/`reply`/`dm`/`spaces`) reject `obscura` bằng `PlatformError{ type: INVALID_ARGS }`. Primary/fallback qua `MEDIRUS_BROWSER_BACKEND` + `MEDIRUS_BROWSER_BACKEND_FALLBACK` (`obscura→chrome` luôn được phép; `chrome→obscura` chỉ trên public-scraping path). Mọi navigation trên `obscura` dùng `waitUntil:'networkidle0'` — `networkidle2` không được hỗ trợ (Obscura 0.2.x). Watch → Verify → Promote gate theo `docs/obscura-watch.md` — `obscura-for-auth` chỉ mở opt-in sau spike-verify, không bao giờ default. (Epic 27.4, AD-23)
 
 ---
 
 ## 4. Danh Mục Yêu Cầu Phi Chức Năng (Non-Functional Requirements NFR-11 ➔ NFR-19)
 
-* **NFR-11 (Tối ưu Tài Nguyên):** Giảm ít nhất **85% RAM** (từ ~10GB xuống <300MB) và **70% CPU** so với mô hình Full Headless Browser. *Củng cố bởi FR-102:* `obscura` backend (~30MB/engine) cho public scraping, đo improvement qua per-backend telemetry (`XACTIONS_BROWSER_BACKEND_METRICS=1` → `browserBackend` trong Epic 34 benchmark).
+* **NFR-11 (Tối ưu Tài Nguyên):** Giảm ít nhất **85% RAM** (từ ~10GB xuống <300MB) và **70% CPU** so với mô hình Full Headless Browser. *Củng cố bởi FR-102:* `obscura` backend (~30MB/engine) cho public scraping, đo improvement qua per-backend telemetry (`MEDIRUS_BROWSER_BACKEND_METRICS=1` → `browserBackend` trong Epic 34 benchmark).
 * **NFR-12 (Băng Thông & Tốc Độ):** Tăng tốc độ thu thập dữ liệu lên ít nhất **5x–10x (>500 requests/giây)** bằng Async HTTP Client với Connection Pool.
 * **NFR-13 (Tự Phục Hồi & Chống Chặn):** Tự động phát hiện proxy chết/rate-limit, cách ly 5 phút và replay request 3 lần với exponential backoff.
 * **NFR-14 (Bảo Mật Phi Mật Khẩu):** Không lưu trữ plain-text password; đăng nhập an toàn qua Terminal ASCII QR Code và Chrome CDP Attach.
 * **NFR-15 (Kiến Trúc Sạch & Khả Năng Mở Rộng):** Lớp `src/core/` hoàn toàn phi phụ thuộc (Zero-Dependency); thêm nền tảng mới chỉ cần viết thêm Adapter.
 * **NFR-16 (Bản Quyền & Tương Thích Ngược):** Mã nguồn 100% tuân thủ MIT / Apache 2.0; bảo toàn 100% tương thích ngược với CLI `unfollowx` và 80+ MCP tools.
-* **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
+* **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong Medirus phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
 * **NFR-19 (Vietnam Geo-Consistent Proxy & Locale):** Tất cả request đến VN platforms (Zalo, VN e-commerce, VN government sites) phải sử dụng VN residential proxy hoặc VN-located server IP; timezone `Asia/Ho_Chi_Minh` và locale `vi-VN` phải consistent với proxy region. Áp dụng từ Epic 21 trở đi.
 
 ---
@@ -135,7 +135,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 
 ```
 ┌────────────────────────────────────────────────────────┬────────────────────────────────────────────────────────┐
-│ XACTIONS (Tầng Dữ Liệu Thô - Raw Data Lake)           │ NOWING (Tầng Dữ Liệu Tinh Chế - AI Knowledge Hub)      │
+│ MEDIRUS (Tầng Dữ Liệu Thô - Raw Data Lake)           │ NOWING (Tầng Dữ Liệu Tinh Chế - AI Knowledge Hub)      │
 ├────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
 │ • Lưu bài viết thô, raw JSON, headers, likes/shares gốc│ • Lưu Leads CRM, Số điện thoại/Email đã bóc tách       │
 │ • Lưu trữ tạm thời với Hot Cache TTL: **30 ngày**      │ • Lưu Vector Embeddings (1536d) và Intent Tags         │
@@ -187,20 +187,20 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 
 *Các yêu cầu dưới đây xuất hiện trong kiến trúc và epic nhưng chưa được gán số FR cho đến khi re-assessment hoàn tất.*
 
-* **FR-85 (Internal Operator Dashboard & Admin CLI):** Cung cấp giao diện vận hành nội bộ (web dashboard + CLI `xactions admin`) để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. Auth dùng internal admin API key hoặc A2A token, không phải multi-tenant SaaS auth.
-* **FR-86 (Metadata Schema Contract for Consumers):** Mỗi platform/category phải publish JSON Schema hoặc TypeScript type cho `Post.metadata`; consumer có thể lấy schema qua API `GET /schemas/:platform/:category`, MCP tool `x_schema_get`, và CLI `xactions schema get`. `PrismaStore` validate `metadata` against schema khi ghi.
-* **FR-87 (Data Retention Policy):** Dữ liệu raw crawl (bản gốc thu thập) lưu trong XActions với TTL 30 ngày; dữ liệu lead/processed output đẩy sang Nowing được giữ vĩnh viễn. Lịch sử checkpoints và audit logs giữ 90 ngày.
+* **FR-85 (Internal Operator Dashboard & Admin CLI):** Cung cấp giao diện vận hành nội bộ (web dashboard + CLI `medirus admin`) để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. Auth dùng internal admin API key hoặc A2A token, không phải multi-tenant SaaS auth.
+* **FR-86 (Metadata Schema Contract for Consumers):** Mỗi platform/category phải publish JSON Schema hoặc TypeScript type cho `Post.metadata`; consumer có thể lấy schema qua API `GET /schemas/:platform/:category`, MCP tool `x_schema_get`, và CLI `medirus schema get`. `PrismaStore` validate `metadata` against schema khi ghi.
+* **FR-87 (Data Retention Policy):** Dữ liệu raw crawl (bản gốc thu thập) lưu trong Medirus với TTL 30 ngày; dữ liệu lead/processed output đẩy sang Nowing được giữ vĩnh viễn. Lịch sử checkpoints và audit logs giữ 90 ngày.
 * **FR-88 (3-Tier Incremental Gap-Filling):** Cào theo mô hình 3 tầng: (1) full seed, (2) delta/gap fill theo `publishedAt`/`lastCrawledAt`, (3) on-demand refresh; loại bỏ 100% duplication và tiết kiệm 90% chi phí proxy so với full re-crawl.
 * **FR-89 (Bluesky AT Protocol Scraper):** Cào profile, followers, following, user feed, search, và custom feeds trên Bluesky qua public AT Protocol API (`https://public.api.bsky.app`) với `AbstractCrawler` + `AbstractApiClient`; hỗ trợ optional auth cho non-public data.
 * **FR-90 (Mastodon REST API Scraper):** Cào profile, followers, following, timeline, search, hashtag, và trending trên bất kỳ Mastodon instance nào qua public REST API với `AbstractCrawler` + `AbstractApiClient`; hỗ trợ optional `accessToken` cho authenticated endpoints.
 * **FR-91 (Utility Scripts & Adapters Consolidation):** Audit và quyết định deprecation cho `src/scrapers/*.js` độc lập và `src/scrapers/adapters/`; convert tính năng hữu ích thành `CrawlerCommand` action hoặc archive; thu gọn adapter layer.
 * **FR-92 (Unified Dispatcher & Backward Compatibility):** `src/scrapers/index.js` trở thành thin dispatcher duy nhất qua `scrape(platform, action, args)`; tất cả caller gọi `CrawlerCommand`; giữ `package.json` exports backward-compatible.
 * **FR-93 (Legacy Decommission):** Xóa legacy modules sau khi đạt shadow-run parity ≥ 99% trong 7 ngày.
-* **FR-102 (Unified Person OSINT Data Harvesting):** Cung cấp MCP tool `x_social_find_profiles` cho phép fan-out truy vấn hồ sơ đồng thời trên Twitter, Facebook, Threads, LinkedIn, Bluesky, Mastodon, TikTok, Zalo OA, Masothue, Chợ Tốt, TopCV. Tuân thủ Option D: XActions chỉ đóng vai trò Data Harvesting, trả về raw `ProfileItem[]`, không lưu trữ Golden Record PII, không tạo bảng thực thể người trong DB.
+* **FR-102 (Unified Person OSINT Data Harvesting):** Cung cấp MCP tool `x_social_find_profiles` cho phép fan-out truy vấn hồ sơ đồng thời trên Twitter, Facebook, Threads, LinkedIn, Bluesky, Mastodon, TikTok, Zalo OA, Masothue, Chợ Tốt, TopCV. Tuân thủ Option D: Medirus chỉ đóng vai trò Data Harvesting, trả về raw `ProfileItem[]`, không lưu trữ Golden Record PII, không tạo bảng thực thể người trong DB.
 * **FR-103 (Crawler Lifecycle Stream Unification & CloudEvents v1.0):** Hợp nhất toàn bộ luồng phát sự kiện vào Template Method của `AbstractCrawler.execute()`. Xóa bỏ 100% cờ tạm `__streamEmitted` và các lệnh publish trực tiếp trong crawler con; đảm bảo 100% event đẩy vào Redis Stream tuân thủ chuẩn CloudEvents v1.0 với `idempotencyKey` chống duplicate.
 * **FR-104 (Platform-Static Zero-Browser HTTP Routing):** Định tuyến tĩnh Tier 0 (HTTP-First / got-jsdom) cho các domain tĩnh/SSR nhẹ (Masothue, Batdongsan, tin tức, RSS); cắt giảm 85% RAM và tăng tốc độ xử lý so với Headless Browser.
 * **FR-105 (Cost-Aware Proxy Escalation & Budget Ceiling):** [Rescoped — ~40% đã có sẵn] Bổ sung `tier` metadata (4 levels: `free`/`datacenter`/`residential`/`mobile_4g`) vào `ProxyIpPool`. `ProxyBudgetGovernor` enforces `PROXY_DAILY_BUDGET_USD` ceiling via `DistributedTokenBucket`. Cost-aware escalation: default `datacenter` → `residential` on 403/Captcha challenge. `BUDGET_CEILING_REACHED` soft degradation trả degraded result thay vì throw `PROXY_EXHAUSTED`.
-* **FR-106 (GitOps Selector Healing Assistant):** [Rescoped — ~70% đã có sẵn] CLI tool `xactions canary heal` orchestrates: `SelectorCanary` drift status → `AutoSelectorFallback.investigate()` → `SelectorSandbox` validation → `unified-diff` generation → GitHub Draft PR. Không auto-heal, không runtime injection — tuân thủ Invariant #4 (GitOps-Driven DOM Drift Healing).
+* **FR-106 (GitOps Selector Healing Assistant):** [Rescoped — ~70% đã có sẵn] CLI tool `medirus canary heal` orchestrates: `SelectorCanary` drift status → `AutoSelectorFallback.investigate()` → `SelectorSandbox` validation → `unified-diff` generation → GitHub Draft PR. Không auto-heal, không runtime injection — tuân thủ Invariant #4 (GitOps-Driven DOM Drift Healing).
 * **FR-107 (OSINT Developer & Identity Registries):** Mở rộng platform matrix của `x_social_find_profiles` với 2 nguồn public API zero-auth: **GitHub** (`https://api.github.com/users/{username}` — trả về name, bio, avatar, company, location, public repos; hỗ trợ `username` queryType) và **Gravatar** (`https://api.gravatar.com/v3/profiles/{sha256(email)}` — resolve email → avatar + linked accounts; hỗ trợ queryType `email`). Direct fetch, không cần proxy, không cần crawler mới — chỉ adapter + đăng ký trong `PROFILE_ACTION_MAP`. Rate limit GitHub unauthenticated (60 req/h) quản lý qua `DistributedTokenBucket`; optional `GITHUB_TOKEN` env var nâng lên 5000 req/h. (Epic 41.1)
 * **FR-108 (OSINT Entity Resolution & Confidence Clustering):** Cung cấp `EntityResolver` module (pure JS, port thuật toán Jaro-Winkler từ Mr.Holmes `entity_resolver.py` — không port code Python) gộp kết quả fan-out của `x_social_find_profiles` thành `identityClusters[]` với confidence score (0.0–1.0). Scoring: exact username match (+40), display-name similarity > 0.85 (+30), avatar URL/pHash match (+30), cross-link trong bio (+20). Output contract: `identityClusters[]` bổ sung bên cạnh `profiles[]` phẳng (backward compat — profiles[] giữ nguyên). Không persist PII (Option D), tính toán in-memory per-request. (Epic 41.2)
 * **FR-109 (Avatar Perceptual Hashing for Entity Resolution):** `EntityResolver` dùng pHash (dHash/aHash + Hamming distance) để so khớp avatar cross-platform khi CDN URL khác nhau. Pure JS module `src/osint/phash.js`, async scoring, không persist PII (Option D). (Story 41.3)
@@ -213,15 +213,15 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-116 (OpenAPI 3.1 Spec Generation & Publication):** Hệ thống phải generate OpenAPI 3.1 document từ Zod schemas (single source of truth), serve qua `GET /openapi.json` (CORS `*`) và Swagger UI self-hosted tại `/api-docs`; spec bảo toàn x402 extensions (`x-payment-info`, `x-bazaar`, `x-x402`) và `/.well-known/x402`. (Epic 46 — Stories 46.1, 46.2)
 * **FR-117 (Uniform Request Validation):** Mọi route thuộc Route Inventory (epics.md Phụ lục A) phải validate `body`, `query`, `path params` và declared headers qua Zod schema, theo pipeline `authenticate → validate → handler`, trả `400` theo error envelope chuẩn. (Epic 46 — Story 46.2)
 * **FR-118 (Uniform Response Envelope):** Mọi JSON endpoint trong scope trả `{ success: true, data: T }` / `{ success: false, error: { code, message, type?, details? } }` + `PaginatedResponse<T>`; domain errors (PlatformError/AD-14) map verbatim qua `error.details`. (Epic 46 — Story 46.2)
-* **FR-119 (Generated TypeScript API Client):** Script `npm run generate:api-client` sinh `@xactions/api-client` tại `packages/api-client/` từ committed `api/openapi.json` — types qua `openapi-typescript` + thin fetch wrapper với typed error union. (Epic 46 — Story 46.3)
+* **FR-119 (Generated TypeScript API Client):** Script `npm run generate:api-client` sinh `@medirus/api-client` tại `packages/api-client/` từ committed `api/openapi.json` — types qua `openapi-typescript` + thin fetch wrapper với typed error union. (Epic 46 — Story 46.3)
 * **FR-120 (Next.js App Shell & Universal Layout):** Ứng dụng web Next.js 15 (App Router, TypeScript, Tailwind, Shadcn/UI, Lucide) với collapsible sidebar, Dark/Light mode, backend connection badge. (Epic 47 — Story 47.1)
 * **FR-121 (Viral DNA Miner Dashboard):** Màn hình `/viral-miner` với realtime progress cards và Recharts visualization cho hook-type distribution/patterns. (Epic 47 — Story 47.2)
 * **FR-122 (Follower CRM Screen):** Màn hình `/crm` với TanStack Table, lead score, segment filters, tag management. (Epic 47 — Story 47.3)
 * **FR-123 (AI Content Optimizer Playground):** Màn hình `/optimizer` với predict score, AI rewrite side-by-side, hashtag generation. (Epic 47 — Story 47.4)
 * **FR-124 (Universal Data Explorer & Export):** Màn hình `/explorer` tra cứu đa ngành (jobs/BĐS/MST/social) với bảng preview và CSV export UTF-8. (Epic 47 — Story 47.5)
 * **FR-125 (Legacy HTML Consolidation):** Gom toàn bộ file HTML rời rạc của dashboard cũ vào SPA Next.js — không còn trang app standalone sót lại. (Epic 47 — epic goal) *(Cập nhật 2026-09-24: Epic 47 mới deliver 6 routes; ~28 màn app còn lại hoàn tất trong Epic 48 — Stories 48.3–48.10. ~20 file marketing/static được loại khỏi scope theo AD-6.)*
-* **FR-126 (Type-Safe API Consumption):** Web app gọi backend qua typed client/`lib/api.ts` typed helper — không raw `fetch` với origin hardcode; mọi call compile-time type-checked. (Epic 47 — cross-cutting; remediated Epic 48 — Story 48.1) *(Cập nhật 2026-09-24: Epic 47 ship screens dùng `fetch('http://localhost:3001/...')` thô, `@xactions/api-client` chưa được import — Story 48.1 remediates bằng BFF + typed helper.)*
-* **FR-127 (Web API Foundation — BFF & Session Transport):** `apps/web` phải có BFF same-origin proxy (`/api/*`, `/api-docs/*`) forward verbatim tới `API_INTERNAL_URL` (method/query/body/streaming, header allowlist, cookie→auth injection); `/session` route quản lý httpOnly cookies `xa_bearer`/`xa_session` (`SameSite=Lax`, `Secure` prod) với login exchange; `lib/api.ts` typed helper (`import type` từ `@xactions/api-client`). (Epic 48 — Story 48.1)
+* **FR-126 (Type-Safe API Consumption):** Web app gọi backend qua typed client/`lib/api.ts` typed helper — không raw `fetch` với origin hardcode; mọi call compile-time type-checked. (Epic 47 — cross-cutting; remediated Epic 48 — Story 48.1) *(Cập nhật 2026-09-24: Epic 47 ship screens dùng `fetch('http://localhost:3001/...')` thô, `@medirus/api-client` chưa được import — Story 48.1 remediates bằng BFF + typed helper.)*
+* **FR-127 (Web API Foundation — BFF & Session Transport):** `apps/web` phải có BFF same-origin proxy (`/api/*`, `/api-docs/*`) forward verbatim tới `API_INTERNAL_URL` (method/query/body/streaming, header allowlist, cookie→auth injection); `/session` route quản lý httpOnly cookies `xa_bearer`/`xa_session` (`SameSite=Lax`, `Secure` prod) với login exchange; `lib/api.ts` typed helper (`import type` từ `@medirus/api-client`). (Epic 48 — Story 48.1)
 * **FR-128 (Auth & Session UI):** Màn `/login` port từ `dashboard/login.html`, drive `POST /session`; trạng thái phiên visible ở header; 401 hiển thị rõ, không dev-fallback che. (Epic 48 — Story 48.2)
 * **FR-129 (Ops & Realtime Screens):** `/monitor`, `/status`, `/run`, `/benchmark` với `lib/realtime.ts` socket.io-client direct-connect; socket auth quyết định theo AD-3 ghi addendum. (Epic 48 — Story 48.3)
 * **FR-130 (Admin Console & Fleet Manager):** `/admin` full parity (checkpoint pause/resume/retry + admin panels); `/accounts`, `/proxies`, `/sessions` — fleet management UI hấp thụ FUTURE-WORK deferred item. (Epic 48 — Stories 48.4, 48.5)
@@ -240,15 +240,15 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-143 (Decentralized Social Deck):** Giao diện `/fediverse` đa cột phong cách TweetDeck tích hợp Bluesky (AT Protocol) & Mastodon (ActivityPub) công khai. (Epic 51 — Story 51.3)
 * **FR-144 (Vietnam B2B Diligence & Procurement Portal):** Giao diện `/enterprise-vn` tra cứu MST, hồ sơ pháp nhân, tình trạng hoạt động và nhãn hiệu bản quyền từ Cục SHTT. (Epic 51 — Story 51.4)
 * **FR-145 (Live Vietnam IT & Tech Jobs Aggregator):** Nâng cấp tab Jobs tại `/explorer` và route `/jobs-vn` kết nối live data TopCV, VietnamWorks, LinkedIn với bộ lọc dải lương và tech stack. (Epic 51 — Story 51.5)
-* **FR-146 (Browser Page Pool — Sharded, Backend-Aware):** Scrape jobs acquire một page/context từ shared `BrowserPool` thay vì launch browser per job. Opt-in qua `XACTIONS_BROWSER_POOL_SIZE`; isolated `browserContext` per job mặc định (không leak state cross-job); backend-aware ceiling — chrome shard ít context/browser, obscura shard qua nhiều `obscura serve` process. Enabler cho NFR-11 (≥85% RAM) & NFR-12 (5–10x) ở worker layer. (Epic 53 — AD-24)
+* **FR-146 (Browser Page Pool — Sharded, Backend-Aware):** Scrape jobs acquire một page/context từ shared `BrowserPool` thay vì launch browser per job. Opt-in qua `MEDIRUS_BROWSER_POOL_SIZE`; isolated `browserContext` per job mặc định (không leak state cross-job); backend-aware ceiling — chrome shard ít context/browser, obscura shard qua nhiều `obscura serve` process. Enabler cho NFR-11 (≥85% RAM) & NFR-12 (5–10x) ở worker layer. (Epic 53 — AD-24)
 
 ### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17 ➔ NFR-26)
 
 * **NFR-17 (Operational Observability):** Hệ thống phải expose real-time metrics qua `GET /governor/status`, `GET /metrics/stream`, dashboard SSE/polling mỗi 5–30s, và alert khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`.
-* **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
+* **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong Medirus phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
 * **NFR-19 (Vietnam Geo-Consistent Proxy & Locale):** Tất cả request đến VN platforms (Zalo, VN e-commerce, VN government sites) phải sử dụng VN residential proxy hoặc VN-located server IP; timezone `Asia/Ho_Chi_Minh` và locale `vi-VN` phải consistent với proxy region. Áp dụng từ Epic 21 trở đi.
-* **NFR-20 (Zero Mocks & Fast Test Execution):** Cấm mock/stub cho network calls trong integration tests; kiểm thử HTTP-first/TLS handshake qua Local Ephemeral Server (`127.0.0.1:0`). Bắt buộc hỗ trợ `XACTIONS_TEST_FAST_DELAYS=1` đưa độ trễ về 0ms; unit test không được vượt quá 1.5 giây.
-* **NFR-21 (Option D Privacy & PII Protection):** XActions không duy trì bất kỳ cơ chế lưu trữ lâu dài thông tin định danh cá nhân tổng hợp (Golden Record). Dữ liệu hồ sơ chỉ luân chuyển tạm thời qua response/stream phục vụ consumer.
+* **NFR-20 (Zero Mocks & Fast Test Execution):** Cấm mock/stub cho network calls trong integration tests; kiểm thử HTTP-first/TLS handshake qua Local Ephemeral Server (`127.0.0.1:0`). Bắt buộc hỗ trợ `MEDIRUS_TEST_FAST_DELAYS=1` đưa độ trễ về 0ms; unit test không được vượt quá 1.5 giây.
+* **NFR-21 (Option D Privacy & PII Protection):** Medirus không duy trì bất kỳ cơ chế lưu trữ lâu dài thông tin định danh cá nhân tổng hợp (Golden Record). Dữ liệu hồ sơ chỉ luân chuyển tạm thời qua response/stream phục vụ consumer.
 * **NFR-22 (Contract Honesty — Spec↔Runtime Parity):** OpenAPI spec luôn khớp runtime: `operationId` duy nhất mọi operation, CI spec lint (`@redocly/cli`) + contract test ≥1 endpoint mỗi route group + regenerate-diff check — fail khi drift. (Epic 46)
 * **NFR-23 (Contract Non-Breaking):** Chuẩn hóa API không phá vỡ consumer hiện hữu: x402 extensions/discovery contract, `x-session-cookie` transport (legacy body field được normalize, không remove), domain error fields (AD-14) và operator surfaces (`/api/governor`, `/api/checkpoints`, `/metrics/stream`) giữ nguyên semantics. (Epic 46)
 * **NFR-24 (Web Performance):** Ứng dụng web Next.js tải trang < 1.0 giây trên kết nối local/dev. (Epic 47)

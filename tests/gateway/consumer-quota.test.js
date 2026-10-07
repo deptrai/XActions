@@ -26,8 +26,8 @@ const ORIGINAL_ENV = { ...process.env };
 let app;
 beforeEach(() => {
   process.env = { ...ORIGINAL_ENV };
-  process.env.XACTIONS_SERVICE_KEYS = SERVICE_MAP;
-  process.env.XACTIONS_CONSUMER_QUOTAS = JSON.stringify({
+  process.env.MEDIRUS_SERVICE_KEYS = SERVICE_MAP;
+  process.env.MEDIRUS_CONSUMER_QUOTAS = JSON.stringify({
     jev: { 'reddit:search': '2/min', default: '5/min' },
     default: '10/min',
   });

@@ -4,7 +4,7 @@
  *
  * Fetch a public X profile. No account, no API key, no browser.
  *
- * This is the shortest path from "npm install xactions" to real data, and it
+ * This is the shortest path from "npm install medirus" to real data, and it
  * runs against X's internal GraphQL API over plain HTTP, so it finishes in
  * well under a second rather than launching Chromium.
  *
@@ -12,7 +12,7 @@
  *   node examples/01-profile-lookup.js nasa github vercel
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 

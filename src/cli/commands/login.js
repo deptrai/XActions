@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions login` — session cookie or terminal QR code setup.
+ * `medirus login` — session cookie or terminal QR code setup.
  *
  * @author nich (@nichxbt)
  * @license MIT
@@ -28,7 +28,7 @@ export function registerLoginCommand(program) {
     .action(async (options = {}) => {
       if (options.cdp) {
         console.log(chalk.cyan('\n⚡ Switching to CDP Remote Attach Mode (Chrome DevTools Protocol on :9222)...'));
-        console.log(chalk.gray('Run \'xactions auth --launch-chrome\' to open Chrome with remote debugging.\n'));
+        console.log(chalk.gray('Run \'medirus auth --launch-chrome\' to open Chrome with remote debugging.\n'));
         return;
       }
 
@@ -55,7 +55,7 @@ export function registerLoginCommand(program) {
         return;
       }
 
-      console.log(chalk.cyan('\n⚡ XActions Login Setup\n'));
+      console.log(chalk.cyan('\n⚡ Medirus Login Setup\n'));
       console.log(chalk.gray('To get your session cookies:'));
       console.log(chalk.gray('1. Go to x.com and log in'));
       console.log(chalk.gray('2. Open DevTools (F12) → Application → Cookies → https://x.com'));

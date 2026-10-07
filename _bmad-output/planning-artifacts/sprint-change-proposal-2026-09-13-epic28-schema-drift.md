@@ -40,7 +40,7 @@ Epic 28 ("Schema Drift & Selector Resilience") được lập kế hoạch nhằ
   - `dashboard/admin.html`: Thêm indicator / widget hiển thị trạng thái Canary trong tab Stream/Proxies.
 - **Story 28.3 (`AutoSelectorFallback`)**:
   - Module core `src/core/auto-selector-fallback.js` phân tích DOM tree (sử dụng Heuristic text/attribute matching).
-  - Đăng ký lệnh CLI: `xactions schema suggest-selector` hoặc `xactions tools suggest-selector`.
+  - Đăng ký lệnh CLI: `medirus schema suggest-selector` hoặc `medirus tools suggest-selector`.
 
 ### Technical & Architectural Impact
 - `src/core/error-envelope.js`: Thêm `ErrorTypes.DEGRADED_DATA = 'degraded_data'`.
@@ -107,7 +107,7 @@ export const ErrorTypes = Object.freeze({
   4. Đánh điểm độ tin cậy (`confidenceScore` từ 0.0 đến 1.0).
 - CLI Command: Tích hợp vào `src/cli/commands/schema.js` hoặc `src/cli/commands/tools.js`:
   ```bash
-  xactions tools suggest-selector --platform twitter --url https://x.com/elonmusk --field tweet_text
+  medirus tools suggest-selector --platform twitter --url https://x.com/elonmusk --field tweet_text
   ```
 
 ---

@@ -44,16 +44,16 @@ const CONFIG = {
 
 ```js
 // timelineViewer.js
-XActions.switchTo('for-you')     // Switch to For You timeline
-XActions.switchTo('following')   // Switch to Following timeline
-XActions.collect()               // Start collecting posts
-XActions.export()                // Export collected posts as JSON
-XActions.abort()                 // Stop collection
+Medirus.switchTo('for-you')     // Switch to For You timeline
+Medirus.switchTo('following')   // Switch to Following timeline
+Medirus.collect()               // Start collecting posts
+Medirus.export()                // Export collected posts as JSON
+Medirus.abort()                 // Stop collection
 
 // timelineScraper.js
-XActions.scrape({ maxPosts: 200 }) // Scrape with custom limit
-XActions.results()                  // Get collected results
-XActions.download()                 // Download as JSON
+Medirus.scrape({ maxPosts: 200 }) // Scrape with custom limit
+Medirus.results()                  // Get collected results
+Medirus.download()                 // Download as JSON
 ```
 
 ## Output Data Structure

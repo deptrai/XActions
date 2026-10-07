@@ -1,8 +1,8 @@
 ---
-title: 'market research: crypto scraping expansion for XActions'
+title: 'market research: crypto scraping expansion for Medirus'
 type: 'market'
-topic: 'Crypto/blockchain data source expansion for XActions multi-domain scraping platform'
-decision: 'Which crypto/blockchain data sources should XActions add as scraping domains?'
+topic: 'Crypto/blockchain data source expansion for Medirus multi-domain scraping platform'
+decision: 'Which crypto/blockchain data sources should Medirus add as scraping domains?'
 source: 'native run'
 status: complete
 preset: 'standard'
@@ -11,36 +11,36 @@ created: '2026-09-26'
 updated: '2026-09-26'
 ---
 
-# Market Research: Crypto Scraping Domain Expansion for XActions
+# Market Research: Crypto Scraping Domain Expansion for Medirus
 
-**Decision:** Which crypto/blockchain data sources should XActions add as scraping domains to serve downstream consumers (Nowing, ChainLens, Jev Trading)?
+**Decision:** Which crypto/blockchain data sources should Medirus add as scraping domains to serve downstream consumers (Nowing, ChainLens, Jev Trading)?
 
-**Scope correction:** XActions is a **data scraping infrastructure platform**, not an end-user product. Features proposed are **new scraping domains/pipelines**, not user-facing features. Downstream consumers (Nowing, ChainLens, Jev Trading) consume via `x_scrape` MCP tool + Redis Stream ThinEvents.
+**Scope correction:** Medirus is a **data scraping infrastructure platform**, not an end-user product. Features proposed are **new scraping domains/pipelines**, not user-facing features. Downstream consumers (Nowing, ChainLens, Jev Trading) consume via `x_scrape` MCP tool + Redis Stream ThinEvents.
 
 ---
 
 ## Executive Summary
 
-**Verdict: After deduplicating against `jev-trading`'s own implementation, XActions' crypto expansion scope is *narrower but sharper* than it first appeared — the real gaps are Reddit search routing, pump.fun coin metadata, a Dexscreener platform, and Telegram.**
+**Verdict: After deduplicating against `jev-trading`'s own implementation, Medirus' crypto expansion scope is *narrower but sharper* than it first appeared — the real gaps are Reddit search routing, pump.fun coin metadata, a Dexscreener platform, and Telegram.**
 
-XActions currently has **25 canonical platforms**. In crypto it has **only pump.fun**. But the naive conclusion — "scrape everything crypto" — collapses on inspection: **jev-trading already self-serves most crypto data directly** (pumpportal WS, Solana RPC/Helius/Triton gRPC, kolscan, Dexscreener TP-fallback, Telegram alerts). XActions' value is only in what jev *can't or shouldn't* scrape itself: **social-platform scraping with auth/anti-bot** (its core moat) and **shared multi-consumer sources** (ChainLens, Nowing also consume).
+Medirus currently has **25 canonical platforms**. In crypto it has **only pump.fun**. But the naive conclusion — "scrape everything crypto" — collapses on inspection: **jev-trading already self-serves most crypto data directly** (pumpportal WS, Solana RPC/Helius/Triton gRPC, kolscan, Dexscreener TP-fallback, Telegram alerts). Medirus' value is only in what jev *can't or shouldn't* scrape itself: **social-platform scraping with auth/anti-bot** (its core moat) and **shared multi-consumer sources** (ChainLens, Nowing also consume).
 
 **Three findings drive the recommendation:**
 
-1. **jev-trading already owns the latency-critical crypto data.** `src/` connects directly to `wss://pumpportal.fun`, `api.mainnet-beta.solana.com`, `mainnet.helius-rpc.com`, `api.helius.xyz` (Triton), `api.telegram.org`, `kolscan.io`. Jev's <5s decision NFR means on-chain/trade data *can't* route through XActions anyway — too slow. Building these in XActions = pure duplication.
+1. **jev-trading already owns the latency-critical crypto data.** `src/` connects directly to `wss://pumpportal.fun`, `api.mainnet-beta.solana.com`, `mainnet.helius-rpc.com`, `api.helius.xyz` (Triton), `api.telegram.org`, `kolscan.io`. Jev's <5s decision NFR means on-chain/trade data *can't* route through Medirus anyway — too slow. Building these in Medirus = pure duplication.
 
-2. **The real gap is wiring + one missing platform.** jev's `searchReddit()` returns [] because XActions' reddit `search` action has no reachable route; pump.fun `/coins/{mint}` is live-but-unscraped; and **Telegram — crypto's primary comms platform — is explicitly deferred in jev Epic 2 because "XActions chưa có TelegramCrawler."**
+2. **The real gap is wiring + one missing platform.** jev's `searchReddit()` returns [] because Medirus' reddit `search` action has no reachable route; pump.fun `/coins/{mint}` is live-but-unscraped; and **Telegram — crypto's primary comms platform — is explicitly deferred in jev Epic 2 because "Medirus chưa có TelegramCrawler."**
 
 3. **Dexscreener is the only new platform with cross-consumer pull.** Verified free (5 endpoints, no key), multi-chain, unique token→social-links map + paid-order legitimacy signal. jev uses it only as a narrow TP fallback — a canonical scraper serves ChainLens + Nowing too, *if* jev routes through `x_scrape`.
 
-**Biggest caveat:** The dedup finding itself is the risk — jev already reimplemented `PumpFunCrawler` in-repo rather than consuming XActions' canonical one (`src/social/pumpFunCrawler.ts` vs `x_scrape`). If consumers keep bypassing XActions, even well-built scrapers go unused. **Before building D3/D4, confirm consumers will actually route through `x_scrape`/REST.**
+**Biggest caveat:** The dedup finding itself is the risk — jev already reimplemented `PumpFunCrawler` in-repo rather than consuming Medirus' canonical one (`src/social/pumpFunCrawler.ts` vs `x_scrape`). If consumers keep bypassing Medirus, even well-built scrapers go unused. **Before building D3/D4, confirm consumers will actually route through `x_scrape`/REST.**
 
-**Top recommendation (deduped against jev-trading repo):** After reading `jev-trading`'s epics + source, most crypto data sources are **already self-served by jev directly** (pumpportal WS, Solana RPC/Helius/Triton, kolscan, Dexscreener TP-fallback, Telegram alerts). The real gaps XActions should fill:
+**Top recommendation (deduped against jev-trading repo):** After reading `jev-trading`'s epics + source, most crypto data sources are **already self-served by jev directly** (pumpportal WS, Solana RPC/Helius/Triton, kolscan, Dexscreener TP-fallback, Telegram alerts). The real gaps Medirus should fill:
 
 1. **D1 — Reddit content-search route** (1 day): jev's `searchReddit()` returns [] today — the crawler's `search` action exists but isn't reachable via the REST/MCP surface jev calls. Pure wiring, unblocks jev Story 2.1 immediately.
 2. **D2 — pump.fun `fetch_coin_meta` action** (1 day): `/coins/{mint}` verified live (CF session); feeds jev Story 1.2's deployer/social-link checks.
 3. **D3 — `crypto/dexscreener` platform** (2-3 days): only new platform worth building — 5 free endpoints, token→social-links map, paid-order legitimacy signal. **Gate:** confirm jev consumes via `x_scrape` instead of its own fallback, else justify on ChainLens alone.
-4. **D4 — Telegram channel monitor** (1-2 weeks): strategic unlock — deferred in jev Epic 2 precisely because "XActions chưa có TelegramCrawler"; also Nowing's biggest missing corpus.
+4. **D4 — Telegram channel monitor** (1-2 weeks): strategic unlock — deferred in jev Epic 2 precisely because "Medirus chưa có TelegramCrawler"; also Nowing's biggest missing corpus.
 
 **Anti-duplicate list (do NOT build):** pumpportal WS, Solana RPC/Helius/Triton, kolscan, pump.fun trade tape, CoinGecko — all already inside jev-trading's own pipeline.
 
@@ -132,9 +132,9 @@ XActions currently has **25 canonical platforms**. In crypto it has **only pump.
 
 ## 3. Gap Analysis — Deduped Against Consumer Repos
 
-**Critical boundary finding (from reading jev-trading's epics + source):** jev-trading already scrapes several crypto sources **directly**, bypassing XActions. Building a scraper in XActions for a source jev already connects to = pure duplication. The dedup matrix below separates "genuinely missing" from "jev does it itself."
+**Critical boundary finding (from reading jev-trading's epics + source):** jev-trading already scrapes several crypto sources **directly**, bypassing Medirus. Building a scraper in Medirus for a source jev already connects to = pure duplication. The dedup matrix below separates "genuinely missing" from "jev does it itself."
 
-### 3a. What jev-trading Already Scrapes DIRECTLY (do NOT duplicate in XActions)
+### 3a. What jev-trading Already Scrapes DIRECTLY (do NOT duplicate in Medirus)
 
 Verified in `jev-trading/src/` + `epics.md`:
 
@@ -147,24 +147,24 @@ Verified in `jev-trading/src/` + `epics.md`:
 | **Helius + Triton gRPC** | `api.helius.xyz` — trade stream, smart-money radar (Story 4.4) | connect log, FR-20 |
 | **Dexscreener REST** | TP Monitor **fallback** — `tpMonitor.ts` uses Dexscreener when Triton stale >5s (FR-19, C3 fix) | `tpMonitor.ts`, FR-19 |
 | **Telegram** | `src/alerts/telegram.ts` — bot token, entry/exit/panic alerts | connect log `api.telegram.org`, Story 6.4/7.5 |
-| **X search** | `xactionsClient.ts` → `POST /api/ai/discovery/search` → XActions queue | **This IS the XActions consumption path** |
+| **X search** | `medirusClient.ts` → `POST /api/ai/discovery/search` → Medirus queue | **This IS the Medirus consumption path** |
 
-→ **Jev self-serves:** on-chain (RPC/Helius/Triton), launch stream (pumpportal), price/TP fallback (Dexscreener), KOL list (kolscan), alerts (Telegram). These are **jev's domain — XActions should NOT rebuild them.**
+→ **Jev self-serves:** on-chain (RPC/Helius/Triton), launch stream (pumpportal), price/TP fallback (Dexscreener), KOL list (kolscan), alerts (Telegram). These are **jev's domain — Medirus should NOT rebuild them.**
 
-### 3b. What XActions Owns That Jev Already Consumes (the real contract)
+### 3b. What Medirus Owns That Jev Already Consumes (the real contract)
 
-| XActions surface | Jev usage | Gap |
+| Medirus surface | Jev usage | Gap |
 |---|---|---|
-| `POST /api/ai/discovery/search` (X search job) | `xactionsClient.searchTwitter()` | Works, but returns [] without `XACTIONS_SESSION_COOKIE` — session-dependent |
-| `PumpFunCrawler` (theses, comment velocity, kolscan, livestream) | Jev's Story 2.2 spec'd it BUT reimplemented in-repo instead of calling `x_scrape` | **Divergence**: jev's own copy vs XActions' canonical crawler — drift risk |
-| `RedditCrawler.search` | `xactionsClient.searchReddit()` **returns []** — jev notes "no public reddit-search route in XActions" | **Real gap**: jev wants Reddit content search, XActions `reddit` crawler HAS `search` action but no REST route jev can reach |
-| Telegram channels | Deferred v2 in jev — "XActions chưa có TelegramCrawler" | **Real gap**: jev wants Telegram crypto channels, XActions has none |
+| `POST /api/ai/discovery/search` (X search job) | `medirusClient.searchTwitter()` | Works, but returns [] without `MEDIRUS_SESSION_COOKIE` — session-dependent |
+| `PumpFunCrawler` (theses, comment velocity, kolscan, livestream) | Jev's Story 2.2 spec'd it BUT reimplemented in-repo instead of calling `x_scrape` | **Divergence**: jev's own copy vs Medirus' canonical crawler — drift risk |
+| `RedditCrawler.search` | `medirusClient.searchReddit()` **returns []** — jev notes "no public reddit-search route in Medirus" | **Real gap**: jev wants Reddit content search, Medirus `reddit` crawler HAS `search` action but no REST route jev can reach |
+| Telegram channels | Deferred v2 in jev — "Medirus chưa có TelegramCrawler" | **Real gap**: jev wants Telegram crypto channels, Medirus has none |
 
-### 3c. Genuinely Missing — Worth XActions Building
+### 3c. Genuinely Missing — Worth Medirus Building
 
-After removing jev's self-served sources and XActions' existing coverage:
+After removing jev's self-served sources and Medirus' existing coverage:
 
-| Data | Consumer need | Why XActions (not jev) |
+| Data | Consumer need | Why Medirus (not jev) |
 |---|---|---|
 | **Reddit content search route** | jev `searchReddit()` returns [] today | Reddit crawler exists (`search` action) but isn't exposed on the REST/MCP surface jev calls — wiring gap, not new scrape |
 | **Telegram crypto channel monitor** | jev Epic 2 deferred: "cần TelegramCrawler"; Nowing needs crypto corpus | Nowhere in either repo; Telegram = crypto's primary comms platform |
@@ -176,9 +176,9 @@ After removing jev's self-served sources and XActions' existing coverage:
 | Rejected | Why |
 |---|---|
 | pumpportal WS scraper | jev Story 1.1 already runs it in worker_thread — duplicating = two consumers of same free stream, no added value |
-| Solana RPC crawler | jev calls RPC/Helius/Triton directly for latency-critical paths (<5s NFR); routing via XActions adds latency jev can't tolerate |
+| Solana RPC crawler | jev calls RPC/Helius/Triton directly for latency-critical paths (<5s NFR); routing via Medirus adds latency jev can't tolerate |
 | kolscan scraper | jev refreshes `kolscan.io/api/top-traders` every 10min already |
-| pump.fun trade stream | jev's PumpPortal + Triton already cover real-time trades; XActions' pump.fun niche is *social* (theses/comments), not trade tape |
+| pump.fun trade stream | jev's PumpPortal + Triton already cover real-time trades; Medirus' pump.fun niche is *social* (theses/comments), not trade tape |
 | CoinGecko price scraper | jev doesn't need it (has Dexscreener fallback + on-chain); ChainLens could want it but it's a thin REST wrapper — low moat |
 
 ---
@@ -187,7 +187,7 @@ After removing jev's self-served sources and XActions' existing coverage:
 
 ### Tier 1: Immediate — Fill Real Gaps (Deduped)
 
-After removing jev-trading's self-served sources, the highest-value items for XActions are **wiring existing capability to consumers** + **the one big missing social platform**:
+After removing jev-trading's self-served sources, the highest-value items for Medirus are **wiring existing capability to consumers** + **the one big missing social platform**:
 
 | # | Item | Type | Data | Effort | Consumer Value |
 |---|---|---|---|---|---|
@@ -199,7 +199,7 @@ After removing jev-trading's self-served sources, the highest-value items for XA
 
 | # | Item | Type | Data | Effort | Consumer Value |
 |---|---|---|---|---|---|
-| D4 | **Telegram crypto channel monitor** | New platform | Public channel/group messages (Bot API `getUpdates` for channels where bot is member; or MTProto user-client for public channels) | 1-2 weeks | jev Epic 2 Story 2.1 **deferred specifically because XActions lacks it**; Nowing: largest missing crypto corpus |
+| D4 | **Telegram crypto channel monitor** | New platform | Public channel/group messages (Bot API `getUpdates` for channels where bot is member; or MTProto user-client for public channels) | 1-2 weeks | jev Epic 2 Story 2.1 **deferred specifically because Medirus lacks it**; Nowing: largest missing crypto corpus |
 | D5 | **Farcaster** | New platform | Crypto-native casts/channels via Hub API or Neynar | 3-5 days | Nowing: Web3 social graph; jev: sentiment beyond X |
 
 ### Tier 3: Watch / Conditional
@@ -214,10 +214,10 @@ After removing jev-trading's self-served sources, the highest-value items for XA
 
 | Rejected | jev's existing coverage |
 |---|---|
-| pumpportal WS in XActions | jev Story 1.1 runs `subscribeNewToken` in worker_thread directly |
-| Solana RPC / Helius / Triton | jev calls directly — latency-critical (<5s NFR), can't route through XActions |
+| pumpportal WS in Medirus | jev Story 1.1 runs `subscribeNewToken` in worker_thread directly |
+| Solana RPC / Helius / Triton | jev calls directly — latency-critical (<5s NFR), can't route through Medirus |
 | kolscan top-traders | jev `refreshKolWallets()` every 10min already |
-| pump.fun trade tape | jev's PumpPortal + Triton cover real-time trades; XActions' pump.fun value is *social* only |
+| pump.fun trade tape | jev's PumpPortal + Triton cover real-time trades; Medirus' pump.fun value is *social* only |
 | CoinGecko price scraper | jev doesn't need it; ChainLens marginal — thin REST wrapper, low moat |
 | Jupiter swap routes | deprecated endpoint + jev executes swaps itself in Phase 2 — not a scrape need |
 
@@ -260,8 +260,8 @@ Probe `api.dexscreener.com` trả 5 endpoint families miễn phí không cần k
 ### Corrections Applied (live probe debunked assumptions)
 - ~~Jupiter `quote-api.jup.ag/v6`~~ → deprecated; migrate `lite-api.jup.ag` — chưa estimate effort được tới khi re-probe.
 - ~~Birdeye free no-key~~ → `public-api.birdeye.so` trả `Unauthorized` — cần registered key (miễn phí nhưng phải register).
-- ~~GMGN REST scrape~~ → Cloudflare HTML challenge — phải dùng got-jsdom/curl transport (đã có trong XActions từ pump.fun Epic 20).
-- ~~pump.fun `/coins/{mint}` là public REST~~ → 404 qua curl thuần, 200 qua in-browser fetch → **yêu cầu CF session**, crawler XActions đã handle.
+- ~~GMGN REST scrape~~ → Cloudflare HTML challenge — phải dùng got-jsdom/curl transport (đã có trong Medirus từ pump.fun Epic 20).
+- ~~pump.fun `/coins/{mint}` là public REST~~ → 404 qua curl thuần, 200 qua in-browser fetch → **yêu cầu CF session**, crawler Medirus đã handle.
 - ~~Raydium/Orca scrapers riêng~~ → Dexscreener `dexId` field đã cover — không cần platform mới.
 
 ## 5. Architecture Notes
@@ -297,13 +297,13 @@ Crypto data is time-sensitive (seconds, not hours). Prioritize:
 ## 6. Cross-Dimension Insights (post-dedup)
 
 ### The Drift Risk Is the Real Finding
-jev-trading **reimplemented `PumpFunCrawler` in its own repo** (`src/social/pumpFunCrawler.ts`) rather than calling XActions' canonical crawler — direct `frontend-api-v3` fetch, own rate limiter, own kolscan cache. Two copies of the same scraper now drift independently. Any XActions expansion plan must first answer: *why did jev fork instead of consume?* Likely: (a) latency — jev needs <5s/token, XActions' queue+poll is ~45s; (b) `x_scrape` MCP wasn't the integration path at Epic-2 spec time; (c) session-cookie requirement for X search. **The moat isn't the scraper — it's making consumers prefer `x_scrape` over DIY.**
+jev-trading **reimplemented `PumpFunCrawler` in its own repo** (`src/social/pumpFunCrawler.ts`) rather than calling Medirus' canonical crawler — direct `frontend-api-v3` fetch, own rate limiter, own kolscan cache. Two copies of the same scraper now drift independently. Any Medirus expansion plan must first answer: *why did jev fork instead of consume?* Likely: (a) latency — jev needs <5s/token, Medirus' queue+poll is ~45s; (b) `x_scrape` MCP wasn't the integration path at Epic-2 spec time; (c) session-cookie requirement for X search. **The moat isn't the scraper — it's making consumers prefer `x_scrape` over DIY.**
 
 ### Latency Is the Unspoken Filter
-Crypto trading data bifurcates cleanly by latency budget. **Sub-second** (mint events, trade tape, TP triggers): jev must own it — gRPC/WS direct; can't route through a scraping service. **Seconds-to-minutes** (social sentiment, Reddit, Telegram, token metadata, KOL flagging): XActions' model fits fine. This latency line is the real boundary between what jev self-serves and what it should consume — and it explains why Dexscreener is borderline (jev uses it as a *slow-path* fallback → could consume via XActions) while Triton/pumpportal are not.
+Crypto trading data bifurcates cleanly by latency budget. **Sub-second** (mint events, trade tape, TP triggers): jev must own it — gRPC/WS direct; can't route through a scraping service. **Seconds-to-minutes** (social sentiment, Reddit, Telegram, token metadata, KOL flagging): Medirus' model fits fine. This latency line is the real boundary between what jev self-serves and what it should consume — and it explains why Dexscreener is borderline (jev uses it as a *slow-path* fallback → could consume via Medirus) while Triton/pumpportal are not.
 
-### Social/Auth-Gated Scraping Is XActions' Actual Domain
-On-chain and market data are commoditized (free RPC, free Dexscreener). What jev *can't* easily self-serve is **auth-gated, anti-bot social scraping** — Telegram crypto channels, Discord alpha servers, Reddit search, pump.fun CF-protected endpoints. That's precisely XActions' existing competency (proxy pools, CF bypass via got-jsdom/curl transport, session management). Crypto expansion should play to that moat, not chase commodity API wrappers jev can fetch with one `fetch()`.
+### Social/Auth-Gated Scraping Is Medirus' Actual Domain
+On-chain and market data are commoditized (free RPC, free Dexscreener). What jev *can't* easily self-serve is **auth-gated, anti-bot social scraping** — Telegram crypto channels, Discord alpha servers, Reddit search, pump.fun CF-protected endpoints. That's precisely Medirus' existing competency (proxy pools, CF bypass via got-jsdom/curl transport, session management). Crypto expansion should play to that moat, not chase commodity API wrappers jev can fetch with one `fetch()`.
 
 ---
 
@@ -315,7 +315,7 @@ On-chain and market data are commoditized (free RPC, free Dexscreener). What jev
 | [2] | Tool comparison matrix (8 tools) | chainlens_ask deep/quality | 2026-09 | 2026-09-26 | MED |
 | [3] | Solana ecosystem metrics | chainlens_ask deep/quality | 2026-09 | 2026-09-26 | LOW-MED |
 | [4] | pump.fun API surface — live/removed endpoints | Live browser probe | 2026-09 | 2026-09-25 | HIGH |
-| [5] | XActions codebase capability inventory | Internal analysis | 2026-09 | 2026-09-26 | HIGH |
+| [5] | Medirus codebase capability inventory | Internal analysis | 2026-09 | 2026-09-26 | HIGH |
 | [6] | Pump.fun crawler actions + descriptor contract | `src/scrapers/social/pumpfun/` | 2026-09 | 2026-09-26 | HIGH |
 | [7] | Canonical platforms + categories | `src/scrapers/social/actions-list.js` | 2026-09 | 2026-09-26 | HIGH |
 | [8] | ThinEvent + Redis Stream format | `src/core/types.js`, `src/utils/redis-stream-publisher.js` | 2026-09 | 2026-09-26 | HIGH |
@@ -325,9 +325,9 @@ On-chain and market data are commoditized (free RPC, free Dexscreener). What jev
 | [12] | Solana public RPC `getHealth`/`getLatestBlockhash` verified | Live curl probe `api.mainnet-beta.solana.com` | 2026-09 | 2026-09-26 | HIGH |
 | [13] | Birdeye rejects no-key; GMGN CF-gated; Jupiter v6 deprecated; pumpportal WS-only | Live curl probes | 2026-09 | 2026-09-26 | HIGH |
 | [14] | jev-trading self-serves pumpportal WS, Solana RPC, Helius/Triton, kolscan, Dexscreener-fallback, Telegram | `jev-trading/src/` connect log + `epics.md` Stories 1.1/4.4/6.4/7.5 | 2026-09 | 2026-09-26 | HIGH |
-| [15] | jev reimplemented PumpFunCrawler in-repo (`src/social/pumpFunCrawler.ts`) rather than consuming `x_scrape` — drift risk | `jev-trading/src/social/pumpFunCrawler.ts`, `xactionsClient.ts` | 2026-09 | 2026-09-26 | HIGH |
-| [16] | jev `searchReddit()` returns [] — "no public reddit-search route in XActions"; Telegram deferred v2 | `jev-trading/src/social/xactionsClient.ts` | 2026-09 | 2026-09-26 | HIGH |
-| [17] | jev latency NFR <5s/token + <1s mint-to-queue — on-chain data can't route through XActions | `jev-trading` PRD NFR-1/NFR-5, epics Story 1.1 | 2026-09 | 2026-09-26 | HIGH |
+| [15] | jev reimplemented PumpFunCrawler in-repo (`src/social/pumpFunCrawler.ts`) rather than consuming `x_scrape` — drift risk | `jev-trading/src/social/pumpFunCrawler.ts`, `medirusClient.ts` | 2026-09 | 2026-09-26 | HIGH |
+| [16] | jev `searchReddit()` returns [] — "no public reddit-search route in Medirus"; Telegram deferred v2 | `jev-trading/src/social/medirusClient.ts` | 2026-09 | 2026-09-26 | HIGH |
+| [17] | jev latency NFR <5s/token + <1s mint-to-queue — on-chain data can't route through Medirus | `jev-trading` PRD NFR-1/NFR-5, epics Story 1.1 | 2026-09 | 2026-09-26 | HIGH |
 
 ---
 
@@ -338,7 +338,7 @@ On-chain and market data are commoditized (free RPC, free Dexscreener). What jev
 | API rate limits (CoinGecko, Dexscreener, Birdeye) | technical | 2026-09 | 2026-12 | Rate limits change quarterly |
 | Pump.fun API endpoints | technical | 2026-09 | 2026-10 | API surface changes frequently |
 | Crypto platform landscape | market | 2026-09 | 2026-12 | New platforms emerge monthly |
-| XActions platform registry | technical | 2026-09 | 2026-12 | New platforms added each epic |
+| Medirus platform registry | technical | 2026-09 | 2026-12 | New platforms added each epic |
 
 **Earliest re-check**: 2026-10 for pump.fun API stability.
 

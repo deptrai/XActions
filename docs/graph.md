@@ -4,7 +4,7 @@
 
 ## Overview
 
-XActions Social Graph crawls your network N degrees deep and runs graph algorithms on the result:
+Medirus Social Graph crawls your network N degrees deep and runs graph algorithms on the result:
 
 - **Build** — Crawl followers/following from a seed account, creating a graph of nodes (accounts) and edges (follow relationships)
 - **Analyze** — Compute mutual connections, bridge accounts, clusters, influence scores, ghost followers, and orbit analysis
@@ -205,7 +205,7 @@ Maps your followers into concentric orbits:
   "name": "nich",
   "followers": 25000,
   "following": 1200,
-  "bio": "Building @XActions",
+  "bio": "Building @Medirus",
   "verified": true,
   "depth": 0,
   "influence": 0.87,
@@ -228,7 +228,7 @@ Maps your followers into concentric orbits:
 
 ### Storage
 
-Graphs are persisted to `~/.xactions/graphs/` as JSON files. Use `graph list` to see saved graphs and `graph delete` to clean up.
+Graphs are persisted to `~/.medirus/graphs/` as JSON files. Use `graph list` to see saved graphs and `graph delete` to clean up.
 
 ---
 

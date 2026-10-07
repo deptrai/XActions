@@ -6,7 +6,7 @@
 
 ## Overview
 
-The XActions Scheduler lets you automate recurring tasks with:
+The Medirus Scheduler lets you automate recurring tasks with:
 
 - **Cron scheduling** — standard cron syntax for any interval
 - **Job templates** — pre-built templates for common tasks
@@ -56,7 +56,7 @@ Args: { "name": "daily-snapshot" }
 ### Node.js
 
 ```javascript
-import { getScheduler, JOB_TEMPLATES } from 'xactions/src/scheduler/scheduler.js';
+import { getScheduler, JOB_TEMPLATES } from 'medirus/src/scheduler/scheduler.js';
 
 const scheduler = getScheduler();
 await scheduler.load();
@@ -127,8 +127,8 @@ dashboard/calendar.html → Visual calendar UI
 
 ### Data Storage
 
-- **Jobs:** `~/.xactions/scheduler.json`
-- **History:** `~/.xactions/scheduler-history/{jobName}.jsonl`
+- **Jobs:** `~/.medirus/scheduler.json`
+- **History:** `~/.medirus/scheduler-history/{jobName}.jsonl`
 
 ---
 

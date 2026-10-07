@@ -5,7 +5,7 @@
  *
  * P0 areas: runGuardedBatch rate-limit guard, like/comment/post automation,
  * friend requests, join groups, view boost, account warmup.
- * Verdict per bmad-xactions-mutation-gate: FAIL if total < 60% OR p0Survived > 0.
+ * Verdict per bmad-medirus-mutation-gate: FAIL if total < 60% OR p0Survived > 0.
  *
  * @type {import('@stryker-mutator/core/core/StrykerOptions').StrykerOptions}
  */

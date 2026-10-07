@@ -73,7 +73,7 @@ This script provides the following capabilities:
  * This script uses conservative delays (60s+ between DMs).
  *
  * 🎮 CONTROLS:
- *   window.XActions.pause()  / .resume() / .abort() / .status()
+ *   window.Medirus.pause()  / .resume() / .abort() / .status()
  * ============================================================
  */
 (() => {
@@ -116,7 +116,7 @@ This script provides the following capabilities:
   const startTime = Date.now();
   const newFollowersList = [];
 
-  const STORAGE_KEY = 'xactions_known_followers';
+  const STORAGE_KEY = 'medirus_known_followers';
 
   const getKnown = () => {
     try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); } catch { return new Set(); }
@@ -125,7 +125,7 @@ This script provides the following capabilities:
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...set]));
   };
 
-  window.XActions = {
+  window.Medirus = {
     pause()  { paused = true;  console.log('⏸️ Paused.'); },
     resume() { paused = false; console.log('▶️ Resumed.'); },
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
@@ -275,7 +275,7 @@ This script provides the following capabilities:
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-new-followers-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-new-followers-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 New followers list exported.');
     }
@@ -332,14 +332,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -377,4 +377,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

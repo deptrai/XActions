@@ -5,7 +5,7 @@ Date: 2026-09-08
 
 ## Summary
 
-Epic 21 mở rộng XActions sang **B2B data collection** cho thị trường Việt Nam: danh bạ doanh nghiệp mới thành lập (MaSoThue), hồ sơ công ty chi tiết (HoSoCongTy), thông tin đấu thầu công (MuaSamCong), và thị trường xe (Oto.com.vn, BonBanh, Chợ Tốt Xe). Epic này là phần của **Vietnam market pivot** (FR-94, FR-95, NFR-19).
+Epic 21 mở rộng Medirus sang **B2B data collection** cho thị trường Việt Nam: danh bạ doanh nghiệp mới thành lập (MaSoThue), hồ sơ công ty chi tiết (HoSoCongTy), thông tin đấu thầu công (MuaSamCong), và thị trường xe (Oto.com.vn, BonBanh, Chợ Tốt Xe). Epic này là phần của **Vietnam market pivot** (FR-94, FR-95, NFR-19).
 
 Epic complete across four stories:
 

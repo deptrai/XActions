@@ -215,7 +215,7 @@ export class ThreadsCrawler extends AbstractCrawler {
       requiresAuth: true,
       requiredArgs: ['text'],
       optionalArgs: ['dryRun'],
-      example: { text: 'Hello Threads from XActions', dryRun: false },
+      example: { text: 'Hello Threads from Medirus', dryRun: false },
       outputType: '{ success: boolean, id?: string, dryRun?: boolean }',
       handler: (/** @type {any} */ args, /** @type {any} */ session) => this.post(args, session),
     }));

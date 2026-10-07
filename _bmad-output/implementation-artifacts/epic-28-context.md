@@ -49,7 +49,7 @@ Epic 28 hardens scraper data quality and selector resilience across supported pl
 - **Selector Re-Discovery Engine & CLI Wiring (28.3):**
   - Core engine located at `src/core/auto-selector-fallback.js` using heuristic tree search, element shape matching, and Levenshtein/substring similarity.
   - Exposed via Commander CLI command in `src/cli/commands/tools.js` (or `src/cli/commands/schema.js`):
-    `xactions tools suggest-selector --platform <platform> --url <url> --field <field> [--backend <obscura|chrome>]`
+    `medirus tools suggest-selector --platform <platform> --url <url> --field <field> [--backend <obscura|chrome>]`
 - **Type Definitions:** Export TypeScript definitions for `SchemaDriftGuard`, `DriftClassification`, `SelectorCanaryResult`, and `CanaryTargetConfig` in `types/core.d.ts`.
 
 ## UX & Interaction Patterns
@@ -57,7 +57,7 @@ Epic 28 hardens scraper data quality and selector resilience across supported pl
 - **Admin Dashboard Indicator:**
   - `dashboard/admin.html` displays a per-platform drift status badge/indicator (green OK / red drift alert) within the existing status / stream views.
 - **CLI Feedback:**
-  - `xactions tools suggest-selector` outputs ranked candidate selectors with confidence scores (0.0–1.0) and selector stability rationale.
+  - `medirus tools suggest-selector` outputs ranked candidate selectors with confidence scores (0.0–1.0) and selector stability rationale.
 
 ## Cross-Story Dependencies
 

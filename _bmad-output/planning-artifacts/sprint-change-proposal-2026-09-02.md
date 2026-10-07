@@ -8,7 +8,7 @@ scope: major
 # Sprint Change Proposal
 
 **Date:** 2026-09-02  
-**Project:** XActions  
+**Project:** Medirus  
 **Triggering issue:** `TwitterCrawler` 55-action audit phát hiện GraphQL schema mới của X/Twitter đã loại bỏ `legacy` object, khiến các normalizer cũ trả dữ liệu rỗng/null và guest action trả 404. Đồng thời user yêu cầu fix frontend UI/UX, real-data scraper test cho Mastodon/Bluesky/Facebook, và commit.
 
 ---

@@ -4,11 +4,11 @@
 
 ## Goal
 
-Expose `scrape()` dispatcher (Epic 25) thành service-to-service contract cho multi-consumer (Nowing, ChainLens, AI agents, trading bots). Control plane qua MCP `x_scrape`, data plane qua Redis Stream `stream:social:raw_posts` (snake_case ThinEvent), discovery qua `x_actions_list`. Epic cũng mở rộng sang các nền tảng social-native mới (pump.fun) để consumer ingest tín hiệu social real-time.
+Expose `scrape()` dispatcher (Epic 25) thành service-to-service contract cho multi-consumer (Nowing, ChainLens, AI agents, trading bots). Control plane qua MCP `x_scrape`, data plane qua Redis Stream `stream:social:raw_posts` (snake_case ThinEvent), discovery qua `medirus_list`. Epic cũng mở rộng sang các nền tảng social-native mới (pump.fun) để consumer ingest tín hiệu social real-time.
 
 ## Stories
 
-- Story 20.1: Multi-Consumer Service Contract (x_scrape + x_actions_list + Action Matrix)
+- Story 20.1: Multi-Consumer Service Contract (x_scrape + medirus_list + Action Matrix)
 - Story 20.2: Universal Stream-Publish Hook (snake_case ThinEvent + mapToThinEvent)
 - Story 20.3: [EXTERNAL — Nowing repo] Shadow-Run Validation
 - Story 20.4: [EXTERNAL — Nowing repo] Legacy Decommissioning
@@ -17,7 +17,7 @@ Expose `scrape()` dispatcher (Epic 25) thành service-to-service contract cho mu
 ## Requirements & Constraints
 
 - `x_scrape` nhận: platform, action, args (nested object), context (Record mở), accountId, proxyUrl, dryRun (default false), artifactFormat; trả unified envelope `{ success, mode: 'stream'|'direct', metadata, stream: {enabled, name, cursor}, preview: [...≤10], data: [...] }`. `dryRun=true` → KHÔNG emit stream events.
-- `x_actions_list` enumerate toàn bộ platform descriptors; platform chưa có crawler → flag `"no_crawler": true`, không silent-skip; lọc bỏ `checkpointResolver` khỏi descriptor trước khi trả.
+- `medirus_list` enumerate toàn bộ platform descriptors; platform chưa có crawler → flag `"no_crawler": true`, không silent-skip; lọc bỏ `checkpointResolver` khỏi descriptor trước khi trả.
 - Mọi platform/crawler mới phải kế thừa `AbstractCrawler` + `AbstractApiClient`, đăng ký action vào `globalActionRegistry` (snake_case action, category hợp lệ), và đi qua `CrawlerCommand`/`scrape(platform, action, options)` dispatcher thống nhất.
 - Rate limit & resilience: sticky proxy per logical target, auto-quarantine proxy khi HTTP 429/403, exponential backoff với jitter, replay tối đa 3 lần; `DistributedTokenBucket` cho quota phân tán (Redis atomic Lua, fallback in-memory).
 - Anti-bot: khi HTTP client dính Cloudflare TLS fingerprint block (HTTP 403) → fallback `createCurlTransport(platform)`; khi HTTP 200 nhưng body rỗng → `JevChallengeDiagnoser` xác minh silent block/captcha trước khi trả dữ liệu rỗng.
@@ -42,4 +42,4 @@ Expose `scrape()` dispatcher (Epic 25) thành service-to-service contract cho mu
 - Story 20.1 và 20.2 **BẮT BUỘC atomic release** — 20.1 trước 20.2 → `x_scrape` trả preview rỗng cho platforms chưa có stream hook (data loss âm thầm).
 - Story 20.2 phụ thuộc `redis-stream-publisher.js` `formatPayload()` và `AbstractCrawler.start()` hook đặt sau `entry.handler()`.
 - Story 20.5 độc lập với 20.1/20.2 về implementation nhưng PHẢI tuân thủ cùng contract (AbstractCrawler, action registry, descriptor dispatch, ThinEvent emission) để consumer ingest thống nhất.
-- Story 20.3/20.4 (external, Nowing repo) KHÔNG block các story XActions; 20.4 blocked by 20.3.
+- Story 20.3/20.4 (external, Nowing repo) KHÔNG block các story Medirus; 20.4 blocked by 20.3.

@@ -1,4 +1,4 @@
-# UX Review — XActions Universal Hybrid Scraping Architecture (r3)
+# UX Review — Medirus Universal Hybrid Scraping Architecture (r3)
 
 **Persona:** Sally / UX Designer  
 **Target:** `ARCHITECTURE-SPINE.md` (r3)  
@@ -21,7 +21,7 @@
   - Người dùng khởi động daemon bằng lệnh nào? (`npm run mcp` vẫn default `stdio`).
   - Làm sao biết daemon đã chạy? Chỉ có `GET /health`, chưa có CLI status hoặc dashboard tile.
   - Khi nào nên dùng HTTP/SSE, khi nào nên dùng stdio? Hướng dẫn này ảnh hưởng đến cả dev lẫn người dùng cuối.
-* **Đề xuất UX:** Thêm `xactions daemon start/status/stop` vào CLI; dashboard hiển thị daemon state; AD-7 bổ sung `Rule 5: startup UX`.
+* **Đề xuất UX:** Thêm `medirus daemon start/status/stop` vào CLI; dashboard hiển thị daemon state; AD-7 bổ sung `Rule 5: startup UX`.
 
 ### F2 — Terminal QR Login chưa cover môi trường không có TTY
 * **AD liên quan:** AD-5
@@ -29,7 +29,7 @@
   - Headless server / Docker / CI không có TTY thì QR không hiển thị.
   - Không có fallback URL hoặc push notification để user confirm trên điện thoại khi không xem được terminal.
   - Thiếu thông báo rõ ràng khi timeout hoặc tài khoản bị checkpoint.
-* **Đề xuất UX:** AD-5 thêm `Rule 4: Non-TTY fallback` — in URL + short code, hoặc support webhook/push để user confirm từ app. Lỗi timeout phải có actionable message: "QR hết hạn — gọi lại `xactions login --qr` hoặc dùng `--cdp`".
+* **Đề xuất UX:** AD-5 thêm `Rule 4: Non-TTY fallback` — in URL + short code, hoặc support webhook/push để user confirm từ app. Lỗi timeout phải có actionable message: "QR hết hạn — gọi lại `medirus login --qr` hoặc dùng `--cdp`".
 
 ### F3 — Adaptive Rate Governor thiếu "outward-facing" status
 * **AD liên quan:** AD-13
@@ -37,17 +37,17 @@
   - User thấy gì khi crawl bị chậm? Silent pause là trải nghiệm tồi.
   - Làm sao biết tài khoản đang hibernation còn bao lâu?
   - Dashboard/CLI cần hiển thị healthy proxy ratio, current throughput, pending lag.
-* **Đề xuất UX:** Thêm `Rule 6` vào AD-13: mọi quyết định throttle/hibernation phải ghi trạng thái công khai qua `GET /governor/status` và CLI `xactions status`. Thông điệp gợi ý hành động, ví dụ: "Tài khoản `fb:123` đang hibernation 18 phút vì WAF challenge. Đổi proxy hoặc thử lại sau."
+* **Đề xuất UX:** Thêm `Rule 6` vào AD-13: mọi quyết định throttle/hibernation phải ghi trạng thái công khai qua `GET /governor/status` và CLI `medirus status`. Thông điệp gợi ý hành động, ví dụ: "Tài khoản `fb:123` đang hibernation 18 phút vì WAF challenge. Đổi proxy hoặc thử lại sau."
 
 ### F4 — CrawlCheckpoint ẩn hoàn toàn với user/operator
 * **AD liên quan:** AD-10, AD-12
 * **Vấn đề:** Checkpoint là nội bộ; user/operator không thấy tiến độ crawl, last cursor, hay có thể resume/pause/retry một target.
-* **Đề xuất UX:** Bổ sung API/CLI surface: `GET /checkpoints`, `xactions checkpoints list --platform shopee --target-key "iphone 15"`. Dashboard hiển thị checkpoint table với `lastCrawledAt`, `lastCursor`, `status` (running/paused/failed).
+* **Đề xuất UX:** Bổ sung API/CLI surface: `GET /checkpoints`, `medirus checkpoints list --platform shopee --target-key "iphone 15"`. Dashboard hiển thị checkpoint table với `lastCrawledAt`, `lastCursor`, `status` (running/paused/failed).
 
 ### F5 — Multi-platform actions khó khám phá
 * **AD liên quan:** AD-11
 * **Vấn đề:** Mỗi platform có registry action snake_case (`search_products`, `get_hashtag_feed`, v.v.), nhưng AI agent và CLI user không biết platform nào hỗ trợ action gì trừ khi đọc code.
-* **Đề xuất UX:** AD-11 bổ sung `Rule 3: Discovery` — mọi crawler phải cung cấp `listActions()` trả về `{ action, description, requiredArgs, example }`. MCP tool `x_actions_list` hoặc CLI `xactions actions --platform shopee`.
+* **Đề xuất UX:** AD-11 bổ sung `Rule 3: Discovery` — mọi crawler phải cung cấp `listActions()` trả về `{ action, description, requiredArgs, example }`. MCP tool `medirus_list` hoặc CLI `medirus actions --platform shopee`.
 
 ### F6 — Error taxonomy chưa friendly cho AI agents và operators
 * **AD liên quan:** AD-9
@@ -66,12 +66,12 @@
 
 ### F9 — Internal Operator Dashboard chưa được định nghĩa UX
 * **AD liên quan:** AD-7, AD-10, AD-13, AD-19
-* **Vấn đề:** Spine đề cập "XActions Internal Operator Dashboard" trong diagram nhưng chưa có AD chi tiết về UX dashboard. Với 4 hệ thống con (proxy pool, checkpoints, governor, stream), dashboard là nơi duy nhất giúp operator nội bộ hiểu tình trạng.
+* **Vấn đề:** Spine đề cập "Medirus Internal Operator Dashboard" trong diagram nhưng chưa có AD chi tiết về UX dashboard. Với 4 hệ thống con (proxy pool, checkpoints, governor, stream), dashboard là nơi duy nhất giúp operator nội bộ hiểu tình trạng.
 * **Đề xuất UX:** Dashboard dùng nội bộ, auth bằng admin API key. Có 5 views: Jobs, Proxies, Accounts, Checkpoints, Stream Metrics. Mỗi view hiển thị real-time status và actions cơ bản (pause/resume/retry).
 
 ### F10 — Backward compatibility với CLI cũ (`unfollowx`)
 * **AD liên quan:** AD-2
-* **Vấn đề:** `src/client/` là legacy Twitter client. Người dùng cũ của `xactions` CLI quen gõ `xactions unfollow` hoặc `xactions get_followers` — nếu abstraction mới ở `src/core` thay đổi API surface, user sẽ gặp lỗi không rõ lý do.
+* **Vấn đề:** `src/client/` là legacy Twitter client. Người dùng cũ của `medirus` CLI quen gõ `medirus unfollow` hoặc `medirus get_followers` — nếu abstraction mới ở `src/core` thay đổi API surface, user sẽ gặp lỗi không rõ lý do.
 * **Đề xuất UX:** AD-2 `Rule 4: Backward Compatibility` — legacy CLI commands map vào `CrawlerCommand` với action tương ứng (`x_get_followers` → `{ action: 'followers', platform: 'twitter' }`). Error message rõ ràng nếu lệnh cũ không còn hỗ trợ.
 
 ---
@@ -98,4 +98,4 @@
 
 ---
 
-*Review by Sally — focused on how humans and AI agents feel, understand, and recover when using XActions.*
+*Review by Sally — focused on how humans and AI agents feel, understand, and recover when using Medirus.*

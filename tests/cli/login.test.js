@@ -31,7 +31,7 @@ describe('Story 12.1 — CLI Login Command with QR & Non-TTY Flags (tests/cli/lo
 
       program.parse([
         'node',
-        'xactions',
+        'medirus',
         'login',
         '--qr',
         '--qr-url',
@@ -63,7 +63,7 @@ describe('Story 12.1 — CLI Login Command with QR & Non-TTY Flags (tests/cli/lo
           capturedOptions = options;
         });
 
-      program.parse(['node', 'xactions', 'login', '--qr']);
+      program.parse(['node', 'medirus', 'login', '--qr']);
 
       expect(capturedOptions).toBeDefined();
       expect(capturedOptions.platform).toBe('twitter');

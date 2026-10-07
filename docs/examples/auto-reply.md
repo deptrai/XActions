@@ -77,8 +77,8 @@ This script provides the following capabilities:
     // ── Triggers (at least one must match) ──────────────────
     triggers: [
       {
-        keywords: ['xactions', 'twitter automation'],
-        reply: 'Check out XActions — the complete X automation toolkit! 🚀 https://github.com/nirholas/XActions',
+        keywords: ['medirus', 'twitter automation'],
+        reply: 'Check out Medirus — the complete X automation toolkit! 🚀 https://github.com/nirholas/XActions',
       },
       // Add more trigger/reply pairs here:
       // { keywords: ['keyword'], reply: 'Your reply text' },
@@ -132,7 +132,7 @@ This script provides the following capabilities:
                 `Delay: ${CONFIG.minDelay/1000}-${CONFIG.maxDelay/1000}s\n`);
 
     const repliedSet = new Set(
-      JSON.parse(localStorage.getItem('xactions_autoreplied') || '[]')
+      JSON.parse(localStorage.getItem('medirus_autoreplied') || '[]')
     );
     const ignoreSet = new Set(CONFIG.ignoreUsers.map(u => u.toLowerCase().replace('@', '')));
     const fromSet = new Set(CONFIG.fromUsers.map(u => u.toLowerCase().replace('@', '')));
@@ -248,7 +248,7 @@ This script provides the following capabilities:
             console.log(`💬 #${replied} Replied to @${author}: "${replyText.slice(0, 40)}..."`);
 
             // Save to localStorage
-            localStorage.setItem('xactions_autoreplied', JSON.stringify([...repliedSet]));
+            localStorage.setItem('medirus_autoreplied', JSON.stringify([...repliedSet]));
 
             // Long delay between replies (critical)
             await rand(CONFIG.minDelay, CONFIG.maxDelay);
@@ -290,8 +290,8 @@ This script provides the following capabilities:
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `triggers` | `[` | Triggers |
-| `keywords` | `['xactions', 'twitter automation']` | Keywords |
-| `reply` | `'Check out XActions — the complete X automation toolkit! 🚀 https:` | github.com/nirholas/XActions' |
+| `keywords` | `['medirus', 'twitter automation']` | Keywords |
+| `reply` | `'Check out Medirus — the complete X automation toolkit! 🚀 https:` | github.com/nirholas/XActions' |
 
 ---
 
@@ -339,14 +339,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -384,4 +384,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

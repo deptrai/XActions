@@ -1,5 +1,5 @@
 /**
- * XActions — Visual Workflow Builder JS
+ * Medirus — Visual Workflow Builder JS
  * Canvas-based drag-and-drop editor, serializes workflows to JSON
  */
 
@@ -455,10 +455,10 @@
       showToast('Workflow saved to server', 'success');
     } catch {
       // Fallback: save to localStorage
-      const saved = JSON.parse(localStorage.getItem('xactions_workflows') || '[]');
+      const saved = JSON.parse(localStorage.getItem('medirus_workflows') || '[]');
       const idx = saved.findIndex(w => w.name === json.name);
       if (idx >= 0) saved[idx] = json; else saved.push(json);
-      localStorage.setItem('xactions_workflows', JSON.stringify(saved));
+      localStorage.setItem('medirus_workflows', JSON.stringify(saved));
       showToast('Workflow saved locally', 'success');
     }
   }
@@ -470,7 +470,7 @@
       const data = await apiRequest('/workflows');
       workflows = data.workflows || [];
     } catch {
-      workflows = JSON.parse(localStorage.getItem('xactions_workflows') || '[]');
+      workflows = JSON.parse(localStorage.getItem('medirus_workflows') || '[]');
     }
 
     if (workflows.length === 0) {

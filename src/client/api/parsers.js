@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — GraphQL/REST Response Parsers
+ * Medirus Client — GraphQL/REST Response Parsers
  *
  * Shared utilities for extracting Tweets, Profiles, cursors and lists from
  * raw Twitter API responses.

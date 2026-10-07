@@ -6,11 +6,11 @@ baseline_commit: 44ca121b63b4e05844193e6bb8aee904285c77ae
 
 Status: done
 
-<!-- First story of Epic 4 (Facebook Growth Automation, Cluster 3 — low risk). Source: epics.md#Story 4.1 + PRD prd-XActions-2026-06-10-epic4 FR-15. -->
+<!-- First story of Epic 4 (Facebook Growth Automation, Cluster 3 — low risk). Source: epics.md#Story 4.1 + PRD prd-Medirus-2026-06-10-epic4 FR-15. -->
 
 ## Story
 
-As a growth marketer using XActions,
+As a growth marketer using Medirus,
 I want to schedule a Facebook post to publish at a specific datetime,
 so that I can maintain consistent content without being online at peak hours.
 
@@ -18,7 +18,7 @@ so that I can maintain consistent content without being online at peak hours.
 
 This is the FIRST persisted-workflow feature in Epic 4. Unlike Epic 2's automate functions (which run synchronously and finish), a scheduled post is **created now, executed later** by a background worker. Three pieces do not exist yet and must be built:
 
-1. **A `Schedule` Prisma model** — XActions has NO scheduled-post table today (verified: `prisma/schema.prisma` has `Operation`, `JobQueue`, `UnfollowerSchedule`, `FacebookAccount` — none fit). The post content + `scheduledAt` must persist so a worker can pick it up.
+1. **A `Schedule` Prisma model** — Medirus has NO scheduled-post table today (verified: `prisma/schema.prisma` has `Operation`, `JobQueue`, `UnfollowerSchedule`, `FacebookAccount` — none fit). The post content + `scheduledAt` must persist so a worker can pick it up.
 2. **A scheduler worker (ticker)** — there is NO active poller firing due jobs. `api/services/unfollowerAlerts.js` has the *pattern* (`getDueSchedules` → `nextRunAt <= now`) but nothing calls it on a tick. We add a node-cron tick.
 3. **A per-user throughput throttle** — NFR-9/NFR10 (≤5 executed posts/hour/user) has ZERO implementation anywhere today.
 
@@ -198,7 +198,7 @@ epics.md calls the throughput cap "NFR10"; PRD calls it "NFR-9". Same requiremen
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 4.1: Schedule Facebook post]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md#FR-15, §7 NFR-9, §8 SM-6/SM-C3]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-10-epic4/prd.md#FR-15, §7 NFR-9, §8 SM-6/SM-C3]
 - [Source: api/services/facebookAutomation.js — runGuardedBatch, createFacebookPost, loginWithCookie/createBrowser/createPage re-exports]
 - [Source: api/routes/facebook.js — Operation create/update + Socket.IO `facebook:operation` emit pattern]
 - [Source: api/services/unfollowerAlerts.js:179–284 — getDueSchedules / markScheduleExecuted poll pattern]

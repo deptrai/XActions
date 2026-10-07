@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
-// XActions — MCP Facebook account management tools contract tests.
+// Medirus — MCP Facebook account management tools contract tests.
 // by nichxbt
 
 import { describe, it, expect, beforeAll } from 'vitest';

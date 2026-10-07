@@ -2,15 +2,15 @@
 
 Status: ready-for-dev
 
-<!-- Port from SST_TOOL_FB Main.cs:Post() 582-799 → XActions. Plan: facebook-messenger-port-plan.md (Epic 5, Story 5.2). -->
+<!-- Port from SST_TOOL_FB Main.cs:Post() 582-799 → Medirus. Plan: facebook-messenger-port-plan.md (Epic 5, Story 5.2). -->
 
 ## Story
 
-As a multi-account operator using XActions,
+As a multi-account operator using Medirus,
 I want to share a Facebook post to target Pages via Messenger with a dry-run preview,
 so that I can run share campaigns at scale with safety guardrails.
 
-This is the **CORE** story of the Messenger Port — the net-new capability C# has that XActions didn't. It consolidates:
+This is the **CORE** story of the Messenger Port — the net-new capability C# has that Medirus didn't. It consolidates:
 - **(a) Share post → page via Messenger** (find share button, click "via Messenger", select target)
 - **(b) Compose & send message** (random `**` segments, line-by-line Shift+Enter, emoji strip, detect blocked)
 - **(c) Batch campaign entry point** (`messengerShareCampaign` routing through `runGuardedBatch`)

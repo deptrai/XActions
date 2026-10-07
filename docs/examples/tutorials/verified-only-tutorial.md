@@ -1,8 +1,8 @@
 ---
 title: "Verified-Only Replies & Prioritized Replies — Tutorial"
-description: "Set reply restrictions to verified users only and leverage prioritized replies on X/Twitter using XActions."
-keywords: ["verified only replies twitter", "reply restrictions x", "prioritized replies twitter", "xactions verified only"]
-canonical: "https://xactions.app/examples/verified-only"
+description: "Set reply restrictions to verified users only and leverage prioritized replies on X/Twitter using Medirus."
+keywords: ["verified only replies twitter", "reply restrictions x", "prioritized replies twitter", "medirus verified only"]
+canonical: "https://medirus.online/examples/verified-only"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
@@ -73,7 +73,7 @@ Before setting reply restrictions, verify that you have Premium:
 
 ```javascript
 (() => {
-  console.log('🔒 VERIFIED-ONLY REPLIES - XActions by nichxbt\n');
+  console.log('🔒 VERIFIED-ONLY REPLIES - Medirus by nichxbt\n');
 
   const verifiedIcons = document.querySelectorAll('[data-testid="icon-verified"]');
   const profileLink = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]');
@@ -103,7 +103,7 @@ Open the compose dialog first (click the post button), then run:
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('🔒 SETTING REPLY RESTRICTION - XActions by nichxbt');
+  console.log('🔒 SETTING REPLY RESTRICTION - Medirus by nichxbt');
 
   const RESTRICTION_LABELS = {
     everyone: 'Everyone',
@@ -178,7 +178,7 @@ Open the compose dialog first (click the post button), then run:
 ### Expected Console Output
 
 ```
-🔒 SETTING REPLY RESTRICTION - XActions by nichxbt
+🔒 SETTING REPLY RESTRICTION - Medirus by nichxbt
 🔒 Target restriction: "Verified accounts"
 ✅ Opened reply restriction menu.
 ✅ Selected: "Verified accounts"
@@ -254,5 +254,5 @@ The boost is automatic -- there is no setting to toggle. Simply having Premium g
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

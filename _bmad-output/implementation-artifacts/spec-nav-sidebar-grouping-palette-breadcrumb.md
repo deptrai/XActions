@@ -7,8 +7,8 @@ status: 'done'
 review_loop_iteration: 0
 followup_review_recommended: false  # 1 medium patch + 1 low patch; no high → converged
 context:
-  - _bmad-output/planning-artifacts/ux-designs/ux-XActions-2026-09-25/EXPERIENCE.md
-  - _bmad-output/planning-artifacts/ux-designs/ux-XActions-2026-09-25/DESIGN.md
+  - _bmad-output/planning-artifacts/ux-designs/ux-Medirus-2026-09-25/EXPERIENCE.md
+  - _bmad-output/planning-artifacts/ux-designs/ux-Medirus-2026-09-25/DESIGN.md
 warnings: []
 deferred: []
 ---

@@ -138,10 +138,10 @@ author: Murat (Test Architect)
 
 ```bash
 # Tạo test DB (PostgreSQL)
-createdb xactions_test
+createdb medirus_test
 
 # .env.test
-DATABASE_URL="postgresql://user:password@localhost:5432/xactions_test?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/medirus_test?schema=public"
 JWT_SECRET="test-secret-do-not-use-in-production"
 REDIS_HOST=localhost
 REDIS_PORT=6379
@@ -162,7 +162,7 @@ const prisma = new PrismaClient();
 export async function seedTestUser() {
   const user = await prisma.user.create({
     data: {
-      email: 'test-api@xactions.app',
+      email: 'test-api@medirus.online',
       twitterUsername: 'testuser',
       // không set sessionCookie thật
     }
@@ -243,8 +243,8 @@ const invalidTwitterCookie = {
 redis-server --daemonize yes
 
 # Setup test DB
-psql -c "DROP DATABASE IF EXISTS xactions_test;"
-psql -c "CREATE DATABASE xactions_test;"
+psql -c "DROP DATABASE IF EXISTS medirus_test;"
+psql -c "CREATE DATABASE medirus_test;"
 cp .env.example .env.test
 # edit .env.test DATABASE_URL, JWT_SECRET, REDIS_*, NODE_ENV=test
 npx prisma db push --schema=prisma/schema.prisma

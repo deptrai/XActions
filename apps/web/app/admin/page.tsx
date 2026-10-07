@@ -285,7 +285,7 @@ const INITIAL_PAYMENTS: PaymentLedgerState = {
     { id: 'tx-904', operation: 'tiktok:extract_metadata', amountUsdc: 0.01, timestamp: '14m ago', txHash: '0x33b4...119c', status: 'confirmed' },
   ],
   webhooks: {
-    customEndpointUrl: 'https://api.acme.corp/webhooks/xactions-payments',
+    customEndpointUrl: 'https://api.acme.corp/webhooks/medirus-payments',
     discordEnabled: true,
     slackEnabled: false,
     signingEnabled: true,
@@ -471,7 +471,7 @@ export default function AdminConsolePage() {
 
   // Alert Channel Form
   const [webhookUrlInput, setWebhookUrlInput] = useState(INITIAL_PAYMENTS.webhooks.customEndpointUrl);
-  const [emailRecipientsInput, setEmailRecipientsInput] = useState('ops@xactions.io, alerts@xactions.io');
+  const [emailRecipientsInput, setEmailRecipientsInput] = useState('ops@medirus.online, alerts@medirus.online');
 
   // Toast Helper
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -1784,7 +1784,7 @@ export default function AdminConsolePage() {
                   value={emailRecipientsInput}
                   onChange={(e) => setEmailRecipientsInput(e.target.value)}
                   className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="ops@xactions.io, lead@xactions.io"
+                  placeholder="ops@medirus.online, lead@medirus.online"
                 />
               </div>
 

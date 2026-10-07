@@ -7,6 +7,6 @@
 /thread/:id /thread.html 200
 
 # API proxy to backend — Railway URL is currently dead (404), needs a live
-# backend deployed before this route works. Set XACTIONS_API_URL in
+# backend deployed before this route works. Set MEDIRUS_API_URL in
 # Cloudflare Pages env vars once one exists.
 /api/* https://web-production-2eb69.up.railway.app/api/:splat 200

@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 🕵️ Shadowban Checker - XActions
+ * 🕵️ Shadowban Checker - Medirus
  * ============================================
  *
  * @name         shadowban-checker
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to any x.com page while logged in (x.com/home works fine)
@@ -110,9 +110,9 @@
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🕵️ SHADOWBAN CHECKER - XActions                        ║
+║  🕵️ SHADOWBAN CHECKER - Medirus                        ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -149,7 +149,7 @@
     results.tests.exists = { status: 'FAIL', detail: 'Account not found or suspended' };
     results.overallStatus = 'SUSPENDED / NOT FOUND';
     log.error('Account not found or suspended. Stopping.');
-    if (CONFIG.exportResults) download(results, `xactions-shadowban-${username}-${new Date().toISOString().slice(0, 10)}.json`);
+    if (CONFIG.exportResults) download(results, `medirus-shadowban-${username}-${new Date().toISOString().slice(0, 10)}.json`);
     return;
   }
   results.tests.exists = { status: 'PASS', detail: 'Account exists and is active' };
@@ -269,7 +269,7 @@
 
   // Save a rolling history in localStorage for later comparison.
   try {
-    const key = `xactions_shadowban_${username}`;
+    const key = `medirus_shadowban_${username}`;
     const history = JSON.parse(localStorage.getItem(key) || '[]');
     history.push(results);
     localStorage.setItem(key, JSON.stringify(history.slice(-30)));
@@ -281,12 +281,12 @@
 
   if (CONFIG.exportResults) {
     console.log('');
-    download(results, `xactions-shadowban-${username}-${new Date().toISOString().slice(0, 10)}.json`);
+    download(results, `medirus-shadowban-${username}-${new Date().toISOString().slice(0, 10)}.json`);
   }
 
-  window.xactionsShadowban = results;
+  window.medirusShadowban = results;
   console.log('');
-  log.info('Full result object: window.xactionsShadowban');
+  log.info('Full result object: window.medirusShadowban');
 
   return results;
 })();

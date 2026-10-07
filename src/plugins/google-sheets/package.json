@@ -1,12 +1,12 @@
 {
-  "name": "xactions-plugin-google-sheets",
+  "name": "medirus-plugin-google-sheets",
   "version": "1.0.0",
-  "description": "XActions plugin — export scraped X/Twitter data directly to Google Sheets",
+  "description": "Medirus plugin — export scraped X/Twitter data directly to Google Sheets",
   "type": "module",
   "main": "index.js",
   "keywords": [
-    "xactions",
-    "xactions-plugin",
+    "medirus",
+    "medirus-plugin",
     "twitter",
     "x",
     "google-sheets",

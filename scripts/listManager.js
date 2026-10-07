@@ -13,7 +13,7 @@
   const CONFIG = {
     action: 'create',           // 'create' | 'addMembers' | 'exportMembers'
     listName: 'My List',
-    listDescription: 'Created by XActions',
+    listDescription: 'Created by Medirus',
     isPrivate: false,
     usernames: [
       // 'user1',
@@ -152,12 +152,12 @@
     }
 
     const data = [...members.values()];
-    download(data, `xactions-list-members-${new Date().toISOString().slice(0, 10)}.json`);
+    download(data, `medirus-list-members-${new Date().toISOString().slice(0, 10)}.json`);
     console.log(`✅ Exported ${data.length} members`);
   };
 
   const run = async () => {
-    console.log('📋 LIST MANAGER — XActions by nichxbt\n');
+    console.log('📋 LIST MANAGER — Medirus by nichxbt\n');
 
     if (CONFIG.action === 'create') await createList();
     else if (CONFIG.action === 'addMembers') await addMembers();

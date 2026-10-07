@@ -87,7 +87,7 @@
   };
 
   const run = async () => {
-    console.log('🤖 BLOCK BOTS — XActions by nichxbt');
+    console.log('🤖 BLOCK BOTS — Medirus by nichxbt');
     console.log(`⚙️ Max blocks: ${CONFIG.maxBlocks} | Dry run: ${CONFIG.dryRun}`);
 
     let scrollAttempts = 0;
@@ -154,7 +154,7 @@
 
     if (detected.length > 0) {
       detected.forEach((b, i) => console.log(`   ${i + 1}. @${b.username} — ${b.reasons.join(', ')}`));
-      download(detected, `xactions-bots-${new Date().toISOString().slice(0, 10)}.json`);
+      download(detected, `medirus-bots-${new Date().toISOString().slice(0, 10)}.json`);
     }
   };
 

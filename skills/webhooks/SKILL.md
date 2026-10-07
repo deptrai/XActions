@@ -1,6 +1,6 @@
 ---
 name: webhooks
-description: Create, manage, and test webhooks in XActions. Get notified via HTTP when automation jobs complete, followers change, or operations finish. Use when users want to integrate XActions events into external systems.
+description: Create, manage, and test webhooks in Medirus. Get notified via HTTP when automation jobs complete, followers change, or operations finish. Use when users want to integrate Medirus events into external systems.
 license: Apache-2.0
 metadata:
   author: nichxbt
@@ -9,7 +9,7 @@ metadata:
 
 # Webhooks
 
-API-powered webhook system for receiving real-time event notifications from XActions.
+API-powered webhook system for receiving real-time event notifications from Medirus.
 
 ## Entry Points
 
@@ -62,7 +62,7 @@ Sends a test payload to the registered URL.
 Webhooks are signed with HMAC-SHA256 using your secret:
 
 ```js
-const signature = req.headers['x-xactions-signature'];
+const signature = req.headers['x-medirus-signature'];
 const expected = crypto.createHmac('sha256', secret)
   .update(JSON.stringify(req.body))
   .digest('hex');
@@ -80,6 +80,6 @@ const isValid = crypto.timingSafeEqual(
 
 ## Related Skills
 
-- **xactions-mcp-server** — AI agent integration alternative to webhooks
+- **medirus-mcp-server** — AI agent integration alternative to webhooks
 - **follower-monitoring** — Source of `follower.gained` / `follower.lost` events
 - **analytics-insights** — Pull analytics instead of waiting for events

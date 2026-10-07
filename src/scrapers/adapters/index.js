@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Scraper Adapter — Registry & Factory
+ * Medirus Scraper Adapter — Registry & Factory
  *
  * Central registry for all scraper framework adapters.
  * Provides adapter discovery, selection, and auto-fallback.
@@ -39,7 +39,7 @@ import { BaseAdapter } from './base.js';
 
 /** @type {Map<string, RegistryEntry>} */
 const registry = new Map();
-let defaultAdapterName = process.env.XACTIONS_SCRAPER_ADAPTER || 'puppeteer';
+let defaultAdapterName = process.env.MEDIRUS_SCRAPER_ADAPTER || 'puppeteer';
 
 /**
  * Register a built-in adapter (lazy — only instantiated when requested)

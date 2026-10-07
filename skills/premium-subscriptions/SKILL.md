@@ -39,7 +39,7 @@ Checks current Premium tier, feature access, and subscription status.
 | Premium | $8/mo | Blue checkmark, scheduling, analytics, Grok, reduced ads |
 | Premium+ | $16/mo | Articles, no ads, creator monetization, highest reply boost |
 
-## XActions Feature Gating
+## Medirus Feature Gating
 
 Several scripts depend on Premium:
 
@@ -71,7 +71,7 @@ Scripts that work on ALL tiers (including free):
 | Premium nav | `a[href="/i/premium_sign_up"]` |
 
 ## Notes
-- Premium features gate some XActions capabilities but most scripts work on free tier
+- Premium features gate some Medirus capabilities but most scripts work on free tier
 - The script reads subscription info -- it does not modify subscriptions
 - Badge verification can be checked on any profile page
 - Premium status affects reply ranking in threads

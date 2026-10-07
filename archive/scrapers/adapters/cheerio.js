@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Scraper Adapter — HTTP/Cheerio
+ * Medirus Scraper Adapter — HTTP/Cheerio
  *
  * Lightweight adapter using HTTP requests + Cheerio for HTML parsing.
  * No browser required — much faster and uses far less memory.
@@ -283,7 +283,7 @@ export class CheerioAdapter extends BaseAdapter {
     const response = await fetch(url, {
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'XActions/3.0 (https://xactions.app)',
+        'User-Agent': 'Medirus/3.0 (https://medirus.online)',
         ...options.headers,
       },
       ...options,

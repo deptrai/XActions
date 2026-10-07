@@ -29,7 +29,7 @@
 
   const CONFIG = {
     // ── Space Details ────────────────────────────────────────
-    title: 'My XActions Space 🎙️',
+    title: 'My Medirus Space 🎙️',
     topic: '',                       // Optional topic/category
     enableRecording: false,          // Record the Space
     scheduled: false,                // Schedule instead of starting now
@@ -100,7 +100,7 @@
     if (CONFIG.scheduled) console.log(`📅 Scheduled: ${CONFIG.scheduleDate || 'not set'}`);
     console.log(`🎙️ Recording: ${CONFIG.enableRecording}`);
 
-    const sessionKey = 'xactions_hostSpace';
+    const sessionKey = 'medirus_hostSpace';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     // Step 1: Open the compose menu to find Spaces option

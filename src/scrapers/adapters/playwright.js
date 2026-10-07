@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Scraper Adapter — Playwright
+ * Medirus Scraper Adapter — Playwright
  *
  * Adapter wrapping Playwright for browser automation.
  * Supports Chromium, Firefox, and WebKit.

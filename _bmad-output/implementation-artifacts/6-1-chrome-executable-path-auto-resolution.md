@@ -10,7 +10,7 @@ Status: done
 
 As a developer,
 I want `createBrowser()` to automatically resolve the Chrome executable path,
-So that XActions runs on environments without hardcoding Chrome locations.
+So that Medirus runs on environments without hardcoding Chrome locations.
 
 ## Acceptance Criteria
 

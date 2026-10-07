@@ -58,4 +58,4 @@ Each bookmark includes:
 
 ---
 
-*Part of [XActions](https://github.com/nirholas/XActions) by [@nichxbt](https://x.com/nichxbt)*
+*Part of [Medirus](https://github.com/nirholas/XActions) by [@nichxbt](https://x.com/nichxbt)*

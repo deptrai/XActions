@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Normalizers for pump.fun social data → XActions canonical shapes.
+ * Normalizers for pump.fun social data → Medirus canonical shapes.
  *
  * Theses come from `mint-positions` position.callout (withThesis=true), NOT a
  * separate replies endpoint. Position fields observed live (2026-09-25):

@@ -25,7 +25,7 @@ describe('convertMcpToolToA2aSkill', () => {
       },
     };
     const skill = convertMcpToolToA2aSkill(tool);
-    expect(skill.id).toBe('xactions.x_get_profile');
+    expect(skill.id).toBe('medirus.x_get_profile');
     // name is now the display name (title-cased), not the raw tool name
     expect(skill.name).toBe('Get Profile');
     expect(skill.description).toContain('profile');
@@ -41,7 +41,7 @@ describe('convertMcpToolToA2aSkill', () => {
 
   it('handles tools with no description', () => {
     const skill = convertMcpToolToA2aSkill({ name: 'x_noop' });
-    expect(skill.id).toBe('xactions.x_noop');
+    expect(skill.id).toBe('medirus.x_noop');
     expect(skill.description).toBe('');
   });
 });
@@ -64,14 +64,14 @@ describe('getAllSkills', () => {
 
 describe('getSkillById', () => {
   it('finds a known skill', () => {
-    const skill = getSkillById('xactions.x_get_profile');
+    const skill = getSkillById('medirus.x_get_profile');
     expect(skill).toBeDefined();
     // name is the display name now
     expect(skill.name).toBe('Get Profile');
   });
 
   it('returns null for unknown skill', () => {
-    expect(getSkillById('xactions.nonexistent')).toBeNull();
+    expect(getSkillById('medirus.nonexistent')).toBeNull();
   });
 });
 

@@ -155,7 +155,7 @@
   // ── Main ──
   const run = async () => {
     console.log('═══════════════════════════════════════');
-    console.log('📢 XActions — Mention Users');
+    console.log('📢 Medirus — Mention Users');
     console.log('═══════════════════════════════════════');
 
     if (CONFIG.usernames.length === 0) {
@@ -223,14 +223,14 @@
     }
 
     // Store mention history in sessionStorage
-    const history = JSON.parse(sessionStorage.getItem('xactions_mentions') || '[]');
+    const history = JSON.parse(sessionStorage.getItem('medirus_mentions') || '[]');
     history.push({
       timestamp: new Date().toISOString(),
       usernames: valid,
       batches: batches.length,
       posted: CONFIG.autoPost,
     });
-    sessionStorage.setItem('xactions_mentions', JSON.stringify(history));
+    sessionStorage.setItem('medirus_mentions', JSON.stringify(history));
 
     console.log('');
     console.log(`✅ ${successCount}/${batches.length} batches composed.`);

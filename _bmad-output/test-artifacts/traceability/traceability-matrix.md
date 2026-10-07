@@ -195,7 +195,7 @@ This ATDD checklist contains 110+ test descriptions organized into 12 describe b
 | OptionalChaining in hooks (40+ mutants) | P1 — `?.` vs `.` not distinguished | Add tests with present values that throw TypeError if `?.` removed |
 | Webhook payload ObjectLiteral (3 mutants) | P1 — payload replaced with `{}` | Assert all fields in `notifyPaymentSettled`/`notifyPaymentFailed` calls |
 | HealthCheck/Pricing network details | P1 — exact network ID/name not asserted | Assert exact `network` and `name` values from config |
-| E2E with real x.com | P2 — no browser E2E | Deferred to `bmad-xactions-browser-e2e` skill |
+| E2E with real x.com | P2 — no browser E2E | Deferred to `bmad-medirus-browser-e2e` skill |
 
 ## Step 3: Map Coverage Oracle to Tests (Traceability Matrix)
 
@@ -250,7 +250,7 @@ This ATDD checklist contains 110+ test descriptions organized into 12 describe b
 | **R-45** | extractOperation: /api/scripts/automation/foo.js → "script:download:automation/foo.js" | P0 | `should extract "script:download:automation/foo.js"` | :141 | Unit | FULL | |
 | **R-46** | extractOperation: /api/ai/ → "unknown" | P0 | `should return "unknown" for resource "/api/ai/"` | :150 | Unit | FULL | Boundary ✅ |
 | **R-47** | extractOperation: /api/ai/scrape/ → "unknown" | P0 | `should return "unknown" for resource "/api/ai/scrape/"` | :154 | Unit | FULL | Boundary ✅ |
-| **R-48** | x402HealthCheck: service = "XActions AI API" | P1 | `should return service field as "XActions AI API"` | :249 | Unit | FULL | |
+| **R-48** | x402HealthCheck: service = "Medirus AI API" | P1 | `should return service field as "Medirus AI API"` | :249 | Unit | FULL | |
 | **R-49** | x402HealthCheck: status "operational" or "degraded" | P1 | `should return status "operational" or "degraded"` | :254 | Unit | FULL | |
 | **R-50** | x402HealthCheck: timestamp ISO string | P1 | `should return timestamp as a valid ISO string` | :259 | Unit | FULL | |
 | **R-51** | x402HealthCheck: x402.enabled | P1 | `should return x402 object with enabled field` | :265 | Unit | FULL | |
@@ -466,4 +466,4 @@ Tests: 234 (228 + 6 new)
 | Gate Result | Skill | When |
 |-------------|-------|------|
 | **PASS** | `bmad-testarch-nfr` | NFR audit (performance, security, reliability) |
-| After NFR | `bmad-xactions-human-review-gate` | P0 areas → pending-human-review |
+| After NFR | `bmad-medirus-human-review-gate` | P0 areas → pending-human-review |

@@ -1,4 +1,4 @@
-// Playwright E2E configuration for XActions
+// Playwright E2E configuration for Medirus
 // by nichxbt
 import { defineConfig, devices } from '@playwright/test';
 

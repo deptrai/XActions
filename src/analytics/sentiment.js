@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Sentiment Analysis Engine
+ * Medirus Sentiment Analysis Engine
  * 
  * Built-in rule-based analyzer (zero dependencies, works offline)
  * Optional LLM mode via OpenRouter API for nuanced analysis.
@@ -250,8 +250,8 @@ Rules:
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://xactions.app',
-      'X-Title': 'XActions Sentiment Analysis',
+      'HTTP-Referer': 'https://medirus.online',
+      'X-Title': 'Medirus Sentiment Analysis',
     },
     body: JSON.stringify({
       model,

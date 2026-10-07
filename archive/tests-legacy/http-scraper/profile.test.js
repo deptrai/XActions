@@ -173,7 +173,7 @@ function createMockClient(response, options = {}) {
 // ===========================================================================
 
 describe('parseUserData', () => {
-  it('parses a complete raw Twitter response into XActions format', () => {
+  it('parses a complete raw Twitter response into Medirus format', () => {
     const profile = parseUserData(FULL_USER_RAW);
 
     expect(profile.id).toBe('123456789');
@@ -302,7 +302,7 @@ describe('parseUserData', () => {
     expect(parseUserData(notVerified).verified).toBe(false);
   });
 
-  it('output matches XActions profile format (has platform: twitter)', () => {
+  it('output matches Medirus profile format (has platform: twitter)', () => {
     const profile = parseUserData(FULL_USER_RAW);
     expect(profile).toHaveProperty('platform', 'twitter');
     // All expected top-level keys present

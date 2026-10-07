@@ -64,7 +64,7 @@
     console.log(`📊 ${fmt(followers)} followers | ${fmt(following)} following | ratio: ${snapshot.ratio}`);
 
     // Load/save history
-    const storageKey = `xactions_growth_${username}`;
+    const storageKey = `medirus_growth_${username}`;
     let history = [];
     try { history = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch {}
 
@@ -135,7 +135,7 @@
 
     // Export
     if (history.length > 1) {
-      download(history, `xactions-growth-${username}-${new Date().toISOString().slice(0, 10)}.json`);
+      download(history, `medirus-growth-${username}-${new Date().toISOString().slice(0, 10)}.json`);
     }
 
     console.log('\n💡 Run again tomorrow to build your growth trendline.\n');

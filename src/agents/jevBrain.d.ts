@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Jev Brain Type Declarations
+// Medirus — Jev Brain Type Declarations
 // by nichxbt
 
 export interface JevQuestion {

@@ -30,7 +30,7 @@ The Link Scraper automatically scrolls through a user's tweets and extracts all 
 
 ```javascript
 // ============================================
-// XActions - Link Scraper (Browser Console)
+// Medirus - Link Scraper (Browser Console)
 // Go to: x.com/USERNAME (any profile page)
 // Open console (F12), paste this, press Enter
 // Author: nich (@nichxbt)
@@ -390,7 +390,7 @@ npm install puppeteer-extra puppeteer-extra-plugin-stealth
 
 ```javascript
 // ============================================
-// XActions - Link Scraper (Node.js + Puppeteer)
+// Medirus - Link Scraper (Node.js + Puppeteer)
 // Save as: scrape-links.js
 // Run: node scrape-links.js USERNAME [limit]
 // Example: node scrape-links.js naval 500
@@ -442,7 +442,7 @@ async function scrapeLinks(username, options = {}) {
     onProgress = null,
   } = options;
 
-  console.log('🔗 XActions Link Scraper');
+  console.log('🔗 Medirus Link Scraper');
   console.log('═'.repeat(50));
   console.log(`👤 Target: @${username}`);
   console.log(`📊 Tweet limit: ${limit}`);
@@ -825,7 +825,7 @@ async function main() {
 
   if (args.length === 0) {
     console.log(`
-🔗 XActions Link Scraper
+🔗 Medirus Link Scraper
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Usage: node scrape-links.js <username> [options]
@@ -987,15 +987,15 @@ Find websites that influencers frequently link to:
 
 ## 🌐 Web Alternative
 
-Don't want to run code? Use **[xactions.app](https://xactions.app)** for a visual interface:
+Don't want to run code? Use **[medirus.online](https://medirus.online)** for a visual interface:
 
-1. Go to [xactions.app](https://xactions.app)
+1. Go to [medirus.online](https://medirus.online)
 2. Enter the username you want to analyze
 3. Select "Link Scraper" from the tools menu
 4. Click "Extract Links"
 5. Download your results as JSON or CSV
 
-**Benefits of xactions.app:**
+**Benefits of medirus.online:**
 - ✅ No coding required
 - ✅ Works on any device
 - ✅ Automatic rate limiting

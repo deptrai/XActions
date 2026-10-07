@@ -143,7 +143,7 @@ const stats = calendar.getStats();
 
 ### Accessing the Dashboard
 
-Start the XActions server and navigate to:
+Start the Medirus server and navigate to:
 
 ```
 http://localhost:3001/agent

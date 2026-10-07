@@ -2,7 +2,7 @@
 
 import prisma from '../lib/prisma.js';
 /**
- * XActions Analytics Dashboard Service (EPS-3)
+ * Medirus Analytics Dashboard Service (EPS-3)
  *
  * Prisma-based analytics aggregation for the dashboard:
  * - Follower growth over time (AccountSnapshot)

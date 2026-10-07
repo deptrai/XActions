@@ -68,7 +68,7 @@ Removes all bookmarks. Tries the built-in "Clear All" button first, then falls b
 - `keepKeywords: []` — protect bookmarks containing specific words
 - `dryRun: false` — preview removals without deleting
 - `exportOnComplete: true` — auto-download log of removed bookmarks
-- Pause/resume/abort via `window.XActions.pause()` / `.resume()` / `.abort()`
+- Pause/resume/abort via `window.Medirus.pause()` / `.resume()` / `.abort()`
 - Rate limit detection with automatic cooldown
 
 ## Bookmark Manager (Puppeteer)

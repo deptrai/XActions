@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Block By Ratio — Free X/Twitter Script | XActions</title>
+  <title>Block By Ratio — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Block accounts by follower/following ratio">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, block, ratio, safety &amp; privacy">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, block, ratio, safety &amp; privacy">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Block By Ratio — XActions">
+  <meta property="og:title" content="Block By Ratio — Medirus">
   <meta property="og:description" content="Block accounts by follower/following ratio">
-  <meta property="og:url" content="https://xactions.app/scripts/block-by-ratio">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/block-by-ratio">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Block By Ratio — XActions">
+  <meta name="twitter:title" content="Block By Ratio — Medirus">
   <meta name="twitter:description" content="Block accounts by follower/following ratio">
 
-  <link rel="canonical" href="https://xactions.app/scripts/block-by-ratio">
+  <link rel="canonical" href="https://medirus.online/scripts/block-by-ratio">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Block By Ratio — Free X/Twitter Script | XActions",
+    "headline": "Block By Ratio — Free X/Twitter Script | Medirus",
     "description": "Block accounts by follower/following ratio",
-    "url": "https://xactions.app/scripts/block-by-ratio",
+    "url": "https://medirus.online/scripts/block-by-ratio",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Safety & Privacy",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, block, ratio, safety & privacy"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, block, ratio, safety & privacy"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Safety & Privacy", "item": "https://xactions.app/scripts#safety-privacy" },
-      { "@type": "ListItem", "position": 4, "name": "Block By Ratio", "item": "https://xactions.app/scripts/block-by-ratio" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Safety & Privacy", "item": "https://medirus.online/scripts#safety-privacy" },
+      { "@type": "ListItem", "position": 4, "name": "Block By Ratio", "item": "https://medirus.online/scripts/block-by-ratio" }
     ]
   }
   </script>
@@ -214,7 +214,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  📊 XActions — Block By Ratio                                ║
+║  📊 Medirus — Block By Ratio                                ║
 ║  Block accounts with suspicious following/follower ratios    ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked             ║' : '║  🔴 LIVE MODE - Accounts WILL be blocked                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -373,7 +373,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
   }
 
   // Save log
-  const storageKey = 'xactions_ratio_blocks';
+  const storageKey = 'medirus_ratio_blocks';
   const log = flagged.map(u =&gt; ({
     username: u.username,
     ratio: u.ratio,
@@ -391,7 +391,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -404,7 +404,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
         <a href="/scripts/blacklist">🚫 Blacklist Manager</a>
 <a href="/scripts/block-bots">🤖 Block Bots</a>
 <a href="/scripts/block-by-keywords">🚫 Block By Keywords</a>
-<a href="/scripts/block-list-transfer">🧱 Block List Transfer - XActions</a>
+<a href="/scripts/block-list-transfer">🧱 Block List Transfer - Medirus</a>
 <a href="/scripts/filter-manager">🔍 Filter Manager</a>
 <a href="/scripts/manage-muted-words">🔇 Manage Muted Words</a>
 <a href="/scripts/manage-settings">⚙️ Manage Settings</a>

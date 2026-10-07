@@ -254,9 +254,9 @@ describe('x402HealthCheck — response shape', () => {
     app.get('/api/ai/health', x402HealthCheck);
   });
 
-  it('should return service field as "XActions AI API"', async () => {
+  it('should return service field as "Medirus AI API"', async () => {
     const res = await request(app).get('/api/ai/health');
-    expect(res.body.service).toBe('XActions AI API');
+    expect(res.body.service).toBe('Medirus AI API');
   });
 
   it('should return status "operational" or "degraded"', async () => {
@@ -456,7 +456,7 @@ describe('x402Middleware — path filtering', () => {
   it('should call next() for /api/ai/health (free endpoint)', async () => {
     const res = await request(app).get('/api/ai/health');
     expect(res.status).toBe(200);
-    expect(res.body.service).toBe('XActions AI API');
+    expect(res.body.service).toBe('Medirus AI API');
   });
 
   it('should call next() for /api/ai/pricing (free endpoint)', async () => {

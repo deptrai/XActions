@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 👋 Remove Follower - XActions
+ * 👋 Remove Follower - Medirus
  * ============================================
  *
  * @name         remove-follower
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to x.com/<your-username>/followers
@@ -131,7 +131,7 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  👋 REMOVE FOLLOWER - XActions                               ║
+║  👋 REMOVE FOLLOWER - Medirus                               ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN - No followers will be removed                 ║' : '║  🔴 LIVE MODE - Followers WILL be removed                   ║'}
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -298,7 +298,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN - No followers will be removed          
   if (removedList.length > 0) {
     download(
       { stats, dryRun: CONFIG.dryRun, removed: removedList, exportedAt: new Date().toISOString() },
-      `xactions-removed-followers-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`
+      `medirus-removed-followers-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`
     );
   }
 

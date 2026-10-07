@@ -139,7 +139,7 @@ const TAG_LEN = 16;
  * @returns {string}
  */
 function encrypt(plaintext, key) {
-  const keyBuf = crypto.scryptSync(key, 'xactions-salt', 32);
+  const keyBuf = crypto.scryptSync(key, 'medirus-salt', 32);
   const iv = crypto.randomBytes(IV_LEN);
   const cipher = crypto.createCipheriv(ALGO, keyBuf, iv);
   const enc = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
@@ -154,7 +154,7 @@ function encrypt(plaintext, key) {
  */
 function decrypt(ciphertext, key) {
   const buf = Buffer.from(ciphertext, 'base64');
-  const keyBuf = crypto.scryptSync(key, 'xactions-salt', 32);
+  const keyBuf = crypto.scryptSync(key, 'medirus-salt', 32);
   const iv = buf.subarray(0, IV_LEN);
   const tag = buf.subarray(IV_LEN, IV_LEN + TAG_LEN);
   const enc = buf.subarray(IV_LEN + TAG_LEN);

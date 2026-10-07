@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 📋 Scrape List - XActions
+ * 📋 Scrape List - Medirus
  * ============================================
  *
  * @name         scrape-list
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to a List page:
@@ -244,9 +244,9 @@
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📋 SCRAPE LIST - XActions                              ║
+║  📋 SCRAPE LIST - Medirus                              ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

@@ -16,7 +16,7 @@ generatedTestFiles:
   - 'tests/utils/exporter.test.js'
 inputDocuments:
   - '_bmad-output/implementation-artifacts/10-3-ai-dataset-export-utility-streaming-jsonl-csv.md'
-  - '_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
+  - '_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
   - 'src/core/error-envelope.js'
   - 'prisma/schema.prisma'
 ---
@@ -109,6 +109,6 @@ During implementation with `/bmad-dev-story`:
 
 ## 5. Artifact Handoff
 
-- **Story File:** [`_bmad-output/implementation-artifacts/10-3-ai-dataset-export-utility-streaming-jsonl-csv.md`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/implementation-artifacts/10-3-ai-dataset-export-utility-streaming-jsonl-csv.md)
-- **Checklist File:** [`_bmad-output/test-artifacts/atdd-checklist-10-3-ai-dataset-export-utility-streaming-jsonl-csv.md`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/test-artifacts/atdd-checklist-10-3-ai-dataset-export-utility-streaming-jsonl-csv.md)
-- **Test Scaffolds:** [`tests/utils/exporter.test.js`](file:///Users/luisphan/Documents/GitHub/XActions/tests/utils/exporter.test.js)
+- **Story File:** [`_bmad-output/implementation-artifacts/10-3-ai-dataset-export-utility-streaming-jsonl-csv.md`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/implementation-artifacts/10-3-ai-dataset-export-utility-streaming-jsonl-csv.md)
+- **Checklist File:** [`_bmad-output/test-artifacts/atdd-checklist-10-3-ai-dataset-export-utility-streaming-jsonl-csv.md`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/test-artifacts/atdd-checklist-10-3-ai-dataset-export-utility-streaming-jsonl-csv.md)
+- **Test Scaffolds:** [`tests/utils/exporter.test.js`](file:///Users/luisphan/Documents/GitHub/Medirus/tests/utils/exporter.test.js)

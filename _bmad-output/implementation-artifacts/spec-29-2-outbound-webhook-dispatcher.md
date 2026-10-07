@@ -21,11 +21,11 @@ context: []
 
 **Always:**
 - Consume `ThinEvent` from `stream:social:raw_posts` via consumer group (not polling)
-- HMAC-SHA256 signature in `X-XActions-Signature` header — same pattern as `a2a/push.js`
+- HMAC-SHA256 signature in `X-Medirus-Signature` header — same pattern as `a2a/push.js`
 - Exponential backoff retry: 3 attempts (1s → 2s → 4s), then dead-letter
-- Dead-letter queue: Redis list `xactions:webhook:dlq`
-- Delivery metrics persisted to Redis hash `xactions:webhook:metrics:{subscriptionId}`
-- Subscription store: Redis hash `xactions:webhook:subscriptions` (JSON per subscription)
+- Dead-letter queue: Redis list `medirus:webhook:dlq`
+- Delivery metrics persisted to Redis hash `medirus:webhook:metrics:{subscriptionId}`
+- Subscription store: Redis hash `medirus:webhook:subscriptions` (JSON per subscription)
 - Registration fields: `url`, `events[]` (platform filter or `*` for all), `secret`, `active`, `description`
 - Admin auth required for management endpoints (reuse `authenticateToken`)
 
@@ -50,7 +50,7 @@ context: []
 | Retry on 5xx | POST returns 500 | Retry with backoff (1s→2s→4s), then DLQ if all fail | Log each attempt |
 | Permanent failure | POST returns 400/401/404 | Straight to DLQ (no retry) | Log + DLQ |
 | Timeout | POST takes >10s | Abort, retry as 5xx | Fetch timeout |
-| HMAC signing | Subscription has `secret` | `X-XActions-Signature: sha256=<hex>` header | Missing secret → no sig |
+| HMAC signing | Subscription has `secret` | `X-Medirus-Signature: sha256=<hex>` header | Missing secret → no sig |
 | DLQ inspection | `GET /api/admin/webhooks/dlq` | Array of failed deliveries with original payload | N/A |
 | DLQ retry | `POST /api/admin/webhooks/dlq/:id/retry` | Re-attempt delivery | Re-add to queue |
 | Consumer group lag | Many events, slow delivery | Consumer group tracks pending, XAUTOCLAIM for stalled | Metrics show lag |
@@ -144,7 +144,7 @@ XACK stream:social:raw_posts webhook-dispatcher <id>
 
 **Metrics per subscription:**
 ```
-HSET xactions:webhook:metrics:{subId}
+HSET medirus:webhook:metrics:{subId}
   totalAttempts 42
   totalSuccess 38
   totalFailures 4

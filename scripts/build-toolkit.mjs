@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Copyright (c) 2024-2026 nich (@nichxbt). All rights reserved.
 /**
- * Builds scripts/twitter/xactions-command-center.js: the single "master"
+ * Builds scripts/twitter/medirus-command-center.js: the single "master"
  * browser-console script that bundles every tool in scripts/twitter/ behind a
  * searchable command-palette UI. Users paste ONE script and pick any tool from
  * a menu instead of hunting for individual files.
@@ -26,7 +26,7 @@ import vm from 'node:vm';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const TW = join(ROOT, 'scripts', 'twitter');
 const SHELL = join(TW, '_command-center-shell.js');
-const OUT = join(TW, 'xactions-command-center.js');
+const OUT = join(TW, 'medirus-command-center.js');
 const VERSION = '1.0.0';
 
 // ---------------------------------------------------------------------------
@@ -296,7 +296,7 @@ function processTool(id, raw) {
 // Build
 // ---------------------------------------------------------------------------
 const files = readdirSync(TW)
-  .filter((f) => f.endsWith('.js') && !f.startsWith('_') && f !== 'xactions-command-center.js')
+  .filter((f) => f.endsWith('.js') && !f.startsWith('_') && f !== 'medirus-command-center.js')
   .map((f) => f.replace(/\.js$/, ''))
   .sort();
 
@@ -340,11 +340,11 @@ shell = shell.replace('/* __XA_INJECT_DATA__ */', () => dataBlock).replace(/__XA
 const header = `// Copyright (c) 2024-2026 nich (@nichxbt). All rights reserved.
 /**
  * ============================================================
- * ⚡ XActions Command Center  (v${VERSION})
+ * ⚡ Medirus Command Center  (v${VERSION})
  * ============================================================
  * The one script to run them all. Paste this into your browser's DevTools
  * console on x.com and a searchable command palette appears with every
- * XActions tool (${catalog.length} of them): scrape, analyze, grow, engage,
+ * Medirus tool (${catalog.length} of them): scrape, analyze, grow, engage,
  * clean up, moderate, and more. Pick a tool, set its options, press Run.
  *
  *   1. Open x.com and press F12 (or Cmd+Option+I) → Console tab.
@@ -352,8 +352,8 @@ const header = `// Copyright (c) 2024-2026 nich (@nichxbt). All rights reserved.
  *   3. Search, choose a tool, and click Run. Reopen anytime with the
  *      ⚡ button (bottom-right) or Cmd/Ctrl+K.
  *
- * @name        XActions Command Center
- * @description One console script that opens a searchable menu of every XActions tool (scrape, analyze, grow, engage, clean up, and moderate) with per-tool options and one-click run.
+ * @name        Medirus Command Center
+ * @description One console script that opens a searchable menu of every Medirus tool (scrape, analyze, grow, engage, clean up, and moderate) with per-tool options and one-click run.
  * @version     ${VERSION}
  * @author      nichxbt (https://x.com/nichxbt)
  *

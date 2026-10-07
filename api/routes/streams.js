@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Stream API Routes
+ * Medirus Stream API Routes
  * REST endpoints for creating, listing, stopping, and querying real-time streams.
  *
  * POST   /api/streams              — create a stream

@@ -1,6 +1,6 @@
 # Repost Posts -- Tutorial
 
-> Step-by-step guide to reposting (retweeting), auto-reposting, and clearing reposts on X using XActions browser scripts.
+> Step-by-step guide to reposting (retweeting), auto-reposting, and clearing reposts on X using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -156,10 +156,10 @@ const CONFIG = {
 **Step 3:** Use controls while running:
 
 ```js
-window.XActions.pause();   // Pause
-window.XActions.resume();  // Resume
-window.XActions.abort();   // Stop
-window.XActions.status();  // Show progress
+window.Medirus.pause();   // Pause
+window.Medirus.resume();  // Resume
+window.Medirus.abort();   // Stop
+window.Medirus.status();  // Show progress
 ```
 
 **Step 4:** A JSON log of removed reposts is auto-downloaded when complete.
@@ -178,8 +178,8 @@ Reposts whose text contains any of these keywords will be skipped.
 
 - **Set `minLikes: 5`** to avoid reposting low-quality content.
 - **Use `skipReplies: true`** to only repost original tweets.
-- **`clearAllReposts.js` has pause/resume** -- use `XActions.pause()` if you need to review progress.
-- **Repost tracking** is saved to sessionStorage under `xactions_reposts`.
+- **`clearAllReposts.js` has pause/resume** -- use `Medirus.pause()` if you need to review progress.
+- **Repost tracking** is saved to sessionStorage under `medirus_reposts`.
 - **The auto-repost script requires at least one filter** (keywords or fromUsers). It will not repost everything blindly.
 - **Rate limit detection** is built in. If X throttles you, the script pauses automatically.
 

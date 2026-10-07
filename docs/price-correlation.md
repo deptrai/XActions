@@ -8,7 +8,7 @@ Data from [tweet-price-charts](https://github.com/rohunvora/tweet-price-charts) 
 
 ## Dashboard
 
-Open `dashboard/price-correlation.html` in your browser or visit [xactions.app/price-correlation](https://xactions.app/price-correlation).
+Open `dashboard/price-correlation.html` in your browser or visit [medirus.online/price-correlation](https://medirus.online/price-correlation).
 
 ### Features
 
@@ -156,7 +156,7 @@ const CONFIG = {
 ## Node.js Module
 
 ```js
-import { analyzeTweetPriceCorrelation } from 'xactions/analytics';
+import { analyzeTweetPriceCorrelation } from 'medirus/analytics';
 
 const result = await analyzeTweetPriceCorrelation({
   tweets: [{ timestamp: 1700000000000, text: 'GM' }],

@@ -1,10 +1,10 @@
 # Tutorial: Profile Management, Backup & Account Settings with Claude
 
-You are my X/Twitter profile optimization specialist. I want to use XActions to update my profile, back up my account data, manage settings, and optimize my presence for maximum impact.
+You are my X/Twitter profile optimization specialist. I want to use Medirus to update my profile, back up my account data, manage settings, and optimize my presence for maximum impact.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with profile management, account backup, and settings features — via MCP tools and browser scripts.
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with profile management, account backup, and settings features — via MCP tools and browser scripts.
 
 ## What I Need You To Do
 
@@ -113,7 +113,7 @@ Protect your account with full backup using `src/backupAccount.js`:
 
 3. **How to run the backup:**
    - Via browser console: paste the backup script
-   - Via CLI: `xactions export-data backup.json`
+   - Via CLI: `medirus export-data backup.json`
    - Via MCP: Export individual components
 
 4. **Backup schedule recommendation:**
@@ -206,7 +206,7 @@ Using `x_check_premium`:
    "Check my premium subscription status"
    ```
 
-2. **Premium features available via XActions:**
+2. **Premium features available via Medirus:**
    - Edit tweets
    - Longer tweets (up to 25,000 chars)
    - Bookmark folders

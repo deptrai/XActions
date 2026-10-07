@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Playground - browser app.
+ * Medirus Playground - browser app.
  *
  * No framework and no build step. It imports the same query translator and
  * the same number formatter the CLI and the server use, so a figure rendered
@@ -241,7 +241,7 @@ function initTheme() {
     const next = dark ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     try {
-      localStorage.setItem('xactions-theme', next);
+      localStorage.setItem('medirus-theme', next);
     } catch {
       // Private browsing can refuse storage. The theme still applies for the
       // life of the page, which is the part that matters.
@@ -793,7 +793,7 @@ async function initHealth() {
   } catch {
     el.health.hidden = false;
     el.health.textContent = 'API unreachable';
-    el.health.dataset.tip = 'The demo API is not answering. The CLI does not depend on it: npx xactions profile nasa still works.';
+    el.health.dataset.tip = 'The demo API is not answering. The CLI does not depend on it: npx medirus profile nasa still works.';
   }
 }
 

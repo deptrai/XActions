@@ -44,7 +44,7 @@
   };
 
   const run = async () => {
-    console.log('🔖 BOOKMARK ORGANIZER — XActions by nichxbt\n');
+    console.log('🔖 BOOKMARK ORGANIZER — Medirus by nichxbt\n');
 
     if (!window.location.href.includes('/bookmarks')) {
       console.error('❌ Navigate to x.com/i/bookmarks first!');
@@ -115,9 +115,9 @@
       const rows = all.map(b =>
         `"${b.url}","${b.username}","${b.text.replace(/"/g, '""')}","${b.categories.join(';')}","${b.time}"`
       );
-      download([header, ...rows].join('\n'), `xactions-bookmarks-organized-${date}.csv`);
+      download([header, ...rows].join('\n'), `medirus-bookmarks-organized-${date}.csv`);
     } else {
-      download({ exportedAt: new Date().toISOString(), total: all.length, byCategory, bookmarks: all }, `xactions-bookmarks-organized-${date}.json`);
+      download({ exportedAt: new Date().toISOString(), total: all.length, byCategory, bookmarks: all }, `medirus-bookmarks-organized-${date}.json`);
     }
 
     console.log('\n🏁 Done!');

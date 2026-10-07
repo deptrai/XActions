@@ -8,7 +8,7 @@
 
 ## Task
 
-Create an ESLint v9+ flat config file with environment-aware settings for the XActions codebase. Node.js files get Node globals; browser scripts get browser globals. Install all required packages.
+Create an ESLint v9+ flat config file with environment-aware settings for the Medirus codebase. Node.js files get Node globals; browser scripts get browser globals. Install all required packages.
 
 ---
 
@@ -30,7 +30,7 @@ npx eslint --version  # Should be 9.x+
 ### File: `eslint.config.js`
 
 ```js
-// eslint.config.js — XActions ESLint flat config
+// eslint.config.js — Medirus ESLint flat config
 // by nichxbt
 import js from '@eslint/js';
 import globals from 'globals';

@@ -13,8 +13,8 @@ priority: 'high'
 baseline_commit: 'ee2517f7'
 context:
   - _bmad-output/implementation-artifacts/epic-50-context.md
-  - _bmad-output/specs/spec-xactions-public-scrape-gateway/SPEC.md
-  - _bmad-output/planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md
+  - _bmad-output/specs/spec-medirus-public-scrape-gateway/SPEC.md
+  - _bmad-output/planning-artifacts/architecture/architecture-medirus-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md
   - _bmad-output/implementation-artifacts/stories/50-1-service-auth-lane-bearer-consumer-derivation.md
   - api/routes/platform.js
   - api/services/jobQueue.js
@@ -169,7 +169,7 @@ context:
   - `src/scrapers/social/reddit/descriptor.js` — `syncCapableActions:['search','subreddit','post_comments']` (aliases `posts`/`comments`/`thread` inherit via mapped check).
   - `src/scrapers/social/pumpfun/descriptor.js` — `syncCapableActions:['fetch_coin_meta']` (inert until 50.6).
   - `api/services/jobQueue.js` — `addJob` null-safe `userId` + `consumerId` + sanitized `config`; `queue.add` failure marks row `failed` before throwing (no orphan `queued`); `operationsQueue.process('scrape', 2)` restores `runWithConsumerContext` + re-resolves `resolveAccountCookie` (secrets never in Bull payload); `getJob` normalizes `failed && attemptsMade < attempts` → `processing` and falls back to `operation.status` on Redis error; completed-handler serializes `result` via `safeStringify`.
-  - `prisma/schema.prisma` + migration `20260927000000_operation_consumer_attribution` — `Operation.userId` → `String?`, `+ consumerId String?` + `@@index([consumerId])` (D-2). Applied to test DB (`xactions_test`); `prisma generate` re-run.
+  - `prisma/schema.prisma` + migration `20260927000000_operation_consumer_attribution` — `Operation.userId` → `String?`, `+ consumerId String?` + `@@index([consumerId])` (D-2). Applied to test DB (`medirus_test`); `prisma generate` re-run.
   - `apps/web/app/pumpfun/page.tsx` — `scrape()` helper detects `202 {mode:'async', statusUrl}` and polls `statusUrl` every ~2s until `completed|failed|cancelled` (cap ~130s to cover `stream_mint_chat` `durationMs` 120s), returning `{result}` in the same shape as a sync call (D-1).
   - `tests/gateway/mode-dispatch.test.js` — unit (`resolveMode`, `classifyDegrade`, `sanitizeOptions`, `assertSerializableOptions`, `canonicalPlatforms`, `isSyncCapable`, `runSyncWithCeiling` timeout/late-settle/queue_fallback) + supertest route tests via injected seams (no `vi.mock`): 200 sync, 202 explicit async, 202 timeout + `Retry-After`, CF/rate-limit degrade with `retryAfterMs` → Bull `delay`, 400 not_sync_capable/bad mode/bad platform type, batch results[]+operationIds[]+partial-capable+dedupe+cap+'all' expansion+'all' scope exclusion, secrets strip, service-lane `consumerId` attribution.
   - `_bmad-output/planning-artifacts/epics.md` — 50.2 AC wording updated for D-5 (allSettled semantics, not dispatcher) and D-6 (detached tracking, not Bull continuation).

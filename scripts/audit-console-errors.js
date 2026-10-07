@@ -152,7 +152,7 @@ async function auditPage(browser, route) {
 }
 
 async function auditPages() {
-  console.log(`\n⚡ XActions Console Error Audit`);
+  console.log(`\n⚡ Medirus Console Error Audit`);
   console.log(`  Base URL: ${BASE_URL}${topOnly ? '  (top-level pages only)' : ''}\n`);
 
   try {

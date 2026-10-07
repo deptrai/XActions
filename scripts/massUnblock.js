@@ -45,7 +45,7 @@
   };
 
   const run = async () => {
-    console.log('🔓 MASS UNBLOCK — XActions by nichxbt');
+    console.log('🔓 MASS UNBLOCK — Medirus by nichxbt');
 
     if (!window.location.href.includes('/blocked')) {
       console.error('❌ Navigate to x.com/settings/blocked first!');
@@ -109,7 +109,7 @@
 
     if (log.length > 0) {
       download({ summary: { unblocked, skipped, errors }, accounts: log },
-        `xactions-unblocked-${new Date().toISOString().slice(0, 10)}.json`);
+        `medirus-unblocked-${new Date().toISOString().slice(0, 10)}.json`);
     }
   };
 

@@ -90,7 +90,7 @@ describe('searchTweets', () => {
   };
 
   it('returns empty array when no results', async () => {
-    const result = await searchTweets(makeEmptyPage(), 'xactions test', { delay: () => {}, maxRetries: 2 });
+    const result = await searchTweets(makeEmptyPage(), 'medirus test', { delay: () => {}, maxRetries: 2 });
     expect(Array.isArray(result)).toBe(true);
     expect(result.length).toBe(0);
   });

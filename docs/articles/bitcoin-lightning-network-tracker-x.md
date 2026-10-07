@@ -48,7 +48,7 @@ X is where Lightning developers, node operators, and protocol researchers announ
 ## Building the Tracker
 
 ```js
-import { TwitterStream } from 'xactions';
+import { TwitterStream } from 'medirus';
 
 const LIGHTNING_KEYWORDS = [
   'Lightning Network', 'BOLT', 'channel capacity', 'routing fee',
@@ -66,7 +66,7 @@ const LIGHTNING_ACCOUNTS = [
 ];
 
 const stream = new TwitterStream({
-  sessionCookie: process.env.XACTIONS_SESSION_COOKIE,
+  sessionCookie: process.env.MEDIRUS_SESSION_COOKIE,
 });
 
 await stream.start({

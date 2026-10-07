@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * Acceptance Tests — Story 10.4: Checkpoint Manager Service.
- * Runs against the real xactions_test PostgreSQL database via tests/store/test-prisma-client.js.
+ * Runs against the real medirus_test PostgreSQL database via tests/store/test-prisma-client.js.
  * @author nich (@nichxbt)
  * @license MIT
  */

@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tweet A/B Tester — Free X/Twitter Script | XActions</title>
+  <title>Tweet A/B Tester — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="A/B test tweet performance. Post two variations">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, tweet, abtester, other tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, tweet, abtester, other tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Tweet A/B Tester — XActions">
+  <meta property="og:title" content="Tweet A/B Tester — Medirus">
   <meta property="og:description" content="A/B test tweet performance. Post two variations">
-  <meta property="og:url" content="https://xactions.app/scripts/tweet-abtester">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/tweet-abtester">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Tweet A/B Tester — XActions">
+  <meta name="twitter:title" content="Tweet A/B Tester — Medirus">
   <meta name="twitter:description" content="A/B test tweet performance. Post two variations">
 
-  <link rel="canonical" href="https://xactions.app/scripts/tweet-abtester">
+  <link rel="canonical" href="https://medirus.online/scripts/tweet-abtester">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Tweet A/B Tester — Free X/Twitter Script | XActions",
+    "headline": "Tweet A/B Tester — Free X/Twitter Script | Medirus",
     "description": "A/B test tweet performance. Post two variations",
-    "url": "https://xactions.app/scripts/tweet-abtester",
+    "url": "https://medirus.online/scripts/tweet-abtester",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Other Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, tweet, abtester, other tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, tweet, abtester, other tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://xactions.app/scripts#other-tools" },
-      { "@type": "ListItem", "position": 4, "name": "Tweet A/B Tester", "item": "https://xactions.app/scripts/tweet-abtester" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://medirus.online/scripts#other-tools" },
+      { "@type": "ListItem", "position": 4, "name": "Tweet A/B Tester", "item": "https://medirus.online/scripts/tweet-abtester" }
     ]
   }
   </script>
@@ -172,22 +172,22 @@
  * 2. Paste this script
  * 3. Use the interactive API:
  *
- *   XActions.createTest({
+ *   Medirus.createTest({
  *     name: 'CTA test',
  *     variantA: 'Check out our new tool! 🔥',
  *     variantB: 'We just launched something amazing → link',
  *   })
  *
- *   XActions.measure('CTA test')  // Measure after both are posted
- *   XActions.results('CTA test')  // View results
- *   XActions.listTests()          // List all tests
- *   XActions.deleteTest('CTA test')
+ *   Medirus.measure('CTA test')  // Measure after both are posted
+ *   Medirus.results('CTA test')  // View results
+ *   Medirus.listTests()          // List all tests
+ *   Medirus.deleteTest('CTA test')
  * ============================================================
  */
 (() =&gt; {
   'use strict';
 
-  const STORAGE_KEY = 'xactions_ab_tests';
+  const STORAGE_KEY = 'medirus_ab_tests';
   const sleep = (ms) =&gt; new Promise(r =&gt; setTimeout(r, ms));
 
   const parseNum = (text) =&gt; {
@@ -207,12 +207,12 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tests));
   };
 
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
   // ── Create A/B test ────────────────────────────────────────
-  window.XActions.createTest = (opts) =&gt; {
+  window.Medirus.createTest = (opts) =&gt; {
     if (!opts || !opts.name || !opts.variantA || !opts.variantB) {
-      console.log('❌ Usage: XActions.createTest({ name: &quot;test&quot;, variantA: &quot;text A&quot;, variantB: &quot;text B&quot; })');
+      console.log('❌ Usage: Medirus.createTest({ name: &quot;test&quot;, variantA: &quot;text A&quot;, variantB: &quot;text B&quot; })');
       return;
     }
 
@@ -241,14 +241,14 @@
     console.log('\n  📋 Next steps:');
     console.log('  1. Post Variant A as a tweet');
     console.log('  2. Post Variant B at the same time of day (next day ideally)');
-    console.log(`  3. Run: XActions.setUrl(&quot;${opts.name}&quot;, &quot;A&quot;, &quot;https://x.com/you/status/123&quot;)`);
-    console.log(`  4. Run: XActions.setUrl(&quot;${opts.name}&quot;, &quot;B&quot;, &quot;https://x.com/you/status/456&quot;)`);
-    console.log(`  5. Wait 24-48h, then: XActions.measure(&quot;${opts.name}&quot;)`);
-    console.log(`  6. View: XActions.results(&quot;${opts.name}&quot;)`);
+    console.log(`  3. Run: Medirus.setUrl(&quot;${opts.name}&quot;, &quot;A&quot;, &quot;https://x.com/you/status/123&quot;)`);
+    console.log(`  4. Run: Medirus.setUrl(&quot;${opts.name}&quot;, &quot;B&quot;, &quot;https://x.com/you/status/456&quot;)`);
+    console.log(`  5. Wait 24-48h, then: Medirus.measure(&quot;${opts.name}&quot;)`);
+    console.log(`  6. View: Medirus.results(&quot;${opts.name}&quot;)`);
   };
 
   // ── Set tweet URL for a variant ────────────────────────────
-  window.XActions.setUrl = (testName, variant, url) =&gt; {
+  window.Medirus.setUrl = (testName, variant, url) =&gt; {
     const tests = loadTests();
     if (!tests[testName]) { console.log(`❌ Test &quot;${testName}&quot; not found.`); return; }
     if (variant !== 'A' &amp;&amp; variant !== 'B') { console.log('❌ Variant must be &quot;A&quot; or &quot;B&quot;.'); return; }
@@ -262,7 +262,7 @@
     console.log(`✅ Variant ${variant} URL set for &quot;${testName}&quot;.`);
 
     if (tests[testName].variantA.posted &amp;&amp; tests[testName].variantB.posted) {
-      console.log(`🎯 Both variants posted! Wait 24-48h then run: XActions.measure(&quot;${testName}&quot;)`);
+      console.log(`🎯 Both variants posted! Wait 24-48h then run: Medirus.measure(&quot;${testName}&quot;)`);
     }
   };
 
@@ -302,13 +302,13 @@
     return metrics;
   };
 
-  window.XActions.measure = async (testName) =&gt; {
+  window.Medirus.measure = async (testName) =&gt; {
     const tests = loadTests();
     if (!tests[testName]) { console.log(`❌ Test &quot;${testName}&quot; not found.`); return; }
 
     const test = tests[testName];
     if (!test.variantA.tweetUrl || !test.variantB.tweetUrl) {
-      console.log('❌ Both variants need URLs. Use XActions.setUrl() first.');
+      console.log('❌ Both variants need URLs. Use Medirus.setUrl() first.');
       return;
     }
 
@@ -350,11 +350,11 @@
     }
 
     saveTests(tests);
-    console.log(`\n💾 Measurement saved. Run XActions.results(&quot;${testName}&quot;) for details.`);
+    console.log(`\n💾 Measurement saved. Run Medirus.results(&quot;${testName}&quot;) for details.`);
   };
 
   // ── View results ───────────────────────────────────────────
-  window.XActions.results = (testName) =&gt; {
+  window.Medirus.results = (testName) =&gt; {
     const tests = loadTests();
     if (!tests[testName]) { console.log(`❌ Test &quot;${testName}&quot; not found.`); return; }
 
@@ -417,10 +417,10 @@
   };
 
   // ── List all tests ─────────────────────────────────────────
-  window.XActions.listTests = () =&gt; {
+  window.Medirus.listTests = () =&gt; {
     const tests = loadTests();
     const names = Object.keys(tests);
-    if (names.length === 0) { console.log('📭 No tests. Use XActions.createTest() to start.'); return; }
+    if (names.length === 0) { console.log('📭 No tests. Use Medirus.createTest() to start.'); return; }
 
     console.log(`\n📋 A/B TESTS (${names.length}):\n`);
     for (const name of names) {
@@ -432,7 +432,7 @@
   };
 
   // ── Delete test ────────────────────────────────────────────
-  window.XActions.deleteTest = (testName) =&gt; {
+  window.Medirus.deleteTest = (testName) =&gt; {
     const tests = loadTests();
     if (!tests[testName]) { console.log(`❌ Test &quot;${testName}&quot; not found.`); return; }
     delete tests[testName];
@@ -441,11 +441,11 @@
   };
 
   // ── Export all test data ───────────────────────────────────
-  window.XActions.exportTests = () =&gt; {
+  window.Medirus.exportTests = () =&gt; {
     const tests = loadTests();
     const blob = new Blob([JSON.stringify(tests, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `xactions-ab-tests-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-ab-tests-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     console.log('📥 All test data exported.');
   };
@@ -457,13 +457,13 @@
   console.log('║  by nichxbt — v1.0' + ' '.repeat(W - 21) + '║');
   console.log('╚' + '═'.repeat(W) + '╝');
   console.log('\n📋 Commands:');
-  console.log('  XActions.createTest({ name, variantA, variantB })');
-  console.log('  XActions.setUrl(testName, &quot;A&quot;|&quot;B&quot;, tweetUrl)');
-  console.log('  XActions.measure(testName)   // Navigate &amp; measure');
-  console.log('  XActions.results(testName)   // View head-to-head');
-  console.log('  XActions.listTests()');
-  console.log('  XActions.deleteTest(testName)');
-  console.log('  XActions.exportTests()');
+  console.log('  Medirus.createTest({ name, variantA, variantB })');
+  console.log('  Medirus.setUrl(testName, &quot;A&quot;|&quot;B&quot;, tweetUrl)');
+  console.log('  Medirus.measure(testName)   // Navigate &amp; measure');
+  console.log('  Medirus.results(testName)   // View head-to-head');
+  console.log('  Medirus.listTests()');
+  console.log('  Medirus.deleteTest(testName)');
+  console.log('  Medirus.exportTests()');
 
   const tests = loadTests();
   const count = Object.keys(tests).length;
@@ -475,7 +475,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

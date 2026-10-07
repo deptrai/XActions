@@ -1,8 +1,8 @@
 ---
 title: "Auto-Like Tweets on X (Twitter) — Free Script 2026"
 description: "Auto-like tweets by keyword on X/Twitter. Free browser script, CLI, and MCP method. No API key needed."
-keywords: ["auto like tweets twitter", "twitter auto liker script", "auto like twitter 2026", "how to auto like on X", "twitter like bot free", "auto like tweets by keyword", "twitter automation like free", "auto engage twitter", "xactions auto liker", "like tweets automatically X"]
-canonical: "https://xactions.app/examples/auto-liker"
+keywords: ["auto like tweets twitter", "twitter auto liker script", "auto like twitter 2026", "how to auto like on X", "twitter like bot free", "auto like tweets by keyword", "twitter automation like free", "auto engage twitter", "medirus auto liker", "like tweets automatically X"]
+canonical: "https://medirus.online/examples/auto-liker"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You're building a personal brand in the AI startup space. You want to grow your X account organically by engaging with people who tweet about topics you care about — "AI startups," "machine learning," "LLM agents." But manually scrolling your timeline and liking relevant posts takes **30–60 minutes a day**. You need a way to auto-like tweets that match your niche keywords while you focus on creating content.
 
-XActions' Auto-Liker scrolls your home feed (or any profile), finds tweets matching your keywords, and likes them automatically with human-like delays. You set it, walk away, and come back to new followers and DMs from people who noticed you liked their posts.
+Medirus' Auto-Liker scrolls your home feed (or any profile), finds tweets matching your keywords, and likes them automatically with human-like delays. You set it, walk away, and come back to new followers and DMs from people who noticed you liked their posts.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -47,7 +47,7 @@ XActions' Auto-Liker scrolls your home feed (or any profile), finds tweets match
 └──────────────────────────────────────────────────────┘
 ```
 
-**After XActions:**
+**After Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -137,7 +137,7 @@ XActions' Auto-Liker scrolls your home feed (or any profile), finds tweets match
 │  ❤️ 45,210  🔄 8,920  💬 12,340                       │
 │                                                      │
 │  👤 @nichxbt                                         │
-│  "Just shipped auto-liker v3 for XActions 🚀        │
+│  "Just shipped auto-liker v3 for Medirus 🚀        │
 │   Now with keyword filtering and MCP support"        │
 │  ❤️ 127  🔄 34  💬 18                                 │
 │                                                      │
@@ -169,8 +169,8 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 
 ```javascript
 // ============================================
-// XActions - Auto-Like Tweets on X/Twitter
-// by nichxbt — https://xactions.app
+// Medirus - Auto-Like Tweets on X/Twitter
+// by nichxbt — https://medirus.online
 // Go to: x.com/home or any user's profile
 // Open console (F12 → Console), paste, Enter
 // ============================================
@@ -203,7 +203,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
   };
 
   console.log('');
-  console.log('❤️  XActions - AUTO-LIKER');
+  console.log('❤️  Medirus - AUTO-LIKER');
   console.log('════════════════════════════════════════');
   console.log(`🔑 Keywords: ${CONFIG.KEYWORDS.length ? CONFIG.KEYWORDS.join(', ') : 'ALL (no filter)'}`);
   console.log(`🎯 Max likes: ${CONFIG.MAX_LIKES}`);
@@ -222,7 +222,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 
   // Load previously liked tweets from sessionStorage
   try {
-    const saved = JSON.parse(sessionStorage.getItem('xactions_liked') || '[]');
+    const saved = JSON.parse(sessionStorage.getItem('medirus_liked') || '[]');
     saved.forEach(id => likedIds.add(id));
     if (likedIds.size > 0) {
       console.log(`📦 Loaded ${likedIds.size} previously liked tweet IDs from session`);
@@ -327,7 +327,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 
         // Save to session
         try {
-          sessionStorage.setItem('xactions_liked', JSON.stringify(Array.from(likedIds)));
+          sessionStorage.setItem('medirus_liked', JSON.stringify(Array.from(likedIds)));
         } catch (e) {}
 
         // Optional retweet
@@ -384,7 +384,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 ### ✅ Expected Output
 
 ```
-❤️  XActions - AUTO-LIKER
+❤️  Medirus - AUTO-LIKER
 ════════════════════════════════════════
 🔑 Keywords: AI, startup, machine learning, LLM
 🎯 Max likes: 20
@@ -392,7 +392,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 ════════════════════════════════════════
 
 ❤️  1/20 — @karpathy: "Just published a new post on training LLMs from scra..."
-❤️  2/20 — @nichxbt: "Just shipped auto-liker v3 for XActions 🚀 Now with key..."
+❤️  2/20 — @nichxbt: "Just shipped auto-liker v3 for Medirus 🚀 Now with key..."
 ❤️  3/20 — @sama: "The most important thing about AI startups is speed of..."
 📊 Progress: 3 liked, 12 skipped, scrolled 10x
 ❤️  4/20 — @ylecun: "New paper on self-supervised learning for LLM pretraini..."
@@ -417,14 +417,14 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 
 ## 💻 Method 2: CLI (Command Line)
 
-> XActions CLI doesn't have a dedicated `auto-like` command yet, but you can use the **MCP server** or **browser console** method. The CLI focuses on scraping and data export.
+> Medirus CLI doesn't have a dedicated `auto-like` command yet, but you can use the **MCP server** or **browser console** method. The CLI focuses on scraping and data export.
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Use the search command to find tweets, then like via browser
-npx xactions search "AI startups" --limit 50 --output ai-tweets.json
+npx medirus search "AI startups" --limit 50 --output ai-tweets.json
 ```
 
 For full automation from the terminal, use the MCP server method below with an AI agent, or run the browser script via Puppeteer (see [auto-liker.md](../auto-liker.md) for the Node.js/Puppeteer example).
@@ -437,14 +437,14 @@ For full automation from the terminal, use the MCP server method below with an A
 
 ### Setup
 
-Add XActions to your MCP config (e.g., `claude_desktop_config.json`):
+Add Medirus to your MCP config (e.g., `claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions", "mcp"]
+      "args": ["-y", "medirus", "mcp"]
     }
   }
 }
@@ -580,10 +580,10 @@ FROM_USERS: ['levelsio', 'marc_louvion', 'dankulkov'],
 ## ❓ FAQ
 
 ### Q: How do I auto-like tweets on Twitter / X in 2026?
-**A:** Go to `x.com/home`, open your browser console (F12 → Console), paste the XActions auto-liker script, and press Enter. Configure your keywords (e.g., "AI," "startup") and the script will scroll your timeline, find matching tweets, and like them automatically with safe 2–5 second delays. No API key or software install needed.
+**A:** Go to `x.com/home`, open your browser console (F12 → Console), paste the Medirus auto-liker script, and press Enter. Configure your keywords (e.g., "AI," "startup") and the script will scroll your timeline, find matching tweets, and like them automatically with safe 2–5 second delays. No API key or software install needed.
 
 ### Q: Is auto-liking tweets on Twitter safe?
-**A:** With reasonable limits, yes. Keep sessions to 20–50 likes with 2–5 second delays between actions. Don't run more than 3–4 sessions per day (total ~100–200 likes/day). The XActions script uses randomized human-like timing to mimic natural behavior. Avoid running multiple automation scripts simultaneously.
+**A:** With reasonable limits, yes. Keep sessions to 20–50 likes with 2–5 second delays between actions. Don't run more than 3–4 sessions per day (total ~100–200 likes/day). The Medirus script uses randomized human-like timing to mimic natural behavior. Avoid running multiple automation scripts simultaneously.
 
 ### Q: Can I auto-like only tweets about a specific topic?
 **A:** Yes. Set the `KEYWORDS` array in the script configuration. For example, `KEYWORDS: ['AI', 'machine learning', 'startup']` will only like tweets containing those words. You can also use `FROM_USERS` to limit likes to specific accounts.
@@ -597,5 +597,5 @@ FROM_USERS: ['levelsio', 'marc_louvion', 'dankulkov'],
 ---
 
 <footer>
-Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

@@ -31,16 +31,16 @@ async function main() {
 
     await page1.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-    const setVal = `xactions-test-value-${crypto.randomUUID()}`;
+    const setVal = `medirus-test-value-${crypto.randomUUID()}`;
     // Clear any leftover from a previous aborted run before setting our unique value.
     await page1.evaluate(() => {
-      localStorage.removeItem('xactions_persist_test');
+      localStorage.removeItem('medirus_persist_test');
     });
     await page1.evaluate((val) => {
-      localStorage.setItem('xactions_persist_test', val);
+      localStorage.setItem('medirus_persist_test', val);
     }, setVal);
 
-    console.log(`Set localStorage 'xactions_persist_test' = '${setVal}'`);
+    console.log(`Set localStorage 'medirus_persist_test' = '${setVal}'`);
     await browser1.close();
     console.log('Session 1 closed.\n');
 
@@ -51,8 +51,8 @@ async function main() {
 
     await page2.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-    const readVal = await page2.evaluate(() => localStorage.getItem('xactions_persist_test'));
-    console.log(`Read localStorage 'xactions_persist_test' = '${readVal}'`);
+    const readVal = await page2.evaluate(() => localStorage.getItem('medirus_persist_test'));
+    console.log(`Read localStorage 'medirus_persist_test' = '${readVal}'`);
 
     await browser2.close();
     console.log('Session 2 closed.\n');

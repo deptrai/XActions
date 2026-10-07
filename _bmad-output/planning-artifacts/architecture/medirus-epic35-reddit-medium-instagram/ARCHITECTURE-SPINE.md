@@ -1,10 +1,10 @@
 ---
-name: 'XActions Epic 35 — Reddit, Medium & Instagram Scraper Expansion'
+name: 'Medirus Epic 35 — Reddit, Medium & Instagram Scraper Expansion'
 type: architecture-spine
 purpose: epic-implementation
 altitude: module
 paradigm: 'Hexagonal / Ports & Adapters + Tiered Hybrid Signer Pool + Proxy Injection'
-scope: 'XActions social scraper expansion: Reddit (HTTP REST API), Medium (RSS/HTML), Instagram (private API bridge or Puppeteer) with unified ProxyProvider support'
+scope: 'Medirus social scraper expansion: Reddit (HTTP REST API), Medium (RSS/HTML), Instagram (private API bridge or Puppeteer) with unified ProxyProvider support'
 status: draft
 created: '2026-09-09'
 updated: '2026-09-09'
@@ -66,7 +66,7 @@ src/scrapers/social/
 ├── instagram/
 │   ├── client.js         # InstagramClient (Puppeteer or bridge)
 │   ├── crawler.js
-│   ├── normalizer.js     # media/user/comment → XActions items
+│   ├── normalizer.js     # media/user/comment → Medirus items
 │   ├── validator.js
 │   └── index.js
 └── index.js              # export new platforms

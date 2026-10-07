@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Auto-Plug Replies — Free X/Twitter Script | XActions</title>
+  <title>Auto-Plug Replies — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Automatically reply to your own tweets that go">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, auto, plug, replies, engagement">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, auto, plug, replies, engagement">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Auto-Plug Replies — XActions">
+  <meta property="og:title" content="Auto-Plug Replies — Medirus">
   <meta property="og:description" content="Automatically reply to your own tweets that go">
-  <meta property="og:url" content="https://xactions.app/scripts/auto-plug-replies">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/auto-plug-replies">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Auto-Plug Replies — XActions">
+  <meta name="twitter:title" content="Auto-Plug Replies — Medirus">
   <meta name="twitter:description" content="Automatically reply to your own tweets that go">
 
-  <link rel="canonical" href="https://xactions.app/scripts/auto-plug-replies">
+  <link rel="canonical" href="https://medirus.online/scripts/auto-plug-replies">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Auto-Plug Replies — Free X/Twitter Script | XActions",
+    "headline": "Auto-Plug Replies — Free X/Twitter Script | Medirus",
     "description": "Automatically reply to your own tweets that go",
-    "url": "https://xactions.app/scripts/auto-plug-replies",
+    "url": "https://medirus.online/scripts/auto-plug-replies",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Engagement",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, auto, plug, replies, engagement"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, auto, plug, replies, engagement"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://xactions.app/scripts#engagement" },
-      { "@type": "ListItem", "position": 4, "name": "Auto-Plug Replies", "item": "https://xactions.app/scripts/auto-plug-replies" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://medirus.online/scripts#engagement" },
+      { "@type": "ListItem", "position": 4, "name": "Auto-Plug Replies", "item": "https://medirus.online/scripts/auto-plug-replies" }
     ]
   }
   </script>
@@ -142,12 +142,12 @@
 
         <div class="controls-box">
         <h3>Runtime Controls</h3>
-        <pre><code>XActions.setPlug(&quot;Check out my new project → link&quot;)
-XActions.setThreshold(100)   // Min likes to trigger
-XActions.scan()              // Manual scan
-XActions.autoScan(600000)    // Auto-scan every 10min
-XActions.stop()              // Stop auto-scanning
-XActions.history()           // View plug history</code></pre>
+        <pre><code>Medirus.setPlug(&quot;Check out my new project → link&quot;)
+Medirus.setThreshold(100)   // Min likes to trigger
+Medirus.scan()              // Manual scan
+Medirus.autoScan(600000)    // Auto-scan every 10min
+Medirus.stop()              // Stop auto-scanning
+Medirus.history()           // View plug history</code></pre>
       </div>
         <section class="config-section">
         <h2>Configuration Options</h2>
@@ -208,12 +208,12 @@ XActions.history()           // View plug history</code></pre>
  * 4. Paste and run
  *
  * Controls:
- *   XActions.setPlug(&quot;Check out my new project → link&quot;)
- *   XActions.setThreshold(100)   // Min likes to trigger
- *   XActions.scan()              // Manual scan
- *   XActions.autoScan(600000)    // Auto-scan every 10min
- *   XActions.stop()              // Stop auto-scanning
- *   XActions.history()           // View plug history
+ *   Medirus.setPlug(&quot;Check out my new project → link&quot;)
+ *   Medirus.setThreshold(100)   // Min likes to trigger
+ *   Medirus.scan()              // Manual scan
+ *   Medirus.autoScan(600000)    // Auto-scan every 10min
+ *   Medirus.stop()              // Stop auto-scanning
+ *   Medirus.history()           // View plug history
  * ============================================================
  */
 (() =&gt; {
@@ -229,7 +229,7 @@ XActions.history()           // View plug history</code></pre>
     scrollDelay: 2000,
   };
 
-  const STORAGE_KEY = 'xactions_plug_history';
+  const STORAGE_KEY = 'medirus_plug_history';
   const sleep = (ms) =&gt; new Promise(r =&gt; setTimeout(r, ms));
 
   const parseNum = (text) =&gt; {
@@ -430,34 +430,34 @@ XActions.history()           // View plug history</code></pre>
   };
 
   // ── Controls ───────────────────────────────────────────────
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
-  window.XActions.setPlug = (msg) =&gt; {
-    if (!msg) { console.log('❌ Usage: XActions.setPlug(&quot;your plug message&quot;)'); return; }
+  window.Medirus.setPlug = (msg) =&gt; {
+    if (!msg) { console.log('❌ Usage: Medirus.setPlug(&quot;your plug message&quot;)'); return; }
     CONFIG.plugMessage = msg;
     console.log(`✅ Plug set: &quot;${msg.slice(0, 60)}...&quot;`);
   };
 
-  window.XActions.setThreshold = (n) =&gt; {
+  window.Medirus.setThreshold = (n) =&gt; {
     if (typeof n !== 'number' || n &lt; 1) { console.log('❌ Threshold must be a positive number.'); return; }
     CONFIG.viralThreshold = n;
     console.log(`✅ Viral threshold set to ${n} likes.`);
   };
 
-  window.XActions.scan = scan;
+  window.Medirus.scan = scan;
 
-  window.XActions.autoScan = (intervalMs = 600000) =&gt; {
+  window.Medirus.autoScan = (intervalMs = 600000) =&gt; {
     if (autoScanTimer) clearInterval(autoScanTimer);
     console.log(`🔄 Auto-scanning every ${(intervalMs / 60000).toFixed(1)} minutes.`);
     autoScanTimer = setInterval(scan, intervalMs);
   };
 
-  window.XActions.stop = () =&gt; {
+  window.Medirus.stop = () =&gt; {
     if (autoScanTimer) { clearInterval(autoScanTimer); autoScanTimer = null; }
     console.log('⏹️ Auto-scan stopped.');
   };
 
-  window.XActions.history = () =&gt; {
+  window.Medirus.history = () =&gt; {
     const history = loadHistory();
     if (history.length === 0) { console.log('📭 No plug history.'); return; }
     console.log(`\n🔌 PLUG HISTORY (${history.length}):\n`);
@@ -467,11 +467,11 @@ XActions.history()           // View plug history</code></pre>
     }
   };
 
-  window.XActions.exportHistory = () =&gt; {
+  window.Medirus.exportHistory = () =&gt; {
     const history = loadHistory();
     const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `xactions-plug-history-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-plug-history-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     console.log('📥 Plug history exported.');
   };
@@ -484,7 +484,7 @@ XActions.history()           // View plug history</code></pre>
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -497,7 +497,7 @@ XActions.history()           // View plug history</code></pre>
         <a href="/scripts/auto-commenter">💬 Auto Commenter</a>
 <a href="/scripts/auto-engage">⚡ Auto Engage</a>
 <a href="/scripts/auto-liker">❤️ Auto Liker</a>
-<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - XActions</a>
+<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - Medirus</a>
 <a href="/scripts/auto-repost">🔁 Auto Repost</a>
 <a href="/scripts/auto-reply">💬 Auto-Reply / Auto-Respond</a>
 <a href="/scripts/engagement-booster">🚀 Engagement Booster v2</a>

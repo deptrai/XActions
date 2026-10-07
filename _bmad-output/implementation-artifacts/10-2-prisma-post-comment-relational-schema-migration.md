@@ -140,7 +140,7 @@ baseline_commit: 7597f4417139183a2def847b2bd608f4ed10c0d3
 - [x] **Task 2: Category Validation in PrismaStore (AC: Category validation in store)**
   - [x] Import `isValidCategory` from `../core/types.js` in `src/store/prisma-store.js`
   - [x] Import `PlatformError`, `ErrorTypes`, `SuggestedActions` from `../core/error-envelope.js` in `src/store/prisma-store.js`
-  - [x] Validate each post's `category` in `storeBatch()` before any database write and throw `PlatformError` with `type: 'invalid_args'`, `code: 'XACT_4001'`, `suggestedAction: 'use_x_actions_list'` if invalid
+  - [x] Validate each post's `category` in `storeBatch()` before any database write and throw `PlatformError` with `type: 'invalid_args'`, `code: 'XACT_4001'`, `suggestedAction: 'use_medirus_list'` if invalid
 
 - [x] **Task 3: Post & Comment Schema and Index Verification (AC: Post model, Comment model, Indexes, CrawlCheckpoint model)**
   - [x] Verify `prisma/schema.prisma` definitions for `Post`, `Comment`, `CrawlCheckpoint` models
@@ -167,7 +167,7 @@ baseline_commit: 7597f4417139183a2def847b2bd608f4ed10c0d3
 - [x] [Review][Patch] Remove duplicate B-tree crawledAt indexes in raw migration SQL [prisma/migrations/20260818233000_universal_scraping_schema/migration.sql:11]
 - [x] [Review][Patch] Add TypeScript declaration for ./store in types/store.d.ts [types/store.d.ts:1]
 - [x] [Review][Patch] Tests use a mock Prisma client instead of real PostgreSQL [tests/store/prisma-store.test.js:24]
-  - Fixed: rewrote `prisma-store.test.js` to use real `PrismaClient` against `xactions_test` (PostgreSQL on `localhost:5434`) with `TRUNCATE` cleanup.
+  - Fixed: rewrote `prisma-store.test.js` to use real `PrismaClient` against `medirus_test` (PostgreSQL on `localhost:5434`) with `TRUNCATE` cleanup.
   - Created `tests/store/test-prisma-client.js` as shared test client using `DATABASE_URL_TEST`.
 - [x] [Review][Patch] `store-automation.test.js` also uses a mock Prisma client [tests/store/store-automation.test.js:15]
   - Fixed: rewrote `store-automation.test.js` to use the same real test client for high-throughput and boundary tests.
@@ -358,8 +358,8 @@ Several Epic 10 review issues are already resolved in the current schema and mig
 
 ### ATDD Artifacts
 
-- **ATDD Checklist:** [`_bmad-output/test-artifacts/atdd-checklist-10-2-prisma-post-comment-relational-schema-migration.md`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/test-artifacts/atdd-checklist-10-2-prisma-post-comment-relational-schema-migration.md)
-- **ATDD Test Scaffolds (RED Phase):** [`tests/store/prisma-store.test.js`](file:///Users/luisphan/Documents/GitHub/XActions/tests/store/prisma-store.test.js)
+- **ATDD Checklist:** [`_bmad-output/test-artifacts/atdd-checklist-10-2-prisma-post-comment-relational-schema-migration.md`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/test-artifacts/atdd-checklist-10-2-prisma-post-comment-relational-schema-migration.md)
+- **ATDD Test Scaffolds (RED Phase):** [`tests/store/prisma-store.test.js`](file:///Users/luisphan/Documents/GitHub/Medirus/tests/store/prisma-store.test.js)
 - **TDD Phase:** RED (Scaffolds generated with `it.skip()`, activate task-by-task during implementation)
 
 ### Environment Setup
@@ -432,7 +432,7 @@ Pattern: implementation artifacts live under `_bmad-output/implementation-artifa
 
 ## Project Context Reference
 
-- Project: XActions
+- Project: Medirus
 - Project key: XACT
 - Repository: https://github.com/nirholas/XActions
 - Tech: Node.js ESM, Prisma, PostgreSQL, Vitest

@@ -27,7 +27,7 @@ import prisma from '../lib/prisma.js';
 /**
  * Check scan results for notable events and send alerts
  * @param {import('socket.io').Server} io - Socket.IO server instance
- * @param {string} userId - XActions user ID
+ * @param {string} userId - Medirus user ID
  * @param {FollowerScanResult} scanResult - Result from followerScanner.runFollowerScan()
  * @returns {Promise<Record<string, unknown>[]>} Generated alerts
  */
@@ -147,7 +147,7 @@ export async function checkAndAlert(io, userId, scanResult) {
 
 /**
  * Deliver alert to user-configured webhook URL
- * @param {string} userId - XActions user ID
+ * @param {string} userId - Medirus user ID
  * @param {Record<string, unknown>} payload - Alert payload
  * @returns {Promise<void>}
  */
@@ -163,7 +163,7 @@ async function deliverWebhook(userId, payload) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        source: 'xactions',
+        source: 'medirus',
         event: 'unfollower_scan',
         timestamp: new Date().toISOString(),
         ...payload,
@@ -194,7 +194,7 @@ const INTERVAL_MS = {
 
 /**
  * Set or update auto-scan schedule
- * @param {string} userId - XActions user ID
+ * @param {string} userId - Medirus user ID
  * @param {'hourly' | 'every6h' | 'daily'} interval - 'hourly', 'every6h', 'daily'
  * @param {string | null} [webhookUrl] - Optional webhook URL for alerts
  * @returns {Promise<Record<string, unknown>>} Schedule record
@@ -229,7 +229,7 @@ export async function setSchedule(userId, interval, webhookUrl = null) {
 
 /**
  * Stop auto-scanning for a user
- * @param {string} userId - XActions user ID
+ * @param {string} userId - Medirus user ID
  * @returns {Promise<Record<string, unknown> | null>} Updated schedule or null
  */
 export async function stopSchedule(userId) {
@@ -248,7 +248,7 @@ export async function stopSchedule(userId) {
 
 /**
  * Get current schedule for a user
- * @param {string} userId - XActions user ID
+ * @param {string} userId - Medirus user ID
  * @returns {Promise<Record<string, unknown> | null>} Schedule record
  */
 export async function getSchedule(userId) {
@@ -273,7 +273,7 @@ export async function getDueSchedules() {
 
 /**
  * Mark a schedule as just executed and set next run time
- * @param {string} userId - XActions user ID
+ * @param {string} userId - Medirus user ID
  * @returns {Promise<void>}
  */
 export async function markScheduleExecuted(userId) {

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions — SessionHealthOrchestrator (Story 27.2)
+ * Medirus — SessionHealthOrchestrator (Story 27.2)
  *
  * Computes a continuous health score [0,100] per `platform:accountId` from six
  * signals — consecutive errors, rate-limit frequency, bot-challenge frequency,

@@ -136,7 +136,7 @@ export default {
       options.proxyPool ||
       options.proxyProvider ||
       process.env.PROXY_URL ||
-      process.env.XACTIONS_PROXIES ||
+      process.env.MEDIRUS_PROXIES ||
       process.env.HTTP_PROXY ||
       process.env.HTTPS_PROXY
     );
@@ -187,13 +187,13 @@ export default {
     let accountId = options.accountId;
 
     if (!cookies) {
-      if (process.env.XACTIONS_SESSION_COOKIE) {
-        if (process.env.XACTIONS_SESSION_COOKIE.includes('auth_token=')) {
-          cookies = process.env.XACTIONS_SESSION_COOKIE;
+      if (process.env.MEDIRUS_SESSION_COOKIE) {
+        if (process.env.MEDIRUS_SESSION_COOKIE.includes('auth_token=')) {
+          cookies = process.env.MEDIRUS_SESSION_COOKIE;
         } else {
-          cookies = `auth_token=${process.env.XACTIONS_SESSION_COOKIE}`;
-          if (process.env.XACTIONS_CSRF_TOKEN) {
-            cookies += `; ct0=${process.env.XACTIONS_CSRF_TOKEN}`;
+          cookies = `auth_token=${process.env.MEDIRUS_SESSION_COOKIE}`;
+          if (process.env.MEDIRUS_CSRF_TOKEN) {
+            cookies += `; ct0=${process.env.MEDIRUS_CSRF_TOKEN}`;
           }
         }
       } else if (process.env.TWITTER_COOKIES) {
@@ -202,7 +202,7 @@ export default {
 
       if (!cookies) {
         try {
-          const cookiePath = path.join(os.homedir(), '.xactions', 'cookies.json');
+          const cookiePath = path.join(os.homedir(), '.medirus', 'cookies.json');
           if (fs.existsSync(cookiePath)) {
             const raw = JSON.parse(fs.readFileSync(cookiePath, 'utf8'));
             if (Array.isArray(raw)) {
@@ -222,7 +222,7 @@ export default {
         accountId = null;
       } else {
         try {
-          const configPath = path.join(os.homedir(), '.xactions', 'config.json');
+          const configPath = path.join(os.homedir(), '.medirus', 'config.json');
           if (fs.existsSync(configPath)) {
             const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
             if (cfg.activeSession) accountId = cfg.activeSession;

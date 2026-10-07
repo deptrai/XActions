@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Scraper Class
+ * Medirus Client — Scraper Class
  *
  * Main entry point for programmatic Twitter/X access via internal GraphQL API.
  * No Puppeteer required — uses HTTP-only requests.
@@ -49,7 +49,7 @@ export const SearchMode = Object.freeze({
  * DMs, home timeline) with a bare 404 and an empty body, which is
  * indistinguishable from a missing resource unless you already know the
  * endpoint needs a session. Raising `HTTP 404: Not Found` sent people hunting
- * for a bug in XActions when the real answer was "log in first".
+ * for a bug in Medirus when the real answer was "log in first".
  *
  * Errors are also constructed with the object-form options ScraperError
  * actually declares. The previous positional calls silently dropped
@@ -188,7 +188,7 @@ class SimpleHttp {
  *
  * @example
  * ```js
- * import { Scraper } from 'xactions/client';
+ * import { Scraper } from 'medirus/client';
  *
  * const scraper = new Scraper();
  * await scraper.loadCookies('./cookies.json');

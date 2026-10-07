@@ -17,7 +17,7 @@ import {
   scrapeFollowers,
   scrapeTweets,
   searchTweets,
-} from 'xactions/scrapers';
+} from 'medirus/scrapers';
 
 const browser = await createBrowser();
 const page = await createPage(browser);
@@ -33,7 +33,7 @@ const followers = await scrapeFollowers(page, 'nichxbt', { max: 500 });
 const tweets = await scrapeTweets(page, 'nichxbt', { max: 100 });
 
 // Search tweets
-const results = await searchTweets(page, 'XActions', { max: 50 });
+const results = await searchTweets(page, 'Medirus', { max: 50 });
 
 await browser.close();
 ```
@@ -41,10 +41,10 @@ await browser.close();
 ### CLI
 
 ```bash
-xactions scrape profile elonmusk
-xactions scrape followers nichxbt --max 500
-xactions scrape tweets nichxbt --max 100
-xactions search "AI agents" --max 50
+medirus scrape profile elonmusk
+medirus scrape followers nichxbt --max 500
+medirus scrape tweets nichxbt --max 100
+medirus search "AI agents" --max 50
 ```
 
 ### Browser Script
@@ -64,7 +64,7 @@ xactions search "AI agents" --max 50
 Full support for all scraping operations via browser automation on x.com.
 
 ```js
-import { twitter } from 'xactions/scrapers';
+import { twitter } from 'medirus/scrapers';
 
 const profile = await twitter.scrapeProfile(page, 'elonmusk');
 const followers = await twitter.scrapeFollowers(page, 'nichxbt');
@@ -74,7 +74,7 @@ const tweets = await twitter.scrapeTweets(page, 'nichxbt');
 ### Bluesky
 
 ```js
-import { bluesky } from 'xactions/scrapers';
+import { bluesky } from 'medirus/scrapers';
 
 const profile = await bluesky.scrapeProfile('user.bsky.social');
 ```
@@ -82,7 +82,7 @@ const profile = await bluesky.scrapeProfile('user.bsky.social');
 ### Threads
 
 ```js
-import { threads } from 'xactions/scrapers';
+import { threads } from 'medirus/scrapers';
 
 const profile = await threads.scrapeProfile('zuck');
 ```
@@ -90,7 +90,7 @@ const profile = await threads.scrapeProfile('zuck');
 ### Mastodon
 
 ```js
-import { mastodon } from 'xactions/scrapers';
+import { mastodon } from 'medirus/scrapers';
 
 const profile = await mastodon.scrapeProfile('user@mastodon.social');
 ```
@@ -149,7 +149,7 @@ Swap browser backends without changing scraper code.
 ### Switching Adapters
 
 ```js
-import { setDefaultAdapter, getAdapter, listAdapters } from 'xactions/scrapers';
+import { setDefaultAdapter, getAdapter, listAdapters } from 'medirus/scrapers';
 
 // List available adapters
 console.log(listAdapters());
@@ -164,7 +164,7 @@ const adapter = getAdapter('cheerio');
 ### Custom Adapters
 
 ```js
-import { BaseAdapter, registerAdapter } from 'xactions/scrapers';
+import { BaseAdapter, registerAdapter } from 'medirus/scrapers';
 
 class MyAdapter extends BaseAdapter {
   async createBrowser(options) { /* ... */ }
@@ -239,7 +239,7 @@ X enforces aggressive rate limits. Follow these guidelines:
 5. **Use proxies** — the `proxyManager` in `src/scraping/` handles rotation
 
 ```js
-import { ProxyManager } from 'xactions/scraping/proxyManager';
+import { ProxyManager } from 'medirus/scraping/proxyManager';
 
 const proxy = new ProxyManager({
   proxies: ['http://proxy1:8080', 'http://proxy2:8080'],
@@ -254,7 +254,7 @@ const proxy = new ProxyManager({
 For large-scale scraping, use the pagination engine:
 
 ```js
-import { PaginationEngine } from 'xactions/scraping/paginationEngine';
+import { PaginationEngine } from 'medirus/scraping/paginationEngine';
 
 const engine = new PaginationEngine({
   maxPages: 100,
@@ -270,7 +270,7 @@ const engine = new PaginationEngine({
 Avoid detection with the stealth browser:
 
 ```js
-import { StealthBrowser } from 'xactions/scraping/stealthBrowser';
+import { StealthBrowser } from 'medirus/scraping/stealthBrowser';
 
 const browser = new StealthBrowser({
   headless: true,

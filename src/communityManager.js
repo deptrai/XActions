@@ -935,8 +935,8 @@
     log('✅', `Scraped ${members.length} members from community ${communityId}`);
 
     // Store in sessionStorage for re-use
-    sessionStorage.setItem(`xactions_community_members_${communityId}`, JSON.stringify(members));
-    log('✅', `Members saved to sessionStorage key: xactions_community_members_${communityId}`);
+    sessionStorage.setItem(`medirus_community_members_${communityId}`, JSON.stringify(members));
+    log('✅', `Members saved to sessionStorage key: medirus_community_members_${communityId}`);
 
     return members;
   };
@@ -1160,18 +1160,18 @@
     console.table(sortedAuthors.map(([author, count]) => ({ author, posts: count })));
 
     // Store in sessionStorage
-    sessionStorage.setItem(`xactions_community_analytics_${communityId}`, JSON.stringify(analytics));
-    log('✅', `Analytics saved to sessionStorage key: xactions_community_analytics_${communityId}`);
+    sessionStorage.setItem(`medirus_community_analytics_${communityId}`, JSON.stringify(analytics));
+    log('✅', `Analytics saved to sessionStorage key: medirus_community_analytics_${communityId}`);
 
     return analytics;
   };
 
   // ══════════════════════════════════════════════════════════
-  // 🌐 Expose on window.XActions.communityManager
+  // 🌐 Expose on window.Medirus.communityManager
   // ══════════════════════════════════════════════════════════
 
-  window.XActions = window.XActions || {};
-  window.XActions.communityManager = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.communityManager = {
     createCommunity,
     editCommunitySettings,
     postInCommunity,
@@ -1190,10 +1190,10 @@
 
   console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
-║           🏘️  XActions Community Manager — by nichxbt         ║
+║           🏘️  Medirus Community Manager — by nichxbt         ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  All functions available on window.XActions.communityManager  ║
+║  All functions available on window.Medirus.communityManager  ║
 ║                                                               ║
 ║  1. 🏗️  createCommunity({ name, description, rules, isPrivate })
 ║     Create a new community with custom settings               ║
@@ -1228,7 +1228,7 @@
 ║                                                               ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║  💡 Example:                                                  ║
-║  const cm = window.XActions.communityManager;                 ║
+║  const cm = window.Medirus.communityManager;                 ║
 ║  await cm.createCommunity({ name: "My Group" });              ║
 ║  await cm.postInCommunity("123456", "Hello community!");      ║
 ║  await cm.viewCommunityMembers("123456", 100);                ║

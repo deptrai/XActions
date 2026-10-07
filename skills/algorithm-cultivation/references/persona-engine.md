@@ -54,28 +54,28 @@ import {
 
 ```bash
 # Create persona interactively
-xactions persona create
+medirus persona create
 
 # Create with options
-xactions persona create --preset crypto-degen --strategy aggressive --activity night-owl
+medirus persona create --preset crypto-degen --strategy aggressive --activity night-owl
 
 # List all personas
-xactions persona list
+medirus persona list
 
 # Run algorithm builder (24/7)
-xactions persona run <personaId>
-xactions persona run <personaId> --no-headless    # visible browser
-xactions persona run <personaId> --dry-run        # preview mode
-xactions persona run <personaId> --sessions 5     # stop after 5 sessions
+medirus persona run <personaId>
+medirus persona run <personaId> --no-headless    # visible browser
+medirus persona run <personaId> --dry-run        # preview mode
+medirus persona run <personaId> --sessions 5     # stop after 5 sessions
 
 # Check stats
-xactions persona status <personaId>
+medirus persona status <personaId>
 
 # Edit persona
-xactions persona edit <personaId> --topics "ai,llm,agents" --strategy thoughtleader
+medirus persona edit <personaId> --topics "ai,llm,agents" --strategy thoughtleader
 
 # Delete persona
-xactions persona delete <personaId>
+medirus persona delete <personaId>
 ```
 
 ## Environment Variables
@@ -83,7 +83,7 @@ xactions persona delete <personaId>
 | Variable | Purpose |
 |----------|---------|
 | `OPENROUTER_API_KEY` | Required for LLM-generated comments and posts |
-| `XACTIONS_SESSION_COOKIE` | X auth token (alternative to `--token` flag) |
+| `MEDIRUS_SESSION_COOKIE` | X auth token (alternative to `--token` flag) |
 
 ## Getting Started (5 minutes)
 
@@ -92,11 +92,11 @@ xactions persona delete <personaId>
 export OPENROUTER_API_KEY=sk-or-v1-...
 
 # 2. Login to X
-xactions login
+medirus login
 
 # 3. Create a persona
-xactions persona create --preset crypto-degen --strategy thoughtleader --activity always-on
+medirus persona create --preset crypto-degen --strategy thoughtleader --activity always-on
 
 # 4. Start building (runs forever)
-xactions persona run persona_1234567890
+medirus persona run persona_1234567890
 ```

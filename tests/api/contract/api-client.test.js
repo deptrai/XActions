@@ -103,7 +103,7 @@ describe('Story 46.3 — api-client generator', () => {
     expect(existsSync(resolve(testOutDir, 'README.md'))).toBe(true);
 
     const clientSrc = readFileSync(resolve(testOutDir, 'client.ts'), 'utf8');
-    expect(clientSrc).toContain('export class XActionsClient');
+    expect(clientSrc).toContain('export class MedirusClient');
     expect(clientSrc).toContain('isPaymentRequired');
     expect(clientSrc).toContain('PaymentRequiredPayload');
     // Method stubs keyed by operationId → camelCase
@@ -141,7 +141,7 @@ describe('Story 46.3 — api-client generator', () => {
 
   it('emitted package.json exports map uses types conditions (Node ESM safe)', () => {
     const pkg = JSON.parse(readFileSync(resolve(prodOutDir, 'package.json'), 'utf8'));
-    expect(pkg.name).toBe('@xactions/api-client');
+    expect(pkg.name).toBe('@medirus/api-client');
     expect(pkg.type).toBe('module');
     expect(pkg.exports?.['.']?.types).toBe('./index.ts');
     expect(pkg.exports?.['./schema']?.types).toBe('./schema.d.ts');
@@ -155,8 +155,8 @@ describe('Story 46.3 — api-client generator', () => {
     expect(clientSrc).toContain('accepts');
   });
 
-  it('XActionsClient runtime: sends auth headers and JSON body via custom fetch', async () => {
-    const { XActionsClient, isPaymentRequired } = await import(resolve(prodOutDir, 'client.ts'));
+  it('MedirusClient runtime: sends auth headers and JSON body via custom fetch', async () => {
+    const { MedirusClient, isPaymentRequired } = await import(resolve(prodOutDir, 'client.ts'));
     let capturedUrl = '';
     let capturedInit = {};
 
@@ -169,7 +169,7 @@ describe('Story 46.3 — api-client generator', () => {
       });
     };
 
-    const client = new XActionsClient({
+    const client = new MedirusClient({
       baseUrl: 'http://test.local',
       sessionCookie: 'sess-123',
       bearerToken: 'jwt-456',
@@ -190,8 +190,8 @@ describe('Story 46.3 — api-client generator', () => {
     expect(JSON.parse(capturedInit.body)).toEqual({ platform: 'tech', niche: 'tech', platform: 'x' });
   });
 
-  it('XActionsClient runtime: parses 402 PaymentRequired as x402 payload', async () => {
-    const { XActionsClient, isPaymentRequired } = await import(resolve(prodOutDir, 'client.ts'));
+  it('MedirusClient runtime: parses 402 PaymentRequired as x402 payload', async () => {
+    const { MedirusClient, isPaymentRequired } = await import(resolve(prodOutDir, 'client.ts'));
     const paymentPayload = {
       x402Version: 2,
       accepts: [{ scheme: 'exact', network: 'eip155:8453', maxAmountRequired: '$0.001', payTo: '0xabc' }],
@@ -203,7 +203,7 @@ describe('Story 46.3 — api-client generator', () => {
         headers: { 'content-type': 'application/json' },
       });
 
-    const client = new XActionsClient({ baseUrl: 'http://test.local', fetch: mockFetch });
+    const client = new MedirusClient({ baseUrl: 'http://test.local', fetch: mockFetch });
     const res = await client.request('http://test.local/api/ai/scrape/profile');
 
     expect(res.ok).toBe(false);
@@ -215,8 +215,8 @@ describe('Story 46.3 — api-client generator', () => {
     }
   });
 
-  it('XActionsClient runtime: parses canonical 401 error envelope', async () => {
-    const { XActionsClient } = await import(resolve(prodOutDir, 'client.ts'));
+  it('MedirusClient runtime: parses canonical 401 error envelope', async () => {
+    const { MedirusClient } = await import(resolve(prodOutDir, 'client.ts'));
     const errorEnvelope = {
       success: false,
       error: { code: 'UNAUTHORIZED', message: 'Missing session cookie' },
@@ -228,7 +228,7 @@ describe('Story 46.3 — api-client generator', () => {
         headers: { 'content-type': 'application/json' },
       });
 
-    const client = new XActionsClient({ baseUrl: 'http://test.local', fetch: mockFetch });
+    const client = new MedirusClient({ baseUrl: 'http://test.local', fetch: mockFetch });
     const res = await client.request('http://test.local/api/viral/mine');
 
     expect(res.ok).toBe(false);

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Auth Module Index
+ * Medirus Client — Auth Module Index
  *
  * Barrel exports for the authentication system.
  *

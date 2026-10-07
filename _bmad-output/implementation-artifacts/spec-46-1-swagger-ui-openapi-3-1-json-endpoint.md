@@ -8,7 +8,7 @@ review_loop_iteration: 1
 followup_review_recommended: false
 context:
   - _bmad-output/implementation-artifacts/epic-46-context.md
-  - _bmad-output/planning-artifacts/architecture/xactions-api-contract-epic46/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/medirus-api-contract-epic46/ARCHITECTURE-SPINE.md
 warnings: []
 deferred: []
 ---
@@ -71,7 +71,7 @@ deferred: []
 - `package.json` — dependencies: `express ^4.21.2`, `zod ^4.6.5`, `@asteasolutions/zod-to-openapi ^9.1.0`, `@redocly/cli ^2.54.2`, `supertest ^6.3.4` — MISSING `swagger-ui-express` (need to add `^5.0.1`)
 - `xspace-agents/agent-voice-chat/package.json` — reference: `swagger-ui-express ^5.0.1` already used in adjacent workspace package
 - `_bmad-output/implementation-artifacts/epic-46-context.md` — epic context (requirements, tech decisions, x402 preservation mandate)
-- `_bmad-output/planning-artifacts/architecture/xactions-api-contract-epic46/ARCHITECTURE-SPINE.md` — 9 ADs covering contract spine
+- `_bmad-output/planning-artifacts/architecture/medirus-api-contract-epic46/ARCHITECTURE-SPINE.md` — 9 ADs covering contract spine
 
 ## Tasks & Acceptance
 

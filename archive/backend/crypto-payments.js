@@ -346,7 +346,7 @@ async function createCoinbaseCharge(payment) {
       'X-CC-Version': '2018-03-22'
     },
     body: JSON.stringify({
-      name: `XActions Credits - ${payment.package}`,
+      name: `Medirus Credits - ${payment.package}`,
       description: `${payment.credits} automation credits`,
       pricing_type: 'fixed_price',
       local_price: {
@@ -378,7 +378,7 @@ async function createNowPaymentsInvoice(payment) {
       price_amount: payment.amountUSD,
       price_currency: 'usd',
       order_id: payment.paymentId,
-      order_description: `XActions ${payment.credits} Credits`,
+      order_description: `Medirus ${payment.credits} Credits`,
       ipn_callback_url: `${process.env.API_URL}/webhooks/nowpayments`,
       success_url: `${process.env.FRONTEND_URL}/dashboard?crypto_payment=${payment.paymentId}`,
       cancel_url: `${process.env.FRONTEND_URL}/pricing`

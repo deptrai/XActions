@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mass Unblock Users — Free X/Twitter Script | XActions</title>
+  <title>Mass Unblock Users — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Unblock all or selected users from your blocked">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, mass, unblock, safety &amp; privacy">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, mass, unblock, safety &amp; privacy">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Mass Unblock Users — XActions">
+  <meta property="og:title" content="Mass Unblock Users — Medirus">
   <meta property="og:description" content="Unblock all or selected users from your blocked">
-  <meta property="og:url" content="https://xactions.app/scripts/mass-unblock">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/mass-unblock">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Mass Unblock Users — XActions">
+  <meta name="twitter:title" content="Mass Unblock Users — Medirus">
   <meta name="twitter:description" content="Unblock all or selected users from your blocked">
 
-  <link rel="canonical" href="https://xactions.app/scripts/mass-unblock">
+  <link rel="canonical" href="https://medirus.online/scripts/mass-unblock">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Mass Unblock Users — Free X/Twitter Script | XActions",
+    "headline": "Mass Unblock Users — Free X/Twitter Script | Medirus",
     "description": "Unblock all or selected users from your blocked",
-    "url": "https://xactions.app/scripts/mass-unblock",
+    "url": "https://medirus.online/scripts/mass-unblock",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Safety & Privacy",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, mass, unblock, safety & privacy"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, mass, unblock, safety & privacy"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Safety & Privacy", "item": "https://xactions.app/scripts#safety-privacy" },
-      { "@type": "ListItem", "position": 4, "name": "Mass Unblock Users", "item": "https://xactions.app/scripts/mass-unblock" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Safety & Privacy", "item": "https://medirus.online/scripts#safety-privacy" },
+      { "@type": "ListItem", "position": 4, "name": "Mass Unblock Users", "item": "https://medirus.online/scripts/mass-unblock" }
     ]
   }
   </script>
@@ -141,7 +141,7 @@
 
         <div class="controls-box">
         <h3>Runtime Controls</h3>
-        <pre><code>window.XActions.pause()  / .resume() / .abort() / .status()</code></pre>
+        <pre><code>window.Medirus.pause()  / .resume() / .abort() / .status()</code></pre>
       </div>
         <section class="config-section">
         <h2>Configuration Options</h2>
@@ -199,7 +199,7 @@
  * 3. Paste and run
  *
  * 🎮 CONTROLS:
- *   window.XActions.pause()  / .resume() / .abort() / .status()
+ *   window.Medirus.pause()  / .resume() / .abort() / .status()
  * ============================================================
  */
 (() =&gt; {
@@ -238,7 +238,7 @@
   const processedUsers = new Set();
   const keepSet = new Set(CONFIG.keepBlocked.map(u =&gt; u.toLowerCase().replace(/^@/, '')));
 
-  window.XActions = {
+  window.Medirus = {
     pause()  { paused = true;  console.log('⏸️ Paused.'); },
     resume() { paused = false; console.log('▶️ Resumed.'); },
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
@@ -350,7 +350,7 @@
     if (CONFIG.exportOnComplete &amp;&amp; unblockedLog.length &gt; 0) {
       const blob = new Blob([JSON.stringify({ summary: { unblocked, skipped, errors }, accounts: unblockedLog }, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-unblocked-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-unblocked-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Results exported.');
     }
@@ -363,7 +363,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -377,7 +377,7 @@
 <a href="/scripts/block-bots">🤖 Block Bots</a>
 <a href="/scripts/block-by-keywords">🚫 Block By Keywords</a>
 <a href="/scripts/block-by-ratio">🚫 Block By Ratio</a>
-<a href="/scripts/block-list-transfer">🧱 Block List Transfer - XActions</a>
+<a href="/scripts/block-list-transfer">🧱 Block List Transfer - Medirus</a>
 <a href="/scripts/filter-manager">🔍 Filter Manager</a>
 <a href="/scripts/manage-muted-words">🔇 Manage Muted Words</a>
 <a href="/scripts/manage-settings">⚙️ Manage Settings</a>

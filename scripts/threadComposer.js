@@ -18,7 +18,7 @@
   };
   // =============================================
 
-  const STORAGE_KEY = 'xactions_thread_draft_';
+  const STORAGE_KEY = 'medirus_thread_draft_';
   let currentThread = [];
 
   const typeIntoInput = async (input, text) => {
@@ -28,10 +28,10 @@
     await sleep(200);
   };
 
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
   // ── Add tweets to the thread ───────────────────
-  window.XActions.thread = (text) => {
+  window.Medirus.thread = (text) => {
     if (Array.isArray(text)) {
       currentThread = text.map(t => t.trim());
       console.log(`✅ Thread loaded: ${currentThread.length} tweets`);
@@ -39,16 +39,16 @@
       currentThread.push(text.trim());
       console.log(`➕ Tweet ${currentThread.length} added (${text.length}/${CONFIG.maxChars} chars)`);
     } else {
-      console.log('❌ Usage: XActions.thread("tweet text") or XActions.thread(["t1","t2"])');
+      console.log('❌ Usage: Medirus.thread("tweet text") or Medirus.thread(["t1","t2"])');
       return;
     }
-    window.XActions.preview();
+    window.Medirus.preview();
   };
 
   // ── Preview the current thread ─────────────────
-  window.XActions.preview = () => {
+  window.Medirus.preview = () => {
     if (currentThread.length === 0) {
-      console.log('📭 No thread loaded. Use XActions.thread("text") to add tweets.');
+      console.log('📭 No thread loaded. Use Medirus.thread("text") to add tweets.');
       return;
     }
 
@@ -72,9 +72,9 @@
   };
 
   // ── Publish the thread ─────────────────────────
-  window.XActions.publish = async () => {
+  window.Medirus.publish = async () => {
     if (currentThread.length === 0) {
-      console.log('❌ No thread loaded. Use XActions.thread([...]) first.');
+      console.log('❌ No thread loaded. Use Medirus.thread([...]) first.');
       return;
     }
 
@@ -124,8 +124,8 @@
   };
 
   // ── Save / Load / List / Delete Drafts ─────────
-  window.XActions.saveDraft = (name) => {
-    if (!name) { console.log('❌ Usage: XActions.saveDraft("name")'); return; }
+  window.Medirus.saveDraft = (name) => {
+    if (!name) { console.log('❌ Usage: Medirus.saveDraft("name")'); return; }
     if (currentThread.length === 0) { console.log('❌ No thread to save.'); return; }
     localStorage.setItem(STORAGE_KEY + name, JSON.stringify({
       tweets: currentThread, savedAt: new Date().toISOString(), name,
@@ -133,19 +133,19 @@
     console.log(`💾 Draft "${name}" saved (${currentThread.length} tweets).`);
   };
 
-  window.XActions.loadDraft = (name) => {
-    if (!name) { console.log('❌ Usage: XActions.loadDraft("name")'); return; }
+  window.Medirus.loadDraft = (name) => {
+    if (!name) { console.log('❌ Usage: Medirus.loadDraft("name")'); return; }
     const raw = localStorage.getItem(STORAGE_KEY + name);
     if (!raw) { console.log(`❌ Draft "${name}" not found.`); return; }
     try {
       const draft = JSON.parse(raw);
       currentThread = draft.tweets;
       console.log(`📂 Loaded "${name}" (${currentThread.length} tweets, saved ${draft.savedAt})`);
-      window.XActions.preview();
+      window.Medirus.preview();
     } catch { console.log('❌ Failed to parse draft.'); }
   };
 
-  window.XActions.listDrafts = () => {
+  window.Medirus.listDrafts = () => {
     const drafts = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -161,22 +161,22 @@
     drafts.forEach(d => console.log(`  📝 "${d.name}" — ${d.tweets} tweets (${d.saved})`));
   };
 
-  window.XActions.deleteDraft = (name) => {
-    if (!name) { console.log('❌ Usage: XActions.deleteDraft("name")'); return; }
+  window.Medirus.deleteDraft = (name) => {
+    if (!name) { console.log('❌ Usage: Medirus.deleteDraft("name")'); return; }
     if (!localStorage.getItem(STORAGE_KEY + name)) { console.log(`❌ Draft "${name}" not found.`); return; }
     localStorage.removeItem(STORAGE_KEY + name);
     console.log(`🗑️ Draft "${name}" deleted.`);
   };
 
   // ── Init ───────────────────────────────────────
-  console.log('🧵 THREAD COMPOSER — XActions by nichxbt');
+  console.log('🧵 THREAD COMPOSER — Medirus by nichxbt');
   console.log('📋 Commands:');
-  console.log('  XActions.thread("text")         — add a tweet');
-  console.log('  XActions.thread(["t1","t2"])     — load full thread');
-  console.log('  XActions.preview()               — preview with char counts');
-  console.log('  XActions.publish()               — post the thread');
-  console.log('  XActions.saveDraft("name")       — save to localStorage');
-  console.log('  XActions.loadDraft("name")       — load a draft');
-  console.log('  XActions.listDrafts()            — list all drafts');
-  console.log('  XActions.deleteDraft("name")     — delete a draft');
+  console.log('  Medirus.thread("text")         — add a tweet');
+  console.log('  Medirus.thread(["t1","t2"])     — load full thread');
+  console.log('  Medirus.preview()               — preview with char counts');
+  console.log('  Medirus.publish()               — post the thread');
+  console.log('  Medirus.saveDraft("name")       — save to localStorage');
+  console.log('  Medirus.loadDraft("name")       — load a draft');
+  console.log('  Medirus.listDrafts()            — list all drafts');
+  console.log('  Medirus.deleteDraft("name")     — delete a draft');
 })();

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Tweet Data Model
+ * Medirus Client — Tweet Data Model
  *
  * Represents a tweet from Twitter's internal GraphQL API.
  * Use Tweet.fromGraphQL(raw) to parse raw API responses.

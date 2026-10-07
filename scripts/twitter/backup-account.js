@@ -80,7 +80,7 @@ var CONFIG = {
   const backupData = {
     meta: {
       createdAt: new Date().toISOString(),
-      source: 'XActions Backup Tool',
+      source: 'Medirus Backup Tool',
       version: '1.0.0'
     },
     profile: null,
@@ -171,7 +171,7 @@ var CONFIG = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `medirus-backup-${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -179,9 +179,9 @@ var CONFIG = {
     console.log('📁 Backup file downloaded!');
   };
   
-  // Create XActions backup interface
-  window.XActions = window.XActions || {};
-  window.XActions.Backup = {
+  // Create Medirus backup interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Backup = {
     data: backupData,
     
     // Backup tweets from current page
@@ -282,17 +282,17 @@ var CONFIG = {
       console.log('');
       
       // Profile
-      window.XActions.Backup.profile();
+      window.Medirus.Backup.profile();
       
       console.log('');
       console.log('📋 NEXT STEPS (run each command after navigating):');
       console.log('');
-      console.log('1. Stay on profile → XActions.Backup.tweets()');
-      console.log('2. Go to Likes tab → XActions.Backup.likes()');
-      console.log('3. Go to Bookmarks → XActions.Backup.bookmarks()');
-      console.log('4. Go to Following → XActions.Backup.following()');
-      console.log('5. Go to Followers → XActions.Backup.followers()');
-      console.log('6. When done → XActions.Backup.download()');
+      console.log('1. Stay on profile → Medirus.Backup.tweets()');
+      console.log('2. Go to Likes tab → Medirus.Backup.likes()');
+      console.log('3. Go to Bookmarks → Medirus.Backup.bookmarks()');
+      console.log('4. Go to Following → Medirus.Backup.following()');
+      console.log('5. Go to Followers → Medirus.Backup.followers()');
+      console.log('6. When done → Medirus.Backup.download()');
       console.log('');
     },
     
@@ -301,15 +301,15 @@ var CONFIG = {
       console.log('');
       console.log('📋 BACKUP COMMANDS:');
       console.log('');
-      console.log('   XActions.Backup.full()      - Start guided backup');
-      console.log('   XActions.Backup.tweets()    - Backup tweets');
-      console.log('   XActions.Backup.likes()     - Backup likes');
-      console.log('   XActions.Backup.bookmarks() - Backup bookmarks');
-      console.log('   XActions.Backup.following() - Backup following');
-      console.log('   XActions.Backup.followers() - Backup followers');
-      console.log('   XActions.Backup.profile()   - Capture profile info');
-      console.log('   XActions.Backup.summary()   - Show backup summary');
-      console.log('   XActions.Backup.download()  - Download backup file');
+      console.log('   Medirus.Backup.full()      - Start guided backup');
+      console.log('   Medirus.Backup.tweets()    - Backup tweets');
+      console.log('   Medirus.Backup.likes()     - Backup likes');
+      console.log('   Medirus.Backup.bookmarks() - Backup bookmarks');
+      console.log('   Medirus.Backup.following() - Backup following');
+      console.log('   Medirus.Backup.followers() - Backup followers');
+      console.log('   Medirus.Backup.profile()   - Capture profile info');
+      console.log('   Medirus.Backup.summary()   - Show backup summary');
+      console.log('   Medirus.Backup.download()  - Download backup file');
       console.log('');
     }
   };
@@ -317,7 +317,7 @@ var CONFIG = {
   console.log('✅ Account Backup Tool loaded!');
   console.log('');
   console.log('📋 QUICK START:');
-  console.log('   Run XActions.Backup.full() for guided backup');
-  console.log('   Run XActions.Backup.help() for all commands');
+  console.log('   Run Medirus.Backup.full() for guided backup');
+  console.log('   Run Medirus.Backup.help() for all commands');
   console.log('');
 })();

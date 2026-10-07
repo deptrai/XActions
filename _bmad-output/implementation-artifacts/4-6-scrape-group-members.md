@@ -6,11 +6,11 @@ baseline_commit: bacb3b1e4beb5ba8c184f45536793c2cb767b4f7
 
 Status: done
 
-<!-- Epic 4 (Facebook Growth Automation, Cluster 1 — medium risk). Source: epics.md#Story 4.6 + PRD prd-XActions-2026-06-10-epic4 FR-20. READ-ONLY scrape — NOT a batch write. -->
+<!-- Epic 4 (Facebook Growth Automation, Cluster 1 — medium risk). Source: epics.md#Story 4.6 + PRD prd-Medirus-2026-06-10-epic4 FR-20. READ-ONLY scrape — NOT a batch write. -->
 
 ## Story
 
-As a growth marketer using XActions,
+As a growth marketer using Medirus,
 I want to scrape the member list of a Facebook group,
 so that I can understand group composition for targeting.
 
@@ -130,7 +130,7 @@ Pattern-wise this mirrors Epic 1's `scrapeFollowers` (src/scrapers/facebook/inde
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 4.6: Scrape Facebook group members]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md#FR-20, §7 NFR-10/NFR-11 (no PII)]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-10-epic4/prd.md#FR-20, §7 NFR-10/NFR-11 (no PII)]
 - [Source: src/scrapers/facebook/index.js#scrapeFollowers (clone template), #scrapeTweets/#searchTweets (scroll pattern)]
 - [Source: api/services/facebookAutomation.js#assertFacebookUrl (SSRF guard to reuse/import)]
 - [Source: _bmad-output/implementation-artifacts/1-4-scrape-followers.md (restricted-group { note } pattern)]

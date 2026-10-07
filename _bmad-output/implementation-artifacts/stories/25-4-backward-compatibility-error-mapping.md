@@ -10,7 +10,7 @@
 
 ## User Story
 
-**As a** consumer of the XActions unified scraping interface,
+**As a** consumer of the Medirus unified scraping interface,
 **I want** khi gọi một action hoặc platform đã bị loại bỏ/deprecated, hệ thống trả về `PlatformError` với `type: ErrorTypes.DEPRECATED` và `suggestedAction` gợi ý hành động thay thế,
 **So that** ứng dụng của tôi có thể tự động bắt lỗi hoặc hiển thị hướng dẫn nâng cấp rõ ràng thay vì crash bất ngờ.
 
@@ -25,7 +25,7 @@ Then trả PlatformError với:
   - type: ErrorTypes.DEPRECATED ('deprecated')
   - code: 'XACT_4001'
   - statusCode: 400
-  - suggestedAction chỉ rõ action/platform thay thế (hoặc 'use_x_actions_list')
+  - suggestedAction chỉ rõ action/platform thay thế (hoặc 'use_medirus_list')
 And ErrorTypes.DEPRECATED được thêm vào src/core/error-envelope.js
 And actionNotAvailable() trong src/scrapers/platforms.js trả về PlatformError chuẩn
 And package.json exports giữ mapping cho ít nhất 1 release cycle (đã hoàn thành tại Story 25.2)

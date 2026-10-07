@@ -3,28 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI API - XActions | Free & Open Source X/Twitter Automation</title>
-  <meta name="description" content="XActions AI API - Free, open-source API for AI agents. Use locally or self-host with optional x402 micropayments. No subscriptions, no API keys.">
+  <title>AI API - Medirus | Free & Open Source X/Twitter Automation</title>
+  <meta name="description" content="Medirus AI API - Free, open-source API for AI agents. Use locally or self-host with optional x402 micropayments. No subscriptions, no API keys.">
   <meta name="keywords" content="Twitter API, X API, AI agent, free twitter api, MCP server, Claude, GPT, Twitter automation API, open source">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
   <meta property="og:type" content="article">
-  <meta property="og:title" content="XActions AI API - Free & Open Source X/Twitter Automation">
+  <meta property="og:title" content="Medirus AI API - Free & Open Source X/Twitter Automation">
   <meta property="og:description" content="Free API for AI agents. Use locally or self-host. Optional x402 micropayments for remote mode.">
-  <meta property="og:url" content="https://xactions.app/ai-api">
-  <meta property="og:site_name" content="XActions">
+  <meta property="og:url" content="https://medirus.online/ai-api">
+  <meta property="og:site_name" content="Medirus">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="XActions AI API - Free & Open Source">
+  <meta name="twitter:title" content="Medirus AI API - Free & Open Source">
   <meta name="twitter:description" content="Pay-per-request API for AI agents. No subscriptions. x402 micropayments.">
-  <link rel="canonical" href="https://xactions.app/ai-api">
+  <link rel="canonical" href="https://medirus.online/ai-api">
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"TechArticle","headline":"XActions AI API Documentation","description":"Free, open-source API for AI agents. Local or self-hosted.","url":"https://xactions.app/ai-api","author":{"@type":"Person","name":"nich"},"publisher":{"@type":"Organization","name":"XActions"}}
+  {"@context":"https://schema.org","@type":"TechArticle","headline":"Medirus AI API Documentation","description":"Free, open-source API for AI agents. Local or self-hosted.","url":"https://medirus.online/ai-api","author":{"@type":"Person","name":"nich"},"publisher":{"@type":"Organization","name":"Medirus"}}
   </script>
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://xactions.app"},{"@type":"ListItem","position":2,"name":"AI API","item":"https://xactions.app/ai-api"}]}
+  {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://medirus.online"},{"@type":"ListItem","position":2,"name":"AI API","item":"https://medirus.online/ai-api"}]}
   </script>
   <link rel="stylesheet" href="/css/common.css">
   <style>
@@ -162,7 +162,7 @@
     <script src="/js/sidebar.js"></script>
     
     <main class="main-content" id="main-content">
-      <header class="main-header"><h1>🤖 XActions AI API</h1></header>
+      <header class="main-header"><h1>🤖 Medirus AI API</h1></header>
       
       <div class="content">
         <p class="subtitle">Free & open-source API for AI agents — local or self-hosted</p>
@@ -227,13 +227,13 @@
           <button class="copy-btn" onclick="copyCode(this)">Copy</button>
           <pre><code>{
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["xactions-mcp"],
+      "args": ["medirus-mcp"],
       "env": {
-        "XACTIONS_MODE": "remote",
+        "MEDIRUS_MODE": "remote",
         "X402_PRIVATE_KEY": "0x...",
-        "XACTIONS_SESSION_COOKIE": "your_auth_token_here"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token_here"
       }
     }
   }
@@ -245,7 +245,7 @@
         <div class="code-wrapper">
           <button class="copy-btn" onclick="copyCode(this)">Copy</button>
           <pre><code>// 1. Make initial request
-const response = await fetch('https://api.xactions.app/api/ai/scrape/profile', {
+const response = await fetch('https://api.medirus.online/api/ai/scrape/profile', {
   method: 'POST',
   headers: { 
     'Content-Type': 'application/json',
@@ -262,7 +262,7 @@ const paymentDetails = response.headers.get('X-Payment-Required');
 const signedPayment = await signWithWallet(paymentDetails);
 
 // 4. Retry with payment header
-const paidResponse = await fetch('https://api.xactions.app/api/ai/scrape/profile', {
+const paidResponse = await fetch('https://api.medirus.online/api/ai/scrape/profile', {
   method: 'POST',
   headers: { 
     'Content-Type': 'application/json',
@@ -367,7 +367,7 @@ const profile = await paidResponse.json();
         <p>Humans can use these features for free:</p>
         
         <div class="free-list">
-          <h3>Use XActions Free Forever</h3>
+          <h3>Use Medirus Free Forever</h3>
           <ul>
             <li>
               <span class="emoji">🌐</span>
@@ -375,11 +375,11 @@ const profile = await paidResponse.json();
             </li>
             <li>
               <span class="emoji">💻</span>
-              <span><a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener noreferrer">CLI Tool</a> — <code>npm install -g xactions</code></span>
+              <span><a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener noreferrer">CLI Tool</a> — <code>npm install -g medirus</code></span>
             </li>
             <li>
               <span class="emoji">📦</span>
-              <span><a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener noreferrer">Node.js Library</a> — <code>npm install xactions</code></span>
+              <span><a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener noreferrer">Node.js Library</a> — <code>npm install medirus</code></span>
             </li>
             <li>
               <span class="emoji">🤖</span>
@@ -408,7 +408,7 @@ const profile = await paidResponse.json();
         <p>As low as $0.001. No minimums, no prepaying, no subscriptions.</p>
         
         <h3>Is my X/Twitter account safe?</h3>
-        <p>Yes. XActions uses browser automation, not the official API. It behaves like a real user. We recommend reasonable rate limits.</p>
+        <p>Yes. Medirus uses browser automation, not the official API. It behaves like a real user. We recommend reasonable rate limits.</p>
         
         <h3>Can I try before paying?</h3>
         <p>Use the free local MCP server to test! It has full functionality. Switch to remote API when you need hosted infrastructure.</p>

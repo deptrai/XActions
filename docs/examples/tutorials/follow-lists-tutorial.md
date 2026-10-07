@@ -1,14 +1,14 @@
 ---
 title: "Follow & Manage Lists on X (Twitter) — Tutorial"
-description: "Follow, unfollow, pin, and browse X Lists using XActions browser scripts."
-keywords: ["follow twitter list", "x list management", "xactions follow list", "pin list twitter", "browse list feed x"]
+description: "Follow, unfollow, pin, and browse X Lists using Medirus browser scripts."
+keywords: ["follow twitter list", "x list management", "medirus follow list", "pin list twitter", "browse list feed x"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Follow & Manage Lists — Tutorial
 
-> Step-by-step guide to following, unfollowing, pinning, browsing, and discovering X Lists using XActions browser scripts.
+> Step-by-step guide to following, unfollowing, pinning, browsing, and discovering X Lists using Medirus browser scripts.
 
 **Works on:** Browser Console
 **Difficulty:** Beginner
@@ -196,10 +196,10 @@ Navigate to `https://x.com/i/lists` and run. The script scrolls through suggeste
 
 ```js
 // Check progress
-window.XActions.status();
+window.Medirus.status();
 
 // Stop the script
-window.XActions.abort();
+window.Medirus.abort();
 ```
 
 ---
@@ -210,7 +210,7 @@ window.XActions.abort();
 - **Browse is read-only.** The `browse` and `discover` actions only read data, so they are safe to run with `dryRun: false`.
 - **Export format matters.** Use JSON for programmatic processing, CSV for spreadsheets.
 - **Discover new lists regularly.** X updates suggestions based on your activity. Run `discover` periodically to find new relevant lists.
-- **State is saved.** Progress is stored in `sessionStorage` under `xactions_followList`.
+- **State is saved.** Progress is stored in `sessionStorage` under `medirus_followList`.
 
 ---
 

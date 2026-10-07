@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions export`, `migrate`, `diff` — data portability commands.
+ * `medirus export`, `migrate`, `diff` — data portability commands.
  *
  * @author nich (@nichxbt)
  * @license MIT
@@ -117,7 +117,7 @@ export function registerPortabilityCommands(program) {
       }
 
       if (!exportDir) {
-        console.error(chalk.red(`No export found for @${user}. Run "xactions export @${user}" first.`));
+        console.error(chalk.red(`No export found for @${user}. Run "medirus export @${user}" first.`));
         return;
       }
 

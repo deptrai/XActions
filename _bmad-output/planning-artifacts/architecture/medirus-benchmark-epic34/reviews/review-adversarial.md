@@ -3,11 +3,11 @@
 **Reviewer Role:** Adversarial Seam Reviewer (BMad Architecture Reviewer Gate)  
 **Date:** 2026-09-08  
 **Status:** PASS WITH REVISIONS (Architectural Seams Identified)  
-**Target Architecture:** `_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md`  
+**Target Architecture:** `_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md`  
 **Referenced Specifications:**
 - `_bmad-output/specs/spec-scraper-benchmark/SPEC.md`
 - `_bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md`
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (Parent AD-1 to AD-22)
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (Parent AD-1 to AD-22)
 - Story Files: `_bmad-output/implementation-artifacts/stories/34-*.md` (Stories 34.1 to 34.8)
 - Existing Codebase: `src/core/base-crawler.js`, `src/core/base-client.js`, `src/core/platform-validator.js`, `src/utils/redis-stream-publisher.js`, `src/store/prisma-store.js`, `src/store/store-with-redis.js`, `prisma/schema.prisma`
 
@@ -154,7 +154,7 @@ To reach production readiness, the spine must be tightened with **new architectu
     ```javascript
     itemCount: Array.isArray(result) ? result.length : (result ? 1 : 0)
     ```
-  - Across XActions scrapers, handlers return diverse data shapes:
+  - Across Medirus scrapers, handlers return diverse data shapes:
     - Twitter profile: `{ user: { ... }, tweets: [...] }`
     - Search queries: `{ items: [...], nextCursor: "abc" }`
     - Pagination wrappers: `{ data: [...], pagination: { count: 50 } }`

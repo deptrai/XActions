@@ -129,7 +129,7 @@
 
     if (CONFIG.exportResults && results.length > 0) {
       download({ analyzedAt: new Date().toISOString(), accounts: results },
-        `xactions-competitor-analysis-${new Date().toISOString().slice(0, 10)}.json`);
+        `medirus-competitor-analysis-${new Date().toISOString().slice(0, 10)}.json`);
       console.log('📥 Report exported as JSON.');
     }
   };

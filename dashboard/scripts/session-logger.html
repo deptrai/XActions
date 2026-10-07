@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Session Logger — Free X/Twitter Script | XActions</title>
-  <meta name="description" content="XActions Automation - Session Logger &amp; Analytics">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, session, logger, automation">
+  <title>Session Logger — Free X/Twitter Script | Medirus</title>
+  <meta name="description" content="Medirus Automation - Session Logger &amp; Analytics">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, session, logger, automation">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Session Logger — XActions">
-  <meta property="og:description" content="XActions Automation - Session Logger &amp; Analytics">
-  <meta property="og:url" content="https://xactions.app/scripts/session-logger">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:title" content="Session Logger — Medirus">
+  <meta property="og:description" content="Medirus Automation - Session Logger &amp; Analytics">
+  <meta property="og:url" content="https://medirus.online/scripts/session-logger">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Session Logger — XActions">
-  <meta name="twitter:description" content="XActions Automation - Session Logger &amp; Analytics">
+  <meta name="twitter:title" content="Session Logger — Medirus">
+  <meta name="twitter:description" content="Medirus Automation - Session Logger &amp; Analytics">
 
-  <link rel="canonical" href="https://xactions.app/scripts/session-logger">
+  <link rel="canonical" href="https://medirus.online/scripts/session-logger">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Session Logger — Free X/Twitter Script | XActions",
-    "description": "XActions Automation - Session Logger & Analytics",
-    "url": "https://xactions.app/scripts/session-logger",
+    "headline": "Session Logger — Free X/Twitter Script | Medirus",
+    "description": "Medirus Automation - Session Logger & Analytics",
+    "url": "https://medirus.online/scripts/session-logger",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Automation",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, session, logger, automation"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, session, logger, automation"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Automation", "item": "https://xactions.app/scripts#automation" },
-      { "@type": "ListItem", "position": 4, "name": "Session Logger", "item": "https://xactions.app/scripts/session-logger" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Automation", "item": "https://medirus.online/scripts#automation" },
+      { "@type": "ListItem", "position": 4, "name": "Session Logger", "item": "https://medirus.online/scripts/session-logger" }
     ]
   }
   </script>
@@ -129,7 +129,7 @@
           <span>by <a href="https://x.com/nichxbt" rel="noopener">@nichxbt</a></span>
         </div>
 
-        <p>XActions Automation - Session Logger &amp; Analytics</p>
+        <p>Medirus Automation - Session Logger &amp; Analytics</p>
 
         
 
@@ -167,7 +167,7 @@
           <div class="code-block">
             <button class="copy-btn" onclick="navigator.clipboard.writeText(this.nextElementSibling.querySelector('code').textContent).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Script',2000)})">Copy Script</button>
             <pre><code>// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation - Session Logger &amp; Analytics
+// Medirus Automation - Session Logger &amp; Analytics
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -180,12 +180,12 @@
 // 3. All automation actions will be recorded
 
 (() =&gt; {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, storage } = window.XActions.Core;
+  const { log, storage } = window.Medirus.Core;
 
   // ============================================
   // CONFIGURATION
@@ -207,8 +207,8 @@
   // ============================================
   // SESSION STATE
   // ============================================
-  const KEY_SESSIONS = 'xactions_sessions';
-  const KEY_CURRENT = 'xactions_current_session';
+  const KEY_SESSIONS = 'medirus_sessions';
+  const KEY_CURRENT = 'medirus_current_session';
   
   const currentSession = {
     id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
@@ -432,7 +432,7 @@
     
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  📊 XActions Analytics - ${periodLabel.padEnd(10)}                     ║
+║  📊 Medirus Analytics - ${periodLabel.padEnd(10)}                     ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Sessions: ${String(stats.sessions).padEnd(10)}                              ║
 ║  Total Duration: ${formatDuration(stats.totalDuration).padEnd(15)}                   ║
@@ -515,7 +515,7 @@
     
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions-logs-${period}-${Date.now()}.json`;
+    a.download = `medirus-logs-${period}-${Date.now()}.json`;
     a.click();
     
     URL.revokeObjectURL(url);
@@ -548,7 +548,7 @@
     
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions-logs-${Date.now()}.csv`;
+    a.download = `medirus-logs-${Date.now()}.csv`;
     a.click();
     
     URL.revokeObjectURL(url);
@@ -581,7 +581,7 @@
   // ============================================
   // EXPORT API
   // ============================================
-  window.XActions.Logger = {
+  window.Medirus.Logger = {
     logAction,
     logError,
     endSession,
@@ -613,7 +613,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -630,7 +630,7 @@
 <a href="/scripts/protect-active-users">🛡️ Protect Active Users</a>
 <a href="/scripts/quota-supervisor">⚠️ Quota Supervisor</a>
 <a href="/scripts/rate-limiter">⏱️ Rate Limiter</a>
-<a href="/scripts/rss-monitor">📡 XActions RSS &amp; Webhook Content Ingestion</a>
+<a href="/scripts/rss-monitor">📡 Medirus RSS &amp; Webhook Content Ingestion</a>
       </div>
       <div class="sidebar-card">
         <h3>🔗 Quick Links</h3>

@@ -48,18 +48,18 @@ Capture keeps everything. Filters are applied at export time, so you can scrape 
 
 ## Console API
 
-After pasting, `window.XActionsToolbox` is available:
+After pasting, `window.MedirusToolbox` is available:
 
 ```js
-XActionsToolbox.tweets()        // all captured posts
-XActionsToolbox.matched()       // posts passing current filters
-XActionsToolbox.export('csv')   // 'json' | 'csv' | 'markdown' | 'text' | 'html'
-XActionsToolbox.copy('text')    // 'json' | 'text'
-XActionsToolbox.start()
-XActionsToolbox.pause()         // toggles pause/resume
-XActionsToolbox.stop()
-XActionsToolbox.clear()
-XActionsToolbox.destroy()       // close panel, restore fetch/XHR
+MedirusToolbox.tweets()        // all captured posts
+MedirusToolbox.matched()       // posts passing current filters
+MedirusToolbox.export('csv')   // 'json' | 'csv' | 'markdown' | 'text' | 'html'
+MedirusToolbox.copy('text')    // 'json' | 'text'
+MedirusToolbox.start()
+MedirusToolbox.pause()         // toggles pause/resume
+MedirusToolbox.stop()
+MedirusToolbox.clear()
+MedirusToolbox.destroy()       // close panel, restore fetch/XHR
 ```
 
 ## Data shape

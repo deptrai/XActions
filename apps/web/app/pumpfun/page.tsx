@@ -7,7 +7,7 @@ import {
   Coins, Rss, Radio, UserCircle, RefreshCw, Play, Square, Copy, Check,
   ExternalLink, Download, AlertTriangle, CheckCircle2, XCircle, Search,
 } from 'lucide-react';
-import type { ApiResult } from '@xactions/api-client';
+import type { ApiResult } from '@medirus/api-client';
 import { api } from '@/lib/api';
 import { isAsyncAccepted, pollOperation } from '@/lib/scrape-poll';
 import { proxiedImageUrl } from '@/lib/ipfs-image';

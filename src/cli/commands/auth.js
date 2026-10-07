@@ -1,6 +1,6 @@
 // Copyright (c) 2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions auth` — Chrome DevTools Protocol (CDP) remote attach launch helper.
+ * `medirus auth` — Chrome DevTools Protocol (CDP) remote attach launch helper.
  *
  * Launches Chrome with remote debugging enabled, then persists the CDP endpoint
  * so crawler commands can attach to the same real-browser profile.
@@ -110,7 +110,7 @@ export function registerAuthCommand(program, config = {}) {
         console.log(chalk.white('Next steps:'));
         console.log(chalk.gray('1. Open your target platforms (LinkedIn, TopCV, Facebook, etc.) in the opened Chrome browser.'));
         console.log(chalk.gray('2. Log in manually. Your session cookies and fingerprint will be preserved.'));
-        console.log(chalk.gray('3. Run your XActions scraper commands with CDP attach enabled.\n'));
+        console.log(chalk.gray('3. Run your Medirus scraper commands with CDP attach enabled.\n'));
       } catch (err) {
         if (spinner) {
           spinner.fail('Failed to launch Chrome for CDP');

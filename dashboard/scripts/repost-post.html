@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Repost Post — Free X/Twitter Script | XActions</title>
+  <title>Repost Post — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Repost (Retweet) Posts on X - by nichxbt">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, repost, post, engagement">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, repost, post, engagement">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Repost Post — XActions">
+  <meta property="og:title" content="Repost Post — Medirus">
   <meta property="og:description" content="Repost (Retweet) Posts on X - by nichxbt">
-  <meta property="og:url" content="https://xactions.app/scripts/repost-post">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/repost-post">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Repost Post — XActions">
+  <meta name="twitter:title" content="Repost Post — Medirus">
   <meta name="twitter:description" content="Repost (Retweet) Posts on X - by nichxbt">
 
-  <link rel="canonical" href="https://xactions.app/scripts/repost-post">
+  <link rel="canonical" href="https://medirus.online/scripts/repost-post">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Repost Post — Free X/Twitter Script | XActions",
+    "headline": "Repost Post — Free X/Twitter Script | Medirus",
     "description": "Repost (Retweet) Posts on X - by nichxbt",
-    "url": "https://xactions.app/scripts/repost-post",
+    "url": "https://medirus.online/scripts/repost-post",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Engagement",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, repost, post, engagement"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, repost, post, engagement"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://xactions.app/scripts#engagement" },
-      { "@type": "ListItem", "position": 4, "name": "Repost Post", "item": "https://xactions.app/scripts/repost-post" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://medirus.online/scripts#engagement" },
+      { "@type": "ListItem", "position": 4, "name": "Repost Post", "item": "https://medirus.online/scripts/repost-post" }
     ]
   }
   </script>
@@ -500,7 +500,7 @@
   // ── Main ──
   const run = async () =&gt; {
     console.log('═══════════════════════════════════════');
-    console.log('🔁 XActions — Repost / Unrepost Posts');
+    console.log('🔁 Medirus — Repost / Unrepost Posts');
     console.log('═══════════════════════════════════════');
 
     switch (CONFIG.mode) {
@@ -527,15 +527,15 @@
 
     // Save tracking data
     if (CONFIG.trackReposts &amp;&amp; repostedPosts.length &gt; 0) {
-      const history = JSON.parse(sessionStorage.getItem('xactions_reposts') || '[]');
+      const history = JSON.parse(sessionStorage.getItem('medirus_reposts') || '[]');
       history.push({
         timestamp: new Date().toISOString(),
         mode: CONFIG.mode,
         count: reposted,
         posts: repostedPosts,
       });
-      sessionStorage.setItem('xactions_reposts', JSON.stringify(history));
-      console.log('💾 Saved to sessionStorage (key: &quot;xactions_reposts&quot;)');
+      sessionStorage.setItem('medirus_reposts', JSON.stringify(history));
+      console.log('💾 Saved to sessionStorage (key: &quot;medirus_reposts&quot;)');
     }
 
     console.log('═══════════════════════════════════════');
@@ -549,7 +549,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -562,7 +562,7 @@
         <a href="/scripts/auto-commenter">💬 Auto Commenter</a>
 <a href="/scripts/auto-engage">⚡ Auto Engage</a>
 <a href="/scripts/auto-liker">❤️ Auto Liker</a>
-<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - XActions</a>
+<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - Medirus</a>
 <a href="/scripts/auto-repost">🔁 Auto Repost</a>
 <a href="/scripts/auto-plug-replies">🔌 Auto-Plug Replies</a>
 <a href="/scripts/auto-reply">💬 Auto-Reply / Auto-Respond</a>

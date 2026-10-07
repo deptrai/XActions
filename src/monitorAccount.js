@@ -15,7 +15,7 @@
 // NOTE: Only works on PUBLIC accounts. Private accounts hide their lists.
 
 (() => {
-  const STORAGE_PREFIX = 'xactions_monitor_';
+  const STORAGE_PREFIX = 'medirus_monitor_';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   // Detect page type
@@ -119,7 +119,7 @@
   };
 
   const run = async () => {
-    console.log(`\n🔭 XActions Monitor — Tracking @${targetUser}'s ${pageType}\n`);
+    console.log(`\n🔭 Medirus Monitor — Tracking @${targetUser}'s ${pageType}\n`);
 
     const currentUsers = await scrapeUsers();
     console.log(`\n✅ Found ${currentUsers.length} accounts\n`);

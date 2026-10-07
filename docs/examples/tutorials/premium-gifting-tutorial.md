@@ -1,15 +1,15 @@
 ---
 title: "Premium Gifting — Tutorial"
-description: "Gift an X Premium subscription to another user from their profile using XActions automation."
-keywords: ["gift x premium", "twitter premium gift", "gift subscription x", "xactions premium gifting"]
-canonical: "https://xactions.app/examples/premium-gifting"
+description: "Gift an X Premium subscription to another user from their profile using Medirus automation."
+keywords: ["gift x premium", "twitter premium gift", "gift subscription x", "medirus premium gifting"]
+canonical: "https://medirus.online/examples/premium-gifting"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Premium Gifting — Tutorial
 
-> Step-by-step guide to gifting an X Premium subscription to another user using XActions.
+> Step-by-step guide to gifting an X Premium subscription to another user using Medirus.
 
 **Works on:** Browser Console
 **Difficulty:** Beginner
@@ -61,7 +61,7 @@ const CONFIG = {
 
 ```javascript
 (() => {
-  console.log('🎁 PREMIUM GIFTING - XActions by nichxbt\n');
+  console.log('🎁 PREMIUM GIFTING - Medirus by nichxbt\n');
 
   console.log('══════════════════════════════════════════════════');
   console.log('🎁 PREMIUM GIFTING INFO');
@@ -89,7 +89,7 @@ Navigate to the recipient's profile first, then paste:
 (async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('🎁 GIFT PREMIUM - XActions by nichxbt\n');
+  console.log('🎁 GIFT PREMIUM - Medirus by nichxbt\n');
 
   // Detect username from URL
   const match = window.location.pathname.match(/^\/([^/]+)\/?$/);
@@ -169,9 +169,9 @@ Navigate to the recipient's profile first, then paste:
 
   // Log gift attempt
   try {
-    const gifts = JSON.parse(sessionStorage.getItem('xactions_premium_gifts') || '[]');
+    const gifts = JSON.parse(sessionStorage.getItem('medirus_premium_gifts') || '[]');
     gifts.push({ username, initiatedAt: new Date().toISOString() });
-    sessionStorage.setItem('xactions_premium_gifts', JSON.stringify(gifts));
+    sessionStorage.setItem('medirus_premium_gifts', JSON.stringify(gifts));
   } catch (e) {}
 })();
 ```
@@ -179,7 +179,7 @@ Navigate to the recipient's profile first, then paste:
 ### Expected Console Output
 
 ```
-🎁 GIFT PREMIUM - XActions by nichxbt
+🎁 GIFT PREMIUM - Medirus by nichxbt
 
 👤 Target user: @friend
 ✅ No verified badge — great gift candidate!
@@ -249,5 +249,5 @@ Navigate to the recipient's profile first, then paste:
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

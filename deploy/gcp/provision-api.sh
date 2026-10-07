@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-shot provisioning for the XActions API on Google Cloud Run.
+# One-shot provisioning for the Medirus API on Google Cloud Run.
 #
 # Creates everything cloudbuild-api.yaml expects: a Cloud SQL Postgres
 # instance, Secret Manager entries for the app secrets, and the IAM
@@ -14,9 +14,9 @@ set -euo pipefail
 
 PROJECT=aerial-vehicle-466722-p5
 REGION=us-central1
-SQL_INSTANCE=xactions-db
-SQL_DB=xactions
-SQL_USER=xactions_app
+SQL_INSTANCE=medirus-db
+SQL_DB=medirus
+SQL_USER=medirus_app
 BUILD_SA="three-ws-build@${PROJECT}.iam.gserviceaccount.com"
 RUNTIME_SA="three-ws@${PROJECT}.iam.gserviceaccount.com"
 
@@ -72,13 +72,13 @@ create_or_update_secret() {
     printf '%s' "$value" | gcloud secrets create "$name" --project "$PROJECT" --data-file=- --replication-policy=automatic
   fi
 }
-create_or_update_secret xactions-database-url "$DATABASE_URL"
-create_or_update_secret xactions-jwt-secret "$(openssl rand -hex 32)"
-create_or_update_secret xactions-session-secret "$(openssl rand -hex 32)"
-create_or_update_secret xactions-admin-api-key "$(openssl rand -hex 32)"
+create_or_update_secret medirus-database-url "$DATABASE_URL"
+create_or_update_secret medirus-jwt-secret "$(openssl rand -hex 32)"
+create_or_update_secret medirus-session-secret "$(openssl rand -hex 32)"
+create_or_update_secret medirus-admin-api-key "$(openssl rand -hex 32)"
 
 echo "==> IAM: grant runtime + build service accounts access to the secrets"
-for secret in xactions-database-url xactions-jwt-secret xactions-session-secret xactions-admin-api-key; do
+for secret in medirus-database-url medirus-jwt-secret medirus-session-secret medirus-admin-api-key; do
   gcloud secrets add-iam-policy-binding "$secret" --project "$PROJECT" \
     --member="serviceAccount:${RUNTIME_SA}" --role="roles/secretmanager.secretAccessor" >/dev/null
 done
@@ -95,15 +95,15 @@ gcloud artifacts repositories describe containers --location "$REGION" --project
 
 echo "==> Building + deploying via Cloud Build"
 gcloud builds submit --config deploy/gcp/cloudbuild-api.yaml --region "$REGION" --project "$PROJECT" \
-  --substitutions="_IMAGE=${REGION}-docker.pkg.dev/${PROJECT}/containers/xactions-api:manual$(date +%s)"
+  --substitutions="_IMAGE=${REGION}-docker.pkg.dev/${PROJECT}/containers/medirus-api:manual$(date +%s)"
 
-SERVICE_URL=$(gcloud run services describe xactions-api --region "$REGION" --project "$PROJECT" --format="value(status.url)")
+SERVICE_URL=$(gcloud run services describe medirus-api --region "$REGION" --project "$PROJECT" --format="value(status.url)")
 echo ""
 echo "==> Deployed: $SERVICE_URL"
 echo "==> Health check:"
 curl -fsS "${SERVICE_URL}/api/health" && echo ""
 echo ""
-echo "Next: map api.xactions.app to this service:"
-echo "  gcloud run domain-mappings create --service=xactions-api --domain=api.xactions.app --region=$REGION --project=$PROJECT"
-echo "Then add the CNAME it prints to Cloudflare DNS for api.xactions.app (proxy OFF / DNS-only,"
+echo "Next: map api.medirus.online to this service:"
+echo "  gcloud run domain-mappings create --service=medirus-api --domain=api.medirus.online --region=$REGION --project=$PROJECT"
+echo "Then add the CNAME it prints to Cloudflare DNS for api.medirus.online (proxy OFF / DNS-only,"
 echo "so Google can validate the mapping and issue the cert)."

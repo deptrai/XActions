@@ -8,7 +8,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { getTwitterClient } from './twitter.js';
 import { queueJob } from '../services/jobQueue.js';
 
-// Payment routes archived - XActions is now 100% free and open-source
+// Payment routes archived - Medirus is now 100% free and open-source
 // All credit checks have been removed - unlimited operations for all users
 
 const router = express.Router();

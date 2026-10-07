@@ -1,8 +1,8 @@
 ---
 title: "ID Verification — Tutorial"
-description: "Check your ID verification status, understand requirements, and navigate the verification flow on X/Twitter using XActions."
-keywords: ["twitter id verification", "x identity verification", "verify identity twitter", "xactions id verification"]
-canonical: "https://xactions.app/examples/id-verification"
+description: "Check your ID verification status, understand requirements, and navigate the verification flow on X/Twitter using Medirus."
+keywords: ["twitter id verification", "x identity verification", "verify identity twitter", "medirus id verification"]
+canonical: "https://medirus.online/examples/id-verification"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
@@ -63,7 +63,7 @@ const CONFIG = {
 
 ```javascript
 (() => {
-  console.log('🪪 ID VERIFICATION - XActions by nichxbt\n');
+  console.log('🪪 ID VERIFICATION - Medirus by nichxbt\n');
 
   // Show requirements
   console.log('══════════════════════════════════════════════════');
@@ -180,7 +180,7 @@ Run the complete script for status check, requirements display, and auto-navigat
 
 ```
 ═══════════════════════════════════════════
-🪪 XActions — ID Verification
+🪪 Medirus — ID Verification
 ═══════════════════════════════════════════
 
 ══════════════════════════════════════════════════
@@ -266,5 +266,5 @@ Run the complete script for status check, requirements display, and auto-navigat
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

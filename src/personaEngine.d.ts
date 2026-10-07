@@ -1,4 +1,4 @@
-import { Persona, ActivityPlan } from './types/xactions.js';
+import { Persona, ActivityPlan } from './types/medirus.js';
 
 export type Plan = ActivityPlan;
 

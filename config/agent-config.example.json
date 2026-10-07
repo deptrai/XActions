@@ -1,5 +1,5 @@
 {
-  "_comment": "XActions Thought Leader Agent — Configuration File",
+  "_comment": "Medirus Thought Leader Agent — Configuration File",
   "_docs": "See docs/research/llm-powered-thought-leader.md for full documentation",
 
   "niche": {

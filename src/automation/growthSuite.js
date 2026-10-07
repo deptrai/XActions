@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation - Growth Automation Suite
+// Medirus Automation - Growth Automation Suite
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -17,12 +17,12 @@
 // 4. Run and let it work!
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, rateLimit, SELECTORS } = window.XActions.Core;
+  const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, rateLimit, SELECTORS } = window.Medirus.Core;
 
   // ============================================
   // GROWTH STRATEGY CONFIGURATION
@@ -313,7 +313,7 @@
   const run = async () => {
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  🚀 XActions Growth Automation                           ║
+║  🚀 Medirus Growth Automation                           ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Keywords: ${STRATEGY.KEYWORDS.slice(0, 3).join(', ').substring(0, 30).padEnd(30)}  ║
 ║  Session: ${STRATEGY.TIMING.SESSION_DURATION_MINUTES} minutes                                 ║
@@ -360,7 +360,7 @@
     log('Stopping growth automation...', 'warning');
   };
 
-  window.XActions.Growth = {
+  window.Medirus.Growth = {
     state: () => state,
     tracked: () => tracked,
     strategy: STRATEGY,

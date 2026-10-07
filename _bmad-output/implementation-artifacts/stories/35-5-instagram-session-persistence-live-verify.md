@@ -25,7 +25,7 @@ Live-verify rằng `InstagramClient` duy trì session ≥10 requests liên tiế
 
 ## Story
 
-As an XActions operator,
+As an Medirus operator,
 I want live evidence that Instagram sessions persist across ≥10 requests under a stable proxy,
 So that the Epic 35 success metric is verified before Nowing relies on it in production.
 

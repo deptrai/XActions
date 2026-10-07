@@ -1,6 +1,6 @@
 # Team Management
 
-Create teams, invite members, assign roles with granular permissions, and track activity across shared XActions workspaces.
+Create teams, invite members, assign roles with granular permissions, and track activity across shared Medirus workspaces.
 
 ## Architecture
 
@@ -9,7 +9,7 @@ src/auth/
 └── teamManager.js   # Team CRUD, RBAC, activity logging
 ```
 
-**Storage:** `~/.xactions/teams.json`, `~/.xactions/users.json`, `~/.xactions/activity-log.json`
+**Storage:** `~/.medirus/teams.json`, `~/.medirus/users.json`, `~/.medirus/activity-log.json`
 
 ## Quick Start
 
@@ -19,7 +19,7 @@ src/auth/
 import {
   createTeam, getTeam, inviteMember, removeMember,
   updateRole, checkPermission, getActivityLog
-} from 'xactions/src/auth/teamManager.js';
+} from 'medirus/src/auth/teamManager.js';
 
 // Create a team
 const team = await createTeam({

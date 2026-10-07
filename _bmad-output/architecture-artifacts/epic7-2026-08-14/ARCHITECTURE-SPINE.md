@@ -1,13 +1,13 @@
 # Architecture Spine — Epic 7: Facebook Advanced Scraping & Multi-Account Parallel Execution
 
 - **Epic:** 7
-- **PRD:** `prd-XActions-2026-08-14-epic7`
+- **PRD:** `prd-Medirus-2026-08-14-epic7`
 - **Status:** draft
 - **Created:** 2026-08-14
 
 ## 1. Context
 
-Epic 7 mở rộng năng lực **đọc** Facebook của XActions để phục vụ lead generation và market research. Hệ thống nhận đầu vào từ API hoặc MCP, chạy trên nhiều tài khoản Facebook đã nuôi, và trả về JSON thuần. Không lưu trữ kết quả scrape trong XActions.
+Epic 7 mở rộng năng lực **đọc** Facebook của Medirus để phục vụ lead generation và market research. Hệ thống nhận đầu vào từ API hoặc MCP, chạy trên nhiều tài khoản Facebook đã nuôi, và trả về JSON thuần. Không lưu trữ kết quả scrape trong Medirus.
 
 ## 2. System Context (C4 L1)
 
@@ -15,12 +15,12 @@ Epic 7 mở rộng năng lực **đọc** Facebook của XActions để phục v
 C4Context
   title System Context — Epic 7
   Person(user, "Growth/Marketing User")
-  System(xactions, "XActions", "MCP / REST API")
+  System(medirus, "Medirus", "MCP / REST API")
   System_Ext(facebook, "Facebook", "Web + GraphQL")
   System_Ext(proxy, "Proxy Provider", "Proxy rotation")
-  Rel(user, xactions, "Scrape leads / comments / groups")
-  Rel(xactions, facebook, "Read via Puppeteer / axios")
-  Rel(xactions, proxy, "Route traffic per account")
+  Rel(user, medirus, "Scrape leads / comments / groups")
+  Rel(medirus, facebook, "Read via Puppeteer / axios")
+  Rel(medirus, proxy, "Route traffic per account")
 ```
 
 ## 3. Container Diagram (C4 L2)

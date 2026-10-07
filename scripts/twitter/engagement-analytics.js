@@ -52,7 +52,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  📊 XActions — Engagement Analytics                          ║
+║  📊 Medirus — Engagement Analytics                          ║
 ║  Analyze likes, comments, retweets on your posts             ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -263,7 +263,7 @@ var CONFIG = {
   });
 
   // Save to localStorage
-  const storageKey = `xactions_engagement_${username}`;
+  const storageKey = `medirus_engagement_${username}`;
   const data = {
     username,
     timestamp: new Date().toISOString(),

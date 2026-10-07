@@ -55,7 +55,7 @@ function safeStringify(value) {
 // Create Bull queue with Redis
 // prefix keeps keys namespaced when this Redis instance is shared with other services
 const operationsQueue = new Queue('operations', {
-  prefix: process.env.REDIS_QUEUE_PREFIX || 'xactions',
+  prefix: process.env.REDIS_QUEUE_PREFIX || 'medirus',
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: Number(process.env.REDIS_PORT || 6379),
@@ -78,7 +78,7 @@ const operationsQueue = new Queue('operations', {
 // the job and fail it with "Missing process handler". Old code never
 // instantiates 'operations-scrape', so scrape jobs are unreachable to it.
 const scrapeQueue = new Queue('operations-scrape', {
-  prefix: process.env.REDIS_QUEUE_PREFIX || 'xactions',
+  prefix: process.env.REDIS_QUEUE_PREFIX || 'medirus',
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: Number(process.env.REDIS_PORT || 6379),
@@ -596,7 +596,7 @@ scrapeQueue.process('scrape', 2, async (job) => {
  * The flag may arrive top-level (`job.data.pooled`) or inside job options
  * (`job.data.options.pooled`) — an explicit boolean wins either direction
  * (request-level `pooled:false` suppresses even when the infra-level env
- * opt-in is set); absent → ambient `XACTIONS_BROWSER_POOL_SIZE` > 0 turns
+ * opt-in is set); absent → ambient `MEDIRUS_BROWSER_POOL_SIZE` > 0 turns
  * pooling on. Mutates `options.pooled` in place.
  *
  * Exported as a pure helper for unit tests (injected-seams mandate: the
@@ -608,7 +608,7 @@ export function resolvePooledFlag(jobData, options) {
   const topLevel = jobData && jobData.pooled !== undefined ? jobData.pooled : undefined;
   const jobPooled = topLevel !== undefined ? topLevel : options.pooled;
   if (jobPooled === undefined) {
-    const envPoolSize = parseInt(process.env.XACTIONS_BROWSER_POOL_SIZE || '', 10);
+    const envPoolSize = parseInt(process.env.MEDIRUS_BROWSER_POOL_SIZE || '', 10);
     if (Number.isFinite(envPoolSize) && envPoolSize > 0) {
       options.pooled = true;
     }
@@ -625,7 +625,7 @@ function deliverCallback(url, payload) {
   if (!url) return;
   fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-XActions-Event': String(payload.event) },
+    headers: { 'Content-Type': 'application/json', 'X-Medirus-Event': String(payload.event) },
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(10_000),
   }).catch(err => console.warn(`⚠️  callbackUrl delivery failed (${url}): ${(err instanceof Error ? err.message : String(err))}`));

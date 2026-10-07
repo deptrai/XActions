@@ -1,14 +1,14 @@
 ---
 title: "Group Direct Messages on X (Twitter) — Tutorial"
-description: "Create group DM conversations and send messages to multiple users at once on X/Twitter using XActions."
-keywords: ["twitter group dm", "group direct message twitter", "xactions group dm", "create group dm x", "bulk group message twitter"]
+description: "Create group DM conversations and send messages to multiple users at once on X/Twitter using Medirus."
+keywords: ["twitter group dm", "group direct message twitter", "medirus group dm", "create group dm x", "bulk group message twitter"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Group Direct Messages — Tutorial
 
-> Step-by-step guide to creating group DM conversations on X/Twitter using XActions browser scripts.
+> Step-by-step guide to creating group DM conversations on X/Twitter using Medirus browser scripts.
 
 **Works on:** Browser Console
 **Difficulty:** Beginner
@@ -125,11 +125,11 @@ While the script runs, you can use these controls in the console:
 
 ```js
 // Check current status
-window.XActions.status();
+window.Medirus.status();
 // Output: Added: 2/3 | Message sent: false | 12s
 
 // Stop the script immediately
-window.XActions.abort();
+window.Medirus.abort();
 ```
 
 ---
@@ -140,7 +140,7 @@ window.XActions.abort();
 - **Verify usernames first.** Misspelled usernames will fail silently. Double-check each username exists.
 - **Increase delays for reliability.** If users are not being found, increase `searchDelay` to 3000-4000ms to give X more time to return search results.
 - **Leave message empty to skip.** Set `message: ''` if you just want to create the group without sending an initial message.
-- **State is saved.** The script stores progress in `sessionStorage` under `xactions_groupDM` so you can check the final status.
+- **State is saved.** The script stores progress in `sessionStorage` under `medirus_groupDM` so you can check the final status.
 
 ---
 
@@ -152,7 +152,7 @@ window.XActions.abort();
 | "Could not find New DM button" | Make sure you are on `x.com/messages` |
 | "Could not find @username in search results" | The username may be misspelled, or the user has DMs disabled |
 | "Need at least 2 recipients added to create a group" | Some users could not be found. Check the failed list in the summary |
-| Script seems stuck | Use `window.XActions.status()` to check progress, or `window.XActions.abort()` to stop |
+| Script seems stuck | Use `window.Medirus.status()` to check progress, or `window.Medirus.abort()` to stop |
 | "Could not find search input" | The DM dialog may not have opened properly. Refresh and try again |
 
 ---

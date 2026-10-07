@@ -8,26 +8,26 @@ note: "Nội dung FR1–14 đã được hợp nhất vào epics-full.md và prd
 ---
 
 # PRD: Facebook Platform Extension
-*Internal technical PRD for adding Facebook scrape and automation support to XActions.*
+*Internal technical PRD for adding Facebook scrape and automation support to Medirus.*
 
 ## 0. Document Purpose
 
-PRD này dành cho người phát triển XActions (maintainer + AI dev agent) và downstream workflow owners (epic/story, architecture). Nó định nghĩa *cái gì* và *vì sao* cho việc thêm Facebook làm nền tảng thứ năm — không lặp lại *cách làm* kỹ thuật. Chi tiết kiến trúc (wiring `platforms` registry, normalized shape, selector strategy) đã nằm ở `_bmad-output/planning-artifacts/architecture.md` Addendum A (ADR-006, ADR-007); PRD này build trên đó. Tài liệu được tổ chức: vocabulary neo theo Glossary, features nhóm lại với FR lồng bên trong (đánh số toàn cục FR-N), assumptions gắn tag inline `[ASSUMPTION]` và liệt kê ở §9.
+PRD này dành cho người phát triển Medirus (maintainer + AI dev agent) và downstream workflow owners (epic/story, architecture). Nó định nghĩa *cái gì* và *vì sao* cho việc thêm Facebook làm nền tảng thứ năm — không lặp lại *cách làm* kỹ thuật. Chi tiết kiến trúc (wiring `platforms` registry, normalized shape, selector strategy) đã nằm ở `_bmad-output/planning-artifacts/architecture.md` Addendum A (ADR-006, ADR-007); PRD này build trên đó. Tài liệu được tổ chức: vocabulary neo theo Glossary, features nhóm lại với FR lồng bên trong (đánh số toàn cục FR-N), assumptions gắn tag inline `[ASSUMPTION]` và liệt kê ở §9.
 
 ## 1. Vision
 
-XActions là toolkit tự động hóa mạng xã hội không phụ thuộc API trả phí, hiện hỗ trợ Twitter/X, Bluesky, Mastodon và Threads qua một adapter pattern thống nhất. Người dùng gọi cùng một interface (`scrape()`, CLI `--platform`, MCP tool, REST API) cho mọi nền tảng và nhận về dữ liệu đã chuẩn hóa.
+Medirus là toolkit tự động hóa mạng xã hội không phụ thuộc API trả phí, hiện hỗ trợ Twitter/X, Bluesky, Mastodon và Threads qua một adapter pattern thống nhất. Người dùng gọi cùng một interface (`scrape()`, CLI `--platform`, MCP tool, REST API) cho mọi nền tảng và nhận về dữ liệu đã chuẩn hóa.
 
 Facebook Platform Extension đưa Facebook vào cùng mô hình đó. Nó cho phép người dùng **đọc** (scrape profile, posts, followers, search) và **hành động** (post, like, comment) trên Facebook bằng browser automation — không cần Facebook Graph API, không phí, chỉ cần session cookie. Vì Facebook là sản phẩm Meta giống Threads, phần đọc tái dùng gần như nguyên vẹn pattern Puppeteer + Stealth đã chạy ổn định; phần ghi tái dùng hạ tầng automation server-side đã có cho Twitter.
 
-Giá trị cốt lõi: người dùng XActions mở rộng vùng phủ sang mạng xã hội lớn nhất thế giới mà không phải học công cụ mới hay đổi quy trình — cùng một toolkit, thêm một nền tảng. Với maintainer, việc này chứng minh kiến trúc multi-platform mở rộng được, biến "thêm nền tảng" thành thao tác có khuôn mẫu thay vì dự án viết lại.
+Giá trị cốt lõi: người dùng Medirus mở rộng vùng phủ sang mạng xã hội lớn nhất thế giới mà không phải học công cụ mới hay đổi quy trình — cùng một toolkit, thêm một nền tảng. Với maintainer, việc này chứng minh kiến trúc multi-platform mở rộng được, biến "thêm nền tảng" thành thao tác có khuôn mẫu thay vì dự án viết lại.
 
 ## 2. Target User
 
 ### 2.1 Jobs To Be Done
 
-- **Là maintainer XActions**, tôi muốn thêm Facebook theo đúng adapter pattern hiện có để chứng minh kiến trúc mở rộng được và giảm chi phí thêm nền tảng tương lai.
-- **Là người làm growth/marketing** dùng XActions, tôi muốn scrape dữ liệu công khai trên Facebook (profile, posts, followers) để phân tích cùng một chỗ với dữ liệu Twitter.
+- **Là maintainer Medirus**, tôi muốn thêm Facebook theo đúng adapter pattern hiện có để chứng minh kiến trúc mở rộng được và giảm chi phí thêm nền tảng tương lai.
+- **Là người làm growth/marketing** dùng Medirus, tôi muốn scrape dữ liệu công khai trên Facebook (profile, posts, followers) để phân tích cùng một chỗ với dữ liệu Twitter.
 - **Là người vận hành nhiều tài khoản**, tôi muốn tự động hóa post/like/comment trên Facebook với cùng cơ chế an toàn (dry-run, delay, batch giới hạn) như đang dùng cho Twitter.
 - **Là AI agent** (qua MCP), tôi muốn gọi tool Facebook bằng cùng schema như các nền tảng khác để không phải xử lý đặc thù từng nền tảng.
 
@@ -35,13 +35,13 @@ Giá trị cốt lõi: người dùng XActions mở rộng vùng phủ sang mạ
 
 - Người cần Facebook Ads/Business automation (quảng cáo trả phí, quản lý campaign) — ngoài phạm vi v1.
 - Người cần automation trên Facebook Groups hoặc Marketplace — ngoài phạm vi v1.
-- Người mong đợi Facebook Graph API chính thức — XActions cố ý dùng browser automation.
+- Người mong đợi Facebook Graph API chính thức — Medirus cố ý dùng browser automation.
 
 ### 2.3 Key User Journeys
 
 Vì đây là tính năng kỹ thuật/nội bộ với người vận hành đơn vai trò, các UJ giữ ở dạng nhẹ (một câu, theo scope dial "lighter").
 
-- **UJ-1. Linh scrape một profile Facebook công khai.** Linh, người làm growth đã cấu hình cookie Facebook, chạy `xactions scrape --platform facebook --profile <handle>` và nhận về JSON profile đã chuẩn hóa giống hệt shape của Twitter. Realizes FR-1.
+- **UJ-1. Linh scrape một profile Facebook công khai.** Linh, người làm growth đã cấu hình cookie Facebook, chạy `medirus scrape --platform facebook --profile <handle>` và nhận về JSON profile đã chuẩn hóa giống hệt shape của Twitter. Realizes FR-1.
 - **UJ-2. Linh thu thập posts gần đây của một trang.** Linh chạy lệnh scrape posts với `--limit 50`, hệ thống scroll và trả về danh sách posts (text, timestamp, likes, comments, media). Realizes FR-2.
 - **UJ-3. Tâm tự động like có kiểm soát.** Tâm, vận hành nhiều tài khoản, chạy automate like nhưng để mặc định `dryRun=true` lần đầu để xem preview những post sẽ bị tác động trước khi thực thi thật. Realizes FR-6, FR-9.
 - **UJ-4. AI agent gọi qua MCP.** Một agent gọi MCP tool với `platform: "facebook", action: "profile"` và nhận kết quả cùng schema như các nền tảng khác, không cần nhánh xử lý riêng. Realizes FR-11.
@@ -172,7 +172,7 @@ Người dùng xác thực bằng cặp cookie `c_user` + `xs`.
 
 ### 4.3 Surfaces Exposure
 
-**Description:** Facebook lộ ra qua cả bốn surface hiện có của XActions, dùng lại pattern từng surface thay vì tạo chiến lược riêng. Realizes UJ-1, UJ-4.
+**Description:** Facebook lộ ra qua cả bốn surface hiện có của Medirus, dùng lại pattern từng surface thay vì tạo chiến lược riêng. Realizes UJ-1, UJ-4.
 
 **Functional Requirements:**
 
@@ -190,7 +190,7 @@ AI agent gọi được scrape và automate Facebook qua MCP với cùng schema 
 Người dùng chạy được lệnh scrape/automate Facebook qua CLI với cờ `--platform facebook`. Realizes UJ-1, UJ-2.
 
 **Consequences (testable):**
-- `xactions scrape --platform facebook --profile <handle>` trả về normalized output qua exporter hiện có (JSON/CSV/...).
+- `medirus scrape --platform facebook --profile <handle>` trả về normalized output qua exporter hiện có (JSON/CSV/...).
 - Lệnh automate có cờ điều khiển dry-run, mặc định bật.
 - Không nhân bản logic scraper trong command (theo rule CLI §5 architecture).
 

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Grouped help tests
+// Medirus — Grouped help tests
 // by nichxbt
 
 import { describe, it, expect } from 'vitest';
@@ -16,7 +16,7 @@ import {
 /** A stand-in program, so these tests never import the 3000-line CLI entry. */
 function makeProgram(names) {
   const program = new Command();
-  program.name('xactions').version('0.0.0-test');
+  program.name('medirus').version('0.0.0-test');
   for (const name of names) {
     program.command(name).description(`does ${name}`);
   }
@@ -117,11 +117,11 @@ describe('help-groups', () => {
       const help = renderRootHelp(program, '3.5.0');
 
       expect(help).toContain('v3.5.0');
-      expect(help).toContain('xactions <command> [options]');
+      expect(help).toContain('medirus <command> [options]');
       expect(help).toContain('Start here');
       expect(help).toContain('Examples');
-      expect(help).toContain('xactions quickstart');
-      expect(help).toContain('xactions help <command>');
+      expect(help).toContain('medirus quickstart');
+      expect(help).toContain('medirus help <command>');
     });
 
     it('lists -h even though Commander keeps it off program.options', () => {

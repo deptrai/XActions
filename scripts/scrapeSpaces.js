@@ -13,7 +13,7 @@
   };
 
   const run = async () => {
-    console.log('🎙️ XActions Spaces Scraper');
+    console.log('🎙️ Medirus Spaces Scraper');
     console.log('=========================');
 
     const isInSpace = !!document.querySelector('[data-testid="SpaceButton"], [data-testid="spaceSpeakers"]');

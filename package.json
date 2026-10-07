@@ -1,8 +1,8 @@
 {
-  "name": "xactions",
+  "name": "medirus",
   "version": "3.5.0",
-  "description": "XActions - The Complete X/Twitter Automation Toolkit. Scrapers, MCP server for AI agents, CLI, and browser scripts. No API required. Open source by @nichxbt. Don't Panic.",
-  "homepage": "https://xactions.app",
+  "description": "Medirus - The Complete X/Twitter Automation Toolkit. Scrapers, MCP server for AI agents, CLI, and browser scripts. No API required. Open source by @nichxbt. Don't Panic.",
+  "homepage": "https://medirus.online",
   "repository": {
     "type": "git",
     "url": "https://github.com/nirholas/xactions.git"
@@ -47,9 +47,9 @@
     "./scrapers/realestate/batdongsan": "./src/scrapers/realestate/batdongsan/index.js"
   },
   "bin": {
-    "xactions": "./src/cli/index.js",
-    "xactions-mcp": "./src/mcp/server.js",
-    "xactions-agent": "./src/agents/thoughtLeaderAgent.js"
+    "medirus": "./src/cli/index.js",
+    "medirus-mcp": "./src/mcp/server.js",
+    "medirus-agent": "./src/agents/thoughtLeaderAgent.js"
   },
   "scripts": {
     "vercel-build": "prisma generate",
@@ -117,7 +117,7 @@
     "site:scripts": "node scripts/build-script-pages.js",
     "site:sitemap": "node scripts/build-sitemap.js",
     "site:build": "npm run site:docs && npm run site:index && npm run site:scripts && npm run site:sitemap && bash deploy/cloudflare/build.sh",
-    "site:deploy": "npm run site:build && npx wrangler pages deploy pages-out --project-name xactions",
+    "site:deploy": "npm run site:build && npx wrangler pages deploy pages-out --project-name medirus",
     "typecheck": "tsc --noEmit",
     "web:dev": "npm --prefix apps/web run dev",
     "web:build": "npm --prefix apps/web run build",
@@ -209,7 +209,7 @@
   },
   "license": "Apache-2.0",
   "keywords": [
-    "xactions",
+    "medirus",
     "twitter",
     "x",
     "twitter-automation",
@@ -261,7 +261,7 @@
     "schemas",
     "api/config/x402-config.js"
   ],
-  "mcpName": "io.github.nirholas/xactions",
+  "mcpName": "io.github.nirholas/medirus",
   "overrides": {
     "uuid": "^11.1.1"
   },

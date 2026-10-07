@@ -1,6 +1,6 @@
 # Track 08 — CycleTLS / TLS Fingerprint Bypass
 
-> the-convocation/twitter-scraper uses CycleTLS to mimic real browser TLS fingerprints and bypass Cloudflare bot detection. XActions relies on Puppeteer (real browser) which works but is heavyweight (200+ MB). This track adds a lightweight TLS fingerprint bypass using CycleTLS or similar technique for the programmatic HTTP client.
+> the-convocation/twitter-scraper uses CycleTLS to mimic real browser TLS fingerprints and bypass Cloudflare bot detection. Medirus relies on Puppeteer (real browser) which works but is heavyweight (200+ MB). This track adds a lightweight TLS fingerprint bypass using CycleTLS or similar technique for the programmatic HTTP client.
 
 ---
 
@@ -897,20 +897,20 @@ x_proxy_status:
 
 Add CLI commands:
 
-xactions tls verify
+medirus tls verify
   → Show current JA3 fingerprint and browser match
   → Color-coded: green = matches browser, red = detectable as bot
 
-xactions tls test
+medirus tls test
   → Make test request to x.com, show if it passes Cloudflare
 
-xactions proxy add <url>
+medirus proxy add <url>
   → Add proxy to pool
 
-xactions proxy test [url]
+medirus proxy test [url]
   → Test proxy connectivity and speed
 
-xactions proxy list
+medirus proxy list
   → Show all proxies with health status
 ```
 

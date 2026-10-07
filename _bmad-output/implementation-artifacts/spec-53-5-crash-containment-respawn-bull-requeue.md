@@ -46,7 +46,7 @@ deferred:
 - Job-side crash propagate nguyên vẹn: crawler/`closeStealthBrowser`→`release` path và processor throw giữ nguyên — Bull `defaultJobOptions.attempts=3, backoff exponential 2000` (jobQueue.js L65-72, L87-95) tự re-queue; không catch/mute lỗi crash ở bất kỳ tầng nào.
 - `drain()` đè respawn: mark-dead trong khi draining chỉ clear entry, không respawn; disconnected handler check `this._draining` → no-op respawn work.
 - `SharedContextPool` (chrome) — browser dead → `_spawnSharedBrowser` re-launch qua `_ensureBrowser` sau khi entry splice; `stats().browsers` giảm khi chrome dead, obscura `stats().endpoints` giữ fleet shape.
-- `XACTIONS_BROWSER_POOL_SIZE` unset → module không load → byte-identical.
+- `MEDIRUS_BROWSER_POOL_SIZE` unset → module không load → byte-identical.
 
 **Never:**
 - Không respawn proactive trong `disconnected` handler (no eager relaunch — tránh crash-loop storm); respawn chỉ xảy ra lazy trên acquire tiếp theo.
@@ -67,7 +67,7 @@ deferred:
 | DRAIN_VS_DISCONNECT | `drain()` đang chạy khi `disconnected` fires | mark-dead clear entry, không respawn, drain loop `closeStealthBrowser` đã best-effort | PoolDrainingError cho waiter |
 | DOUBLE_DISCONNECT | listener fires 2 lần / stale browser disconnect sau respawn | `_markBrowserDead` idempotent, `respawns` chỉ +1, entry mới không bị đụng | none |
 | STARVATION_RECOVER | tất cả browser dead, N waiter queued | release của in-flight fail-jobs wake waiter → spawn mới → jobs chạy lại | PoolAcquireTimeoutError nếu `acquireTimeoutMs` elapse |
-| ENV_OFF | `XACTIONS_BROWSER_POOL_SIZE` unset | module không vào pooled path | none — byte-identical |
+| ENV_OFF | `MEDIRUS_BROWSER_POOL_SIZE` unset | module không vào pooled path | none — byte-identical |
 
 </intent-contract>
 
@@ -122,7 +122,7 @@ deferred:
 - `node --check src/scraping/browserPool.js` — sạch.
 
 **Manual checks (không gate CI):**
-- `scripts/browser-pool-spike.mjs` với `XACTIONS_BROWSER_POOL_SIZE>0`, giết một Chrome/obscura process giữa run: jobs trên browser đó fail → Bull re-queue → run hoàn tất; `stats().respawns` > 0; không job nào mất dấu.
+- `scripts/browser-pool-spike.mjs` với `MEDIRUS_BROWSER_POOL_SIZE>0`, giết một Chrome/obscura process giữa run: jobs trên browser đó fail → Bull re-queue → run hoàn tất; `stats().respawns` > 0; không job nào mất dấu.
 
 ## Review Triage Log
 

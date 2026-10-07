@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 💬 Auto Reply Mentions - XActions
+ * 💬 Auto Reply Mentions - Medirus
  * ============================================
  *
  * @name         auto-reply-mentions
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to x.com/notifications/mentions
@@ -80,7 +80,7 @@
     userName: '[data-testid="User-Name"] a[href^="/"]'
   };
 
-  const STORAGE_KEY = 'xactions_replied_mentions';
+  const STORAGE_KEY = 'medirus_replied_mentions';
 
   // ============================================
   // 🛠️ HELPERS
@@ -177,9 +177,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  💬 AUTO REPLY MENTIONS - XActions                       ║
+║  💬 AUTO REPLY MENTIONS - Medirus                       ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

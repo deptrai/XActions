@@ -13,7 +13,7 @@
  *   node examples/04-cross-platform.js nasa nasa.bsky.social Gargron@mastodon.social
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 

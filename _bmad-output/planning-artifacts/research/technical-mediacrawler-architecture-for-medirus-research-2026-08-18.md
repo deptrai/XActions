@@ -4,30 +4,30 @@ inputDocuments: []
 workflowType: 'research'
 lastStep: 6
 research_type: 'technical'
-research_topic: 'MediaCrawler Architecture & Engineering Patterns for XActions'
-research_goals: 'Nghiên cứu sâu kiến trúc kỹ thuật của MediaCrawler (Hybrid Scraping, Browser Signing Bridge, Proxy Pool, Pluggable Storage, Comment Tree) và xây dựng blueprint kiến trúc nâng cấp cho XActions'
+research_topic: 'MediaCrawler Architecture & Engineering Patterns for Medirus'
+research_goals: 'Nghiên cứu sâu kiến trúc kỹ thuật của MediaCrawler (Hybrid Scraping, Browser Signing Bridge, Proxy Pool, Pluggable Storage, Comment Tree) và xây dựng blueprint kiến trúc nâng cấp cho Medirus'
 user_name: 'Luisphan'
 date: '2026-08-18'
 web_research_enabled: true
 source_verification: true
 ---
 
-# Báo cáo Nghiên cứu Kỹ thuật: Phân tích Kiến trúc MediaCrawler & Blueprint Nâng cấp XActions
+# Báo cáo Nghiên cứu Kỹ thuật: Phân tích Kiến trúc MediaCrawler & Blueprint Nâng cấp Medirus
 
 **Date:** 2026-08-18  
 **Author:** Luisphan  
 **Research Type:** Technical Architecture & Engineering Research  
 **Source Code Bases:** 
-- `XActions` (`/Users/luisphan/Documents/GitHub/XActions`)
+- `Medirus` (`/Users/luisphan/Documents/GitHub/Medirus`)
 - `MediaCrawler` (`/Users/luisphan/Documents/GitHub/MediaCrawler`)
 
 ---
 
 ## Research Overview
 
-Báo cáo này nghiên cứu chuyên sâu về thiết kế hệ thống, các mẫu kiến trúc (architectural patterns), và kỹ thuật phòng chống bot (anti-bot bypass) của dự án mã nguồn mở **MediaCrawler** (NanmiCoder) để ứng dụng vào hệ sinh thái **XActions**.
+Báo cáo này nghiên cứu chuyên sâu về thiết kế hệ thống, các mẫu kiến trúc (architectural patterns), và kỹ thuật phòng chống bot (anti-bot bypass) của dự án mã nguồn mở **MediaCrawler** (NanmiCoder) để ứng dụng vào hệ sinh thái **Medirus**.
 
-Nghiên cứu tập trung giải quyết các bài toán cốt lõi của XActions khi mở rộng quy mô thu thập dữ liệu và tự động hóa đa nền tảng:
+Nghiên cứu tập trung giải quyết các bài toán cốt lõi của Medirus khi mở rộng quy mô thu thập dữ liệu và tự động hóa đa nền tảng:
 1. **Tối ưu hóa tài nguyên:** Chuyển dịch từ mô hình Full-Browser Automation sang kiến trúc **Hybrid "Browser-as-Signer / HTTP-as-Fetcher"**, giúp giảm 85–90% mức tiêu thụ RAM/CPU.
 2. **Nâng cấp phương thức xác thực:** Bổ sung cơ chế **Terminal QR Code Login** (ASCII QR) và **CDP Attach Mode** (kết nối trình duyệt Chrome có sẵn qua Chrome DevTools Protocol) để triệt tiêu nguy cơ checkpoint tài khoản.
 3. **Quản lý mạng & IP Rotation:** Xây dựng hệ thống **Proxy IP Pool & Dynamic Residential Tunneling** kèm cơ chế tự động xoay IP và replay request với backoff khi bị chặn `429 Too Many Requests` / `403 Forbidden`.
@@ -39,16 +39,16 @@ Nghiên cứu tập trung giải quyết các bài toán cốt lõi của XActio
 ## Table of Contents
 
 1. [Executive Summary (Tóm tắt điều hành)](#1-executive-summary)
-2. [MediaCrawler & XActions Technical Landscape & Architecture Analysis](#2-technical-landscape--architecture-analysis)
+2. [MediaCrawler & Medirus Technical Landscape & Architecture Analysis](#2-technical-landscape--architecture-analysis)
 3. [Core Engineering Techniques & Pattern Deep-Dive](#3-core-engineering-techniques--pattern-deep-dive)
    - 3.1. Hybrid "Browser-as-Signer / HTTP-as-Fetcher"
    - 3.2. Authentication Modes: Terminal QR Login & CDP Attach
    - 3.3. Proxy IP Pool & Dynamic Tunnel Rotation
    - 3.4. Hierarchical Comment Tree Extraction & Deduplication
    - 3.5. Pluggable Multi-Storage Architecture (SQLite, JSONL, PostgreSQL)
-4. [Technology Stack Comparison: Node.js (XActions) vs Python (MediaCrawler)](#4-technology-stack-comparison)
+4. [Technology Stack Comparison: Node.js (Medirus) vs Python (MediaCrawler)](#4-technology-stack-comparison)
 5. [Security, Anti-Detection & Fingerprint Spoofing](#5-security-anti-detection--fingerprint-spoofing)
-6. [Architectural Blueprint & Implementation Plan for XActions](#6-architectural-blueprint--implementation-plan-for-xactions)
+6. [Architectural Blueprint & Implementation Plan for Medirus](#6-architectural-blueprint--implementation-plan-for-medirus)
    - 6.1. Target Directory & Module Structure
    - 6.2. Abstract Classes & Core Interfaces (TypeScript / ESM)
    - 6.3. Production-Ready Code Implementations
@@ -65,7 +65,7 @@ Trong bối cảnh các nền tảng mạng xã hội lớn (X/Twitter, Facebook
 
 **MediaCrawler** giải quyết triệt để bài toán này bằng kiến trúc **Hybrid**: Trình duyệt thật (qua Playwright hoặc kết nối CDP) chỉ được khởi chạy ở giai đoạn xác thực phiên và tạo "Cầu nối sinh chữ ký" (Signature Bridge). Khi cần thu thập dữ liệu hàng loạt, toàn bộ tác vụ được chuyển giao cho Async HTTP Client với cookie và header hợp lệ được nạp sẵn.
 
-Áp dụng toàn bộ tư duy kiến trúc này vào **XActions** sẽ mang lại bước nhảy vọt về hiệu năng, độ ổn định và khả năng mở rộng đa nền tảng (multi-platform), đồng thời tương thích hoàn hảo với giao thức Model Context Protocol (MCP) phục vụ cho các AI Agent.
+Áp dụng toàn bộ tư duy kiến trúc này vào **Medirus** sẽ mang lại bước nhảy vọt về hiệu năng, độ ổn định và khả năng mở rộng đa nền tảng (multi-platform), đồng thời tương thích hoàn hảo với giao thức Model Context Protocol (MCP) phục vụ cho các AI Agent.
 
 ---
 
@@ -100,9 +100,9 @@ MediaCrawler/
 - **Dependency Injection:** `AbstractStore` và `ProxyProvider` được tiêm vào các crawler instance tùy theo config runtime.
 - **Context Isolation:** Quản lý `BrowserContext` riêng biệt cho từng phiên làm việc, tránh rò rỉ cookie giữa các tác vụ.
 
-### 2.2. Đối chiếu với hiện trạng của XActions
+### 2.2. Đối chiếu với hiện trạng của Medirus
 
-Codebase hiện tại của XActions tại `/Users/luisphan/Documents/GitHub/XActions`:
+Codebase hiện tại của Medirus tại `/Users/luisphan/Documents/GitHub/Medirus`:
 - Đã có adapter framework trong `src/scrapers/adapters/` (Puppeteer, Playwright, Cheerio, Crawlee).
 - Đã có `src/scrapers/twitter/http/playwright-session.js` thực hiện harvest guest token cho Twitter API.
 - Đã có `src/scrapers/facebook/` xử lý proxy, fingerprint và GraphQL send.
@@ -133,7 +133,7 @@ Codebase hiện tại của XActions tại `/Users/luisphan/Documents/GitHub/XAc
        │
        ▼
 ┌────────────────────────────────────────────────────────┐
-│                   XActions Crawler                     │
+│                   Medirus Crawler                     │
 │                                                        │
 │  1. Check Cookie & Token validity                      │
 │  2. If Signature needed ──► [Browser Worker: evaluate] │
@@ -187,7 +187,7 @@ MediaCrawler cho phép chuyển đổi chế độ lưu trữ qua biến môi tr
 
 ## 4. Technology Stack Comparison
 
-| Thành phần | MediaCrawler (Python) | Đề xuất cho XActions (Node.js/TypeScript) | Ưu thế & Lý do chọn |
+| Thành phần | MediaCrawler (Python) | Đề xuất cho Medirus (Node.js/TypeScript) | Ưu thế & Lý do chọn |
 | :--- | :--- | :--- | :--- |
 | **Runtime & Language** | Python 3.10+, `asyncio` | Node.js >= 18, ESM / TypeScript | Node.js có tốc độ xử lý I/O JSON và concurrency vượt trội |
 | **Browser Engine** | `playwright-python` | `playwright` / `puppeteer-core` | Playwright hỗ trợ CDP connection và context isolation tối ưu |
@@ -217,11 +217,11 @@ MediaCrawler cho phép chuyển đổi chế độ lưu trữ qua biến môi tr
 
 ---
 
-## 6. Architectural Blueprint & Implementation Plan for XActions
+## 6. Architectural Blueprint & Implementation Plan for Medirus
 
 ### 6.1. Cấu trúc thư mục mục tiêu (Target Directory Structure)
 
-Tái cấu trúc và bổ sung các module cốt lõi trong XActions:
+Tái cấu trúc và bổ sung các module cốt lõi trong Medirus:
 
 ```
 src/
@@ -259,7 +259,7 @@ src/
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 
 /**
- * Base Abstract Crawler for all platforms in XActions
+ * Base Abstract Crawler for all platforms in Medirus
  */
 export class AbstractCrawler {
   constructor(options = {}) {
@@ -408,7 +408,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 export class SqliteStore {
-  constructor({ dbPath = './data/xactions_crawled.db' } = {}) {
+  constructor({ dbPath = './data/medirus_crawled.db' } = {}) {
     const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     
@@ -514,7 +514,7 @@ export function displayTerminalQrCode(qrString, message = 'Quét mã QR bằng �
 
 ```mermaid
 gantt
-    title Kế hoạch Triển khai Kiến trúc Nâng cấp XActions
+    title Kế hoạch Triển khai Kiến trúc Nâng cấp Medirus
     dateFormat  YYYY-MM-DD
     section Phase 1: Core Foundation
     Tạo Base Classes (AbstractCrawler, Store)       :p1_1, 2026-08-19, 5d
@@ -542,7 +542,7 @@ gantt
 
 ## 8. Conclusion & Next Steps
 
-Dự án **MediaCrawler** cung cấp một hình mẫu xuất sắc về cách xây dựng hệ thống thu thập dữ liệu mạng xã hội quy mô lớn với chi phí tài nguyên tối thiểu. Bằng việc chuyển giao các kỹ thuật tinh hoa từ MediaCrawler (Hybrid Engine, Browser Signer, Proxy Pool, Pluggable Storage, và CDP/QR Login) vào **XActions**, hệ thống sẽ đạt được:
+Dự án **MediaCrawler** cung cấp một hình mẫu xuất sắc về cách xây dựng hệ thống thu thập dữ liệu mạng xã hội quy mô lớn với chi phí tài nguyên tối thiểu. Bằng việc chuyển giao các kỹ thuật tinh hoa từ MediaCrawler (Hybrid Engine, Browser Signer, Proxy Pool, Pluggable Storage, và CDP/QR Login) vào **Medirus**, hệ thống sẽ đạt được:
 - **Tốc độ vượt trội:** Nhanh hơn 5–10 lần so với mô hình thuần Headless Browser.
 - **Tiết kiệm tài nguyên:** Giảm tới 90% lượng RAM/CPU tiêu thụ.
 - **Trải nghiệm mượt mà:** Người dùng CLI và AI MCP Server có thể đăng nhập tức thì qua mã QR hoặc CDP mà không cần cấu hình phức tạp.

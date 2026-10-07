@@ -10,7 +10,7 @@ status: proposed
 
 ## 1. Issue Summary
 
-**Trigger:** Spike `scripts/obscura-spike.mjs` chứng minh [Obscura](https://github.com/h4ckf0r0day/obscura) (browser engine Rust, CDP-compatible) tích hợp được vào XActions qua `puppeteer-core.connect`, nhưng có giới hạn kỹ thuật rõ ràng.
+**Trigger:** Spike `scripts/obscura-spike.mjs` chứng minh [Obscura](https://github.com/h4ckf0r0day/obscura) (browser engine Rust, CDP-compatible) tích hợp được vào Medirus qua `puppeteer-core.connect`, nhưng có giới hạn kỹ thuật rõ ràng.
 
 **Problem:** Obscura là engine **non-Chromium** tự render. Nó hydrate tốt form đăng nhập X (`/i/flow/login` render ngang Chrome: 4 inputs + `data-testid`), nhưng **không mount `data-testid` trên các trang SPA sau-auth** (`/explore`, `/home` trả body ~270KB nhưng testid rỗng — React hydration fail). Ngoài ra `waitUntil:'networkidle2'` **treo hoàn toàn** trên Obscura 0.2.2.
 
@@ -32,7 +32,7 @@ status: proposed
 
 ### Artifact Conflicts
 - **PRD:** thêm FR-XX pluggable backend + NFR-XX (networkidle0-only). Không xung đột NFR11 (85% RAM reduction — Obscura củng cố).
-- **Architecture spine (`xactions-hybrid-scraping-spine`, `epic35`, `facebook-gateway`):** khái niệm `transport`/`adapter` đã có (`'http'|'puppeteer'|'rss'`). Obscura là **backend dưới transport `puppeteer`**, không phải transport mới — khớp spine.
+- **Architecture spine (`medirus-hybrid-scraping-spine`, `epic35`, `facebook-gateway`):** khái niệm `transport`/`adapter` đã có (`'http'|'puppeteer'|'rss'`). Obscura là **backend dưới transport `puppeteer`**, không phải transport mới — khớp spine.
 - **`facebook-gateway`:** rule "chỉ SessionFactory launch browser" → Obscura connect đi qua `SessionFactory.createBrowser`.
 - **CI/CD:** spike `BACKEND=both`, skip khi không có `obscura serve`.
 
@@ -52,7 +52,7 @@ status: proposed
 **P2 — `src/scraping/stealthBrowser.js`:** backend option (đã áp); **guard** throw khi post-auth module request `obscura`; map `userDataDir`→storage-dir.
 
 **P3 — Story "Obscura Public-Scraping Backend & Watch":**
-- AC1: guest scrapers chạy `XACTIONS_BROWSER_BACKEND=obscura` với `obscura serve --stealth`.
+- AC1: guest scrapers chạy `MEDIRUS_BROWSER_BACKEND=obscura` với `obscura serve --stealth`.
 - AC2: post-auth automation assert guard throw khi `backend==='obscura'`.
 - AC3: `obscura-spike.mjs BACKEND=both` trong CI (skip khi không có server).
 - AC4: `docs/obscura-watch.md` liệt kê issue theo dõi (#531, #886, #643, #683, #817, #866) + promote gate.

@@ -7,15 +7,15 @@ import type { Page, Browser, LaunchOptions, ElementHandle } from 'puppeteer';
  * scraper dispatcher so it can auto-close the browser it created.
  */
 export interface PageWithBrowser extends Page {
-  __xactions_browser?: Browser;
+  __medirus_browser?: Browser;
 }
 
 /**
- * Broad options bag used by most XActions manager functions. Explicitly lists
+ * Broad options bag used by most Medirus manager functions. Explicitly lists
  * the optional keys that appear in the JSDoc, while an index signature lets
  * unknown/custom options through without widening to `any`.
  */
-export interface XActionsOptions {
+export interface MedirusOptions {
   [key: string]: unknown;
   limit?: number;
   format?: string;
@@ -332,7 +332,7 @@ export interface ActivityPlan {
 }
 
 /** Options passed to startAlgorithmBuilder. */
-export interface StartOptions extends XActionsOptions {
+export interface StartOptions extends MedirusOptions {
   personaId: string;
   authToken?: string;
 }
@@ -375,7 +375,7 @@ export interface PluginManifest {
   hooks?: Record<string, unknown>;
 }
 
-/** Plugin registry entry stored in ~/.xactions/plugins.json. */
+/** Plugin registry entry stored in ~/.medirus/plugins.json. */
 export interface PluginEntry {
   [key: string]: unknown;
   package?: string;

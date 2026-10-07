@@ -29,7 +29,7 @@
  * This script uses conservative delays (60s+ between DMs).
  *
  * 🎮 CONTROLS:
- *   window.XActions.pause()  / .resume() / .abort() / .status()
+ *   window.Medirus.pause()  / .resume() / .abort() / .status()
  * ============================================================
  */
 (() => {
@@ -72,7 +72,7 @@
   const startTime = Date.now();
   const newFollowersList = [];
 
-  const STORAGE_KEY = 'xactions_known_followers';
+  const STORAGE_KEY = 'medirus_known_followers';
 
   const getKnown = () => {
     try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); } catch { return new Set(); }
@@ -81,7 +81,7 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...set]));
   };
 
-  window.XActions = {
+  window.Medirus = {
     pause()  { paused = true;  console.log('⏸️ Paused.'); },
     resume() { paused = false; console.log('▶️ Resumed.'); },
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
@@ -231,7 +231,7 @@
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-new-followers-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-new-followers-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 New followers list exported.');
     }

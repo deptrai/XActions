@@ -1,4 +1,4 @@
-# XActions — System Architecture
+# Medirus — System Architecture
 
 > **Version:** 4.2.0 (September 2026)  
 > **Status:** Production / Distributed Multi-Platform Autonomous Scraping & Syndication Engine  
@@ -8,16 +8,16 @@
 
 ## 1. Executive Architectural Overview
 
-**XActions** is an enterprise-grade, distributed scraping, interaction, and content syndication platform designed for both human operators and autonomous AI agents (via Model Context Protocol - MCP).
+**Medirus** is an enterprise-grade, distributed scraping, interaction, and content syndication platform designed for both human operators and autonomous AI agents (via Model Context Protocol - MCP).
 
-Originally started as a Twitter/X browser automation utility, XActions has evolved through 41 Epics (including Phase 7: OSINT Find Profiles, Distributed Token Bucket, Account Pool & Health Guard, GitOps Selector Healing, Cost-Aware Proxy Escalation, and Epic 41: Developer Registries & Entity Resolution) into a **universal 26-platform scraping and cross-platform write syndication engine**. It combines stealth headless browser automation (Puppeteer/Playwright/CDP) with direct reverse-engineered internal APIs (GraphQL, AT Protocol, REST, SSE, JetStream) and resilient governance infrastructure (Adaptive Rate Governor, Distributed Token Bucket, Proxy Dual-Pool, Schema Drift Canary, and Outbound Webhooks).
+Originally started as a Twitter/X browser automation utility, Medirus has evolved through 41 Epics (including Phase 7: OSINT Find Profiles, Distributed Token Bucket, Account Pool & Health Guard, GitOps Selector Healing, Cost-Aware Proxy Escalation, and Epic 41: Developer Registries & Entity Resolution) into a **universal 26-platform scraping and cross-platform write syndication engine**. It combines stealth headless browser automation (Puppeteer/Playwright/CDP) with direct reverse-engineered internal APIs (GraphQL, AT Protocol, REST, SSE, JetStream) and resilient governance infrastructure (Adaptive Rate Governor, Distributed Token Bucket, Proxy Dual-Pool, Schema Drift Canary, and Outbound Webhooks).
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                                   CLIENT & AGENT SURFACES                              │
 ├───────────────────┬───────────────────┬────────────────────┬───────────────────────────┤
 │  AI Agents (MCP)  │   CLI (Terminal)  │  Admin Dashboard   │   REST API / Webhooks     │
-│  xactions-mcp     │   bin/unfollowx   │  dashboard/*.html  │   api/server.js (port 3001)│
+│  medirus-mcp     │   bin/unfollowx   │  dashboard/*.html  │   api/server.js (port 3001)│
 └─────────┬─────────┴─────────┬─────────┴──────────┬─────────┴─────────────┬─────────────┘
           │                   │                    │                       │
           ▼                   ▼                    ▼                       ▼
@@ -72,7 +72,7 @@ Originally started as a Twitter/X browser automation utility, XActions has evolv
 ## 2. Core Architectural Subsystems
 
 ### 2.1. Universal Scraper Spine (`src/scrapers/`)
-Every platform in XActions implements a standard contract conforming to `AbstractCrawler` and `descriptor.js` (Story 25.1):
+Every platform in Medirus implements a standard contract conforming to `AbstractCrawler` and `descriptor.js` (Story 25.1):
 1. **Single Entry Point**: `scrape(platform, action, options)`
    - Dispatches via descriptor lookup (`DESCRIPTORS[platform]`).
    - Supports `platform: 'all'` or arrays of platforms via `UniversalActionDispatcher`.
@@ -162,7 +162,7 @@ SelectorCanary (drift detection, successRate < 0.8 for 2 runs → alert)
   → GitHub Draft PR (branch canary-heal/{platform}-{target}-{ts})
 ```
 - Components: `src/services/selector-canary.js` (probes + alert dispatcher), `src/services/selector-sandbox.js`, `src/services/canary-healer.js`.
-- CLI: `xactions canary status | probe | heal` (`src/cli/commands/canary.js`); targets configured in `config/canary-targets.json`.
+- CLI: `medirus canary status | probe | heal` (`src/cli/commands/canary.js`); targets configured in `config/canary-targets.json`.
 - `heal` modes: `--preview` (print diff), `--output <path>` (patch file), default Draft PR; `--platform`/`--target` scope; `--json` structured output.
 
 #### Cost-Aware Proxy Escalation (Epic 40)
@@ -179,9 +179,9 @@ SelectorCanary (drift detection, successRate < 0.8 for 2 runs → alert)
 
 ### 2.7. Model Context Protocol (MCP) Server (`src/mcp/server.js`)
 - Full compliance with `@modelcontextprotocol/sdk`.
-- Over 190 registered tools including `x_scrape`, `x_actions_list`, `x_publish_all`, `x_like_all`, `x_follow_all`, `x_download_media`, `x_crawl_post`, and the OSINT fan-out tool `x_social_find_profiles` (Epic 36), plus account-pool management tools (`x_account_list`, `x_account_get`, `x_account_release`).
+- Over 190 registered tools including `x_scrape`, `medirus_list`, `x_publish_all`, `x_like_all`, `x_follow_all`, `x_download_media`, `x_crawl_post`, and the OSINT fan-out tool `x_social_find_profiles` (Epic 36), plus account-pool management tools (`x_account_list`, `x_account_get`, `x_account_release`).
 - Multi-consumer quota gate (AD-20) protecting shared resources from AI agent runaway loops.
-- Exposes structured resources (`xactions://platforms`, `xactions://actions`, `xactions://system/status`).
+- Exposes structured resources (`medirus://platforms`, `medirus://actions`, `medirus://system/status`).
 
 ### 2.8. Agentic Decision Plane — Jev (`src/agents/jevBrain.js`, Epic 42)
 
@@ -236,7 +236,7 @@ The agentic subsystems (`src/agents/`, `src/algorithmBuilder.js`, `src/personaEn
 ## 4. Directory & Module Map
 
 ```
-XActions/
+Medirus/
 ├── api/                                # Express.js REST API server & routes
 │   ├── routes/                         # REST endpoints (auth, governor, webhooks...)
 │   ├── services/                       # Background services & scraper bridges
@@ -362,7 +362,7 @@ Following our full audit of the repository, the following technical debt items a
 3. **Modularize CLI Entry Point**:
    - Refactor `src/cli/index.js` into modular sub-command handlers (`src/cli/commands/*.js`), keeping the CLI entry point under 200 lines.
 4. **Fast-Mock Flag for Unit Testing**:
-   - Introduce `XACTIONS_TEST_FAST_DELAYS=1` to bypass `gaussianDelay()` during local unit test runs, reducing test suite execution time by over 70%.
+   - Introduce `MEDIRUS_TEST_FAST_DELAYS=1` to bypass `gaussianDelay()` during local unit test runs, reducing test suite execution time by over 70%.
 
 ---
 
@@ -381,7 +381,7 @@ Following our full audit of the repository, the following technical debt items a
 - [ ] **Post-retro appended stories (2026-09-19):** Story 41.3 avatar pHash (Epic 41), Story 35.5 IG session live-verify (Epic 35), Story 13.11 marketplace filters (Epic 13) — `ready-for-dev`, Epics flipped back to `in-progress`. Gated: 13.12, 27.5, 33.3, 33.4 (`backlog-blocked` pending activation).
 - [x] Distributed Token Bucket (Redis Lua) backing both consumer quotas and the daily proxy budget.
 - [x] Account Pool health guard with hibernation synced to the Adaptive Rate Governor.
-- [x] GitOps selector healing via `xactions canary status | probe | heal` (Draft PR output only).
+- [x] GitOps selector healing via `medirus canary status | probe | heal` (Draft PR output only).
 - [x] Cost-aware proxy escalation with `PROXY_DAILY_BUDGET_USD` ceiling and `BUDGET_CEILING_REACHED` soft degradation.
 
 ---
@@ -393,13 +393,13 @@ Following our full audit of the repository, the following technical debt items a
 1. **Template Method for Streaming (Zero `__streamEmitted`):**
    `AbstractCrawler.execute()` is the **Single Source of Truth** for event streaming to Redis Streams. Subclasses are strictly forbidden from directly importing or invoking `publisher.publish()`, and must never attach arbitrary status flags (such as `__streamEmitted`) to domain payloads.
 2. **Option D Identity Cleanliness (Strict PII Boundary — rescoped by Epic 41):**
-   XActions operates purely as a **Stateless Data Harvester** with respect to persistence: `x_social_find_profiles` returns platform-native `ProfileItem[]` and an `identityClusters[]` array computed **in-memory per request** by `EntityResolver` (Jaro-Winkler + additive confidence scoring). It must never create identity tables (`PersonEntity`, `GoldenContact`) or persist resolved PII in Node.js/Prisma. Entity resolution is allowed only as a **pure, stateless, per-request computation** — persistence remains prohibited.
+   Medirus operates purely as a **Stateless Data Harvester** with respect to persistence: `x_social_find_profiles` returns platform-native `ProfileItem[]` and an `identityClusters[]` array computed **in-memory per request** by `EntityResolver` (Jaro-Winkler + additive confidence scoring). It must never create identity tables (`PersonEntity`, `GoldenContact`) or persist resolved PII in Node.js/Prisma. Entity resolution is allowed only as a **pure, stateless, per-request computation** — persistence remains prohibited.
 3. **Platform-Static HTTP Routing (No Sequential Escalation Loops):**
    Lightweight public domains (e.g., Masothue, Batdongsan, RSS) route directly through Tier 0 (`got-jsdom`), while bot-protected social platforms route directly to Tier 1 (CDP / Stealth Browser). Sequential 3-tier trial-and-error escalation that induces up to 16s latency is rejected.
 4. **GitOps-Driven DOM Drift Healing (No Runtime Code Injection):**
    Selectors remain immutable in source control (`selectors.json`, `selectors.md`). When `SelectorCanary` detects drift, `AutoSelectorFallback` produces an AST-validated `unified-diff` and automatically generates a GitHub Draft PR. Direct runtime hot-patching of unverified selectors into Redis is rejected.
 5. **No Mocks in Integration & Zero Delay in Test:**
-   Testing Tier 0 HTTP engines must use in-process Local Ephemeral Servers (`127.0.0.1:0` with HTTP/2 and TLS) instead of external mocks or internet endpoints. All delay/jitter utilities must check `process.env.XACTIONS_TEST_FAST_DELAYS === '1'` to ensure unit tests finish in <1.5s.
+   Testing Tier 0 HTTP engines must use in-process Local Ephemeral Servers (`127.0.0.1:0` with HTTP/2 and TLS) instead of external mocks or internet endpoints. All delay/jitter utilities must check `process.env.MEDIRUS_TEST_FAST_DELAYS === '1'` to ensure unit tests finish in <1.5s.
 
 ### 13.2. Architecture Decision Records (Phase 7)
 
@@ -407,7 +407,7 @@ Following our full audit of the repository, the following technical debt items a
 - **AD-41 (CloudEvents v1.0 Envelope):** All stream items pushed to Redis Streams must comply with the CloudEvents 1.0 JSON format and include an `idempotencyKey` computed from `sha256(platform + entityId + timestamp_bucket)`.
 - **AD-42 (Cost-Aware Proxy Escalation):** `ProxyIpPool` nodes carry `tier: 'free' | 'datacenter' | 'residential' | 'mobile_4g'`. Requests default to `datacenter` and only escalate to `residential` upon receiving explicit bot challenges (`XACT_5030` or HTTP 403). Daily budget ceilings are atomically governed by `DistributedTokenBucket`. [Rescoped 2026-09-18] Migration: `residential: boolean` → `tier` enum; backward compat `residential: true` → `tier: 'residential'`. `ProxyBudgetGovernor` enforces `PROXY_DAILY_BUDGET_USD` ceiling; `BUDGET_CEILING_REACHED` soft degradation returns degraded result instead of throwing `PROXY_EXHAUSTED`.
 - **AD-43 (Zero-Browser Engine Invariant):** Lightweight platforms (Masothue, Batdongsan, Chotot, TopCV, VietnamWorks, Shopee) are HTTP-first by design. Their `DESCRIPTORS` map to `AbstractApiClient`-based clients using `got`/`undici` — no Chromium process is spawned. Engine metadata (`engineUsed`, `durationMs`, `platform`, `action`) is injected into `_metadata` on every `AbstractCrawler.start()` result so downstream consumers can observe transport choice and latency without inspecting client classes.
-- **AD-44 (GitOps Selector Healing — No Runtime Injection):** Selector drift healing follows a strict GitOps pipeline: `SelectorCanary` detects drift → `AutoSelectorFallback.investigate()` generates ranked candidates → `SelectorSandbox` validates candidates against `expectedShape` → `CanaryHealer` produces a `unified-diff` for `canary-targets.json` → GitHub Draft PR is created for human review. Runtime hot-patching of selectors into Redis or in-memory config is strictly rejected. The `xactions canary heal` CLI orchestrates this flow manually; auto-heal on detection is prohibited.
+- **AD-44 (GitOps Selector Healing — No Runtime Injection):** Selector drift healing follows a strict GitOps pipeline: `SelectorCanary` detects drift → `AutoSelectorFallback.investigate()` generates ranked candidates → `SelectorSandbox` validates candidates against `expectedShape` → `CanaryHealer` produces a `unified-diff` for `canary-targets.json` → GitHub Draft PR is created for human review. Runtime hot-patching of selectors into Redis or in-memory config is strictly rejected. The `medirus canary heal` CLI orchestrates this flow manually; auto-heal on detection is prohibited.
 - **AD-45 (In-Memory Identity Resolution — Epic 41, rescopes Option D):** `x_social_find_profiles` may compute `identityClusters[]` in-memory via `EntityResolver` (Jaro-Winkler similarity + additive confidence scoring over 4 signals: exact-username +40, name-similarity>0.85 +30, avatar-match +30, cross-link-in-bio +20, merged by union-find at threshold ≥40). This refines the earlier "no entity resolution" reading of AD-40: the prohibition is on **persistence** (`PersonEntity`/`GoldenContact` tables, stored PII), not on stateless per-request clustering. Zero-auth identity registries (`github` → username, `gravatar` → email) are registered in `PROFILE_ACTION_MAP`; GitHub's 60 req/h (5000 with `GITHUB_TOKEN`) budget is enforced via `DistributedTokenBucket`. Out of scope (Mr.Holmes domain): dorking, breach/leak checks, BFS recursive profiling, Maigret-style mass scans.
 - **AD-46 (Avatar Perceptual Hashing — Story 41.3, Epic 41):** `EntityResolver`'s `avatar_match` signal is upgraded from URL-string-equality to **perceptual hashing** (`src/osint/phash.js`, pure JS, zero-dep): dHash/aHash over decoded RGBA + Hamming distance on a 64-bit hash, threshold ≤ 10. This closes the CDN-rotation gap where the same avatar served from `fbcdn.net` vs `cdninstagram.com` vs `avatars.githubusercontent.com` produces different URLs. URL-exact match remains the fast-path; pHash fetch+decode only runs on URL miss, is async, and respects Option D — no hash or PII is persisted (in-memory per-request).
 - **AD-48 (Agentic Decision Plane — Jev, Epic 42):** Typed-decision model `jev-latest` is introduced as a dedicated plane for *judgment* (relevance, action routing, spam/safety), distinct from generative *content* LLMs. Contract: `POST /v1/systemone { state: string|object|array, questions: {id: Choice|Score|Noul} }` -> `{choice|score|noul, probabilities, confidence}`. Constraints: text-only state; English-primary (verified strong on vi/mixed corpus); Noul carries no `confidence` field. Routing: `jevBrain.js` sole gateway; confidence-gated action; `LLMBrain` fallback. Verified corpus: `scripts/jev-verify/`.

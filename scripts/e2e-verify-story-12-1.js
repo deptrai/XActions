@@ -64,12 +64,12 @@ async function runE2EVerification() {
 
   // Test 3: TTY vs Non-TTY QR Output Formatting
   console.log('\n[E2E 3] QR Code Output Formatting:');
-  const ttyOutput = await displayTerminalQrCode('https://xactions.app/auth?token=sentinel_test', { small: true });
+  const ttyOutput = await displayTerminalQrCode('https://medirus.online/auth?token=sentinel_test', { small: true });
   console.log(`  - TTY QR matrix length: ${ttyOutput.length} chars (includes Unicode ASCII blocks)`);
 
   const originalTTY = process.stdout.isTTY;
   process.stdout.isTTY = false;
-  const nonTtyOutput = await displayTerminalQrCode('https://xactions.app/auth?token=sentinel_test', { shortCode: 'SEN-88' });
+  const nonTtyOutput = await displayTerminalQrCode('https://medirus.online/auth?token=sentinel_test', { shortCode: 'SEN-88' });
   process.stdout.isTTY = originalTTY;
   console.log(`  - Non-TTY Output:\n${nonTtyOutput.trim()}`);
 

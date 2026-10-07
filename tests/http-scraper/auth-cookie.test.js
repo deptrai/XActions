@@ -92,7 +92,7 @@ describe('saveCookies / loadCookies', () => {
   let tmpDir;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'xactions-auth-test-'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'medirus-auth-test-'));
   });
 
   afterEach(async () => {

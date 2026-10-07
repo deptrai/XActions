@@ -39,7 +39,7 @@ const CONFIG = {
   createList: {
     enabled: false,
     name: 'My List',
-    description: 'Created by XActions',
+    description: 'Created by Medirus',
     isPrivate: true,
   },
   addUsers: {

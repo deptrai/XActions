@@ -18,12 +18,12 @@ import { RateLimitError } from '../../src/core/error-envelope.js';
 let artifactDir;
 
 beforeAll(async () => {
-  artifactDir = await fs.mkdtemp(path.join(os.tmpdir(), 'xactions-envelope-'));
-  process.env.XACTIONS_ARTIFACT_DIR = artifactDir;
+  artifactDir = await fs.mkdtemp(path.join(os.tmpdir(), 'medirus-envelope-'));
+  process.env.MEDIRUS_ARTIFACT_DIR = artifactDir;
 });
 
 afterAll(async () => {
-  delete process.env.XACTIONS_ARTIFACT_DIR;
+  delete process.env.MEDIRUS_ARTIFACT_DIR;
   await fs.rm(artifactDir, { recursive: true, force: true });
 });
 
@@ -86,8 +86,8 @@ describe('wrapToolResult', () => {
     assert.equal(envelope.platform, 'mastodon');
   });
 
-  it('detects universal for x_actions_list', async () => {
-    const envelope = await wrapToolResult('x_actions_list', {}, 0);
+  it('detects universal for medirus_list', async () => {
+    const envelope = await wrapToolResult('medirus_list', {}, 0);
     assert.equal(envelope.platform, 'universal');
   });
 
@@ -233,7 +233,7 @@ describe('wrapToolResult', () => {
     // Point the artifact directory at an existing file so fs.mkdir rejects.
     const staleFile = path.join(artifactDir, 'not-a-dir');
     await fs.writeFile(staleFile, 'stale');
-    process.env.XACTIONS_ARTIFACT_DIR = staleFile;
+    process.env.MEDIRUS_ARTIFACT_DIR = staleFile;
 
     const envelope = await wrapToolResult('x_get_tweets', records, 0, { args: { platform: 'twitter' } });
 
@@ -250,7 +250,7 @@ describe('wrapToolResult', () => {
     assert.equal(typeof envelope.error.message, 'string');
 
     // Restore the temp directory for subsequent tests.
-    process.env.XACTIONS_ARTIFACT_DIR = artifactDir;
+    process.env.MEDIRUS_ARTIFACT_DIR = artifactDir;
     await fs.unlink(staleFile);
   });
 });

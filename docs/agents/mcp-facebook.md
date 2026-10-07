@@ -1,6 +1,6 @@
 # MCP Facebook Tools Reference
 
-> Tài liệu các tool Facebook trên XActions MCP server (`src/mcp/server.js`).
+> Tài liệu các tool Facebook trên Medirus MCP server (`src/mcp/server.js`).
 > Cập nhật 2026-08-14.
 
 ## Tổng quan

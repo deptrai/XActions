@@ -4,7 +4,7 @@
 
 | Code | Name | Description | Source |
 |------|------|-------------|--------|
-| [AT] | API Test | Generate and run real HTTP API tests for XActions Express routes. | `references/api-test.md` |
+| [AT] | API Test | Generate and run real HTTP API tests for Medirus Express routes. | `references/api-test.md` |
 | [MT] | MCP Test | Verify MCP tool definitions, schemas, and live execution. | `references/mcp-test.md` |
 | [BT] | Browser Test | Pilot live browser and generate Playwright E2E scripts. | `references/browser-test.md` |
 | [DF] | Debug Failure | Diagnose and fix failing API, MCP, or browser tests. | `references/debug-failure.md` |

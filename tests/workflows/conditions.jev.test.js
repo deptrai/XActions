@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Workflow Jev Condition Tests (Story 43.1)
+// Medirus — Workflow Jev Condition Tests (Story 43.1)
 // by nichxbt
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';

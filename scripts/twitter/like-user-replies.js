@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 💬 Like User Replies - XActions
+ * 💬 Like User Replies - Medirus
  * ============================================
  * 
  * @name         like-user-replies
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-01-26
- * @website      https://xactions.app
+ * @website      https://medirus.online
  * 
  * Usage:
  *   1. Go to a specific tweet page (x.com/username/status/xxx)
@@ -122,9 +122,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  💬 LIKE USER REPLIES - XActions                         ║
+║  💬 LIKE USER REPLIES - Medirus                         ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

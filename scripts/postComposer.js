@@ -13,13 +13,13 @@
   const MODE = 'tweet'; // 'tweet', 'thread', or 'poll'
 
   // For single tweet
-  const TWEET_TEXT = 'Hello from XActions! 🚀';
+  const TWEET_TEXT = 'Hello from Medirus! 🚀';
 
   // For thread
   const THREAD_TWEETS = [
     '🧵 Thread: Why automation matters (1/3)',
     'Automation saves hours of manual work and lets you focus on what matters — creating great content. (2/3)',
-    'Try XActions for free at github.com/nirholas/XActions ⚡ (3/3)',
+    'Try Medirus for free at github.com/nirholas/XActions ⚡ (3/3)',
   ];
 
   // For poll
@@ -146,7 +146,7 @@
   };
 
   const run = async () => {
-    console.log('⚡ XActions Post Composer');
+    console.log('⚡ Medirus Post Composer');
     console.log('========================');
 
     switch (MODE) {

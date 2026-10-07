@@ -1,4 +1,4 @@
-# 🚀 XActions Growth Strategy: 76 → 100,000 Stars
+# 🚀 Medirus Growth Strategy: 76 → 100,000 Stars
 
 **Current:** 76 stars, 14 forks  
 **Target:** 100,000 stars  
@@ -19,7 +19,7 @@
 ai-agent, automation, claude, gpt, mass-unfollow, mcp, mcp-server, 
 model-context-protocol, nodejs, open-source, puppeteer, twitter, 
 twitter-automation, twitter-bot, twitter-scraper, unfollow-tool, 
-x, xactions, scraper, social-media
+x, medirus, scraper, social-media
 ```
 
 **Description** — Keep current (it's good). Under 350 chars with keywords front-loaded.
@@ -27,7 +27,7 @@ x, xactions, scraper, social-media
 **License** — Fix the "NOASSERTION" license display. Add/verify the LICENSE file is a proper Apache 2.0 license file so GitHub renders it correctly.
 
 **Social Preview Image** — Create a 1280x640px social preview image:
-- Title: "⚡ XActions"
+- Title: "⚡ Medirus"
 - Subtitle: "Free X/Twitter Automation — No API Required"
 - Key stats: "Scrapers • MCP • CLI • Browser Scripts"
 - Upload at: Settings → Social preview
@@ -35,7 +35,7 @@ x, xactions, scraper, social-media
 ### 1.2 Viral Distribution Channels
 
 **Hacker News** (potential: 500-5,000 stars in 24 hours):
-- Title format: `Show HN: XActions – Free X/Twitter automation toolkit (no API needed)`
+- Title format: `Show HN: Medirus – Free X/Twitter automation toolkit (no API needed)`
 - Best time: Tuesday-Thursday, 9-11 AM ET
 - Key selling point: "We replaced Twitter's $100/mo API with browser automation"
 - Have 5-10 friends ready to upvote in the first hour (critical mass)
@@ -104,9 +104,9 @@ All open source. All free.
 Star it: github.com/nirholas/xactions
 ```
 
-**Posting cadence:** 3-5x/week about XActions. Mix:
+**Posting cadence:** 3-5x/week about Medirus. Mix:
 - Demo videos (screen recordings of scripts running)
-- "Before XActions vs After" comparisons
+- "Before Medirus vs After" comparisons
 - User testimonials / DMs (ask permission)
 - Feature announcements
 - Tutorial threads
@@ -122,7 +122,7 @@ Star it: github.com/nirholas/xactions
 
 **YouTube videos:**
 - "Unfollow Everyone Who Doesn't Follow You Back (Free)" — This specific search query gets thousands of monthly searches
-- "Twitter Automation Without API — XActions Demo"
+- "Twitter Automation Without API — Medirus Demo"
 - "How to Scrape Twitter for Free in 2026"
 
 ---
@@ -131,7 +131,7 @@ Star it: github.com/nirholas/xactions
 
 ### 2.1 MCP/AI Angle (This Is Your Moat)
 
-The MCP ecosystem is exploding. Position XActions as THE Twitter MCP server:
+The MCP ecosystem is exploding. Position Medirus as THE Twitter MCP server:
 - Get listed on **awesome-mcp-servers** repos (multiple exist with 10k+ stars)
 - Get listed on **mcp.so** and similar MCP directories
 - Write a guide: "How to Give Claude Access to Twitter (Free)"
@@ -162,8 +162,8 @@ To hit GitHub Trending (JavaScript, daily):
 
 ### 2.4 Partnerships & Cross-Promotion
 
-- **n8n** — XActions as an n8n node for Twitter automation
-- **Puppeteer** — Reference XActions in Puppeteer ecosystem
+- **n8n** — Medirus as an n8n node for Twitter automation
+- **Puppeteer** — Reference Medirus in Puppeteer ecosystem
 - **AI Agent builders** — Integrate with LangChain, AutoGPT, CrewAI
 - **Privacy-focused tools** — "No API keys = no data shared with Twitter"
 
@@ -191,8 +191,8 @@ High-demand features that drive stars:
 
 ### 3.3 Ecosystem Building
 
-- Create `create-xactions-app` scaffolding tool
-- Build VS Code extension for XActions
+- Create `create-medirus-app` scaffolding tool
+- Build VS Code extension for Medirus
 - Create GitHub Action for Twitter automation
 - Build Raycast extension
 - Build Alfred workflow
@@ -210,7 +210,7 @@ High-demand features that drive stars:
 ### 4.1 Platform Expansion
 
 - Support **Bluesky**, **Mastodon**, **Threads** automation
-- Rename/rebrand to "Social Actions" or keep XActions as umbrella
+- Rename/rebrand to "Social Actions" or keep Medirus as umbrella
 - Each platform = new audience = new stars
 
 ### 4.2 Enterprise & Education
@@ -252,7 +252,7 @@ At 10k+ stars, media picks up naturally:
 
 ## Quick Wins (Do This Week)
 
-- [ ] Post a viral tweet about XActions with demo video
+- [ ] Post a viral tweet about Medirus with demo video
 - [ ] Submit to Hacker News (Show HN)
 - [ ] Post on r/programming and r/javascript
 - [ ] Submit PR to awesome-mcp-servers repos
@@ -282,4 +282,4 @@ Year 2:  Media + education + community          → 40,000 → 100,000 stars
 
 ---
 
-*Strategy by @nichxbt for XActions — github.com/nirholas/xactions*
+*Strategy by @nichxbt for Medirus — github.com/nirholas/xactions*

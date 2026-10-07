@@ -40,7 +40,7 @@ Session: https://v2.chainlens.app/c/66b221c4-913b-4ea1-b8f4-0567cf4310fc
 - Customization buried in config files
 - → Users build custom solutions, fragmenting ecosystem
 
-## Implication for XActions
+## Implication for Medirus
 - Browser automation sidesteps API cost entirely
 - Already has: X automation + scrapers + analytics + AI/persona engine + x402 payments
 - Missing: on-chain data integration, crypto-specific content templates, token/whale alert triggers

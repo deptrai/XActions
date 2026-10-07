@@ -30,7 +30,7 @@
 
 ## 1. Executive Summary
 
-Twitter/X's web client communicates exclusively via internal GraphQL and REST API endpoints at `api.x.com`. Every action performed in the browser — viewing profiles, scrolling timelines, searching tweets — is a plain HTTP request with JSON responses. This means **all 18 of XActions' Puppeteer-based scraper functions can be replaced with direct HTTP calls**, eliminating the need for a headless browser for data retrieval.
+Twitter/X's web client communicates exclusively via internal GraphQL and REST API endpoints at `api.x.com`. Every action performed in the browser — viewing profiles, scrolling timelines, searching tweets — is a plain HTTP request with JSON responses. This means **all 18 of Medirus' Puppeteer-based scraper functions can be replaced with direct HTTP calls**, eliminating the need for a headless browser for data retrieval.
 
 ### Impact
 
@@ -303,12 +303,12 @@ sequenceDiagram
 
 **Limitations:** Guest tokens are rate-limited aggressively. If `x-rate-limit-incoming` header returns `0`, the guest token is burned — delete it and acquire a new one.
 
-#### Cookie-Based Auth (Primary Method for XActions)
+#### Cookie-Based Auth (Primary Method for Medirus)
 
 ```mermaid
 sequenceDiagram
     participant U as User Browser
-    participant X as XActions
+    participant X as Medirus
     participant A as api.x.com
 
     U->>X: Provide auth_token cookie from browser
@@ -490,7 +490,7 @@ const FIELD_TOGGLES = {
 Response path: data.user.result.legacy
 ```
 
-| API Field | XActions Field | Type |
+| API Field | Medirus Field | Type |
 |-----------|---------------|------|
 | `name` | `name` | string |
 | `screen_name` | `username` | string |
@@ -520,7 +520,7 @@ Additional fields from parent:
 Response path: instructions[].entries[].content.itemContent.tweet_results.result.legacy
 ```
 
-| API Field | XActions Field | Type |
+| API Field | Medirus Field | Type |
 |-----------|---------------|------|
 | `id_str` | `id` | string |
 | `full_text` | `text` | string |
@@ -711,7 +711,7 @@ graph TB
         H[src/scrapers/twitter/http/client.js<br>HTTP client + session]
         I[src/scrapers/twitter/http/auth.js<br>Auth token management]
         J[src/scrapers/twitter/http/endpoints.js<br>GraphQL query definitions]
-        K[src/scrapers/twitter/http/parsers.js<br>Response → XActions format]
+        K[src/scrapers/twitter/http/parsers.js<br>Response → Medirus format]
         L[src/scrapers/twitter/http/pagination.js<br>Cursor-based pagination]
         M[src/scrapers/twitter/http/rate-limiter.js<br>Rate limit manager]
         N[src/scrapers/twitter/http/features.json<br>Feature flags config]
@@ -743,7 +743,7 @@ registerBuiltin('http', () => import('./http.js'));
 
 Usage:
 ```javascript
-import { createBrowser, scrapeProfile } from 'xactions/scrapers/twitter';
+import { createBrowser, scrapeProfile } from 'medirus/scrapers/twitter';
 
 // Option A: Direct HTTP (new)
 const session = await createBrowser({ adapter: 'http' });
@@ -789,7 +789,7 @@ flowchart TD
 | 3 | `src/scrapers/twitter/http/auth.js` | Auth token management (cookie import, guest token, login flow) | ~250 |
 | 4 | `src/scrapers/twitter/http/endpoints.js` | GraphQL endpoint definitions (query IDs, base URLs) | ~100 |
 | 5 | `src/scrapers/twitter/http/features.json` | Feature flags (separate file for easy updates) | ~50 |
-| 6 | `src/scrapers/twitter/http/parsers.js` | Response JSON → XActions format converters | ~300 |
+| 6 | `src/scrapers/twitter/http/parsers.js` | Response JSON → Medirus format converters | ~300 |
 | 7 | `src/scrapers/twitter/http/pagination.js` | Cursor extraction + async generator pagination | ~100 |
 | 8 | `src/scrapers/twitter/http/rate-limiter.js` | Rate limit tracking + backoff logic | ~150 |
 | 9 | `src/scrapers/adapters/http.js` | HTTP adapter conforming to BaseAdapter interface | ~150 |
@@ -823,7 +823,7 @@ flowchart TD
 | `got` | ~200 KB + deps | Feature-rich, retry built-in | Large transitive deps | Overkill |
 | `axios` | ~130 KB | Popular, interceptors | No HTTP/2, browser-oriented | Not ideal |
 
-**Decision:** Use Node.js native `fetch` (available since Node 18+). XActions already targets Node 18+. For cookie management, use `tough-cookie`.
+**Decision:** Use Node.js native `fetch` (available since Node 18+). Medirus already targets Node 18+. For cookie management, use `tough-cookie`.
 
 ### 13.2 Cookie Management
 

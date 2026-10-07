@@ -1,6 +1,6 @@
 # Consumer Quickstart — migrating to the Unified Scrape Gateway
 
-> Story 50.9 — UX-4 fix. Convert a legacy `xactionsClient.ts` (queue+poll via
+> Story 50.9 — UX-4 fix. Convert a legacy `medirusClient.ts` (queue+poll via
 > `/api/ai/discovery/search`) to the new `POST /api/platform/:platform/scrape`
 > contract in under 30 minutes.
 
@@ -18,7 +18,7 @@
 
 ### Before
 ```ts
-const client = new XActionsClient({
+const client = new MedirusClient({
   sessionCookie: process.env.X_SESSION_COOKIE,
 });
 ```
@@ -38,8 +38,8 @@ anonymous IP bucket anyway.
 
 ### After — code
 ```ts
-const client = new XActionsClient({
-  apiKey: process.env.XACTIONS_API_KEY, // e.g. sk_jev_xxx
+const client = new MedirusClient({
+  apiKey: process.env.MEDIRUS_API_KEY, // e.g. sk_jev_xxx
 });
 ```
 
@@ -138,7 +138,7 @@ Is the action in the descriptor's syncCapableActions?
 
 | kind | retryable | retry_after_ms | Action |
 |---|---|---|---|
-| `auth` | `false` | — | Refresh credentials; check `XACTIONS_API_KEY` |
+| `auth` | `false` | — | Refresh credentials; check `MEDIRUS_API_KEY` |
 | `validation` | `false` | — | Fix args; check `GET /api/actions` for requiredArgs |
 | `consumer_quota` | `true` | yes | Wait `retry_after_ms`, then retry — your bucket is exhausted |
 | `upstream_rate_limit` | `true` | yes | Exponential backoff; upstream is throttling us |
@@ -167,18 +167,18 @@ If you're running against the private `jev-trading` deployment, the diff
 is identical — swap `base` to your deployment host and reuse `sk_jev_*`
 service keys. Paths inside your repo to update:
 
-- `src/clients/xactionsClient.ts` — replace `searchReddit`, `searchTwitter`,
+- `src/clients/medirusClient.ts` — replace `searchReddit`, `searchTwitter`,
   `scrapePumpfun`, `dexscreenerLookup` bodies with the sync-lane calls above
 - `src/jobs/monitor.ts` — replace the `poll operationId` loop with either
   sync response handling or async `statusUrl` poller (unchanged shape)
 
 ## 8. Working playground
 
-- **Try it live**: `https://xactions.app/gateway` — pick platform + action +
+- **Try it live**: `https://medirus.online/gateway` — pick platform + action +
   mode, paste body, see envelope + `metadata.request_id` for tracing.
-- **Action catalog**: `https://xactions.app/actions` — canonical list of all
+- **Action catalog**: `https://medirus.online/actions` — canonical list of all
   actions with `requiredArgs`, `syncCapable`, `status`.
-- **Monitor**: `https://xactions.app/gateway/monitor` — p50/p95/p99,
+- **Monitor**: `https://medirus.online/gateway/monitor` — p50/p95/p99,
   upstream health per platform, quota degrade reasons, request trace lookup.
 
 ## Support

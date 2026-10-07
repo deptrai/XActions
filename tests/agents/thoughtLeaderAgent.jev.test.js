@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — ThoughtLeaderAgent Jev Adoption Tests (Story 42.2)
+// Medirus — ThoughtLeaderAgent Jev Adoption Tests (Story 42.2)
 // by nichxbt
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';

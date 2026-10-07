@@ -15,7 +15,7 @@
   };
 
   const run = async () => {
-    console.log('🔍 XActions Explore Scraper');
+    console.log('🔍 Medirus Explore Scraper');
     console.log('===========================');
 
     // Scrape trends

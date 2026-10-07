@@ -4,7 +4,7 @@
 
 ## Overview
 
-XActions Video Engine uses [Remotion](https://remotion.dev) to programmatically render MP4 videos from social media data. It generates:
+Medirus Video Engine uses [Remotion](https://remotion.dev) to programmatically render MP4 videos from social media data. It generates:
 
 - **Tweet Cards** — Animated tweet with author, text, engagement stats (vertical, landscape, square)
 - **Thread Previews** — Multi-tweet thread animation
@@ -94,7 +94,7 @@ site/video/
 {
   author: 'nich',
   handle: '@nichxbt',
-  text: 'XActions: 75+ free MCP tools for Twitter automation...',
+  text: 'Medirus: 75+ free MCP tools for Twitter automation...',
   likes: 2847,
   retweets: 412,
   replies: 163,
@@ -164,4 +164,4 @@ Downloads the video through a proxy (bypasses CORS restrictions).
 - **Use Remotion Studio** for rapid previewing before rendering
 - **Customize `theme.js`** to match your brand colors
 - **Batch render** with no arguments — renders all 8 compositions at once
-- **Feed real data** — replace `defaultProps` with data from XActions scrapers for authentic content
+- **Feed real data** — replace `defaultProps` with data from Medirus scrapers for authentic content

@@ -23,7 +23,7 @@ Inject dynamic, per-account-stable noise into canvas, WebGL buffer readback, and
 - FR-113 (Advanced Canvas/WebGL/Audio Fingerprint Spoofing — conditional)
 
 ## Story
-As an XActions operator scraping heavily-defended targets, I want canvas/WebGL/audio fingerprints spoofed with stable per-account noise, so that headless sessions survive advanced bot detection that reads rendering/audio entropy.
+As an Medirus operator scraping heavily-defended targets, I want canvas/WebGL/audio fingerprints spoofed with stable per-account noise, so that headless sessions survive advanced bot detection that reads rendering/audio entropy.
 
 ## Current Gap
 - `stealthBrowser.js:295-302` only spoofs WebGL **vendor/renderer strings** (static, from FingerprintManager profile).

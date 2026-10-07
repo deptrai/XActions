@@ -6,7 +6,7 @@
  * and are skipped unless the environment variable is set.
  *
  * Run with:
- *   XACTIONS_LIVE_TESTS=true TWITTER_COOKIES="auth_token=xxx; ct0=yyy" npx vitest run tests/http-scraper/live.test.js
+ *   MEDIRUS_LIVE_TESTS=true TWITTER_COOKIES="auth_token=xxx; ct0=yyy" npx vitest run tests/http-scraper/live.test.js
  *
  * Requirements:
  *   - Valid Twitter auth cookies (auth_token + ct0)
@@ -30,7 +30,7 @@ import { GuestTokenManager } from '../../src/scrapers/twitter/http/guest.js';
 // Configuration
 // ---------------------------------------------------------------------------
 
-const LIVE = process.env.XACTIONS_LIVE_TESTS === 'true';
+const LIVE = process.env.MEDIRUS_LIVE_TESTS === 'true';
 const COOKIES = process.env.TWITTER_COOKIES || '';
 
 /** Create a real authenticated client */
@@ -48,12 +48,12 @@ function createLiveClient() {
 }
 
 // ===========================================================================
-// Live tests — skipped unless XACTIONS_LIVE_TESTS=true
+// Live tests — skipped unless MEDIRUS_LIVE_TESTS=true
 // ===========================================================================
 
 describe.skipIf(!LIVE)('HTTP Scraper — Live Tests', () => {
   // These tests hit real Twitter API
-  // Run with: XACTIONS_LIVE_TESTS=true TWITTER_COOKIES="..." npx vitest run tests/http-scraper/live.test.js
+  // Run with: MEDIRUS_LIVE_TESTS=true TWITTER_COOKIES="..." npx vitest run tests/http-scraper/live.test.js
 
   describe('Profile Scraping', () => {
     it('scrapes a public profile (@X)', async () => {
@@ -78,7 +78,7 @@ describe.skipIf(!LIVE)('HTTP Scraper — Live Tests', () => {
       expect(profile.verified).toBe(true);
     });
 
-    it('returns correct XActions profile format', async () => {
+    it('returns correct Medirus profile format', async () => {
       const client = createLiveClient();
       const profile = await scrapeProfile(client, 'X');
 

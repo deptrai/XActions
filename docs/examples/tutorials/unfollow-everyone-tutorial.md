@@ -1,8 +1,8 @@
 ---
 title: "Unfollow Everyone on X (Twitter) — Free Script 2026"
 description: "Mass unfollow all accounts on X/Twitter in minutes. Free browser script, CLI, and AI agent method. No API needed."
-keywords: ["unfollow everyone on twitter", "mass unfollow twitter", "unfollow all twitter 2026", "how to unfollow everyone on X", "twitter unfollow script free", "bulk unfollow twitter", "unfollow everyone X free", "twitter fresh start unfollow all", "mass unfollow no API", "xactions unfollow everyone"]
-canonical: "https://xactions.app/examples/unfollow-everyone"
+keywords: ["unfollow everyone on twitter", "mass unfollow twitter", "unfollow all twitter 2026", "how to unfollow everyone on X", "twitter unfollow script free", "bulk unfollow twitter", "unfollow everyone X free", "twitter fresh start unfollow all", "mass unfollow no API", "medirus unfollow everyone"]
+canonical: "https://medirus.online/examples/unfollow-everyone"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You created your X account in 2019 and followed everyone you saw — crypto influencers, meme pages, brands running giveaways, people who followed you first. Now your timeline is a dumpster fire of engagement-bait and AI slop. You follow **2,847 accounts** and can barely find tweets from people you actually care about. You want a **complete fresh start**: unfollow literally everyone, then rebuild a curated following list from scratch.
 
-Manually clicking "Following → Unfollow → Confirm" 2,847 times would take **8+ hours of non-stop clicking**. XActions does it in about 20 minutes while you get coffee.
+Manually clicking "Following → Unfollow → Confirm" 2,847 times would take **8+ hours of non-stop clicking**. Medirus does it in about 20 minutes while you get coffee.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -45,7 +45,7 @@ Manually clicking "Following → Unfollow → Confirm" 2,847 times would take **
 └──────────────────────────────────────────────┘
 ```
 
-**After XActions:**
+**After Medirus:**
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -59,7 +59,7 @@ Manually clicking "Following → Unfollow → Confirm" 2,847 times would take **
 ├──────────────────────────────────────────────┤
 │  Following: 0        Followers: 953          │
 │  Ratio: ∞ 💪                                 │
-│  Time to unfollow with XActions: ~20 min     │
+│  Time to unfollow with Medirus: ~20 min     │
 │  Backup file: ✅ saved automatically         │
 └──────────────────────────────────────────────┘
 ```
@@ -169,8 +169,8 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 
 ```javascript
 // ============================================
-// XActions - Unfollow Everyone on X/Twitter
-// by nichxbt — https://xactions.app
+// Medirus - Unfollow Everyone on X/Twitter
+// by nichxbt — https://medirus.online
 // Go to: x.com/YOUR_USERNAME/following
 // Open console (F12 → Console), paste, Enter
 // ============================================
@@ -184,7 +184,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
   const MAX_SCROLL_RETRIES = 15;     // Stop scrolling after 15 retries with no new users
 
   console.log('');
-  console.log('☢️  XActions - UNFOLLOW EVERYONE');
+  console.log('☢️  Medirus - UNFOLLOW EVERYONE');
   console.log('════════════════════════════════════════');
   console.log('⚠️  WARNING: This will unfollow ALL accounts!');
   console.log('⚠️  This action CANNOT be undone!');
@@ -395,7 +395,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 ### ✅ Expected Console Output
 
 ```
-☢️  XActions - UNFOLLOW EVERYONE
+☢️  Medirus - UNFOLLOW EVERYONE
 ════════════════════════════════════════
 ⚠️  WARNING: This will unfollow ALL accounts!
 ⚠️  This action CANNOT be undone!
@@ -462,14 +462,14 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 **Best for:** Power users, automated workflows, and accounts with 500+ following.
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Unfollow everyone (interactive — will prompt for confirmation)
-npx xactions unfollow --all
+npx medirus unfollow --all
 
 # With explicit flags
-npx xactions unfollow --all \
+npx medirus unfollow --all \
   --delay 4000 \
   --batch-size 10 \
   --batch-pause 30000 \
@@ -479,7 +479,7 @@ npx xactions unfollow --all \
 ### Example with all options:
 
 ```bash
-npx xactions unfollow --all \
+npx medirus unfollow --all \
   --username nichxbt \
   --delay 4000 \
   --batch-size 10 \
@@ -493,7 +493,7 @@ npx xactions unfollow --all \
 ### ✅ CLI Output Preview
 
 ```
-⚡ XActions v3.5.0
+⚡ Medirus v3.5.0
 
 ☢️  UNFOLLOW EVERYONE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -539,14 +539,14 @@ npx xactions unfollow --all \
 
 ### Setup
 
-Add XActions to your MCP config (e.g., `claude_desktop_config.json`):
+Add Medirus to your MCP config (e.g., `claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions", "mcp"]
+      "args": ["-y", "medirus", "mcp"]
     }
   }
 }
@@ -698,7 +698,7 @@ username,name,bio
 ## ❓ FAQ
 
 ### Q: How do I mass unfollow everyone on Twitter / X in 2026?
-**A:** Go to `x.com/YOUR_USERNAME/following`, open your browser console (F12 → Console), paste the XActions unfollow-everyone script, and press Enter. The script scans your full following list, downloads a backup file, asks for confirmation, then unfollows every account automatically with safe delays. No API key or software install needed — it runs entirely in your browser.
+**A:** Go to `x.com/YOUR_USERNAME/following`, open your browser console (F12 → Console), paste the Medirus unfollow-everyone script, and press Enter. The script scans your full following list, downloads a backup file, asks for confirmation, then unfollows every account automatically with safe delays. No API key or software install needed — it runs entirely in your browser.
 
 ### Q: Can I undo it after unfollowing everyone on X?
 **A:** No — there is no built-in undo. The script auto-downloads a JSON backup of every account you followed, so you can manually re-follow specific people later using that file. Always check that the backup file downloaded successfully before confirming.
@@ -710,10 +710,10 @@ username,name,bio
 **A:** X's Terms of Service discourage "aggressive following and unfollowing." This script uses randomized human-like delays (3–5 seconds + batch pauses) to mimic natural behavior. Thousands of people have used it without issues, but run during off-peak hours and take breaks between sessions for maximum safety.
 
 ### Q: Will people know I unfollowed them?
-**A:** X does not send notifications when someone unfollows you. However, third-party apps like XActions' "detect unfollowers" can reveal the change. Your DM history and past interactions remain intact.
+**A:** X does not send notifications when someone unfollows you. However, third-party apps like Medirus' "detect unfollowers" can reveal the change. Your DM history and past interactions remain intact.
 
 ---
 
 <footer>
-Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

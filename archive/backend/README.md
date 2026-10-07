@@ -1,7 +1,7 @@
 # Archived Backend Code
 
 These files contained payment functionality that has been removed.
-XActions is now 100% free and open-source.
+Medirus is now 100% free and open-source.
 
 ## Archived Files
 
@@ -14,7 +14,7 @@ XActions is now 100% free and open-source.
 
 ## Reason: Transition to documentation-focused open-source project
 
-XActions is now completely free with no accounts, credits, or payments required.
+Medirus is now completely free with no accounts, credits, or payments required.
 All features are accessible via browser scripts, CLI, or the Node.js library.
 
 ## Restoration

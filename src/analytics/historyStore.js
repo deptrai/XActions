@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Historical Analytics Database
+ * Medirus Historical Analytics Database
  * Time-series storage for account metrics, tweet performance, and engagement trends.
  * Uses SQLite via better-sqlite3 for local persistence.
  *
@@ -19,7 +19,7 @@ import os from 'os';
 // Database Setup
 // ============================================================================
 
-const DB_DIR = path.join(os.homedir(), '.xactions');
+const DB_DIR = path.join(os.homedir(), '.medirus');
 const DB_PATH = path.join(DB_DIR, 'analytics.db');
 
 let _db = null;

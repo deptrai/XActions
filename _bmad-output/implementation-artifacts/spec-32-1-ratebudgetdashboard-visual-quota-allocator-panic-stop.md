@@ -17,7 +17,7 @@ context:
 
 ## Intent
 
-**Problem:** Hiện tại việc quản trị hạn mức (`AdaptiveRateGovernor`) chỉ chạy ngầm trong bộ nhớ và backend metrics. Người vận hành hệ thống (XActions Operator) không xem được trực quan mức tiêu thụ RPM theo từng đối tác (`chainlens`, `nowing`, `internal`), không có nút dừng khẩn cấp (Panic Stop) khi xảy ra sự cố bị phạt rate-limit, và không thể điều chỉnh độ ưu tiên hàng đợi (priority queues) trực quan.
+**Problem:** Hiện tại việc quản trị hạn mức (`AdaptiveRateGovernor`) chỉ chạy ngầm trong bộ nhớ và backend metrics. Người vận hành hệ thống (Medirus Operator) không xem được trực quan mức tiêu thụ RPM theo từng đối tác (`chainlens`, `nowing`, `internal`), không có nút dừng khẩn cấp (Panic Stop) khi xảy ra sự cố bị phạt rate-limit, và không thể điều chỉnh độ ưu tiên hàng đợi (priority queues) trực quan.
 
 **Approach:**
 1. **Backend & Governor Core:**
@@ -42,7 +42,7 @@ context:
 - Giữ nguyên các endpoints hiện có của `api/routes/governor.js` (`GET /api/governor/status`).
 - Bảo vệ các endpoint mới bằng middleware `authenticateToken` và `requireAdmin` (hoặc bypass khi chạy local/dev header).
 - Nút Panic Stop phải có modal xác nhận trước khi thực hiện để tránh bấm nhầm.
-- Lưu trữ trạng thái sắp xếp priority cục bộ trong `localStorage` (`xactions_priority_order`) để phục hồi ngay khi tải lại trang.
+- Lưu trữ trạng thái sắp xếp priority cục bộ trong `localStorage` (`medirus_priority_order`) để phục hồi ngay khi tải lại trang.
 
 **Never:**
 - KHÔNG làm crash server nếu redis/pool không khả dụng khi gọi Panic Stop (graceful fallback).

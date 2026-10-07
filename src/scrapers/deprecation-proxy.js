@@ -4,8 +4,8 @@
  * Re-exports the new hybrid barrels while emitting console warnings on access.
  *
  * @deprecated This re-export bridge is only for backward compatibility.
- *             Prefer `xactions/scrapers/social/bluesky` and
- *             `xactions/scrapers/social/mastodon`.
+ *             Prefer `medirus/scrapers/social/bluesky` and
+ *             `medirus/scrapers/social/mastodon`.
  */
 
 import * as blueskyBarrel from './social/bluesky/index.js';
@@ -31,7 +31,7 @@ function createDeprecationProxy(legacyName, replacement, fallbacks = {}) {
       if (typeof prop === 'string' && !warnedKeys.has(prop)) {
         warnedKeys.add(prop);
         console.warn(
-          `DEPRECATED: xactions/scrapers/${legacyName}/${prop} is deprecated. Use xactions/scrapers/social/${legacyName} instead.`
+          `DEPRECATED: medirus/scrapers/${legacyName}/${prop} is deprecated. Use medirus/scrapers/social/${legacyName} instead.`
         );
       }
       const val = Reflect.get(target, prop, receiver);
@@ -43,7 +43,7 @@ function createDeprecationProxy(legacyName, replacement, fallbacks = {}) {
       if (!warnedKeys.has('(call)')) {
         warnedKeys.add('(call)');
         console.warn(
-          `DEPRECATED: xactions/scrapers/${legacyName} is deprecated. Use xactions/scrapers/social/${legacyName} instead.`
+          `DEPRECATED: medirus/scrapers/${legacyName} is deprecated. Use medirus/scrapers/social/${legacyName} instead.`
         );
       }
       if (typeof target === 'function') {

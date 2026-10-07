@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * ❤️ Scrape Likers - XActions
+ * ❤️ Scrape Likers - Medirus
  * ============================================
  *
  * @name         scrape-likers
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Open a post's Likes page: x.com/<user>/status/<id>/likes
@@ -153,8 +153,8 @@
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  ❤️ SCRAPE LIKERS - XActions                             ║
-║  🌐 https://xactions.app                                 ║
+║  ❤️ SCRAPE LIKERS - Medirus                             ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

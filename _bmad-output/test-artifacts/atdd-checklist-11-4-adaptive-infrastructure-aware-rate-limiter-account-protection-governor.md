@@ -52,7 +52,7 @@ During implementation with `/bmad-dev-story`:
 2. **Task 2 (`src/core/status-api.js` & `src/core/index.js`):** Add `globalStatusApi` singleton and re-export globals.
 3. **Task 3 (`src/utils/stream-metrics.js`):** Implement resilient `StreamMetricsReader` reading Redis Stream pending count.
 4. **Task 4 (`api/routes/governor.js` & `api/server.js`):** Mount `GET /governor/status`.
-5. **Task 5 (`src/cli/index.js` & `src/mcp/server.js`):** Add `xactions status` and `x_governor_status` MCP tool.
+5. **Task 5 (`src/cli/index.js` & `src/mcp/server.js`):** Add `medirus status` and `x_governor_status` MCP tool.
 6. **Task 6 (`types/core.d.ts` & `types/index.d.ts`):** Update TypeScript declarations.
 7. **Task 7 (Green Phase):** Unskip all 18 tests in `tests/core/adaptive-governor.test.js` and `tests/core/status-api.test.js` and verify 100% pass.
 8. **Task 8 (Regression):** Run regression suite across all core, proxy, and client test files.

@@ -240,8 +240,8 @@
     }
 
     // Also store in sessionStorage
-    sessionStorage.setItem('xactions_bulk_links', JSON.stringify(urls));
-    console.log('💾 Links saved to sessionStorage (key: "xactions_bulk_links")');
+    sessionStorage.setItem('medirus_bulk_links', JSON.stringify(urls));
+    console.log('💾 Links saved to sessionStorage (key: "medirus_bulk_links")');
 
     // Log all links
     console.log('\n📋 Collected Links:');
@@ -253,7 +253,7 @@
   // ── Main ──
   const run = async () => {
     console.log('═══════════════════════════════════════');
-    console.log('🔗 XActions — Share & Embed Posts');
+    console.log('🔗 Medirus — Share & Embed Posts');
     console.log('═══════════════════════════════════════');
 
     let result;

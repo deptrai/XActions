@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Engagement Booster v2 — Free X/Twitter Script | XActions</title>
+  <title>Engagement Booster v2 — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Systematically engage with tweets from target">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, engagement, booster, engagement">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, engagement, booster, engagement">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Engagement Booster v2 — XActions">
+  <meta property="og:title" content="Engagement Booster v2 — Medirus">
   <meta property="og:description" content="Systematically engage with tweets from target">
-  <meta property="og:url" content="https://xactions.app/scripts/engagement-booster">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/engagement-booster">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Engagement Booster v2 — XActions">
+  <meta name="twitter:title" content="Engagement Booster v2 — Medirus">
   <meta name="twitter:description" content="Systematically engage with tweets from target">
 
-  <link rel="canonical" href="https://xactions.app/scripts/engagement-booster">
+  <link rel="canonical" href="https://medirus.online/scripts/engagement-booster">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Engagement Booster v2 — Free X/Twitter Script | XActions",
+    "headline": "Engagement Booster v2 — Free X/Twitter Script | Medirus",
     "description": "Systematically engage with tweets from target",
-    "url": "https://xactions.app/scripts/engagement-booster",
+    "url": "https://medirus.online/scripts/engagement-booster",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Engagement",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, engagement, booster, engagement"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, engagement, booster, engagement"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://xactions.app/scripts#engagement" },
-      { "@type": "ListItem", "position": 4, "name": "Engagement Booster v2", "item": "https://xactions.app/scripts/engagement-booster" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://medirus.online/scripts#engagement" },
+      { "@type": "ListItem", "position": 4, "name": "Engagement Booster v2", "item": "https://medirus.online/scripts/engagement-booster" }
     ]
   }
   </script>
@@ -392,7 +392,7 @@
   // PERSISTENT SESSION HISTORY (localStorage)
   // ═══════════════════════════════════════════════════════════
 
-  const STORAGE_KEY = 'xactions_engagement_history';
+  const STORAGE_KEY = 'medirus_engagement_history';
 
   const loadHistory = () =&gt; {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
@@ -863,7 +863,7 @@
     document.getElementById('xeb-exportHistory')?.addEventListener('click', () =&gt; {
       const blob = new Blob([JSON.stringify(loadHistory(), null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-engagement-history-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-engagement-history-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
     });
     document.getElementById('xeb-clearHistory')?.addEventListener('click', () =&gt; {
@@ -1401,7 +1401,7 @@
       const dateStr = new Date().toISOString().slice(0, 10);
       // JSON
       const jsonBlob = new Blob([JSON.stringify(STATE.results, null, 2)], { type: 'application/json' });
-      downloadBlob(jsonBlob, `xactions-engagement-${dateStr}.json`);
+      downloadBlob(jsonBlob, `medirus-engagement-${dateStr}.json`);
       // CSV
       const headers = ['timestamp', 'author', 'text', 'score', 'actions'];
       const rows = STATE.results.map(r =&gt;
@@ -1409,7 +1409,7 @@
       );
       const csv = [headers.join(','), ...rows.map(r =&gt; r.join(','))].join('\n');
       const csvBlob = new Blob([csv], { type: 'text/csv' });
-      downloadBlob(csvBlob, `xactions-engagement-${dateStr}.csv`);
+      downloadBlob(csvBlob, `medirus-engagement-${dateStr}.csv`);
       addLog('📥 Results exported (JSON + CSV)');
     }
 
@@ -1550,8 +1550,8 @@
   });
 
   // Expose API for console access
-  window.XActions = window.XActions || {};
-  window.XActions.engagementBooster = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.engagementBooster = {
     pause: () =&gt; { STATE.paused = true; STATE.status = 'paused'; addLog('⏸ Paused'); },
     resume: () =&gt; { STATE.paused = false; STATE.status = 'running'; addLog('▶ Resumed'); },
     abort: () =&gt; { STATE.aborted = true; addLog('🛑 Aborting...'); },
@@ -1566,7 +1566,7 @@
   console.log('╔══════════════════════════════════════════╗');
   console.log('║  🚀 ENGAGEMENT BOOSTER v2                ║');
   console.log('║  by nichxbt — floating panel active      ║');
-  console.log('║  Console: XActions.engagementBooster.*    ║');
+  console.log('║  Console: Medirus.engagementBooster.*    ║');
   console.log('╚══════════════════════════════════════════╝');
 
 })();
@@ -1576,7 +1576,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -1589,7 +1589,7 @@
         <a href="/scripts/auto-commenter">💬 Auto Commenter</a>
 <a href="/scripts/auto-engage">⚡ Auto Engage</a>
 <a href="/scripts/auto-liker">❤️ Auto Liker</a>
-<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - XActions</a>
+<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - Medirus</a>
 <a href="/scripts/auto-repost">🔁 Auto Repost</a>
 <a href="/scripts/auto-plug-replies">🔌 Auto-Plug Replies</a>
 <a href="/scripts/auto-reply">💬 Auto-Reply / Auto-Respond</a>

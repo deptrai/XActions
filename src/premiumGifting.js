@@ -21,7 +21,7 @@
   };
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  const STORAGE_KEY = 'xactions_premium_gifts';
+  const STORAGE_KEY = 'medirus_premium_gifts';
 
   const SELECTORS = {
     giftPremium: '[data-testid="giftPremium"]',
@@ -159,7 +159,7 @@
 
   const run = async () => {
     console.log('═══════════════════════════════════════════');
-    console.log('🎁 XActions — Gift X Premium');
+    console.log('🎁 Medirus — Gift X Premium');
     console.log('═══════════════════════════════════════════\n');
 
     showGiftInfo();

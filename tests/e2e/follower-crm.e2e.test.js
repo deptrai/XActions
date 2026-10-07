@@ -31,7 +31,7 @@ const TEST_SCOPE = 'e2e-follower-crm';
 
 describe('CRM — Follower Contact Intelligence & Segmentation E2E', () => {
   beforeAll(() => {
-    const dbDir = path.join(os.homedir(), '.xactions');
+    const dbDir = path.join(os.homedir(), '.medirus');
     fs.mkdirSync(dbDir, { recursive: true });
     const db = new Database(path.join(dbDir, 'analytics.db'));
 

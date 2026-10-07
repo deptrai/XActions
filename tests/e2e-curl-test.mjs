@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import prisma from '../api/lib/prisma.js';
 import governorRoutes from '../api/routes/governor.js';
 
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'xactions-super-secret-jwt-key-2026';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'medirus-super-secret-jwt-key-2026';
 const adminToken = jwt.sign(
   { id: 'usr_admin', userId: 'usr_admin', role: 'admin' },
   process.env.JWT_SECRET,
@@ -15,7 +15,7 @@ const adminToken = jwt.sign(
 prisma.user.findUnique = async () => ({
   id: 'usr_admin',
   role: 'admin',
-  email: 'admin@xactions.app',
+  email: 'admin@medirus.online',
   username: 'admin',
 });
 

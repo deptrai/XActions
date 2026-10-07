@@ -1,21 +1,21 @@
 ---
-title: 'PRD: XActions Multi-Platform Scraper Expansion'
+title: 'PRD: Medirus Multi-Platform Scraper Expansion'
 status: final
 created: '2026-09-09'
 updated: '2026-09-09'
 ---
 
-# PRD: XActions Multi-Platform Scraper Expansion
+# PRD: Medirus Multi-Platform Scraper Expansion
 
 ## Vision
-XActions currently supports Twitter/X, Facebook, Threads, TikTok, Bluesky, Mastodon, YouTube, Zalo. This expansion adds **Reddit**, **Medium**, and **Instagram** scrapers so users can collect and analyze public content across all major social platforms in one toolkit — with unified proxy support.
+Medirus currently supports Twitter/X, Facebook, Threads, TikTok, Bluesky, Mastodon, YouTube, Zalo. This expansion adds **Reddit**, **Medium**, and **Instagram** scrapers so users can collect and analyze public content across all major social platforms in one toolkit — with unified proxy support.
 
 ## Background
 Research findings:
 - **Reddit** — official REST API + read-only mode feasible; HTTP adapter sufficient.
 - **Medium** — official API deprecated; RSS feed (`/feed/@username`) still accessible without auth; HTTP or cheerio adapter sufficient.
 - **Instagram** — high complexity; private API via `instagrapi` or Puppeteer needed; proxy + session management required; alternative is external managed service.
-- XActions already has `src/proxy/` (`ProxyIpPool`, `providers.js`) and `FacebookAccount.encryptedProxy` — proxy support exists but not yet unified across scrapers.
+- Medirus already has `src/proxy/` (`ProxyIpPool`, `providers.js`) and `FacebookAccount.encryptedProxy` — proxy support exists but not yet unified across scrapers.
 - Current `.env` uses a `country-vn` SocksNode proxy; US-resident platforms may require `country-us` or other residential proxy.
 
 ## Goals
@@ -82,7 +82,7 @@ Research findings:
 
 ## Open Questions
 - OQ-1: Should Instagram scraper use `instagrapi` Python bridge or pure Node.js implementation?
-- OQ-2: Should XActions create a shared `Proxy` table in Prisma schema for cross-platform proxy pool?
+- OQ-2: Should Medirus create a shared `Proxy` table in Prisma schema for cross-platform proxy pool?
 - OQ-3: Should default proxy for Reddit/Medium be `country-us` instead of `country-vn`?
 - OQ-4: What is the expected scale for Reddit scraping (API pricing vs. read-only limits)?
 

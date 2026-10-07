@@ -50,7 +50,7 @@ The BIS Innovation Hub alone coordinates CBDC research across 63 member central 
 ### Stream setup with keyword filtering
 
 ```js
-import { TwitterStream } from 'xactions';
+import { TwitterStream } from 'medirus';
 
 const CBDC_TERMS = [
   'CBDC', 'digital euro', 'digital yuan', 'e-CNY',
@@ -60,7 +60,7 @@ const CBDC_TERMS = [
 ];
 
 const stream = new TwitterStream({
-  sessionCookie: process.env.XACTIONS_SESSION_COOKIE,
+  sessionCookie: process.env.MEDIRUS_SESSION_COOKIE,
 });
 
 await stream.start({

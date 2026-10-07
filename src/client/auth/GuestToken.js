@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — GuestToken
+ * Medirus Client — GuestToken
  *
  * Manages Twitter guest tokens for unauthenticated API access.
  * Guest tokens allow reading public data without logging in.

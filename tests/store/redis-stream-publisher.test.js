@@ -52,8 +52,8 @@ describe('Story 14.3: RedisStreamPublisher Unit & Contract Tests', () => {
       // CloudEvents v1.0 Envelope attributes
       specversion: '1.0',
       id: 'facebook:123456789',
-      source: 'org.xactions.crawler.facebook',
-      type: 'org.xactions.scrape.completed',
+      source: 'org.medirus.crawler.facebook',
+      type: 'org.medirus.scrape.completed',
       time: '2026-08-28T00:00:00.000Z',
       datacontenttype: 'application/json',
       data: JSON.stringify(sampleEvent),
@@ -161,8 +161,8 @@ describe('Story 14.3: RedisStreamPublisher Unit & Contract Tests', () => {
       const validEvent = {
         specversion: '1.0',
         id: 'facebook:post-1',
-        source: 'org.xactions.crawler.facebook',
-        type: 'org.xactions.scrape.completed',
+        source: 'org.medirus.crawler.facebook',
+        type: 'org.medirus.scrape.completed',
         time: new Date().toISOString(),
         datacontenttype: 'application/json',
         data: '{"message":"hello"}',
@@ -186,22 +186,22 @@ describe('Story 14.3: RedisStreamPublisher Unit & Contract Tests', () => {
       expect(validateCloudEvent({ specversion: '1.0', id: '1', source: '' }, out)).toBe(false);
       expect(out.reason).toContain('Missing or invalid "source"');
 
-      expect(validateCloudEvent({ specversion: '1.0', id: '1', source: 'org.xactions', type: '' }, out)).toBe(false);
+      expect(validateCloudEvent({ specversion: '1.0', id: '1', source: 'org.medirus', type: '' }, out)).toBe(false);
       expect(out.reason).toContain('Missing or invalid "type"');
 
-      expect(validateCloudEvent({ specversion: '1.0', id: '1', source: 'org.xactions', type: 't', time: 'invalid' }, out)).toBe(false);
+      expect(validateCloudEvent({ specversion: '1.0', id: '1', source: 'org.medirus', type: 't', time: 'invalid' }, out)).toBe(false);
       expect(out.reason).toContain('Invalid "time" timestamp');
 
-      expect(validateCloudEvent({ specversion: '1.0', id: '1', source: 'org.xactions', type: 't', time: new Date().toISOString() }, out)).toBe(false);
+      expect(validateCloudEvent({ specversion: '1.0', id: '1', source: 'org.medirus', type: 't', time: new Date().toISOString() }, out)).toBe(false);
       expect(out.reason).toContain('Missing "datacontenttype"');
 
-      expect(validateCloudEvent({ specversion: '1.0', id: '1', source: 'org.xactions', type: 't', time: new Date().toISOString(), datacontenttype: 'application/json' }, out)).toBe(false);
+      expect(validateCloudEvent({ specversion: '1.0', id: '1', source: 'org.medirus', type: 't', time: new Date().toISOString(), datacontenttype: 'application/json' }, out)).toBe(false);
       expect(out.reason).toContain('Missing "data"');
 
       expect(validateCloudEvent({
         specversion: '1.0',
         id: '1',
-        source: 'org.xactions',
+        source: 'org.medirus',
         type: 't',
         time: new Date().toISOString(),
         datacontenttype: 'application/json',
@@ -212,7 +212,7 @@ describe('Story 14.3: RedisStreamPublisher Unit & Contract Tests', () => {
       expect(validateCloudEvent({
         specversion: '1.0',
         id: '1',
-        source: 'org.xactions',
+        source: 'org.medirus',
         type: 't',
         time: new Date().toISOString(),
         datacontenttype: 'application/json',

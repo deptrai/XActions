@@ -205,7 +205,7 @@ This script provides the following capabilities:
   // PERSISTENT SESSION HISTORY (localStorage)
   // ═══════════════════════════════════════════════════════════
 
-  const STORAGE_KEY = 'xactions_engagement_history';
+  const STORAGE_KEY = 'medirus_engagement_history';
 
   const loadHistory = () => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
@@ -676,7 +676,7 @@ This script provides the following capabilities:
     document.getElementById('xeb-exportHistory')?.addEventListener('click', () => {
       const blob = new Blob([JSON.stringify(loadHistory(), null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-engagement-history-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-engagement-history-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
     });
     document.getElementById('xeb-clearHistory')?.addEventListener('click', () => {
@@ -1214,7 +1214,7 @@ This script provides the following capabilities:
       const dateStr = new Date().toISOString().slice(0, 10);
       // JSON
       const jsonBlob = new Blob([JSON.stringify(STATE.results, null, 2)], { type: 'application/json' });
-      downloadBlob(jsonBlob, `xactions-engagement-${dateStr}.json`);
+      downloadBlob(jsonBlob, `medirus-engagement-${dateStr}.json`);
       // CSV
       const headers = ['timestamp', 'author', 'text', 'score', 'actions'];
       const rows = STATE.results.map(r =>
@@ -1222,7 +1222,7 @@ This script provides the following capabilities:
       );
       const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
       const csvBlob = new Blob([csv], { type: 'text/csv' });
-      downloadBlob(csvBlob, `xactions-engagement-${dateStr}.csv`);
+      downloadBlob(csvBlob, `medirus-engagement-${dateStr}.csv`);
       addLog('📥 Results exported (JSON + CSV)');
     }
 
@@ -1363,8 +1363,8 @@ This script provides the following capabilities:
   });
 
   // Expose API for console access
-  window.XActions = window.XActions || {};
-  window.XActions.engagementBooster = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.engagementBooster = {
     pause: () => { STATE.paused = true; STATE.status = 'paused'; addLog('⏸ Paused'); },
     resume: () => { STATE.paused = false; STATE.status = 'running'; addLog('▶ Resumed'); },
     abort: () => { STATE.aborted = true; addLog('🛑 Aborting...'); },
@@ -1379,7 +1379,7 @@ This script provides the following capabilities:
   console.log('╔══════════════════════════════════════════╗');
   console.log('║  🚀 ENGAGEMENT BOOSTER v2                ║');
   console.log('║  by nichxbt — floating panel active      ║');
-  console.log('║  Console: XActions.engagementBooster.*    ║');
+  console.log('║  Console: Medirus.engagementBooster.*    ║');
   console.log('╚══════════════════════════════════════════╝');
 
 })();
@@ -1446,14 +1446,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -1491,4 +1491,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Follow Ratio Manager — Free X/Twitter Script | XActions</title>
+  <title>Follow Ratio Manager — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Monitor and manage your follow/following ratio.">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, follow, ratio, manager, unfollow tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, follow, ratio, manager, unfollow tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Follow Ratio Manager — XActions">
+  <meta property="og:title" content="Follow Ratio Manager — Medirus">
   <meta property="og:description" content="Monitor and manage your follow/following ratio.">
-  <meta property="og:url" content="https://xactions.app/scripts/follow-ratio-manager">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/follow-ratio-manager">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Follow Ratio Manager — XActions">
+  <meta name="twitter:title" content="Follow Ratio Manager — Medirus">
   <meta name="twitter:description" content="Monitor and manage your follow/following ratio.">
 
-  <link rel="canonical" href="https://xactions.app/scripts/follow-ratio-manager">
+  <link rel="canonical" href="https://medirus.online/scripts/follow-ratio-manager">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Follow Ratio Manager — Free X/Twitter Script | XActions",
+    "headline": "Follow Ratio Manager — Free X/Twitter Script | Medirus",
     "description": "Monitor and manage your follow/following ratio.",
-    "url": "https://xactions.app/scripts/follow-ratio-manager",
+    "url": "https://medirus.online/scripts/follow-ratio-manager",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Unfollow Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, follow, ratio, manager, unfollow tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, follow, ratio, manager, unfollow tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Unfollow Tools", "item": "https://xactions.app/scripts#unfollow-tools" },
-      { "@type": "ListItem", "position": 4, "name": "Follow Ratio Manager", "item": "https://xactions.app/scripts/follow-ratio-manager" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Unfollow Tools", "item": "https://medirus.online/scripts#unfollow-tools" },
+      { "@type": "ListItem", "position": 4, "name": "Follow Ratio Manager", "item": "https://medirus.online/scripts/follow-ratio-manager" }
     ]
   }
   </script>
@@ -141,10 +141,10 @@
 
         <div class="controls-box">
         <h3>Runtime Controls</h3>
-        <pre><code>XActions.setTarget(2.0)        — target ratio (followers/following)
-XActions.track()               — take a ratio snapshot
-XActions.history()             — view ratio over time
-XActions.plan()                — get a plan to reach target</code></pre>
+        <pre><code>Medirus.setTarget(2.0)        — target ratio (followers/following)
+Medirus.track()               — take a ratio snapshot
+Medirus.history()             — view ratio over time
+Medirus.plan()                — get a plan to reach target</code></pre>
       </div>
         <section class="config-section">
         <h2>Configuration Options</h2>
@@ -199,10 +199,10 @@ XActions.plan()                — get a plan to reach target</code></pre>
  * 3. Paste and run
  *
  * Controls:
- *   XActions.setTarget(2.0)        — target ratio (followers/following)
- *   XActions.track()               — take a ratio snapshot
- *   XActions.history()             — view ratio over time
- *   XActions.plan()                — get a plan to reach target
+ *   Medirus.setTarget(2.0)        — target ratio (followers/following)
+ *   Medirus.track()               — take a ratio snapshot
+ *   Medirus.history()             — view ratio over time
+ *   Medirus.plan()                — get a plan to reach target
  * ============================================================
  */
 (() =&gt; {
@@ -215,7 +215,7 @@ XActions.plan()                — get a plan to reach target</code></pre>
     exportResults: true,
   };
 
-  const STORAGE_KEY = 'xactions_ratio_history';
+  const STORAGE_KEY = 'medirus_ratio_history';
   const sleep = (ms) =&gt; new Promise(r =&gt; setTimeout(r, ms));
 
   const parseNum = (text) =&gt; {
@@ -402,7 +402,7 @@ XActions.plan()                — get a plan to reach target</code></pre>
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-ratio-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-ratio-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Ratio data exported.');
     }
@@ -411,19 +411,19 @@ XActions.plan()                — get a plan to reach target</code></pre>
   };
 
   // ── Controls ───────────────────────────────────────────────
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
-  window.XActions.setTarget = (ratio) =&gt; {
+  window.Medirus.setTarget = (ratio) =&gt; {
     if (typeof ratio !== 'number' || ratio &lt; 0.1) { console.log('❌ Target must be a positive number.'); return; }
     CONFIG.targetRatio = ratio;
     console.log(`🎯 Target ratio set to ${ratio}:1`);
   };
 
-  window.XActions.track = analyze;
+  window.Medirus.track = analyze;
 
-  window.XActions.history = () =&gt; {
+  window.Medirus.history = () =&gt; {
     const history = loadHistory();
-    if (history.length === 0) { console.log('📭 No history. Run XActions.track() first.'); return; }
+    if (history.length === 0) { console.log('📭 No history. Run Medirus.track() first.'); return; }
     console.log(`\n📊 RATIO HISTORY (${history.length} snapshots):\n`);
     for (const snap of history) {
       const date = new Date(snap.timestamp).toLocaleString();
@@ -431,12 +431,12 @@ XActions.plan()                — get a plan to reach target</code></pre>
     }
   };
 
-  window.XActions.plan = () =&gt; {
+  window.Medirus.plan = () =&gt; {
     console.log('📊 Re-analyzing...');
     analyze();
   };
 
-  window.XActions.reset = () =&gt; {
+  window.Medirus.reset = () =&gt; {
     localStorage.removeItem(STORAGE_KEY);
     console.log('🗑️ Ratio history cleared.');
   };
@@ -449,7 +449,7 @@ XActions.plan()                — get a plan to reach target</code></pre>
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

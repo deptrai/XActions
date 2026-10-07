@@ -26,7 +26,7 @@ import os from 'os';
 import app from '../../api/server.js';
 import { makeTestToken, makeTestUserId, seedTestUser } from './fixtures/test-user.js';
 
-const DB_PATH = path.join(os.homedir(), '.xactions', 'analytics.db');
+const DB_PATH = path.join(os.homedir(), '.medirus', 'analytics.db');
 
 /** Ensure token_mentions exists in analytics.db (schema mirrors 54.2 pipeline).
  * @param {import('better-sqlite3').Database} db

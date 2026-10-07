@@ -1,12 +1,12 @@
 {
-  "name": "xactions-plugin-excel",
+  "name": "medirus-plugin-excel",
   "version": "1.0.0",
-  "description": "XActions plugin — export scraped X/Twitter data to Excel (.xlsx) files",
+  "description": "Medirus plugin — export scraped X/Twitter data to Excel (.xlsx) files",
   "type": "module",
   "main": "index.js",
   "keywords": [
-    "xactions",
-    "xactions-plugin",
+    "medirus",
+    "medirus-plugin",
     "twitter",
     "x",
     "excel",

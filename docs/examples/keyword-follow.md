@@ -58,7 +58,7 @@ This feature helps you grow your network strategically by:
 
 ```javascript
 // ============================================
-// XActions - Keyword Follow (Browser Console)
+// Medirus - Keyword Follow (Browser Console)
 // Author: nich (@nichxbt)
 // Go to: x.com/search?q=YOUR_KEYWORD
 // Open console (F12), paste this
@@ -94,7 +94,7 @@ This feature helps you grow your network strategically by:
   // SCRIPT - Don't modify below this line
   // ==========================================
   
-  console.log('🔍 XActions - Keyword Follow');
+  console.log('🔍 Medirus - Keyword Follow');
   console.log('='.repeat(50));
   console.log('⚙️  Settings:');
   console.log(`   • Max follows: ${CONFIG.MAX_FOLLOWS}`);
@@ -408,13 +408,13 @@ This feature helps you grow your network strategically by:
   console.log('='.repeat(50));
 
   // Store followed users in localStorage for persistence
-  const storedFollows = JSON.parse(localStorage.getItem('xactions_followed') || '[]');
+  const storedFollows = JSON.parse(localStorage.getItem('medirus_followed') || '[]');
   const newFollows = Array.from(followedUsers).map(username => ({
     username,
     followedAt: new Date().toISOString(),
     source: window.location.href
   }));
-  localStorage.setItem('xactions_followed', JSON.stringify([...storedFollows, ...newFollows]));
+  localStorage.setItem('medirus_followed', JSON.stringify([...storedFollows, ...newFollows]));
 
   // Return results
   return {
@@ -436,7 +436,7 @@ This feature helps you grow your network strategically by:
 
 **Output example:**
 ```
-🔍 XActions - Keyword Follow
+🔍 Medirus - Keyword Follow
 ==================================================
 ⚙️  Settings:
    • Max follows: 20
@@ -515,7 +515,7 @@ touch keyword-follow.js
 
 ```javascript
 // ============================================
-// XActions - Keyword Follow (Node.js + Puppeteer)
+// Medirus - Keyword Follow (Node.js + Puppeteer)
 // Author: nich (@nichxbt)
 //
 // Usage:
@@ -975,7 +975,7 @@ async function keywordFollow(keywords = CONFIG.keywords, options = {}) {
   const sessionFollows = [];
   
   logger.info('='.repeat(50));
-  logger.info('🔍 XActions - Keyword Follow');
+  logger.info('🔍 Medirus - Keyword Follow');
   logger.info('='.repeat(50));
   logger.info(`Keywords: ${keywords.join(', ')}`);
   logger.info(`Max follows per keyword: ${CONFIG.maxFollowsPerKeyword}`);
@@ -1193,7 +1193,7 @@ async function main() {
       return;
     } else if (args[i] === '--help') {
       console.log(`
-🔍 XActions - Keyword Follow
+🔍 Medirus - Keyword Follow
 
 Usage:
   node keyword-follow.js [keyword]                    Search and follow
@@ -1257,7 +1257,7 @@ node keyword-follow.js --export-csv
 
 ```
 [2026-01-15T10:30:00.000Z] [INFO] ==================================================
-[2026-01-15T10:30:00.001Z] [INFO] 🔍 XActions - Keyword Follow
+[2026-01-15T10:30:00.001Z] [INFO] 🔍 Medirus - Keyword Follow
 [2026-01-15T10:30:00.002Z] [INFO] ==================================================
 [2026-01-15T10:30:00.003Z] [INFO] Keywords: web3 developer, crypto founder
 [2026-01-15T10:30:00.004Z] [INFO] Max follows per keyword: 10
@@ -1406,7 +1406,7 @@ The script creates these files:
 
 ## 🌐 Website Alternative
 
-Don't want to run scripts? Use the web dashboard at **[xactions.app](https://xactions.app)**:
+Don't want to run scripts? Use the web dashboard at **[medirus.online](https://medirus.online)**:
 
 ### Features:
 - ✨ **No coding required** - Just enter keywords and click
@@ -1422,7 +1422,7 @@ Don't want to run scripts? Use the web dashboard at **[xactions.app](https://xac
 - **Pro ($9/mo)**: 100 follows/day, unlimited keywords, scheduling
 - **Business ($29/mo)**: 300 follows/day, multi-account, API access
 
-[Get started at xactions.app →](https://xactions.app)
+[Get started at medirus.online →](https://medirus.online)
 
 ---
 

@@ -56,7 +56,7 @@ Detection           ContentCalendar  Engagement
 ### Interactive Setup
 
 ```bash
-xactions agent setup
+medirus agent setup
 ```
 
 8-step wizard:
@@ -73,19 +73,19 @@ xactions agent setup
 
 ```bash
 # Full run
-xactions agent start --config data/agent-config.json
+medirus agent start --config data/agent-config.json
 
 # Test mode (5 minutes)
-xactions agent start --config data/agent-config.json --test
+medirus agent start --config data/agent-config.json --test
 
 # Manual login first
-xactions agent start --config data/agent-config.json --login
+medirus agent start --config data/agent-config.json --login
 ```
 
 ### Programmatic Usage
 
 ```javascript
-import { ThoughtLeaderAgent } from 'xactions/src/agents/thoughtLeaderAgent.js';
+import { ThoughtLeaderAgent } from 'medirus/src/agents/thoughtLeaderAgent.js';
 
 const agent = new ThoughtLeaderAgent({
   niche: {
@@ -206,7 +206,7 @@ await agent.stop();
 Tiered LLM client that uses the right model for each task.
 
 ```javascript
-import { LLMBrain } from 'xactions/src/agents/llmBrain.js';
+import { LLMBrain } from 'medirus/src/agents/llmBrain.js';
 
 const llm = new LLMBrain({
   provider: 'openrouter',
@@ -246,7 +246,7 @@ const llm = new LLMBrain({
 Puppeteer-based browser automation with stealth and X/Twitter-specific helpers.
 
 ```javascript
-import { BrowserDriver } from 'xactions/src/agents/browserDriver.js';
+import { BrowserDriver } from 'medirus/src/agents/browserDriver.js';
 
 const driver = new BrowserDriver({
   headless: true,
@@ -303,7 +303,7 @@ All interactions use `data-testid` selectors for stability across X UI updates.
 Human behavior simulation that makes browser automation indistinguishable from real users.
 
 ```javascript
-import { AntiDetection } from 'xactions/src/agents/antiDetection.js';
+import { AntiDetection } from 'medirus/src/agents/antiDetection.js';
 
 const ad = new AntiDetection();
 
@@ -346,7 +346,7 @@ await ad.simulateReading(page, 3000);
 Circadian activity scheduling that mimics real human patterns.
 
 ```javascript
-import { Scheduler } from 'xactions/src/agents/scheduler.js';
+import { Scheduler } from 'medirus/src/agents/scheduler.js';
 
 const scheduler = new Scheduler({
   timezone: 'America/New_York',
@@ -406,7 +406,7 @@ Hour:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
 Weekly content planning with performance tracking.
 
 ```javascript
-import { ContentCalendar } from 'xactions/src/agents/contentCalendar.js';
+import { ContentCalendar } from 'medirus/src/agents/contentCalendar.js';
 
 const calendar = new ContentCalendar({
   persona: myPersona,
@@ -458,7 +458,7 @@ const bestType = calendar.getBestContentType(); // 'insight'
 SQLite-based metrics, action logging, and cost tracking.
 
 ```javascript
-import { AgentDatabase } from 'xactions/src/agents/database.js';
+import { AgentDatabase } from 'medirus/src/agents/database.js';
 
 const db = new AgentDatabase('data/agent.db');
 
@@ -510,7 +510,7 @@ Typical daily cost at Normal intensity: ~$0.50-2.00
 Voice definition and content validation.
 
 ```javascript
-import { Persona } from 'xactions/src/agents/persona.js';
+import { Persona } from 'medirus/src/agents/persona.js';
 
 const persona = new Persona({
   name: 'AI Researcher',
@@ -552,7 +552,7 @@ The persona validator rejects content containing:
 Optional multi-agent coordination with strict ethics enforcement.
 
 ```javascript
-import { EngagementNetwork } from 'xactions/src/agents/engagementNetwork.js';
+import { EngagementNetwork } from 'medirus/src/agents/engagementNetwork.js';
 
 const network = new EngagementNetwork({
   maxNetworkSize: 5,
@@ -599,26 +599,26 @@ const { allowed, violations } = network.checkEthics('agent-1', 'agent-2', 'like'
 
 ```bash
 # Setup wizard
-xactions agent setup
+medirus agent setup
 
 # Start agent
-xactions agent start [--config <path>] [--test] [--login]
+medirus agent start [--config <path>] [--test] [--login]
 
 # Check status
-xactions agent status
+medirus agent status
 
 # View report
-xactions agent report [--days 7]
+medirus agent report [--days 7]
 
 # Test LLM connection
-xactions agent test
+medirus agent test
 ```
 
 ---
 
 ## MCP Tools
 
-When using XActions via AI agents (Claude, GPT):
+When using Medirus via AI agents (Claude, GPT):
 
 | Tool | Description |
 |------|-------------|

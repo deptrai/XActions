@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
-// XActions — executeFacebookAutomateTool behavior tests (Story 3.2 / AC3.7-3.8)
+// Medirus — executeFacebookAutomateTool behavior tests (Story 3.2 / AC3.7-3.8)
 // by nichxbt
 //
 // Covers pre-browser guards that fire before createBrowser is called:

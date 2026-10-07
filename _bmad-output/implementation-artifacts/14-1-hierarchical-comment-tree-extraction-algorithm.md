@@ -274,7 +274,7 @@ Patterns:
 ## Project Context Reference
 
 - Epic 14: `_bmad-output/planning-artifacts/epics.md#epic-14-deep-conversation-scraper-mcp-daemon-nowing-event-stream`
-- Architecture AD-6: `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:172-178`
+- Architecture AD-6: `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:172-178`
 - Prisma Comment schema: `prisma/schema.prisma:361-387`
 - CommentItem type: `src/core/types.js:31-47`
 - `PrismaStore` comment batch: `src/store/prisma-store.js:271-298`

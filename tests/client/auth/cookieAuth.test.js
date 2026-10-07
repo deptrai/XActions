@@ -25,7 +25,7 @@ function createTokenManager() {
 }
 
 beforeEach(() => {
-  tempDir = join(tmpdir(), `xactions-test-${randomUUID()}`);
+  tempDir = join(tmpdir(), `medirus-test-${randomUUID()}`);
 });
 
 afterEach(async () => {

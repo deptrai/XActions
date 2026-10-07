@@ -15,7 +15,7 @@ Tài liệu này tập hợp các yêu cầu, ý tưởng, và tính năng bị 
 
 **Trạng thái:** 🟡 **Story stub → Story 13.12 (Epic 13, `backlog-blocked`).** `FacebookClient.requestGraphQl()` đã replay doc_id qua HTTP, nhưng chưa có capture→cache→replay engine tổng quát. Awaiting activation conditions below.
 
-**Nguồn:** `archive/prds/prd-XActions-2026-08-14-epic7/prd.md` §4.5, `archive/epics-1-9-legacy.md` Epic 7.
+**Nguồn:** `archive/prds/prd-Medirus-2026-08-14-epic7/prd.md` §4.5, `archive/epics-1-9-legacy.md` Epic 7.
 
 **Mô tả:** Capture `doc_id` từ `api/graphql` request trong Puppeteer và replay bằng HTTP client (`axios`/`undici`) với `fb_dtsg`, `lsd`, `__dyn`, `__csr`. Fallback sang hydration/DOM nếu `doc_id` rotate.
 

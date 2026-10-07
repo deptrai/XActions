@@ -14,7 +14,7 @@ you know exactly which change did it.
 mkdir brand-monitor && cd brand-monitor
 npm init -y
 npm pkg set type=module
-npm install xactions
+npm install medirus
 ```
 
 ```bash
@@ -32,9 +32,9 @@ Search is session-tier, so both cookies are required. See
 `monitor.js`:
 
 ```js
-import { Scraper, SearchMode } from 'xactions/client';
+import { Scraper, SearchMode } from 'medirus/client';
 
-const QUERY = process.argv[2] || 'xactions';
+const QUERY = process.argv[2] || 'medirus';
 
 const scraper = new Scraper();
 await scraper.setCookies(`auth_token=${process.env.X_AUTH_TOKEN}; ct0=${process.env.X_CSRF_TOKEN}`);
@@ -98,11 +98,11 @@ because X search only reaches back so far anyway.
 
 ## Pass 3 — Score the sentiment
 
-XActions ships a rule-based analyzer that runs entirely offline: no model, no
+Medirus ships a rule-based analyzer that runs entirely offline: no model, no
 key, no network call, no per-request cost.
 
 ```js
-import { analyzeSentiment } from 'xactions/analytics';
+import { analyzeSentiment } from 'medirus/analytics';
 
 const sentiment = await analyzeSentiment(tweet.text);
 // { score: -0.6, label: 'negative', confidence: 1, keywords: ['terrible', 'broken'] }
@@ -242,7 +242,7 @@ which query matched.
 
 **Track it over time.** Write every scored mention to a file or a database and
 you have a sentiment trend, which is far more useful than any single alert.
-`aggregateResults()` from `xactions/analytics` gives you average, median, and
+`aggregateResults()` from `medirus/analytics` gives you average, median, and
 direction over a batch.
 
 **Reply automatically.** With a session you can `x_reply` from the MCP server or

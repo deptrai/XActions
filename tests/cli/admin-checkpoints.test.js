@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Tests for xactions admin checkpoints & checkpoint command group (Story 19.4.4)
+ * Tests for medirus admin checkpoints & checkpoint command group (Story 19.4.4)
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -16,7 +16,7 @@ function stripAnsi(str) {
   return str.replace(/\x1B\[[0-9;]*m/g, '');
 }
 
-describe('Story 19.4.4: xactions admin checkpoints management', () => {
+describe('Story 19.4.4: medirus admin checkpoints management', () => {
   let testCheckpointId = 'cp_cli_test_19_4_4';
 
   beforeEach(async () => {

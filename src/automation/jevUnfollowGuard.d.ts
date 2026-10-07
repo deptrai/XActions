@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions — JevUnfollowGuard (Story 42.8) public surface.
+ * Medirus — JevUnfollowGuard (Story 42.8) public surface.
  * Cognitive classification of non-followers before unfollow — fail-safe
  * toward keeping. See jevUnfollowGuard.js for full docs.
  */

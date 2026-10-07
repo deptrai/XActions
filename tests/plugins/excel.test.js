@@ -69,7 +69,7 @@ describe('normalizeData (excel)', () => {
 describe('excel plugin exports', () => {
   it('exports required plugin fields', async () => {
     const plugin = await import('../../src/plugins/excel/index.js');
-    expect(plugin.name).toBe('xactions-plugin-excel');
+    expect(plugin.name).toBe('medirus-plugin-excel');
     expect(plugin.version).toBe('1.0.0');
     expect(typeof plugin.description).toBe('string');
     expect(Array.isArray(plugin.tools)).toBe(true);
@@ -109,7 +109,7 @@ describe('excel plugin exports', () => {
 describe('google-sheets plugin exports', () => {
   it('exports required plugin fields', async () => {
     const plugin = await import('../../src/plugins/google-sheets/index.js');
-    expect(plugin.name).toBe('xactions-plugin-google-sheets');
+    expect(plugin.name).toBe('medirus-plugin-google-sheets');
     expect(plugin.version).toBe('1.0.0');
     expect(typeof plugin.description).toBe('string');
     expect(Array.isArray(plugin.tools)).toBe(true);
@@ -139,7 +139,7 @@ describe('google-sheets plugin exports', () => {
 describe('template plugin exports', () => {
   it('has correct name, version, and arrays', async () => {
     const plugin = await import('../../src/plugins/template/index.js');
-    expect(plugin.name).toBe('xactions-plugin-example');
+    expect(plugin.name).toBe('medirus-plugin-example');
     expect(plugin.version).toBe('1.0.0');
     expect(Array.isArray(plugin.actions)).toBe(true);
     expect(Array.isArray(plugin.scrapers)).toBe(true);

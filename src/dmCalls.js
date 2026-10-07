@@ -136,7 +136,7 @@
     console.log(`📋 Target: @${CONFIG.username}`);
     console.log(`📞 Call type: ${CONFIG.callType}`);
 
-    const sessionKey = 'xactions_dmCalls';
+    const sessionKey = 'medirus_dmCalls';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     // Navigate to messages if not already there

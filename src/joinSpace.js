@@ -87,7 +87,7 @@
     startTime: Date.now(),
   };
 
-  window.XActions = {
+  window.Medirus = {
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
     status() {
       const el = ((Date.now() - stats.startTime) / 1000).toFixed(0);
@@ -147,7 +147,7 @@
     }
     console.log(`📋 Min listeners: ${CONFIG.minListeners}`);
 
-    const sessionKey = 'xactions_joinSpace';
+    const sessionKey = 'medirus_joinSpace';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     // Navigate to search with Spaces filter

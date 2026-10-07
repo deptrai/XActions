@@ -5,7 +5,7 @@ console on x.com, and it runs against the page you already have open, using the
 session you are already logged into.
 
 No `npm install`, no API key, no cookie extraction, no server. This is the
-fastest way to try XActions, and for one-off cleanup jobs it is often the right
+fastest way to try Medirus, and for one-off cleanup jobs it is often the right
 tool rather than a fallback.
 
 ---
@@ -21,7 +21,7 @@ tool rather than a fallback.
 4. Paste the whole script and press <kbd>Enter</kbd>.
 
 The first time you paste into a console, Chrome asks you to type `allow
-pasting`. That is a browser safety feature, not something XActions can skip.
+pasting`. That is a browser safety feature, not something Medirus can skip.
 
 > **Read what you paste.** These scripts act as you, on your account. Every one
 > in this repo is short enough to read end to end before you run it, and that is
@@ -95,9 +95,9 @@ The same jobs are available with more control from the CLI and the Node.js
 library, which stream results, resume, and export to CSV or Google Sheets:
 
 ```bash
-npx xactions profile nasa
-npx xactions non-followers YOUR_USERNAME
-npx xactions tweets nasa --limit 200 --output tweets.csv
+npx medirus profile nasa
+npx medirus non-followers YOUR_USERNAME
+npx medirus tweets nasa --limit 200 --output tweets.csv
 ```
 
 See the [CLI reference](cli-reference.md), the [examples](../examples/), and the

@@ -1,6 +1,6 @@
-# Google Knowledge Panel Strategy for XActions
+# Google Knowledge Panel Strategy for Medirus
 
-> How to get XActions recognized as a notable entity in Google's Knowledge Graph, triggering a Knowledge Panel in search results.
+> How to get Medirus recognized as a notable entity in Google's Knowledge Graph, triggering a Knowledge Panel in search results.
 
 ---
 
@@ -8,7 +8,7 @@
 
 A Knowledge Panel is the information box that appears on the right side of Google search results (desktop) or at the top (mobile) when Google recognizes a query as a known entity — a person, company, product, or software project.
 
-**Goal:** When someone searches "XActions" or "XActions Twitter automation", Google displays a panel with:
+**Goal:** When someone searches "Medirus" or "Medirus Twitter automation", Google displays a panel with:
 - Name, logo, description
 - Official website link
 - Social profiles (GitHub, X/Twitter, npm)
@@ -43,18 +43,18 @@ This is the **single highest-ROI action**. Google reads Wikidata directly.
 #### 2. Upgrade JSON-LD Structured Data
 See [structured-data.md](structured-data.md) for the full schema reference.
 
-Ensure every page on xactions.app includes:
+Ensure every page on medirus.online includes:
 - `Organization` schema with `sameAs` links
 - `SoftwareApplication` schema with rich properties
 - `WebSite` schema with `SearchAction`
 
 #### 3. Consistent Entity Naming
 Across every platform, use identical information:
-- **Name:** XActions
+- **Name:** Medirus
 - **Tagline:** "The Complete X/Twitter Automation Toolkit"
 - **Description:** "Free, open-source X/Twitter automation tools — scrapers, MCP server for AI agents, CLI, and browser scripts. No API fees."
 - **Author:** nich (@nichxbt)
-- **URL:** https://xactions.app
+- **URL:** https://medirus.online
 - **Repository:** https://github.com/nirholas/XActions
 
 ### Phase 2: Authority Signals (Week 2-4)
@@ -62,7 +62,7 @@ Across every platform, use identical information:
 #### 4. Platform Listings
 See [platform-listings.md](platform-listings.md) for the complete checklist.
 
-Get XActions listed on:
+Get Medirus listed on:
 - Product Hunt, AlternativeTo, Crunchbase
 - npm (already done), PyPI (if applicable)
 - awesome-* GitHub repos
@@ -77,7 +77,7 @@ Google requires **independent, reliable sources** to confirm notability. This me
 
 #### 6. Wikipedia Article
 Only attempt after you have:
-- [ ] 3+ independent reliable sources citing XActions
+- [ ] 3+ independent reliable sources citing Medirus
 - [ ] Wikidata item already created
 - [ ] Significant GitHub stars (1,000+)
 - [ ] Press coverage from recognized publications
@@ -88,7 +88,7 @@ Wikipedia has strict notability guidelines for software — premature attempts g
 
 #### 7. Claim the Knowledge Panel
 Once Google generates a panel:
-1. Search "XActions" on Google
+1. Search "Medirus" on Google
 2. Click "Claim this knowledge panel" at the bottom
 3. Verify via one of your linked accounts (Google, X, GitHub)
 4. Suggest edits to description, logo, social links
@@ -113,7 +113,7 @@ Once Google generates a panel:
 
 ## Monitoring
 
-- **Search "XActions" weekly** on Google — check if panel appears
+- **Search "Medirus" weekly** on Google — check if panel appears
 - **Google Search Console** — monitor entity recognition signals
 - **Google's Structured Data Testing Tool** — validate JSON-LD: https://search.google.com/test/rich-results
 - **Schema Markup Validator** — https://validator.schema.org/
@@ -123,7 +123,7 @@ Once Google generates a panel:
 
 ## Common Pitfalls
 
-1. **Inconsistent naming** — "XActions" vs "xactions" vs "X-Actions" across platforms confuses Google
+1. **Inconsistent naming** — "Medirus" vs "medirus" vs "X-Actions" across platforms confuses Google
 2. **Self-published sources only** — Google needs INDEPENDENT coverage, not just your blog
 3. **Premature Wikipedia article** — Gets deleted, makes future attempts harder
 4. **Missing `sameAs` links** — Google can't connect your profiles without explicit `sameAs` in JSON-LD

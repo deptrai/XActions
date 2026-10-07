@@ -5,8 +5,8 @@ import path from 'path';
 import os from 'os';
 import { FileStore, resetStore, getStore } from '../../src/workflows/store.js';
 
-// Use isolated temp directories so tests don't touch ~/.xactions
-const TEMP_BASE = path.join(os.tmpdir(), `xactions-test-${process.pid}`);
+// Use isolated temp directories so tests don't touch ~/.medirus
+const TEMP_BASE = path.join(os.tmpdir(), `medirus-test-${process.pid}`);
 const WORKFLOWS_DIR = path.join(TEMP_BASE, 'workflows');
 const RUNS_DIR = path.join(TEMP_BASE, 'workflow-runs');
 

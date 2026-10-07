@@ -145,7 +145,7 @@ Stryker mutates the real file but no test calls it → 295/299 mutants survive.
 
 #### Pattern 1: Mirror — verify exact response fields
 
-- it('should return service field as "XActions AI API"')
+- it('should return service field as "Medirus AI API"')
 - it('should return status "operational" when x402 is configured')
 - it('should return status "degraded" when x402 is not configured')
 - it('should return timestamp as a valid ISO string')

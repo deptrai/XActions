@@ -23,7 +23,7 @@ Epic complete across three stories:
 
 2. **MCP daemon + SSE**
    - `mcp-server` có thể expose qua HTTP/SSE.
-   - `xactions mcp` start daemon mode.
+   - `medirus mcp` start daemon mode.
 
 3. **Thin Event streaming**
    - `RedisStreamPublisher` emit `ThinEvent` cho Nowing.
@@ -46,7 +46,7 @@ Epic complete across three stories:
    - Nowing AI consume từ Redis Stream.
 
 2. **Daemon mode cho MCP**
-   - `xactions mcp` không chỉ là stdio server — có HTTP/SSE mode.
+   - `medirus mcp` không chỉ là stdio server — có HTTP/SSE mode.
 
 ## Follow-up Recommendations
 

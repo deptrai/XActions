@@ -1,6 +1,6 @@
 ---
 stepsCompleted: [1, 2, 3, 4, 5, 6]
-project: XActions
+project: Medirus
 date: 2026-08-21
 assessor: BMad Product Manager
 ---
@@ -8,7 +8,7 @@ assessor: BMad Product Manager
 # Implementation Readiness Assessment Report
 
 **Date:** 2026-08-21
-**Project:** XActions
+**Project:** Medirus
 **Assessor:** BMad Product Manager
 **Run:** Re-run after remediation (commits dc8a3ed + cbc0c41)
 
@@ -25,21 +25,21 @@ assessor: BMad Product Manager
 - `FUTURE-WORK.md` (deferred scope)
 
 **Sharded/Deprecated PRDs:**
-- `prds/prd-XActions-2026-06-08/prd.md` (deprecated, Epic 1–3)
-- `prds/prd-XActions-2026-06-10-epic4/prd.md` (deprecated, Epic 4)
-- `prds/prd-XActions-2026-08-14-epic7/prd.md` (deprecated, Epic 7)
-- `prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md` (deprecated, Epics 10–18)
+- `prds/prd-Medirus-2026-06-08/prd.md` (deprecated, Epic 1–3)
+- `prds/prd-Medirus-2026-06-10-epic4/prd.md` (deprecated, Epic 4)
+- `prds/prd-Medirus-2026-08-14-epic7/prd.md` (deprecated, Epic 7)
+- `prds/prd-Medirus-2026-08-18-universal-scraping-engine/prd.md` (deprecated, Epics 10–18)
 
 ### Architecture Documents
 
 **Canonical:**
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (r3)
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (r3)
 
 **Supporting:**
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md`
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md`
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-DEV-REVIEW-2026-08-18.md`
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UPDATE-GATE-2026-08-18-r3.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-DEV-REVIEW-2026-08-18.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UPDATE-GATE-2026-08-18-r3.md`
 
 **Deprecated:**
 - `architecture.md` (brownfield as-built)
@@ -56,7 +56,7 @@ assessor: BMad Product Manager
 - `ux/DESIGN.md` (design tokens + new operator dashboard components)
 - `ux/EXPERIENCE.md` (Facebook flows, 2026-06-19)
 - `ux/EXPERIENCE-UNIVERSAL-2026-08-21.md` (operator/AI/CLI/multi-platform flows)
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` (UX → epic/story AC mapping)
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` (UX → epic/story AC mapping)
 
 ### Other Planning Documents
 
@@ -103,7 +103,7 @@ assessor: BMad Product Manager
 
 | Range | Canonical ID | Source | Count |
 |---|---|---|---|
-| FB-NFR-1..FB-NFR-5 | `prds/prd-XActions-2026-06-08/prd.md` | Cross-cutting Facebook NFRs | 5 |
+| FB-NFR-1..FB-NFR-5 | `prds/prd-Medirus-2026-06-08/prd.md` | Cross-cutting Facebook NFRs | 5 |
 | FB-NFR-6..FB-NFR-10 | `epics-full.md` | Epic 4 NFRs (delay, dry-run, risk, scheduling, no PII) | 5 |
 | FB-NFR-11..FB-NFR-15 | `epics-full.md` | Epic 7 NFRs (no storage, health check, concurrency, privacy, resilience, read velocity) | 5 |
 | U-NFR-11..U-NFR-16 | `prd.md` | Universal engine NFRs | 6 |
@@ -210,8 +210,8 @@ assessor: BMad Product Manager
 - `ux/DESIGN.md` — tồn tại, đã bổ sung new components (Admin Status Card, Alert Banner, Data Table, Schema Viewer, Stream Metrics Chart, CLI Output Blocks).
 - `ux/EXPERIENCE.md` — tồn tại (draft 2026-06-19), chỉ cover Facebook + X/Twitter cũ.
 - `ux/EXPERIENCE-UNIVERSAL-2026-08-21.md` — tồn tại, cover operator / AI / CLI / multi-platform flows.
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` — tồn tại, map F1–F10 → epic/story + AC + priority.
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — đã thêm section UX Remediation Alignment.
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md` — tồn tại, map F1–F10 → epic/story + AC + priority.
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — đã thêm section UX Remediation Alignment.
 
 ### UX ↔ PRD Alignment
 
@@ -232,8 +232,8 @@ assessor: BMad Product Manager
 |---|---|---|
 | AD-7 MCP HTTP/SSE daemon | Daemon startup/status CLI + dashboard tile | ✅ Mapped vào Story 14.2 (F1) |
 | AD-5 QR Login | Non-TTY fallback + timeout message | ✅ Mapped vào Story 12.1 (F2) |
-| AD-13 Adaptive Rate Governor | `GET /governor/status`, `xactions status` | ✅ Mapped vào Story 11.4 (F3) |
-| AD-10/AD-12 CrawlCheckpoint | `xactions checkpoints list` + dashboard table | ✅ Mapped vào Story 10.4 / 19.1 (F4) |
+| AD-13 Adaptive Rate Governor | `GET /governor/status`, `medirus status` | ✅ Mapped vào Story 11.4 (F3) |
+| AD-10/AD-12 CrawlCheckpoint | `medirus checkpoints list` + dashboard table | ✅ Mapped vào Story 10.4 / 19.1 (F4) |
 | AD-11 Action Registry | `listActions()` + discovery CLI/MCP | ✅ Mapped vào Story 10.1 / 10.5 (F5) |
 | AD-9 Error Taxonomy | Standard error envelope with `suggestedAction` | ✅ Mapped vào Story 10.1 (F6) |
 | AD-7 Redis Stream | `GET /metrics/stream` + dashboard panel | ✅ Mapped vào Story 14.3 / 19.3 (F7) |
@@ -360,7 +360,7 @@ Re-run này xác định **0 critical, 3 major, 6 minor** issues. Các tài li�
 
 - **Assessor:** BMad Product Manager
 - **Date:** 2026-08-21
-- **Project:** XActions
+- **Project:** Medirus
 - **Report file:** `_bmad-output/planning-artifacts/implementation-readiness-report-2026-08-21-rerun.md`
 
 Workflow complete.

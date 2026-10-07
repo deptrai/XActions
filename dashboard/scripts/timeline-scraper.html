@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Timeline Scraper — Free X/Twitter Script | XActions</title>
+  <title>Timeline Scraper — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="src/timelineScraper.js">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, timeline, scraper, other tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, timeline, scraper, other tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Timeline Scraper — XActions">
+  <meta property="og:title" content="Timeline Scraper — Medirus">
   <meta property="og:description" content="src/timelineScraper.js">
-  <meta property="og:url" content="https://xactions.app/scripts/timeline-scraper">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/timeline-scraper">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Timeline Scraper — XActions">
+  <meta name="twitter:title" content="Timeline Scraper — Medirus">
   <meta name="twitter:description" content="src/timelineScraper.js">
 
-  <link rel="canonical" href="https://xactions.app/scripts/timeline-scraper">
+  <link rel="canonical" href="https://medirus.online/scripts/timeline-scraper">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Timeline Scraper — Free X/Twitter Script | XActions",
+    "headline": "Timeline Scraper — Free X/Twitter Script | Medirus",
     "description": "src/timelineScraper.js",
-    "url": "https://xactions.app/scripts/timeline-scraper",
+    "url": "https://medirus.online/scripts/timeline-scraper",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Other Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, timeline, scraper, other tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, timeline, scraper, other tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://xactions.app/scripts#other-tools" },
-      { "@type": "ListItem", "position": 4, "name": "Timeline Scraper", "item": "https://xactions.app/scripts/timeline-scraper" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://medirus.online/scripts#other-tools" },
+      { "@type": "ListItem", "position": 4, "name": "Timeline Scraper", "item": "https://medirus.online/scripts/timeline-scraper" }
     ]
   }
   </script>
@@ -505,7 +505,7 @@
       return;
     }
 
-    const name = filename || `xactions-timeline-${getTimestamp()}`;
+    const name = filename || `medirus-timeline-${getTimestamp()}`;
 
     if (format === 'json') {
       const blob = new Blob([JSON.stringify(tweets, null, 2)], { type: 'application/json' });
@@ -683,13 +683,13 @@
       bestHours,
     };
 
-    console.log('\n✅ Stats analysis complete. Access via window.XActions.timelineScraper.lastStats');
+    console.log('\n✅ Stats analysis complete. Access via window.Medirus.timelineScraper.lastStats');
     return stats;
   };
 
   // ── Expose API ─────────────────────────────────────────────
-  window.XActions = window.XActions || {};
-  window.XActions.timelineScraper = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.timelineScraper = {
     scrapeForYou,
     scrapeFollowing,
     scrapeProfile,
@@ -713,17 +713,17 @@
           console.error('❌ Unknown type. Use: forYou, following, profile, likes, media');
           return [];
       }
-      window.XActions.timelineScraper.lastResults = tweets;
+      window.Medirus.timelineScraper.lastResults = tweets;
       return tweets;
     },
   };
 
   // ── Menu ───────────────────────────────────────────────────
   console.log('╔════════════════════════════════════════════════════════════╗');
-  console.log('║  📋 TIMELINE SCRAPER — XActions by nichxbt                  ║');
+  console.log('║  📋 TIMELINE SCRAPER — Medirus by nichxbt                  ║');
   console.log('╚════════════════════════════════════════════════════════════╝');
   console.log('');
-  console.log('📌 Available commands (via window.XActions.timelineScraper):');
+  console.log('📌 Available commands (via window.Medirus.timelineScraper):');
   console.log('');
   console.log('   🏠 scrapeForYou(max)       — Scrape &quot;For You&quot; timeline');
   console.log('   👥 scrapeFollowing(max)     — Scrape &quot;Following&quot; timeline');
@@ -735,10 +735,10 @@
   console.log('   🚀 run(type, max)           — Quick run (forYou/following/profile/likes/media)');
   console.log('');
   console.log('💡 Examples:');
-  console.log('   const t = await XActions.timelineScraper.scrapeForYou(50)');
-  console.log('   XActions.timelineScraper.exportData(t, &quot;csv&quot;)');
-  console.log('   XActions.timelineScraper.analyzeTimeline(t)');
-  console.log('   const t = await XActions.timelineScraper.run(&quot;following&quot;, 200)');
+  console.log('   const t = await Medirus.timelineScraper.scrapeForYou(50)');
+  console.log('   Medirus.timelineScraper.exportData(t, &quot;csv&quot;)');
+  console.log('   Medirus.timelineScraper.analyzeTimeline(t)');
+  console.log('   const t = await Medirus.timelineScraper.run(&quot;following&quot;, 200)');
   console.log('');
   console.log('✅ Timeline Scraper loaded. Ready to use.');
 })();
@@ -747,7 +747,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

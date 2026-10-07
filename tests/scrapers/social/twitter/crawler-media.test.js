@@ -287,7 +287,7 @@ describe('Story 13.2.4 — Twitter Hybrid Media Scraper', () => {
   beforeEach(async () => {
     await cleanupTestDatabase();
     receivedRequests = [];
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'xactions-media-'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'medirus-media-'));
   });
 
   beforeAll(async () => {

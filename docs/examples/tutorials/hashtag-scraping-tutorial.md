@@ -1,8 +1,8 @@
 ---
 title: "Scrape Tweets by Hashtag on X (Twitter) — Free 2026"
 description: "Scrape tweets by hashtag on X/Twitter and export to JSON/CSV. Free browser script with engagement metrics. No API key needed."
-keywords: ["scrape twitter hashtag", "twitter hashtag scraper free", "export hashtag tweets CSV", "twitter hashtag data extraction", "scrape tweets by hashtag 2026", "twitter hashtag analytics tool", "download hashtag tweets X", "xactions hashtag scraping", "twitter trending hashtag scraper", "hashtag tweet collector free"]
-canonical: "https://xactions.app/examples/hashtag-scraping"
+keywords: ["scrape twitter hashtag", "twitter hashtag scraper free", "export hashtag tweets CSV", "twitter hashtag data extraction", "scrape tweets by hashtag 2026", "twitter hashtag analytics tool", "download hashtag tweets X", "medirus hashtag scraping", "twitter trending hashtag scraper", "hashtag tweet collector free"]
+canonical: "https://medirus.online/examples/hashtag-scraping"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You're a crypto marketing manager running a campaign with the hashtag #DeFiSummer. You need to know: How many tweets are using the hashtag? What's the average engagement? Who are the top tweeters? What time of day gets the most traction? The official X analytics dashboard gives you almost nothing — and third-party tools want $200/month for hashtag tracking.
 
-XActions' Hashtag Scraper navigates to any hashtag page, scrolls through results, and collects every tweet with full data: author, text, likes, retweets, replies, views, timestamp, and extracted hashtags. At the end, it exports everything to JSON and CSV so you can analyze it in any spreadsheet or data tool.
+Medirus' Hashtag Scraper navigates to any hashtag page, scrolls through results, and collects every tweet with full data: author, text, likes, retweets, replies, views, timestamp, and extracted hashtags. At the end, it exports everything to JSON and CSV so you can analyze it in any spreadsheet or data tool.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -45,11 +45,11 @@ XActions' Hashtag Scraper navigates to any hashtag page, scrolls through results
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**After XActions:**
+**After Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Tracking a Hashtag Campaign (XActions)                      │
+│  Tracking a Hashtag Campaign (Medirus)                      │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  Navigate to x.com/hashtag/DeFiSummer                        │
@@ -154,8 +154,8 @@ XActions' Hashtag Scraper navigates to any hashtag page, scrolls through results
 
 ```javascript
 // ============================================
-// XActions - Hashtag Scraper
-// by nichxbt — https://xactions.app
+// Medirus - Hashtag Scraper
+// by nichxbt — https://medirus.online
 // Go to: x.com/hashtag/TAG or search #TAG
 // Open console (F12 → Console), paste, Enter
 // ============================================
@@ -319,18 +319,18 @@ XActions' Hashtag Scraper navigates to any hashtag page, scrolls through results
 ## 💻 Method 2: CLI
 
 ```bash
-# Install XActions
-npm install -g xactions
+# Install Medirus
+npm install -g medirus
 
 # Scrape tweets by hashtag
-npx xactions hashtag DeFiSummer --max 500
+npx medirus hashtag DeFiSummer --max 500
 
 # Export to CSV
-npx xactions hashtag DeFiSummer --format csv --output defi-summer.csv
+npx medirus hashtag DeFiSummer --format csv --output defi-summer.csv
 
 # Scrape with login (for protected search results)
-npx xactions login
-npx xactions hashtag YOUR_HASHTAG --max 1000
+npx medirus login
+npx medirus hashtag YOUR_HASHTAG --max 1000
 ```
 
 ---
@@ -420,5 +420,5 @@ Yes! After the script runs, use `window.scrapedHashtag` to access the full datas
 
 <p align="center">
   <b>Built with ❤️ by <a href="https://x.com/nichxbt">@nichxbt</a></b><br>
-  <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+  <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </p>

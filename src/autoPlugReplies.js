@@ -24,12 +24,12 @@
  * 4. Paste and run
  *
  * Controls:
- *   XActions.setPlug("Check out my new project → link")
- *   XActions.setThreshold(100)   // Min likes to trigger
- *   XActions.scan()              // Manual scan
- *   XActions.autoScan(600000)    // Auto-scan every 10min
- *   XActions.stop()              // Stop auto-scanning
- *   XActions.history()           // View plug history
+ *   Medirus.setPlug("Check out my new project → link")
+ *   Medirus.setThreshold(100)   // Min likes to trigger
+ *   Medirus.scan()              // Manual scan
+ *   Medirus.autoScan(600000)    // Auto-scan every 10min
+ *   Medirus.stop()              // Stop auto-scanning
+ *   Medirus.history()           // View plug history
  * ============================================================
  */
 (() => {
@@ -45,7 +45,7 @@
     scrollDelay: 2000,
   };
 
-  const STORAGE_KEY = 'xactions_plug_history';
+  const STORAGE_KEY = 'medirus_plug_history';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   const parseNum = (text) => {
@@ -246,34 +246,34 @@
   };
 
   // ── Controls ───────────────────────────────────────────────
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
-  window.XActions.setPlug = (msg) => {
-    if (!msg) { console.log('❌ Usage: XActions.setPlug("your plug message")'); return; }
+  window.Medirus.setPlug = (msg) => {
+    if (!msg) { console.log('❌ Usage: Medirus.setPlug("your plug message")'); return; }
     CONFIG.plugMessage = msg;
     console.log(`✅ Plug set: "${msg.slice(0, 60)}..."`);
   };
 
-  window.XActions.setThreshold = (n) => {
+  window.Medirus.setThreshold = (n) => {
     if (typeof n !== 'number' || n < 1) { console.log('❌ Threshold must be a positive number.'); return; }
     CONFIG.viralThreshold = n;
     console.log(`✅ Viral threshold set to ${n} likes.`);
   };
 
-  window.XActions.scan = scan;
+  window.Medirus.scan = scan;
 
-  window.XActions.autoScan = (intervalMs = 600000) => {
+  window.Medirus.autoScan = (intervalMs = 600000) => {
     if (autoScanTimer) clearInterval(autoScanTimer);
     console.log(`🔄 Auto-scanning every ${(intervalMs / 60000).toFixed(1)} minutes.`);
     autoScanTimer = setInterval(scan, intervalMs);
   };
 
-  window.XActions.stop = () => {
+  window.Medirus.stop = () => {
     if (autoScanTimer) { clearInterval(autoScanTimer); autoScanTimer = null; }
     console.log('⏹️ Auto-scan stopped.');
   };
 
-  window.XActions.history = () => {
+  window.Medirus.history = () => {
     const history = loadHistory();
     if (history.length === 0) { console.log('📭 No plug history.'); return; }
     console.log(`\n🔌 PLUG HISTORY (${history.length}):\n`);
@@ -283,11 +283,11 @@
     }
   };
 
-  window.XActions.exportHistory = () => {
+  window.Medirus.exportHistory = () => {
     const history = loadHistory();
     const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `xactions-plug-history-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-plug-history-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     console.log('📥 Plug history exported.');
   };

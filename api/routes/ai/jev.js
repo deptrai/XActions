@@ -72,7 +72,7 @@ function getBrain() {
 router.get('/status', (req, res) => {
   const brain = getBrain();
   res.json({
-    service: 'XActions Jev Decision Plane',
+    service: 'Medirus Jev Decision Plane',
     version: '1.0.0',
     endpoint: brain.endpoint,
     model: brain.model,

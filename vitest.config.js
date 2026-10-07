@@ -8,7 +8,7 @@ dotenv.config({ path: '.env.local', override: true });
 const testDatabaseUrl =
   process.env.DATABASE_URL_TEST ||
   process.env.DATABASE_URL ||
-  'postgresql://postgres:postgres@localhost:5434/xactions_test?schema=public';
+  'postgresql://postgres:postgres@localhost:5434/medirus_test?schema=public';
 
 import { resolve } from 'node:path';
 

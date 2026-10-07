@@ -145,11 +145,11 @@ function createMockClient({ authenticated = true, graphqlResponses = [] } = {}) 
 // ---------------------------------------------------------------------------
 
 describe('parseUserEntry', () => {
-  it('parses a standard user result into XActions format', () => {
+  it('parses a standard user result into Medirus format', () => {
     const raw = buildRawUser({
       username: 'nichxbt',
       name: 'nich',
-      bio: 'building XActions',
+      bio: 'building Medirus',
       verified: true,
       followersCount: 5000,
       followingCount: 200,
@@ -161,7 +161,7 @@ describe('parseUserEntry', () => {
       expect.objectContaining({
         username: 'nichxbt',
         name: 'nich',
-        bio: 'building XActions',
+        bio: 'building Medirus',
         verified: true,
         followersCount: 5000,
         followingCount: 200,
@@ -740,7 +740,7 @@ describe('Pagination limit enforcement', () => {
 // Tests: Output format consistency
 // ---------------------------------------------------------------------------
 
-describe('Output format — XActions user format', () => {
+describe('Output format — Medirus user format', () => {
   it('every user object has required fields', async () => {
     const userLookup = {
       data: {

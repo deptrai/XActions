@@ -1,6 +1,6 @@
 # Scraping Infrastructure
 
-Low-level scraping modules for anti-detection browsing, smart pagination with resume, and proxy rotation. These power all XActions scrapers and automation behind the scenes.
+Low-level scraping modules for anti-detection browsing, smart pagination with resume, and proxy rotation. These power all Medirus scrapers and automation behind the scenes.
 
 ## Architecture
 
@@ -16,12 +16,12 @@ src/scraping/
 Anti-detection Puppeteer wrapper. Tries `puppeteer-extra` + stealth plugin first, falls back to vanilla Puppeteer.
 
 ```javascript
-import { launchStealthBrowser } from 'xactions/src/scraping/stealthBrowser.js';
+import { launchStealthBrowser } from 'medirus/src/scraping/stealthBrowser.js';
 
 const browser = await launchStealthBrowser({
   proxy: 'http://user:pass@proxy.example.com:8080',
   headless: true,
-  userDataDir: '/tmp/xactions-browser',
+  userDataDir: '/tmp/medirus-browser',
   viewport: { width: 1920, height: 1080 },
   userAgent: 'custom-ua-string'  // or omit for random selection
 });
@@ -40,7 +40,7 @@ const browser = await launchStealthBrowser({
 Smart scroll-and-extract loop with deduplication, retries, checkpoint/resume, and progress tracking.
 
 ```javascript
-import { PaginationEngine } from 'xactions/src/scraping/paginationEngine.js';
+import { PaginationEngine } from 'medirus/src/scraping/paginationEngine.js';
 
 const engine = new PaginationEngine({
   maxPages: 50,
@@ -92,12 +92,12 @@ If a `checkpointFile` is provided, the engine saves progress periodically. If th
 Proxy rotation with health tracking, auto-blacklisting of failing proxies, and load balancing.
 
 ```javascript
-import { ProxyManager } from 'xactions/src/scraping/proxyManager.js';
+import { ProxyManager } from 'medirus/src/scraping/proxyManager.js';
 
 const manager = new ProxyManager();
 
 // Load proxies from different sources
-manager.loadFromEnv();  // XACTIONS_PROXIES or XACTIONS_PROXY_FILE
+manager.loadFromEnv();  // MEDIRUS_PROXIES or MEDIRUS_PROXY_FILE
 // or
 await manager.loadFromFile('/path/to/proxies.txt');
 // or
@@ -128,8 +128,8 @@ http://proxy3.example.com:3128
 
 | Variable | Description |
 |----------|-------------|
-| `XACTIONS_PROXIES` | Comma-separated proxy URLs |
-| `XACTIONS_PROXY_FILE` | Path to a proxy list file |
+| `MEDIRUS_PROXIES` | Comma-separated proxy URLs |
+| `MEDIRUS_PROXY_FILE` | Path to a proxy list file |
 
 ### Health Tracking
 
@@ -148,7 +148,7 @@ Proxies with too many consecutive failures are automatically blacklisted for a c
 
 ## Usage with Other Modules
 
-These modules are used internally by all XActions scrapers:
+These modules are used internally by all Medirus scrapers:
 
 ```javascript
 // src/scrapers/ uses stealthBrowser + paginationEngine

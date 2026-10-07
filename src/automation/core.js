@@ -1,13 +1,13 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation Framework - Core Utilities
+// Medirus Automation Framework - Core Utilities
 // https://github.com/nirholas/XActions
 //
 // This is the foundation module. Paste this FIRST, then paste any automation script.
 // All automations depend on this core module.
 
-window.XActions = window.XActions || {};
+window.Medirus = window.Medirus || {};
 
-window.XActions.Core = (() => {
+window.Medirus.Core = (() => {
   // ============================================
   // CONFIGURATION
   // ============================================
@@ -19,12 +19,12 @@ window.XActions.Core = (() => {
     DELAY_BETWEEN_ACTIONS: 2000,
     
     // Limits (to avoid rate limiting)
-    MAX_ACTIONS_PER_HOUR: 50,
+    MAMEDIRUS_PER_HOUR: 50,
     MAX_FOLLOWS_PER_DAY: 100,
     MAX_LIKES_PER_DAY: 200,
     
     // Storage keys prefix
-    STORAGE_PREFIX: 'xactions_',
+    STORAGE_PREFIX: 'medirus_',
     
     // Debug mode
     DEBUG: true,
@@ -518,4 +518,4 @@ window.XActions.Core = (() => {
   };
 })();
 
-console.log('✅ XActions Core loaded! Ready for automation scripts.');
+console.log('✅ Medirus Core loaded! Ready for automation scripts.');

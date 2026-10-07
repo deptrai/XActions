@@ -64,7 +64,7 @@
   };
 
   const run = async () => {
-    console.log('🏠 LEAVE ALL COMMUNITIES — XActions by nichxbt\n');
+    console.log('🏠 LEAVE ALL COMMUNITIES — Medirus by nichxbt\n');
 
     if (CONFIG.dryRun) console.log('⚠️ DRY RUN — Set CONFIG.dryRun = false to actually leave\n');
     if (CONFIG.whitelist.length > 0) console.log(`🛡️ Whitelist: ${CONFIG.whitelist.length} communities\n`);
@@ -132,7 +132,7 @@
     if (leftLog.length > 0) {
       download(
         { summary: { left, errors, whitelisted: CONFIG.whitelist.length }, communities: leftLog },
-        `xactions-communities-left-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-communities-left-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
 

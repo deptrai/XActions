@@ -1,9 +1,9 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions logout` — remove saved session.
+ * `medirus logout` — remove saved session.
  *
  * Clears everything the login flow can leave behind: the auth_token and ct0
- * values in `~/.xactions/config.json`, plus the full cookie jar that
+ * values in `~/.medirus/config.json`, plus the full cookie jar that
  * `createHttpScraper()` prefers over them. Leaving any one of the three on
  * disk keeps the CLI authenticated, so a "successful" logout would lie.
  *

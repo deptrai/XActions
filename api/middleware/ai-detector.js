@@ -217,7 +217,7 @@ export function aiDetectorMiddleware(req, res, next) {
   req.agentInfo = getAgentInfo(req);
 
   // Add response header indicating detection (useful for debugging)
-  res.set('X-XActions-Client', agentType);
+  res.set('X-Medirus-Client', agentType);
 
   // Log AI requests for analytics (in production, send to analytics service)
   if (req.isAI && req.path && req.path.startsWith('/api/')) {
@@ -237,7 +237,7 @@ export function requireAIAgent(req, res, next) {
   if (!req.isAI) {
     return next(new ApiError('FORBIDDEN', 403, 'This endpoint is for AI agents only. Humans should use free browser scripts.', {
       reason: 'AI Agent Required',
-      humanAlternative: 'https://xactions.app/run.html',
+      humanAlternative: 'https://medirus.online/run.html',
     }));
   }
   next();
@@ -254,7 +254,7 @@ export function requireHuman(req, res, next) {
     return next(new ApiError('FORBIDDEN', 403, 'This endpoint is for human users. AI agents should use the paid API.', {
       reason: 'Human Access Only',
       aiEndpoint: '/api/ai/',
-      docs: 'https://xactions.app/docs/ai-api',
+      docs: 'https://medirus.online/docs/ai-api',
     }));
   }
   next();

@@ -1,4 +1,4 @@
-# Forged Idea — Jev (TypeSafe) × XActions
+# Forged Idea — Jev (TypeSafe) × Medirus
 
 ## Quyết định khóa
 - **Jev = Decision Engine riêng** (`src/agents/jevBrain.js`), KHÔNG phải LLM provider thứ 4 trong `llmBrain`. `systemOne` không phải `chat/completions` — "drop-in" là ảo giác.

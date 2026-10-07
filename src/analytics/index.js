@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Analytics — Unified Entry Point
+ * Medirus Analytics — Unified Entry Point
  * 
  * Re-exports all analytics modules for convenient importing.
  * 

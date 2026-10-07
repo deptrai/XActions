@@ -59,14 +59,14 @@ function toISODate(raw) {
 // ---------------------------------------------------------------------------
 
 /**
- * Transform Twitter's raw GraphQL user object into the clean XActions
+ * Transform Twitter's raw GraphQL user object into the clean Medirus
  * profile format.
  *
  * This is a **pure function** - it performs no I/O and has no side effects.
  *
  * @param {Raw} rawUser - The `data.user.result` (or equivalent) object
  *   from a Twitter GraphQL response.
- * @returns {Raw} Normalised XActions profile object.
+ * @returns {Raw} Normalised Medirus profile object.
  * @throws {NotFoundError} If the user is unavailable (suspended / deactivated).
  */
 export function parseUserData(rawUser) {
@@ -119,7 +119,7 @@ export function parseUserData(rawUser) {
  *
  * @param {import('./client.js').TwitterHttpClient} client - Configured HTTP client.
  * @param {string} username - The screen name (without leading `@`).
- * @returns {Promise<Raw>} XActions profile object.
+ * @returns {Promise<Raw>} Medirus profile object.
  * @throws {NotFoundError} Non-existent or suspended username.
  * @throws {AuthError} Protected account accessed without auth.
  * @throws {TwitterApiError} Other API errors.
@@ -164,7 +164,7 @@ export async function scrapeProfile(client, username) {
  *
  * @param {import('./client.js').TwitterHttpClient} client - Configured HTTP client.
  * @param {string} userId - The numeric user ID.
- * @returns {Promise<Raw>} XActions profile object.
+ * @returns {Promise<Raw>} Medirus profile object.
  * @throws {NotFoundError} Unknown user ID.
  * @throws {AuthError} Protected account without auth.
  * @throws {TwitterApiError} Other API errors.

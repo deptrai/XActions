@@ -1,6 +1,6 @@
 # Getting Started with Browser Automation
 
-> A step-by-step tutorial to run your first XActions automation in the browser console.
+> A step-by-step tutorial to run your first Medirus automation in the browser console.
 
 ---
 
@@ -33,22 +33,22 @@ Copy the entire contents of [`src/automation/core.js`](../../src/automation/core
 You should see:
 
 ```
-✅ XActions Core loaded! Ready for automation scripts.
+✅ Medirus Core loaded! Ready for automation scripts.
 ```
 
 ### Verify It Works
 
 ```javascript
 // Test logging
-window.XActions.Core.log('Hello from XActions!', 'success');
-// Output: ✅ [12:34:56] Hello from XActions!
+window.Medirus.Core.log('Hello from Medirus!', 'success');
+// Output: ✅ [12:34:56] Hello from Medirus!
 
 // Test async utility
-await window.XActions.Core.sleep(1000);
+await window.Medirus.Core.sleep(1000);
 console.log('Slept for 1 second');
 
 // Check available selectors
-console.log(window.XActions.Core.SELECTORS);
+console.log(window.Medirus.Core.SELECTORS);
 ```
 
 ---
@@ -93,7 +93,7 @@ Or just refresh the page.
 
 ## Step 4: Understanding the Output
 
-XActions uses emoji-prefixed logs:
+Medirus uses emoji-prefixed logs:
 
 | Emoji | Meaning |
 |-------|---------|
@@ -122,14 +122,14 @@ Example output:
 After running automations, data persists in localStorage:
 
 ```javascript
-// See all XActions data
+// See all Medirus data
 Object.keys(localStorage)
-  .filter(k => k.startsWith('xactions_'))
+  .filter(k => k.startsWith('medirus_'))
   .forEach(k => console.log(k, JSON.parse(localStorage.getItem(k))));
 
 // Check specific data
-window.XActions.Core.storage.get('liked_tweets');
-window.XActions.Core.storage.get('followed_users');
+window.Medirus.Core.storage.get('liked_tweets');
+window.Medirus.Core.storage.get('followed_users');
 ```
 
 ---

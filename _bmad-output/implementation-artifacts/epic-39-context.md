@@ -9,12 +9,12 @@ Provide a GitOps-driven selector healing pipeline that detects DOM drift via `Se
 ## Stories
 
 - Story 39.1: Canary targets config expansion + `expectedShape` fields. ✅ **Done** — config-only update.
-- Story 39.2: GitOps Patch Assistant CLI (`xactions canary heal`) — net-new implementation.
+- Story 39.2: GitOps Patch Assistant CLI (`medirus canary heal`) — net-new implementation.
 
 ## Requirements & Constraints
 
 - **Invariant #4 (GitOps-Driven DOM Drift Healing)**: Selectors remain immutable in source control (`canary-targets.json`, `selectors.md`). When drift is detected, the healing flow produces a Draft PR — never auto-heals or injects code at runtime.
-- **Manual Trigger Only**: `xactions canary heal` is a manual CLI command. Auto-heal on drift detection is prohibited to prevent unverified selector changes.
+- **Manual Trigger Only**: `medirus canary heal` is a manual CLI command. Auto-heal on drift detection is prohibited to prevent unverified selector changes.
 - **Sandbox Validation Mandatory**: Every candidate selector must be validated in an isolated page context against `expectedShape` before being included in a patch.
 - **Unified-Diff Output**: Patches are generated as `unified-diff` format for `canary-targets.json` — either written to a `.patch` file or delivered via GitHub Draft PR (`gh` CLI).
 - **Human Review Gate**: The final step is always a Draft PR requiring human merge — no direct commits to main.
@@ -24,7 +24,7 @@ Provide a GitOps-driven selector healing pipeline that detects DOM drift via `Se
 
 - **Separation of Concerns**: Detection (`SelectorCanary`), Investigation (`AutoSelectorFallback`), Validation (`SelectorSandbox`), and Patching (`CanaryHealer` + CLI) are distinct layers.
 - **Rescope Justification**: ~70% of original Epic 39 was already implemented in Stories 28.2 (`SelectorCanary`) and 28.3 (`AutoSelectorFallback`). Only the GitOps orchestration layer is net-new.
-- **CLI Structure**: `xactions canary {status|probe|heal}` with `--preview` and `--output` flags for dry-run and patch-file workflows.
+- **CLI Structure**: `medirus canary {status|probe|heal}` with `--preview` and `--output` flags for dry-run and patch-file workflows.
 - **Fallback Strategy**: If `gh` CLI is unavailable or fails, output a `.patch` file with instructions for manual PR creation.
 
 ## Cross-Story Dependencies

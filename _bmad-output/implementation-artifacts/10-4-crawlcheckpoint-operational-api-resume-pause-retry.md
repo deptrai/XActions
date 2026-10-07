@@ -94,13 +94,13 @@ status: in-progress
 
 ### AC7 — CLI commands
 
-- **Given** the CLI `xactions checkpoints ...`
+- **Given** the CLI `medirus checkpoints ...`
 - **When** the operator runs:
-  - `xactions checkpoints list [options]`
-  - `xactions checkpoints show <id>`
-  - `xactions checkpoints resume <id>`
-  - `xactions checkpoints pause <id>`
-  - `xactions checkpoints retry <id>`
+  - `medirus checkpoints list [options]`
+  - `medirus checkpoints show <id>`
+  - `medirus checkpoints resume <id>`
+  - `medirus checkpoints pause <id>`
+  - `medirus checkpoints retry <id>`
 - **Then** each command uses the same business logic as the HTTP API.
 - **And** `list` supports `--platform`, `--target-type`, `--status`, `--target-key`, `--limit`, `--offset`.
 - **And** all commands print a concise human-readable summary; with `--json` they print JSON.
@@ -168,7 +168,7 @@ No ambiguous decisions requiring human input. All findings are unambiguous `patc
 #### patch
 
 - [ ] [Review][P0][Patch] Tests use mock `PrismaClient` objects and an in-memory test proxy, violating AGENTS.md Rule 1 and the story spec. Rewrite `tests/store/checkpoint-manager.test.js` and `tests/api/checkpoints-routes.test.js` to use the real `tests/store/test-prisma-client.js` + PostgreSQL. Revert `tests/store/test-prisma-client.js` to a real `PrismaClient` (no in-memory fallback). [tests/store/checkpoint-manager.test.js:33-238, tests/api/checkpoints-routes.test.js:125-222, tests/store/test-prisma-client.js:1-195]
-- [ ] [Review][P0][Patch] `tests/store/test-prisma-client.js` falls back to `process.env.DATABASE_URL`, which can point at a production database and cause `cleanupTestDatabase()` to truncate production tables. Use a hardcoded `xactions_test` connection string and do not fall back to `DATABASE_URL`. [tests/store/test-prisma-client.js:9-15]
+- [ ] [Review][P0][Patch] `tests/store/test-prisma-client.js` falls back to `process.env.DATABASE_URL`, which can point at a production database and cause `cleanupTestDatabase()` to truncate production tables. Use a hardcoded `medirus_test` connection string and do not fall back to `DATABASE_URL`. [tests/store/test-prisma-client.js:9-15]
 - [ ] [Review][P0][Patch] `api/routes/checkpoints.js` `requireCheckpointManage` mishandles `validateApiKey` and `validateToken` return values (`if (agent)` is true even when `valid: false`). It also sets `req.agent` to the validation result object instead of the identity object with `permissions`. Fix by checking `result.valid` and setting `req.agent = { id, permissions, type }` from the payload/record, or align with the spec by chaining `authenticateToken` and `createAuthMiddleware`. [api/routes/checkpoints.js:33-110]
 - [ ] [Review][P1][Patch] Retry state machine rejects `paused` status, contradicting the spec transition table which allows `paused` → `retry` → `running`. Add `'paused'` to `validRetryStates` in `src/store/checkpoint-manager.js`. [src/store/checkpoint-manager.js:224]
 - [ ] [Review][P1][Patch] CLI and API silently accept invalid `limit`/`offset` (`NaN`, negative, non-numeric) and silently default them. Validate at the route/CLI boundary and return a 400 / printed error for invalid values. [src/cli/index.js checkpoint `list` options, api/routes/checkpoints.js:122-133]
@@ -241,7 +241,7 @@ No ambiguous decisions requiring human input. All findings are unambiguous `patc
 - License header: `// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.`
 - JSDoc for public functions and `@typedef` for options.
 - Throw `PlatformError` (not plain `Error`) for business-level errors such as invalid state transitions or missing resources.
-- Never mock `PrismaClient` in tests; use the real `xactions_test` PostgreSQL database.
+- Never mock `PrismaClient` in tests; use the real `medirus_test` PostgreSQL database.
 - Commit and push as `nirholas`.
 
 ---
@@ -392,17 +392,17 @@ Error responses wrap `success: false, error`:
 
 ```bash
 # List
-xactions checkpoints list
-xactions checkpoints list --platform twitter --status failed --limit 20
-xactions checkpoints list --json
+medirus checkpoints list
+medirus checkpoints list --platform twitter --status failed --limit 20
+medirus checkpoints list --json
 
 # Show
-xactions checkpoints show <id>
+medirus checkpoints show <id>
 
 # Control
-xactions checkpoints resume <id>
-xactions checkpoints pause <id>
-xactions checkpoints retry <id>
+medirus checkpoints resume <id>
+medirus checkpoints pause <id>
+medirus checkpoints retry <id>
 ```
 
 CLI action pseudo-code:
@@ -449,7 +449,7 @@ checkpointsCmd.command('resume <id>')
 | `src/store/checkpoint-manager.js` | **New** — core checkpoint CRUD + state machine |
 | `api/routes/checkpoints.js` | **New** — Express routes for `/api/checkpoints` |
 | `api/server.js` | **Modify** — mount `checkpointsRoutes` at `/api/checkpoints` |
-| `src/cli/index.js` | **Modify** — add `xactions checkpoints` command group |
+| `src/cli/index.js` | **Modify** — add `medirus checkpoints` command group |
 | `types/checkpoint-manager.d.ts` | **New** — TypeScript declarations for the service (optional but recommended) |
 | `types/index.d.ts` | **Modify** — export checkpoint types if created |
 | `tests/store/checkpoint-manager.test.js` | **New** — real-DB service tests |
@@ -469,7 +469,7 @@ checkpointsCmd.command('resume <id>')
 
 - Use the same test database setup as Story 10.2:
   ```bash
-  DATABASE_URL_TEST='postgresql://luisphan@localhost:5432/xactions_test?schema=public'
+  DATABASE_URL_TEST='postgresql://luisphan@localhost:5432/medirus_test?schema=public'
   ```
   (or `DATABASE_URL` if `DATABASE_URL_TEST` is not set).
 - Run `npx prisma db push` or `npx prisma migrate deploy` before tests if the `CrawlCheckpoint` table is missing.
@@ -507,8 +507,8 @@ checkpointsCmd.command('resume <id>')
 
 ### CLI Tests (`tests/cli/checkpoints-cli.test.js`)
 
-- `xactions checkpoints list` runs without error and prints checkpoints.
-- `xactions checkpoints resume <id>` updates the checkpoint in the real DB.
+- `medirus checkpoints list` runs without error and prints checkpoints.
+- `medirus checkpoints resume <id>` updates the checkpoint in the real DB.
 - Prefer invoking the commander `program` directly (import `src/cli/index.js` and use `program.parseAsync([...])`) over spawning a subprocess.
 
 ### Verification Commands
@@ -553,7 +553,7 @@ npx vitest run tests/store tests/api   # regression with 10.2/10.3
 
 ## Project Context Reference
 
-- Project: XActions
+- Project: Medirus
 - Project key: XACT
 - Repository: https://github.com/deptrai/XActions
 - Tech: Node.js ESM, Prisma, PostgreSQL, Vitest, Express, Commander
@@ -570,7 +570,7 @@ npx vitest run tests/store tests/api   # regression with 10.2/10.3
 4. **Do not create a new auth system.** Use the existing JWT user (`api/middleware/auth.js`) and A2A agent (`src/a2a/auth.js`) surfaces.
 5. **Do not return Prisma internals in error messages.** Use `PlatformError` with `code`, `message`, and `statusCode`.
 6. **Do not forget to mount the router in `api/server.js`.** Without `app.use('/api/checkpoints', checkpointsRoutes)`, the endpoints will not exist.
-7. **Do not mock Prisma in tests.** Use the real `xactions_test` database.
+7. **Do not mock Prisma in tests.** Use the real `medirus_test` database.
 8. **Do not allow unbounded `limit`.** Cap at `500` and default to `50`.
 9. **Do not leak `nextScheduledAt` details in CLI unless `--json`.** Keep human-readable output concise.
 10. **Scope boundary:** This story is the checkpoint **control plane**, not the crawler execution engine. It does not schedule Bull jobs or run Puppeteer.
@@ -593,7 +593,7 @@ npx vitest run tests/store tests/api   # regression with 10.2/10.3
 
 - **Status:** `done`
 - **Context engine analysis completed:** comprehensive developer guide created.
-- **ATDD & Dev implementation completed:** All 22 acceptance and integration tests passing (100% GREEN). Implemented `src/store/checkpoint-manager.js`, `api/routes/checkpoints.js`, mounted route in `api/server.js`, integrated `xactions checkpoints` CLI commands with JSON option, and added strict TypeScript declarations in `types/checkpoint-manager.d.ts`. Full regression suite passing (98/98 tests green).
+- **ATDD & Dev implementation completed:** All 22 acceptance and integration tests passing (100% GREEN). Implemented `src/store/checkpoint-manager.js`, `api/routes/checkpoints.js`, mounted route in `api/server.js`, integrated `medirus checkpoints` CLI commands with JSON option, and added strict TypeScript declarations in `types/checkpoint-manager.d.ts`. Full regression suite passing (98/98 tests green).
 - **Adversarial Code Review completed:** Clean review (100% Acceptance criteria verified, 0 critical bugs, 0 security vulnerabilities, 0 edge-case regressions). Marked story `done`.
 
 ---
@@ -613,7 +613,7 @@ npx vitest run tests/store tests/api   # regression with 10.2/10.3
 - Implemented `retryCheckpoint(id)` validating transition from `failed` or `stalled` ➔ `running`, resetting `errorCount = 0`, keeping `lastCursor`/`lastTimestamp`, setting `nextScheduledAt = now()`, and rejecting `running`, `paused`, or `completed` with `400 PlatformError (XACT_4002)`.
 - Implemented Express route router `api/routes/checkpoints.js` with dual-channel auth middleware supporting JWT admin users (`req.user.isAdmin`) and A2A agents with `checkpoint:manage` permission.
 - Mounted `/api/checkpoints` in `api/server.js`.
-- Added CLI command group `xactions checkpoints` in `src/cli/index.js` (`list`, `show`, `resume`, `pause`, `retry`, `--json`) with clean Prisma disconnect in `finally` and `process.exitCode = 1` on error.
+- Added CLI command group `medirus checkpoints` in `src/cli/index.js` (`list`, `show`, `resume`, `pause`, `retry`, `--json`) with clean Prisma disconnect in `finally` and `process.exitCode = 1` on error.
 - Added strict TypeScript definitions in `types/checkpoint-manager.d.ts` and exported in `types/index.d.ts`.
 - Verified 22/22 unit and API route acceptance tests in `tests/store/checkpoint-manager.test.js` and `tests/api/checkpoints-routes.test.js`.
 - Verified 98/98 tests passing across the entire regression test suite.

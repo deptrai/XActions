@@ -118,8 +118,8 @@ describe('mapToThinEvent', () => {
 
     // CloudEvents v1.0 Envelope assertions
     expect(event.specversion).toBe('1.0');
-    expect(event.source).toBe('org.xactions.crawler.test');
-    expect(event.type).toBe('org.xactions.scrape.completed');
+    expect(event.source).toBe('org.medirus.crawler.test');
+    expect(event.type).toBe('org.medirus.scrape.completed');
     expect(event.datacontenttype).toBe('application/json');
     expect(event.time).toBeDefined();
     expect(event.data).toBeDefined();

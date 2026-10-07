@@ -1,6 +1,6 @@
 # Unfollow Accounts -- Tutorial
 
-> Step-by-step guide to unfollowing accounts on X using XActions browser scripts.
+> Step-by-step guide to unfollowing accounts on X using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -108,9 +108,9 @@ Max: 100 | Delay: 1200-3000ms | Whitelist: 3
 **Step 4:** Use controls while running:
 
 ```js
-XActionsUtils.pause();   // Pause
-XActionsUtils.resume();  // Resume
-XActionsUtils.abort();   // Stop
+MedirusUtils.pause();   // Pause
+MedirusUtils.resume();  // Resume
+MedirusUtils.abort();   // Stop
 ```
 
 **Step 5:** A JSON log is auto-downloaded and saved to localStorage.
@@ -155,10 +155,10 @@ dryRun: false,
 **Step 5:** Use controls while running:
 
 ```js
-XActions.pause();    // Pause
-XActions.resume();   // Resume
-XActions.abort();    // Stop
-XActions.status();   // Show progress
+Medirus.pause();    // Pause
+Medirus.resume();   // Resume
+Medirus.abort();    // Stop
+Medirus.status();   // Show progress
 ```
 
 ### Smart Unfollow (Time-Based)

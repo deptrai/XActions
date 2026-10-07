@@ -1,8 +1,8 @@
-# XActions Command Center -- Tutorial
+# Medirus Command Center -- Tutorial
 
-> Run every XActions browser tool from one searchable menu. Paste one script, pick a tool, press Run.
+> Run every Medirus browser tool from one searchable menu. Paste one script, pick a tool, press Run.
 
-The Command Center is the fastest way to use XActions. Instead of finding a single script file, opening it, editing its config, and pasting it, you paste **one** script and get a floating command palette with all 108 tools inside it: create, scrape, analyze, grow, engage, clean up, moderate, manage lists, and more.
+The Command Center is the fastest way to use Medirus. Instead of finding a single script file, opening it, editing its config, and pasting it, you paste **one** script and get a floating command palette with all 108 tools inside it: create, scrape, analyze, grow, engage, clean up, moderate, manage lists, and more.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -12,7 +12,7 @@ The Command Center is the fastest way to use XActions. Instead of finding a sing
 1. Open x.com and go to the page you want to work on (a profile, your timeline, search results, your Likes, your Followers, etc.).
 2. Open DevTools (F12) and select the **Console** tab.
 3. If the console warns about pasting, type `allow pasting` and press Enter.
-4. Copy the entire contents of [`scripts/twitter/xactions-command-center.js`](../../../scripts/twitter/xactions-command-center.js) and paste it into the console, then press Enter.
+4. Copy the entire contents of [`scripts/twitter/medirus-command-center.js`](../../../scripts/twitter/medirus-command-center.js) and paste it into the console, then press Enter.
 5. The **Command Center** palette appears in the top-right corner.
 
 Reopen the palette any time with the floating button (bottom-right) or **Cmd/Ctrl + K**.
@@ -58,6 +58,6 @@ While a tool runs, it appears in the palette's dock with a **Stop** button (and 
 
 - Everything runs locally in your own logged-in browser session. Nothing is sent to any server.
 - Automating actions on X can hit rate limits or violate the platform's terms if pushed too hard. The action tools pace themselves. Keep volumes reasonable and use the read-only tools freely.
-- Every individual tool still works on its own if you prefer to paste just one. See the per-tool pages at [xactions.app/scripts](https://xactions.app/scripts).
+- Every individual tool still works on its own if you prefer to paste just one. See the per-tool pages at [medirus.online/scripts](https://medirus.online/scripts).
 
-Part of [XActions](https://github.com/nirholas/XActions).
+Part of [Medirus](https://github.com/nirholas/XActions).

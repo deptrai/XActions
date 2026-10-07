@@ -13,7 +13,7 @@
  *   node examples/03-sentiment-report.js github 40
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 

@@ -27,7 +27,7 @@
   };
 
   const run = async () => {
-    console.log('📦 DOWNLOAD ACCOUNT DATA — XActions by nichxbt');
+    console.log('📦 DOWNLOAD ACCOUNT DATA — Medirus by nichxbt');
     console.log('━'.repeat(50));
 
     if (!window.location.href.includes('/download_your_data') && !window.location.href.includes('/your_twitter_data')) {

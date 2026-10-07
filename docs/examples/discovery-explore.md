@@ -35,7 +35,7 @@ Scrape trends, explore feed, topics, and advanced search on X/Twitter.
 ## 📦 Node.js Module
 
 ```javascript
-import { getTrends, searchTweets, advancedSearch, getExploreFeed } from 'xactions';
+import { getTrends, searchTweets, advancedSearch, getExploreFeed } from 'medirus';
 
 // Get current trends
 const trends = await getTrends(page);

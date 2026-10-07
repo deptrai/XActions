@@ -1,6 +1,6 @@
 ---
 name: mcp-test
-description: Verify XActions MCP tool definitions, schema validity, and tool execution against a running or importable MCP server.
+description: Verify Medirus MCP tool definitions, schema validity, and tool execution against a running or importable MCP server.
 code: MT
 added: 2026-08-28
 type: prompt

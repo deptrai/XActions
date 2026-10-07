@@ -152,22 +152,22 @@ describe('launchStealthBrowser({pooled})', () => {
     expect(ctorCalls).toHaveLength(2);
   });
 
-  it('ENV_SIZE: XACTIONS_BROWSER_POOL_SIZE > 0 sets default pool size; unset/garbage → 4', async () => {
+  it('ENV_SIZE: MEDIRUS_BROWSER_POOL_SIZE > 0 sets default pool size; unset/garbage → 4', async () => {
     mockAcquire.mockResolvedValue(makeLease('chrome'));
 
-    vi.stubEnv('XACTIONS_BROWSER_POOL_SIZE', '2');
+    vi.stubEnv('MEDIRUS_BROWSER_POOL_SIZE', '2');
     await launchStealthBrowser({ pooled: true });
     expect(ctorCalls[0].size).toBe(2);
 
     await resetDefaultPools();
     ctorCalls.length = 0;
-    vi.stubEnv('XACTIONS_BROWSER_POOL_SIZE', '0');
+    vi.stubEnv('MEDIRUS_BROWSER_POOL_SIZE', '0');
     await launchStealthBrowser({ pooled: true });
     expect(ctorCalls[0].size).toBe(4);
 
     await resetDefaultPools();
     ctorCalls.length = 0;
-    vi.stubEnv('XACTIONS_BROWSER_POOL_SIZE', 'banana');
+    vi.stubEnv('MEDIRUS_BROWSER_POOL_SIZE', 'banana');
     await launchStealthBrowser({ pooled: true });
     expect(ctorCalls[0].size).toBe(4);
   });

@@ -5,7 +5,7 @@ Date: 2026-09-08
 
 ## Summary
 
-Epic 12 giải quyết **frictionless authentication** — cách để user auth vào XActions mà không cần config phức tạp. Hai phương thức: Terminal ASCII QR code login (Story 12.1, 12.3) và CDP Remote Attach (Story 12.2).
+Epic 12 giải quyết **frictionless authentication** — cách để user auth vào Medirus mà không cần config phức tạp. Hai phương thức: Terminal ASCII QR code login (Story 12.1, 12.3) và CDP Remote Attach (Story 12.2).
 
 Epic complete across three stories:
 

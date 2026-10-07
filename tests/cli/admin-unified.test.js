@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Tests for xactions admin unified command group (Story 19.4)
+ * Tests for medirus admin unified command group (Story 19.4)
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -14,7 +14,7 @@ function stripAnsi(str) {
   return str.replace(/\x1B\[[0-9;]*m/g, '');
 }
 
-describe('Story 19.4: xactions admin unified command group', () => {
+describe('Story 19.4: medirus admin unified command group', () => {
   it('registers admin command group on the program', () => {
     const program = new Command();
     registerAdminCommand(program);
@@ -174,7 +174,7 @@ describe('Story 19.4: xactions admin unified command group', () => {
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await program.parseAsync(['node', 'xactions', 'admin', 'proxies', 'list', '--json']);
+      await program.parseAsync(['node', 'medirus', 'admin', 'proxies', 'list', '--json']);
     } finally {
       console.log = originalLog;
     }
@@ -194,7 +194,7 @@ describe('Story 19.4: xactions admin unified command group', () => {
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await program.parseAsync(['node', 'xactions', 'admin', 'accounts', 'list', '--json']);
+      await program.parseAsync(['node', 'medirus', 'admin', 'accounts', 'list', '--json']);
     } finally {
       console.log = originalLog;
     }
@@ -214,7 +214,7 @@ describe('Story 19.4: xactions admin unified command group', () => {
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await program.parseAsync(['node', 'xactions', 'admin', 'checkpoints', 'list', '--limit', '-1', '--json']);
+      await program.parseAsync(['node', 'medirus', 'admin', 'checkpoints', 'list', '--limit', '-1', '--json']);
     } finally {
       console.log = originalLog;
     }
@@ -233,7 +233,7 @@ describe('Story 19.4: xactions admin unified command group', () => {
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await program.parseAsync(['node', 'xactions', 'admin', 'checkpoints', 'list', '--offset', '-1', '--json']);
+      await program.parseAsync(['node', 'medirus', 'admin', 'checkpoints', 'list', '--offset', '-1', '--json']);
     } finally {
       console.log = originalLog;
     }

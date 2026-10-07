@@ -4,7 +4,7 @@
 
 ## Goal
 
-Consolidate XActions' static catalog of 220+ individual MCP tools into 10 cohesive Domain Dispatchers operating under a default compact mode, reducing schema token overhead by ~95% and eliminating tool-dropping and selection degradation in LLM agents (Claude Code CLI, Cursor, Claude Desktop), while preserving 100% backward compatibility for legacy workflows via a full-catalog runtime switch.
+Consolidate Medirus' static catalog of 220+ individual MCP tools into 10 cohesive Domain Dispatchers operating under a default compact mode, reducing schema token overhead by ~95% and eliminating tool-dropping and selection degradation in LLM agents (Claude Code CLI, Cursor, Claude Desktop), while preserving 100% backward compatibility for legacy workflows via a full-catalog runtime switch.
 
 ## Stories
 

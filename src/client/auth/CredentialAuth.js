@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Credential-Based Authentication
+ * Medirus Client — Credential-Based Authentication
  *
  * Implements Twitter's multi-step login flow using username, password, and email.
  * This replicates the same flow that twikit and agent-twitter-client use.

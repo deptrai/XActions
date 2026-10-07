@@ -53,7 +53,7 @@
   };
 
   const run = async () => {
-    console.log('🔇 MUTE BY KEYWORDS - XActions by nichxbt');
+    console.log('🔇 MUTE BY KEYWORDS - Medirus by nichxbt');
 
     if (CONFIG.keywords.length === 0) {
       console.error('❌ No keywords configured! Edit CONFIG.keywords array.');

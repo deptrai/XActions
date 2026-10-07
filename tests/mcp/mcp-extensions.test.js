@@ -21,7 +21,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 
 beforeAll(async () => {
-  process.env.XACTIONS_MODE = 'local';
+  process.env.MEDIRUS_MODE = 'local';
   await initializeBackend();
 });
 
@@ -80,26 +80,26 @@ describe('MCP Extensions — High-Value Tools', () => {
   });
 
   it('x_shadowban_check throws when username is missing', async () => {
-    const oldEnv = process.env.XACTIONS_DEFAULT_USERNAME;
-    delete process.env.XACTIONS_DEFAULT_USERNAME;
+    const oldEnv = process.env.MEDIRUS_DEFAULT_USERNAME;
+    delete process.env.MEDIRUS_DEFAULT_USERNAME;
     try {
       await expect(executeTool('x_shadowban_check', {})).rejects.toThrow(
         /username is required/
       );
     } finally {
-      if (oldEnv) process.env.XACTIONS_DEFAULT_USERNAME = oldEnv;
+      if (oldEnv) process.env.MEDIRUS_DEFAULT_USERNAME = oldEnv;
     }
   });
 
   it('x_backup_account throws when username is missing', async () => {
-    const oldEnv = process.env.XACTIONS_DEFAULT_USERNAME;
-    delete process.env.XACTIONS_DEFAULT_USERNAME;
+    const oldEnv = process.env.MEDIRUS_DEFAULT_USERNAME;
+    delete process.env.MEDIRUS_DEFAULT_USERNAME;
     try {
       await expect(executeTool('x_backup_account', {})).rejects.toThrow(
         /username is required/
       );
     } finally {
-      if (oldEnv) process.env.XACTIONS_DEFAULT_USERNAME = oldEnv;
+      if (oldEnv) process.env.MEDIRUS_DEFAULT_USERNAME = oldEnv;
     }
   });
 
@@ -128,22 +128,22 @@ describe('MCP Extensions — Resources & Prompts Handlers', () => {
     expect(result.resources.length).toBeGreaterThanOrEqual(3);
 
     const uris = result.resources.map((r) => r.uri);
-    expect(uris).toContain('xactions://platforms');
-    expect(uris).toContain('xactions://actions');
-    expect(uris).toContain('xactions://system/status');
+    expect(uris).toContain('medirus://platforms');
+    expect(uris).toContain('medirus://actions');
+    expect(uris).toContain('medirus://system/status');
   });
 
-  it('reads xactions://platforms resource', async () => {
+  it('reads medirus://platforms resource', async () => {
     const srv = createMcpServer();
     const readHandler = srv._requestHandlers?.get(ReadResourceRequestSchema.shape.method.value);
     expect(readHandler).toBeDefined();
 
     const result = await readHandler({
       method: 'resources/read',
-      params: { uri: 'xactions://platforms' },
+      params: { uri: 'medirus://platforms' },
     });
     expect(result.contents).toBeDefined();
-    expect(result.contents[0].uri).toBe('xactions://platforms');
+    expect(result.contents[0].uri).toBe('medirus://platforms');
     expect(result.contents[0].mimeType).toBe('application/json');
 
     const parsed = JSON.parse(result.contents[0].text);
@@ -151,17 +151,17 @@ describe('MCP Extensions — Resources & Prompts Handlers', () => {
     expect(Array.isArray(parsed.platforms)).toBe(true);
   });
 
-  it('reads xactions://system/status resource', async () => {
+  it('reads medirus://system/status resource', async () => {
     const srv = createMcpServer();
     const readHandler = srv._requestHandlers?.get(ReadResourceRequestSchema.shape.method.value);
     expect(readHandler).toBeDefined();
 
     const result = await readHandler({
       method: 'resources/read',
-      params: { uri: 'xactions://system/status' },
+      params: { uri: 'medirus://system/status' },
     });
     expect(result.contents).toBeDefined();
-    expect(result.contents[0].uri).toBe('xactions://system/status');
+    expect(result.contents[0].uri).toBe('medirus://system/status');
     const parsed = JSON.parse(result.contents[0].text);
     expect(parsed.version).toBeDefined();
     expect(parsed.mode).toBeDefined();
@@ -173,7 +173,7 @@ describe('MCP Extensions — Resources & Prompts Handlers', () => {
     expect(readHandler).toBeDefined();
 
     await expect(
-      readHandler({ method: 'resources/read', params: { uri: 'xactions://unknown/uri' } })
+      readHandler({ method: 'resources/read', params: { uri: 'medirus://unknown/uri' } })
     ).rejects.toThrow(/Resource not found/);
   });
 

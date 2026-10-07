@@ -32,7 +32,7 @@ This feature helps you clean up your following list by:
 
 ```javascript
 // ============================================
-// XActions - Unfollow Non-Followers (Browser Console)
+// Medirus - Unfollow Non-Followers (Browser Console)
 // Author: nich (@nichxbt)
 // Go to: x.com/YOUR_USERNAME/following
 // Open console (F12), paste this
@@ -46,7 +46,7 @@ This feature helps you clean up your following list by:
   const BATCH_PAUSE = 15000;         // Pause every 10 unfollows (ms)
   const MAX_SCROLL_RETRIES = 10;     // Stop if no new users found
   
-  console.log('🔍 XActions - Unfollow Non-Followers');
+  console.log('🔍 Medirus - Unfollow Non-Followers');
   console.log('====================================');
   console.log(`⚙️  Max unfollows: ${MAX_UNFOLLOWS}`);
   console.log(`⚙️  Unfollow delay: ${UNFOLLOW_DELAY}ms`);
@@ -268,7 +268,7 @@ This feature helps you clean up your following list by:
 
 ```javascript
 // ============================================
-// XActions - Unfollow Non-Followers (Node.js)
+// Medirus - Unfollow Non-Followers (Node.js)
 // Author: nich (@nichxbt)
 // Save as: unfollow-non-followers.js
 // Run: node unfollow-non-followers.js
@@ -449,7 +449,7 @@ async function unfollowUser(page, username) {
 
 async function unfollowNonFollowers() {
   console.log('');
-  console.log('🔍 XActions - Unfollow Non-Followers');
+  console.log('🔍 Medirus - Unfollow Non-Followers');
   console.log('====================================');
   console.log(`👤 Username: @${CONFIG.username}`);
   console.log(`📊 Max scan: ${CONFIG.maxScan}`);
@@ -696,7 +696,7 @@ node unfollow-non-followers.js
 
 **Output example:**
 ```
-🔍 XActions - Unfollow Non-Followers
+🔍 Medirus - Unfollow Non-Followers
 ====================================
 👤 Username: @nichxbt
 📊 Max scan: 2000
@@ -791,7 +791,7 @@ If you hit rate limits:
 
 ## 🌐 Website Alternative
 
-Don't want to run scripts? Use [xactions.app](https://xactions.app):
+Don't want to run scripts? Use [medirus.online](https://medirus.online):
 
 1. **Login** - Connect your X account securely
 2. **Scan** - Click "Find Non-Followers" 
@@ -818,4 +818,4 @@ Don't want to run scripts? Use [xactions.app](https://xactions.app):
 ---
 
 *Author: nich ([@nichxbt](https://x.com/nichxbt))*  
-*Part of [XActions](https://xactions.app) - X/Twitter Automation Tools*
+*Part of [Medirus](https://medirus.online) - X/Twitter Automation Tools*

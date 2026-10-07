@@ -47,7 +47,7 @@ Search and scrape tweets from X/Twitter using keywords, hashtags, advanced opera
 
 ```javascript
 // ============================================
-// XActions - Tweet Search Scraper (Browser Console)
+// Medirus - Tweet Search Scraper (Browser Console)
 // Go to: x.com/search?q=YOUR_QUERY
 // Open console (F12), paste this
 // Author: nich (@nichxbt)
@@ -347,7 +347,7 @@ npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
 
 ```javascript
 // ============================================
-// XActions - Tweet Search Scraper (Node.js)
+// Medirus - Tweet Search Scraper (Node.js)
 // Save as: search-tweets.js
 // Run: node search-tweets.js "bitcoin" --filter latest --count 500
 // Author: nich (@nichxbt)
@@ -391,7 +391,7 @@ async function searchTweets(query, options = {}) {
     outputPath = null,     // Output file path
   } = options;
 
-  console.log('🔍 XActions Tweet Search Scraper');
+  console.log('🔍 Medirus Tweet Search Scraper');
   console.log('================================');
   console.log(`📝 Query: "${query}"`);
   console.log(`🏷️ Filter: ${filter}`);
@@ -744,7 +744,7 @@ function parseArgs() {
       options.headless = false;
     } else if (arg === '--help' || arg === '-h') {
       console.log(`
-🔍 XActions Tweet Search Scraper
+🔍 Medirus Tweet Search Scraper
 
 Usage:
   node search-tweets.js <query> [options]
@@ -981,7 +981,7 @@ const chronological = tweets.sort((a, b) =>
 
 Don't want to run scripts? Use our web app:
 
-### [xactions.app](https://xactions.app)
+### [medirus.online](https://medirus.online)
 
 - ✅ No coding required
 - ✅ Visual search interface
@@ -1004,7 +1004,7 @@ Don't want to run scripts? Use our web app:
 ## 🔗 Resources
 
 - [Twitter Search Docs](https://help.x.com/en/using-x/x-advanced-search)
-- [XActions Documentation](https://xactions.app/docs)
+- [Medirus Documentation](https://medirus.online/docs)
 - [Puppeteer Setup Guide](../troubleshooting.md#puppeteer)
 
 ---

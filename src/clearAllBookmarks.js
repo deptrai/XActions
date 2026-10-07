@@ -22,7 +22,7 @@
  * 3. Paste and run
  *
  * 🎮 CONTROLS:
- *   window.XActions.pause()  / .resume() / .abort() / .status()
+ *   window.Medirus.pause()  / .resume() / .abort() / .status()
  * ============================================================
  */
 (() => {
@@ -62,7 +62,7 @@
   const startTime = Date.now();
   const removedLog = [];
 
-  window.XActions = {
+  window.Medirus = {
     pause()  { paused = true;  console.log('⏸️ Paused.'); },
     resume() { paused = false; console.log('▶️ Resumed.'); },
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
@@ -178,7 +178,7 @@
     if (CONFIG.exportOnComplete && removedLog.length > 0) {
       const blob = new Blob([JSON.stringify({ summary: { removed, kept, errors }, bookmarks: removedLog }, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-bookmarks-cleared-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-bookmarks-cleared-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Log exported.');
     }

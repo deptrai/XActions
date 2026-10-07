@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate canonical action/arg matrix from x_actions_list.
+ * Generate canonical action/arg matrix from medirus_list.
  * Usage: npm run docs:matrix
  * Output: docs/canonical-action-matrix.md + docs/canonical-action-matrix.json
  */

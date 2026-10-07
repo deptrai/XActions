@@ -1,6 +1,6 @@
 # Bookmark Posts & Create Bookmark Folders -- Tutorial
 
-> Step-by-step guide to managing bookmarks on X using XActions browser scripts and the Node.js library.
+> Step-by-step guide to managing bookmarks on X using Medirus browser scripts and the Node.js library.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -142,10 +142,10 @@ Otherwise, it removes bookmarks one by one, scrolling through the list.
 **Step 3:** Use controls while running:
 
 ```js
-window.XActions.pause();   // Pause
-window.XActions.resume();  // Resume
-window.XActions.abort();   // Stop
-window.XActions.status();  // Show progress
+window.Medirus.pause();   // Pause
+window.Medirus.resume();  // Resume
+window.Medirus.abort();   // Stop
+window.Medirus.status();  // Show progress
 ```
 
 ### Selectively Clear Bookmarks

@@ -6,11 +6,11 @@ baseline_commit: e2deee0
 
 Status: done
 
-<!-- Epic 4 (Facebook Growth Automation, Cluster 2 — medium-high risk). Source: epics.md#Story 4.8 + PRD prd-XActions-2026-06-10-epic4 FR-22. Realizes UJ-8. -->
+<!-- Epic 4 (Facebook Growth Automation, Cluster 2 — medium-high risk). Source: epics.md#Story 4.8 + PRD prd-Medirus-2026-06-10-epic4 FR-22. Realizes UJ-8. -->
 
 ## Story
 
-As a growth hacker using XActions,
+As a growth hacker using Medirus,
 I want to bulk-cancel pending friend requests,
 so that I can free up my friend-request quota without manual clicking.
 
@@ -89,7 +89,7 @@ Key design:
 
 ## Review Findings
 
-<!-- Code review 2026-06-19 (claude-opus-4-8). 4 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor, XActions domain. Blind "Critical" claims (sleep undefined, remaining negative) verified FALSE against source (sleep defined L17; runGuardedBatch counts per-item L182-194; warning fires L161). -->
+<!-- Code review 2026-06-19 (claude-opus-4-8). 4 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor, Medirus domain. Blind "Critical" claims (sleep undefined, remaining negative) verified FALSE against source (sleep defined L17; runGuardedBatch counts per-item L182-194; warning fires L161). -->
 
 ### Decision needed
 
@@ -144,7 +144,7 @@ Key design:
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 4.8: Cancel pending friend requests]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md#FR-22, §7 NFR-7/NFR-8, UJ-8]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-10-epic4/prd.md#FR-22, §7 NFR-7/NFR-8, UJ-8]
 - [Source: api/services/facebookAutomation.js#runGuardedBatch, #joinFacebookGroups (batch template)]
 - [Source: _bmad-output/implementation-artifacts/4-6-scrape-group-members.md (scrape/scroll pattern for Phase 1)]
 

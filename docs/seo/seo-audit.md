@@ -1,6 +1,6 @@
-# Technical SEO Audit Checklist for XActions
+# Technical SEO Audit Checklist for Medirus
 
-> Comprehensive checklist to ensure xactions.app is fully optimized for search engines, structured data validation, and Knowledge Panel eligibility.
+> Comprehensive checklist to ensure medirus.online is fully optimized for search engines, structured data validation, and Knowledge Panel eligibility.
 
 ---
 
@@ -43,7 +43,7 @@
 
 | Meta Tag | Present? | Consistent? |
 |----------|----------|-------------|
-| `<title>` — unique, includes "XActions" | [ ] | [ ] |
+| `<title>` — unique, includes "Medirus" | [ ] | [ ] |
 | `<meta name="description">` — unique, 150-160 chars | [ ] | [ ] |
 | `<meta name="robots" content="index, follow">` | [ ] | [ ] |
 | `<link rel="canonical">` — absolute URL, no trailing slash inconsistency | [ ] | [ ] |
@@ -52,7 +52,7 @@
 | `<meta property="og:url">` | [ ] | [ ] |
 | `<meta property="og:image">` — 1200×630px | [ ] | [ ] |
 | `<meta property="og:type">` | [ ] | [ ] |
-| `<meta property="og:site_name" content="XActions">` | [ ] | [ ] |
+| `<meta property="og:site_name" content="Medirus">` | [ ] | [ ] |
 | `<meta name="twitter:card" content="summary_large_image">` | [ ] | [ ] |
 | `<meta name="twitter:site" content="@nichxbt">` | [ ] | [ ] |
 | `<meta name="twitter:title">` | [ ] | [ ] |
@@ -61,33 +61,33 @@
 
 ### Title Tag Formula
 ```
-[Page Name] - XActions | [Category/Benefit]
+[Page Name] - Medirus | [Category/Benefit]
 ```
 Examples:
-- "XActions — Free AI-Powered X/Twitter Automation Tools"
-- "MCP Server - XActions | AI Agent Twitter Integration"
-- "About XActions | Open-Source X/Twitter Automation Toolkit"
+- "Medirus — Free AI-Powered X/Twitter Automation Tools"
+- "MCP Server - Medirus | AI Agent Twitter Integration"
+- "About Medirus | Open-Source X/Twitter Automation Toolkit"
 
 ---
 
 ## 3. Crawlability & Indexing
 
 ### robots.txt
-- **Location:** https://xactions.app/robots.txt
+- **Location:** https://medirus.online/robots.txt
 - [ ] `Allow: /` for all user agents
 - [ ] `Disallow: /admin`, `/login`, `/api/`
-- [ ] `Sitemap: https://xactions.app/sitemap.xml`
+- [ ] `Sitemap: https://medirus.online/sitemap.xml`
 - [ ] No accidental disallows blocking important pages
 
 ### sitemap.xml
-- **Location:** https://xactions.app/sitemap.xml
+- **Location:** https://medirus.online/sitemap.xml
 - [ ] All public pages included
 - [ ] No non-existent URLs (404s)
 - [ ] `<changefreq>` and `<priority>` set appropriately
 - [ ] Submitted to Google Search Console
 
 ### Google Search Console
-- [ ] Property verified (https://xactions.app)
+- [ ] Property verified (https://medirus.online)
 - [ ] Sitemap submitted
 - [ ] No manual actions or penalties
 - [ ] Coverage report: all pages indexed
@@ -99,7 +99,7 @@ Examples:
 # URL Inspection → Enter URL → Request Indexing
 
 # Check if a page is indexed:
-# Google search: site:xactions.app/about
+# Google search: site:medirus.online/about
 ```
 
 ---
@@ -128,9 +128,9 @@ Examples:
 
 ### Test URLs
 ```
-https://pagespeed.web.dev/analysis?url=https://xactions.app
-https://pagespeed.web.dev/analysis?url=https://xactions.app/about
-https://pagespeed.web.dev/analysis?url=https://xactions.app/features
+https://pagespeed.web.dev/analysis?url=https://medirus.online
+https://pagespeed.web.dev/analysis?url=https://medirus.online/about
+https://pagespeed.web.dev/analysis?url=https://medirus.online/features
 ```
 
 ---
@@ -224,20 +224,20 @@ Check that the same information appears identically on:
 
 | Platform | Name | URL | Description |
 |----------|------|-----|-------------|
-| xactions.app | XActions | ✓ | ✓ |
-| GitHub | XActions | ✓ | ✓ |
-| npm | xactions | ✓ | ✓ |
-| Wikidata | XActions | ✓ | ✓ |
-| Product Hunt | XActions | ✓ | ✓ |
-| AlternativeTo | XActions | ✓ | ✓ |
-| Crunchbase | XActions | ✓ | ✓ |
+| medirus.online | Medirus | ✓ | ✓ |
+| GitHub | Medirus | ✓ | ✓ |
+| npm | medirus | ✓ | ✓ |
+| Wikidata | Medirus | ✓ | ✓ |
+| Product Hunt | Medirus | ✓ | ✓ |
+| AlternativeTo | Medirus | ✓ | ✓ |
+| Crunchbase | Medirus | ✓ | ✓ |
 
 ### `sameAs` Links Present in JSON-LD
 
 The Organization schema on about.html must include `sameAs` pointing to ALL of these:
 - [ ] `https://github.com/nirholas/XActions`
 - [ ] `https://x.com/nichxbt`
-- [ ] `https://www.npmjs.com/package/xactions`
+- [ ] `https://www.npmjs.com/package/medirus`
 - [ ] `https://www.wikidata.org/wiki/Q_______` (after creation)
 - [ ] Product Hunt URL (after listing)
 - [ ] Crunchbase URL (after listing)

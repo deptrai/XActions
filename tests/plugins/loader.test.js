@@ -7,21 +7,21 @@ import { isValidPluginName, validatePlugin } from '../../src/plugins/loader.js';
 // ============================================================================
 
 describe('isValidPluginName', () => {
-  it('accepts xactions-plugin-* names', () => {
-    expect(isValidPluginName('xactions-plugin-analytics')).toBe(true);
-    expect(isValidPluginName('xactions-plugin-excel')).toBe(true);
-    expect(isValidPluginName('xactions-plugin-google-sheets')).toBe(true);
+  it('accepts medirus-plugin-* names', () => {
+    expect(isValidPluginName('medirus-plugin-analytics')).toBe(true);
+    expect(isValidPluginName('medirus-plugin-excel')).toBe(true);
+    expect(isValidPluginName('medirus-plugin-google-sheets')).toBe(true);
   });
 
-  it('accepts @xactions/* scoped names', () => {
-    expect(isValidPluginName('@xactions/excel')).toBe(true);
-    expect(isValidPluginName('@xactions/my-plugin')).toBe(true);
+  it('accepts @medirus/* scoped names', () => {
+    expect(isValidPluginName('@medirus/excel')).toBe(true);
+    expect(isValidPluginName('@medirus/my-plugin')).toBe(true);
   });
 
   it('rejects arbitrary npm package names', () => {
     expect(isValidPluginName('lodash')).toBe(false);
     expect(isValidPluginName('my-cool-plugin')).toBe(false);
-    expect(isValidPluginName('xactions')).toBe(false); // no suffix
+    expect(isValidPluginName('medirus')).toBe(false); // no suffix
   });
 
   it('rejects empty string', () => {
@@ -29,8 +29,8 @@ describe('isValidPluginName', () => {
   });
 
   it('rejects names that only partially match', () => {
-    expect(isValidPluginName('not-xactions-plugin-foo')).toBe(false);
-    expect(isValidPluginName('@notxactions/foo')).toBe(false);
+    expect(isValidPluginName('not-medirus-plugin-foo')).toBe(false);
+    expect(isValidPluginName('@notmedirus/foo')).toBe(false);
   });
 });
 
@@ -40,7 +40,7 @@ describe('isValidPluginName', () => {
 
 describe('validatePlugin', () => {
   const validPlugin = {
-    name: 'xactions-plugin-test',
+    name: 'medirus-plugin-test',
     version: '1.0.0',
   };
 
@@ -52,7 +52,7 @@ describe('validatePlugin', () => {
 
   it('passes for a fully-specified valid plugin', () => {
     const { valid, errors } = validatePlugin({
-      name: 'xactions-plugin-full',
+      name: 'medirus-plugin-full',
       version: '2.3.1',
       description: 'A full plugin',
       actions: [{ name: 'doThing', script: '(() => {})()' }],
@@ -72,7 +72,7 @@ describe('validatePlugin', () => {
   });
 
   it('fails when version is missing', () => {
-    const { valid, errors } = validatePlugin({ name: 'xactions-plugin-test' });
+    const { valid, errors } = validatePlugin({ name: 'medirus-plugin-test' });
     expect(valid).toBe(false);
     expect(errors).toContain('Plugin must export a "version" string');
   });

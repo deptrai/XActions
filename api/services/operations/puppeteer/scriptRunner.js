@@ -2,7 +2,7 @@
 /**
  * Browser Script Runner (Puppeteer)
  *
- * Executes an XActions browser script server-side in an authenticated
+ * Executes an Medirus browser script server-side in an authenticated
  * Puppeteer session. This is the engine behind POST /api/scripts/run.
  *
  * Flow:
@@ -106,7 +106,7 @@ function resolveScriptPath(scriptPath) {
  */
 
 /**
- * Run a single XActions browser script via Puppeteer.
+ * Run a single Medirus browser script via Puppeteer.
  *
  * @param {RunBrowserScriptConfig} config
  * @param {(message: string) => void} updateProgress
@@ -183,8 +183,8 @@ export async function runBrowserScript(config, updateProgress, isCancelled) {
     await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
 
     await page.evaluate((p) => {
-      const w = /** @type {Window & typeof globalThis & { __XACTIONS_PARAMS__: Record<string, unknown> }} */ (window);
-      w.__XACTIONS_PARAMS__ = p;
+      const w = /** @type {Window & typeof globalThis & { __MEDIRUS_PARAMS__: Record<string, unknown> }} */ (window);
+      w.__MEDIRUS_PARAMS__ = p;
     }, params);
 
     updateProgress('Executing script…');
@@ -193,9 +193,9 @@ export async function runBrowserScript(config, updateProgress, isCancelled) {
       updateProgress('⏱️ Script timeout reached — aborting');
       try {
         await page.evaluate(() => {
-          const w = /** @type {Window & typeof globalThis & { XActions?: { abort: () => void } }} */ (window);
-          if (typeof w?.XActions?.abort === 'function') {
-            w.XActions.abort();
+          const w = /** @type {Window & typeof globalThis & { Medirus?: { abort: () => void } }} */ (window);
+          if (typeof w?.Medirus?.abort === 'function') {
+            w.Medirus.abort();
           }
         });
       } catch { /* page may already be closing */ }

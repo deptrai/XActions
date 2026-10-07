@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Follower CRM & Segmentation
+ * Medirus Follower CRM & Segmentation
  * Tag, score, segment, and search followers with rich filtering.
  *
  * Kills: Circleboom (smart search), Followerwonk (follower segmentation)
@@ -18,7 +18,7 @@ import os from 'os';
 // Database Setup
 // ============================================================================
 
-const DB_DIR = path.join(os.homedir(), '.xactions');
+const DB_DIR = path.join(os.homedir(), '.medirus');
 const DB_PATH = path.join(DB_DIR, 'analytics.db');
 
 let _db = null;

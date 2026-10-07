@@ -1,7 +1,7 @@
 # Implementation Readiness Assessment Report
 
 **Date:** 2026-08-12
-**Project:** XActions
+**Project:** Medirus
 **Assessor:** bmad-check-implementation-readiness
 **Input:** epics-full.md (comprehensive — 7 epics, 48 stories)
 **Status:** Complete

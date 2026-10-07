@@ -13,7 +13,7 @@
  *   node examples/05-export-followers.js nasa 500 nasa-followers.csv
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 
@@ -60,7 +60,7 @@ process.stdout.write(`\r  ${count} written\n`);
 if (count === 0) {
   console.error(
     `\nX returned no followers for @${handle}. The account may be protected, or your ` +
-      'session may have expired — re-run `xactions login` and try again.',
+      'session may have expired — re-run `medirus login` and try again.',
   );
   process.exit(1);
 }

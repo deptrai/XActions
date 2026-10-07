@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 🔇 Manage Muted Words - XActions
+ * 🔇 Manage Muted Words - Medirus
  * ============================================
  *
  * @name         manage-muted-words
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to x.com/settings/muted_keywords
@@ -173,9 +173,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔇 MANAGE MUTED WORDS - XActions                        ║
+║  🔇 MANAGE MUTED WORDS - Medirus                        ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -198,7 +198,7 @@
       words.forEach((w, i) => console.log(`   ${i + 1}. "${w}"`));
       download(
         { scrapedAt: new Date().toISOString(), count: words.length, mutedWords: words },
-        `xactions-muted-words-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-muted-words-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
     console.log(`\n✅ Listed ${stats.listed} muted word(s). by nichxbt`);

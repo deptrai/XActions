@@ -10,7 +10,7 @@
 
 ## User Story
 
-**As a** maintainer and API/CLI/MCP consumer of XActions,
+**As a** maintainer and API/CLI/MCP consumer of Medirus,
 **I want** mọi caller nội bộ trong `src/mcp/`, `src/cli/`, `api/` ngừng import trực tiếp từ các thư mục legacy (`src/client/Scraper.js`, `src/scrapers/{twitter,facebook,threads,bluesky,mastodon}/`), đồng thời hệ thống trả về error envelope chuẩn (`PlatformError` với `type: ErrorTypes.DEPRECATED` và `suggestedAction`) khi gọi action đã bị loại bỏ hoặc platform cũ,
 **So that** toàn bộ codebase sử dụng unified dispatcher `scrape(platform, action, options)` và `CrawlerCommand`, tạo điều kiện an toàn cho việc decommission hoàn toàn legacy code trong Epic 26 mà không gây breaking changes cho user hiện tại.
 
@@ -45,7 +45,7 @@ Then dispatcher trả về PlatformError (hoặc throw) với:
   - code: 'XACT_4001' (hoặc mã lỗi chuẩn)
   - statusCode: 400
   - message: nêu rõ action đã deprecated và platform
-  - suggestedAction: chỉ rõ action/platform thay thế hợp lệ (hoặc 'use_x_actions_list')
+  - suggestedAction: chỉ rõ action/platform thay thế hợp lệ (hoặc 'use_medirus_list')
 And ErrorTypes.DEPRECATED được định nghĩa trong src/core/error-envelope.js
 And actionNotAvailable() trong src/scrapers/platforms.js trả về PlatformError tương thích
 ```

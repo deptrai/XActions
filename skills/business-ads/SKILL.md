@@ -43,7 +43,7 @@ Puppeteer-based module for business intelligence.
 
 Test tweet variations with statistical comparison.
 
-**Controls:** `XActions.createTest(name, textA, textB)`, `XActions.setUrl(name, variant, url)`, `XActions.measure(name)`, `XActions.results(name)`
+**Controls:** `Medirus.createTest(name, textA, textB)`, `Medirus.setUrl(name, variant, url)`, `Medirus.measure(name)`, `Medirus.results(name)`
 
 ## Auto-Plug Replies
 
@@ -51,7 +51,7 @@ Test tweet variations with statistical comparison.
 
 Automatically reply to your viral tweets with promotional content.
 
-**Controls:** `XActions.setPlug(text)`, `XActions.setThreshold(n)`, `XActions.scan()`, `XActions.autoScan(ms)`
+**Controls:** `Medirus.setPlug(text)`, `Medirus.setThreshold(n)`, `Medirus.scan()`, `Medirus.autoScan(ms)`
 
 ## Strategy Guide
 

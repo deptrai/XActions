@@ -70,7 +70,7 @@ Some automation scripts may use X/Twitter-specific globals or DOM APIs not in th
       ...globals.browser,
       ...globals.es2021,
       // X/Twitter page globals that scripts may reference
-      XActions: 'readonly',
+      Medirus: 'readonly',
     },
   },
 }

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Scrapers — Unified Multi-Platform, Multi-Framework Interface
+ * Medirus Scrapers — Unified Multi-Platform, Multi-Framework Interface
  * 
  * Platforms: Twitter/X, Bluesky, Threads, Mastodon
  * Frameworks: Puppeteer (default), Playwright, Cheerio/HTTP
@@ -8,28 +8,28 @@
  * All original Twitter exports are preserved for full backward compatibility.
  * New unified `scrape()` function dispatches to the correct platform module.
  * 
- * Set scraping framework globally: XACTIONS_SCRAPER_ADAPTER=playwright
+ * Set scraping framework globally: MEDIRUS_SCRAPER_ADAPTER=playwright
  * Or per-call: createBrowser({ adapter: 'playwright' })
  * 
  * Usage:
  *   // Backward-compatible Twitter (unchanged):
- *   import scrapers from 'xactions/scrapers';
+ *   import scrapers from 'medirus/scrapers';
  *   const profile = await scrapers.scrapeProfile(page, 'elonmusk');
  * 
  *   // New unified interface:
- *   import { scrape, platforms } from 'xactions/scrapers';
+ *   import { scrape, platforms } from 'medirus/scrapers';
  *   const profile = await scrape('bluesky', 'profile', { username: 'user.bsky.social' });
  *   const mastodonPosts = await scrape('mastodon', 'posts', { username: 'user', instance: 'https://mastodon.social', limit: 20, max_id: '...' });
  *   const mastodonSearch = await scrape('mastodon', 'search', { query: 'open source', instance: 'https://mastodon.social' });
  *   const profile = await scrape('mastodon', 'profile', { username: 'user', instance: 'https://mastodon.social' });
  *
  *   // Use Playwright instead of Puppeteer:
- *   import { createBrowser, createPage, scrapeProfile } from 'xactions/scrapers';
+ *   import { createBrowser, createPage, scrapeProfile } from 'medirus/scrapers';
  *   const browser = await createBrowser({ adapter: 'playwright' });
  *   const page = await createPage(browser);
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  */
 
@@ -148,7 +148,7 @@ import { defaultStore } from '../store/index.js';
 // ============================================================================
 // HTTP Scraper (Direct GraphQL — no browser required)
 // Usage: createBrowser({ adapter: 'http', cookies: '...' })
-// Or:   import { createHttpScraper } from 'xactions/scrapers/social/twitter';
+// Or:   import { createHttpScraper } from 'medirus/scrapers/social/twitter';
 // ============================================================================
 
 export { createHttpScraper } from './social/twitter/http/index.js';
@@ -257,7 +257,7 @@ export { DESCRIPTORS };
  *
  * @param {string} platform - Platform name: 'twitter', 'bluesky', 'mastodon', 'threads'
  * @param {string} action - Action name. Mastodon aliases: 'profile', 'followers', 'following', 'posts' ('tweets'/'timeline'/'feed'/'user_feed'/'get_user_feed'/'statuses'/'toots'/'toot'), 'search', 'hashtag' ('tag'), 'trending'.
- * @param {import('../types/xactions.d.ts').XActionsOptions & { instance?: string, baseUrl?: string, accessToken?: string, token?: string, authToken?: string, max_id?: string, since_id?: string, exclude_replies?: boolean, includeReplies?: boolean, type?: string, query?: string, q?: string, keyword?: string, hashtag?: string, tag?: string }} options - Action-specific options. Mastodon accepts `instance`/`baseUrl`, `accessToken`/`token`/`authToken`, pagination `max_id`/`since_id`, and `exclude_replies` or `includeReplies`.
+ * @param {import('../types/medirus.d.ts').MedirusOptions & { instance?: string, baseUrl?: string, accessToken?: string, token?: string, authToken?: string, max_id?: string, since_id?: string, exclude_replies?: boolean, includeReplies?: boolean, type?: string, query?: string, q?: string, keyword?: string, hashtag?: string, tag?: string }} options - Action-specific options. Mastodon accepts `instance`/`baseUrl`, `accessToken`/`token`/`authToken`, pagination `max_id`/`since_id`, and `exclude_replies` or `includeReplies`.
  * @returns {Promise<Record<string, unknown>>} Scraped data
  *
  * @example

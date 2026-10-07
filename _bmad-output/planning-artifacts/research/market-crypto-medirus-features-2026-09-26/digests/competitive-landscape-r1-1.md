@@ -32,9 +32,9 @@ Session: https://v2.chainlens.app/c/0f65e112-60c9-487f-8170-b751fdeb12ea
 - Compliance moat: spam filters, account suspension risk → assisted-drafting > full auto-posting
 
 ## Leads
-- Browser automation = XActions' moat vs API-priced competitors
+- Browser automation = Medirus' moat vs API-priced competitors
 - Gap: nobody combines X automation + on-chain data + content gen in one tool
-- x402 crypto payments already in XActions — natural fit for crypto-native users
+- x402 crypto payments already in Medirus — natural fit for crypto-native users
 
 ## Sources cited
 - CoinMarketCap, Crypto.com, TradingView, CoinGecko, Binance, Coinbase (aggregator-level)

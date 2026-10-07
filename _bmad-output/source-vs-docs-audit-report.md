@@ -1,7 +1,7 @@
-# Báo Cáo Audit Đối Chiếu Source Code và Tài Liệu Canonical — XActions Hybrid Scraping Spine
+# Báo Cáo Audit Đối Chiếu Source Code và Tài Liệu Canonical — Medirus Hybrid Scraping Spine
 
 **Ngày thực hiện:** 2026-09-01  
-**Kho lưu trữ:** `/Users/luisphan/Documents/GitHub/XActions`  
+**Kho lưu trữ:** `/Users/luisphan/Documents/GitHub/Medirus`  
 **Nhánh Git:** `develop`  
 **Git Commit ID:** `745db53726a045fd6c4dea6a97eb0bac6f0cfeac`
 
@@ -10,11 +10,11 @@
 ## 1. Executive Summary
 
 ### 1.1. Phạm vi kiểm toán
-Đợt kiểm toán read-only toàn diện đối chiếu source code XActions với 5 tài liệu canonical:
+Đợt kiểm toán read-only toàn diện đối chiếu source code Medirus với 5 tài liệu canonical:
 
 1. **PRD:** `_bmad-output/planning-artifacts/prd.md` (Epics 10–20, 23–26)
 2. **Epics Breakdown:** `_bmad-output/planning-artifacts/epics.md`
-3. **Architecture Spine:** `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (21 AD)
+3. **Architecture Spine:** `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (21 AD)
 4. **UX / Design:** `_bmad-output/planning-artifacts/ux/DESIGN.md` + `EXPERIENCE-UNIVERSAL-2026-08-21.md`
 5. **Readiness Report gần nhất:** `_bmad-output/planning-artifacts/implementation-readiness-report-2026-08-26-r5.md`
 
@@ -42,9 +42,9 @@
 | **AD-11 — CrawlerCommand & ActionRegistry** | `src/core/base-crawler.js`, `src/core/action-registry.js` | `src/core/base-crawler.js`, `src/core/action-registry.js` | **FULLY_IMPLEMENTED** | `AbstractCrawler` sử dụng private `#registry`; `ActionDescriptor` có `requiresAuth` resolved; `globalActionRegistry` tại `src/core/action-registry.js`. |
 | **AD-12 — CrawlCheckpoint State for Idempotent Resume** | `prisma/schema.prisma`, `src/store/checkpoint-manager.js`, `src/scrapers/**` | `prisma/schema.prisma`, `src/store/checkpoint-manager.js` | **FULLY_IMPLEMENTED** | `CrawlCheckpoint` với `@@unique([platform, targetType, targetKey])`, `status` enum, CRUD/resume/pause/retry tại `src/store/checkpoint-manager.js` và `api/routes/checkpoints.js`. |
 | **AD-13 — Adaptive Infrastructure-Aware Dynamic Rate Limiting & Account Protection Governor** | `src/core/adaptive-governor.js`, `src/core/account-pool.js`, `src/proxy/proxy-pool.js` | `src/core/adaptive-governor.js`, `src/core/account-pool.js`, `src/proxy/proxy-pool.js` | **FULLY_IMPLEMENTED** | `AdaptiveRateGovernor` tính `maxReqPerSecond` theo healthy proxy, platform limits, Redis consumer lag, hibernation 15–30 phút, account rotation tại `src/core/adaptive-governor.js`. `AccountPool` quản lý velocity/hibernation/rotation tại `src/core/account-pool.js`. |
-| **AD-14 — Operational Status & Error Envelope for Consumers** | `src/core/error-envelope.js`, `src/core/status-api.js`, `src/mcp/**`, `src/api/**`, `src/cli/**` | `src/core/error-envelope.js`, `src/core/status-api.js`, `src/mcp/server.js`, `api/routes/governor.js` | **FULLY_IMPLEMENTED** | `PlatformError` envelope chuẩn `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }` tại `src/core/error-envelope.js:1-120`. `GET /governor/status` tại `api/routes/governor.js`. `x_actions_list` và `x_crawl_*` tại `src/mcp/server.js:2649-2693`. Legacy CLI `unfollowx` mapping còn giữ. |
+| **AD-14 — Operational Status & Error Envelope for Consumers** | `src/core/error-envelope.js`, `src/core/status-api.js`, `src/mcp/**`, `src/api/**`, `src/cli/**` | `src/core/error-envelope.js`, `src/core/status-api.js`, `src/mcp/server.js`, `api/routes/governor.js` | **FULLY_IMPLEMENTED** | `PlatformError` envelope chuẩn `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }` tại `src/core/error-envelope.js:1-120`. `GET /governor/status` tại `api/routes/governor.js`. `medirus_list` và `x_crawl_*` tại `src/mcp/server.js:2649-2693`. Legacy CLI `unfollowx` mapping còn giữ. |
 | **AD-15 — Terminal QR Login with Non-TTY Fallback & Clear Auth Feedback** | `src/core/base-login.js`, `src/utils/qrcode.js`, `src/cli/login.js` | `src/core/base-login.js`, `src/utils/qrcode.js`, `src/cli/commands/login.js` | **PARTIALLY_IMPLEMENTED** | `src/utils/qrcode.js` có ASCII QR (`qrcode-terminal`) nhưng thiếu countdown 60s, timeout 120s, non-TTY URL fallback, `--qr-url`, `--push` theo spec. `login.js` CLI chưa có các flags này. |
-| **AD-16 — CrawlCheckpoint Operational API** | `src/store/checkpoint-manager.js`, `src/api/**`, `src/cli/**`, `prisma/schema.prisma` | `src/store/checkpoint-manager.js`, `api/routes/checkpoints.js`, `src/cli/commands/checkpoints.js` | **FULLY_IMPLEMENTED** | `GET /checkpoints`, `GET /checkpoints/:id`, `POST /checkpoints/:id/resume|pause|retry` tại `api/routes/checkpoints.js`. CLI `xactions checkpoints list/show/resume/pause/retry` tại `src/cli/commands/checkpoints.js`. Status values `running|paused|failed|completed|stalled` tại `prisma/schema.prisma:394`. |
+| **AD-16 — CrawlCheckpoint Operational API** | `src/store/checkpoint-manager.js`, `src/api/**`, `src/cli/**`, `prisma/schema.prisma` | `src/store/checkpoint-manager.js`, `api/routes/checkpoints.js`, `src/cli/commands/checkpoints.js` | **FULLY_IMPLEMENTED** | `GET /checkpoints`, `GET /checkpoints/:id`, `POST /checkpoints/:id/resume|pause|retry` tại `api/routes/checkpoints.js`. CLI `medirus checkpoints list/show/resume/pause/retry` tại `src/cli/commands/checkpoints.js`. Status values `running|paused|failed|completed|stalled` tại `prisma/schema.prisma:394`. |
 | **AD-17 — Redis Stream Metrics & Backpressure Observability** | `src/utils/stream-metrics*.js`, `src/utils/stream-alerts.js`, `api/routes/streams.js` | `src/utils/stream-metrics.js`, `src/utils/stream-metrics-collector.js`, `src/utils/stream-alerts.js`, `api/routes/streams.js` | **FULLY_IMPLEMENTED** | `GET /metrics/stream` tại `api/routes/streams.js`; `StreamMetricsCollector` tại `src/utils/stream-metrics-collector.js`; alert thresholds 50.000 / 60s tại `src/utils/stream-alerts.js`. |
 | **AD-18 — Metadata Schema Contract for Consumers** | `src/core/metadata-schema-registry.js`, `src/api/schemas.js`, `src/store/prisma-store.js`, `schemas/**` | `src/core/metadata-schema-registry.js`, `api/routes/schemas.js`, `src/store/prisma-store.js`, `schemas/**` | **FULLY_IMPLEMENTED** | Registry tại `src/core/metadata-schema-registry.js`; API `GET /schemas`, `GET /schemas/:platform/:category` tại `api/routes/schemas.js`; 9 pilot schemas tại `schemas/{twitter,facebook,threads,tiktok,shopee,tiktokshop,realestate,recruitment}/*.json`. |
 | **AD-19 — Internal Operator Dashboard, Admin CLI & MCP Surface** | `dashboard/admin.html`, `api/routes/admin.js`, `src/cli/commands/admin.js`, `src/mcp/server.js` | `dashboard/admin.html`, `api/routes/admin.js`, `src/cli/commands/admin.js` | **PARTIALLY_IMPLEMENTED** | Dashboard UI 19.1–19.3 hoàn thành (`dashboard/admin.html`), admin REST routes 19.2/19.3 tại `api/routes/admin.js`. CLI `admin` chỉ có `stream metrics/alerts` (`src/cli/commands/admin.js:24-125`) — thiếu `status`, `proxies`, `accounts`, `checkpoints` (19.4.1–19.4.5). MCP `x_admin_*` chưa tìm thấy trong `src/mcp/server.js`. |
@@ -150,7 +150,7 @@
 ## 8. Recommendations
 
 1. **Hoàn thiện Epic 19 (Admin CLI & REST API):**
-   - Bổ sung `xactions admin status/proxies/accounts/checkpoints` trong `src/cli/commands/admin.js`.
+   - Bổ sung `medirus admin status/proxies/accounts/checkpoints` trong `src/cli/commands/admin.js`.
    - Bổ sung `/admin/checkpoints` CRUD trong `api/routes/admin.js`.
    - Thêm `x_admin_*` MCP tools trong `src/mcp/server.js`.
 

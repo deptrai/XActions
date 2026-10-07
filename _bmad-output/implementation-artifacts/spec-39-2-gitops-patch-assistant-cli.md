@@ -1,5 +1,5 @@
 ---
-title: 'Story 39.2 — GitOps Patch Assistant CLI (xactions canary heal)'
+title: 'Story 39.2 — GitOps Patch Assistant CLI (medirus canary heal)'
 type: 'feature'
 created: '2026-09-18'
 status: 'done'
@@ -17,12 +17,12 @@ deferred: []
 
 **Problem:** DOM selector drift is detected by `SelectorCanary` but there is no automated path to heal it — developers must manually investigate, test candidates, and create PRs. This violates Invariant #4 (GitOps-Driven DOM Drift Healing) which requires a Draft PR workflow, not runtime patching.
 
-**Approach:** Implement `xactions canary heal` CLI that orchestrates: load drift status → `AutoSelectorFallback.investigate()` → `SelectorSandbox` validation → `unified-diff` generation → GitHub Draft PR (or `.patch` file fallback). Manual trigger only; no auto-heal.
+**Approach:** Implement `medirus canary heal` CLI that orchestrates: load drift status → `AutoSelectorFallback.investigate()` → `SelectorSandbox` validation → `unified-diff` generation → GitHub Draft PR (or `.patch` file fallback). Manual trigger only; no auto-heal.
 
 ## Boundaries & Constraints
 
 **Always:**
-- Manual trigger only — `xactions canary heal` is a CLI command, not a scheduled job.
+- Manual trigger only — `medirus canary heal` is a CLI command, not a scheduled job.
 - Sandbox validation mandatory — every candidate selector must be validated against `expectedShape` in isolated page context.
 - Unified-diff output — patches target `config/canary-targets.json` only.
 - GitHub Draft PR — never direct commit; always human review gate.
@@ -39,20 +39,20 @@ deferred: []
 
 | Scenario | Input / State | Expected Output / Behavior | Error Handling |
 |----------|--------------|---------------------------|----------------|
-| HAPPY_PATH | `xactions canary heal --platform twitter --target twitter-profile` | Draft PR created with unified-diff | No error expected |
-| PREVIEW | `xactions canary heal --preview` | Unified-diff printed to stdout, no PR created | No error expected |
-| PATCH_FILE | `xactions canary heal --output fix.patch` | `.patch` file written, no PR created | No error expected |
-| NO_CANDIDATES | `xactions canary heal` but no valid selector found | GitHub Issue created with investigation details | `No valid replacement selectors found` |
-| INVALID_TARGET | `xactions canary heal --platform foo --target bar` | Error message + exit code 1 | `Unknown platform or target` |
-| GH_CLI_MISSING | `xactions canary heal` but `gh` not installed | Fallback to `.patch` file + instructions | `gh CLI not found — wrote patch file` |
+| HAPPY_PATH | `medirus canary heal --platform twitter --target twitter-profile` | Draft PR created with unified-diff | No error expected |
+| PREVIEW | `medirus canary heal --preview` | Unified-diff printed to stdout, no PR created | No error expected |
+| PATCH_FILE | `medirus canary heal --output fix.patch` | `.patch` file written, no PR created | No error expected |
+| NO_CANDIDATES | `medirus canary heal` but no valid selector found | GitHub Issue created with investigation details | `No valid replacement selectors found` |
+| INVALID_TARGET | `medirus canary heal --platform foo --target bar` | Error message + exit code 1 | `Unknown platform or target` |
+| GH_CLI_MISSING | `medirus canary heal` but `gh` not installed | Fallback to `.patch` file + instructions | `gh CLI not found — wrote patch file` |
 | SANDBOX_FAIL | Candidate fails `expectedShape` validation | Candidate rejected, try next | `Candidate failed validation: {reason}` |
-| MULTI_PLATFORM | `xactions canary heal` without `--platform` | Heal all drifted platforms sequentially | Partial failure logged per platform |
+| MULTI_PLATFORM | `medirus canary heal` without `--platform` | Heal all drifted platforms sequentially | Partial failure logged per platform |
 
 </intent-contract>
 
 ## Code Map
 
-- `src/cli/commands/canary.js` — NEW: CLI command registration for `xactions canary {status|probe|heal}`.
+- `src/cli/commands/canary.js` — NEW: CLI command registration for `medirus canary {status|probe|heal}`.
 - `src/services/canary-healer.js` — NEW: `CanaryHealer` orchestration service (detect → investigate → validate → patch → PR).
 - `src/services/selector-sandbox.js` — NEW: `SelectorSandbox` for candidate validation in isolated page.
 - `src/utils/unified-diff.js` — NEW: `generateJsonUnifiedDiff` for `canary-targets.json` patches.
@@ -81,10 +81,10 @@ deferred: []
 
 **Acceptance Criteria:**
 
-- Given `xactions canary status`, when run, then displays `platformDrift` status for all platforms from governor.
-- Given `xactions canary heal --platform twitter --target twitter-profile`, when run with valid drift, then creates GitHub Draft PR with unified-diff.
-- Given `xactions canary heal --preview`, when run, then outputs unified-diff to stdout without creating PR.
-- Given `xactions canary heal --output fix.patch`, when run, then writes `.patch` file instead of PR.
+- Given `medirus canary status`, when run, then displays `platformDrift` status for all platforms from governor.
+- Given `medirus canary heal --platform twitter --target twitter-profile`, when run with valid drift, then creates GitHub Draft PR with unified-diff.
+- Given `medirus canary heal --preview`, when run, then outputs unified-diff to stdout without creating PR.
+- Given `medirus canary heal --output fix.patch`, when run, then writes `.patch` file instead of PR.
 - Given a candidate selector fails `expectedShape` validation, when sandbox runs, then candidate is rejected and next candidate tried.
 - Given no valid candidates found, when `heal` completes, then creates GitHub Issue with investigation details.
 - Given `gh` CLI is not installed, when `heal` runs, then falls back to `.patch` file output with instructions.
@@ -138,13 +138,13 @@ This ensures only working selectors are included in the patch.
 Status: done
 
 ### Summary of Implemented Change
-Implemented `xactions canary heal` CLI for GitOps-driven selector drift healing. The workflow orchestrates: drift status loading → `AutoSelectorFallback.investigate()` → `SelectorSandbox` validation → `unified-diff` generation → GitHub Draft PR (or `.patch` file fallback). Manual trigger only; no auto-heal per Invariant #4.
+Implemented `medirus canary heal` CLI for GitOps-driven selector drift healing. The workflow orchestrates: drift status loading → `AutoSelectorFallback.investigate()` → `SelectorSandbox` validation → `unified-diff` generation → GitHub Draft PR (or `.patch` file fallback). Manual trigger only; no auto-heal per Invariant #4.
 
 ### Files Changed
 - `src/utils/unified-diff.js` — `generateJsonUnifiedDiff()` using LCS line diff (no new deps)
 - `src/services/selector-sandbox.js` — `SelectorSandbox` class with `validate(url, selector, expectedShape)`; launches stealth browser, validates tagName/minChildren/childSelectors/text/attributes predicates
 - `src/services/canary-healer.js` — `CanaryHealer` orchestrator: resolve target → investigate → sandbox validate → generate diff → `gh` Draft PR (with `.patch` fallback / GitHub Issue on no-candidates)
-- `src/cli/commands/canary.js` — `xactions canary {status|probe|heal}` with `--preview`, `--output`, `--platform`, `--target`, `--json` flags
+- `src/cli/commands/canary.js` — `medirus canary {status|probe|heal}` with `--preview`, `--output`, `--platform`, `--target`, `--json` flags
 - `src/cli/index.js` — import + `registerCanaryCommand(program)` after `registerToolsCommand`
 - `config/canary-targets.json` — added `expectedShape` per target (twitter/facebook/youtube/threads)
 - `types/core.d.ts` — appended `SelectorSandboxOptions`, `SelectorSandboxResult`, `PatchCandidate`, `HealingStatus`, `HealingResult`, `CanaryHealerOptions`, `CanaryHealer` declarations

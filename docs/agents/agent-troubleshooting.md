@@ -1,6 +1,6 @@
 # Agent Troubleshooting Guide
 
-Common issues agents encounter when working on XActions and how to resolve them.
+Common issues agents encounter when working on Medirus and how to resolve them.
 
 ---
 
@@ -41,14 +41,14 @@ const fetchMock = vi.fn(async (url) => {
 ## MCP Server
 
 ### MCP server crashes on startup
-1. Check `XACTIONS_SESSION_COOKIE` is set in environment
+1. Check `MEDIRUS_SESSION_COOKIE` is set in environment
 2. Verify Node.js version ≥ 18: `node --version`
 3. Check import errors: `node src/mcp/server.js` directly
 4. Review `docs/mcp-setup.md` for full setup
 
 ### MCP tool returns "not authenticated"
 **Cause:** Session cookie expired or missing.
-**Fix:** Get a fresh `auth_token` cookie from DevTools → Application → Cookies → `auth_token` on x.com. Set as `XACTIONS_SESSION_COOKIE`.
+**Fix:** Get a fresh `auth_token` cookie from DevTools → Application → Cookies → `auth_token` on x.com. Set as `MEDIRUS_SESSION_COOKIE`.
 
 ### MCP tool times out
 **Cause:** Puppeteer can't launch (missing Chrome/Chromium) or x.com is blocking automation.
@@ -80,26 +80,26 @@ npx puppeteer browsers install chrome
 
 ## CLI
 
-### `xactions` command not found after install
+### `medirus` command not found after install
 ```bash
-npm install -g xactions
+npm install -g medirus
 # Or from source:
 npm link
 ```
 
 ### CLI persona commands fail
-1. Check `XACTIONS_SESSION_COOKIE` env var
+1. Check `MEDIRUS_SESSION_COOKIE` env var
 2. For LLM features: check `OPENROUTER_API_KEY`
-3. Run `xactions persona list` to verify setup
+3. Run `medirus persona list` to verify setup
 
 ---
 
 ## Selector Drift & Canary (Epic 39)
 
 ### Selectors stopped working after an X/Twitter DOM change
-1. Run `xactions canary status` — shows per-platform `successRate`, `consecutiveFailures`, and the last working selector
-2. Run `xactions canary probe` — one probe cycle across all targets in `config/canary-targets.json`
-3. Run `xactions canary heal --platform twitter --preview` — prints the unified-diff without touching anything
+1. Run `medirus canary status` — shows per-platform `successRate`, `consecutiveFailures`, and the last working selector
+2. Run `medirus canary probe` — one probe cycle across all targets in `config/canary-targets.json`
+3. Run `medirus canary heal --platform twitter --preview` — prints the unified-diff without touching anything
 4. Review the diff, then run without `--preview` to create a GitHub **Draft PR** (branch `canary-heal/<platform>-<target>-<ts>`)
 5. Merge the PR — selectors live in source control, never hot-patched at runtime (AD-44)
 
@@ -120,7 +120,7 @@ npm link
 
 ### `PROXY_EXHAUSTED` (XACT_5030) instead of budget error
 **Cause:** Different failure — no proxy node of the requested tier could serve the request (all quarantined or none configured).
-**Fix:** Check `xactions governor status` for proxy health; add proxies of the needed tier (`free | datacenter | residential | mobile_4g`) or set `requiresProxy: false` where a direct connection is acceptable.
+**Fix:** Check `medirus governor status` for proxy health; add proxies of the needed tier (`free | datacenter | residential | mobile_4g`) or set `requiresProxy: false` where a direct connection is acceptable.
 
 ### Paid-tier costs appear even though I only use free proxies
 **Cost model:** `ProxyBudgetGovernor` estimates ~50MB per request × tier rate (datacenter $0.5/GB, residential $8/GB, mobile_4g $15/GB; free = $0). Verify proxy records carry the right `tier` — the deprecated `residential: true` boolean maps to `tier: 'residential'`, so migrate proxy configs to the explicit `tier` field.
@@ -139,7 +139,7 @@ npm link
 
 ### A platform returns `status: 'account_sick'`
 **Cause:** The supplied `accountId` is hibernating (rate-limited or panic-stopped via the Adaptive Rate Governor).
-**Fix:** Check `xactions governor status` for hibernation state and wait out the hibernation window, or supply a different `accountId`.
+**Fix:** Check `medirus governor status` for hibernation state and wait out the hibernation window, or supply a different `accountId`.
 
 ---
 
@@ -186,7 +186,7 @@ npx vitest run tests/specific/test.js
 |-------|-----------|-----|
 | `require` is not defined | ESM-only project (`"type":"module"` in package.json) | Use `import`/`export` only |
 | `window` is not defined | Browser script running in Node.js | Browser scripts are console-only; Node.js alternatives are in `src/scrapers/` |
-| Selector stopped working | X/Twitter changed DOM | Run `xactions canary status` / `canary heal --preview`; check `docs/agents/selectors.md` |
+| Selector stopped working | X/Twitter changed DOM | Run `medirus canary status` / `canary heal --preview`; check `docs/agents/selectors.md` |
 | Rate limit after few actions | No delay between actions | Add `await sleep(1000 + Math.random() * 2000)` between each action |
 | `BUDGET_CEILING_REACHED` | Daily proxy budget exhausted | Wait for daily reset (TTL) or raise `PROXY_DAILY_BUDGET_USD` |
 | `circuit_open` in OSINT results | 3 consecutive platform failures | Wait 60s half-open cooldown; fix root cause in `error.category` |

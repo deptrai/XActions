@@ -35,7 +35,7 @@ from pathlib import Path
 
 # --- Agent-specific configuration (set by builder) ---
 
-SKILL_NAME = "xactions-test-engineer"
+SKILL_NAME = "medirus-test-engineer"
 SANCTUM_DIR = SKILL_NAME
 
 # Files that stay in the skill bundle (only used during First Breath)
@@ -198,7 +198,7 @@ def substitute_vars(content: str, variables: dict) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Scaffold the xactions-test-engineer sanctum in a project."
+        description="Scaffold the medirus-test-engineer sanctum in a project."
     )
     parser.add_argument(
         "project_root",

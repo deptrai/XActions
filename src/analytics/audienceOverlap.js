@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Audience Overlap & Venn Analysis
+ * Medirus Audience Overlap & Venn Analysis
  * Finds shared followers between accounts, identifies unique audiences.
  *
  * Kills: Followerwonk (compare followers, find overlaps)

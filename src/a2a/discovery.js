@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions A2A — Agent Discovery Service
+ * Medirus A2A — Agent Discovery Service
  *
  * Discover, register, and manage external A2A agents. Includes skill matching,
  * trust scoring, and persistence of agent metadata.
@@ -19,7 +19,7 @@ import { applyAuth } from './auth.js';
 // Constants
 // ============================================================================
 
-const CACHE_DIR = path.join(os.homedir(), '.xactions', 'agents');
+const CACHE_DIR = path.join(os.homedir(), '.medirus', 'agents');
 const AGENTS_FILE = path.join(CACHE_DIR, 'registry.json');
 const TRUST_FILE = path.join(CACHE_DIR, 'trust.json');
 const DEFAULT_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
@@ -313,7 +313,7 @@ export class SkillMatcher {
   }
 
   /**
-   * Find agents with skills that XActions doesn't have.
+   * Find agents with skills that Medirus doesn't have.
    *
    * @param {string[]} mySkillIds
    * @returns {Promise<Array<{ agentUrl: string, agentName: string, uniqueSkills: string[] }>>}

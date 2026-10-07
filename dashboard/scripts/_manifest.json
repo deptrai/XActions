@@ -17,7 +17,7 @@
   },
   {
     "slug": "account-settings",
-    "title": "Account Settings - XActions",
+    "title": "Account Settings - Medirus",
     "description": "Toggle common X privacy and safety settings (protect posts, DMs, tagging, discoverability) from one script.",
     "category": "Account Management",
     "icon": "⚙️",
@@ -26,7 +26,7 @@
   {
     "slug": "actions",
     "title": "Actions",
-    "description": "XActions Actions Library - Complete X/Twitter Actions",
+    "description": "Medirus Actions Library - Complete X/Twitter Actions",
     "category": "Automation",
     "icon": "⚡",
     "sourceDir": "src/automation"
@@ -41,7 +41,7 @@
   },
   {
     "slug": "add-to-list",
-    "title": "Add To List - XActions",
+    "title": "Add To List - Medirus",
     "description": "Add a batch of users to one of your Twitter Lists via the list's \"Manage members\" search, rate-limited.",
     "category": "Lists & Communities",
     "icon": "➕",
@@ -154,7 +154,7 @@
   {
     "slug": "auto-commenter",
     "title": "Auto Commenter",
-    "description": "XActions Automation - Auto Commenter",
+    "description": "Medirus Automation - Auto Commenter",
     "category": "Engagement",
     "icon": "💬",
     "sourceDir": "src/automation"
@@ -170,14 +170,14 @@
   {
     "slug": "auto-liker",
     "title": "Auto Liker",
-    "description": "XActions Automation - Timeline Auto-Liker",
+    "description": "Medirus Automation - Timeline Auto-Liker",
     "category": "Engagement",
     "icon": "❤️",
     "sourceDir": "src/automation"
   },
   {
     "slug": "auto-reply-dms",
-    "title": "Auto Reply DMs - XActions",
+    "title": "Auto Reply DMs - Medirus",
     "description": "Auto-reply to unread DM conversations with a single message template.",
     "category": "Messaging",
     "icon": "💌",
@@ -185,7 +185,7 @@
   },
   {
     "slug": "auto-reply-mentions",
-    "title": "Auto Reply Mentions - XActions",
+    "title": "Auto Reply Mentions - Medirus",
     "description": "Reply to your recent mentions with rotating templates so no @ goes unanswered.",
     "category": "Engagement",
     "icon": "📨",
@@ -273,7 +273,7 @@
   },
   {
     "slug": "block-list-transfer",
-    "title": "Block List Transfer - XActions",
+    "title": "Block List Transfer - Medirus",
     "description": "Export your block list to JSON, import and block a list of users, or block-chain an account's followers.",
     "category": "Safety & Privacy",
     "icon": "🧱",
@@ -321,7 +321,7 @@
   },
   {
     "slug": "bulk-dm",
-    "title": "Bulk DM - XActions",
+    "title": "Bulk DM - Medirus",
     "description": "Send a personalized DM to a list of users from one message template.",
     "category": "Messaging",
     "icon": "📤",
@@ -426,7 +426,7 @@
   {
     "slug": "control-panel",
     "title": "Control Panel",
-    "description": "XActions Control Panel — Floating UI for Browser Automations",
+    "description": "Medirus Control Panel — Floating UI for Browser Automations",
     "category": "Automation",
     "icon": "🎛️",
     "sourceDir": "src/automation"
@@ -434,7 +434,7 @@
   {
     "slug": "core",
     "title": "Core",
-    "description": "XActions Automation Framework - Core Utilities",
+    "description": "Medirus Automation Framework - Core Utilities",
     "category": "Automation",
     "icon": "⚙️",
     "sourceDir": "src/automation"
@@ -474,7 +474,7 @@
   {
     "slug": "customer-service",
     "title": "Customer Service",
-    "description": "XActions Automation - Customer Service Bot",
+    "description": "Medirus Automation - Customer Service Bot",
     "category": "Automation",
     "icon": "🤝",
     "sourceDir": "src/automation"
@@ -489,7 +489,7 @@
   },
   {
     "slug": "delete-tweets",
-    "title": "Delete Tweets - XActions",
+    "title": "Delete Tweets - Medirus",
     "description": "DESTRUCTIVE: bulk-delete your own posts by age, keywords, or performance. Defaults to a safe dry run.",
     "category": "Content Tools",
     "icon": "🗑️",
@@ -618,7 +618,7 @@
   {
     "slug": "filter-manager",
     "title": "Filter Manager",
-    "description": "Configure filters for XActions automation",
+    "description": "Configure filters for Medirus automation",
     "category": "Safety & Privacy",
     "icon": "🔍",
     "sourceDir": "scripts/twitter"
@@ -649,7 +649,7 @@
   },
   {
     "slug": "follow-back",
-    "title": "Follow Back - XActions",
+    "title": "Follow Back - Medirus",
     "description": "Follow every account that follows you but that you don't follow back yet.",
     "category": "Growth",
     "icon": "🔗",
@@ -658,14 +658,14 @@
   {
     "slug": "follow-engagers",
     "title": "Follow Engagers",
-    "description": "XActions Automation - Follow Likers & Commenters",
+    "description": "Medirus Automation - Follow Likers & Commenters",
     "category": "Growth",
     "icon": "🎯",
     "sourceDir": "src/automation"
   },
   {
     "slug": "follow-list-members",
-    "title": "Follow List Members - XActions",
+    "title": "Follow List Members - Medirus",
     "description": "Follow every member of a Twitter List, skipping accounts you already follow, rate-limited.",
     "category": "Lists & Communities",
     "icon": "👣",
@@ -682,7 +682,7 @@
   {
     "slug": "follow-target-users",
     "title": "Follow Target Users",
-    "description": "XActions Automation - Follow Followers/Following of Target Users",
+    "description": "Medirus Automation - Follow Followers/Following of Target Users",
     "category": "Growth",
     "icon": "🎯",
     "sourceDir": "src/automation"
@@ -746,7 +746,7 @@
   {
     "slug": "growth-suite",
     "title": "Growth Suite",
-    "description": "XActions Automation - Growth Automation Suite",
+    "description": "Medirus Automation - Growth Automation Suite",
     "category": "Growth",
     "icon": "🚀",
     "sourceDir": "src/automation"
@@ -826,7 +826,7 @@
   {
     "slug": "keyword-follow",
     "title": "Keyword Follow",
-    "description": "XActions Automation - Keyword Search & Follow",
+    "description": "Medirus Automation - Keyword Search & Follow",
     "category": "Growth",
     "icon": "🔑",
     "sourceDir": "src/automation"
@@ -865,7 +865,7 @@
   },
   {
     "slug": "like-by-feed",
-    "title": "Like By Feed - XActions",
+    "title": "Like By Feed - Medirus",
     "description": "Automatically like tweets from your home timeline/feed",
     "category": "Engagement",
     "icon": "❤️",
@@ -873,7 +873,7 @@
   },
   {
     "slug": "like-by-hashtag",
-    "title": "Like By Hashtag - XActions",
+    "title": "Like By Hashtag - Medirus",
     "description": "Automatically like tweets containing specific hashtags",
     "category": "Engagement",
     "icon": "❤️",
@@ -881,7 +881,7 @@
   },
   {
     "slug": "like-by-location",
-    "title": "Like By Location - XActions",
+    "title": "Like By Location - Medirus",
     "description": "Automatically like tweets from specific geographic locations",
     "category": "Engagement",
     "icon": "❤️",
@@ -889,7 +889,7 @@
   },
   {
     "slug": "like-by-user",
-    "title": "Like By User - XActions",
+    "title": "Like By User - Medirus",
     "description": "Automatically like all tweets from a specific user's profile",
     "category": "Engagement",
     "icon": "❤️",
@@ -905,7 +905,7 @@
   },
   {
     "slug": "like-user-replies",
-    "title": "Like User Replies - XActions",
+    "title": "Like User Replies - Medirus",
     "description": "Automatically like replies/comments on a specific tweet",
     "category": "Engagement",
     "icon": "❤️",
@@ -930,7 +930,7 @@
   {
     "slug": "link-scraper",
     "title": "Link Scraper",
-    "description": "XActions Automation - Link Scraper",
+    "description": "Medirus Automation - Link Scraper",
     "category": "Scrapers",
     "icon": "🔗",
     "sourceDir": "src/automation"
@@ -1058,7 +1058,7 @@
   {
     "slug": "multi-account",
     "title": "Multi Account",
-    "description": "XActions Automation - Multi-Account Manager",
+    "description": "Medirus Automation - Multi-Account Manager",
     "category": "Account Management",
     "icon": "👥",
     "sourceDir": "src/automation"
@@ -1122,14 +1122,14 @@
   {
     "slug": "algorithm-trainer",
     "title": "Phase 1",
-    "description": "XActions Automation - Algorithm Trainer",
+    "description": "Medirus Automation - Algorithm Trainer",
     "category": "Growth",
     "icon": "🧠",
     "sourceDir": "src/automation"
   },
   {
     "slug": "pin-tweet",
-    "title": "Pin Tweet - XActions",
+    "title": "Pin Tweet - Medirus",
     "description": "Pin or unpin one of your own tweets to the top of your profile.",
     "category": "Posting",
     "icon": "📌",
@@ -1177,7 +1177,7 @@
   },
   {
     "slug": "post-tweet",
-    "title": "Post Tweet - XActions",
+    "title": "Post Tweet - Medirus",
     "description": "Compose and post a single tweet from your logged-in session.",
     "category": "Posting",
     "icon": "✍️",
@@ -1234,7 +1234,7 @@
   {
     "slug": "protect-active-users",
     "title": "Protect Active Users",
-    "description": "XActions Automation - Don't Unfollow Active Users",
+    "description": "Medirus Automation - Don't Unfollow Active Users",
     "category": "Automation",
     "icon": "🛡️",
     "sourceDir": "src/automation"
@@ -1258,7 +1258,7 @@
   {
     "slug": "quota-supervisor",
     "title": "Quota Supervisor",
-    "description": "XActions Automation - Quota Supervisor",
+    "description": "Medirus Automation - Quota Supervisor",
     "category": "Automation",
     "icon": "⚠️",
     "sourceDir": "src/automation"
@@ -1273,7 +1273,7 @@
   },
   {
     "slug": "quote-tweet",
-    "title": "Quote Tweet - XActions",
+    "title": "Quote Tweet - Medirus",
     "description": "Quote-tweet the post you are currently viewing with your own text.",
     "category": "Posting",
     "icon": "💬",
@@ -1297,7 +1297,7 @@
   },
   {
     "slug": "remove-follower",
-    "title": "Remove Follower - XActions",
+    "title": "Remove Follower - Medirus",
     "description": "Remove followers without blocking them: X's native \"Remove this follower\", or a soft-block fallback.",
     "category": "Safety & Privacy",
     "icon": "🚪",
@@ -1353,7 +1353,7 @@
   },
   {
     "slug": "schedule-post",
-    "title": "Schedule Post - XActions",
+    "title": "Schedule Post - Medirus",
     "description": "Schedule a tweet for a future date/time using X's native scheduler.",
     "category": "Posting",
     "icon": "🗓️",
@@ -1401,7 +1401,7 @@
   },
   {
     "slug": "scrape-user-likes",
-    "title": "Scrape User Likes - XActions",
+    "title": "Scrape User Likes - Medirus",
     "description": "Scroll a user's Likes timeline and export the posts they liked (url, author, text, counts) to JSON and CSV.",
     "category": "Scrapers",
     "icon": "💗",
@@ -1426,7 +1426,7 @@
   {
     "slug": "session-logger",
     "title": "Session Logger",
-    "description": "XActions Automation - Session Logger & Analytics",
+    "description": "Medirus Automation - Session Logger & Analytics",
     "category": "Automation",
     "icon": "📋",
     "sourceDir": "src/automation"
@@ -1466,7 +1466,7 @@
   {
     "slug": "smart-unfollow",
     "title": "Smart Unfollow",
-    "description": "XActions Automation - Smart Unfollow (Time-Based)",
+    "description": "Medirus Automation - Smart Unfollow (Time-Based)",
     "category": "Unfollow Tools",
     "icon": "🧠",
     "sourceDir": "src/automation"
@@ -1506,7 +1506,7 @@
   {
     "slug": "thought-leader-cultivator",
     "title": "Thought Leader Cultivator",
-    "description": "XActions - Thought Leader Algorithm Cultivator (Standalone)",
+    "description": "Medirus - Thought Leader Algorithm Cultivator (Standalone)",
     "category": "Growth",
     "icon": "🧠",
     "sourceDir": "scripts"
@@ -1553,7 +1553,7 @@
   },
   {
     "slug": "trending-monitor",
-    "title": "Trending Monitor - XActions",
+    "title": "Trending Monitor - Medirus",
     "description": "Capture the current X trends (name, post count, category), highlight watched keywords, and optionally re-scan on an interval.",
     "category": "Analytics",
     "icon": "📈",
@@ -1665,7 +1665,7 @@
   },
   {
     "slug": "unlike-all",
-    "title": "Unlike All Tweets - XActions",
+    "title": "Unlike All Tweets - Medirus",
     "description": "Unlikes all liked tweets from your likes page (x.com/USERNAME/likes)",
     "category": "Content Tools",
     "icon": "💔",
@@ -1673,7 +1673,7 @@
   },
   {
     "slug": "unlike-old",
-    "title": "Unlike Old Tweets - XActions",
+    "title": "Unlike Old Tweets - Medirus",
     "description": "Unlikes tweets older than a specified number of days from your likes page",
     "category": "Content Tools",
     "icon": "💔",
@@ -1761,7 +1761,7 @@
   },
   {
     "slug": "vote-in-polls",
-    "title": "Vote In Polls - XActions",
+    "title": "Vote In Polls - Medirus",
     "description": "Vote in polls found in a timeline or search as you scroll, using a fixed or random option strategy.",
     "category": "Engagement",
     "icon": "🗳️",
@@ -1841,7 +1841,7 @@
   },
   {
     "slug": "comment-by-hashtag",
-    "title": "XActions - Comment By Hashtag",
+    "title": "Medirus - Comment By Hashtag",
     "description": "Search for tweets with specific hashtags and automatically",
     "category": "Engagement",
     "icon": "💬",
@@ -1849,7 +1849,7 @@
   },
   {
     "slug": "comment-by-location",
-    "title": "XActions - Comment By Location",
+    "title": "Medirus - Comment By Location",
     "description": "Search for tweets from specific locations and automatically",
     "category": "Engagement",
     "icon": "💬",
@@ -1857,23 +1857,23 @@
   },
   {
     "slug": "algorithm-builder",
-    "title": "XActions Algorithm Builder",
+    "title": "Medirus Algorithm Builder",
     "description": "",
     "category": "Growth",
     "icon": "🧠",
     "sourceDir": "src"
   },
   {
-    "slug": "xactions-command-center",
-    "title": "XActions Command Center",
-    "description": "One console script that opens a searchable menu of every XActions tool (scrape, analyze, grow, engage, clean up, and moderate) with per-tool options and one-click run.",
+    "slug": "medirus-command-center",
+    "title": "Medirus Command Center",
+    "description": "One console script that opens a searchable menu of every Medirus tool (scrape, analyze, grow, engage, clean up, and moderate) with per-tool options and one-click run.",
     "category": "Command Center",
     "icon": "⚡",
     "sourceDir": "scripts/twitter"
   },
   {
     "slug": "evergreen-recycler",
-    "title": "XActions Evergreen Content Recycler",
+    "title": "Medirus Evergreen Content Recycler",
     "description": "",
     "category": "Other Tools",
     "icon": "⚡",
@@ -1881,7 +1881,7 @@
   },
   {
     "slug": "persona-engine",
-    "title": "XActions Persona Engine",
+    "title": "Medirus Persona Engine",
     "description": "",
     "category": "Growth",
     "icon": "🎭",
@@ -1889,7 +1889,7 @@
   },
   {
     "slug": "rss-monitor",
-    "title": "XActions RSS & Webhook Content Ingestion",
+    "title": "Medirus RSS & Webhook Content Ingestion",
     "description": "",
     "category": "Automation",
     "icon": "📡",
@@ -1897,7 +1897,7 @@
   },
   {
     "slug": "scraper-toolbox",
-    "title": "XActions Scraper Toolbox",
+    "title": "Medirus Scraper Toolbox",
     "description": "Interactive on-page control panel for scraping X/Twitter",
     "category": "Other Tools",
     "icon": "⚡",

@@ -2,7 +2,7 @@
 /**
  * Story 50.9 — Migration Quickstart (/gateway/quickstart)
  *
- * Interactive guide converting a legacy `xactionsClient.ts` (queue+poll via
+ * Interactive guide converting a legacy `medirusClient.ts` (queue+poll via
  * /api/ai/discovery/search) to the new `POST /api/platform/{platform}/scrape`
  * unified envelope contract.
  *

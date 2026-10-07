@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Workflow Conditions
+ * Medirus Workflow Conditions
  * Conditional logic for workflow steps
  *
  * Evaluates expressions against the workflow context to determine
@@ -44,8 +44,8 @@ function getJevBrain() {
  * Degraded → { passed: false } (conservative — no signal, no act).
  *
  * @param {Record<string, unknown>} jevConfig — the `jev` field value.
- * @param {import('../types/xactions.js').WorkflowContext} context
- * @returns {Promise<import('../types/xactions.js').ConditionEvaluation>}
+ * @param {import('../types/medirus.js').WorkflowContext} context
+ * @returns {Promise<import('../types/medirus.js').ConditionEvaluation>}
  */
 async function evaluateJevCondition(jevConfig, context) {
   const question = /** @type {string|undefined} */ (jevConfig.question);
@@ -145,7 +145,7 @@ const OPERATORS = {
  * Supports: "profile.followers", "profile.tweets[0].text", "profile.tweets.length"
  *
  * @param {unknown} path
- * @param {import('../types/xactions.js').WorkflowContext} context
+ * @param {import('../types/medirus.js').WorkflowContext} context
  * @returns {unknown}
  */
 function resolveValue(path, context) {
@@ -197,7 +197,7 @@ function resolveValue(path, context) {
  *   "results.length > 0"
  *
  * @param {unknown} expression
- * @returns {import('../types/xactions.js').WorkflowCondition}
+ * @returns {import('../types/medirus.js').WorkflowCondition}
  */
 function parseExpression(expression) {
   const str = String(expression).trim();
@@ -242,9 +242,9 @@ function parseExpression(expression) {
  * 3. AND conditions: { "condition": { "all": ["expr1", "expr2"] } }
  * 4. OR conditions: { "condition": { "any": ["expr1", "expr2"] } }
  *
- * @param {string | import('../types/xactions.js').WorkflowCondition} condition - The condition to evaluate
- * @param {import('../types/xactions.js').WorkflowContext} context - The workflow variable context
- * @returns {import('../types/xactions.js').ConditionEvaluation}
+ * @param {string | import('../types/medirus.js').WorkflowCondition} condition - The condition to evaluate
+ * @param {import('../types/medirus.js').WorkflowContext} context - The workflow variable context
+ * @returns {import('../types/medirus.js').ConditionEvaluation}
  */
 export function evaluateCondition(condition, context) {
   try {
@@ -253,7 +253,7 @@ export function evaluateCondition(condition, context) {
     }
 
     if (typeof condition === 'object' && condition !== null) {
-      const cond = /** @type {import('../types/xactions.js').WorkflowCondition} */ (condition);
+      const cond = /** @type {import('../types/medirus.js').WorkflowCondition} */ (condition);
 
       // AND conditions
       if (cond.all && Array.isArray(cond.all)) {
@@ -303,8 +303,8 @@ export function evaluateCondition(condition, context) {
  * Evaluate a single expression string
  *
  * @param {unknown} expression
- * @param {import('../types/xactions.js').WorkflowContext} context
- * @returns {import('../types/xactions.js').ConditionEvaluation}
+ * @param {import('../types/medirus.js').WorkflowContext} context
+ * @returns {import('../types/medirus.js').ConditionEvaluation}
  */
 function evaluateExpression(expression, context) {
   const parsed = parseExpression(expression);
@@ -331,8 +331,8 @@ function evaluateExpression(expression, context) {
  * The synchronous `evaluateCondition` remains for backward compatibility.
  *
  * @param {string | Record<string, unknown>} condition
- * @param {import('../types/xactions.js').WorkflowContext} context
- * @returns {Promise<import('../types/xactions.js').ConditionEvaluation>}
+ * @param {import('../types/medirus.js').WorkflowContext} context
+ * @returns {Promise<import('../types/medirus.js').ConditionEvaluation>}
  */
 export async function evaluateConditionAsync(condition, context) {
   if (typeof condition === 'object' && condition !== null && condition.jev) {

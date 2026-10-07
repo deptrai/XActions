@@ -33,7 +33,7 @@ describe('BasePushAdapter', () => {
     expect(adapter.streamId).toBe('test-stream-1');
     expect(adapter.isConnected).toBe(false);
     expect(adapter.isPaused).toBe(false);
-    expect(adapter.cursorKey).toBe('xactions:adapter_cursor:test-stream-1');
+    expect(adapter.cursorKey).toBe('medirus:adapter_cursor:test-stream-1');
   });
 
   it('throws error when streamId is omitted', () => {

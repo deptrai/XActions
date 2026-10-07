@@ -1,21 +1,21 @@
 ---
 stepsCompleted: [1, 2, 3, 4]
 inputDocuments:
-  - 'planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
-  - 'planning-artifacts/research/technical-mediacrawler-architecture-for-xactions-research-2026-08-18.md'
+  - 'planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
+  - 'planning-artifacts/research/technical-mediacrawler-architecture-for-medirus-research-2026-08-18.md'
   - 'planning-artifacts/archive/epics-1-9-legacy.md'
   - 'prisma/schema.prisma'
-  - '../nowing/_bmad-output/planning-artifacts/architecture/architecture-xactions-social-integration-2026-08-15/ARCHITECTURE-SPINE.md'
-  - 'specs/spec-xactions-public-scrape-gateway/SPEC.md'
-  - 'planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md'
-  - 'planning-artifacts/research/market-crypto-xactions-features-2026-09-26/research.md'
+  - '../nowing/_bmad-output/planning-artifacts/architecture/architecture-medirus-social-integration-2026-08-15/ARCHITECTURE-SPINE.md'
+  - 'specs/spec-medirus-public-scrape-gateway/SPEC.md'
+  - 'planning-artifacts/architecture/architecture-medirus-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md'
+  - 'planning-artifacts/research/market-crypto-medirus-features-2026-09-26/research.md'
 ---
 
-# XActions Universal Hybrid Scraping & Automation Engine — Epic Breakdown (Epics 10–20)
+# Medirus Universal Hybrid Scraping & Automation Engine — Epic Breakdown (Epics 10–20)
 
 ## Overview
 
-Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ thống **XActions Universal Hybrid Scraping & Automation Microservice** (tiếp nối Epics 1–9 trong `archive/epics-1-9-legacy.md`). Hệ thống được thiết kế theo chuẩn **Hexagonal Architecture + Tiered Hybrid Signer Engine + Dual-Channel Microservice Daemon + Adaptive Rate Limiter**, hợp nhất 100% cơ sở dữ liệu trên **PostgreSQL (Prisma ORM với JSONB GIN Indexes)** và đóng vai trò là Scraping Engine toàn năng cho hệ sinh thái **Nowing (AI Lead & Research Hub)** cũng như nền tảng SaaS/CLI/AI MCP độc lập.
+Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ thống **Medirus Universal Hybrid Scraping & Automation Microservice** (tiếp nối Epics 1–9 trong `archive/epics-1-9-legacy.md`). Hệ thống được thiết kế theo chuẩn **Hexagonal Architecture + Tiered Hybrid Signer Engine + Dual-Channel Microservice Daemon + Adaptive Rate Limiter**, hợp nhất 100% cơ sở dữ liệu trên **PostgreSQL (Prisma ORM với JSONB GIN Indexes)** và đóng vai trò là Scraping Engine toàn năng cho hệ sinh thái **Nowing (AI Lead & Research Hub)** cũng như nền tảng SaaS/CLI/AI MCP độc lập.
 
 ## Backlog Status & Legacy Code Overlap (Audit 2026-08-21)
 
@@ -33,12 +33,12 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 | 13.2 | `src/scrapers/twitter/index.js`, `src/scrapers/twitter/http/`, `src/client/Scraper.js`, `src/scrapers/index.js` | `TwitterCrawler extends AbstractCrawler` in `src/scrapers/social/twitter/` |
 | 13.3 | `src/scrapers/facebook/index.js`, `src/scrapers/facebook/graphql.js` | `FacebookCrawler extends AbstractCrawler` in `src/scrapers/social/facebook/` |
 | 14.1 | `src/scrapers/twitter/http/thread.js` (conversation/thread) | topological sort + Prisma batch save by depth |
-| 14.2 | `package.json` `mcp:daemon`, `src/mcp/server.js` `startHttpTransport()` (port 3001) | 3-layer JSON envelope, `x_crawl_*`, `x_actions_list`, artifact export |
+| 14.2 | `package.json` `mcp:daemon`, `src/mcp/server.js` `startHttpTransport()` (port 3001) | 3-layer JSON envelope, `x_crawl_*`, `medirus_list`, artifact export |
 | 14.3 | `src/streaming/streamManager.js` (Redis/Bull/Socket.IO) | `stream:social:raw_posts` thin events, metrics endpoint, alerts |
 | 15.1 | `src/scrapers/threads/index.js` (Puppeteer) | `ThreadsCrawler extends AbstractCrawler` in `src/scrapers/social/threads/` |
 | 19.1–19.3 | `/api/checkpoints`, `/api/proxies`, `/api/streams` routes exist | dashboard views in `dashboard/admin.html` |
-| 19.5 | `xactions checkpoints list/show/resume/pause/retry` | done |
-| 19.6 | `xactions stream start/stop/list/history/pause/resume` | Nowing `stream:social:raw_posts` metrics + alerts |
+| 19.5 | `medirus checkpoints list/show/resume/pause/retry` | done |
+| 19.6 | `medirus stream start/stop/list/history/pause/resume` | Nowing `stream:social:raw_posts` metrics + alerts |
 | 19.7 | `/api/proxies`, `/api/streams`, `/api/checkpoints` | mount under `/admin/*` with admin auth |
 
 ### New / No Code in Repo
@@ -50,7 +50,7 @@ Tài liệu phân rã chi tiết Epics và User Stories cho toàn bộ hệ th�
 | 17.x | Chotot, Batdongsan | legacy lives in Nowing repo |
 | 18.1–18.2 | TopCV, VietnamWorks | no code |
 | 18.3 | LinkedIn via CDP | blocked by 12.2 |
-| 19.4, 19.8 | `xactions admin` CLI, `x_admin_*` MCP tools | no code |
+| 19.4, 19.8 | `medirus admin` CLI, `x_admin_*` MCP tools | no code |
 
 ### Decommission Plan (Epic 20.1)
 After new hybrid crawlers (Epics 13–18) are stable, the following legacy modules will be removed:
@@ -117,8 +117,8 @@ After new hybrid crawlers (Epics 13–18) are stable, the following legacy modul
 * **FR81 (VietnamWorks Job Scraper):** Cào tin tuyển dụng IT và Executive trên VietnamWorks qua API public / HTML parser.
 * **FR82 (LinkedIn Lead & Job Scraper):** Cào thông tin ứng viên, công ty và bài đăng tuyển dụng trên LinkedIn qua CDP Attach Port 9222.
 * **FR83 (Nowing Thin Event Stream Ingest):** Phát luồng dữ liệu cào dạng Thin Event Pointers (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 1000000` hoặc `MINID` theo thời gian, configurable) cho Nowing AI Hub.
-* **FR84 (Multi-Consumer Service Contract & Decommissioning):** Biến `scrape()` dispatcher thành service-to-service contract cho multi-consumer (Nowing, ChainLens, AI agents) qua MCP `x_scrape` + Redis Stream `stream:social:raw_posts` + `x_actions_list` discovery. Gỡ bỏ 20+ scraper cũ khỏi Nowing backend sau shadow-run ≥99% parity. (Epic 20)
-* **FR85 (Internal Operator Dashboard & Admin CLI):** Cung cấp dashboard nội bộ và CLI `xactions admin` để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. (Epic 19)
+* **FR84 (Multi-Consumer Service Contract & Decommissioning):** Biến `scrape()` dispatcher thành service-to-service contract cho multi-consumer (Nowing, ChainLens, AI agents) qua MCP `x_scrape` + Redis Stream `stream:social:raw_posts` + `medirus_list` discovery. Gỡ bỏ 20+ scraper cũ khỏi Nowing backend sau shadow-run ≥99% parity. (Epic 20)
+* **FR85 (Internal Operator Dashboard & Admin CLI):** Cung cấp dashboard nội bộ và CLI `medirus admin` để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. (Epic 19)
 * **FR86 (Metadata Schema Contract for Consumers):** Mỗi platform/category publish JSON Schema cho `Post.metadata` và API/CLI/MCP discovery. (Story 10.5)
 * **FR87 (Data Retention Policy):** Dữ liệu raw crawl TTL 30 ngày; leads/processed output vĩnh viễn; checkpoints/audit logs 90 ngày. (Story 10.2, Epic 19)
 * **FR88 (3-Tier Incremental Gap-Filling):** Cào theo mô hình full seed → delta/gap fill → on-demand refresh; 0% duplication; 90% proxy cost saving. (Epic 10, 11)
@@ -137,7 +137,7 @@ After new hybrid crawlers (Epics 13–18) are stable, the following legacy modul
 * **NFR15 (Clean Architecture & Extensibility):** Tách biệt 100% giữa Core domain contracts và Implementation adapters; việc thêm nền tảng mới không làm thay đổi core logic.
 * **NFR16 (License & Backward Compatibility):** 100% mã nguồn tuân thủ giấy phép tự do (MIT / Apache 2.0); giữ nguyên khả năng tương thích ngược với CLI `unfollowx` và toàn bộ 80+ MCP tools hiện có.
 * **NFR17 (Operational Observability):** Hệ thống expose real-time metrics qua `GET /governor/status`, `GET /metrics/stream`, dashboard SSE/polling 5–30s, và alert khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`.
-* **NFR18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
+* **NFR18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong Medirus phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
 
 ---
 
@@ -151,7 +151,7 @@ I want **định nghĩa các abstract class `AbstractCrawler`, `AbstractApiClien
 So that **tôi có thể thêm nền tảng mới (Shopee, LinkedIn, v.v.) mà không vi phạm core logic, và AI agent / operator nhận được actionable errors khi gặp sự cố**.
 
 **Acceptance Criteria:**
-* **Given** repo XActions ở trạng thái sau architecture r3
+* **Given** repo Medirus ở trạng thái sau architecture r3
 * **When** kiểm tra `package.json` và `src/core/`
 * **Then** `got-scraping`, `qrcode-terminal`, `socks-proxy-agent`, và `undici` phải có trong `dependencies` (hoặc xác nhận đã có)
 * **And** thư mục `src/core/` là 100% Pure ESM, no external npm dependencies
@@ -184,7 +184,7 @@ So that **toàn bộ dữ liệu cào đa ngành được lưu trữ tập trung
 **Acceptance Criteria:**
 
 #### Post model
-* **Given** file `prisma/schema.prisma` của dự án XActions
+* **Given** file `prisma/schema.prisma` của dự án Medirus
 * **When** định nghĩa model `Post` với `id` Namespaced `${platform}:${externalId}`, `platform`, `externalId`, `category`, `authorId`, `authorName`, `content`, `mediaUrls String[]`, `likesCount`, `repostsCount`, `repliesCount`, `viewsCount`, `metadata Json?`, `publishedAt`, `crawledAt`
 * **Then** `@@unique([platform, externalId])` tồn tại trên `Post` và migration sinh ra hợp lệ
 
@@ -233,7 +233,7 @@ So that **tôi có thể quản lý tiến độ crawl khi container restart ho�
 * **When** triển khai `src/api/checkpoints.js` và `src/cli/commands/checkpoints.js`
 * **Then** có endpoint `GET /checkpoints`, `GET /checkpoints/:id`, `POST /checkpoints/:id/resume`, `POST /checkpoints/:id/pause`, `POST /checkpoints/:id/retry`
 * **And** các thao tác resume/pause/retry yêu cầu operator đã xác thực với quyền `checkpoint:manage` (hoặc admin tương đương)
-* **And** CLI `xactions checkpoints list/show/resume/pause/retry` hoạt động
+* **And** CLI `medirus checkpoints list/show/resume/pause/retry` hoạt động
 * **And** `CrawlCheckpoint.status` chuyển đổi đúng giữa `running`, `paused`, `failed`, `completed`, `stalled`.
 
 ### Story 10.5: Metadata Schema Contract & Registry for Consumers
@@ -247,7 +247,7 @@ So that **consumer biết trước field nào tồn tại và kiểu dữ liệu
 * **Then** hệ thống hỗ trợ đăng ký JSON Schema từ file `schemas/<platform>/<category>.json` (hoặc TypeScript type)
 * **And** ít nhất 2 pilot schema được publish: `schemas/twitter/social.json` và `schemas/shopee/ecom.json`
 * **And** API `GET /schemas`, `GET /schemas/:platform/:category` trả về JSON Schema
-* **And** MCP tool `x_schema_get` và CLI `xactions schema get <platform> <category>` hoạt động
+* **And** MCP tool `x_schema_get` và CLI `medirus schema get <platform> <category>` hoạt động
 * **And** `PrismaStore` validate `metadata` against schema khi ghi, trả `invalid_args` error nếu mismatch; các schema ngoài pilot có thể được thêm trong epic chuyên biệt sau.
 
 ---
@@ -328,7 +328,7 @@ So that **hệ thống không bị quá tải khi Proxy xoay không kịp và tr
 * **And** cho auth-required platforms: mỗi tài khoản có token bucket `safeRequestsPerMinute`; tự động đưa tài khoản vào Hibernation 15–30 phút khi gặp Captcha/WAF; `AccountPool` tự động chuyển sang tài khoản tiếp theo khi account hiện tại đạt giới hạn hoặc hibernation
 * **And** cho no-auth platforms: tốc độ giới hạn theo proxy/IP, không cần hibernation account; nếu IP bị ban, quarantine và rotate proxy
 * **And** hãm tốc độ cào khi hàng đợi Redis Stream `stream:social:raw_posts` vượt quá 10,000 unread messages (Consumer Lag Backpressure)
-* **And** cung cấp `GET /governor/status` và CLI `xactions status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
+* **And** cung cấp `GET /governor/status` và CLI `medirus status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
 
 ### Story 11.5: end-to-end-request-pipeline-two-mode-ip
 As a **Reliability Engineer**,
@@ -422,7 +422,7 @@ So that **tôi có thể dùng app điện thoại quét mã đăng nhập tức
 
 ### Story 12.2: cdp-remote-attach-mode-chrome-devtools-protocol
 As a **Power User**,
-I want **kết nối XActions trực tiếp vào Chrome thật của tôi qua cổng 9222 với helper tự mở Chrome và độ trễ ngẫu nhiên Gaussian**,
+I want **kết nối Medirus trực tiếp vào Chrome thật của tôi qua cổng 9222 với helper tự mở Chrome và độ trễ ngẫu nhiên Gaussian**,
 So that **hệ thống sử dụng nguyên vẹn profile và fingerprint thật của tôi để cào LinkedIn/TopCV mà không bị phát hiện automation**.
 
 **Acceptance Criteria:**
@@ -434,7 +434,7 @@ So that **hệ thống sử dụng nguyên vẹn profile và fingerprint thật 
 ### Story 12.3: terminal-qr-full-backfill
 As a **Power User / Automation Engineer**,
 I want **`src/core/cdp-launcher.js` tự động nhận diện Microsoft Edge, Brave, Chromium Canary, Snap Chromium trên Windows, macOS, Linux kèm các cờ bypass anti-bot**,
-So that **XActions có thể khởi chạy và kết nối CDP thành công trên mọi máy trạm của người dùng mà không bị WAF phát hiện automation control**.
+So that **Medirus có thể khởi chạy và kết nối CDP thành công trên mọi máy trạm của người dùng mà không bị WAF phát hiện automation control**.
 
 **Acceptance Criteria:**
 * **Given** môi trường hệ điều hành Windows, macOS hoặc Linux
@@ -633,7 +633,7 @@ So that **tôi có thể tự động hóa list curation mà không cần browse
 * **And (Scope & Deprecation Marker)** gắn `@deprecated` cho list helpers trong `src/client/Scraper.js`; cập nhật `docs/deprecation-plan.md`.
 
 ### Story 13.2.12: Twitter Hybrid Integration & Caller Migration
-As a **XActions Platform Engineer**,
+As a **Medirus Platform Engineer**,
 I want **`scrape('twitter'|'x', ...)`, MCP/CLI tools và `src/client/Scraper.js` chuyển sang dùng `TwitterCrawler`/`TwitterClient` mới**,
 So that **người dùng cuối và các service không còn phụ thuộc legacy Twitter modules**.
 
@@ -668,7 +668,7 @@ So that **token extraction is resilient to Facebook DOM/script changes, supports
 **Acceptance Criteria:**
 * **Given** `FacebookClient` accepts `signerPool`, `tokenRing`, `cdpUrl`, and `adapterName`
 * **When** `ensureTokens()` is called with a browser bridge configured
-* **Then** it attaches or launches Chrome (Playwright by default, Puppeteer via `XACTIONS_SCRAPER_ADAPTER`) using CDP, navigates to `https://www.facebook.com/`, and extracts tokens via `page.evaluate()`
+* **Then** it attaches or launches Chrome (Playwright by default, Puppeteer via `MEDIRUS_SCRAPER_ADAPTER`) using CDP, navigates to `https://www.facebook.com/`, and extracts tokens via `page.evaluate()`
 * **And** it caches tokens with a 5-minute TTL and supports refresh 30 seconds before expiry
 * **And** `requestGraphQl()` builds the GraphQL body using tokens from the signer bridge
 * **And** it falls back to HTTP-only regex extraction when `signerPool`/`cdpUrl` is not configured
@@ -746,7 +746,7 @@ So that **các hành động tương tác được quản lý bởi `FacebookCli
 * **And (Scope & Deprecation Marker)** gắn `@deprecated` cho `shareLinkByUid.js`, `messengerQueue.js`, `messengerShare.js`, `graphqlSend.js` trong `src/scrapers/facebook/`; cập nhật `docs/deprecation-plan.md`.
 
 ### Story 13.10: Facebook Hybrid Integration & Caller Migration
-As a **XActions Platform Engineer**,
+As a **Medirus Platform Engineer**,
 I want **`scrape('facebook', ...)` public API, MCP/CLI tools, và `api/services/*` chuyển sang sử dụng `FacebookCrawler`/`FacebookClient` mới**,
 So that **người dùng cuối và các service nội bộ không còn phụ thuộc `src/scrapers/facebook/` legacy**.
 
@@ -757,7 +757,7 @@ So that **người dùng cuối và các service nội bộ không còn phụ th
 * **And** `package.json` exports thêm `./scrapers/social` hoặc `./scrapers/facebook` để consumer truy cập `FacebookClient`/`FacebookCrawler`
 * **And** `api/services/facebookScrape.js`, `facebookAutomation.js`, `facebookAccountPool.js`, `facebookHealth.js` được refactor để gọi `FacebookCrawler.start()` / `FacebookClient` thay vì các hàm legacy
 * **And** `api/routes/facebook.js` validation vẫn chấp nhận cùng action set; response shape không đổi với consumer
-* **And** action discovery qua `FacebookCrawler.listActions()`, MCP `x_actions_list` và CLI `xactions actions --platform facebook` trả về `requiresAuth` đã phân giải cho từng action (additive, không break consumer hiện có).
+* **And** action discovery qua `FacebookCrawler.listActions()`, MCP `medirus_list` và CLI `medirus actions --platform facebook` trả về `requiresAuth` đã phân giải cho từng action (additive, không break consumer hiện có).
 * **And** toàn bộ test `tests/scrapers/facebook-index.test.js`, `tests/scrapers/facebook-*.test.js` chuyển sang test `FacebookCrawler` tương ứng hoặc được đánh dấu `@deprecated`
 * **And (Scope & Deprecation Marker)** `src/scrapers/facebook/` được đánh dấu `@deprecated` toàn bộ; `docs/deprecation-plan.md` status tracker cập nhật sang `deprecated-planned` và ghi rõ dependency vào Story 13.10.
 
@@ -792,7 +792,7 @@ So that **tôi nắm bắt trọn vẹn ngữ cảnh tranh luận mà không b�
 
 ### Story 14.2: MCP Tool Exporters & Daemon HTTP/SSE Server
 As an **AI Agent (Claude / Antigravity / Cursor)**,
-I want **XActions MCP Server chạy thường trực dạng Daemon HTTP/SSE (Port 3001) trả về 3-Layer JSON Envelope và tự động xuất File Artifact khi dữ liệu >100 records**,
+I want **Medirus MCP Server chạy thường trực dạng Daemon HTTP/SSE (Port 3001) trả về 3-Layer JSON Envelope và tự động xuất File Artifact khi dữ liệu >100 records**,
 So that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà không phải spawn subprocess `node`**.
 
 **Acceptance Criteria:**
@@ -811,7 +811,7 @@ So that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 
 #### Action discovery
 * **Given** `AbstractCrawler.listActions()` đã tồn tại
-* **When** gọi tool `x_actions_list`
+* **When** gọi tool `medirus_list`
 * **Then** trả về `ActionDescriptor[]` với `{ action, description, requiredArgs, optionalArgs, example, outputType, requiresAuth }`.
 
 #### Error envelope
@@ -820,14 +820,14 @@ So that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 * **Then** error envelope chuẩn hóa: `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`.
 
 #### CLI daemon commands & legacy mapping
-* **Given** CLI `xactions` và legacy `unfollowx`
-* **When** gọi `xactions daemon status/start/stop`
+* **Given** CLI `medirus` và legacy `unfollowx`
+* **When** gọi `medirus daemon status/start/stop`
 * **Then** CLI quản lý vòng đời daemon MCP
-* **And** legacy CLI commands `unfollowx` được map vào `CrawlerCommand` hoặc trả error `suggestedAction: 'use_x_actions_list'`.
+* **And** legacy CLI commands `unfollowx` được map vào `CrawlerCommand` hoặc trả error `suggestedAction: 'use_medirus_list'`.
 
 ### Story 14.3: Realtime Thin Event Redis Stream for Nowing AI Lead Hub
 As a **Nowing Platform Orchestrator**,
-I want **dữ liệu cào từ XActions được phát tức thì dưới dạng Thin Event Pointer vào Redis Stream `stream:social:raw_posts`**,
+I want **dữ liệu cào từ Medirus được phát tức thì dưới dạng Thin Event Pointer vào Redis Stream `stream:social:raw_posts`**,
 So that **Nowing backend có thể chạy background NLP Intent Extractor theo thời gian thực mà không làm tràn bộ nhớ Redis**.
 
 **Acceptance Criteria:**
@@ -852,7 +852,7 @@ So that **tôi nhận được ngay bảng phân tích Top từ khóa/hashtag th
 * **And (return shape)** hàm trả về `{ unigrams: [{ term, count }], bigrams: [{ term, count }], hashtags: [{ tag, count }], totalTokens, lang }`; sắp xếp deterministic `count` giảm dần rồi `term` tăng dần.
 * **And (n-gram boundary)** bigram tính trên token stream đã lọc; không bao giờ span qua stopword, dấu câu, hoặc ranh giới item.
 * **And (hashtag)** trích xuất `tag` bỏ ký tự `#`, NFC-normalize + lowercase, loại trừ fragment trong URL/email và `#` theo sau toàn số (regex `#(?=[\p{L}])[\p{L}\p{N}_]+`).
-* **And (input source)** MCP tool `x_analytics_buzzwords` và CLI `xactions analytics buzzwords` nhận đầu vào `{ items? | scrapeId? | source }`; CLI đọc `PostItem[]`/`CommentItem[]` từ file/stdin hoặc truy vấn lại một scrape đã lưu — không yêu cầu caller truyền object sống qua boundary MCP.
+* **And (input source)** MCP tool `x_analytics_buzzwords` và CLI `medirus analytics buzzwords` nhận đầu vào `{ items? | scrapeId? | source }`; CLI đọc `PostItem[]`/`CommentItem[]` từ file/stdin hoặc truy vấn lại một scrape đã lưu — không yêu cầu caller truyền object sống qua boundary MCP.
 * **And (edge cases)** `minLength` clamp về `>= 1`; `topN = max(0, floor(topN ?? 10))`; với `items` rỗng/null, item thiếu `content`, hoặc `content` không phải string → bỏ qua item đó và trả `{ unigrams: [], bigrams: [], hashtags: [], totalTokens: 0, lang }` thay vì throw.
 * **And (cost & default)** `includeBuzzwords` là opt-in (mặc định **tắt**) trong `AbstractCrawler` options; khi bật, `summary.buzzwords` chứa kết quả `extractKeywordFrequency` trên tối đa 500 item đầu để giới hạn chi phí O(n); khi crawl không có text thì `summary.buzzwords` là mảng rỗng chứ không phải `undefined`.
 * **And (tests)** thêm unit test thật (không mock) trong `tests/analytics/word-frequency.test.js` cover: loại stopword vi+en, bigram không span stopword/item boundary, hashtag case-fold + bỏ URL fragment, và input rỗng/invalid trả về zero-result.
@@ -914,7 +914,7 @@ So that **crawler không phụ thuộc HTML parsing dễ vỡ và đạt through
 * **And (Scope & Deprecation Marker)** cập nhật `docs/deprecation-plan.md` ghi rõ `search` và `comments` đã harden.
 
 ### Story 15.1.4: Threads Hybrid Integration & Package Exports
-As a **XActions Platform Engineer**,
+As a **Medirus Platform Engineer**,
 I want **`scrape('threads', ...)`, MCP/CLI tools và các caller cũ chuyển sang `ThreadsCrawler`/`ThreadsClient` mới**,
 So that **người dùng cuối không còn phụ thuộc `src/scrapers/threads/` legacy**.
 
@@ -1080,69 +1080,69 @@ So that **tôi phát hiện sớm khi Nowing consumer chậm hoặc stream bị 
 
 ### Story 19.4: Admin CLI — Unified Command Group
 As an **Internal Automation Operator**,
-I want **một nhóm lệnh CLI `xactions admin` tổng hợp để vận hành hệ thống từ terminal**,
+I want **một nhóm lệnh CLI `medirus admin` tổng hợp để vận hành hệ thống từ terminal**,
 So that **tôi có thể tra cứu governor status, quản lý proxy/account/checkpoint, và xem stream metrics mà không cần mở dashboard**.
 
 **Acceptance Criteria:**
-* **Given** `xactions admin` command group
-* **When** chạy `xactions admin --help`
+* **Given** `medirus admin` command group
+* **When** chạy `medirus admin --help`
 * **Then** liệt kê các sub-commands: `status`, `proxies`, `accounts`, `checkpoints`, `stream`
 * **And** tất cả commands yêu cầu permission `admin` hoặc `checkpoint:manage` (cho checkpoint-only).
 
 ### Story 19.4.1: Admin CLI — Status
 As an **Internal Automation Operator**,
-I want **lệnh `xactions admin status` hiển thị tổng quan governor, proxy pool, và hibernating accounts**,
+I want **lệnh `medirus admin status` hiển thị tổng quan governor, proxy pool, và hibernating accounts**,
 So that **tôi nắm nhanh tình trạng hệ thống từ terminal**.
 
 **Acceptance Criteria:**
-* **Given** `xactions admin` group
-* **When** chạy `xactions admin status`
+* **Given** `medirus admin` group
+* **When** chạy `medirus admin status`
 * **Then** in ra `healthyProxyCount / totalProxyCount`, `currentReqPerSecond`, `redisConsumerLag`, `throttleLevel`, danh sách `hibernatingAccounts`.
 
 ### Story 19.4.2: Admin CLI — Proxy Management
 As an **Internal Automation Operator**,
-I want **lệnh `xactions admin proxies ...` để liệt kê, cách ly và bỏ cách ly proxy**,
+I want **lệnh `medirus admin proxies ...` để liệt kê, cách ly và bỏ cách ly proxy**,
 So that **tôi có thể kiểm soát proxy pool từ CLI khi phát hiện IP bị chặn hoặc cần bảo trì**.
 
 **Acceptance Criteria:**
-* **Given** `xactions admin` group
-* **When** chạy `xactions admin proxies list`
+* **Given** `medirus admin` group
+* **When** chạy `medirus admin proxies list`
 * **Then** liệt kê proxy với trạng thái `healthy` / `quarantined` / `expiryAt`
-* **And** `xactions admin proxy quarantine <proxyKey>` và `xactions admin proxy release <proxyKey>` cách ly / bỏ cách ly proxy thủ công.
+* **And** `medirus admin proxy quarantine <proxyKey>` và `medirus admin proxy release <proxyKey>` cách ly / bỏ cách ly proxy thủ công.
 
 ### Story 19.4.3: Admin CLI — Account Management
 As an **Internal Automation Operator**,
-I want **lệnh `xactions admin accounts ...` để liệt kê, đánh thức, và xoay account đang hibernation**,
+I want **lệnh `medirus admin accounts ...` để liệt kê, đánh thức, và xoay account đang hibernation**,
 So that **tôi quản lý vòng đời tài khoản auth-required mà không cần restart crawler**.
 
 **Acceptance Criteria:**
-* **Given** `xactions admin` group
-* **When** chạy `xactions admin accounts list --platform <platform>`
+* **Given** `medirus admin` group
+* **When** chạy `medirus admin accounts list --platform <platform>`
 * **Then** liệt kê account, `velocity`, `hibernatingUntil`, `assignedProxy`
-* **And** `xactions admin account wake <accountId>` đánh thức account từ hibernation
-* **And** `xactions admin account rotate <accountId> <platform>` đổi account khác trong `AccountPool`.
+* **And** `medirus admin account wake <accountId>` đánh thức account từ hibernation
+* **And** `medirus admin account rotate <accountId> <platform>` đổi account khác trong `AccountPool`.
 
 ### Story 19.4.4: Admin CLI — Checkpoint Management
 As an **Internal Automation Operator**,
-I want **lệnh `xactions admin checkpoints ...` để liệt kê, resume, pause, và retry checkpoint**,
+I want **lệnh `medirus admin checkpoints ...` để liệt kê, resume, pause, và retry checkpoint**,
 So that **tôi điều khiển pipeline cào từ terminal khi một target bị lỗi**.
 
 **Acceptance Criteria:**
-* **Given** `xactions admin` group
-* **When** chạy `xactions admin checkpoints list/resume/pause/retry`
+* **Given** `medirus admin` group
+* **When** chạy `medirus admin checkpoints list/resume/pause/retry`
 * **Then** gọi `api/routes/checkpoints.js` tương ứng và cập nhật trạng thái `CrawlCheckpoint`.
 
 ### Story 19.4.5: Admin CLI — Stream Metrics & Alerts
 As an **Internal Automation Operator**,
-I want **lệnh `xactions admin stream ...` để xem metrics và kích hoạt test alert**,
+I want **lệnh `medirus admin stream ...` để xem metrics và kích hoạt test alert**,
 So that **tôi phát hiện khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s` từ CLI**.
 
 **Acceptance Criteria:**
-* **Given** `xactions admin` group
-* **When** chạy `xactions admin stream metrics/alerts/test`
+* **Given** `medirus admin` group
+* **When** chạy `medirus admin stream metrics/alerts/test`
 * **Then** hiển thị stream metrics và kích hoạt test alert.
 
-> **Note:** Các lệnh `xactions checkpoints ...` và `xactions stream ...` hiện có (`src/cli/commands/checkpoints.js`, `src/cli/commands/stream.js`) sẽ được giữ lại dưới dạng alias hoặc redirect đến `xactions admin ...` trong quá trình chuyển đổi, và bị xoá ở Epic 20.2.
+> **Note:** Các lệnh `medirus checkpoints ...` và `medirus stream ...` hiện có (`src/cli/commands/checkpoints.js`, `src/cli/commands/stream.js`) sẽ được giữ lại dưới dạng alias hoặc redirect đến `medirus admin ...` trong quá trình chuyển đổi, và bị xoá ở Epic 20.2.
 
 > **Note:** Story 19.4 đã được tách thành 5 sub-stories 19.4.1–19.4.5. Các vị trí 19.5 và 19.6 không còn được sử dụng; NFR traceability đã được cập nhật để tham chiếu 19.4.5 thay vì 19.6.
 
@@ -1198,13 +1198,13 @@ So that **Claude/Cursor/Antigravity có thể hỏi "tình trạng proxy pool th
 
 ## Epic 20: Multi-Consumer Scraping Platform Service Contract
 
-> **Restructured 2026-09-15** — Kiến trúc kết nối thay đổi từ custom adapter sang MCP `x_scrape` + Redis Stream. Nowing đã wire phía mình; XActions cần expose service contract. Xem `sprint-change-proposal-2026-09-15-multi-consumer-scraping-platform.md`.
+> **Restructured 2026-09-15** — Kiến trúc kết nối thay đổi từ custom adapter sang MCP `x_scrape` + Redis Stream. Nowing đã wire phía mình; Medirus cần expose service contract. Xem `sprint-change-proposal-2026-09-15-multi-consumer-scraping-platform.md`.
 
-### Story 20.1: multi-consumer-service-contract-x-scrape-x-actions
+### Story 20.1: multi-consumer-service-contract-x-scrape-medirus-
 
-As a **XActions Platform Engineer**,
-I want **expose `scrape()` dispatcher thành service-to-service contract qua MCP `x_scrape` tool, mở rộng `x_actions_list` cho toàn bộ 24 platforms, và generate canonical action matrix doc**,
-So that **Nowing, ChainLens, và bất kỳ consumer nào đều gọi được XActions qua cùng một contract — control plane qua MCP, discovery qua `x_actions_list`**.
+As a **Medirus Platform Engineer**,
+I want **expose `scrape()` dispatcher thành service-to-service contract qua MCP `x_scrape` tool, mở rộng `medirus_list` cho toàn bộ 24 platforms, và generate canonical action matrix doc**,
+So that **Nowing, ChainLens, và bất kỳ consumer nào đều gọi được Medirus qua cùng một contract — control plane qua MCP, discovery qua `medirus_list`**.
 
 **Acceptance Criteria:**
 
@@ -1226,7 +1226,7 @@ So that **Nowing, ChainLens, và bất kỳ consumer nào đều gọi được 
 * **And** `context.workspaceId` missing khi stream enabled → WARN log `[StreamPublisher:MissingWorkspaceId]`
 
 * **When** mở rộng `src/scrapers/social/actions-list.js`
-* **Then** `x_actions_list` enumerate toàn bộ 24 platform descriptors (thêm fnb, healthcare, legal, automotive, b2b-registry-extended, tiktokShop)
+* **Then** `medirus_list` enumerate toàn bộ 24 platform descriptors (thêm fnb, healthcare, legal, automotive, b2b-registry-extended, tiktokShop)
 * **And** verify mỗi platform có Crawler class với `listActions()` — platform nào chưa có → flag `"no_crawler": true` trong output, KHÔNG silent-skip
 * **And** lọc bỏ `checkpointResolver` khỏi `ActionDescriptor` trước khi trả (function ref, không serialize)
 * **And** filter theo `category` + `detailLevel: 'summary'|'full'`
@@ -1239,7 +1239,7 @@ So that **Nowing, ChainLens, và bất kỳ consumer nào đều gọi được 
 
 ### Story 20.2: universal-stream-publish-hook-snake-case-thin-event
 
-As a **XActions Platform Engineer**,
+As a **Medirus Platform Engineer**,
 I want **thêm universal stream-publish hook vào `AbstractCrawler` sau `entry.handler()` trong `start()`, normalize sang snake_case ThinEvent, và gỡ bỏ per-crawler direct emit**,
 So that **tất cả 23+ crawlers tự động emit thin events vào Redis Stream `stream:social:raw_posts` — zero per-crawler code**.
 
@@ -1499,7 +1499,7 @@ So that **tôi có thể chạy mọi action pump.fun (fetch_mint_social, fetch_
 
 * **When** triển khai hoàn tất
 * **Then** không thêm dependency mới (không `@solana/web3.js`, không wallet adapter — đúng ADR `docs/architecture/adr-pumpfun-auth-and-dependencies.md`), tuân thủ DESIGN tokens hiện có + `accent-pumpfun`, mobile responsive (coin grid 1 cột, tabs scrollable ngang)
-* **And** `docs`/`dashboard/docs/pumpfun-auth.html` mô tả quy trình "xactions pumpfun auth" / Browser Bridge để người dùng tự cấp session
+* **And** `docs`/`dashboard/docs/pumpfun-auth.html` mô tả quy trình "medirus pumpfun auth" / Browser Bridge để người dùng tự cấp session
 
 ---
 
@@ -1518,7 +1518,7 @@ So that **tôi có thể chạy mọi action pump.fun (fetch_mint_social, fetch_
 
 ## Phase 4 Extension — Epics 23–26: Universal AbstractCrawler Migration
 
-> **Scope:** hoàn thiện kiến trúc `AbstractCrawler` cho toàn bộ XActions (Bluesky, Mastodon, utility scripts, adapters, dispatcher, legacy decommission).
+> **Scope:** hoàn thiện kiến trúc `AbstractCrawler` cho toàn bộ Medirus (Bluesky, Mastodon, utility scripts, adapters, dispatcher, legacy decommission).
 
 
 ## Cross-Epic Dependency Map
@@ -1613,7 +1613,7 @@ So that **crawler biết phân biệt lỗi mạng, rate-limit, auth failure, v�
 * **And** cả hai trả về `SuggestedActions` phù hợp (`ROTATE_PROXY`, `WAIT`, `RELOGIN`, `SKIP`)
 
 ### Story 23.6: Bluesky & Mastodon Integration & Caller Migration
-As a **XActions Platform Engineer**,  
+As a **Medirus Platform Engineer**,  
 I want **`scrape('bluesky'|'mastodon', ...)` và tất cả caller chuyển sang `BlueskyCrawler`/`MastodonCrawler` mới**,  
 So that **người dùng cuối không còn phụ thuộc `src/scrapers/bluesky/index.js` và `src/scrapers/mastodon/index.js` cũ**.
 
@@ -1658,7 +1658,7 @@ So that **tôi có thể gọi chúng từ CLI/MCP thay vì dán script vào con
 * **Then** `TwitterCrawler` thêm các action: `download_video({ tweetId, quality })`, `export_bookmarks({ username, limit })`, `unroll_thread({ tweetId })`
 * **And** mỗi action trả về `PostItem[]` hoặc `Buffer`/`ReadableStream` cho download
 * **And** legacy file được gắn `@deprecated` với ghi chú thay thế
-* **And** CLI/MCP expose `xactions download video <tweetId>` và `xactions export bookmarks <username>`
+* **And** CLI/MCP expose `medirus download video <tweetId>` và `medirus export bookmarks <username>`
 
 ### Story 24.3: Adapter Layer Consolidation
 As a **Platform Scraper Developer**,  
@@ -1693,7 +1693,7 @@ So that **`src/scrapers/` chỉ còn `social/` dispatcher và platform crawlers*
 > **Epic grouping note:** This is the *glue* epic. It makes `scrape(platform, action, args)` the single entry point for all internal and external callers.
 
 ### Story 25.1: Universal `scrape()` Dispatcher
-As a **XActions Platform Engineer**,  
+As a **Medirus Platform Engineer**,  
 I want **`src/scrapers/index.js` trở thành một thin dispatcher duy nhất cho mọi platform**,  
 So that **không còn logic scraper nào nằm ngoài `src/scrapers/social/<platform>/`**.
 
@@ -1723,7 +1723,7 @@ So that **tôi import một kiến trúc ổn định dù tên file legacy đã 
 * **And** `npm run typecheck` pass
 
 ### Story 25.3: MCP / CLI / API Caller Migration
-As a **XActions Platform Engineer**,  
+As a **Medirus Platform Engineer**,  
 I want **tất cả MCP tools, CLI commands, và API routes gọi `scrape()` hoặc `CrawlerCommand` thay vì import scraper cụ thể**,  
 So that **không còn coupling trực tiếp với legacy modules**.
 
@@ -1809,7 +1809,7 @@ So that **decommission không gây regression cho consumer cũ**.
 ### Story 26.2: Final Legacy Removal
 As a **Codebase Maintainer**,  
 I want **xoá toàn bộ legacy scraper modules sau khi parity đạt**,  
-So that **XActions chỉ còn một kiến trúc `AbstractCrawler` duy nhất**.
+So that **Medirus chỉ còn một kiến trúc `AbstractCrawler` duy nhất**.
 
 **Acceptance Criteria:**
 * **Given** parity ≥ 99% và tag backup đã tạo
@@ -1872,7 +1872,7 @@ So that **XActions chỉ còn một kiến trúc `AbstractCrawler` duy nhất**.
 ### Story 27.1: FingerprintManager — TLS/JA4 Spoofing & Geo-Consistent Profiles
 As a **Scraping Reliability Engineer**,  
 I want **a `FingerprintManager` that rotates per-session fingerprints and binds them to a geo-consistent proxy region**,  
-So that **platforms cannot detect XActions via TLS/JA4 signatures, inconsistent timezone/locale, or proxy-UA mismatches**.
+So that **platforms cannot detect Medirus via TLS/JA4 signatures, inconsistent timezone/locale, or proxy-UA mismatches**.
 
 **Acceptance Criteria:**
 * **Given** `src/agents/antiDetection.js` and `src/scraping/stealthBrowser.js` already generate UA/viewport/WebGL
@@ -1919,12 +1919,12 @@ So that **we cut ~85% browser RAM on public scrapes without risking React-hydrat
 
 **Acceptance Criteria:**
 * **Given** `PuppeteerAdapter.launch/connect` (`src/scrapers/adapters/puppeteer.js`) and `launchStealthBrowser(options)`
-* **When** `options.backend` or `XACTIONS_BROWSER_BACKEND` selects `obscura`
+* **When** `options.backend` or `MEDIRUS_BROWSER_BACKEND` selects `obscura`
 * **Then** it `puppeteer-core.connect({browserWSEndpoint})` to `options.wsEndpoint || OBSCURA_WS_ENDPOINT || ws://127.0.0.1:9222`; `chrome`/unset → `puppeteer.launch()` unchanged; `browser.__backend` recorded; teardown reads `__backend` (`obscura`→`disconnect()`, `chrome`→`close()`)
 * **And** a public scraper bridge (e.g. reddit/medium) threads `options.backend`/`requiresAuth` into `adapter.launch()` so backend reaches the scraper — not only `launchStealthBrowser`
 * **And** post-auth actions (`requiresAuth===true`, resolved per base-crawler.js:177) reject `backend==='obscura'` with `PlatformError{ type: INVALID_ARGS }` (no silent fallback, no separate registry)
-* **And** primary/fallback via `XACTIONS_BROWSER_BACKEND` + `XACTIONS_BROWSER_BACKEND_FALLBACK` (default `chrome`): `obscura→chrome` always allowed; `chrome→obscura` only on public-scraping path (post-auth still throws via guard)
-* **And** `XACTIONS_BROWSER_BACKEND_METRICS=1` tags each real browser launch/probe with `browserBackend` (Epic 34 `emitRun`); per-backend latency/success comparison runs via `obscura-spike.mjs BACKEND=both` — default OFF, `CanaryRunner` unchanged (it probes HTTP, not browser)
+* **And** primary/fallback via `MEDIRUS_BROWSER_BACKEND` + `MEDIRUS_BROWSER_BACKEND_FALLBACK` (default `chrome`): `obscura→chrome` always allowed; `chrome→obscura` only on public-scraping path (post-auth still throws via guard)
+* **And** `MEDIRUS_BROWSER_BACKEND_METRICS=1` tags each real browser launch/probe with `browserBackend` (Epic 34 `emitRun`); per-backend latency/success comparison runs via `obscura-spike.mjs BACKEND=both` — default OFF, `CanaryRunner` unchanged (it probes HTTP, not browser)
 * **And** all `obscura` navigation uses `waitUntil:'networkidle0'`/`load`/`domcontentloaded` — never `networkidle2` (hangs on 0.2.2)
 * **And** `scripts/obscura-spike.mjs BACKEND=both` verifies chrome vs obscura on example/cloudflare/sannysoft/x-guest, skips cleanly when no `obscura serve`
 * **And** `docs/obscura-backend.md` (install, `obscura serve --stealth`, env vars, fit matrix) + `docs/obscura-watch.md` (issue watch list, promote gate requiring `/home` `data-testid` mount green) exist
@@ -1985,7 +1985,7 @@ So that **I can recover from DOM drift without manually inspecting every UI chan
 * **Then** it fetches a live snapshot of the page (via Puppeteer `createStealthPage` or HTTP)
 * **And** it searches the DOM for elements whose text/attributes/children structurally match the expected output shape (e.g., tweet text, like count)
 * **And** it returns a ranked list of candidate selectors with `confidenceScore` (0.0–1.0), **preferring stable attributes in order `data-testid` → `role`/`aria-*` → semantic tag+structure, and rejecting obfuscated hash-only class selectors**
-* **And** the tool is CLI-accessible via the existing commander wiring in `src/cli/commands/`: `xactions tools suggest-selector --platform twitter --url https://x.com/elonmusk --field tweet_text`
+* **And** the tool is CLI-accessible via the existing commander wiring in `src/cli/commands/`: `medirus tools suggest-selector --platform twitter --url https://x.com/elonmusk --field tweet_text`
 
 ---
 
@@ -1996,7 +1996,7 @@ So that **I can recover from DOM drift without manually inspecting every UI chan
 ### Story 29.1: Jetstream/SSE/CDC Adapters for Push-Based Social Streams
 As a **Real-Time Data Consumer**,  
 I want **adapters for Bluesky Jetstream, Mastodon SSE, and generic CDC sources**,  
-So that **XActions can receive events in real time instead of polling every N seconds**.
+So that **Medirus can receive events in real time instead of polling every N seconds**.
 
 **Acceptance Criteria:**
 * **Given** `src/streaming/streamManager.js` already polls tweets/followers/mentions via Bull queue
@@ -2009,7 +2009,7 @@ So that **XActions can receive events in real time instead of polling every N se
 * **And** stream types are extended to include `jetstream`, `mastodon_sse`, `cdc`
 
 ### Story 29.2: Outbound Webhook Dispatcher with HMAC Signing & Retry
-As a **XActions Operator**,  
+As a **Medirus Operator**,  
 I want **an outbound webhook dispatcher that signs and retries delivery to subscriber endpoints**,  
 So that **Nowing and external consumers can subscribe to real-time events reliably**.
 
@@ -2018,13 +2018,13 @@ So that **Nowing and external consumers can subscribe to real-time events reliab
 * **When** implementing `src/streaming/outbound-webhook-dispatcher.js`
 * **Then** it consumes `ThinEvent` from Redis Stream or Bull queue
 * **And** it supports webhook registration with `url`, `events[]`, `secret`, `active` status
-* **And** it signs each POST body with `X-XActions-Signature` (HMAC-SHA256)
+* **And** it signs each POST body with `X-Medirus-Signature` (HMAC-SHA256)
 * **And** it retries with exponential backoff (3 attempts) and moves permanent failures to a dead-letter queue
 * **And** delivery metrics (attempts, latency, success/failure) are persisted
 * **And** API routes `/api/admin/webhooks/subscriptions` and `/api/admin/webhooks/delivery-logs` are added
 
 ### Story 29.3: Stream Replay & Missed-Event Recovery
-As a **XActions Consumer**,  
+As a **Medirus Consumer**,  
 I want **the ability to replay events from a specific time window or cursor**,  
 So that **my downstream system can recover from downtime without losing data**.
 
@@ -2098,7 +2098,7 @@ So that **I can download and archive multi-platform content with consistent meta
 > **Epic grouping note:** This epic upgrades existing rate governance from in-memory, backend-only metrics into a visible, controllable, distributed queue system.
 
 ### Story 32.1: RateBudgetDashboard — Visual Quota Allocator & Panic Stop
-As a **XActions Operator**,  
+As a **Medirus Operator**,  
 I want **a dashboard that shows live quota usage, drag-drop priority queues, and a panic stop button**,  
 So that **I can manage platform risk visually during spikes or incidents**.
 
@@ -2113,7 +2113,7 @@ So that **I can manage platform risk visually during spikes or incidents**.
 
 ### Story 32.2: DistributedTokenBucket — Redis-Backed Quota with Header Parsing
 As a **Scraping Platform Engineer**,  
-I want **per-consumer and per-account rate limits synchronized across multiple XActions instances**,  
+I want **per-consumer and per-account rate limits synchronized across multiple Medirus instances**,  
 So that **horizontal scaling does not break the existing quota model**.
 
 **Acceptance Criteria:**
@@ -2176,7 +2176,7 @@ So that **Nowing AI can monitor trending VN YouTube channels, video comments, an
 
 ## Revised Epic Priority & Execution Order (Vietnam Market Pivot — 2026-09-05)
 
-> **Rationale:** XActions serves Nowing AI Lead Hub for the Vietnam market. VN-specific platforms (Epic 21–22, 33) deliver direct business value immediately. Infrastructure hardening (Epic 27–32) follows once VN crawlers are stable.
+> **Rationale:** Medirus serves Nowing AI Lead Hub for the Vietnam market. VN-specific platforms (Epic 21–22, 33) deliver direct business value immediately. Infrastructure hardening (Epic 27–32) follows once VN crawlers are stable.
 
 ```
 Phase A — Vietnam Core (NEXT):
@@ -2249,7 +2249,7 @@ Phase D — Finalization:
 
 ## Business Context
 
-Nowing (B2B Lead Hub) depends on XActions để scrape 15+ nền tảng. Không có benchmark suite, không thể đo lường khách quan:
+Nowing (B2B Lead Hub) depends on Medirus để scrape 15+ nền tảng. Không có benchmark suite, không thể đo lường khách quan:
 - **Stability**: scraper nào thất bại âm thầm (False 200, login wall, Cloudflare)?
 - **Quality**: scraper nào trả về dữ liệu thiếu hoặc sai schema?
 - **Noise**: scraper nào sinh duplicate, spam, lead sai?
@@ -2349,7 +2349,7 @@ Nowing cần **Health Score (0-100)** và **Tier (A/B/C)** cho mỗi scraper đ�
 
 - Spec: `_bmad-output/specs/spec-scraper-benchmark/SPEC.md`
 - Metrics Catalog: `_bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md`
-- Architecture Spine: `_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md`
+- Architecture Spine: `_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md`
 - Change Proposal: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-09-08-benchmark-v2.md`
 - Review Synthesis: `_bmad-output/planning-artifacts/review-epic34-synthesis-2026-09-08.md`
 - Backlog File: `_bmad-output/planning-artifacts/backlog-epic-34.md`
@@ -2360,7 +2360,7 @@ Nowing cần **Health Score (0-100)** và **Tier (A/B/C)** cho mỗi scraper đ�
 
 ## Business Context
 
-XActions hiện hỗ trợ 10+ nền tảng social nhưng thiếu ba nguồn nội dung quan trọng: **Reddit** (community + discussion data), **Medium** (long-form content), và **Instagram** (visual social + influencer data). Nowing AI Lead Hub cần đa dạng hóa nguồn lead generation và content intelligence. Technical research 2026-09-08/09 cho thấy:
+Medirus hiện hỗ trợ 10+ nền tảng social nhưng thiếu ba nguồn nội dung quan trọng: **Reddit** (community + discussion data), **Medium** (long-form content), và **Instagram** (visual social + influencer data). Nowing AI Lead Hub cần đa dạng hóa nguồn lead generation và content intelligence. Technical research 2026-09-08/09 cho thấy:
 
 - **Reddit** — official REST API + read-only mode feasible, but public `.json` endpoints often return HTTP 403 from non-residential/unauthenticated IPs; RSS fallback (`/r/{sub}/new.rss`) and optional Puppeteer stealth bridge are required for resilient public scraping.
 - **Medium** — official API deprecated; RSS feed still accessible without auth; low complexity.
@@ -2454,7 +2454,7 @@ XActions hiện hỗ trợ 10+ nền tảng social nhưng thiếu ba nguồn n�
 # Epic 36: Unified Person OSINT & Identity Harvesting Dispatcher
 
 ## Business Context
-Nowing Lead Hub và ChainLens Research cần một điểm chạm tập trung để tìm kiếm dấu chân số của một cá nhân đồng thời trên 10+ nền tảng mạng xã hội và kênh tuyển dụng/doanh nghiệp. Tuân thủ quyết định kiến trúc Option D (`PROPOSAL-person-reconnaissance-osint.md`), XActions đóng vai trò Data Harvesting thuần túy: thực hiện fan-out truy vấn, thu thập dữ liệu thô (`ProfileItem[]`) và trả về caller mà không lưu trữ thực thể hay PII trong cơ sở dữ liệu.
+Nowing Lead Hub và ChainLens Research cần một điểm chạm tập trung để tìm kiếm dấu chân số của một cá nhân đồng thời trên 10+ nền tảng mạng xã hội và kênh tuyển dụng/doanh nghiệp. Tuân thủ quyết định kiến trúc Option D (`PROPOSAL-person-reconnaissance-osint.md`), Medirus đóng vai trò Data Harvesting thuần túy: thực hiện fan-out truy vấn, thu thập dữ liệu thô (`ProfileItem[]`) và trả về caller mà không lưu trữ thực thể hay PII trong cơ sở dữ liệu.
 
 ## Scope
 **Trong scope:**
@@ -2489,7 +2489,7 @@ Hệ thống xuất hiện nợ kỹ thuật Split-Brain Publishing: crawler con
 - Đóng gói sự kiện theo chuẩn CloudEvents v1.0 kèm thuộc tính `idempotencyKey`.
 
 **Ngoài scope:**
-- Xây dựng Event Lake hay Parquet Export nội bộ trong XActions (đã giao cho downstream consumer).
+- Xây dựng Event Lake hay Parquet Export nội bộ trong Medirus (đã giao cho downstream consumer).
 
 ## Stories
 ### Story 38.1: crawler-lifecycle-cleanup-and-stream-unification
@@ -2553,7 +2553,7 @@ Giao diện các mạng xã hội thường xuyên thay đổi khiến CSS/XPath
 
 ## Scope (Rescoped)
 **Trong scope:**
-- `xactions canary heal` CLI orchestrating: drift status → `AutoSelectorFallback.investigate()` → `SelectorSandbox` validation → `unified-diff` → GitHub Draft PR.
+- `medirus canary heal` CLI orchestrating: drift status → `AutoSelectorFallback.investigate()` → `SelectorSandbox` validation → `unified-diff` → GitHub Draft PR.
 - `SelectorSandbox` validates candidates against `expectedShape` in isolated page context.
 - `CanaryHealer` service coordinating the full healing pipeline.
 - `expectedShape` field added to `canary-targets.json` for validation.
@@ -2575,7 +2575,7 @@ Giao diện các mạng xã hội thường xuyên thay đổi khiến CSS/XPath
 ## Business Context
 Live verification của `x_social_find_profiles` (Epic 36) với query thực tế `deptraidapxichlo` đã lộ ra 2 gap: (1) các developer/identity registries công khai (GitHub, Gravatar) chưa có trong platform matrix dù là nguồn dữ liệu mở giàu metadata nhất và không tốn proxy; (2) kết quả trả về là danh sách phẳng `profiles[]` — caller không biết được profile nào trên platform nào thuộc cùng một người thật.
 
-> **⚠️ Boundary Note (2026-09-19):** Sau duplication audit với Mr.Holmes (`docs/proposals/PROPOSAL-person-reconnaissance-osint-v1-xactions-only.md`), Epic 41 chỉ port **thuật toán** (Jaro-Winkler similarity) chứ không port code Python. Các khả năng thuộc domain điều tra của Mr.Holmes bị loại khỏi scope: Google/Yandex Dorking, breach/leak check (HIBP/Shodan), BFS Recursive Profiler, Mindmap/LLM Report, quét 2500 sites (Maigret). Nếu cần các khả năng này, operator orchestrate qua MCP của Mr.Holmes — không duplicate trong XActions.
+> **⚠️ Boundary Note (2026-09-19):** Sau duplication audit với Mr.Holmes (`docs/proposals/PROPOSAL-person-reconnaissance-osint-v1-medirus-only.md`), Epic 41 chỉ port **thuật toán** (Jaro-Winkler similarity) chứ không port code Python. Các khả năng thuộc domain điều tra của Mr.Holmes bị loại khỏi scope: Google/Yandex Dorking, breach/leak check (HIBP/Shodan), BFS Recursive Profiler, Mindmap/LLM Report, quét 2500 sites (Maigret). Nếu cần các khả năng này, operator orchestrate qua MCP của Mr.Holmes — không duplicate trong Medirus.
 
 ## Scope
 **Trong scope:**
@@ -2602,7 +2602,7 @@ Live verification của `x_social_find_profiles` (Epic 36) với query thực t�
 ## Epic 42: Agentic Decision Plane — Jev Typed-Decision Integration
 
 ## Business Context
-Mọi quyết định "có nên like/reply/follow không" trong XActions hiện đi qua generative LLM (`LLMBrain`, `callLLM`) hoặc heuristic thô (`Math.random()`, ngưỡng cứng `score>60/>80`). Điều này gây 3 vấn đề: (1) **tốn chi phí** — trả tiền token sinh text chỉ để `parseInt` vứt đi; (2) **không tin cậy** — `JSON.parse`/`regex` parse rác, `catch → return default`; (3) **không tự chủ được** — không có confidence calibrated để biết "khi nào không chắc" → escalate, buộc phải giám sát. Epic này đưa **TypeSafe Jev** (System One model) vào làm **Decision Plane** riêng (xem `docs/architecture.md` §2.8, AD-48): Jev trả typed verdict `{choice|score|noul, probabilities, confidence}`, LLM chỉ giữ vai trò sinh prose. Verified trên corpus 40 tweet (`scripts/jev-verify/`): relevance 85%, spam 98%, vi 92%/mixed 100%/en 79%, ~$0.024/1000 tweet.
+Mọi quyết định "có nên like/reply/follow không" trong Medirus hiện đi qua generative LLM (`LLMBrain`, `callLLM`) hoặc heuristic thô (`Math.random()`, ngưỡng cứng `score>60/>80`). Điều này gây 3 vấn đề: (1) **tốn chi phí** — trả tiền token sinh text chỉ để `parseInt` vứt đi; (2) **không tin cậy** — `JSON.parse`/`regex` parse rác, `catch → return default`; (3) **không tự chủ được** — không có confidence calibrated để biết "khi nào không chắc" → escalate, buộc phải giám sát. Epic này đưa **TypeSafe Jev** (System One model) vào làm **Decision Plane** riêng (xem `docs/architecture.md` §2.8, AD-48): Jev trả typed verdict `{choice|score|noul, probabilities, confidence}`, LLM chỉ giữ vai trò sinh prose. Verified trên corpus 40 tweet (`scripts/jev-verify/`): relevance 85%, spam 98%, vi 92%/mixed 100%/en 79%, ~$0.024/1000 tweet.
 
 ## Scope
 **Trong scope:**
@@ -2724,7 +2724,7 @@ Sau khi hoàn thành Epic 42 (Decision Plane) và Epic 43 (Decision Surface), Ep
 
 ## Epic 45: jev-corpus-miner — Universal Viral DNA Mining & Content Intelligence
 
-Epic 45 mở ra khả năng "reverse-engineer" viral DNA ở quy mô lớn trên **mọi nền tảng**: scrape corpus posts từ niche → Jev batch classification với platform-specific questions → aggregate thành viral stats → feed vào content generation pipeline → backtest validate. Biến XActions từ "automation tool" thành "cross-platform content intelligence platform" với data-backed viral patterns.
+Epic 45 mở ra khả năng "reverse-engineer" viral DNA ở quy mô lớn trên **mọi nền tảng**: scrape corpus posts từ niche → Jev batch classification với platform-specific questions → aggregate thành viral stats → feed vào content generation pipeline → backtest validate. Biến Medirus từ "automation tool" thành "cross-platform content intelligence platform" với data-backed viral patterns.
 
 **Nguồn:** Phân tích từ FB article về Jev corpus mining (100k tweets / 20.4s / $0.67 / 14 questions per tweet).
 
@@ -2793,8 +2793,8 @@ So that I can discover which content patterns actually drive virality per platfo
 
 **Acceptance Criteria:**
 
-**Given** I have configured XActions scrapers and a niche keyword (e.g., "web3", "saas", "fitness", "apartment-hanoi")
-**When** I run `xactions viral-mine --platform {platform} --niche {niche} --count {count}`
+**Given** I have configured Medirus scrapers and a niche keyword (e.g., "web3", "saas", "fitness", "apartment-hanoi")
+**When** I run `medirus viral-mine --platform {platform} --niche {niche} --count {count}`
 **Then** the system detects platform category and uses appropriate scraper:
   - Social: `twitter`, `threads`, `facebook`, `tiktok`, `youtube`, `reddit`, `instagram`, `bluesky`, `mastodon`, `medium`, `zalo`
   - Recruitment: `linkedin`, `topcv`, `vietnamworks`
@@ -2832,7 +2832,7 @@ So that I can query "which hook type performs best on LinkedIn for SaaS niche" o
 **Acceptance Criteria:**
 
 **Given** a `PostViralProfile[]` corpus has been generated (from Story 45.1)
-**When** I run the stats aggregation (auto-triggered after mining OR via `xactions viral-stats --platform {platform} --niche {niche}`)
+**When** I run the stats aggregation (auto-triggered after mining OR via `medirus viral-stats --platform {platform} --niche {niche}`)
 **Then** the system computes `ViralStats`:
   - platform: string (18 supported platforms)
   - category: string (social|recruitment|realestate|ecom)
@@ -2861,7 +2861,7 @@ So that I can query "which hook type performs best on LinkedIn for SaaS niche" o
 
 ### Story 45.3: jev-content-intel — Feed Stats vào Content Generation
 
-As a content creator using XActions,
+As a content creator using Medirus,
 I want content generation to leverage viral DNA stats from my niche on the target platform,
 So that generated content follows proven viral patterns rather than generic templates.
 
@@ -2896,7 +2896,7 @@ So that I can trust (or calibrate) the viral stats before relying on them for co
 **Acceptance Criteria:**
 
 **Given** viral stats exist and I have posted content in the target platform+niche
-**When** I run `xactions backtest --platform {platform} --niche {niche} --days {days}`
+**When** I run `medirus backtest --platform {platform} --niche {niche} --days {days}`
 **Then** the system fetches my posts from the last {days} days via platform-appropriate scraper
 **And** for each post, extracts viral DNA attributes (via cached Jev results or re-classification)
 **And** compares predicted viral potential (from stats match) vs actual engagement
@@ -3022,7 +3022,7 @@ FR-102: Story 45.5 - Viral Dashboard UI (web interface for mining/stats/backtest
 | Decision | Rationale |
 |----------|-----------|
 | `batchDecide()` in JevBrain | Reusable for other epics, keeps concurrency logic centralized |
-| File-based storage | Consistent with XActions persistence pattern, no DB dependency |
+| File-based storage | Consistent with Medirus persistence pattern, no DB dependency |
 | Polling for dashboard | Simpler than WebSocket, sufficient for batch operations |
 | Platform questions as config | Easy to update per platform without code changes |
 | Niche normalization | Prevents file path collisions, consistent naming |
@@ -3063,7 +3063,7 @@ FR-102: Story 45.5 - Viral Dashboard UI (web interface for mining/stats/backtest
 
 # Epic 46: Chuẩn Hóa Bộ Hợp Đồng API & Tài Liệu Tương Tác OpenAPI 3.1 / Swagger
 
-**Goal:** Chuẩn hóa toàn bộ API routes của backend Express (scope định nghĩa tại Route Inventory — Phụ lục A) sang OpenAPI 3.1 được generate từ Zod schemas, cung cấp Swagger UI self-hosted tại `/api-docs` và script sinh TypeScript API client (`@xactions/api-client`) để frontend Next.js (Epic 47) gọi API type-safe.
+**Goal:** Chuẩn hóa toàn bộ API routes của backend Express (scope định nghĩa tại Route Inventory — Phụ lục A) sang OpenAPI 3.1 được generate từ Zod schemas, cung cấp Swagger UI self-hosted tại `/api-docs` và script sinh TypeScript API client (`@medirus/api-client`) để frontend Next.js (Epic 47) gọi API type-safe.
 
 **Requirements Covered:** FR-116, FR-117, FR-118, FR-119, NFR-22, NFR-23 (prd.md §7.1/§7.2).
 
@@ -3073,7 +3073,7 @@ FR-102: Story 45.5 - Viral Dashboard UI (web interface for mining/stats/backtest
 - **Bảo toàn contract x402 (bắt buộc):** spec mới phải giữ nguyên `x-payment-info`, `x-bazaar`, `securitySchemes.x402Payment` và `GET /.well-known/x402` — đây là discovery contract của x402scan, phá vỡ = paid AI endpoints mất pricing/discovery.
 - **Exclusions (không áp dụng validation/envelope):** `POST /webhooks/*` (raw Buffer body cho Stripe signature), các endpoint streaming/binary/SSE/redirect (`/api/video/download`, `/metrics/stream`), và `/api/plugins/*` (mount runtime qua `mountPluginRoutes` — plugin tự đăng ký schema nếu muốn vào spec). Envelope chỉ áp dụng cho JSON endpoints.
 - **Deployment:** spec/UI đầy đủ chỉ bắt buộc trên `api/server.js`. `api/serverless.js` (Vercel) serve spec cùng document nhưng `info.description` phải ghi rõ một số paths trả 503 trên serverless.
-- **Epic 47** consume `@xactions/api-client`. Epic này chỉ deliver client package; migrate fetch calls cũ trong dashboard/frontend thuộc Epic 47.
+- **Epic 47** consume `@medirus/api-client`. Epic này chỉ deliver client package; migrate fetch calls cũ trong dashboard/frontend thuộc Epic 47.
 - **Build order:** `46.2 → 46.1 → 46.3` — spec cần Zod schemas (46.2) trước khi `paths` coverage của 46.1 verify được; client gen (46.3) chạy trên artifact ổn định cuối cùng.
 - **Envelope chuẩn (định nghĩa tại đây, dùng xuyên epic):** success `{ success: true, data: T }`; error `{ success: false, error: { code: string, message: string, type?: string, details?: unknown } }`. Pagination dùng `PaginatedResponse<T> = { success: true, data: T[], page: { cursor: string | null, limit: number, total?: number } }`.
 
@@ -3116,7 +3116,7 @@ So that **input được validate chặt trước handler, response theo một e
 
 ---
 
-### Story 46.3: Generator Sinh TypeScript API Client (`@xactions/api-client`)
+### Story 46.3: Generator Sinh TypeScript API Client (`@medirus/api-client`)
 
 As a **Frontend Developer**,  
 I want **chạy `npm run generate:api-client` ở `package.json` gốc để sinh client TypeScript từ spec**,  
@@ -3127,7 +3127,7 @@ So that **tôi gọi API trong Next.js (Epic 47) với gợi ý code (IntelliSen
 **Given** `package.json` gốc có script `"generate:api-client"` và `workspaces` đã khai báo `packages/*`  
 **When** chạy `npm run generate:api-client`  
 **Then** tool đọc spec từ artifact đã commit (`openapi.json` được sinh bởi script build) hoặc import spec builder trực tiếp — **không** fetch HTTP từ server đang chạy; fail loudly nếu spec thiếu/không parse được.  
-**And** output vào `packages/api-client/` (path duy nhất, import được dưới tên `@xactions/api-client`), types sinh qua `openapi-typescript` + fetch wrapper mỏng viết tay.  
+**And** output vào `packages/api-client/` (path duy nhất, import được dưới tên `@medirus/api-client`), types sinh qua `openapi-typescript` + fetch wrapper mỏng viết tay.  
 **And** export một type per schema trong spec (e.g., `ViralStats`, `PostItem`, `CRMContact`, `OptimizeTweetRequest`) cộng `PaginatedResponse<T>`; generated types được namespace/dedupe để không đụng các component `Error`/`SuccessResponse`/`PaymentRequired` hiện có.  
 **And** fetch wrapper inject auth (Bearer token hoặc `x-session-cookie`) và trả typed error union (`400 | 401 | 402 | 429 | 500`) thay vì `any` — consumer không phải tự xử lý auth/error lại.
 
@@ -3236,7 +3236,7 @@ Mount table trích từ `api/server.js`. ✅ = Zod validate + envelope + spec. �
 
 ### Story 47.1: Khởi Tạo Dự Án Next.js 15 App Router & Universal Layout
 
-As a **Người dùng XActions**,  
+As a **Người dùng Medirus**,  
 I want **truy cập giao diện web Next.js mượt mà với Sidebar điều hướng thông minh, Dark/Light Mode và thanh trạng thái kết nối Backend**,  
 So that **tôi có thể điều hướng giữa các công cụ nhanh chóng mà trang không bị tải lại từ đầu**.
 
@@ -3323,7 +3323,7 @@ So that **tôi có thể xem trước dữ liệu dạng bảng và xuất file 
 
 **Phạm vi & Phụ thuộc (Dependencies / Non-goals):**
 
-- **Architecture spine:** `architecture/xactions-web-foundation-epic48/ARCHITECTURE-SPINE.md` — 8 ADs (AD-1 BFF proxy, AD-2 cookie session, AD-3 realtime deferred, AD-4 hand-rolled components, AD-5 app-router only, AD-6 app-screens-only scope, AD-7 parallel-run, AD-8 test infra).
+- **Architecture spine:** `architecture/medirus-web-foundation-epic48/ARCHITECTURE-SPINE.md` — 8 ADs (AD-1 BFF proxy, AD-2 cookie session, AD-3 realtime deferred, AD-4 hand-rolled components, AD-5 app-router only, AD-6 app-screens-only scope, AD-7 parallel-run, AD-8 test infra).
 - **Marketing/static pages excluded (AD-6):** ~20 file (index, about, blog, faq, pricing, terms, privacy, features, team, tutorials…) không phải app screens — giữ ở `dashboard/` hoặc tách static site sau.
 - **Backend `api/` không đổi trong 48.1–48.3** — ngoại lệ duy nhất: socket auth extension (AD-3) được phép sửa `api/realtime/socketHandler.js` trong story 48.4.
 - **Realtime auth gap đã biết (AD-3):** `io.use` chỉ đọc `socket.handshake.auth.token` (`socketHandler.js:88`) — quyết (a) parse cookie hoặc (b) socket-token endpoint khi làm màn realtime đầu tiên. Deferred: `deferred-work.md` 2026-09-24.
@@ -3567,10 +3567,10 @@ So that **concurrent pause/resume không ghi đè và ledger sạch**.
 
 # Epic 50: Public Scrape Gateway — Unified Service Contract
 
-> **Source spec:** `_bmad-output/specs/spec-xactions-public-scrape-gateway/SPEC.md` (CAP-1..10, C-1..13, NG-1..8)  
-> **Source spine:** `_bmad-output/planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md` (AD-1..7, OQ-1..3 resolved)  
-> **Source research:** `_bmad-output/planning-artifacts/research/market-crypto-xactions-features-2026-09-26/research.md` (D1-D4)  
-> **UX review:** `_bmad-output/specs/spec-xactions-public-scrape-gateway/ux-review.md` (UX-1..5 patched inline)  
+> **Source spec:** `_bmad-output/specs/spec-medirus-public-scrape-gateway/SPEC.md` (CAP-1..10, C-1..13, NG-1..8)  
+> **Source spine:** `_bmad-output/planning-artifacts/architecture/architecture-medirus-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md` (AD-1..7, OQ-1..3 resolved)  
+> **Source research:** `_bmad-output/planning-artifacts/research/market-crypto-medirus-features-2026-09-26/research.md` (D1-D4)  
+> **UX review:** `_bmad-output/specs/spec-medirus-public-scrape-gateway/ux-review.md` (UX-1..5 patched inline)  
 > **Trigger:** jev-trading forked `PumpFunCrawler` in-repo vì không có sync REST surface + service auth — gateway phải mở contract này cho mọi machine consumer (jev, Nowing, ChainLens, third-party).
 
 **Epic Goal:** Biến `POST /api/platform/:platform/scrape` thành public service contract đầy đủ — service-auth lane, sync/async dispatch, unified envelope, per-consumer quota, self-discovery, observability dashboard, interactive playground, và migration quickstart — để bất kỳ backend consumer nào cũng integrate mà không cần session cookie, MCP-only path, hoặc queue+poll bắt buộc.
@@ -3594,7 +3594,7 @@ So that **I can call the gateway without a user session cookie, and my identity 
 **When** implement middleware
 **Then** new file `api/middleware/serviceAuth.js` exports `serviceAuth(req,res,next)` that:
 - Extracts `Authorization: Bearer <token>` via `extractBearerToken` from `src/mcp/consumer-context.js`
-- Looks up token in env-driven map `XACTIONS_SERVICE_KEYS` (JSON: `{"<token>": {"consumer_id":"jev","tier":"internal"}}`) — falls back to `XACTIONS_MCP_API_KEY`/`XACTIONS_API_TOKEN` legacy check
+- Looks up token in env-driven map `MEDIRUS_SERVICE_KEYS` (JSON: `{"<token>": {"consumer_id":"jev","tier":"internal"}}`) — falls back to `MEDIRUS_MCP_API_KEY`/`MEDIRUS_API_TOKEN` legacy check
 - Sets `req.consumer = {consumerId, apiKeyValid:true, source:'serviceAuth'}`
 - On invalid/missing token → `401 + ErrorEnvelope{code:'XACT_4001', kind:'auth', message:'Invalid Bearer token'}`
 - **Ignores `X-Consumer-Id` header for identity** — logs it as hint only (`req.consumerHint`)
@@ -3605,7 +3605,7 @@ So that **I can call the gateway without a user session cookie, and my identity 
 
 **And** spoof test: request with valid Bearer but `X-Consumer-Id: internal` resolves to Bearer's mapped consumer (e.g. `jev`), NOT `internal` — verified by contract test
 
-**And** legacy `XACTIONS_MCP_API_KEY` Bearer (single shared token) still works → maps to `internal` consumer
+**And** legacy `MEDIRUS_MCP_API_KEY` Bearer (single shared token) still works → maps to `internal` consumer
 
 ---
 
@@ -3673,8 +3673,8 @@ So that **my client adapter is platform-agnostic, traceable, and debuggable**.
 
 **And** `error.kind` is a closed enum: `'auth' | 'validation' | 'consumer_quota' | 'upstream_rate_limit' | 'proxy_ip_block' | 'upstream_error' | 'internal'` — lets consumers pick retry strategy without guessing
 - `consumer_quota` → slow own request rate (their fault)
-- `upstream_rate_limit` → degrade to async, XActions' pool hot (our upstream)
-- `proxy_ip_block` → escalate to XActions ops (infra)
+- `upstream_rate_limit` → degrade to async, Medirus' pool hot (our upstream)
+- `proxy_ip_block` → escalate to Medirus ops (infra)
 - `retryable:true` + `retry_after_ms` required on 429/503
 
 **And** `preview` is `data.slice(0,10)` verbatim; never a summary object (summaries go in `metadata`)
@@ -3696,7 +3696,7 @@ So that **one consumer can't starve another, anonymous callers get a taste, heav
 **Given** `DistributedTokenBucket` exists in `src/core/distributed-token-bucket.js`
 **When** wire per-consumer quota
 **Then** bucket key = `{derived_consumer_id}:{platform}:{action}` — e.g. `jev:reddit:search`
-- Named consumers (`jev`,`nowing`,`chainlens`) get free quota per env config `XACTIONS_CONSUMER_QUOTAS` (JSON: `{"jev":{"reddit:search":"100/min"}}`)
+- Named consumers (`jev`,`nowing`,`chainlens`) get free quota per env config `MEDIRUS_CONSUMER_QUOTAS` (JSON: `{"jev":{"reddit:search":"100/min"}}`)
 - `internal` consumer unmetered (trusted)
 - Unknown/anonymous callers (no Bearer) → `anonymous` bucket, IP-bucketed, tight ceiling (default `10/min` per IP+platform+action)
 
@@ -3730,7 +3730,7 @@ So that **one consumer can't starve another, anonymous callers get a taste, heav
 
 ---
 
-### Story 50.5: Self-Discovery — `GET /api/actions` + openapi.json + x_actions_list + Public Catalog UI
+### Story 50.5: Self-Discovery — `GET /api/actions` + openapi.json + medirus_list + Public Catalog UI
 
 As a **consumer integrating the gateway**,
 I want **enumerate every (platform, action, syncCapable, mode) triple via REST, MCP, openapi spec, AND a browsable catalog**,
@@ -3740,12 +3740,12 @@ So that **my adapter knows what's callable — whichever discovery surface I hap
 
 **Backend — manifest endpoint:**
 
-**Given** `api/openapi.json` exists and `x_actions_list` MCP tool exists
+**Given** `api/openapi.json` exists and `medirus_list` MCP tool exists
 **When** regenerate openapi + add REST introspection route
 **Then** `GET /api/actions` returns full manifest unauthenticated:
 - Lists every `{platform, action, syncCapable, required_args[], category, description}` triple
 - <100ms response, cached from descriptor registry
-- Same payload as `x_actions_list` MCP tool — REST and MCP consumers on equal footing (UX-1 fix)
+- Same payload as `medirus_list` MCP tool — REST and MCP consumers on equal footing (UX-1 fix)
 
 **And** `api/openapi.json` documents `POST /api/platform/{platform}/scrape` with:
 - `platform` path param enum from `VALID_PLATFORMS`
@@ -3754,7 +3754,7 @@ So that **my adapter knows what's callable — whichever discovery surface I hap
 - Auth: `securitySchemes` for Bearer + x402
 - `X-Consumer-Id` annotated as *observability hint only* (UX-5)
 
-**And** `src/scrapers/social/actions-list.js` `x_actions_list` output includes per-action `syncCapable: boolean` flag sourced from descriptor `syncCapableActions`
+**And** `src/scrapers/social/actions-list.js` `medirus_list` output includes per-action `syncCapable: boolean` flag sourced from descriptor `syncCapableActions`
 
 **And** new platforms register identically — `dexscreener` and `telegram` appear in listing when descriptors land (Stories 50.7, 50.8); telegram flagged `coming_soon:true`
 
@@ -3882,7 +3882,7 @@ So that **the D4 spec can pick MTProto-vs-Bot without restructuring the platform
 ### Story 50.9: Reddit Search E2E Validation + Contract Test + Migration Quickstart
 
 As a **consumer (jev)**,
-I want **`POST /api/platform/reddit/scrape {action:'search'}` to return reddit search results in <1.5s sync — AND a migration guide that converts my existing `xactionsClient.ts` to the new contract**,
+I want **`POST /api/platform/reddit/scrape {action:'search'}` to return reddit search results in <1.5s sync — AND a migration guide that converts my existing `medirusClient.ts` to the new contract**,
 So that **my `searchReddit()` stops returning `[]` and I upgrade in <30 minutes instead of reverse-engineering**.
 
 **Acceptance Criteria:**
@@ -3904,18 +3904,18 @@ So that **my `searchReddit()` stops returning `[]` and I upgrade in <30 minutes 
 - Envelope shape validation across `reddit`, `pumpfun`, `x` — identical `error.kind` enum coverage
 - Per-consumer quota isolation (two tokens, one exhausts, other succeeds)
 - `not_sync_capable` returns 400 not 202
-- `GET /api/actions` returns manifest matching `x_actions_list` shape
+- `GET /api/actions` returns manifest matching `medirus_list` shape
 
 **And** `npm run docs:matrix` includes `reddit/search` with `syncCapable:true`
 
-**And** live manual verification against `api.dexscreener.com` + `frontend-api-v3.pump.fun` + `reddit.com` documents response times in `_bmad-output/planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/live-probe-results.md`
+**And** live manual verification against `api.dexscreener.com` + `frontend-api-v3.pump.fun` + `reddit.com` documents response times in `_bmad-output/planning-artifacts/architecture/architecture-medirus-public-scrape-gateway-2026-09-26/live-probe-results.md`
 
 **Migration quickstart (UX-4 fix):**
 
-**Given** jev's `xactionsClient.ts` uses `POST /api/ai/discovery/search` + queue+poll
+**Given** jev's `medirusClient.ts` uses `POST /api/ai/discovery/search` + queue+poll
 **When** write `docs/consumer-quickstart.md` + interactive guide at `apps/web/app/gateway/quickstart/`
 **Then**:
-- Markdown doc covers: before/after `xactionsClient.ts` diff (searchTwitter + searchReddit methods rewritten), auth migration (drop `sessionCookie` → add Bearer), sync-vs-async decision tree, `error.kind` → retry-strategy mapping, common pitfalls
+- Markdown doc covers: before/after `medirusClient.ts` diff (searchTwitter + searchReddit methods rewritten), auth migration (drop `sessionCookie` → add Bearer), sync-vs-async decision tree, `error.kind` → retry-strategy mapping, common pitfalls
 - Interactive page walks: pick consumer type → pick platform+action → paste existing client code → highlights which lines change (side-by-side diff) → link to playground pre-filled
 - jev-specific section: references actual file paths in jev-trading repo, shows working diff
 - Doc lives in `docs/` (repo-visible) AND web route (interactive) — same content, two surfaces
@@ -3928,7 +3928,7 @@ As a **consumer (anonymous free-tier / jev)**,
 I want **`POST /api/platform/facebook/scrape` and `POST /api/facebook/scrape` to accept `auth:'guest'` that forces the existing fb-guest DOM lane — never touching the account pool**,
 So that **I can scrape public Facebook content (posts, comments, groups, marketplace) with zero cookies and zero risk of silently consuming a stored account**.
 
-**Context (course-corrected 2026-10-06):** Probes confirmed every pure-HTTP cookieless method is dead on facebook.com 2026 (plugins/post.php→400, plugins/page.php→JS-shell only, oembed→needs app token, social-bot UA→React hydration shell with no og: tags). The ONLY viable cookieless path is browser DOM render — which XActions already implements via `fb-guest`. This story surfaces that lane explicitly rather than building a new scraper. See `_bmad-output/planning-artifacts/sprint-change-proposal-2026-10-06-fb-guest-lane.md`.
+**Context (course-corrected 2026-10-06):** Probes confirmed every pure-HTTP cookieless method is dead on facebook.com 2026 (plugins/post.php→400, plugins/page.php→JS-shell only, oembed→needs app token, social-bot UA→React hydration shell with no og: tags). The ONLY viable cookieless path is browser DOM render — which Medirus already implements via `fb-guest`. This story surfaces that lane explicitly rather than building a new scraper. See `_bmad-output/planning-artifacts/sprint-change-proposal-2026-10-06-fb-guest-lane.md`.
 
 **Acceptance Criteria:**
 
@@ -3976,7 +3976,7 @@ Stories 50.6–50.8 are parallelizable after 50.3 lands. 50.9 is the backend int
 > **Source spec:** `_bmad-output/specs/spec-fe-platform-suites/SPEC.md` (CAP-1..5, C-1..5, NG-1..3)  
 > **Source UX review:** `_bmad-output/specs/spec-fe-platform-suites/ux-review.md` (Personas, Interaction Patterns, Wireframes)  
 > **Source PRD:** `_bmad-output/planning-artifacts/prd.md` (§7.1 FR-141..145, §7.2 NFR-29..30)  
-> **Trigger:** Backend XActions sở hữu 28 platforms và 242 actions hoạt động ổn định nhưng Frontend (`apps/web`) còn thiếu giao diện tương tác chuyên biệt cho các mảng dữ liệu giá trị cao (Crypto DEX, YouTube, Fediverse, Doanh nghiệp VN, Tuyển dụng IT). Người dùng hiện phải gọi API thô qua `/gateway` hoặc xem catalog tĩnh tại `/actions`.
+> **Trigger:** Backend Medirus sở hữu 28 platforms và 242 actions hoạt động ổn định nhưng Frontend (`apps/web`) còn thiếu giao diện tương tác chuyên biệt cho các mảng dữ liệu giá trị cao (Crypto DEX, YouTube, Fediverse, Doanh nghiệp VN, Tuyển dụng IT). Người dùng hiện phải gọi API thô qua `/gateway` hoặc xem catalog tĩnh tại `/actions`.
 
 **Epic Goal:** Xây dựng 5 bộ giao diện người dùng (Platform Suites) hiện đại, giàu tính tương tác và chuẩn mực UX trên `apps/web` (Next.js 15, Tailwind, Lucide), biến năng lực cào dữ liệu backend thành các bảng điều khiển tác nghiệp thời gian thực cho Crypto Trader, Content Creator, Nhà nghiên cứu mạng xã hội phi tập trung, và Chuyên viên B2B/Tuyển dụng.
 
@@ -4034,7 +4034,7 @@ So that **I can analyze viral video topics, track channel stats, and gauge audie
 - **Tab 3: Comment & Sentiment Reader** (`youtube:video_comments`):
   - Input accepts YouTube video URL or ID (e.g. `dQw4w9WgXcQ`)
   - Displays top 20 comments with author avatar, comment text, upvote count, and published date
-  - Provides quick sentiment summary pill (Positive / Neutral / Skeptical) computed via XActions AI endpoint or simple heuristic
+  - Provides quick sentiment summary pill (Positive / Neutral / Skeptical) computed via Medirus AI endpoint or simple heuristic
 
 **And** loading states use realistic Skeleton cards matching exact video card aspect ratio (16:9 thumbnail + 2 text lines)  
 **And** all requests pass through BFF proxy with 15-minute SWR caching for trending data
@@ -4150,7 +4150,7 @@ All 5 stories can be implemented independently and in parallel since each target
 
 
 ### Epic 52: MCP Tool Surface Consolidation & Dual-Mode Runtime
-*Tái cấu trúc bề mặt công cụ MCP của XActions từ 224 tools tĩnh thành 10 Domain Dispatchers, tối ưu hóa triệt để context window và đảm bảo tương thích 100% với Claude Code CLI.*
+*Tái cấu trúc bề mặt công cụ MCP của Medirus từ 224 tools tĩnh thành 10 Domain Dispatchers, tối ưu hóa triệt để context window và đảm bảo tương thích 100% với Claude Code CLI.*
 
 #### Story 52.1: Domain Dispatcher Schemas & Routing Facade
 - Định nghĩa mảng `DOMAIN_TOOLS` gồm 10 tools với schema chuẩn mực.
@@ -4182,7 +4182,7 @@ All 5 stories can be implemented independently and in parallel since each target
 - Teardown respect `browser.__backend` (AD-23): obscura→`disconnect()`, chrome→`close()`; pool-own-browser lifecycle.
 
 #### Story 53.3: jobQueue scrape processor thread `pooled`
-- `api/services/jobQueue.js` scrape processor đọc `job.data.pooled`/`XACTIONS_BROWSER_POOL_SIZE`; `scrapeDispatch.js` clamp + propagate pool size hints.
+- `api/services/jobQueue.js` scrape processor đọc `job.data.pooled`/`MEDIRUS_BROWSER_POOL_SIZE`; `scrapeDispatch.js` clamp + propagate pool size hints.
 
 #### Story 53.4: Obscura pool-of-processes shard strategy
 - Vì obscura bottleneck là nav/render (không phải context-create), shard qua nhiều `obscura serve` process (~30MB/process), mỗi process ~2–4 page/CDP-connection. Chrome shard qua ~4–6 isolated contexts/browser.
@@ -4191,16 +4191,16 @@ All 5 stories can be implemented independently and in parallel since each target
 - Pool detect dead browser → respawn; chỉ in-flight jobs trên browser đó fail; Bull `attempts`/`backoff` re-queue. Không silent loss.
 
 #### Story 53.6: Telemetry dims + spike verify gate
-- `emitRun` thêm `pooled`, `poolBackend`, `poolWaitMs` (gated `XACTIONS_BROWSER_BACKEND_METRICS=1`). Promote `browser-pool-spike.mjs` thành verify gate pre-release.
+- `emitRun` thêm `pooled`, `poolBackend`, `poolWaitMs` (gated `MEDIRUS_BROWSER_BACKEND_METRICS=1`). Promote `browser-pool-spike.mjs` thành verify gate pre-release.
 
 
 ## Epic 54: Token Sentiment Intelligence Layer
 
-> **Origin:** `jev-trading/_bmad-output/planning-artifacts/research/technical-crypto-social-sentiment-providers-2026-10-04/research.md` Recommendation #3 — "Giữ XActions MCP làm lớp ingestion dự phòng cho các tín hiệu provider không phủ". Gap analysis cross-referenced với `research/market-crypto-xactions-features-2026-09-26/research.md` §3c.
+> **Origin:** `jev-trading/_bmad-output/planning-artifacts/research/technical-crypto-social-sentiment-providers-2026-10-04/research.md` Recommendation #3 — "Giữ Medirus MCP làm lớp ingestion dự phòng cho các tín hiệu provider không phủ". Gap analysis cross-referenced với `research/market-crypto-medirus-features-2026-09-26/research.md` §3c.
 >
-> **Positioning:** XActions KHÔNG replicate provider-grade bot filtering (Kaito Bittensor NLP, TheTie 7yr clean data — moat nhiều năm). Epic này build **coverage-gap metrics**: tín hiệu mà DexCheck/Cookie Pro không phủ — KOL watchlist riêng của jev, VN crypto Twitter, token quá nhỏ chưa được index. Buy baseline (DexCheck Free + Cookie $19.99/th), build coverage gap.
+> **Positioning:** Medirus KHÔNG replicate provider-grade bot filtering (Kaito Bittensor NLP, TheTie 7yr clean data — moat nhiều năm). Epic này build **coverage-gap metrics**: tín hiệu mà DexCheck/Cookie Pro không phủ — KOL watchlist riêng của jev, VN crypto Twitter, token quá nhỏ chưa được index. Buy baseline (DexCheck Free + Cookie $19.99/th), build coverage gap.
 >
-> **Dependency:** không phụ thuộc Epic 10–53 sequence (dùng `x_scrape`/`x_monitor_keyword`/Dexscreener crawler/ `historyStore` đã live). YÊU CẦU ingestion health gate: nếu X search trả `[]` liên tục (session cookie chết — precedent: jev `searchTwitter()` trả rỗng khi thiếu `XACTIONS_SESSION_COOKIE`), metrics phải flag `degraded: true` thay vì trả số ảo.
+> **Dependency:** không phụ thuộc Epic 10–53 sequence (dùng `x_scrape`/`x_monitor_keyword`/Dexscreener crawler/ `historyStore` đã live). YÊU CẦU ingestion health gate: nếu X search trả `[]` liên tục (session cookie chết — precedent: jev `searchTwitter()` trả rỗng khi thiếu `MEDIRUS_SESSION_COOKIE`), metrics phải flag `degraded: true` thay vì trả số ảo.
 
 ### Story 54.0: Ingestion Coverage Spike — X Search & Dexscreener Validation (PREREQUISITE)
 > **Phase:** MVP-blocking spike | **Estimate:** ~1 day | **Type:** measurement, not implementation
@@ -4274,7 +4274,7 @@ So that **jev-trading gets Cookie-Pro-style `Mindshare %` and `Mindshare Delta` 
 * **And** `mindshare_delta(token, 24h)` and `mindshare_delta(token, 7d)` = current share minus trailing-baseline share
 * **And** `top_voices(token)` = top authors by weighted mentions — primitive Top Voices (Cookie parity)
 * **And** expose `x_token_mindshare` MCP action + `/api/analytics/mindshare` REST endpoint returning full watchlist ranking
-* **And** response schema matches a provider-compatible shape `{ token, mindsharePct, delta24h, delta7d, topVoices[], degraded }` so jev can hot-swap XActions↔Cookie as data source
+* **And** response schema matches a provider-compatible shape `{ token, mindsharePct, delta24h, delta7d, topVoices[], degraded }` so jev can hot-swap Medirus↔Cookie as data source
 * **And** unit tests: synthetic 3-token corpus with known shares must reproduce expected %±1pt
 
 ### Story 54.5: Narrative Clustering & Rotation Detection
@@ -4301,7 +4301,7 @@ So that **jev catches narrative rotation early (e.g. "AI agents → DeSci → me
 ### Story 54.6: Telegram Crypto Channel Crawler
 > **Phase:** Gated (Post-Ship-Gate) | **Gate:** Story 54.1–54.4 ship gate + Product Council approve
 > **Parity:** Santiment TG coverage (>400 crypto chats, 1–2s latency) — kênh crypto mạnh nhất mà provider nào cũng có
-> **Origin:** D4 từ `research/market-crypto-xactions-features-2026-09-26` Tier-2 (jev Epic 2 deferred specifically vì XActions thiếu)
+> **Origin:** D4 từ `research/market-crypto-medirus-features-2026-09-26` Tier-2 (jev Epic 2 deferred specifically vì Medirus thiếu)
 > **Architecture:** VERIFIED — `research/technical-telegram-channel-crawler-mmomarket-pattern-2026-10-04/research.md`. Copy production-proven relay pattern từ `mmomarket.org/apps/telegram-relay` (GramJS `telegram@2.26.22`, StringSession, done 2026-09-20). **Không dùng Bot API** — crypto channels không add bot lạ; MTProto user-client là primary.
 
 As a **Crypto Intelligence Consumer**,

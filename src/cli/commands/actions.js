@@ -1,8 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions actions list` — action discovery for CLI.
+ * `medirus actions list` — action discovery for CLI.
  *
- * Reuses the same executeActionListTool logic as the MCP `x_actions_list` tool.
+ * Reuses the same executeActionListTool logic as the MCP `medirus_list` tool.
  *
  * @author nich (@nichxbt)
  * @license MIT

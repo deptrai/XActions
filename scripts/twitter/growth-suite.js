@@ -131,11 +131,11 @@ var CONFIG = {
   const storage = {
     get: (key) => {
       try {
-        return JSON.parse(localStorage.getItem(`xactions_growth_${key}`) || 'null');
+        return JSON.parse(localStorage.getItem(`medirus_growth_${key}`) || 'null');
       } catch { return null; }
     },
     set: (key, value) => {
-      localStorage.setItem(`xactions_growth_${key}`, JSON.stringify(value));
+      localStorage.setItem(`medirus_growth_${key}`, JSON.stringify(value));
     }
   };
   
@@ -254,9 +254,9 @@ var CONFIG = {
     return true;
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Growth = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Growth = {
     state,
     config: CONFIG,
     
@@ -354,15 +354,15 @@ var CONFIG = {
       console.log('');
       console.log('📋 GROWTH SUITE COMMANDS:');
       console.log('');
-      console.log('   XActions.Growth.autoLike()      - Auto-like feed posts');
-      console.log('   XActions.Growth.autoFollow()    - Auto-follow users');
-      console.log('   XActions.Growth.smartUnfollow() - Unfollow non-followers');
-      console.log('   XActions.Growth.stop()          - Stop automation');
-      console.log('   XActions.Growth.stats()         - Show statistics');
+      console.log('   Medirus.Growth.autoLike()      - Auto-like feed posts');
+      console.log('   Medirus.Growth.autoFollow()    - Auto-follow users');
+      console.log('   Medirus.Growth.smartUnfollow() - Unfollow non-followers');
+      console.log('   Medirus.Growth.stop()          - Stop automation');
+      console.log('   Medirus.Growth.stats()         - Show statistics');
       console.log('');
     },
   };
   
-  log('Growth Suite loaded! Use XActions.Growth.help() for commands.');
+  log('Growth Suite loaded! Use Medirus.Growth.help() for commands.');
   console.log('');
 })();

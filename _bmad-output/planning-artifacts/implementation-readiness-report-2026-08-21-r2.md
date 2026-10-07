@@ -3,14 +3,14 @@ stepsCompleted: [1, 2, 3, 4, 5, 6]
 inputDocuments:
   - _bmad-output/planning-artifacts/prd.md
   - _bmad-output/planning-artifacts/prd-canonicalization-addendum-2026-08-21.md
-  - _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
   - _bmad-output/planning-artifacts/epics.md
   - _bmad-output/planning-artifacts/ux/DESIGN.md
   - _bmad-output/planning-artifacts/ux/EXPERIENCE-UNIVERSAL-2026-08-21.md
   - _bmad-output/planning-artifacts/CANONICAL-DOCS.md
 workflowType: 'readiness-check'
 lastStep: 6
-project_name: 'XActions'
+project_name: 'Medirus'
 user_name: 'Luis'
 date: '2026-08-21'
 overall_readiness_status: 'READY'
@@ -19,7 +19,7 @@ overall_readiness_status: 'READY'
 # Implementation Readiness Assessment Report
 
 **Date:** 2026-08-21  
-**Project:** XActions (Universal Hybrid Scraping & Multi-Platform Intelligence Engine)  
+**Project:** Medirus (Universal Hybrid Scraping & Multi-Platform Intelligence Engine)  
 **Auditor:** BMad Product Management & Lead Quality Auditor  
 **Status:** 🟢 **READY FOR IMPLEMENTATION (Phase 4 Ready)**  
 
@@ -31,11 +31,11 @@ overall_readiness_status: 'READY'
 
 | Document Type | Canonical Document Path | Status | Verification Result |
 |---|---|:---:|---|
-| **PRD** | [`prd.md`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/prd.md) & [`prd-canonicalization-addendum-2026-08-21.md`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/prd-canonicalization-addendum-2026-08-21.md) | ✅ Approved | 100% đầy đủ Master FR/NFR register, phạm vi và mục tiêu sản phẩm. |
-| **Architecture** | [`architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md) | ✅ Canonical | Kiến trúc Tiered Hybrid Signer, Ports & Adapters, Hexagonal Clean Core. |
-| **Epics & Stories** | [`epics.md`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/epics.md) | ✅ Canonical | 14 Epics, 47 Stories với đầy đủ BDD Given/When/Then Acceptance Criteria. |
-| **UX Contract** | [`ux/DESIGN.md`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/ux/DESIGN.md) & [`ux/EXPERIENCE-UNIVERSAL-2026-08-21.md`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/ux/EXPERIENCE-UNIVERSAL-2026-08-21.md) | ✅ Canonical | Design tokens, Operator views, Terminal QR flow, CLI UI patterns. |
-| **Status Tracking** | [`sprint-status.yaml`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/implementation-artifacts/sprint-status.yaml) | ✅ Canonical | Đồng bộ 100% với file system artifacts và kết quả test suite thực tế. |
+| **PRD** | [`prd.md`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/prd.md) & [`prd-canonicalization-addendum-2026-08-21.md`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/prd-canonicalization-addendum-2026-08-21.md) | ✅ Approved | 100% đầy đủ Master FR/NFR register, phạm vi và mục tiêu sản phẩm. |
+| **Architecture** | [`architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md) | ✅ Canonical | Kiến trúc Tiered Hybrid Signer, Ports & Adapters, Hexagonal Clean Core. |
+| **Epics & Stories** | [`epics.md`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/epics.md) | ✅ Canonical | 14 Epics, 47 Stories với đầy đủ BDD Given/When/Then Acceptance Criteria. |
+| **UX Contract** | [`ux/DESIGN.md`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/ux/DESIGN.md) & [`ux/EXPERIENCE-UNIVERSAL-2026-08-21.md`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/ux/EXPERIENCE-UNIVERSAL-2026-08-21.md) | ✅ Canonical | Design tokens, Operator views, Terminal QR flow, CLI UI patterns. |
+| **Status Tracking** | [`sprint-status.yaml`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/implementation-artifacts/sprint-status.yaml) | ✅ Canonical | Đồng bộ 100% với file system artifacts và kết quả test suite thực tế. |
 
 ---
 
@@ -100,12 +100,12 @@ Toàn bộ các yêu cầu chức năng (FRs) được phân loại theo Master 
 ## 4. UX & Architecture Alignment Review
 
 1. **UX Contract Compliance:**
-   - Hợp đồng trải nghiệm người dùng [`ux/EXPERIENCE-UNIVERSAL-2026-08-21.md`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/ux/EXPERIENCE-UNIVERSAL-2026-08-21.md) quy định rõ:
+   - Hợp đồng trải nghiệm người dùng [`ux/EXPERIENCE-UNIVERSAL-2026-08-21.md`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/ux/EXPERIENCE-UNIVERSAL-2026-08-21.md) quy định rõ:
      - Luồng đăng nhập quét mã Terminal ASCII QR (Story 12.1) có cờ non-TTY fallback và countdown timer 60s.
      - Luồng gắn CDP Remote Attach (Story 12.2 / 18.3) có Gaussian jitter 3–7s.
      - Luồng Dashboard theo dõi Jobs, Proxies và Stream metrics (Story 19.1 – 19.3) có cập nhật thời gian thực qua SSE/REST.
 2. **Architecture Compliance:**
-   - Kiến trúc [`ARCHITECTURE-SPINE.md`](file:///Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md) đáp ứng trọn vẹn các yêu cầu phi chức năng (Clean Core 0 deps, undici/got-scraping TLS spoofing, Redis Stream lag throttling, O(1) Pre-Signed Token Ring).
+   - Kiến trúc [`ARCHITECTURE-SPINE.md`](file:///Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md) đáp ứng trọn vẹn các yêu cầu phi chức năng (Clean Core 0 deps, undici/got-scraping TLS spoofing, Redis Stream lag throttling, O(1) Pre-Signed Token Ring).
    - Không phát hiện bất kỳ sự mâu thuẫn hay xung đột nào giữa UX, Architecture và PRD.
 
 ---

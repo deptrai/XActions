@@ -1,9 +1,9 @@
-# XActions — API Reference
+# Medirus — API Reference
 
-> Complete function reference for the `xactions` npm package.
+> Complete function reference for the `medirus` npm package.
 > 
 > ```bash
-> npm install xactions
+> npm install medirus
 > ```
 
 ## Table of Contents
@@ -22,7 +22,7 @@
 ## Quick Start
 
 ```javascript
-import { createBrowser, createPage, scrapeProfile, scrapeFollowers } from 'xactions';
+import { createBrowser, createPage, scrapeProfile, scrapeFollowers } from 'medirus';
 
 const browser = await createBrowser();
 const page = await createPage(browser);
@@ -180,7 +180,7 @@ Search for tweets matching a query.
 
 ```javascript
 // Basic search
-const tweets = await searchTweets(page, 'xactions', { limit: 100 });
+const tweets = await searchTweets(page, 'medirus', { limit: 100 });
 
 // Advanced search operators
 const viral = await searchTweets(page, 'AI tools min_faves:1000 lang:en', { limit: 50 });
@@ -228,7 +228,7 @@ console.log(thread.text); // Full thread as text
 Manager modules are higher-level Puppeteer-based automation tools.
 
 ```javascript
-import { dmManager, profileManager, engagementManager } from 'xactions';
+import { dmManager, profileManager, engagementManager } from 'medirus';
 ```
 
 | Module | Description |
@@ -262,18 +262,18 @@ import { dmManager, profileManager, engagementManager } from 'xactions';
 node src/mcp/server.js
 
 # Or via npx
-npx xactions-mcp
+npx medirus-mcp
 ```
 
 **Claude Desktop config:**
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions", "--mcp"],
+      "args": ["-y", "medirus", "--mcp"],
       "env": {
-        "XACTIONS_MODE": "local"
+        "MEDIRUS_MODE": "local"
       }
     }
   }
@@ -285,23 +285,23 @@ npx xactions-mcp
 ## CLI Commands
 
 ```bash
-npm install -g xactions
+npm install -g medirus
 ```
 
 | Command | Description |
 |---------|-------------|
-| `xactions login` | Authenticate with X |
-| `xactions logout` | Clear saved credentials |
-| `xactions profile <user>` | Get profile data |
-| `xactions followers <user>` | List followers |
-| `xactions following <user>` | List following |
-| `xactions non-followers <user>` | Find non-followers |
-| `xactions tweets <user>` | Get tweets |
-| `xactions search <query>` | Search tweets |
-| `xactions hashtag <tag>` | Scrape hashtag |
-| `xactions thread <url>` | Unroll a thread |
-| `xactions media <user>` | Scrape media |
-| `xactions info` | Show version and config |
+| `medirus login` | Authenticate with X |
+| `medirus logout` | Clear saved credentials |
+| `medirus profile <user>` | Get profile data |
+| `medirus followers <user>` | List followers |
+| `medirus following <user>` | List following |
+| `medirus non-followers <user>` | Find non-followers |
+| `medirus tweets <user>` | Get tweets |
+| `medirus search <query>` | Search tweets |
+| `medirus hashtag <tag>` | Scrape hashtag |
+| `medirus thread <url>` | Unroll a thread |
+| `medirus media <user>` | Scrape media |
+| `medirus info` | Show version and config |
 
 **Common flags:**
 - `--limit N` — Maximum items
@@ -315,7 +315,7 @@ npm install -g xactions
 50+ scripts for pasting in the DevTools console. Listed via:
 
 ```javascript
-import { browserScripts } from 'xactions';
+import { browserScripts } from 'medirus';
 console.log(Object.keys(browserScripts));
 ```
 
@@ -328,7 +328,7 @@ See the [full catalog in the README](../README.md#-complete-feature-list).
 TypeScript declarations are included at `types/index.d.ts`.
 
 ```typescript
-import type { Profile, User, Tweet, Thread, VideoResult } from 'xactions';
+import type { Profile, User, Tweet, Thread, VideoResult } from 'medirus';
 ```
 
 See [types/index.d.ts](../types/index.d.ts) for all interfaces.

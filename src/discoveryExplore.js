@@ -35,7 +35,7 @@ const SELECTORS = {
  * Search tweets with query
  * @param {import('puppeteer').Page} page
  * @param {string} query - Search query (supports operators)
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function searchTweets(page, query, options = {}) {
@@ -83,7 +83,7 @@ export async function searchTweets(page, query, options = {}) {
 /**
  * Get trending topics
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function getTrends(page, options = {}) {
@@ -107,7 +107,7 @@ export async function getTrends(page, options = {}) {
 /**
  * Get explore feed content
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function getExploreFeed(page, options = {}) {
@@ -176,7 +176,7 @@ export async function followTopic(page, topicName) {
 /**
  * Advanced search with multiple filters
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').SearchFilters} filters
+ * @param {import('./types/medirus.js').SearchFilters} filters
  * @returns {Promise<Record<string, unknown>[]>}
  */
 export async function advancedSearch(page, filters = {}) {

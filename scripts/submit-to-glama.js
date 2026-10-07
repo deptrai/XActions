@@ -23,7 +23,7 @@ const HEADERS = {
   Accept: 'application/vnd.github+json',
   'X-GitHub-Api-Version': '2022-11-28',
   'Content-Type': 'application/json',
-  'User-Agent': 'xactions-glama-submitter',
+  'User-Agent': 'medirus-glama-submitter',
 };
 
 const GLAMA_JSON =

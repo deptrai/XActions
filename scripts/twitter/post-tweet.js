@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 📝 Post Tweet - XActions
+ * 📝 Post Tweet - Medirus
  * ============================================
  *
  * @name         post-tweet
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to x.com/home (or x.com/compose/post)
@@ -18,7 +18,7 @@
  *   4. Paste this entire script and press Enter
  *
  * Example:
- *   Set CONFIG.text = "gm from XActions 🚀" and leave dryRun = true to preview.
+ *   Set CONFIG.text = "gm from Medirus 🚀" and leave dryRun = true to preview.
  *   Flip dryRun = false and re-paste to actually post it. The script opens the
  *   composer, types your text with a real input event, clicks Post, and confirms.
  *
@@ -33,7 +33,7 @@
   // ============================================
   const CONFIG = {
     // The text to post (max 280 for non-Premium, longer allowed on Premium).
-    text: 'gm from XActions 🚀',
+    text: 'gm from Medirus 🚀',
 
     // Optional: URL of a tweet to reply to. Leave '' to post a standalone tweet.
     // Example: 'https://x.com/nichxbt/status/1234567890123456789'
@@ -109,9 +109,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📝 POST TWEET - XActions                                ║
+║  📝 POST TWEET - Medirus                                ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

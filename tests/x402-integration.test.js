@@ -184,7 +184,7 @@ describeWithServer('x402 Payment Integration', () => {
     it('returns 200 without payment', async () => {
       const res = await apiRequest('GET', '/api/ai/health');
       expect(res.status).toBe(200);
-      expect(res.body.service).toBe('XActions AI API');
+      expect(res.body.service).toBe('Medirus AI API');
     });
 
     it('returns pricing information', async () => {
@@ -329,7 +329,7 @@ describeWithServer('x402 API Documentation Endpoint', () => {
   it('returns API documentation at /api/ai/', async () => {
     const res = await apiRequest('GET', '/api/ai/');
     expect(res.status).toBe(200);
-    expect(res.body.service).toBe('XActions AI API');
+    expect(res.body.service).toBe('Medirus AI API');
   });
 
   it('lists endpoint categories', async () => {

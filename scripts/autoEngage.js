@@ -61,7 +61,7 @@
   };
 
   const run = async () => {
-    console.log('⚡ XActions Auto-Engager');
+    console.log('⚡ Medirus Auto-Engager');
     console.log('========================');
     console.log(`Mode: ${CONFIG.mode}`);
     console.log(`Max: ${CONFIG.maxActions} actions`);

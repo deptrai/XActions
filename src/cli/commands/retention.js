@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // by nichxbt
 /**
- * `xactions retention` CLI command group.
+ * `medirus retention` CLI command group.
  * Story 10.6: Data retention cleanup and status commands.
  *
  * @author nich (@nichxbt)
@@ -32,7 +32,7 @@ import { parseCliPositiveInt, parseCliNonNegativeInt, printCliError, disconnectP
  */
 
 /**
- * Register `xactions retention` CLI command.
+ * Register `medirus retention` CLI command.
  * @param {import("commander").Command} program
  */
 export function registerRetentionCommand(program) {

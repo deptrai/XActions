@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Core — platform-agnostic contracts and shared types.
+ * Medirus Core — platform-agnostic contracts and shared types.
  * @author nich (@nichxbt)
  * @license MIT
  */

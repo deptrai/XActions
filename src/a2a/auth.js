@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions A2A — Inter-Agent Authentication
+ * Medirus A2A — Inter-Agent Authentication
  *
  * API key management, JWT token generation/validation, permission system,
  * and middleware for authenticating agent-to-agent communication.
@@ -18,7 +18,7 @@ import os from 'os';
 // Constants & Paths
 // ============================================================================
 
-const A2A_DIR = path.join(os.homedir(), '.xactions', 'a2a');
+const A2A_DIR = path.join(os.homedir(), '.medirus', 'a2a');
 const KEYS_FILE = path.join(A2A_DIR, 'a2a-keys.json');
 const SECRET_FILE = path.join(A2A_DIR, 'a2a-secret.key');
 const OUTBOUND_FILE = path.join(A2A_DIR, 'outbound-auth.json');
@@ -165,7 +165,7 @@ export async function generateToken(agentId, permissions = PERMISSION_PRESETS.re
   const header = { alg: 'HS256', typ: 'JWT' };
   const payload = {
     sub: agentId,
-    iss: 'xactions',
+    iss: 'medirus',
     aud: 'a2a',
     permissions,
     iat: now,

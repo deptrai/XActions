@@ -4,7 +4,7 @@
 
 ## Goal
 
-Cung cấp lớp mạng "bọc thép" cho XActions: một ProxyIpPool tập trung quản lý proxy tĩnh và dynamic residential tunnel với cách ly tự động (auto-quarantine) chống rò rỉ IP qua WebRTC/DNS, một AccountPool xoay tài khoản đa nền tảng, và một AdaptiveRateGovernor điều phối tốc độ cào theo năng lực hạ tầng thực tế (số proxy sống, velocity per account, Redis consumer lag). Mục tiêu triệt tiêu nguy cơ die tài khoản hàng loạt, không bao giờ fallback về direct connection, và đảm bảo truy vấn on-demand của consumer (Nowing/ChainLens) không bị bulk crawl starving tài nguyên.
+Cung cấp lớp mạng "bọc thép" cho Medirus: một ProxyIpPool tập trung quản lý proxy tĩnh và dynamic residential tunnel với cách ly tự động (auto-quarantine) chống rò rỉ IP qua WebRTC/DNS, một AccountPool xoay tài khoản đa nền tảng, và một AdaptiveRateGovernor điều phối tốc độ cào theo năng lực hạ tầng thực tế (số proxy sống, velocity per account, Redis consumer lag). Mục tiêu triệt tiêu nguy cơ die tài khoản hàng loạt, không bao giờ fallback về direct connection, và đảm bảo truy vấn on-demand của consumer (Nowing/ChainLens) không bị bulk crawl starving tài nguyên.
 
 ## Stories
 
@@ -24,7 +24,7 @@ Cung cấp lớp mạng "bọc thép" cho XActions: một ProxyIpPool tập trun
 - **FR-66B (Adaptive Rate Limiter):** Điều phối tốc độ scrape theo giới hạn an toàn của nền tảng.
 - **NFR-13 (Tự Phục Hồi & Chống Chặn):** Tự động phát hiện proxy chết/rate-limit, cách ly 5 phút, replay 3 lần với exponential backoff — hệ thống không được crash khi nền tảng kích hoạt bảo vệ diện rộng.
 - **NFR-15:** Lớp `src/core/` hoàn toàn Zero-Dependency.
-- **NFR-17 (Observability):** Expose governor status qua `GET /governor/status` và CLI `xactions status` (healthyProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts, throttleLevel); alert khi stream backlog vượt ngưỡng.
+- **NFR-17 (Observability):** Expose governor status qua `GET /governor/status` và CLI `medirus status` (healthyProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts, throttleLevel); alert khi stream backlog vượt ngưỡng.
 - Provider URLs dạng `user:pass@host:port` phải parse đúng scheme/credentials và chuẩn hóa thành `NormalizedProxy`; tương thích `undici.ProxyAgent`, `socks-proxy-agent`, và `playwright.chromium.launch({ proxy })`.
 
 ## Technical Decisions

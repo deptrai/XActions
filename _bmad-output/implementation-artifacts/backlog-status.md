@@ -1,4 +1,4 @@
-# XActions Backlog Status Dashboard (Epics 1–20)
+# Medirus Backlog Status Dashboard (Epics 1–20)
 
 > Tổng hợp trạng thái toàn bộ story backlog. Cập nhật lần cuối: 2026-08-21.
 >

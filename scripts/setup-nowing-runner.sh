@@ -3,7 +3,7 @@
 # Run this script ON the nowing server (not on the dev machine).
 #
 # Usage:
-#   export GH_OWNER_REPO="deptrai/XActions"
+#   export GH_OWNER_REPO="deptrai/Medirus"
 #   ./scripts/setup-nowing-runner.sh
 #
 # The script can be run as root. If run as root, it creates a dedicated
@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-OWNER_REPO="${GH_OWNER_REPO:-deptrai/XActions}"
+OWNER_REPO="${GH_OWNER_REPO:-deptrai/Medirus}"
 RUNNER_NAME="${RUNNER_NAME:-nowing}"
 RUNNER_LABELS="${RUNNER_LABELS:-nowing}"
 RUNNER_USER="${RUNNER_USER:-nowing-runner}"

@@ -1,27 +1,27 @@
-// XActions Extension — Injected Page Script
+// Medirus Extension — Injected Page Script
 // Runs in the actual x.com page context (not content script sandbox)
 // Has full access to the page DOM, same as pasting in console
 // by nichxbt
 
 (() => {
-  if (window.__xactions_injected) return;
-  window.__xactions_injected = true;
+  if (window.__medirus_injected) return;
+  window.__medirus_injected = true;
 
   // ============================================
   // CORE MODULE (from src/automation/core.js)
   // ============================================
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
-  window.XActions.Core = (() => {
+  window.Medirus.Core = (() => {
     const CONFIG = {
       DELAY_SHORT: 500,
       DELAY_MEDIUM: 1500,
       DELAY_LONG: 3000,
       DELAY_BETWEEN_ACTIONS: 2000,
-      MAX_ACTIONS_PER_HOUR: 50,
+      MAMEDIRUS_PER_HOUR: 50,
       MAX_FOLLOWS_PER_DAY: 100,
       MAX_LIKES_PER_DAY: 200,
-      STORAGE_PREFIX: 'xactions_',
+      STORAGE_PREFIX: 'medirus_',
       DEBUG: true,
     };
 
@@ -157,7 +157,7 @@
 
     // Notify extension bridge
     function notify(type, data) {
-      window.postMessage({ source: 'xactions-page', type, ...data }, '*');
+      window.postMessage({ source: 'medirus-page', type, ...data }, '*');
     }
 
     return {
@@ -182,7 +182,7 @@
   // AUTO-LIKER
   // ============================================
   registerAutomation('autoLiker', async (settings) => {
-    const { log, sleep, randomDelay, scrollBy, clickElement, SELECTORS, storage, rateLimit } = window.XActions.Core;
+    const { log, sleep, randomDelay, scrollBy, clickElement, SELECTORS, storage, rateLimit } = window.Medirus.Core;
     const opts = {
       LIKE_ALL: false,
       KEYWORDS: settings.keywords || [],
@@ -232,7 +232,7 @@
         likedTweets.add(tweetId);
         rateLimit.increment('like', 'day');
 
-        window.postMessage({ source: 'xactions-page', type: 'ACTION_PERFORMED', automationId: 'autoLiker', action: `❤️ Liked tweet ${tweetId} (${likeCount}/${opts.MAX_LIKES})` }, '*');
+        window.postMessage({ source: 'medirus-page', type: 'ACTION_PERFORMED', automationId: 'autoLiker', action: `❤️ Liked tweet ${tweetId} (${likeCount}/${opts.MAX_LIKES})` }, '*');
         log(`❤️ Liked: "${text.substring(0, 50)}..." (${likeCount}/${opts.MAX_LIKES})`, 'success');
 
         await randomDelay(opts.MIN_DELAY, opts.MAX_DELAY);
@@ -245,14 +245,14 @@
 
     storage.set('liked_tweets', Array.from(likedTweets));
     log(`✅ Auto-Liker done! Liked ${likeCount} tweets.`, 'success');
-    window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_COMPLETE', automationId: 'autoLiker', summary: `${likeCount} tweets liked` }, '*');
+    window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_COMPLETE', automationId: 'autoLiker', summary: `${likeCount} tweets liked` }, '*');
   });
 
   // ============================================
   // SMART UNFOLLOW
   // ============================================
   registerAutomation('smartUnfollow', async (settings) => {
-    const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, SELECTORS } = window.XActions.Core;
+    const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, SELECTORS } = window.Medirus.Core;
     const opts = {
       DAYS_TO_WAIT: settings.daysToWait || 3,
       MAX_UNFOLLOWS: settings.maxActions || 50,
@@ -269,7 +269,7 @@
     const currentPath = window.location.pathname;
     if (!currentPath.endsWith('/following')) {
       log('⚠️ Navigate to your following page first (x.com/YOUR_USERNAME/following)', 'warning');
-      window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_ERROR', automationId: 'smartUnfollow', error: 'Navigate to your following page first' }, '*');
+      window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_ERROR', automationId: 'smartUnfollow', error: 'Navigate to your following page first' }, '*');
       return;
     }
 
@@ -309,7 +309,7 @@
         }
 
         unfollowCount++;
-        window.postMessage({ source: 'xactions-page', type: 'ACTION_PERFORMED', automationId: 'smartUnfollow', action: `👋 Unfollowed @${username} (${unfollowCount}/${opts.MAX_UNFOLLOWS})` }, '*');
+        window.postMessage({ source: 'medirus-page', type: 'ACTION_PERFORMED', automationId: 'smartUnfollow', action: `👋 Unfollowed @${username} (${unfollowCount}/${opts.MAX_UNFOLLOWS})` }, '*');
         log(`👋 Unfollowed @${username} (${unfollowCount}/${opts.MAX_UNFOLLOWS})`, 'success');
 
         await randomDelay(opts.DELAY_BETWEEN_UNFOLLOWS, opts.DELAY_BETWEEN_UNFOLLOWS * 1.5);
@@ -320,14 +320,14 @@
     }
 
     log(`✅ Smart Unfollow done! Unfollowed ${unfollowCount} users.`, 'success');
-    window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_COMPLETE', automationId: 'smartUnfollow', summary: `${unfollowCount} users unfollowed` }, '*');
+    window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_COMPLETE', automationId: 'smartUnfollow', summary: `${unfollowCount} users unfollowed` }, '*');
   });
 
   // ============================================
   // KEYWORD FOLLOW
   // ============================================
   registerAutomation('keywordFollow', async (settings) => {
-    const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, rateLimit, SELECTORS } = window.XActions.Core;
+    const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, rateLimit, SELECTORS } = window.Medirus.Core;
     const opts = {
       KEYWORDS: settings.keywords || ['web3', 'crypto'],
       MAX_FOLLOWS_PER_KEYWORD: settings.maxPerKeyword || 10,
@@ -382,7 +382,7 @@
           rateLimit.increment('follow', 'day');
           saveFollowedUser(username);
 
-          window.postMessage({ source: 'xactions-page', type: 'ACTION_PERFORMED', automationId: 'keywordFollow', action: `➕ Followed @${username} for "${keyword}" (${followCount}/${opts.MAX_FOLLOWS_TOTAL})` }, '*');
+          window.postMessage({ source: 'medirus-page', type: 'ACTION_PERFORMED', automationId: 'keywordFollow', action: `➕ Followed @${username} for "${keyword}" (${followCount}/${opts.MAX_FOLLOWS_TOTAL})` }, '*');
           log(`➕ Followed @${username} (${followCount}/${opts.MAX_FOLLOWS_TOTAL})`, 'success');
 
           await randomDelay(opts.DELAY_BETWEEN_FOLLOWS, opts.DELAY_BETWEEN_FOLLOWS * 1.5);
@@ -395,14 +395,14 @@
     }
 
     log(`✅ Keyword Follow done! Followed ${followCount} users.`, 'success');
-    window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_COMPLETE', automationId: 'keywordFollow', summary: `${followCount} users followed` }, '*');
+    window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_COMPLETE', automationId: 'keywordFollow', summary: `${followCount} users followed` }, '*');
   });
 
   // ============================================
   // FOLLOW ENGAGERS
   // ============================================
   registerAutomation('followEngagers', async (settings) => {
-    const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, rateLimit, SELECTORS } = window.XActions.Core;
+    const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, rateLimit, SELECTORS } = window.Medirus.Core;
     const opts = {
       MODE: settings.mode || 'likers',
       MAX_FOLLOWS: settings.maxActions || 30,
@@ -417,7 +417,7 @@
     // Must be on a tweet page
     if (!window.location.pathname.includes('/status/')) {
       log('⚠️ Navigate to a specific tweet first', 'warning');
-      window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_ERROR', automationId: 'followEngagers', error: 'Navigate to a specific tweet first' }, '*');
+      window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_ERROR', automationId: 'followEngagers', error: 'Navigate to a specific tweet first' }, '*');
       return;
     }
 
@@ -447,7 +447,7 @@
         followCount++;
         rateLimit.increment('follow', 'day');
 
-        window.postMessage({ source: 'xactions-page', type: 'ACTION_PERFORMED', automationId: 'followEngagers', action: `➕ Followed @${username} (${followCount}/${opts.MAX_FOLLOWS})` }, '*');
+        window.postMessage({ source: 'medirus-page', type: 'ACTION_PERFORMED', automationId: 'followEngagers', action: `➕ Followed @${username} (${followCount}/${opts.MAX_FOLLOWS})` }, '*');
         log(`➕ Followed engager @${username} (${followCount}/${opts.MAX_FOLLOWS})`, 'success');
 
         await randomDelay(opts.DELAY_BETWEEN_FOLLOWS, opts.DELAY_BETWEEN_FOLLOWS * 1.5);
@@ -459,14 +459,14 @@
     }
 
     log(`✅ Follow Engagers done! Followed ${followCount} users.`, 'success');
-    window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_COMPLETE', automationId: 'followEngagers', summary: `${followCount} engagers followed` }, '*');
+    window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_COMPLETE', automationId: 'followEngagers', summary: `${followCount} engagers followed` }, '*');
   });
 
   // ============================================
   // AUTO-COMMENTER
   // ============================================
   registerAutomation('autoCommenter', async (settings) => {
-    const { log, sleep, randomDelay, scrollToTop, clickElement, waitForElement, storage, SELECTORS } = window.XActions.Core;
+    const { log, sleep, randomDelay, scrollToTop, clickElement, waitForElement, storage, SELECTORS } = window.Medirus.Core;
     const opts = {
       COMMENTS: settings.comments || ['🔥', 'Great point!', 'Interesting take!', 'Love this!', '💯'],
       CHECK_INTERVAL_SECONDS: settings.checkInterval || 60,
@@ -525,7 +525,7 @@
           commentedTweets.add(tweetId);
           storage.set('commented_tweets', Array.from(commentedTweets));
 
-          window.postMessage({ source: 'xactions-page', type: 'ACTION_PERFORMED', automationId: 'autoCommenter', action: `💬 Commented "${comment}" on tweet ${tweetId} (${commentCount}/${opts.MAX_COMMENTS})` }, '*');
+          window.postMessage({ source: 'medirus-page', type: 'ACTION_PERFORMED', automationId: 'autoCommenter', action: `💬 Commented "${comment}" on tweet ${tweetId} (${commentCount}/${opts.MAX_COMMENTS})` }, '*');
           log(`💬 Commented on tweet: "${comment}" (${commentCount}/${opts.MAX_COMMENTS})`, 'success');
         }
 
@@ -539,14 +539,14 @@
     }
 
     log(`✅ Auto-Commenter done! Posted ${commentCount} comments.`, 'success');
-    window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_COMPLETE', automationId: 'autoCommenter', summary: `${commentCount} comments posted` }, '*');
+    window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_COMPLETE', automationId: 'autoCommenter', summary: `${commentCount} comments posted` }, '*');
   });
 
   // ============================================
   // GROWTH SUITE
   // ============================================
   registerAutomation('growthSuite', async (settings) => {
-    const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, rateLimit, SELECTORS } = window.XActions.Core;
+    const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, rateLimit, SELECTORS } = window.Medirus.Core;
     const opts = {
       KEYWORDS: settings.keywords || ['web3', 'crypto', 'AI'],
       enableFollow: settings.enableFollow !== false,
@@ -580,7 +580,7 @@
           if (!likeBtn) continue;
           await clickElement(likeBtn);
           state.likes++;
-          window.postMessage({ source: 'xactions-page', type: 'ACTION_PERFORMED', automationId: 'growthSuite', action: `❤️ Liked tweet (${state.likes}/${opts.maxLikes})` }, '*');
+          window.postMessage({ source: 'medirus-page', type: 'ACTION_PERFORMED', automationId: 'growthSuite', action: `❤️ Liked tweet (${state.likes}/${opts.maxLikes})` }, '*');
           await randomDelay(opts.DELAY, opts.DELAY * 1.5);
         }
         scrollBy(600);
@@ -590,7 +590,7 @@
     }
 
     log(`✅ Growth Suite done! Likes: ${state.likes}, Follows: ${state.follows}, Unfollows: ${state.unfollows}`, 'success');
-    window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_COMPLETE', automationId: 'growthSuite', summary: `${state.likes} likes, ${state.follows} follows, ${state.unfollows} unfollows` }, '*');
+    window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_COMPLETE', automationId: 'growthSuite', summary: `${state.likes} likes, ${state.follows} follows, ${state.unfollows} unfollows` }, '*');
   });
 
   // ============================================
@@ -622,7 +622,7 @@
   // ============================================
   window.addEventListener('message', async (event) => {
     if (event.source !== window) return;
-    if (!event.data || event.data.source !== 'xactions-extension') return;
+    if (!event.data || event.data.source !== 'medirus-extension') return;
 
     const msg = event.data;
 
@@ -634,8 +634,8 @@
           try {
             await runner(msg.settings || {});
           } catch (err) {
-            console.error(`XActions automation error (${msg.automationId}):`, err);
-            window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_ERROR', automationId: msg.automationId, error: err.message }, '*');
+            console.error(`Medirus automation error (${msg.automationId}):`, err);
+            window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_ERROR', automationId: msg.automationId, error: err.message }, '*');
           }
         }
         break;
@@ -656,18 +656,18 @@
         break;
 
       case 'GET_ACCOUNT_INFO':
-        window.postMessage({ source: 'xactions-page', type: 'ACCOUNT_INFO', data: scrapeAccountInfo() }, '*');
+        window.postMessage({ source: 'medirus-page', type: 'ACCOUNT_INFO', data: scrapeAccountInfo() }, '*');
         break;
     }
   });
 
-  console.log('✅ XActions automation engine injected');
+  console.log('✅ Medirus automation engine injected');
 
   // ============================================
   // VIDEO DOWNLOADER
   // ============================================
   registerAutomation('videoDownloader', async (settings) => {
-    const { log, sleep, SELECTORS } = window.XActions.Core;
+    const { log, sleep, SELECTORS } = window.Medirus.Core;
     const opts = {
       quality: settings.quality || 'highest',
       autoDownload: settings.autoDownload || false,
@@ -707,9 +707,9 @@
       if (!actionBar) return;
 
       const btn = document.createElement('button');
-      btn.className = 'xactions-dl-btn';
+      btn.className = 'medirus-dl-btn';
       btn.innerHTML = '⬇';
-      btn.title = 'Download video (XActions)';
+      btn.title = 'Download video (Medirus)';
       btn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:16px;padding:4px 8px;border-radius:50%;transition:background 0.2s;color:#1d9bf0;';
       btn.addEventListener('mouseenter', () => btn.style.background = 'rgba(29,155,240,0.1)');
       btn.addEventListener('mouseleave', () => btn.style.background = 'none');
@@ -722,10 +722,10 @@
         if (videoUrl) {
           const a = document.createElement('a');
           a.href = videoUrl;
-          a.download = `xactions_video_${tweetId}.mp4`;
+          a.download = `medirus_video_${tweetId}.mp4`;
           a.click();
           btn.innerHTML = '✅';
-          window.postMessage({ source: 'xactions-page', type: 'ACTION_PERFORMED', automationId: 'videoDownloader', action: `⬇ Downloaded video from tweet ${tweetId}` }, '*');
+          window.postMessage({ source: 'medirus-page', type: 'ACTION_PERFORMED', automationId: 'videoDownloader', action: `⬇ Downloaded video from tweet ${tweetId}` }, '*');
           log(`⬇ Downloaded video from tweet ${tweetId}`, 'success');
         } else {
           // Fallback: open tweet in new tab for manual download
@@ -733,7 +733,7 @@
           btn.title = 'Could not extract video URL — try right-click > Save Video';
           log(`⚠️ Could not extract video URL for tweet ${tweetId}`, 'warning');
         }
-        setTimeout(() => { btn.innerHTML = '⬇'; btn.title = 'Download video (XActions)'; }, 3000);
+        setTimeout(() => { btn.innerHTML = '⬇'; btn.title = 'Download video (Medirus)'; }, 3000);
       });
 
       actionBar.appendChild(btn);
@@ -750,25 +750,25 @@
       observer.observe(document.body, { childList: true, subtree: true });
 
       // Store observer so we can disconnect on stop
-      window.__xactions_videoObserver = observer;
+      window.__medirus_videoObserver = observer;
 
       // Keep running until stopped
       while (!automationStopFlags['videoDownloader']) {
         await sleep(5000);
       }
       observer.disconnect();
-      window.__xactions_videoObserver = null;
+      window.__medirus_videoObserver = null;
     }
 
     log('🎬 Video Downloader disabled', 'info');
-    window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_COMPLETE', automationId: 'videoDownloader', summary: 'Video downloader stopped' }, '*');
+    window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_COMPLETE', automationId: 'videoDownloader', summary: 'Video downloader stopped' }, '*');
   });
 
   // ============================================
   // UNFOLLOWER DETECTOR
   // ============================================
   registerAutomation('unfollowerDetector', async (settings) => {
-    const { log, sleep, scrollBy, waitForElements, SELECTORS, storage } = window.XActions.Core;
+    const { log, sleep, scrollBy, waitForElements, SELECTORS, storage } = window.Medirus.Core;
     const opts = {
       notifications: settings.notifications !== false,
       keepHistory: settings.keepHistory !== false,
@@ -781,7 +781,7 @@
     const username = pathParts[1];
     if (!username || pathParts[2] !== 'followers') {
       log('⚠️ Navigate to your followers page first (x.com/YOUR_USERNAME/followers)', 'warning');
-      window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_ERROR', automationId: 'unfollowerDetector', error: 'Navigate to your followers page (x.com/YOUR_USERNAME/followers)' }, '*');
+      window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_ERROR', automationId: 'unfollowerDetector', error: 'Navigate to your followers page (x.com/YOUR_USERNAME/followers)' }, '*');
       return;
     }
 
@@ -832,7 +832,7 @@
 
       if (unfollowers.length > 0) {
         log(`🚨 ${unfollowers.length} unfollower(s): ${unfollowers.map(u => '@' + u).join(', ')}`, 'warning');
-        window.postMessage({ source: 'xactions-page', type: 'ACTION_PERFORMED', automationId: 'unfollowerDetector', action: `🚨 Detected ${unfollowers.length} unfollower(s): ${unfollowers.map(u => '@' + u).join(', ')}` }, '*');
+        window.postMessage({ source: 'medirus-page', type: 'ACTION_PERFORMED', automationId: 'unfollowerDetector', action: `🚨 Detected ${unfollowers.length} unfollower(s): ${unfollowers.map(u => '@' + u).join(', ')}` }, '*');
       } else {
         log('✅ No unfollowers detected since last scan', 'success');
       }
@@ -856,14 +856,14 @@
     storage.set('last_follower_scan', Date.now());
 
     log(`✅ Unfollower scan complete! ${currentFollowers.size} followers recorded`, 'success');
-    window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_COMPLETE', automationId: 'unfollowerDetector', summary: `${unfollowers.length} unfollower(s), ${currentFollowers.size} total followers` }, '*');
+    window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_COMPLETE', automationId: 'unfollowerDetector', summary: `${unfollowers.length} unfollower(s), ${currentFollowers.size} total followers` }, '*');
   });
 
   // ============================================
   // BEST TIME TO POST
   // ============================================
   registerAutomation('bestTimeToPost', async (settings) => {
-    const { log, sleep, scrollBy, SELECTORS, storage } = window.XActions.Core;
+    const { log, sleep, scrollBy, SELECTORS, storage } = window.Medirus.Core;
     const opts = {
       tweetCount: settings.tweetCount || 50,
       timezone: settings.timezone || 'local',
@@ -920,7 +920,7 @@
           text: text.substring(0, 80),
         });
 
-        window.postMessage({ source: 'xactions-page', type: 'ACTION_PERFORMED', automationId: 'bestTimeToPost', action: `📊 Analyzed tweet ${tweetData.length}/${opts.tweetCount}` }, '*');
+        window.postMessage({ source: 'medirus-page', type: 'ACTION_PERFORMED', automationId: 'bestTimeToPost', action: `📊 Analyzed tweet ${tweetData.length}/${opts.tweetCount}` }, '*');
       }
 
       if (tweetData.length === lastCount) {
@@ -972,14 +972,14 @@
     }
 
     log(`✅ Analyzed ${tweetData.length} tweets!`, 'success');
-    window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_COMPLETE', automationId: 'bestTimeToPost', summary: `${tweetData.length} tweets analyzed` }, '*');
+    window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_COMPLETE', automationId: 'bestTimeToPost', summary: `${tweetData.length} tweets analyzed` }, '*');
   });
 
   // ============================================
   // THREAD READER
   // ============================================
   registerAutomation('threadReader', async (settings) => {
-    const { log, sleep, SELECTORS } = window.XActions.Core;
+    const { log, sleep, SELECTORS } = window.Medirus.Core;
     const opts = {
       showUnrollBtn: settings.showUnrollBtn !== false,
       autoDetect: settings.autoDetect !== false,
@@ -1009,9 +1009,9 @@
       if (!actionBar) return;
 
       const btn = document.createElement('button');
-      btn.className = 'xactions-unroll-btn';
+      btn.className = 'medirus-unroll-btn';
       btn.innerHTML = '🧵';
-      btn.title = 'Unroll thread (XActions)';
+      btn.title = 'Unroll thread (Medirus)';
       btn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:14px;padding:4px 8px;border-radius:50%;transition:background 0.2s;color:#1d9bf0;';
       btn.addEventListener('mouseenter', () => btn.style.background = 'rgba(29,155,240,0.1)');
       btn.addEventListener('mouseleave', () => btn.style.background = 'none');
@@ -1032,7 +1032,7 @@
         if (threadTweets.length > 0) {
           // Create overlay with unrolled thread
           const overlay = document.createElement('div');
-          overlay.id = 'xactions-thread-overlay';
+          overlay.id = 'medirus-thread-overlay';
           overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;overflow-y:auto;padding:20px;';
 
           const container = document.createElement('div');
@@ -1073,7 +1073,7 @@
           document.body.appendChild(overlay);
 
           btn.innerHTML = '🧵';
-          window.postMessage({ source: 'xactions-page', type: 'ACTION_PERFORMED', automationId: 'threadReader', action: `🧵 Unrolled thread with ${threadTweets.length} tweets` }, '*');
+          window.postMessage({ source: 'medirus-page', type: 'ACTION_PERFORMED', automationId: 'threadReader', action: `🧵 Unrolled thread with ${threadTweets.length} tweets` }, '*');
           log(`🧵 Unrolled thread: ${threadTweets.length} tweets`, 'success');
         } else {
           btn.innerHTML = '🧵';
@@ -1091,24 +1091,24 @@
         document.querySelectorAll(SELECTORS.tweet).forEach(addUnrollButton);
       });
       observer.observe(document.body, { childList: true, subtree: true });
-      window.__xactions_threadObserver = observer;
+      window.__medirus_threadObserver = observer;
 
       while (!automationStopFlags['threadReader']) {
         await sleep(5000);
       }
       observer.disconnect();
-      window.__xactions_threadObserver = null;
+      window.__medirus_threadObserver = null;
     }
 
     log('🧵 Thread Reader disabled', 'info');
-    window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_COMPLETE', automationId: 'threadReader', summary: 'Thread reader stopped' }, '*');
+    window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_COMPLETE', automationId: 'threadReader', summary: 'Thread reader stopped' }, '*');
   });
 
   // ============================================
   // QUICK STATS
   // ============================================
   registerAutomation('quickStats', async (settings) => {
-    const { log, sleep, scrollBy, SELECTORS, storage } = window.XActions.Core;
+    const { log, sleep, scrollBy, SELECTORS, storage } = window.Medirus.Core;
     const opts = {
       showOverlay: settings.showOverlay !== false,
       trackDaily: settings.trackDaily !== false,
@@ -1165,7 +1165,7 @@
 
     if (tweetStats.length === 0) {
       log('⚠️ No tweets found to analyze', 'warning');
-      window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_ERROR', automationId: 'quickStats', error: 'No tweets found' }, '*');
+      window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_ERROR', automationId: 'quickStats', error: 'No tweets found' }, '*');
       return;
     }
 
@@ -1203,15 +1203,15 @@
     // Show overlay on page
     if (opts.showOverlay) {
       // Remove existing overlay
-      document.querySelector('#xactions-stats-overlay')?.remove();
+      document.querySelector('#medirus-stats-overlay')?.remove();
 
       const overlay = document.createElement('div');
-      overlay.id = 'xactions-stats-overlay';
+      overlay.id = 'medirus-stats-overlay';
       overlay.style.cssText = 'position:fixed;bottom:16px;right:16px;background:#16181c;border:1px solid #2f3336;border-radius:16px;padding:16px;z-index:99998;color:#e7e9ea;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;min-width:220px;box-shadow:0 4px 12px rgba(0,0,0,0.5);';
       overlay.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <span style="font-weight:700;font-size:14px;">⚡ Quick Stats</span>
-          <button id="xactions-close-stats" style="background:none;border:none;color:#71767b;cursor:pointer;font-size:16px;">✕</button>
+          <button id="medirus-close-stats" style="background:none;border:none;color:#71767b;cursor:pointer;font-size:16px;">✕</button>
         </div>
         <div style="font-size:12px;color:#71767b;margin-bottom:8px;">${tweetStats.length} tweets analyzed</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -1234,12 +1234,12 @@
         </div>
       `;
       document.body.appendChild(overlay);
-      overlay.querySelector('#xactions-close-stats').addEventListener('click', () => overlay.remove());
+      overlay.querySelector('#medirus-close-stats').addEventListener('click', () => overlay.remove());
     }
 
-    window.postMessage({ source: 'xactions-page', type: 'ACTION_PERFORMED', automationId: 'quickStats', action: `⚡ Engagement rate: ${engagementRate}%, avg: ${avgEngagement.toFixed(1)} per tweet` }, '*');
+    window.postMessage({ source: 'medirus-page', type: 'ACTION_PERFORMED', automationId: 'quickStats', action: `⚡ Engagement rate: ${engagementRate}%, avg: ${avgEngagement.toFixed(1)} per tweet` }, '*');
     log(`⚡ Engagement rate: ${engagementRate}% | Avg: ${avgEngagement.toFixed(1)} | Likes: ${avgLikes} | RTs: ${avgRetweets} | Replies: ${avgReplies}`, 'success');
-    window.postMessage({ source: 'xactions-page', type: 'AUTOMATION_COMPLETE', automationId: 'quickStats', summary: `${engagementRate}% engagement rate (${tweetStats.length} tweets)` }, '*');
+    window.postMessage({ source: 'medirus-page', type: 'AUTOMATION_COMPLETE', automationId: 'quickStats', summary: `${engagementRate}% engagement rate (${tweetStats.length} tweets)` }, '*');
   });
 
 })();

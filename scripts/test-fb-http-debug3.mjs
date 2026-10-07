@@ -4,7 +4,7 @@ import { gotScraping } from 'got-scraping';
 import { ProxyIpPool } from '../src/proxy/proxy-pool.js';
 import { getProxyAgent } from '../src/proxy/providers.js';
 
-const rawCookies = JSON.parse(fs.readFileSync('/Users/luisphan/.xactions/facebook-cookies.json', 'utf8'));
+const rawCookies = JSON.parse(fs.readFileSync('/Users/luisphan/.medirus/facebook-cookies.json', 'utf8'));
 const cookieRecord = {};
 for (const c of rawCookies) {
   if (c.name) cookieRecord[c.name] = c.value;

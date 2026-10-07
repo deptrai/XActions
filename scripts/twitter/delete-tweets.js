@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 🗑️ Delete Tweets - XActions
+ * 🗑️ Delete Tweets - Medirus
  * ============================================
  *
  * @name         delete-tweets
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to YOUR OWN profile page (x.com/YOUR_USERNAME)
@@ -170,9 +170,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🗑️  DELETE TWEETS - XActions                            ║
+║  🗑️  DELETE TWEETS - Medirus                            ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -362,7 +362,7 @@
   if (deleteLog.length > 0) {
     download(
       { profile: profileUser, stats, dryRun: CONFIG.dryRun, tweets: deleteLog },
-      `xactions-delete-tweets-${new Date().toISOString().slice(0, 10)}.json`
+      `medirus-delete-tweets-${new Date().toISOString().slice(0, 10)}.json`
     );
   }
 

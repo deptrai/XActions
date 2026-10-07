@@ -265,7 +265,7 @@
     }
 
     console.log('ℹ️ 2FA methods: sms, app, key');
-    console.log('ℹ️ Usage: XActions.advancedSettings.setup2FA("app")');
+    console.log('ℹ️ Usage: Medirus.advancedSettings.setup2FA("app")');
   };
 
   // ---------------------------------------------------------------------------
@@ -729,7 +729,7 @@
       if (selects.length > 0) {
         const current = selects[0];
         console.log(`   Current display language: ${current.options[current.selectedIndex]?.text || 'unknown'}`);
-        console.log('ℹ️ Usage: XActions.advancedSettings.manageLanguages("English")');
+        console.log('ℹ️ Usage: Medirus.advancedSettings.manageLanguages("English")');
       }
       if (links.length > 0) {
         console.log('   Content language links found:');
@@ -788,7 +788,7 @@
     if (Object.keys(options).length === 0) {
       console.log('📋 Audience and tagging toggles:');
       toggles.forEach(t => console.log(`   - ${t.label.substring(0, 80)} [${t.enabled ? 'ON' : 'OFF'}]`));
-      console.log('ℹ️ Usage: XActions.advancedSettings.manageAudienceTagging({ protectTweets: true, photoTagging: "followers" })');
+      console.log('ℹ️ Usage: Medirus.advancedSettings.manageAudienceTagging({ protectTweets: true, photoTagging: "followers" })');
     }
 
     console.log(`✅ Audience and tagging updated. ${changed} change(s) made.`);
@@ -823,7 +823,7 @@
     }
 
     if (Object.keys(options).length === 0) {
-      console.log('ℹ️ Usage: XActions.advancedSettings.manageDiscoverability({ findByEmail: false, findByPhone: false })');
+      console.log('ℹ️ Usage: Medirus.advancedSettings.manageDiscoverability({ findByEmail: false, findByPhone: false })');
     }
 
     console.log(`✅ Discoverability settings updated. ${changed} change(s) made.`);
@@ -851,7 +851,7 @@
     } else if (toggles.length > 0) {
       console.log('📋 Spaces-related toggles:');
       toggles.forEach(t => console.log(`   - ${t.label.substring(0, 80)} [${t.enabled ? 'ON' : 'OFF'}]`));
-      console.log('ℹ️ Usage: XActions.advancedSettings.manageSpacesActivity(false) — to hide listening activity');
+      console.log('ℹ️ Usage: Medirus.advancedSettings.manageSpacesActivity(false) — to hide listening activity');
     } else {
       console.log('⚠️ No Spaces toggles found on this page. Spaces settings may be located elsewhere.');
     }
@@ -929,16 +929,16 @@
         const current = selects[0];
         console.log(`   Current: ${current.options[current.selectedIndex]?.text || 'unknown'}`);
       }
-      console.log('ℹ️ Usage: XActions.advancedSettings.manageCountry("United States")');
+      console.log('ℹ️ Usage: Medirus.advancedSettings.manageCountry("United States")');
     }
   };
 
   // ---------------------------------------------------------------------------
-  // Expose on window.XActions.advancedSettings
+  // Expose on window.Medirus.advancedSettings
   // ---------------------------------------------------------------------------
 
-  window.XActions = window.XActions || {};
-  window.XActions.advancedSettings = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.advancedSettings = {
     changePassword,
     changeEmail,
     changePhone,
@@ -967,7 +967,7 @@
 
   console.log('');
   console.log('╔══════════════════════════════════════════════════════════════╗');
-  console.log('║           XActions — Advanced Settings Manager              ║');
+  console.log('║           Medirus — Advanced Settings Manager              ║');
   console.log('║                      by nichxbt                             ║');
   console.log('╠══════════════════════════════════════════════════════════════╣');
   console.log('║  Account                                                    ║');
@@ -1002,8 +1002,8 @@
   console.log('║  19. deactivateAccount()       — with safety prompt        ║');
   console.log('║  20. manageCountry(countryName?)                            ║');
   console.log('╠══════════════════════════════════════════════════════════════╣');
-  console.log('║  Access: XActions.advancedSettings.<functionName>(...)      ║');
-  console.log('║  Example: XActions.advancedSettings.manageDisplay({         ║');
+  console.log('║  Access: Medirus.advancedSettings.<functionName>(...)      ║');
+  console.log('║  Example: Medirus.advancedSettings.manageDisplay({         ║');
   console.log('║    theme: "dark", color: "blue" })                          ║');
   console.log('╚══════════════════════════════════════════════════════════════╝');
   console.log('');

@@ -1,6 +1,6 @@
 // Sentinel real-data smoke test for the recent auth/guest/token-ring commit.
 // Exercises FacebookClient and FacebookCrawler against live facebook.com.
-// Reads cookie from ~/.xactions/facebook-cookies.json when an auth profile is requested.
+// Reads cookie from ~/.medirus/facebook-cookies.json when an auth profile is requested.
 // Loads a rotating residential proxy from PROXY_URL (or FACEBOOK_PROXY).
 // Logs only result counts and health signals; never prints cookie or proxy credentials.
 
@@ -9,7 +9,7 @@ import { FacebookClient, FacebookCrawler } from '../src/scrapers/social/facebook
 import { ProxyIpPool } from '../src/proxy/proxy-pool.js';
 import { readFileSync } from 'node:fs';
 
-const COOKIE_PATH = `${process.env.HOME}/.xactions/facebook-cookies.json`;
+const COOKIE_PATH = `${process.env.HOME}/.medirus/facebook-cookies.json`;
 const PROXY_URL = process.env.PROXY_URL
   || (process.env.FACEBOOK_PROXY && process.env.FACEBOOK_PROXY_AUTH_USERNAME
     ? `http://${process.env.FACEBOOK_PROXY_AUTH_USERNAME}:${process.env.FACEBOOK_PROXY_AUTH_PASSWORD}@${process.env.FACEBOOK_PROXY.replace(/^https?:\/\//, '')}`

@@ -11,7 +11,7 @@ priority: 'medium'
 context:
   - _bmad-output/specs/spec-scraper-benchmark/SPEC.md
   - _bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md
-  - _bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md
   - src/cli/index.js
   - src/cli/commands/benchmark.js
   - api/routes/benchmark.js
@@ -22,16 +22,16 @@ context:
 
 ## Story Statement
 As an Operations Engineer and Pipeline Analyst,
-I want a unified CLI command (`xactions benchmark`) and an interactive HTML Dashboard (`dashboard/benchmark.html`),
+I want a unified CLI command (`medirus benchmark`) and an interactive HTML Dashboard (`dashboard/benchmark.html`),
 So that I can monitor scraper reliability at a glance, immediately spot Tier C degraded scrapers, and inspect granular 4-pillar metric breakdowns without navigating raw database records.
 
 ---
 
 ## Acceptance Criteria (BDD Format)
 
-### AC 1: `xactions benchmark [list]` CLI Command
+### AC 1: `medirus benchmark [list]` CLI Command
 - **Given** recorded benchmark evaluations in PostgreSQL and Redis,
-- **When** the operator runs `xactions benchmark` or `xactions benchmark list`,
+- **When** the operator runs `medirus benchmark` or `medirus benchmark list`,
 - **Then**:
   - Displays a formatted terminal table with columns:
     - `Scraper ID`
@@ -50,9 +50,9 @@ So that I can monitor scraper reliability at a glance, immediately spot Tier C d
   - Works independently without requiring the web dashboard server to be running.
   - If no benchmark evaluations exist, prints `ℹ️ No benchmark scores available yet.` (or `[]` in JSON mode).
 
-### AC 2: `xactions benchmark detail <scraperId>` CLI Command
+### AC 2: `medirus benchmark detail <scraperId>` CLI Command
 - **Given** an existing scraper with historical benchmark scores,
-- **When** the operator runs `xactions benchmark detail <scraperId>` or `xactions benchmark --scraper <scraperId>`,
+- **When** the operator runs `medirus benchmark detail <scraperId>` or `medirus benchmark --scraper <scraperId>`,
 - **Then**:
   - Displays a comprehensive terminal scorecard card:
     - Scraper ID, Platform, Category, Current Tier, Composite Health Score.
@@ -134,9 +134,9 @@ The dashboard `dashboard/benchmark.html` is plain static HTML + Vanilla JS with 
 ## Tasks / Subtasks
 
 - [x] **Phase 1: CLI Benchmark Command (`src/cli/commands/benchmark.js`, `src/cli/index.js`)**
-  - [x] Implement `xactions benchmark [list]` with chalk color formatting and ASCII table (AC 1).
+  - [x] Implement `medirus benchmark [list]` with chalk color formatting and ASCII table (AC 1).
   - [x] Implement `--tier`, `--platform`, `--limit`, `--format json` flags (AC 1).
-  - [x] Implement `xactions benchmark detail <scraperId>` with pillar gauges and knock-out diagnostics (AC 2).
+  - [x] Implement `medirus benchmark detail <scraperId>` with pillar gauges and knock-out diagnostics (AC 2).
   - [x] Register `registerBenchmarkCommand` in `src/cli/index.js`.
 
 - [x] **Phase 2: REST API Endpoints (`api/routes/benchmark.js`, `api/server.js`)**
@@ -172,7 +172,7 @@ claude-sonnet-5[1m]
 5. Chạy test suite và kiểm tra tương thích ngược.
 
 ### Debug Log
-- Khắc phục lỗi hiển thị trùng lặp bảng trong Commander.js khi gọi `xactions benchmark --format json` bằng cách bỏ action handler trùng lặp trên command cha và cấu hình subcommand `list` với `{ isDefault: true }`.
+- Khắc phục lỗi hiển thị trùng lặp bảng trong Commander.js khi gọi `medirus benchmark --format json` bằng cách bỏ action handler trùng lặp trên command cha và cấu hình subcommand `list` với `{ isDefault: true }`.
 - Khắc phục lỗi fallback khi `HealthTierCache` trả về falsy hoặc undefined trong API endpoints để đảm bảo luôn fallback về `detail.tier` hoặc `UNKNOWN`.
 
 ### Completion Notes

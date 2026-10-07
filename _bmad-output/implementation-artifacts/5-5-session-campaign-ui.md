@@ -12,7 +12,7 @@ Status: done
 
 ## Story
 
-As a multi-account operator using XActions,
+As a multi-account operator using Medirus,
 I want to manage Facebook sessions, accounts, and Messenger share campaigns from the existing dashboard,
 So that I can run campaigns using the WinForms flow (import → select → preview → run) without leaving the dashboard or adding a new UI surface.
 

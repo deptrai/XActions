@@ -18,7 +18,7 @@
  *   npm run site:index
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 
@@ -175,7 +175,7 @@ ${cards}
 
   const body = `<main class="content content--wide" id="main">
   <div class="prose">
-${hero('📖 Documentation', 'XActions documentation', `${pages.length} pages covering the CLI, the Node.js library, ${''}the MCP server for AI agents, and ${''}the browser console scripts. Press <kbd>⌘K</kbd> to search all of it.`)}
+${hero('📖 Documentation', 'Medirus documentation', `${pages.length} pages covering the CLI, the Node.js library, ${''}the MCP server for AI agents, and ${''}the browser console scripts. Press <kbd>⌘K</kbd> to search all of it.`)}
 
     <div class="quick-links">
       <a class="btn" href="/docs/learn/your-first-scrape">Start here →</a>
@@ -189,7 +189,7 @@ ${sections}
 
   return renderPage({
     title: 'Documentation',
-    description: `Complete XActions documentation: ${pages.length} pages on scraping X without an API key, the CLI, the Node.js library, 144 MCP tools for AI agents, and 93 browser console scripts.`,
+    description: `Complete Medirus documentation: ${pages.length} pages on scraping X without an API key, the CLI, the Node.js library, 144 MCP tools for AI agents, and 93 browser console scripts.`,
     urlPath: '/docs',
     navCurrent: 'docs',
     body,
@@ -226,7 +226,7 @@ function buildTutorialsIndex(pages) {
 
   const body = `<main class="content content--wide" id="main">
   <div class="prose">
-${hero('🎓 Tutorials', 'Learn XActions', 'Guided walkthroughs that start from nothing and end with something working. Every command in them has been run.')}
+${hero('🎓 Tutorials', 'Learn Medirus', 'Guided walkthroughs that start from nothing and end with something working. Every command in them has been run.')}
 
     <h2 id="walkthroughs">Guided walkthroughs</h2>
     <p>Work through these in order the first time. Each one assumes the setup from the one before it.</p>
@@ -250,7 +250,7 @@ ${promptCards}
 
   return renderPage({
     title: 'Tutorials',
-    description: `${walkthroughs.length} guided XActions walkthroughs plus ${prompts.length} ready-to-paste AI prompts. From your first scrape to a deployed brand monitor.`,
+    description: `${walkthroughs.length} guided Medirus walkthroughs plus ${prompts.length} ready-to-paste AI prompts. From your first scrape to a deployed brand monitor.`,
     urlPath: '/tutorials',
     navCurrent: 'tutorials',
     body,
@@ -283,11 +283,11 @@ function buildExamplesIndex(examples) {
 
   const body = `<main class="content content--wide" id="main">
   <div class="prose">
-${hero('⚡ Examples', 'Runnable examples', `${examples.length} Node.js programs built on the XActions library. Every one runs against the live API and was verified before release. ${guestCount} of them need no account at all.`)}
+${hero('⚡ Examples', 'Runnable examples', `${examples.length} Node.js programs built on the Medirus library. Every one runs against the live API and was verified before release. ${guestCount} of them need no account at all.`)}
 
     <h2 id="run-them">Run them</h2>
     <pre><code>git clone ${REPO_URL}.git
-cd XActions
+cd Medirus
 npm install
 node examples/01-profile-lookup.js</code></pre>
     <p>That last command needs no API key, no account, and no browser.</p>
@@ -311,7 +311,7 @@ ${rows}
 
   return renderPage({
     title: 'Examples',
-    description: `${examples.length} runnable XActions examples: scrape X profiles and timelines with no API key, export followers to CSV, monitor keywords, and drive the MCP server.`,
+    description: `${examples.length} runnable Medirus examples: scrape X profiles and timelines with no API key, export followers to CSV, monitor keywords, and drive the MCP server.`,
     urlPath: '/examples',
     navCurrent: 'examples',
     body,
@@ -319,7 +319,7 @@ ${rows}
 {
   "@context": "https://schema.org",
   "@type": "ItemList",
-  "name": "XActions examples",
+  "name": "Medirus examples",
   "numberOfItems": ${examples.length},
   "itemListElement": [
     ${examples

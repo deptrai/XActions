@@ -49,7 +49,7 @@ A bridge security monitor built on X gives you an early warning layer. Security 
 ## Stream Configuration
 
 ```js
-import { TwitterStream } from 'xactions';
+import { TwitterStream } from 'medirus';
 
 const BRIDGE_SECURITY_KEYWORDS = [
   // Exploit indicators
@@ -82,7 +82,7 @@ const SECURITY_ACCOUNTS = [
 ];
 
 const stream = new TwitterStream({
-  sessionCookie: process.env.XACTIONS_SESSION_COOKIE,
+  sessionCookie: process.env.MEDIRUS_SESSION_COOKIE,
 });
 
 await stream.start({

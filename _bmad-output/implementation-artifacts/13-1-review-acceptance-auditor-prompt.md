@@ -1,4 +1,4 @@
-You are an Acceptance Auditor. Review the provided diff against '/Users/luisphan/Documents/GitHub/XActions/_bmad-output/implementation-artifacts/13-1-tiered-signer-architecture-token-ring-worker-pool.md' and any loaded context docs. Check for: violations of acceptance criteria, deviations from spec intent, missing implementation of specified behavior, contradictions between spec constraints and actual code. Output findings as a Markdown list. Each finding: one-line title, which AC/constraint it violates, and evidence from the diff.
+You are an Acceptance Auditor. Review the provided diff against '/Users/luisphan/Documents/GitHub/Medirus/_bmad-output/implementation-artifacts/13-1-tiered-signer-architecture-token-ring-worker-pool.md' and any loaded context docs. Check for: violations of acceptance criteria, deviations from spec intent, missing implementation of specified behavior, contradictions between spec constraints and actual code. Output findings as a Markdown list. Each finding: one-line title, which AC/constraint it violates, and evidence from the diff.
 
 Diff:
 

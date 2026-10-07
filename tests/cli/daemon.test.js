@@ -2,7 +2,7 @@
 /**
  * CLI daemon helper tests (Story 14.2)
  *
- * Exercises the file logic behind `xactions daemon` without spawning a real
+ * Exercises the file logic behind `medirus daemon` without spawning a real
  * MCP server. Uses real HTTP and child processes only — no mocks.
  */
 

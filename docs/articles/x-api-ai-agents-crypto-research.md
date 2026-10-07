@@ -15,7 +15,7 @@ This guide covers the architecture and implementation of an autonomous crypto re
 ## Pipeline Architecture
 
 ```
-X Stream (XActions) → Event Queue (Bull/Redis)
+X Stream (Medirus) → Event Queue (Bull/Redis)
   → AI Analyzer (Claude/GPT-4) → Structured Data (PostgreSQL)
     → Research Digest (Slack/Email/API)
 ```
@@ -29,7 +29,7 @@ Each stage is decoupled so you can scale, replace, or tune components independen
 Target accounts that generate the highest-quality alpha, not just the most volume.
 
 ```js
-import { TwitterStream } from 'xactions';
+import { TwitterStream } from 'medirus';
 import { Queue } from 'bullmq';
 
 const analysisQueue = new Queue('crypto-research', {
@@ -55,7 +55,7 @@ const HIGH_SIGNAL_KEYWORDS = [
 ];
 
 const stream = new TwitterStream({
-  sessionCookie: process.env.XACTIONS_SESSION_COOKIE,
+  sessionCookie: process.env.MEDIRUS_SESSION_COOKIE,
 });
 
 await stream.start({

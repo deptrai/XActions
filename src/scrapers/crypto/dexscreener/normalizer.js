@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Normalizers for dexscreener.com public REST → XActions canonical shapes.
+ * Normalizers for dexscreener.com public REST → Medirus canonical shapes.
  * All outputs snake_case; domain fields (boosts.active, orders[].type,
  * pair.dexId) live in the `data` payload only — never in the envelope.
  *

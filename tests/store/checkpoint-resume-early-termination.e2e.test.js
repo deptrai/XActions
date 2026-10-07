@@ -1,7 +1,7 @@
 // Story 25.5/25.6/25.7 — Checkpoint round-trip E2E on a real Postgres test DB.
 // Exercises the full ACL -> getCheckpoint -> inject cursor -> storeBatch ->
 // findExistingIds -> shouldStopPagination path against a live PrismaStore.
-// No mocks: real PrismaClient against DATABASE_URL_TEST (xactions_test).
+// No mocks: real PrismaClient against DATABASE_URL_TEST (medirus_test).
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { PrismaStore } from '../../src/store/prisma-store.js';
 import { prisma, cleanupTestDatabase } from './test-prisma-client.js';

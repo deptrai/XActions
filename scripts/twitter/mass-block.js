@@ -74,7 +74,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🚫 XActions — Mass Block                                    ║
+║  🚫 Medirus — Mass Block                                    ║
 ║  Block multiple users from a list                            ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked             ║' : '║  🔴 LIVE MODE - Accounts WILL be blocked                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -189,7 +189,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
   }
 
   // Save log
-  const storageKey = 'xactions_mass_block_log';
+  const storageKey = 'medirus_mass_block_log';
   const log = {
     timestamp: new Date().toISOString(),
     ...results

@@ -1,8 +1,8 @@
 ---
 title: "View Analytics (Premium) — Tutorial"
-description: "Navigate to your analytics dashboard, scrape impressions and engagement metrics, analyze post performance, and export data using XActions."
-keywords: ["x analytics dashboard", "twitter analytics script", "view impressions x", "export twitter analytics", "xactions analytics"]
-canonical: "https://xactions.app/examples/view-analytics"
+description: "Navigate to your analytics dashboard, scrape impressions and engagement metrics, analyze post performance, and export data using Medirus."
+keywords: ["x analytics dashboard", "twitter analytics script", "view impressions x", "export twitter analytics", "medirus analytics"]
+canonical: "https://medirus.online/examples/view-analytics"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
@@ -68,7 +68,7 @@ const CONFIG = {
 (async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('📊 VIEW ANALYTICS - XActions by nichxbt\n');
+  console.log('📊 VIEW ANALYTICS - Medirus by nichxbt\n');
   console.log('💡 Note: Full analytics require X Premium subscription.\n');
 
   const analyticsLink = document.querySelector('a[href="/i/account_analytics"]')
@@ -257,14 +257,14 @@ Run this after the analytics page has loaded:
       posts,
     };
 
-    sessionStorage.setItem('xactions_analytics', JSON.stringify(data));
+    sessionStorage.setItem('medirus_analytics', JSON.stringify(data));
     console.log('\n💾 Analytics saved to sessionStorage.');
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions_analytics_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `medirus_analytics_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -310,7 +310,7 @@ await browser.close();
 ### Expected Console Output
 
 ```
-📊 VIEW ANALYTICS - XActions by nichxbt
+📊 VIEW ANALYTICS - Medirus by nichxbt
 
 💡 Note: Full analytics require X Premium subscription.
 
@@ -379,7 +379,7 @@ await browser.close();
 |---------|----------|
 | "No overview metrics found" | Full analytics require X Premium. Subscribe at `x.com/i/premium_sign_up`. |
 | Low post count | Increase `maxPostsToScan` in CONFIG. The script scrolls to load more posts. |
-| Export not downloading | Check your browser's download settings. The file is named `xactions_analytics_YYYY-MM-DD.json`. |
+| Export not downloading | Check your browser's download settings. The file is named `medirus_analytics_YYYY-MM-DD.json`. |
 | Metrics showing as 0 | X may not display metrics for very recent posts. Wait 24 hours for accurate data. |
 
 ---
@@ -396,5 +396,5 @@ await browser.close();
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — User-Agent strings
+ * Medirus Client — User-Agent strings
  *
  * X rejects requests that do not look like they came from a browser. A bare
  * `fetch()` from Node sends `User-Agent: node` (or omits the header), and
@@ -13,7 +13,7 @@
  * Every request the HTTP-only client makes therefore carries one of these.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 

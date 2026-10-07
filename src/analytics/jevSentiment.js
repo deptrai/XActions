@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Sentiment — Semantic Sentiment & Sarcasm Analysis via Jev
+ * Medirus Sentiment — Semantic Sentiment & Sarcasm Analysis via Jev
  *
  * Employs TypeSafe Jev (System One) primitives to evaluate:
  * - Sentiment nuance: enthusiastic, positive, neutral, skeptical, hostile.

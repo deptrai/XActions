@@ -1,8 +1,8 @@
 ---
 title: "Auto-Comment on X (Twitter) — Free Script 2026"
 description: "Auto-reply to tweets on X/Twitter with custom comments. Free browser script for engagement growth. No API needed."
-keywords: ["auto comment twitter", "twitter auto reply script", "auto comment X 2026", "how to auto reply on twitter", "twitter auto commenter free", "auto reply tweets script", "twitter engagement bot free", "auto comment tweets by keyword", "xactions auto commenter", "twitter reply automation"]
-canonical: "https://xactions.app/examples/auto-commenter"
+keywords: ["auto comment twitter", "twitter auto reply script", "auto comment X 2026", "how to auto reply on twitter", "twitter auto commenter free", "auto reply tweets script", "twitter engagement bot free", "auto comment tweets by keyword", "medirus auto commenter", "twitter reply automation"]
+canonical: "https://medirus.online/examples/auto-commenter"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You're building your personal brand in crypto/web3. You've noticed that the people who consistently reply to big accounts like @VitalikButerin and @CZ_Binance with thoughtful comments get massive exposure — their replies sit at the top and get thousands of views. But you can't refresh their profiles all day waiting for a new tweet.
 
-You want an automated system that monitors a target user's profile, detects when they post something new, and drops one of your pre-written comments within the first few minutes — before thousands of other replies bury yours. XActions' auto-commenter does exactly that.
+You want an automated system that monitors a target user's profile, detects when they post something new, and drops one of your pre-written comments within the first few minutes — before thousands of other replies bury yours. Medirus' auto-commenter does exactly that.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -46,7 +46,7 @@ You want an automated system that monitors a target user's profile, detects when
 └──────────────────────────────────────────────────────┘
 ```
 
-**After XActions:**
+**After Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -175,8 +175,8 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 
 ```javascript
 // ============================================
-// XActions - Auto-Comment on X/Twitter
-// by nichxbt — https://xactions.app
+// Medirus - Auto-Comment on X/Twitter
+// by nichxbt — https://medirus.online
 // Go to: x.com/TARGET_USERNAME
 // Open console (F12 → Console), paste, Enter
 // Keep this tab open!
@@ -224,7 +224,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 
   // Load previous session
   try {
-    const saved = JSON.parse(sessionStorage.getItem('xactions_commented') || '[]');
+    const saved = JSON.parse(sessionStorage.getItem('medirus_commented') || '[]');
     saved.forEach(id => commentedTweets.add(id));
     if (commentedTweets.size > 0) {
       console.log(`📦 Loaded ${commentedTweets.size} previously commented tweet IDs`);
@@ -236,7 +236,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 
   console.log('');
   console.log('╔═══════════════════════════════════════════════════════╗');
-  console.log('║  💬 XActions Auto-Commenter                          ║');
+  console.log('║  💬 Medirus Auto-Commenter                          ║');
   console.log('║                                                       ║');
   console.log(`║  Watching: @${username.padEnd(40)}║`);
   console.log(`║  Interval: Every ${String(CONFIG.CHECK_INTERVAL_SECONDS).padEnd(3)}seconds                       ║`);
@@ -331,7 +331,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
     // Save state
     commentedTweets.add(tweetId);
     try {
-      sessionStorage.setItem('xactions_commented', JSON.stringify(Array.from(commentedTweets)));
+      sessionStorage.setItem('medirus_commented', JSON.stringify(Array.from(commentedTweets)));
     } catch (e) {}
     commentCount++;
 
@@ -428,7 +428,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 
 ```
 ╔═══════════════════════════════════════════════════════╗
-║  💬 XActions Auto-Commenter                          ║
+║  💬 Medirus Auto-Commenter                          ║
 ║                                                       ║
 ║  Watching: @VitalikButerin                            ║
 ║  Interval: Every 60 seconds                           ║
@@ -467,9 +467,9 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions", "mcp"]
+      "args": ["-y", "medirus", "mcp"]
     }
   }
 }
@@ -581,10 +581,10 @@ COMMENTS: [
 ## ❓ FAQ
 
 ### Q: How do I auto-reply to tweets on Twitter / X in 2026?
-**A:** Go to the target user's profile on `x.com/USERNAME`, open your browser console (F12 → Console), paste the XActions auto-commenter script, and press Enter. Configure your comment pool and check interval. The script monitors the profile for new tweets and replies automatically. Keep the browser tab open while it runs.
+**A:** Go to the target user's profile on `x.com/USERNAME`, open your browser console (F12 → Console), paste the Medirus auto-commenter script, and press Enter. Configure your comment pool and check interval. The script monitors the profile for new tweets and replies automatically. Keep the browser tab open while it runs.
 
 ### Q: Is auto-commenting on Twitter safe?
-**A:** With conservative limits, yes. Keep sessions to 3–5 comments max, use varied comment templates, and target 1–2 accounts per session. X detects and penalizes repetitive or spammy replies. The XActions script uses randomized delays and comment rotation to mimic natural behavior.
+**A:** With conservative limits, yes. Keep sessions to 3–5 comments max, use varied comment templates, and target 1–2 accounts per session. X detects and penalizes repetitive or spammy replies. The Medirus script uses randomized delays and comment rotation to mimic natural behavior.
 
 ### Q: Can I auto-comment on tweets that mention specific keywords?
 **A:** Yes. Set `REQUIRE_KEYWORD: true` and fill the `KEYWORDS` array with your target terms. The script will only comment on the target user's tweets that contain at least one of your keywords.
@@ -598,5 +598,5 @@ COMMENTS: [
 ---
 
 <footer>
-Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

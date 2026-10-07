@@ -29,15 +29,15 @@ The main repurposing engine. Scans your timeline, then converts any tweet into 5
 
 ### Controls
 
-- `XActions.scan()` -- Scrape tweets from current page
-- `XActions.list()` -- Show all scraped tweets with indices
-- `XActions.toThread(i)` -- Convert tweet to thread outline
-- `XActions.toSummary(i)` -- Condense to punchy summary variations
-- `XActions.toStorm(i)` -- Break into numbered tweet storm
-- `XActions.toBlog(i)` -- Generate blog/article outline with SEO keywords
-- `XActions.toQuoteTemplates(i)` -- Create 3 quote-retweet variations
-- `XActions.all(i)` -- Run ALL 5 repurposing strategies
-- `XActions.export()` -- Download all repurposed content as JSON
+- `Medirus.scan()` -- Scrape tweets from current page
+- `Medirus.list()` -- Show all scraped tweets with indices
+- `Medirus.toThread(i)` -- Convert tweet to thread outline
+- `Medirus.toSummary(i)` -- Condense to punchy summary variations
+- `Medirus.toStorm(i)` -- Break into numbered tweet storm
+- `Medirus.toBlog(i)` -- Generate blog/article outline with SEO keywords
+- `Medirus.toQuoteTemplates(i)` -- Create 3 quote-retweet variations
+- `Medirus.all(i)` -- Run ALL 5 repurposing strategies
+- `Medirus.export()` -- Download all repurposed content as JSON
 
 ### Repurposing Formats
 
@@ -71,15 +71,15 @@ High-engagement tweet
 
 ### Weekly content repurposing routine
 1. Run `src/tweetPerformance.js` to identify top 5 tweets this week
-2. Run `src/contentRepurposer.js` -> `XActions.scan()`
-3. For each top tweet: `XActions.all(i)` to generate all formats
-4. Export with `XActions.export()` for scheduling
+2. Run `src/contentRepurposer.js` -> `Medirus.scan()`
+3. For each top tweet: `Medirus.all(i)` to generate all formats
+4. Export with `Medirus.export()` for scheduling
 5. Space repurposed content 3+ days from original
 
 ### Maximizing a viral tweet
-1. When a tweet goes viral, immediately run `XActions.toThread(i)` for a follow-up thread
-2. Use `XActions.toQuoteTemplates(i)` for engagement in replies
-3. Later, use `XActions.toBlog(i)` for a long-form article
+1. When a tweet goes viral, immediately run `Medirus.toThread(i)` for a follow-up thread
+2. Use `Medirus.toQuoteTemplates(i)` for engagement in replies
+3. Later, use `Medirus.toBlog(i)` for a long-form article
 4. Use `src/autoPlugReplies.js` to plug your offer on the viral tweet
 
 ## Notes

@@ -1,14 +1,14 @@
 ---
 title: "Audio and Video Calls in DMs on X (Twitter) — Tutorial"
-description: "Start audio or video calls in X/Twitter DM conversations using XActions browser scripts."
-keywords: ["twitter dm call", "x audio call", "twitter video call dm", "xactions dm calls", "start call twitter dm"]
+description: "Start audio or video calls in X/Twitter DM conversations using Medirus browser scripts."
+keywords: ["twitter dm call", "x audio call", "twitter video call dm", "medirus dm calls", "start call twitter dm"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Audio and Video Calls in DMs — Tutorial
 
-> Step-by-step guide to initiating audio and video calls within X/Twitter DM conversations using XActions browser scripts.
+> Step-by-step guide to initiating audio and video calls within X/Twitter DM conversations using Medirus browser scripts.
 
 **Works on:** Browser Console
 **Difficulty:** Beginner

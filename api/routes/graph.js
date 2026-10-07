@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Social Graph API Routes
+ * Medirus Social Graph API Routes
  *
  * Routes:
  *   POST   /api/graph/build          — Start graph crawl (background job)

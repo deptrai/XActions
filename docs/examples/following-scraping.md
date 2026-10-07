@@ -38,7 +38,7 @@ The **`followsBack`** indicator is powerful — it lets you instantly identify:
 
 ```javascript
 // ============================================
-// XActions - Following Scraper (Browser Console)
+// Medirus - Following Scraper (Browser Console)
 // Author: nich (@nichxbt)
 // Go to: x.com/USERNAME/following
 // Open console (F12), paste this entire script
@@ -247,7 +247,7 @@ Save as `scrape-following.js`:
 
 ```javascript
 // ============================================
-// XActions - Following Scraper (Node.js)
+// Medirus - Following Scraper (Node.js)
 // Author: nich (@nichxbt)
 // 
 // Save as: scrape-following.js
@@ -548,7 +548,7 @@ const exportType = args[2] || 'all'; // 'all', 'mutual', 'oneway'
 if (!username) {
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║           XActions - Following Scraper                       ║
+║           Medirus - Following Scraper                       ║
 ║           Author: nich (@nichxbt)                            ║
 ╚══════════════════════════════════════════════════════════════╝
 
@@ -878,7 +878,7 @@ const following = await scrapeFollowing('smallAccount', {
 
 ## 🌐 Website Alternative
 
-Don't want to code? Use **[xactions.app](https://xactions.app)**:
+Don't want to code? Use **[medirus.online](https://medirus.online)**:
 
 1. 🔐 Login with your X account
 2. 👤 Enter any public username
@@ -887,7 +887,7 @@ Don't want to code? Use **[xactions.app](https://xactions.app)**:
 5. 📥 Download as CSV or JSON
 6. 🤝 Filter by mutual/one-way directly in the UI
 
-**Features on xactions.app:**
+**Features on medirus.online:**
 - ✅ No coding required
 - ✅ Cloud-based processing
 - ✅ Automatic mutual detection
@@ -907,5 +907,5 @@ Don't want to code? Use **[xactions.app](https://xactions.app)**:
 
 <p align="center">
   <b>Built with ❤️ by <a href="https://x.com/nichxbt">@nichxbt</a></b><br>
-  <sub>Part of the <a href="https://github.com/nirholas/xactions">XActions</a> toolkit</sub>
+  <sub>Part of the <a href="https://github.com/nirholas/xactions">Medirus</a> toolkit</sub>
 </p>

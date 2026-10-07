@@ -17,7 +17,7 @@ Status: ready-for-dev
 
 ## ⚠️ Critical Constraints / Architecture Variance
 
-1. **Extend Existing `xactions admin accounts` Group** — Story 19.4 already created `accounts list` in `src/cli/commands/admin.js`. This story adds `wake` and `rotate` subcommands under `xactions admin accounts`, plus an alias group `xactions admin account <list|wake|rotate>` (singular alias matching the established pattern in 19.4.2).
+1. **Extend Existing `medirus admin accounts` Group** — Story 19.4 already created `accounts list` in `src/cli/commands/admin.js`. This story adds `wake` and `rotate` subcommands under `medirus admin accounts`, plus an alias group `medirus admin account <list|wake|rotate>` (singular alias matching the established pattern in 19.4.2).
 2. **REST-First with In-Process Fallback**:
    - For `wake <accountId>`: Attempt `POST /api/admin/accounts/wake` with body `{ accountId, platform }` (or `POST /api/admin/accounts/:id/wake`). If remote API is unreachable and no explicit `--url` was provided, fall back to `globalAccountPool.markAvailable(accountId, platform)`.
    - For `rotate <accountId> [platform]`: Attempt `POST /api/admin/accounts/rotate` with body `{ accountId, platform }` (or `POST /api/admin/accounts/:id/rotate`). If remote API is unreachable, fall back to `globalAccountPool.getNextAvailable(platform)`.
@@ -40,7 +40,7 @@ Status: ready-for-dev
 ## Story
 
 As an **Internal Automation Operator**,  
-I want **the commands `xactions admin accounts wake <accountId>` and `xactions admin accounts rotate <accountId> [platform]` (along with `xactions admin account ...` aliases)**,  
+I want **the commands `medirus admin accounts wake <accountId>` and `medirus admin accounts rotate <accountId> [platform]` (along with `medirus admin account ...` aliases)**,  
 so that **I can inspect, wake hibernating accounts, and rotate assigned crawler accounts directly from the terminal without restarting services**.
 
 ---
@@ -49,8 +49,8 @@ so that **I can inspect, wake hibernating accounts, and rotate assigned crawler 
 
 ### AC-1: CLI Command Registration & Help Contract
 
-- **Given** the `xactions admin` command group
-- **When** the operator runs `xactions admin accounts --help` or `xactions admin account --help`
+- **Given** the `medirus admin` command group
+- **When** the operator runs `medirus admin accounts --help` or `medirus admin account --help`
 - **Then** the output lists:
   - `list`: List all accounts with hibernation status and velocity
   - `wake <accountId>`: Wake an account from hibernation
@@ -61,7 +61,7 @@ so that **I can inspect, wake hibernating accounts, and rotate assigned crawler 
 ### AC-2: Wake Account via REST or In-Process Pool
 
 - **Given** an account in hibernation (e.g., `acc_tw_01`)
-- **When** the operator runs `xactions admin accounts wake acc_tw_01 --platform twitter` (or `admin account wake ...`)
+- **When** the operator runs `medirus admin accounts wake acc_tw_01 --platform twitter` (or `admin account wake ...`)
 - **Then** the command attempts `POST /api/admin/accounts/wake` with Bearer token
 - **And** on success, prints a confirmation that the account is now active and ready
 - **And** if `--json` is passed, outputs `{ success: true, accountId: "acc_tw_01", status: "active", message: "..." }`
@@ -71,7 +71,7 @@ so that **I can inspect, wake hibernating accounts, and rotate assigned crawler 
 ### AC-3: Rotate Account via REST or In-Process Pool
 
 - **Given** an active or rate-limited account in the pool
-- **When** the operator runs `xactions admin accounts rotate acc_tw_01 twitter` (or `admin account rotate ...`)
+- **When** the operator runs `medirus admin accounts rotate acc_tw_01 twitter` (or `admin account rotate ...`)
 - **Then** the command attempts `POST /api/admin/accounts/rotate` with Bearer token
 - **And** on success, prints both the previous account ID and the next assigned account ID
 - **And** if `--json` is passed, outputs `{ success: true, previousAccountId: "...", nextAccountId: "...", platform: "..." }`
@@ -149,7 +149,7 @@ registerAccountSubcommands(accountCmd);
 ## Testing Plan
 
 1. **Unit & CLI Verification (`tests/cli/admin-accounts.test.js`)**:
-   - Verify `xactions admin accounts --help` and `xactions admin account --help` list `list`, `wake`, and `rotate`.
+   - Verify `medirus admin accounts --help` and `medirus admin account --help` list `list`, `wake`, and `rotate`.
    - Test in-process fallback for `wake` on a hibernating account record.
    - Test in-process fallback for `rotate` and verify the next available account is returned.
    - Test `--json` flag formats valid JSON output for all commands.

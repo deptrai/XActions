@@ -17,7 +17,7 @@
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   const run = async () => {
-    console.log('📦 DOWNLOAD ACCOUNT DATA - XActions by nichxbt');
+    console.log('📦 DOWNLOAD ACCOUNT DATA - Medirus by nichxbt');
 
     if (!window.location.href.includes('/download_your_data') && !window.location.href.includes('/your_twitter_data')) {
       console.error('❌ Navigate to x.com/settings/download_your_data first!');

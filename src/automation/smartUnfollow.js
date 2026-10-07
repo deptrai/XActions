@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation - Smart Unfollow (Time-Based)
+// Medirus Automation - Smart Unfollow (Time-Based)
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -13,12 +13,12 @@
 // 3. Configure options below and run!
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, rateLimit, SELECTORS } = window.XActions.Core;
+  const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, rateLimit, SELECTORS } = window.Medirus.Core;
 
   // ============================================
   // CONFIGURATION

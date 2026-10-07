@@ -1,6 +1,6 @@
 # Report Posts or Accounts -- Tutorial
 
-> Step-by-step guide to reporting spam, abuse, and fake accounts on X using XActions browser scripts.
+> Step-by-step guide to reporting spam, abuse, and fake accounts on X using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -120,7 +120,7 @@ For reporting individual posts (not accounts), use `src/postInteractions.js`:
 
 ```js
 // First paste src/postInteractions.js, then call:
-await XActions.postInteractions.reportPost(
+await Medirus.postInteractions.reportPost(
   'https://x.com/user/status/123456789',
   'spam'
 );

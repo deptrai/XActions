@@ -31,17 +31,17 @@ Browser console scripts for automating content creation and publishing on X/Twit
 ### threadComposer.js
 Interactive thread creation with draft persistence. Compose parts, preview, reorder, and publish.
 
-**Controls:** `XActions.create(topic, points)`, `XActions.preview()`, `XActions.post()`, `XActions.export()`
+**Controls:** `Medirus.create(topic, points)`, `Medirus.preview()`, `Medirus.post()`, `Medirus.export()`
 
 ### contentRepurposer.js
 Converts existing tweets into new formats: threads, tweet storms, blog outlines, summary variations, and quote-tweet templates. Scan your timeline, pick top tweets, generate 5 content variations per tweet.
 
-**Controls:** `XActions.scan()`, `XActions.list()`, `XActions.toThread(i)`, `XActions.toSummary(i)`, `XActions.toStorm(i)`, `XActions.toBlog(i)`, `XActions.toQuoteTemplates(i)`, `XActions.all(i)`
+**Controls:** `Medirus.scan()`, `Medirus.list()`, `Medirus.toThread(i)`, `Medirus.toSummary(i)`, `Medirus.toStorm(i)`, `Medirus.toBlog(i)`, `Medirus.toQuoteTemplates(i)`, `Medirus.all(i)`
 
 ### autoPlugReplies.js
 Auto-replies to your own viral tweets with a promotional plug. Configurable viral threshold, dry-run mode, session limits.
 
-**Controls:** `XActions.setPlug(text)`, `XActions.scan()`, `XActions.autoScan(ms)`, `XActions.stop()`
+**Controls:** `Medirus.setPlug(text)`, `Medirus.scan()`, `Medirus.autoScan(ms)`, `Medirus.stop()`
 
 ### quoteTweetAutomation.js
 Auto quote-tweets matching tweets with customizable templates and engagement filters.
@@ -69,10 +69,10 @@ Auto quote-tweets matching tweets with customizable templates and engagement fil
 5. `src/contentCalendar.js` -- identify posting gaps to fill
 
 ### Thread workflow
-1. Use `src/contentRepurposer.js` -> `XActions.toThread(i)` for thread outlines
+1. Use `src/contentRepurposer.js` -> `Medirus.toThread(i)` for thread outlines
 2. Edit and refine with `src/threadComposer.js`
-3. Preview with `XActions.preview()`
-4. Post with `XActions.post()`
+3. Preview with `Medirus.preview()`
+4. Post with `Medirus.post()`
 
 ## Notes
 - All posting scripts include dry-run mode by default

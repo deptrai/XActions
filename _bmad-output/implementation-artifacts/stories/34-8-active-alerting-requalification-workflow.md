@@ -47,9 +47,9 @@
   - Upon promotion, `requalifiedAt` epoch timestamp is recorded, updating PostgreSQL `ScraperHealthScore`, Redis hash `hash:scraper:health_tier`, and `HealthTierCache`.
   - Future rolling 24-hour aggregations ignore errors before `requalifiedAt` (AD-31).
 
-### AC 4: Operator Scorecard CLI `xactions benchmark alerts` Subcommand
-- **Given** the XActions CLI,
-- **When** running `xactions benchmark alerts` or `xactions benchmark alerts --format json`,
+### AC 4: Operator Scorecard CLI `medirus benchmark alerts` Subcommand
+- **Given** the Medirus CLI,
+- **When** running `medirus benchmark alerts` or `medirus benchmark alerts --format json`,
 - **Then**:
   - Displays an aligned ASCII table of recent alerts (Scraper ID, Platform, Tier Transition, Score, Reason, Action, Timestamp).
   - Outputs formatted JSON array when `--format json` or `--json` is passed.
@@ -107,7 +107,7 @@ Maintains a 1-hour per-scraper deduplication map to protect operator chat channe
   - [x] Set `requalifiedAt` epoch and update PostgreSQL, Redis hash, and RAM cache (AC 3).
 
 - [x] **Phase 3: CLI Subcommand & REST API Endpoints (`src/cli/commands/benchmark.js`, `api/routes/benchmark.js`)**
-  - [x] Implement `xactions benchmark alerts` CLI subcommand and ASCII table formatter (AC 4).
+  - [x] Implement `medirus benchmark alerts` CLI subcommand and ASCII table formatter (AC 4).
   - [x] Implement `GET /api/benchmark/alerts` endpoint (AC 5).
   - [x] Implement `POST /api/benchmark/requalify/:id` endpoint (AC 5).
 

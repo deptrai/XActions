@@ -11,7 +11,7 @@
 
 ### Triggering Story
 - Không thuộc một story cụ thể đang backlog. Được phát hiện trong quá trình **Epic 34 Scraper Benchmark & Reliability Suite** khi kiểm tra dashboard benchmark trên production.
-- Nowing gọi `POST /api/platform/:platform/scrape` mà không truyền `cursor`/`after` thì XActions cào lại từ đầu, dù đã có `CrawlCheckpoint` trong PostgreSQL.
+- Nowing gọi `POST /api/platform/:platform/scrape` mà không truyền `cursor`/`after` thì Medirus cào lại từ đầu, dù đã có `CrawlCheckpoint` trong PostgreSQL.
 
 ### Core Problem
 - **CrawlCheckpoint** (`CrawlCheckpoint` model, `PrismaStore.saveCheckpoint()` / `getCheckpoint()`) đã tồn tại nhưng **chưa được tự động sử dụng** để nạp `lastCursor` khi caller không truyền cursor.
@@ -23,7 +23,7 @@
 - `src/core/base-crawler.js:220-380` — `start()` không gọi `store.getCheckpoint()`.
 - `src/store/prisma-store.js:190-280` — `storeBatch()` trả về `undefined` dù Prisma `createMany` trả về `count`.
 - `api/routes/platform.js:308-342` — `POST /:platform/scrape` chỉ truyền `req.body` vào `scrape()`.
-- Architecture review chi tiết: `_bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/AUTO-CHECKPOINT-LOOKUP-ARCHITECTURE-REVIEW.md`.
+- Architecture review chi tiết: `_bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/AUTO-CHECKPOINT-LOOKUP-ARCHITECTURE-REVIEW.md`.
 
 ---
 
@@ -57,7 +57,7 @@
 - **Không xung đột.** FR-88 (3-Tier Incremental Gap-Filling) và FR-87 (Data Retention) được củng cố.
 - **Cần cập nhật:** Ghi rõ `lastCursor` được tự động nạp khi `resume` không bị tắt.
 
-#### Architecture Spine (`architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`)
+#### Architecture Spine (`architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`)
 - **Không xung đột.** AD-10, AD-12, AD-16 đã có sẵn. Chỉ cần cập nhật AD-11 (CrawlerCommand & ActionRegistry) để thêm `checkpointResolver` vào `ActionDescriptor`.
 - **Cần cập nhật:** Sequence diagram cho `AbstractCrawler.start()` thêm bước resolve checkpoint.
 
@@ -147,7 +147,7 @@ So that **we save proxy cost and avoid duplicate full re-crawls on every schedul
 - `src/core/base-store.js`
 - `src/store/prisma-store.js`
 - `src/store/index.js`
-- `src/core/types.js` / `types/xactions.d.ts`
+- `src/core/types.js` / `types/medirus.d.ts`
 
 **Estimate:** 1 sprint
 

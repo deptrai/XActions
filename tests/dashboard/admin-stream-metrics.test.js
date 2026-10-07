@@ -290,13 +290,13 @@ describe.skip('Story 19.x: Admin Dashboard — LEGACY (decommissioned Story 48.1
     const { document, window } = dom.window;
 
     document.getElementById('alert-webhook-url').value = 'https://discord.com/api/webhooks/test-hook';
-    document.getElementById('alert-email-recipients').value = 'ops-team@xactions.app';
+    document.getElementById('alert-email-recipients').value = 'ops-team@medirus.online';
 
     // Test saving configuration
     await window.__dashboard.saveStreamAlertConfig();
     const currentConfig = defaultStreamAlertEngine.getConfig();
     expect(currentConfig.webhookUrl).toBe('https://discord.com/api/webhooks/test-hook');
-    expect(currentConfig.emailRecipients).toBe('ops-team@xactions.app');
+    expect(currentConfig.emailRecipients).toBe('ops-team@medirus.online');
 
     // Test sending synthetic test alert
     await window.__dashboard.testStreamAlert();

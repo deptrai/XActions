@@ -128,7 +128,7 @@
   };
 
   const run = async () => {
-    console.log('🔍 DISCOVERY & EXPLORE — XActions by nichxbt\n');
+    console.log('🔍 DISCOVERY & EXPLORE — Medirus by nichxbt\n');
 
     let data;
     if (CONFIG.action === 'trends') data = await scrapeTrends();
@@ -139,7 +139,7 @@
       const date = new Date().toISOString().slice(0, 10);
       download(
         { exportedAt: new Date().toISOString(), ...data },
-        `xactions-explore-${CONFIG.action}-${date}.json`
+        `medirus-explore-${CONFIG.action}-${date}.json`
       );
     }
 

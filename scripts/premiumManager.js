@@ -98,7 +98,7 @@
   };
 
   const run = async () => {
-    console.log('⭐ PREMIUM MANAGER — XActions by nichxbt\n');
+    console.log('⭐ PREMIUM MANAGER — Medirus by nichxbt\n');
     console.log('🔍 Detecting Premium tier...\n');
 
     const { tier, signals } = detectTier();
@@ -137,7 +137,7 @@
       const date = new Date().toISOString().slice(0, 10);
       download(
         { exportedAt: new Date().toISOString(), detectedTier: tier, tierInfo, signals, allTiers: TIER_FEATURES },
-        `xactions-premium-status-${date}.json`
+        `medirus-premium-status-${date}.json`
       );
     }
 

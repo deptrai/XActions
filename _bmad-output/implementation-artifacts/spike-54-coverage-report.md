@@ -2,7 +2,7 @@
 
 > Generated: 2026-10-05T01:38:50.839Z
 > Runner: `scripts/spike-54-coverage.mjs` (phases: search)
-> Auth path: **auth_session (~/.xactions/cookies.json fallback)** (cookie=false, csrf=false)
+> Auth path: **auth_session (~/.medirus/cookies.json fallback)** (cookie=false, csrf=false)
 
 ## Verdicts (per story)
 

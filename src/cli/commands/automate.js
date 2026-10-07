@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions automate` — Facebook write automation (like, comment, post, messenger-share).
+ * `medirus automate` — Facebook write automation (like, comment, post, messenger-share).
  *
  * @author nich (@nichxbt)
  * @license MIT

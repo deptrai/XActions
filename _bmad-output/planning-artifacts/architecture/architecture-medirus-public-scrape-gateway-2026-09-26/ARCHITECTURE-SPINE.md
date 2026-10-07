@@ -1,19 +1,19 @@
 ---
-name: 'XActions Public Scrape Gateway'
+name: 'Medirus Public Scrape Gateway'
 type: architecture-spine
 purpose: build-substrate
 altitude: feature
 paradigm: 'Single-Gateway Facade — one versioned scrape contract in front of the descriptor dispatcher; auth + mode are cross-cutting seams, not per-consumer branches'
-scope: 'The public scrape surface XActions exposes to machine consumers (jev-trading, Nowing, ChainLens, third-party) — sync/async dispatch, service auth, rate-limit isolation'
+scope: 'The public scrape surface Medirus exposes to machine consumers (jev-trading, Nowing, ChainLens, third-party) — sync/async dispatch, service auth, rate-limit isolation'
 status: final
 created: '2026-09-26'
 updated: '2026-09-26'
 binds: [jev-trading Story 8.3, Nowing stream ingest, ChainLens research calls, third-party REST consumers]
-sources: ['research/market-crypto-xactions-features-2026-09-26', 'jev-trading epics.md Stories 8.1-8.3', 'api/routes/platform.js', 'src/mcp/consumer-context.js', 'src/scrapers/index.js']
-companions: ['research.md (market-crypto-xactions-features-2026-09-26)']
+sources: ['research/market-crypto-medirus-features-2026-09-26', 'jev-trading epics.md Stories 8.1-8.3', 'api/routes/platform.js', 'src/mcp/consumer-context.js', 'src/scrapers/index.js']
+companions: ['research.md (market-crypto-medirus-features-2026-09-26)']
 ---
 
-# Architecture Spine — XActions Public Scrape Gateway
+# Architecture Spine — Medirus Public Scrape Gateway
 
 ## Design Paradigm
 
@@ -62,7 +62,7 @@ flowchart TD
 
 - **Binds:** the gateway's auth middleware
 - **Prevents:** machine consumers being forced through user-JWT (the actual reason jev can't call the sync route today)
-- **Rule:** `authenticate` (user JWT — dashboard) OR `serviceAuth` (Bearer/API-key via existing `identifyConsumer` seam) — mutually exclusive per request, both resolve to a caller identity. **The Bearer credential cryptographically binds the consumer_id** — the gateway derives `consumer_id` server-side from the Bearer token (env-configured map `XACTIONS_MCP_API_KEY`→consumer, or a lookup table); `X-Consumer-Id` header is a *hint only*, never authoritative. This prevents header-spoofing from bypassing AD-7 quota. Third-party/external consumers authenticate via **x402 pay-per-call** (`api/middleware/x402.js` — needs route-config extension to cover `POST /api/platform/:platform/scrape`). No consumer transmits a session cookie — session/proxy resolution is server-side per platform.
+- **Rule:** `authenticate` (user JWT — dashboard) OR `serviceAuth` (Bearer/API-key via existing `identifyConsumer` seam) — mutually exclusive per request, both resolve to a caller identity. **The Bearer credential cryptographically binds the consumer_id** — the gateway derives `consumer_id` server-side from the Bearer token (env-configured map `MEDIRUS_MCP_API_KEY`→consumer, or a lookup table); `X-Consumer-Id` header is a *hint only*, never authoritative. This prevents header-spoofing from bypassing AD-7 quota. Third-party/external consumers authenticate via **x402 pay-per-call** (`api/middleware/x402.js` — needs route-config extension to cover `POST /api/platform/:platform/scrape`). No consumer transmits a session cookie — session/proxy resolution is server-side per platform.
 
 ### AD-3 — `mode: sync | async` is a dispatch flag, not a different endpoint
 
@@ -72,15 +72,15 @@ flowchart TD
 
 ### AD-4 — The latency boundary is architectural, not advisory
 
-- **Binds:** what XActions offers vs what consumers self-serve
-- **Prevents:** XActions absorbing latency-critical paths it can't serve (and consumers blaming the platform for it)
-- **Rule:** XActions serves **seconds-to-minutes** data only — social scraping, auth-gated endpoints, content corpus. Sub-second paths (pumpportal WS mint stream, Solana RPC/Helius/Triton, trade tape, TP triggers) are **consumer-owned and out of scope** — XActions neither proxies nor mirrors them. The gateway's sync budget is documented per action so a consumer can tell at call-time whether an action is fast-lane-eligible.
+- **Binds:** what Medirus offers vs what consumers self-serve
+- **Prevents:** Medirus absorbing latency-critical paths it can't serve (and consumers blaming the platform for it)
+- **Rule:** Medirus serves **seconds-to-minutes** data only — social scraping, auth-gated endpoints, content corpus. Sub-second paths (pumpportal WS mint stream, Solana RPC/Helius/Triton, trade tape, TP triggers) are **consumer-owned and out of scope** — Medirus neither proxies nor mirrors them. The gateway's sync budget is documented per action so a consumer can tell at call-time whether an action is fast-lane-eligible.
 
 ### AD-5 — Consumer-independent response envelope
 
 - **Binds:** response shape of every gateway call
 - **Prevents:** consumer-specific response shapes creating de-facto per-caller contracts
-- **Rule:** All calls return the unified Epic-20 envelope `{ success, mode, metadata, stream:{enabled,name,cursor}, preview[≤10], data[] }`. **`preview` is a verbatim slice `data[0..10]`** — never a derived summary; summaries/stats go in `metadata`. A consumer needing a different shape (jev's `Post`/`Corpus`) normalizes in **its own adapter** (`xactionsClient.normalizePost`) — never inside XActions.
+- **Rule:** All calls return the unified Epic-20 envelope `{ success, mode, metadata, stream:{enabled,name,cursor}, preview[≤10], data[] }`. **`preview` is a verbatim slice `data[0..10]`** — never a derived summary; summaries/stats go in `metadata`. A consumer needing a different shape (jev's `Post`/`Corpus`) normalizes in **its own adapter** (`medirusClient.normalizePost`) — never inside Medirus.
 
 ### AD-6 — No consumer-specific fields in the shared contract
 
@@ -91,15 +91,15 @@ flowchart TD
 ### AD-7 — Per-consumer rate-limit isolation
 
 - **Binds:** token-bucket + proxy-pool accounting
-- **Prevents:** one consumer's scrape volume starving another's — specifically jev's own direct Dexscreener TP-fallback dying because XActions' dexscreener crawler burned the shared IP budget
-- **Rule:** `DistributedTokenBucket` keys are `consumer_id : platform : action`, not platform-global. XActions' upstream-fetched traffic uses the platform proxy pool; a consumer's own direct-fetch IP budget is a separate lane that XActions never touches. Quotas are per-consumer and independently enforced.
+- **Prevents:** one consumer's scrape volume starving another's — specifically jev's own direct Dexscreener TP-fallback dying because Medirus' dexscreener crawler burned the shared IP budget
+- **Rule:** `DistributedTokenBucket` keys are `consumer_id : platform : action`, not platform-global. Medirus' upstream-fetched traffic uses the platform proxy pool; a consumer's own direct-fetch IP budget is a separate lane that Medirus never touches. Quotas are per-consumer and independently enforced.
 
 ## Consistency Conventions
 
 | Concern | Convention |
 | --- | --- |
 | Consumer identity | Derived server-side from Bearer credential (env map or lookup); `X-Consumer-Id` header is a non-authoritative hint. `nowing`/`chainlens`/`internal` are the metered classes; jev resolves to `internal` via Bearer binding. |
-| Service auth | Bearer token vs `XACTIONS_MCP_API_KEY`/`XACTIONS_API_TOKEN`; external paid access via x402. No session-cookie transmission by machine consumers. |
+| Service auth | Bearer token vs `MEDIRUS_MCP_API_KEY`/`MEDIRUS_API_TOKEN`; external paid access via x402. No session-cookie transmission by machine consumers. |
 | Response shape | Unified envelope `{success, mode, metadata, stream, preview, data}` — snake_case data fields per ThinEvent, dual-emit camelCase. `preview` = verbatim `data[0..10]` slice; summaries in `metadata`. |
 | Action naming | snake_case `verb_noun` (`fetch_coin_meta`, `token_socials`, `search`); descriptor `actionMap` exposes shorthand aliases (`coin_meta`, `socials`). `syncCapable` manifest is the source of truth for mode eligibility. |
 | Mode selection | `mode` in request body (optional; default per-action manifest); cold anti-bot auto-degrades sync→async via `202+operationId+Retry-After` only. |
@@ -115,7 +115,7 @@ flowchart TD
 - **Infra minimums:** Redis ≥6 (Streams + Lua for `DistributedTokenBucket`); PostgreSQL ≥14 (Prisma). No additional infra for the gateway itself — reuses the existing stack.
 - **SLO:** `mode:'sync'` p99 < 1.5s end-to-end on a healthy upstream (proxy pool warm, no CF challenge). Breach → `202` degrade contract (AD-3), never silent-hang. `mode:'async'` no SLO — consumer polls.
 - **Observability:** every gateway call emits `X-Request-Id` (accepted inbound or generated) and propagates to `metadata.request_id`; OTel `traceparent` respected if present; per-call log line `consumer_id, platform, action, mode, duration_ms, upstream_status` written to Morgan/stdout.
-- **Environments:** dev = `NODE_ENV=development` + local Redis/Postgres (`.env.example`); prod = managed Redis + Postgres + `XACTIONS_MCP_API_KEY`/`XACTIONS_API_TOKEN` configured. Staging is a prod clone — no special mode.
+- **Environments:** dev = `NODE_ENV=development` + local Redis/Postgres (`.env.example`); prod = managed Redis + Postgres + `MEDIRUS_MCP_API_KEY`/`MEDIRUS_API_TOKEN` configured. Staging is a prod clone — no special mode.
 
 ## Stack
 
@@ -138,7 +138,7 @@ src/mcp/consumer-context.js     # REUSE — already implements X-Consumer-Id + B
 src/scrapers/index.js           # scrape() dispatcher — unchanged; mode handled above it
 src/scrapers/crypto/dexscreener/# NEW platform (descriptor+client+crawler+normalizer)
 src/scrapers/social/telegram/   # NEW platform (descriptor+client+crawler+normalizer)
-api/openapi.json                # regenerate — surface x_actions_list for self-discovery
+api/openapi.json                # regenerate — surface medirus_list for self-discovery
 ```
 
 ## Capability → Architecture Map
@@ -170,7 +170,7 @@ These were the spine's open calls; each resolved against the code, not preferenc
 
 **Resolved: no hardcode — the list stays frozen; consumer identity is env-driven.** `VALID_CONSUMER_IDS = ['nowing','chainlens','internal']` is a **quota-billing boundary**, not a caller whitelist. `internal` already means "unmetered, trusted, bypasses quota gate." jev is a same-trust-domain internal service → it belongs at `internal`/`trusted`, not as a new named billable consumer.
 
-The mechanism to add a *named* consumer, when one is needed for metering, is the env var `XACTIONS_MCP_API_KEY` + `X-Consumer-Id` — the identity seam (`identifyConsumer`) already separates "who is calling" (header, free-form) from "are they authenticated" (Bearer). A new named consumer = config (`VALID_CONSUMER_IDS` sourced from env), not a code change. `internal` remains the unmetered default.
+The mechanism to add a *named* consumer, when one is needed for metering, is the env var `MEDIRUS_MCP_API_KEY` + `X-Consumer-Id` — the identity seam (`identifyConsumer`) already separates "who is calling" (header, free-form) from "are they authenticated" (Bearer). A new named consumer = config (`VALID_CONSUMER_IDS` sourced from env), not a code change. `internal` remains the unmetered default.
 
 ### OQ-2 — Sync timeout for CF-gated calls (pump.fun `/coins/<mint>`)
 

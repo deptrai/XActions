@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Video & Media Downloader module for XActions (Story 31.1).
+ * Video & Media Downloader module for Medirus (Story 31.1).
  * Delegates extraction and normalization to UniversalMediaPipeline.
  *
  * @author nich (@nichxbt)

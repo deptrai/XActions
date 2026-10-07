@@ -125,13 +125,13 @@ let scrapeSpy;
 
 beforeEach(() => {
   process.env = { ...ORIGINAL_ENV };
-  delete process.env.XACTIONS_SERVICE_KEYS;
-  delete process.env.XACTIONS_MCP_API_KEY;
-  delete process.env.XACTIONS_API_TOKEN;
+  delete process.env.MEDIRUS_SERVICE_KEYS;
+  delete process.env.MEDIRUS_MCP_API_KEY;
+  delete process.env.MEDIRUS_API_TOKEN;
   // Story 50.4 — anonymous free tier is metered per IP+platform+action; these
   // tests exercise the dispatch contract, not quota. Raise the ceiling so
   // the shared in-process bucket never gates contract assertions.
-  process.env.XACTIONS_CONSUMER_QUOTAS = JSON.stringify({ default: '100000/min' });
+  process.env.MEDIRUS_CONSUMER_QUOTAS = JSON.stringify({ default: '100000/min' });
   process.env.NODE_ENV = 'development';
   _resetServiceKeyMap();
   _resetDispatch();
@@ -743,7 +743,7 @@ describe('POST /api/platform/:platform/scrape — mode dispatch', () => {
   });
 
   it('EDGE_ACCOUNTIDS_SERVICE: service caller + accountIds → 400 before dispatch', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = SERVICE_MAP;
     _resetServiceKeyMap();
     const res = await request(app)
       .post('/api/platform/reddit/scrape')
@@ -766,7 +766,7 @@ describe('POST /api/platform/:platform/scrape — mode dispatch', () => {
   });
 
   it('EDGE_OP_USER: serviceAuth caller + mode:async → job data userId=null, consumerId=jev', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = SERVICE_MAP;
     _resetServiceKeyMap();
     const res = await request(app)
       .post('/api/platform/reddit/scrape')
@@ -1357,42 +1357,42 @@ describe('sanitizeOptions — pooled / poolSize hints (Story 53.3)', () => {
 });
 
 describe('resolvePooledFlag — jobQueue processor opt-in (Story 53.3)', () => {
-  const origEnv = process.env.XACTIONS_BROWSER_POOL_SIZE;
+  const origEnv = process.env.MEDIRUS_BROWSER_POOL_SIZE;
   afterEach(() => {
-    if (origEnv === undefined) delete process.env.XACTIONS_BROWSER_POOL_SIZE;
-    else process.env.XACTIONS_BROWSER_POOL_SIZE = origEnv;
+    if (origEnv === undefined) delete process.env.MEDIRUS_BROWSER_POOL_SIZE;
+    else process.env.MEDIRUS_BROWSER_POOL_SIZE = origEnv;
   });
 
   it('ENV_OPTIN: env > 0 + no flag → options.pooled = true', () => {
-    process.env.XACTIONS_BROWSER_POOL_SIZE = '4';
+    process.env.MEDIRUS_BROWSER_POOL_SIZE = '4';
     const options = {};
     resolvePooledFlag({}, options);
     expect(options.pooled).toBe(true);
   });
 
   it('JOB_OPTIN: env unset + job.data.options.pooled → pooled = true', () => {
-    delete process.env.XACTIONS_BROWSER_POOL_SIZE;
+    delete process.env.MEDIRUS_BROWSER_POOL_SIZE;
     const options = { pooled: true };
     resolvePooledFlag({}, options);
     expect(options.pooled).toBe(true);
   });
 
   it('OFF_DEFAULT: env unset + no flag → pooled absent (byte-identical)', () => {
-    delete process.env.XACTIONS_BROWSER_POOL_SIZE;
+    delete process.env.MEDIRUS_BROWSER_POOL_SIZE;
     const options = {};
     resolvePooledFlag({}, options);
     expect(options).not.toHaveProperty('pooled');
   });
 
   it('EXPLICIT_OFF: env=4 + pooled:false in job options → pooled stays false', () => {
-    process.env.XACTIONS_BROWSER_POOL_SIZE = '4';
+    process.env.MEDIRUS_BROWSER_POOL_SIZE = '4';
     const options = { pooled: false };
     resolvePooledFlag({}, options);
     expect(options.pooled).toBe(false);
   });
 
   it('top-level job.data.pooled beats options.pooled', () => {
-    delete process.env.XACTIONS_BROWSER_POOL_SIZE;
+    delete process.env.MEDIRUS_BROWSER_POOL_SIZE;
     const options = { pooled: true };
     resolvePooledFlag({ pooled: false }, options);
     expect(options.pooled).toBe(false);

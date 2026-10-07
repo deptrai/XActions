@@ -1,14 +1,14 @@
 ---
 title: "View Trends & Explore on X (Twitter) — Tutorial"
-description: "Browse trending topics, explore tabs, and scrape trend data on X/Twitter using XActions scripts."
-keywords: ["twitter trends", "x trending topics", "explore tab twitter", "xactions trends", "twitter trend scraper", "what is trending on twitter"]
+description: "Browse trending topics, explore tabs, and scrape trend data on X/Twitter using Medirus scripts."
+keywords: ["twitter trends", "x trending topics", "explore tab twitter", "medirus trends", "twitter trend scraper", "what is trending on twitter"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # View Trends & Explore — Tutorial
 
-> Step-by-step guide to viewing trending topics, browsing the Explore tab, and scraping trend data on X/Twitter using XActions scripts.
+> Step-by-step guide to viewing trending topics, browsing the Explore tab, and scraping trend data on X/Twitter using Medirus scripts.
 
 **Works on:** Node.js (Puppeteer)
 **Difficulty:** Beginner
@@ -19,7 +19,7 @@ date: "2026-03-30"
 
 ## Prerequisites
 
-- Node.js >= 18 installed with XActions dependencies (`npm install`)
+- Node.js >= 18 installed with Medirus dependencies (`npm install`)
 - A Puppeteer page authenticated with your X session cookie
 - Or: logged into x.com in your browser for manual exploration
 
@@ -27,7 +27,7 @@ date: "2026-03-30"
 
 ## Quick Start
 
-1. Set up a Puppeteer page with your X session cookie (see `XACTIONS_SESSION_COOKIE` in `.env`)
+1. Set up a Puppeteer page with your X session cookie (see `MEDIRUS_SESSION_COOKIE` in `.env`)
 2. Import functions from `src/discoveryExplore.js`
 3. Call `getTrends()` or `getExploreFeed()` with your page instance
 4. Process the returned data

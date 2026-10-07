@@ -30,7 +30,7 @@ Not all X signals relate to arbitrage, but several categories are highly predict
 ## Stream Configuration
 
 ```js
-import { TwitterStream } from 'xactions';
+import { TwitterStream } from 'medirus';
 
 const ARB_SIGNAL_KEYWORDS = [
   // Exchange operational signals
@@ -65,7 +65,7 @@ const EXCHANGE_STATUS_ACCOUNTS = [
 ];
 
 const stream = new TwitterStream({
-  sessionCookie: process.env.XACTIONS_SESSION_COOKIE,
+  sessionCookie: process.env.MEDIRUS_SESSION_COOKIE,
 });
 
 await stream.start({

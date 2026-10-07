@@ -128,7 +128,7 @@ function createEventPayload(eventType, payment) {
       metadata: payment.metadata || {},
     },
     source: {
-      service: 'XActions',
+      service: 'Medirus',
       version: '1.0.0',
       environment: process.env.NODE_ENV || 'development',
     },
@@ -204,7 +204,7 @@ async function sendWithRetry(url, payload, options = {}) {
       const extraHeaders = /** @type {Record<string, string>} */ (options.headers || {});
       const headers = /** @type {Record<string, string>} */ ({
         'Content-Type': 'application/json',
-        'User-Agent': 'XActions-Webhook/1.0',
+        'User-Agent': 'Medirus-Webhook/1.0',
         'X-Webhook-Event': event,
         'X-Webhook-ID': eventId,
         'X-Webhook-Timestamp': timestamp,
@@ -341,7 +341,7 @@ async function sendDiscordNotification(payload) {
     ],
     timestamp: payload.timestamp,
     footer: {
-      text: `XActions x402 • ${source.environment}`,
+      text: `Medirus x402 • ${source.environment}`,
     },
   };
 
@@ -378,7 +378,7 @@ async function sendDiscordNotification(payload) {
   
   const discordPayload = { 
     embeds: [embed],
-    username: 'XActions Payments',
+    username: 'Medirus Payments',
   };
   
   const result = await sendWithRetry(DISCORD_WEBHOOK, discordPayload);
@@ -618,17 +618,17 @@ export async function testWebhooks() {
     // Send a test message to Discord
     const testEmbed = {
       title: '🧪 Webhook Test',
-      description: 'This is a test notification from XActions payment webhook system.',
+      description: 'This is a test notification from Medirus payment webhook system.',
       color: 0x7289da,
       timestamp: new Date().toISOString(),
-      footer: { text: 'XActions Webhook Test' },
+      footer: { text: 'Medirus Webhook Test' },
     };
     results.destinations.discord = await sendWithRetry(DISCORD_WEBHOOK, { embeds: [testEmbed] });
   }
   
   if (SLACK_WEBHOOK) {
     const testSlack = {
-      text: '🧪 *Webhook Test*\nThis is a test notification from XActions payment webhook system.',
+      text: '🧪 *Webhook Test*\nThis is a test notification from Medirus payment webhook system.',
     };
     results.destinations.slack = await sendWithRetry(SLACK_WEBHOOK, testSlack);
   }

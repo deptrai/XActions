@@ -14,7 +14,7 @@ Status: done
 
 ## Story
 
-As a growth marketer using XActions,
+As a growth marketer using Medirus,
 I want to scrape followers of a Facebook profile/page when publicly available,
 so that I can understand audience composition without hitting a hard error when data is restricted.
 
@@ -117,7 +117,7 @@ This function intentionally returns **either** an array (exposed) **or** an obje
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 1.4]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md#FR-3, Open Question Q3, NFR1/4/5]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-08/prd.md#FR-3, Open Question Q3, NFR1/4/5]
 - [Source: src/scrapers/threads/index.js#scrapeFollowers lines 306-335 — note-fallback template]
 - [Source: src/scrapers/facebook/index.js#scrapeTweets — delay seam + bounded loop pattern to mirror; normalizeHandle to reuse]
 - [Source: src/scrapers/index.js#actionMap line 170 — followers→scrapeFollowers already mapped]

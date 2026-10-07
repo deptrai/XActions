@@ -1,8 +1,8 @@
-# UX Review — XActions Public Scrape Gateway (Developer Experience Audit)
+# UX Review — Medirus Public Scrape Gateway (Developer Experience Audit)
 
 **Reviewer:** Sally (UX Designer)
 **Date:** 2026-09-26
-**Lens:** Machine-consumer DX — the "user" is a backend service integrating XActions. Every design decision below is judged on *time-to-first-successful-call* and *error-debuggability*.
+**Lens:** Machine-consumer DX — the "user" is a backend service integrating Medirus. Every design decision below is judged on *time-to-first-successful-call* and *error-debuggability*.
 
 ---
 
@@ -14,14 +14,14 @@ The contract is architecturally sound but its *developer experience surface* has
 
 ## UX-1 (HIGH): The Discovery Problem That Caused the Fork Isn't Fully Closed
 
-**What the spec promises:** `openapi.json` + `x_actions_list` self-discovery.
+**What the spec promises:** `openapi.json` + `medirus_list` self-discovery.
 
-**The actual gap:** jev's `xactionsClient.ts` calls `POST /api/ai/discovery/search` because *that's the endpoint they found*. `POST /api/platform/:platform/scrape` exists already but is invisible — jev's code comments literally say "Reddit has no public search route in XActions (platform.ts is account management, not content search)". They looked at the route, saw `router.use(authenticate)` (user-JWT), and concluded it wasn't for them.
+**The actual gap:** jev's `medirusClient.ts` calls `POST /api/ai/discovery/search` because *that's the endpoint they found*. `POST /api/platform/:platform/scrape` exists already but is invisible — jev's code comments literally say "Reddit has no public search route in Medirus (platform.ts is account management, not content search)". They looked at the route, saw `router.use(authenticate)` (user-JWT), and concluded it wasn't for them.
 
 **UX fix needed:** Discovery isn't just "openapi.json exists" — it's that the consumer *finds the contract before guessing*. Recommendations:
 
 - Add `GET /api/platform/:platform/scrape` **OPTIONS** or `GET /api/platform/:platform/scrape/schema` returning the action manifest + `syncCapable` + `requiredArgs` — so a consumer can introspect without reading openapi.
-- `x_actions_list` output should be callable via **REST GET** too, not only MCP — jev's client doesn't speak MCP; forcing MCP for discovery defeats the point.
+- `medirus_list` output should be callable via **REST GET** too, not only MCP — jev's client doesn't speak MCP; forcing MCP for discovery defeats the point.
 - `openapi.json` should be reachable at `/api/openapi.json` (top-level, conventional path) not buried — and reference `platform/*/scrape` explicitly with `mode` enum so codegen tools pick it up.
 
 **Story 50.5 AC hint:** add "consumer can curl `GET /api/actions` and receive the manifest in <100ms without auth".
@@ -34,15 +34,15 @@ The contract is architecturally sound but its *developer experience surface* has
 
 **The actual gap:** A consumer hitting `XACT_4029` (rate-limit) needs to know *which* quota died — their own per-consumer bucket, the upstream platform's rate-limit, or the proxy pool's IP budget. Three different causes, three different retry strategies:
 - consumer-quota → back off per `Retry-After`, it's their own budget
-- upstream 429 → degrade to async and retry with jitter — XActions' pool is hot
-- proxy-IP-block → switch session, escalate to XActions ops
+- upstream 429 → degrade to async and retry with jitter — Medirus' pool is hot
+- proxy-IP-block → switch session, escalate to Medirus ops
 
 **UX fix needed:** `ErrorEnvelope` needs a `kind` discriminator beyond `code`:
 ```
 {success:false, error:{code:'XACT_4029', kind:'consumer_quota'|'upstream_rate_limit'|'proxy_ip_block'|'auth'|'validation', retryable:true|false, retry_after_ms, ...}}
 ```
 
-A consumer reading `kind:'consumer_quota'` knows to slow their own request rate. `kind:'upstream_rate_limit'` knows XActions' pool is hot and they should degrade to async. Without this, every 429 looks identical and consumers guess.
+A consumer reading `kind:'consumer_quota'` knows to slow their own request rate. `kind:'upstream_rate_limit'` knows Medirus' pool is hot and they should degrade to async. Without this, every 429 looks identical and consumers guess.
 
 **Story 50.3 AC hint:** envelope `error.kind` is a closed enum; `retry_after_ms` required when `retryable:true`.
 
@@ -71,15 +71,15 @@ jev's `holderConcentration` uses a 2s timeout and is non-fatal — they're built
 
 **What the spec promises:** contract exists, consumers can call.
 
-**The actual gap:** jev's `xactionsClient.ts` is already wired to `POST /api/ai/discovery/search` + polling. Switching them to `POST /api/platform/reddit/scrape` requires:
+**The actual gap:** jev's `medirusClient.ts` is already wired to `POST /api/ai/discovery/search` + polling. Switching them to `POST /api/platform/reddit/scrape` requires:
 1. Drop `sessionCookie` plumbing (Twitter cookie no longer needed for service calls)
-2. Add `Authorization: Bearer ${XACTIONS_SERVICE_KEY}`
+2. Add `Authorization: Bearer ${MEDIRUS_SERVICE_KEY}`
 3. Rewrite `searchReddit()` from `return []` to a real call
 4. Optionally collapse `searchTwitter` to sync-mode for fast queries
 
 None of this is documented as a **migration recipe**. The spec says "consumers normalize in their own adapter" but doesn't give jev a template.
 
-**UX fix needed:** A `docs/migration-jev.md` (or `docs/consumer-quickstart.md`) companion showing before/after `xactionsClient.ts` — specifically the diff of searchTwitter + searchReddit methods. This turns "spec says it's possible" into "jev sees the 20-line change they need".
+**UX fix needed:** A `docs/migration-jev.md` (or `docs/consumer-quickstart.md`) companion showing before/after `medirusClient.ts` — specifically the diff of searchTwitter + searchReddit methods. This turns "spec says it's possible" into "jev sees the 20-line change they need".
 
 **Story 50.9 AC hint:** include a migration guide in the deliverable — jev's diff is the acceptance.
 

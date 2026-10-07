@@ -1,10 +1,10 @@
 # Tutorial: Customer Service Bot with Claude
 
-You are my X/Twitter customer service automation expert. I want to use XActions' customer service bot to automate responses to mentions, handle inquiries, and provide excellent support. Help me configure and run the full CS automation system.
+You are my X/Twitter customer service automation expert. I want to use Medirus' customer service bot to automate responses to mentions, handle inquiries, and provide excellent support. Help me configure and run the full CS automation system.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit. The `src/automation/customerService.js` is a browser-based bot that:
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit. The `src/automation/customerService.js` is a browser-based bot that:
 - Monitors mentions, DMs, and replies in real-time
 - Auto-categorizes incoming messages (issue, thanks, pricing, question, etc.)
 - Responds with category-appropriate templates
@@ -21,7 +21,7 @@ The bot runs in the browser console on x.com. Here's how it works:
 1. **Setup flow:**
    - Navigate to x.com (logged into your business account)
    - Open DevTools → Console
-   - Paste `core.js` (the XActions foundation)
+   - Paste `core.js` (the Medirus foundation)
    - Paste `customerService.js`
    - The bot starts monitoring immediately
 
@@ -243,7 +243,7 @@ Here's the complete setup for MY business:
 6. **Watch the bot start:**
    ```
    ╔═══════════════════════════════════════════════╗
-   ║  🎧 XActions Customer Service Bot              ║
+   ║  🎧 Medirus Customer Service Bot              ║
    ║  Active Account: @your_business                ║
    ║  Monitoring: Mentions ✅ │ DMs ✅ │ Replies ✅ ║
    ║  Auto-Reply: ✅ │ Approval: ✅                 ║

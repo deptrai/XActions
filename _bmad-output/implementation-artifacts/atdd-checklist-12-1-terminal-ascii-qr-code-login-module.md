@@ -35,7 +35,7 @@
 
 ---
 
-### AC-4 & AC-7: CLI `xactions login --qr` với Flags Mở Rộng & Error Messages
+### AC-4 & AC-7: CLI `medirus login --qr` với Flags Mở Rộng & Error Messages
 * File: `tests/cli/login.test.js`
 - [x] `[P0] should parse --qr, --qr-url, --push, --cdp, --platform, and --timeout options` ➔ 🟢 **Passing**
 - [x] `[P1] should default platform to twitter and timeout to 120s when flags are omitted` ➔ 🟢 **Passing**

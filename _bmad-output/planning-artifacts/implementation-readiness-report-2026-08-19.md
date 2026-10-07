@@ -9,38 +9,38 @@ stepsCompleted:
   - step-07-re-assessment
 includedDocuments:
   prd:
-    - /Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/prd.md
+    - /Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/prd.md
   architecture:
-    - /Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
+    - /Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
   epics:
-    - /Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/epics.md
+    - /Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/epics.md
   ux:
-    - /Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md
+    - /Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md
 ---
 
 # Implementation Readiness Assessment Report
 
 **Date:** 2026-08-19
-**Project:** XActions
+**Project:** Medirus
 
 ## Step 1: Document Discovery — Inventory
 
 ### PRD Files
 - `prd.md` (13,083 bytes, 2026-08-18 22:40) ✅ selected
-- `prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md` (13,131 bytes, 2026-08-18 22:25)
-- `prds/prd-XActions-2026-08-14-epic7/prd.md` (16,220 bytes, 2026-08-15 01:26)
-- `prds/prd-XActions-2026-06-10-epic4/prd.md` (18,279 bytes, 2026-06-27 05:57)
-- `prds/prd-XActions-2026-06-08/prd.md` (20,456 bytes, 2026-06-27 05:57)
+- `prds/prd-Medirus-2026-08-18-universal-scraping-engine/prd.md` (13,131 bytes, 2026-08-18 22:25)
+- `prds/prd-Medirus-2026-08-14-epic7/prd.md` (16,220 bytes, 2026-08-15 01:26)
+- `prds/prd-Medirus-2026-06-10-epic4/prd.md` (18,279 bytes, 2026-06-27 05:57)
+- `prds/prd-Medirus-2026-06-08/prd.md` (20,456 bytes, 2026-06-27 05:57)
 
 ### Architecture Files
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (37,566 bytes, 2026-08-19 01:07) ✅ selected
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-DEV-REVIEW-2026-08-18.md`
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-EPIC10-REVIEW-2026-08-18.md`
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-EPIC10-PM-REVIEW-2026-08-18.md`
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UPDATE-GATE-2026-08-18.md`
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UPDATE-GATE-2026-08-18-R3.md`
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` ✅ selected as UX
-- `architecture/xactions-hybrid-scraping-spine/EPIC10-DECISION-LOG-2026-08-18.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (37,566 bytes, 2026-08-19 01:07) ✅ selected
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-DEV-REVIEW-2026-08-18.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-EPIC10-REVIEW-2026-08-18.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-EPIC10-PM-REVIEW-2026-08-18.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UPDATE-GATE-2026-08-18.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UPDATE-GATE-2026-08-18-R3.md`
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` ✅ selected as UX
+- `architecture/medirus-hybrid-scraping-spine/EPIC10-DECISION-LOG-2026-08-18.md`
 - `architecture.md` (46,292 bytes, 2026-08-15 01:26) — old architecture, not selected
 
 ### Epics & Stories Files
@@ -48,7 +48,7 @@ includedDocuments:
 - `epics-full.md` (47,474 bytes, 2026-08-15 01:26) — old epics, not selected
 
 ### UX Design Files
-- `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` (8,102 bytes, 2026-08-19 01:08) ✅ selected
+- `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` (8,102 bytes, 2026-08-19 01:08) ✅ selected
 - `ux/DESIGN.md` (9,741 bytes, 2026-08-08) — not selected
 - `ux/EXPERIENCE.md` (11,494 bytes, 2026-08-08) — not selected
 
@@ -106,7 +106,7 @@ FR-82 (LinkedIn B2B Lead & Job Scraper): Cào thông tin nhân sự và bài đ�
 
 FR-83 (Realtime Thin Event Redis Stream Ingest): Phát luồng sự kiện tinh gọn (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 20000`).
 
-FR-84 (Nowing Adapter Cutover & Legacy Scraper Decommissioning): Nâng cấp adapter bên Nowing kết nối sang XActions MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
+FR-84 (Nowing Adapter Cutover & Legacy Scraper Decommissioning): Nâng cấp adapter bên Nowing kết nối sang Medirus MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
 
 **Total FRs: 21**
 
@@ -128,9 +128,9 @@ NFR-16 (License & Backward Compatibility): Mã nguồn 100% tuân thủ MIT / Ap
 
 ### Additional Requirements / Constraints
 
-- **Data Retention:** XActions raw data 30-day TTL; Nowing leads permanent.
+- **Data Retention:** Medirus raw data 30-day TTL; Nowing leads permanent.
 - **3-Tier Incremental Gap-Filling:** Delta crawl, no duplication, 90% proxy cost saving.
-- **Microservice Integration:** XActions serves Nowing via MCP/Redis Stream and acts as standalone microservice/SaaS/CLI/AI MCP.
+- **Microservice Integration:** Medirus serves Nowing via MCP/Redis Stream and acts as standalone microservice/SaaS/CLI/AI MCP.
 - **Phasing:** 4 implementation phases (Foundation, Hybrid Signer/Social, Viral/E-Com, Local/B2B Recruitment).
 - **JTBD:** Nowing AI, SaaS marketers, CLI developers, AI agents (MCP).
 
@@ -192,8 +192,8 @@ NFR-16 (License & Backward Compatibility): Mã nguồn 100% tuân thủ MIT / Ap
 
 ### UX Document Status
 
-- **Found:** `architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` (8,102 bytes, 2026-08-19).
-- **Scope note:** XActions is an internal microservice, so UX is operator-facing (CLI, dashboard, MCP) and AI-agent-facing, not end-user SaaS.
+- **Found:** `architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REVIEW-2026-08-18.md` (8,102 bytes, 2026-08-19).
+- **Scope note:** Medirus is an internal microservice, so UX is operator-facing (CLI, dashboard, MCP) and AI-agent-facing, not end-user SaaS.
 
 ### UX ↔ PRD Alignment
 
@@ -214,10 +214,10 @@ NFR-16 (License & Backward Compatibility): Mã nguồn 100% tuân thủ MIT / Ap
 
 | UX Finding | Architecture Decision | Status |
 |---|---|---|
-| F1 | AD-7 now adds Rule 5: Startup & Operational UX with `xactions daemon start/status/stop` and dashboard tile; Story 14.2 covers CLI daemon commands | ✅ Aligned |
+| F1 | AD-7 now adds Rule 5: Startup & Operational UX with `medirus daemon start/status/stop` and dashboard tile; Story 14.2 covers CLI daemon commands | ✅ Aligned |
 | F2 | AD-5 Rule 1 and Story 12.1 AC explicitly detect `process.stdout.isTTY` and print URL + short code for non-TTY with `--push` fallback | ✅ Aligned |
-| F3 | AD-13 + Story 11.4 define `GET /governor/status` and `xactions status` | ✅ Aligned |
-| F4 | AD-10 + Story 10.4 + Epic 19 define `/checkpoints`, `xactions checkpoints` | ✅ Aligned |
+| F3 | AD-13 + Story 11.4 define `GET /governor/status` and `medirus status` | ✅ Aligned |
+| F4 | AD-10 + Story 10.4 + Epic 19 define `/checkpoints`, `medirus checkpoints` | ✅ Aligned |
 | F5 | AD-11 + Story 10.1 `AbstractCrawler.listActions()` | ✅ Aligned |
 | F6 | AD-9 + `PlatformError.toEnvelope()` with `suggestedAction` | ✅ Aligned |
 | F7 | AD-17 + Epic 19.3 stream metrics view | ✅ Aligned |
@@ -272,7 +272,7 @@ NFR-16 (License & Backward Compatibility): Mã nguồn 100% tuân thủ MIT / Ap
 
 3. **Story 14.4 — Forward dependency on Epics 15–18**
    - **Location:** `epics.md` lines 343–355
-   - **Violation:** AC says *"When XActions hoàn thành các crawler đa nền tảng (Social, Ecom, BĐS, Tuyển dụng)"* — this requires output from Epics 15, 16, 17, 18 before Epic 14 can finish.
+   - **Violation:** AC says *"When Medirus hoàn thành các crawler đa nền tảng (Social, Ecom, BĐS, Tuyển dụng)"* — this requires output from Epics 15, 16, 17, 18 before Epic 14 can finish.
    - **Quote:** *"xóa bỏ an toàn các thư mục scraper cũ... (`shopee/`, `chotot/`, `batdongsan/`, `topcv/`, `vietnamworks/`...)"*
    - **Recommendation:** Move Story 14.4 to the **end of Epic 18** or a separate Epic 20 "Nowing Cutover & Decommissioning". Epic 14 should not depend on future epics.
 
@@ -378,7 +378,7 @@ Hệ thống có nền tảng kiến trúc và yêu cầu rất tốt. Các forw
    - Thêm AD chi tiết cho dashboard framework nếu cần.
 
 4. **Cập nhật kiến trúc:**
-   - Đảm bảo AD-19 bao gồm cả CLI commands (`xactions daemon start/status/stop`) để giải quyết F1.
+   - Đảm bảo AD-19 bao gồm cả CLI commands (`medirus daemon start/status/stop`) để giải quyết F1.
 
 ### Final Note
 
@@ -386,7 +386,7 @@ Assessment này xác định **5 vấn đề nghiêm trọng** và **nhiều v�
 
 Báo cáo chi tiết được lưu tại:
 
-<ref_file file="/Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/implementation-readiness-report-2026-08-19.md" />
+<ref_file file="/Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/implementation-readiness-report-2026-08-19.md" />
 
 ---
 

@@ -46,11 +46,11 @@ The following decisions are non-negotiable and override any earlier language in 
 
 ## Story
 
-As a **XActions Platform Engineer**,  
+As a **Medirus Platform Engineer**,  
 I want **`scrape('threads', ...)`, MCP/CLI tools, and public package exports to switch to the new `ThreadsCrawler` / `ThreadsClient` hybrid architecture**,  
 So that **end users and internal callers no longer depend on the legacy `src/scrapers/threads/` Puppeteer-only code path, and all Threads operations benefit from the hybrid engine (Meta GraphQL-first, SSR fallback, sticky residential proxy, error envelopes, and action-level auth)**.
 
-Như một **Kỹ sư Nền tảng XActions**,  
+Như một **Kỹ sư Nền tảng Medirus**,  
 Tôi muốn **`scrape('threads', ...)`, công cụ MCP/CLI và public package exports chuyển sang kiến trúc hybrid `ThreadsCrawler` / `ThreadsClient` mới**,  
 Để **người dùng cuối và các caller không còn phụ thuộc vào code path Puppeteer-only legacy `src/scrapers/threads/`, đồng thời mọi thao tác Threads tận dụng được hybrid engine (ưu tiên Meta GraphQL, fallback SSR, proxy residential cố định, error envelope chuẩn và xác thực cấp action).**
 
@@ -63,7 +63,7 @@ Story 15.1.4 is the **cutover / integration story** for the Threads hybrid threa
   - Cập nhật `package.json` `exports` để expose `./scrapers/social/threads` và `./scrapers/social`.
   - Cập nhật `src/mcp/server.js`:
     - `x_crawl_post` và `x_crawl_comments_tree` (các tool cross-platform thực sự tồn tại) dispatch qua `scrape('threads', ...)`.
-    - `x_actions_list` đã import `ThreadsCrawler`; giữ nguyên và verify không khởi chạy Puppeteer.
+    - `medirus_list` đã import `ThreadsCrawler`; giữ nguyên và verify không khởi chạy Puppeteer.
     - Bổ sung `x_get_profile_multiplatform`, `x_get_tweets_multiplatform`, `x_search_tweets_multiplatform` trong `src/mcp/local-tools.js` để khi `args.platform === 'threads'` thì gọi `scrape('threads', 'profile'|'get_user_feed'|'search', options)` thay vì Twitter-only path. Các tên `x_crawl_profile`, `x_crawl_user_timeline`, `x_crawl_search`, `x_crawl_comments` không tồn tại trong codebase.
   - Cập nhật `docs/deprecation-plan.md` status tracker sang `deprecated-planned` cho toàn bộ Threads legacy `src/scrapers/threads/` và ghi rõ dependency vào Story 15.1.4.
   - Gắn `@deprecated` JSDoc và `// LEGACY — see docs/deprecation-plan.md` cho `src/scrapers/threads/index.js`.
@@ -78,7 +78,7 @@ Story 15.1.4 is the **cutover / integration story** for the Threads hybrid threa
 ## Sources
 
 - `_bmad-output/planning-artifacts/epics.md` — Epic 15, Story 15.1.4 [dòng 826-838]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 (Tiered Signer), AD-2 (AbstractCrawler/ActionRegistry), AD-3 (Proxy Strategy), AD-10 (No Mocks Testing), AD-14 (Error Envelope)
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 (Tiered Signer), AD-2 (AbstractCrawler/ActionRegistry), AD-3 (Proxy Strategy), AD-10 (No Mocks Testing), AD-14 (Error Envelope)
 - `_bmad-output/implementation-artifacts/15-1-threads-scraper-adapter-meta-internal-graphql.md` — Story 15.1 base hybrid engine
 - `_bmad-output/implementation-artifacts/15-1-1-threads-hybrid-profile-followers-following.md` — Story 15.1.1 profile & connection actions
 - `_bmad-output/implementation-artifacts/15-1-2-threads-hybrid-post-detail-comment-tree.md` — Story 15.1.2 post_detail & shortcode resolution
@@ -115,8 +115,8 @@ Story 15.1.4 is the **cutover / integration story** for the Threads hybrid threa
 | `following` | `following` | `{ username: options.username \|\| target, count: options.limit \|\| options.count, cursor: options.cursor }` | Trả về danh sách profiles & limitation note |
 
 ### AC-3: Package.json Exports & Module Resolution
-- **Given** `package.json` của project XActions
-- **When** consumer import từ `xactions/scrapers/social/threads` hoặc `xactions/scrapers/social`
+- **Given** `package.json` của project Medirus
+- **When** consumer import từ `medirus/scrapers/social/threads` hoặc `medirus/scrapers/social`
 - **Then** `package.json` chứa exports field:
   - `"./scrapers/social/threads": "./src/scrapers/social/threads/index.js"`
   - `"./scrapers/social": "./src/scrapers/social/index.js"`
@@ -165,7 +165,7 @@ Story 15.1.4 is the **cutover / integration story** for the Threads hybrid threa
 - `src/mcp/server.js`:
   - `x_crawl_post` (`executeCrawlPostTool`) gọi `scrape(platform, 'post_detail' | 'posts', ...)` — khi `platform === 'threads'` phải dispatch vào `ThreadsCrawler` qua `src/scrapers/index.js`.
   - `x_crawl_comments_tree` (`executeCrawlCommentsTreeTool`) gọi `scrape(platform, 'get_comments', ...)` — map sang `get_post_comments` trong `THREADS_ACTION_MAP`.
-  - `x_actions_list` đã import `ThreadsCrawler`; verify `cleanup()` không leak Puppeteer.
+  - `medirus_list` đã import `ThreadsCrawler`; verify `cleanup()` không leak Puppeteer.
 - `src/mcp/local-tools.js`:
   - Thêm `x_get_profile_multiplatform`, `x_get_tweets_multiplatform`, `x_search_tweets_multiplatform` để khi `args.platform === 'threads'` thì gọi `scrape('threads', 'profile' | 'get_user_feed' | 'search', options)`.
   - `x_get_thread` hiện là Twitter-only; không đổi tên trong 15.1.4. Nếu cần hỗ trợ Threads post detail qua tool này, mở rộng sau.
@@ -185,8 +185,8 @@ Story 15.1.4 is the **cutover / integration story** for the Threads hybrid threa
   - `'profile'`, `'feed'`, `'user_feed'`, `'timeline'`, `'tweets'`, `'post'`, `'post_detail'`, `'comments'`, `'post_comments'`, `'search'`, `'followers'`, `'following'`.
 - Verify absence of Puppeteer browser launch (assert no `puppeteer.launch` calls, no `Chromium` process spawned).
 - Verify package exports:
-  - `xactions/scrapers/social/threads` resolves to `src/scrapers/social/threads/index.js`.
-  - `xactions/scrapers/social` resolves and re-exports Threads public symbols.
+  - `medirus/scrapers/social/threads` resolves to `src/scrapers/social/threads/index.js`.
+  - `medirus/scrapers/social` resolves and re-exports Threads public symbols.
 
 ### ATDD Artifacts
 

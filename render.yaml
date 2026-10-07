@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# XActions — Render.com Blueprint
+# Medirus — Render.com Blueprint
 # Free tier: 750 hours/month web services, free PostgreSQL (90 days)
 # Deploy: Connect GitHub repo → Render auto-detects this file
 # by nichxbt
@@ -10,7 +10,7 @@ services:
   # API Server
   # ─────────────────────────────────────────────────────────────────────────────
   - type: web
-    name: xactions-api
+    name: medirus-api
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
@@ -23,16 +23,16 @@ services:
         value: "3001"
       - key: DATABASE_URL
         fromDatabase:
-          name: xactions-db
+          name: medirus-db
           property: connectionString
       - key: REDIS_HOST
         fromService:
-          name: xactions-redis
+          name: medirus-redis
           type: redis
           property: host
       - key: REDIS_PORT
         fromService:
-          name: xactions-redis
+          name: medirus-redis
           type: redis
           property: port
       - key: JWT_SECRET
@@ -50,7 +50,7 @@ services:
   # Background Worker
   # ─────────────────────────────────────────────────────────────────────────────
   - type: worker
-    name: xactions-worker
+    name: medirus-worker
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerCommand: node api/services/jobQueue.js
@@ -60,16 +60,16 @@ services:
         value: production
       - key: DATABASE_URL
         fromDatabase:
-          name: xactions-db
+          name: medirus-db
           property: connectionString
       - key: REDIS_HOST
         fromService:
-          name: xactions-redis
+          name: medirus-redis
           type: redis
           property: host
       - key: REDIS_PORT
         fromService:
-          name: xactions-redis
+          name: medirus-redis
           type: redis
           property: port
       - key: JWT_SECRET
@@ -83,7 +83,7 @@ services:
   # Static Frontend (Website — content pages only, dashboard hidden)
   # ─────────────────────────────────────────────────────────────────────────────
   - type: web
-    name: xactions-website
+    name: medirus-website
     runtime: static
     buildCommand: echo "Static site — no build needed"
     staticPublishPath: ./dashboard
@@ -119,9 +119,9 @@ services:
         destination: /mcp.html
 
 databases:
-  - name: xactions-db
+  - name: medirus-db
     plan: free
-    databaseName: xactions
+    databaseName: medirus
     postgresMajorVersion: "16"
 
 # Note: Render Redis requires paid plan ($7/mo) or use Upstash free tier

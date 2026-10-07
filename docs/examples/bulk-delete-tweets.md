@@ -69,9 +69,9 @@ This script provides the following capabilities:
  *    Use src/backupAccount.js to save your tweets before deleting.
  *
  * CONTROLS:
- *   XActionsUtils.pause()   — pause
- *   XActionsUtils.resume()  — resume
- *   XActionsUtils.abort()   — stop
+ *   MedirusUtils.pause()   — pause
+ *   MedirusUtils.resume()  — resume
+ *   MedirusUtils.abort()   — stop
  * ============================================================
  */
 (() => {
@@ -120,7 +120,7 @@ This script provides the following capabilities:
   // 🔧 Embedded Utilities
   // ══════════════════════════════════════════════════════════
 
-  const U = window.XActionsUtils || (() => {
+  const U = window.MedirusUtils || (() => {
     const sleep = ms => new Promise(r => setTimeout(r, ms + ms * 0.15 * (Math.random() - 0.5)));
     const rand = (lo, hi) => sleep(lo + Math.random() * (hi - lo));
 
@@ -170,8 +170,8 @@ This script provides the following capabilities:
         a.download = fn; document.body.appendChild(a); a.click(); a.remove();
         console.log(`📥 Downloaded: ${fn}`);
       },
-      saveState(k, d) { try { localStorage.setItem('xactions_' + k, JSON.stringify(d)); } catch {} },
-      loadState(k, d) { try { return JSON.parse(localStorage.getItem('xactions_' + k)) ?? d; } catch { return d; } },
+      saveState(k, d) { try { localStorage.setItem('medirus_' + k, JSON.stringify(d)); } catch {} },
+      loadState(k, d) { try { return JSON.parse(localStorage.getItem('medirus_' + k)) ?? d; } catch { return d; } },
     };
   })();
 
@@ -374,8 +374,8 @@ This script provides the following capabilities:
 
             // Periodic confirmation
             if (CONFIG.confirmEvery > 0 && deleted % CONFIG.confirmEvery === 0 && deleted > 0) {
-              console.log(`\n⏸️  Paused at ${deleted} deletions. Call XActionsUtils.resume() to continue.\n`);
-              if (window.XActionsUtils) window.XActionsUtils.pause();
+              console.log(`\n⏸️  Paused at ${deleted} deletions. Call MedirusUtils.resume() to continue.\n`);
+              if (window.MedirusUtils) window.MedirusUtils.pause();
               else { /* wait 10s then continue */ await U.sleep(10000); }
             }
 
@@ -426,7 +426,7 @@ This script provides the following capabilities:
     if (CONFIG.exportOnComplete && deletedLog.length > 0) {
       U.download(
         { deleted: deletedLog, stats: { count: deleted, skipped: skippedCount, errors, elapsed: elapsed + 's' } },
-        `xactions-deleted-tweets-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-deleted-tweets-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
 
@@ -501,14 +501,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -542,4 +542,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

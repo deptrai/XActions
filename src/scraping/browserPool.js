@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Browser Page Pool (Epic 53 / AD-24)
+ * Medirus Browser Page Pool (Epic 53 / AD-24)
  *
  * One shared browser process serves N concurrent scrape jobs via per-job
  * pages/contexts — replaces launch-per-job (~300–500MB/job → ~9MB).
@@ -10,7 +10,7 @@
  * - Backend-aware context ceiling (AD-24 Rule 3): chrome ~5 contexts/browser
  *   (spike knee @ N=8 on context-create serialization), obscura ~3
  *   (nav/render is the bottleneck — sharding across processes is 53.4).
- * - Opt-in only: `XACTIONS_BROWSER_POOL_SIZE` (0/undefined = caller stays on
+ * - Opt-in only: `MEDIRUS_BROWSER_POOL_SIZE` (0/undefined = caller stays on
  *   launch-per-job; this module is never imported into default paths).
  * - Teardown honors AD-23 via `closeStealthBrowser` (obscura→disconnect,
  *   chrome→close). `release()` closes the job's page+context only — the
@@ -25,7 +25,7 @@ import { launchStealthBrowser, createStealthPage, closeStealthBrowser } from './
 
 /**
  * @typedef {object} BrowserPoolOptions
- * @property {number} [size] - max concurrent slots (default env `XACTIONS_BROWSER_POOL_SIZE`, then 4).
+ * @property {number} [size] - max concurrent slots (default env `MEDIRUS_BROWSER_POOL_SIZE`, then 4).
  * @property {number} [contextsPerBrowser] - isolated-context ceiling per browser before spawning another (default 5 chrome / clamp [4,6]).
  * @property {number} [pagesPerProcess] - CDP page connections per obscura serve process (default 3, min 1).
  * @property {number} [acquireTimeoutMs] - max wait for a slot; 0 = forever.
@@ -101,9 +101,9 @@ export class PoolAcquireTimeoutError extends Error {
 export class BrowserPool {
   /** @param {BrowserPoolOptions} [options] */
   constructor(options = {}) {
-    const _sz = Number(options.size ?? process.env.XACTIONS_BROWSER_POOL_SIZE ?? 4);
+    const _sz = Number(options.size ?? process.env.MEDIRUS_BROWSER_POOL_SIZE ?? 4);
     this._size = Number.isFinite(_sz) && _sz >= 0 ? _sz : 4;
-    this._backend = options.backend || process.env.XACTIONS_BROWSER_BACKEND || 'chrome';
+    this._backend = options.backend || process.env.MEDIRUS_BROWSER_BACKEND || 'chrome';
     this._acquireTimeoutMs = Number(options.acquireTimeoutMs ?? 0) || 0;
     this._isolated = options.isolated !== false;
     /** @type {number} */
@@ -116,7 +116,7 @@ export class BrowserPool {
     this._endpoints = [];
 
     if (this._backend === 'obscura') {
-      const pppRaw = options.pagesPerProcess ?? process.env.XACTIONS_BROWSER_PAGES_PER_PROCESS ?? 3;
+      const pppRaw = options.pagesPerProcess ?? process.env.MEDIRUS_BROWSER_PAGES_PER_PROCESS ?? 3;
       const pppNum = Number(pppRaw);
       this._pagesPerProcess = (Number.isFinite(pppNum) && pppNum >= 1) ? Math.floor(pppNum) : 3;
 
@@ -204,7 +204,7 @@ export class BrowserPool {
       if (options.contextsPerBrowser !== undefined) {
         cpb = Number(options.contextsPerBrowser);
       } else {
-        const envCpb = Number(process.env.XACTIONS_BROWSER_CONTEXTS_PER_BROWSER ?? 5);
+        const envCpb = Number(process.env.MEDIRUS_BROWSER_CONTEXTS_PER_BROWSER ?? 5);
         cpb = (Number.isFinite(envCpb) && envCpb >= 1) ? Math.min(6, Math.max(4, Math.floor(envCpb))) : 5;
       }
       this._contextsPerBrowser = cpb;

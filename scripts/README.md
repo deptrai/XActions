@@ -107,10 +107,10 @@ Check out `templates/script-template.js` for a starting point. Follow the patter
 
 ## 📚 Related Resources
 
-- [XActions Documentation](../docs/)
+- [Medirus Documentation](../docs/)
 - [Browser Console Scripts (src/)](../src/)
 - [AGENTS.md](../AGENTS.md) - Selector references and patterns
 
 ---
 
-*Part of the [XActions](https://github.com/nirholas/XActions) toolkit by [@nichxbt](https://x.com/nichxbt)*
+*Part of the [Medirus](https://github.com/nirholas/XActions) toolkit by [@nichxbt](https://x.com/nichxbt)*

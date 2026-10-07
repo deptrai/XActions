@@ -72,7 +72,7 @@ import {
   exportSegment,
   addAutoTagRule,
   BUILT_IN_RULES
-} from 'xactions/src/analytics/followerCRM.js';
+} from 'medirus/src/analytics/followerCRM.js';
 
 // Sync followers to CRM
 await syncFollowers('nichxbt');
@@ -140,7 +140,7 @@ api/routes/crm.js  → REST API endpoints
 
 ### Database Schema
 
-Stored in `~/.xactions/analytics.db`.
+Stored in `~/.medirus/analytics.db`.
 
 | Table | Purpose |
 |---|---|

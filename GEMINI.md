@@ -1,4 +1,4 @@
-# XActions — Agent Instructions
+# Medirus — Agent Instructions
 
 > X/Twitter automation toolkit: browser scripts, CLI, Node.js library, MCP server, web dashboard. No API fees. By nichxbt.
 
@@ -10,16 +10,16 @@
 | Unfollow non-followers | `src/unfollowback.js` |
 | Download Twitter video | `scripts/videoDownloader.js` |
 | Detect unfollowers | `src/detectUnfollowers.js` |
-| Train algorithm for a niche | `src/automation/algorithmBuilder.js` (browser) or `xactions persona create` (CLI) |
+| Train algorithm for a niche | `src/automation/algorithmBuilder.js` (browser) or `medirus persona create` (CLI) |
 | Become a thought leader / grow account | `skills/algorithm-cultivation/SKILL.md` |
-| 24/7 LLM-powered growth agent | `src/algorithmBuilder.js` + `src/personaEngine.js` — run via `xactions persona run <id>` |
-| Create a persona for automation | `xactions persona create` or MCP tool `x_persona_create` |
-| Twitter automation without API | XActions uses browser automation |
+| 24/7 LLM-powered growth agent | `src/algorithmBuilder.js` + `src/personaEngine.js` — run via `medirus persona run <id>` |
+| Create a persona for automation | `medirus persona create` or MCP tool `x_persona_create` |
+| Twitter automation without API | Medirus uses browser automation |
 | MCP server for Twitter | `src/mcp/server.js` |
 
 ## Architecture Overview
 
-XActions has **three runtime contexts** — know which one you're working in:
+Medirus has **three runtime contexts** — know which one you're working in:
 
 | Context | Where it runs | Entry point | Key constraint |
 |---|---|---|---|
@@ -92,8 +92,8 @@ docs/agents/        → selectors.md, browser-script-patterns.md, contributing-f
 - **Lead generation** — find and qualify B2B leads from X conversations
 - **Viral thread generation** — research trends and generate high-engagement threads
 - **A2A multi-agent** — Agent-to-Agent protocol integration
-- **XActions CLI** — `bin/unfollowx` command-line tool
-- **XActions MCP server** — `src/mcp/server.js` for AI agents
+- **Medirus CLI** — `bin/unfollowx` command-line tool
+- **Medirus MCP server** — `src/mcp/server.js` for AI agents
 
 ## Key Technical Context
 
@@ -101,7 +101,7 @@ docs/agents/        → selectors.md, browser-script-patterns.md, contributing-f
 - DOM selectors change frequently — see [selectors.md](docs/agents/selectors.md)
 - Scripts in `src/automation/` require pasting `src/automation/core.js` first
 - State persistence uses `sessionStorage` (lost on tab close)
-- CLI entry point: `bin/unfollowx`, installed via `npm install -g xactions`
+- CLI entry point: `bin/unfollowx`, installed via `npm install -g medirus`
 - MCP server: `src/mcp/server.js` — used by Claude Desktop and AI agents
 - Prefer `data-testid` selectors — most stable across X/Twitter UI updates
 - X enforces aggressive rate limits; all automation must include 1-3s delays between actions
@@ -119,7 +119,7 @@ npx prisma migrate dev   # Run database migrations
 
 ## Environment Variables
 
-Copy `.env.example` for the full list. Key variables: `DATABASE_URL`, `JWT_SECRET`, `REDIS_HOST`, `REDIS_PORT`, `XACTIONS_SESSION_COOKIE`, `PUPPETEER_HEADLESS`.
+Copy `.env.example` for the full list. Key variables: `DATABASE_URL`, `JWT_SECRET`, `REDIS_HOST`, `REDIS_PORT`, `MEDIRUS_SESSION_COOKIE`, `PUPPETEER_HEADLESS`.
 
 ## Testing Conventions
 

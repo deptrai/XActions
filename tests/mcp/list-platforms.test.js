@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
-// XActions — x_list_platforms runtime contract tests
+// Medirus — x_list_platforms runtime contract tests
 // by nichxbt
 
 import { describe, it, expect } from 'vitest';

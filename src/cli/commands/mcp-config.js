@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions mcp-config` — generate MCP server config for popular clients.
+ * `medirus mcp-config` — generate MCP server config for popular clients.
  *
  * @author nich (@nichxbt)
  * @license MIT
@@ -55,17 +55,17 @@ export function registerMcpConfigCommand(program) {
 
       const mcpEntry = {
         command: 'npx',
-        args: ['-y', 'xactions-mcp'],
+        args: ['-y', 'medirus-mcp'],
         env: {
-          XACTIONS_SESSION_COOKIE: 'your_auth_token_here',
+          MEDIRUS_SESSION_COOKIE: 'your_auth_token_here',
         },
       };
 
       const fullConfig = client === 'vscode'
-        ? { mcp: { servers: { xactions: mcpEntry } } }
-        : { mcpServers: { xactions: mcpEntry } };
+        ? { mcp: { servers: { medirus: mcpEntry } } }
+        : { mcpServers: { medirus: mcpEntry } };
 
-      console.log(chalk.bold.cyan('\n⚡ XActions MCP Configuration\n'));
+      console.log(chalk.bold.cyan('\n⚡ Medirus MCP Configuration\n'));
       console.log(chalk.gray(`Client: ${client}`));
       console.log(chalk.gray(`OS:     ${platform}`));
       if (configPath) {
@@ -90,10 +90,10 @@ export function registerMcpConfigCommand(program) {
           if (client === 'vscode') {
             existing.mcp = existing.mcp || {};
             existing.mcp.servers = existing.mcp.servers || {};
-            existing.mcp.servers.xactions = mcpEntry;
+            existing.mcp.servers.medirus = mcpEntry;
           } else {
             existing[key] = existing[key] || {};
-            existing[key].xactions = mcpEntry;
+            existing[key].medirus = mcpEntry;
           }
 
           await fs.mkdir(path.dirname(configPath), { recursive: true });
@@ -111,7 +111,7 @@ export function registerMcpConfigCommand(program) {
         console.log(chalk.yellow('Config path not found for this client/OS. Copy the JSON above manually.'));
       } else {
         console.log(chalk.gray('Tip: Use --write to write directly to the config file.'));
-        console.log(chalk.gray(`     xactions mcp-config --write --client ${client}`));
+        console.log(chalk.gray(`     medirus mcp-config --write --client ${client}`));
       }
 
       console.log(chalk.gray('\n📖 Full setup guide: https://github.com/nirholas/XActions/blob/main/docs/mcp-setup.md'));

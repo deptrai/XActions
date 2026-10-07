@@ -33,8 +33,8 @@
     // ── Triggers (at least one must match) ──────────────────
     triggers: [
       {
-        keywords: ['xactions', 'twitter automation'],
-        reply: 'Check out XActions — the complete X automation toolkit! 🚀 https://github.com/nirholas/XActions',
+        keywords: ['medirus', 'twitter automation'],
+        reply: 'Check out Medirus — the complete X automation toolkit! 🚀 https://github.com/nirholas/XActions',
       },
       // Add more trigger/reply pairs here:
       // { keywords: ['keyword'], reply: 'Your reply text' },
@@ -88,7 +88,7 @@
                 `Delay: ${CONFIG.minDelay/1000}-${CONFIG.maxDelay/1000}s\n`);
 
     const repliedSet = new Set(
-      JSON.parse(localStorage.getItem('xactions_autoreplied') || '[]')
+      JSON.parse(localStorage.getItem('medirus_autoreplied') || '[]')
     );
     const ignoreSet = new Set(CONFIG.ignoreUsers.map(u => u.toLowerCase().replace('@', '')));
     const fromSet = new Set(CONFIG.fromUsers.map(u => u.toLowerCase().replace('@', '')));
@@ -204,7 +204,7 @@
             console.log(`💬 #${replied} Replied to @${author}: "${replyText.slice(0, 40)}..."`);
 
             // Save to localStorage
-            localStorage.setItem('xactions_autoreplied', JSON.stringify([...repliedSet]));
+            localStorage.setItem('medirus_autoreplied', JSON.stringify([...repliedSet]));
 
             // Long delay between replies (critical)
             await rand(CONFIG.minDelay, CONFIG.maxDelay);

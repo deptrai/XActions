@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions CSV Bulk Operations Import
+ * Medirus CSV Bulk Operations Import
  * Accept CSV/JSON/TXT of usernames and perform batch follow/unfollow/block operations.
  *
  * Kills: Phantombuster (spreadsheet input), Circleboom
@@ -14,7 +14,7 @@ import fsp from 'fs/promises';
 import path from 'path';
 import os from 'os';
 
-const PROGRESS_DIR = path.join(os.homedir(), '.xactions');
+const PROGRESS_DIR = path.join(os.homedir(), '.medirus');
 const BLACKLIST_FILE = path.join(PROGRESS_DIR, 'blacklist.txt');
 
 // Daily action caps (configurable)

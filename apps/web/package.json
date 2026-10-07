@@ -1,5 +1,5 @@
 {
-  "name": "@xactions/web",
+  "name": "@medirus/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@xactions/api-client": "file:../../packages/api-client",
+    "@medirus/api-client": "file:../../packages/api-client",
     "clsx": "^2.1.1",
     "lucide-react": "^0.475.0",
     "next": "^15.1.7",

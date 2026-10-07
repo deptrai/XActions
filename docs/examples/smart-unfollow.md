@@ -22,12 +22,12 @@ This approach is smarter than a simple "unfollow non-followers" script because i
 
 ## ⚙️ Example 1: Configuration Approach
 
-The simplest way to use Smart Unfollow is through the xactions configuration:
+The simplest way to use Smart Unfollow is through the medirus configuration:
 
 ```javascript
-const { xactions } = require('xactions');
+const { medirus } = require('medirus');
 
-const client = new xactions({
+const client = new medirus({
   username: process.env.X_USERNAME,
   password: process.env.X_PASSWORD,
 });
@@ -864,9 +864,9 @@ A grace period (typically 3-7 days) gives people fair time to:
 
 Don't want to run code? Use the web dashboard:
 
-### [xactions.app](https://xactions.app)
+### [medirus.online](https://medirus.online)
 
-The xactions.app dashboard provides:
+The medirus.online dashboard provides:
 
 - **Visual Smart Unfollow** - Same functionality with a beautiful UI
 - **Follow Tracking** - Automatic logging of when you follow users
@@ -876,9 +876,9 @@ The xactions.app dashboard provides:
 - **Analytics** - Track your follow/unfollow ratio over time
 - **No Code Required** - Just connect and configure
 
-### Getting Started with xactions.app
+### Getting Started with medirus.online
 
-1. Visit [xactions.app](https://xactions.app)
+1. Visit [medirus.online](https://medirus.online)
 2. Connect your X account
 3. Navigate to **Tools → Smart Unfollow**
 4. Configure your grace period and exclusions

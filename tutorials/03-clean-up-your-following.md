@@ -2,7 +2,7 @@
 
 **Time:** 20 minutes · **Login required:** yes · **You need:** Tutorial 01 finished
 
-The job XActions is best known for: find the accounts you follow that do not
+The job Medirus is best known for: find the accounts you follow that do not
 follow you back, and unfollow the ones you actually want gone.
 
 The important word is *review*. The failure mode here is not a bug, it is
@@ -15,7 +15,7 @@ is built around not doing that.
 ## Step 0 — Log in
 
 ```bash
-npx xactions login
+npx medirus login
 ```
 
 Follower and following lists are session-tier: X will not serve them to a
@@ -28,7 +28,7 @@ done this.
 ## Step 1 — Look before you touch
 
 ```bash
-npx xactions non-followers YOUR_USERNAME
+npx medirus non-followers YOUR_USERNAME
 ```
 
 ```
@@ -50,7 +50,7 @@ This reads both lists and diffs them. It changes nothing.
 Save the full list before going further:
 
 ```bash
-npx xactions non-followers YOUR_USERNAME --output non-followers.json
+npx medirus non-followers YOUR_USERNAME --output non-followers.json
 ```
 
 ---
@@ -157,13 +157,13 @@ so an interrupted run resumes rather than restarting:
 
 ```bash
 # Preview first. Nothing is unfollowed.
-npx xactions bulk unfollow cut-list.json --dry-run
+npx medirus bulk unfollow cut-list.json --dry-run
 
 # Then for real, 3s apart
-npx xactions bulk unfollow cut-list.json --delay 3000
+npx medirus bulk unfollow cut-list.json --delay 3000
 
 # Interrupted? Pick up where it stopped.
-npx xactions bulk unfollow cut-list.json --delay 3000 --resume
+npx medirus bulk unfollow cut-list.json --delay 3000 --resume
 ```
 
 It accepts JSON, CSV, or a plain text file of handles, so you can hand-edit the
@@ -211,7 +211,7 @@ who was following you yesterday, so the useful time to start is before you need
 it:
 
 ```js
-import { Scraper } from 'xactions/client';
+import { Scraper } from 'medirus/client';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const scraper = new Scraper();

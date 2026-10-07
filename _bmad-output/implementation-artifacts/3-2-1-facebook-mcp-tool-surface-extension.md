@@ -14,7 +14,7 @@ Status: done
 
 ## Story
 
-As an AI agent using the XActions MCP server,
+As an AI agent using the Medirus MCP server,
 I want additional Facebook MCP tools for group-member scraping, marketplace search, and account listing,
 so that I can reach all Facebook capabilities already implemented in the codebase without platform-specific workarounds.
 

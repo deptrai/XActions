@@ -68,7 +68,7 @@ Story 16.1 triển khai Shopee E-Commerce crawler đầu tiên trong Epic 16 tr�
 
 - `_bmad-output/planning-artifacts/epics.md` — Story 16.1 [dòng 857-868]
 - `_bmad-output/planning-artifacts/prd.md` — FR-76, NFR-11/12/13/15/18 [dòng 91, 114-120]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2, AD-3, AD-11, AD-14, AD-18
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2, AD-3, AD-11, AD-14, AD-18
 - `src/core/base-crawler.js` — `AbstractCrawler`
 - `src/core/base-client.js` — `AbstractApiClient` (`got-scraping` transport)
 - `src/core/platform-validator.js` — `AbstractPlatformResponseValidator`

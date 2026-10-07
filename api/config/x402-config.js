@@ -4,7 +4,7 @@
  * 
  * Optional pay-per-request pricing for self-hosted remote AI API.
  * All local features (browser scripts, CLI, MCP server) are 100% free.
- * x402 is only relevant if you self-host the XActions API and want to
+ * x402 is only relevant if you self-host the Medirus API and want to
  * monetize remote AI agent access. Most users can ignore this file.
  * 
  * @see https://x402.org for protocol documentation

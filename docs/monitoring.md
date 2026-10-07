@@ -120,7 +120,7 @@ const CONFIG = {
 ### Stop Monitoring
 Run this in the console:
 ```js
-stopXActionsMonitor()
+stopMedirusMonitor()
 ```
 
 ---
@@ -135,17 +135,17 @@ All monitoring data is stored in your browser's `localStorage`:
 
 ### View Stored Data
 ```js
-// See all XActions data
+// See all Medirus data
 Object.keys(localStorage)
-  .filter(k => k.startsWith('xactions'))
+  .filter(k => k.startsWith('medirus'))
   .forEach(k => console.log(k, JSON.parse(localStorage[k])));
 ```
 
 ### Clear All Data
 ```js
-// Remove all XActions snapshots
+// Remove all Medirus snapshots
 Object.keys(localStorage)
-  .filter(k => k.startsWith('xactions'))
+  .filter(k => k.startsWith('medirus'))
   .forEach(k => localStorage.removeItem(k));
 ```
 

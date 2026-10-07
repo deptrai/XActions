@@ -36,7 +36,7 @@
   };
 
   const run = async () => {
-    console.log('🔍 AUDIT FOLLOWERS - XActions by nichxbt');
+    console.log('🔍 AUDIT FOLLOWERS - Medirus by nichxbt');
 
     if (!window.location.href.includes('/followers')) {
       console.error('❌ Navigate to x.com/YOUR_USERNAME/followers first!');
@@ -166,7 +166,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `xactions-follower-audit-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-follower-audit-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       console.log('\n📥 Full audit report downloaded as JSON');
     }

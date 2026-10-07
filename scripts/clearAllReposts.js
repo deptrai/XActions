@@ -31,7 +31,7 @@
   };
 
   const run = async () => {
-    console.log('🔄 CLEAR ALL REPOSTS — XActions by nichxbt');
+    console.log('🔄 CLEAR ALL REPOSTS — Medirus by nichxbt');
     console.log(CONFIG.dryRun ? '🔍 DRY RUN — preview only' : '⚠️ LIVE MODE — reposts WILL be removed!');
     console.log(`⚙️ Max: ${CONFIG.maxRemovals} | Skip keywords: ${CONFIG.skipKeywords.length}`);
 
@@ -102,7 +102,7 @@
     if (removedLog.length > 0) {
       download(
         { stats: { removed, skipped, dryRun: CONFIG.dryRun }, reposts: removedLog },
-        `xactions-reposts-cleared-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-reposts-cleared-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
 

@@ -3,7 +3,7 @@
 **Time:** 10 minutes · **Login required:** optional · **You need:** Node.js 18+ and an MCP client
 
 MCP (Model Context Protocol) is how AI assistants call external tools. This
-tutorial connects XActions' 144 tools to Claude Desktop, Cursor, or Windsurf, so
+tutorial connects Medirus' 144 tools to Claude Desktop, Cursor, or Windsurf, so
 you can ask for a competitor analysis in English and have the assistant actually
 go and get the data.
 
@@ -17,14 +17,14 @@ Before touching any client config, confirm the server itself runs. This one step
 saves most of the debugging people do later:
 
 ```bash
-npx -y xactions-mcp
+npx -y medirus-mcp
 ```
 
 You should see, on stderr:
 
 ```
-💻 XActions MCP Server: Local mode (free)
-⚡ XActions MCP Server v3.4.4 — 145 tools
+💻 Medirus MCP Server: Local mode (free)
+⚡ Medirus MCP Server v3.4.4 — 145 tools
 📋 Tools available: 144
 ✅ Server running on stdio
 ```
@@ -36,12 +36,12 @@ To go further and actually complete a handshake and a tool call:
 
 ```bash
 git clone https://github.com/nirholas/XActions.git
-cd XActions && npm install
+cd Medirus && npm install
 node examples/08-mcp-tool-call.js
 ```
 
 ```
-Connected to xactions-mcp v3.4.4
+Connected to medirus-mcp v3.4.4
 Server offers 144 tools.
 
 Calling x_get_profile — Get profile information for a user...
@@ -71,9 +71,9 @@ Edit the config file:
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions-mcp"]
+      "args": ["-y", "medirus-mcp"]
     }
   }
 }
@@ -89,9 +89,9 @@ servers are spawned at application startup.
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions-mcp"]
+      "args": ["-y", "medirus-mcp"]
     }
   }
 }
@@ -104,7 +104,7 @@ servers are spawned at application startup.
 ### Claude Code
 
 ```bash
-claude mcp add xactions -- npx -y xactions-mcp
+claude mcp add medirus -- npx -y medirus-mcp
 ```
 
 ---
@@ -118,12 +118,12 @@ everything, put your cookies in the `env` block:
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions-mcp"],
+      "args": ["-y", "medirus-mcp"],
       "env": {
-        "XACTIONS_SESSION_COOKIE": "your_auth_token_value",
-        "XACTIONS_CSRF_TOKEN": "your_ct0_value"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token_value",
+        "MEDIRUS_CSRF_TOKEN": "your_ct0_value"
       }
     }
   }
@@ -159,7 +159,7 @@ Ask in plain language. The assistant picks the tools.
 
 **Monitoring (needs a session):**
 
-> Search X for mentions of "XActions" in the last day and summarise the
+> Search X for mentions of "Medirus" in the last day and summarise the
 > sentiment.
 
 The assistant chains tools on its own: `x_get_profile` to resolve the account,
@@ -187,7 +187,7 @@ To list them yourself:
 node examples/08-mcp-tool-call.js x_get_profile nasa
 ```
 
-or ask the assistant: *"What XActions tools do you have?"*
+or ask the assistant: *"What Medirus tools do you have?"*
 
 ---
 
@@ -222,9 +222,9 @@ them. Use absolute paths:
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "/usr/local/bin/node",
-      "args": ["/absolute/path/to/XActions/src/mcp/server.js"]
+      "args": ["/absolute/path/to/Medirus/src/mcp/server.js"]
     }
   }
 }
@@ -232,7 +232,7 @@ them. Use absolute paths:
 
 Find yours with `which node`.
 
-**Does the server run standalone?** Back to Step 1. If `npx -y xactions-mcp`
+**Does the server run standalone?** Back to Step 1. If `npx -y medirus-mcp`
 fails there, the problem is not the client.
 
 Fuller list: [docs/troubleshooting.md](../docs/troubleshooting.md#mcp-server-not-connecting).

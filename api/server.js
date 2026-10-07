@@ -174,7 +174,7 @@ app.options('/.well-known/x402', cors(openCors));
 
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? /** @type {string[]} */ (['https://xactions.app', process.env.FRONTEND_URL].filter((o) => typeof o === 'string'))
+    ? /** @type {string[]} */ (['https://medirus.online', process.env.FRONTEND_URL].filter((o) => typeof o === 'string'))
     : (process.env.DEV_ORIGINS || 'http://localhost:3000,http://localhost:3001,http://localhost:5173').split(','),
   credentials: true
 }));
@@ -285,7 +285,7 @@ app.get('/health', (_req, res) => {
 });
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'xactions-api', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', service: 'medirus-api', timestamp: new Date().toISOString() });
 });
 
 // SEO files - robots.txt, sitemap.xml, manifest.json
@@ -344,7 +344,7 @@ app.use(express.static(path.join(__dirname, '../public'), {
 
 // Legacy static dashboard files have been retired. All web traffic is routed via Next.js App Router (Story 48.10).
 
-// Branding middleware - injects "Powered by XActions" if no license
+// Branding middleware - injects "Powered by Medirus" if no license
 app.use(brandingMiddleware());
 
 // Routes
@@ -446,7 +446,7 @@ setupMcpRoutes(app);
 
 
 // Story 48.10 / Deployment — Forward all non-API web traffic to Next.js App Router (port 3000)
-// This enables xactions.medirus.online to serve the Next.js frontend through port 3001
+// This enables medirus.medirus.online to serve the Next.js frontend through port 3001
 // localhost (not 127.0.0.1) — Next dev binds IPv6 ::1 only; Node fetch resolves AAAA first
 const WEB_APP_URL = process.env.WEB_APP_URL || 'http://localhost:3000';
 app.use(async (req, res, next) => {
@@ -524,7 +524,7 @@ app.use(errorMiddleware);
 // Use httpServer instead of app.listen for Socket.io support
 if (process.env.NODE_ENV !== 'test') {
   httpServer.listen(PORT, async () => {
-    console.log(`🚀 XActions API Server running on port ${PORT}`);
+    console.log(`🚀 Medirus API Server running on port ${PORT}`);
     console.log(`🔌 WebSocket server ready for real-time connections`);
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
 

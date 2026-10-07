@@ -107,7 +107,7 @@
   };
 
   const run = async () => {
-    console.log('🔖 XActions Bookmark Manager');
+    console.log('🔖 Medirus Bookmark Manager');
     console.log('============================');
 
     if (CONFIG.action === 'clear_all') {

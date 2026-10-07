@@ -1,11 +1,11 @@
-# Epic 5 Retrospective: Facebook Messenger Port (SST_TOOL_FB → XActions)
+# Epic 5 Retrospective: Facebook Messenger Port (SST_TOOL_FB → Medirus)
 
 Status: done
 Date: 2026-06-12
 
 ## Summary
 
-Epic 5 ported the Facebook Messenger-share flow from the legacy C# `SST_TOOL_FB` tool into XActions as browser-free helpers, guarded browser automation, auth/proxy support, and operator-facing CLI/MCP/REST surfaces.
+Epic 5 ported the Facebook Messenger-share flow from the legacy C# `SST_TOOL_FB` tool into Medirus as browser-free helpers, guarded browser automation, auth/proxy support, and operator-facing CLI/MCP/REST surfaces.
 
 The Epic is complete across four stories:
 
@@ -57,7 +57,7 @@ Final verification after Story 5.4: **151/151 Facebook tests passed** across 7 s
 
 ## What Was Difficult
 
-1. **Legacy C# shape vs. XActions runtime shape**
+1. **Legacy C# shape vs. Medirus runtime shape**
    - The story text initially referenced an older/incorrect `facebookAutomation.js` campaign shape.
    - Story 5.4 needed an explicit reconciliation note to avoid inventing a second campaign loop.
 

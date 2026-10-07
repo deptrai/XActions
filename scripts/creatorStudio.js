@@ -189,7 +189,7 @@
         posts,
         analyzedAt: new Date().toISOString(),
       };
-      download(report, `xactions-creator-studio-${new Date().toISOString().slice(0, 10)}.json`);
+      download(report, `medirus-creator-studio-${new Date().toISOString().slice(0, 10)}.json`);
     }
 
     console.log('\n✅ Creator Studio analysis complete.');

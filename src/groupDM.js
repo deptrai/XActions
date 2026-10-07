@@ -21,8 +21,8 @@
  * 4. Paste and run
  *
  * 🎮 CONTROLS:
- *   window.XActions.abort()   — stop the script
- *   window.XActions.status()  — check progress
+ *   window.Medirus.abort()   — stop the script
+ *   window.Medirus.status()  — check progress
  * ============================================================
  */
 // by nichxbt
@@ -64,7 +64,7 @@
     startTime: Date.now(),
   };
 
-  window.XActions = {
+  window.Medirus = {
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
     status() {
       const el = ((Date.now() - stats.startTime) / 1000).toFixed(0);
@@ -122,7 +122,7 @@
     console.log(`💬 Message: "${CONFIG.message}"`);
 
     // Save state to sessionStorage
-    const sessionKey = 'xactions_groupDM';
+    const sessionKey = 'medirus_groupDM';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     // Step 1: Click New DM button

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — LLM Brain Module
+// Medirus — LLM Brain Module
 // Tiered LLM client for intelligent decision-making
 // by nichxbt
 
@@ -74,8 +74,8 @@ class LLMBrain {
         const headers = { 'Content-Type': 'application/json' };
         if (this.apiKey) headers['Authorization'] = `Bearer ${this.apiKey}`;
         if (this.provider === 'openrouter') {
-          headers['HTTP-Referer'] = 'https://xactions.app';
-          headers['X-Title'] = 'XActions Agent';
+          headers['HTTP-Referer'] = 'https://medirus.online';
+          headers['X-Title'] = 'Medirus Agent';
         }
 
         const res = await fetch(this.baseUrl, { method: 'POST', headers, body: JSON.stringify(body) });

@@ -63,7 +63,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  📊 XActions — Block By Ratio                                ║
+║  📊 Medirus — Block By Ratio                                ║
 ║  Block accounts with suspicious following/follower ratios    ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked             ║' : '║  🔴 LIVE MODE - Accounts WILL be blocked                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -222,7 +222,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
   }
 
   // Save log
-  const storageKey = 'xactions_ratio_blocks';
+  const storageKey = 'medirus_ratio_blocks';
   const log = flagged.map(u => ({
     username: u.username,
     ratio: u.ratio,

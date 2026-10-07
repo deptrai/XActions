@@ -45,7 +45,7 @@ The agent system is a fully autonomous growth engine that:
 ### 1. Run the Setup Wizard
 
 ```bash
-npx xactions agent setup
+npx medirus agent setup
 # or
 npm run agent:setup
 ```
@@ -60,7 +60,7 @@ The wizard walks you through:
 ### 2. Log In to X.com
 
 ```bash
-npx xactions agent login
+npx medirus agent login
 # or
 npm run agent:login
 ```
@@ -70,7 +70,7 @@ This opens a headed browser — log in manually, then press Enter. Your session 
 ### 3. Test for 5 Minutes
 
 ```bash
-npx xactions agent test
+npx medirus agent test
 # or
 npm run agent:test
 ```
@@ -80,7 +80,7 @@ Runs the agent for 5 minutes so you can verify behavior before going 24/7.
 ### 4. Start the Agent
 
 ```bash
-npx xactions agent start
+npx medirus agent start
 # or
 npm run agent
 ```
@@ -91,13 +91,13 @@ The agent runs continuously, sleeping during configured hours and varying activi
 
 ```bash
 # Today's metrics
-npx xactions agent status
+npx medirus agent status
 
 # Last 7 days growth report
-npx xactions agent report
+npx medirus agent report
 
 # Last 30 days
-npx xactions agent report --days 30
+npx medirus agent report --days 30
 ```
 
 ## Configuration
@@ -365,15 +365,15 @@ Multi-agent coordination with ethical guardrails (optional).
 
 ```bash
 # Full command reference
-xactions agent --help
+medirus agent --help
 
 # Individual commands
-xactions agent start [--config <path>]    # Start 24/7 agent
-xactions agent test [--config <path>]     # 5-minute test run
-xactions agent login                       # Browser login for auth
-xactions agent setup                       # Interactive configuration wizard
-xactions agent status [--config <path>]   # Today's metrics
-xactions agent report [--days <n>]        # Growth report
+medirus agent start [--config <path>]    # Start 24/7 agent
+medirus agent test [--config <path>]     # 5-minute test run
+medirus agent login                       # Browser login for auth
+medirus agent setup                       # Interactive configuration wizard
+medirus agent status [--config <path>]   # Today's metrics
+medirus agent report [--days <n>]        # Growth report
 ```
 
 ## Environment Variables

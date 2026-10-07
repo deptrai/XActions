@@ -17,7 +17,7 @@
 ## Deferred to Epic 20.2 / 13.10 Follow-up
 
 - `POST /api/facebook/automate` still routes to legacy `facebookAutomation.js`.
-- CLI `xactions automate` still runs legacy Puppeteer automation.
+- CLI `medirus automate` still runs legacy Puppeteer automation.
 - MCP `executeFacebookAutomateTool` / `executeFacebookEpic4Tool` still use legacy helpers.
 - `facebookAccountPool.runBatch` still launches Puppeteer pages.
 - `facebookHealth.js` still uses raw `axios`, not `FacebookClient`.
@@ -38,7 +38,7 @@ See `deferred-work.md` for full ledger.
 | AC-5 | PARTIAL | `marketplace`/`group_members` OK via `facebookScrape.run`; other tools not fully verified. |
 | AC-6 | FAIL | `x_facebook_automate` and Epic-4 tools not hybrid. |
 | AC-7 | PARTIAL | CLI `scrape` OK; CLI `automate` legacy. |
-| AC-8 | PARTIAL after patch | `listActions()` now reports correct `requiresAuth`; no `xactions actions` CLI command. |
+| AC-8 | PARTIAL after patch | `listActions()` now reports correct `requiresAuth`; no `medirus actions` CLI command. |
 | AC-9 | PARTIAL | `package.json` exports OK; type declarations missing. |
 | AC-10 | PARTIAL | `index.js` and `docs/deprecation-plan.md` OK; other legacy files lack banners. |
 | AC-11 | FAIL | Tests are weak smoke tests; several surfaces not actually invoked. |
@@ -48,6 +48,6 @@ See `deferred-work.md` for full ledger.
 ## Recommended Next Steps
 
 1. Decide whether the remaining legacy caller surfaces (CLI/MCP/REST automate) are in 13.10 scope or deferred to Epic 20.2.
-2. If 13.10 scope: migrate `executeFacebookAutomateTool`, `executeFacebookEpic4Tool`, `POST /automate`, and `xactions automate` to `FacebookCrawler.start()`.
+2. If 13.10 scope: migrate `executeFacebookAutomateTool`, `executeFacebookEpic4Tool`, `POST /automate`, and `medirus automate` to `FacebookCrawler.start()`.
 3. If 20.2 scope: keep `sprint-status` at `needs-rework` until the deferred ledger is closed.
 4. Add real integration tests that invoke the handlers and assert hybrid dispatch (not just module import).

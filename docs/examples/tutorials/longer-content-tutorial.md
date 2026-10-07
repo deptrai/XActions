@@ -1,12 +1,12 @@
 # Post Longer Content & Longer Videos -- Tutorial
 
-> Step-by-step guide to posting extended tweets, long-form articles, and longer videos using XActions with Premium/Premium+ tiers.
+> Step-by-step guide to posting extended tweets, long-form articles, and longer videos using Medirus with Premium/Premium+ tiers.
 
 ## Prerequisites
 - Logged into x.com in your browser
 - Browser DevTools console (F12 -> Console tab)
 - **X Premium or Premium+ subscription** (required for extended limits)
-- For Node.js usage: `npm install xactions` and a valid session cookie
+- For Node.js usage: `npm install medirus` and a valid session cookie
 
 ## Quick Start
 1. Navigate to x.com

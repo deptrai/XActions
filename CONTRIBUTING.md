@@ -1,6 +1,6 @@
-# Contributing to XActions ⚡
+# Contributing to Medirus ⚡
 
-Thank you for your interest in contributing to **XActions** — the complete X/Twitter automation platform!
+Thank you for your interest in contributing to **Medirus** — the complete X/Twitter automation platform!
 
 Created by [nich](https://github.com/nirholas) ([@nichxbt](https://x.com/nichxbt))
 
@@ -19,7 +19,7 @@ Created by [nich](https://github.com/nirholas) ([@nichxbt](https://x.com/nichxbt
 ```bash
 # Clone your fork
 git clone https://github.com/YOUR-USERNAME/xactions.git
-cd xactions
+cd medirus
 
 # Install dependencies
 npm install
@@ -98,7 +98,7 @@ npm run check:endpoints   # are X's GraphQL query IDs still current?
 ## 🏗️ Project Structure
 
 ```
-xactions/
+medirus/
 ├── src/              # Core modules
 │   ├── automation/   # Automation features
 │   └── *.js          # Main scripts
@@ -130,7 +130,7 @@ By contributing, you agree that your contributions will be licensed under the Ap
 
 ---
 
-**Thank you for helping make XActions better!** ⚡
+**Thank you for helping make Medirus better!** ⚡
 
 ## Code of Conduct
 

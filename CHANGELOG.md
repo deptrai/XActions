@@ -11,9 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 #### A CLI you can find your way around
-- **Commands are grouped by task.** Running `xactions` printed fifty-three commands in one flat alphabetical list, which tells a newcomer nothing about where to start and an experienced user nothing about what else exists. The root help now sorts them into eight task-shaped groups (Start here, Read an account, Followers and audience, Search and monitor, Write and grow, Automate, Move data, Low level) with an examples block and pointers to `quickstart`, per-command help, and completions. The grouping is reconciled against the live command tree, so a newly registered command still appears (under "More") and a group entry naming a deleted command is caught by a test rather than shipped.
-- **`xactions quickstart`.** A guided first run that reads what you already have configured and prints the three commands that will produce a result on your machine, then the directions worth exploring next. `--json` reports the detected setup state (config directory, whether a session is saved, guest or session tier) for scripts and CI.
-- **`xactions completion bash|zsh|fish`.** Tab completion for every command, sub-command, and flag, generated from the live Commander tree rather than a hand-maintained list, so it stays correct as commands are added. Descriptions are escaped per shell: an unescaped colon in zsh's `name:description` format silently truncated half the descriptions, and an apostrophe would have terminated the quoted string early.
+- **Commands are grouped by task.** Running `medirus` printed fifty-three commands in one flat alphabetical list, which tells a newcomer nothing about where to start and an experienced user nothing about what else exists. The root help now sorts them into eight task-shaped groups (Start here, Read an account, Followers and audience, Search and monitor, Write and grow, Automate, Move data, Low level) with an examples block and pointers to `quickstart`, per-command help, and completions. The grouping is reconciled against the live command tree, so a newly registered command still appears (under "More") and a group entry naming a deleted command is caught by a test rather than shipped.
+- **`medirus quickstart`.** A guided first run that reads what you already have configured and prints the three commands that will produce a result on your machine, then the directions worth exploring next. `--json` reports the detected setup state (config directory, whether a session is saved, guest or session tier) for scripts and CI.
+- **`medirus completion bash|zsh|fish`.** Tab completion for every command, sub-command, and flag, generated from the live Commander tree rather than a hand-maintained list, so it stays correct as commands are added. Descriptions are escaped per shell: an unescaped colon in zsh's `name:description` format silently truncated half the descriptions, and an apostrophe would have terminated the quoted string early.
 
 ### Changed
 
@@ -23,12 +23,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Documentation
 
 - **[tutorial 05: Read any account like an analyst](tutorials/05-competitive-intelligence.md).** Reading an account report properly (median versus mean, engagement per view versus per follower, lifetime versus recent cadence), comparing accounts, follower overlap, and tracking a series over time. Runs entirely on the guest tier.
-- **[tutorial 06: Everything is JSON](tutorials/06-everything-is-json.md).** XActions as a pipeline component: the real field names, jq filters, chaining commands, exit codes in cron and CI, and where to switch from shell to the Node client. Every snippet was run against live data before it was written down.
-- **CLI reference corrected.** It carried a hardcoded `Version 3.0.0`, claimed an X account was required (most reads need none), and steered new users to `xactions login` (paste cookies out of DevTools) rather than `xactions connect` (log in through a real browser). It now documents the command groups, `quickstart`, and `completion`.
+- **[tutorial 06: Everything is JSON](tutorials/06-everything-is-json.md).** Medirus as a pipeline component: the real field names, jq filters, chaining commands, exit codes in cron and CI, and where to switch from shell to the Node client. Every snippet was run against live data before it was written down.
+- **CLI reference corrected.** It carried a hardcoded `Version 3.0.0`, claimed an X account was required (most reads need none), and steered new users to `medirus login` (paste cookies out of DevTools) rather than `medirus connect` (log in through a real browser). It now documents the command groups, `quickstart`, and `completion`.
 
 ### Security
 
-- `packages/xactions-mcp` raised off the vulnerable 3.4.4 dependency line, clearing the outstanding `npm audit` advisories. Released as 3.4.8 and carried into this version.
+- `packages/medirus-mcp` raised off the vulnerable 3.4.4 dependency line, clearing the outstanding `npm audit` advisories. Released as 3.4.8 and carried into this version.
 
 
 ### Fixed
@@ -36,11 +36,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 #### Public reads work again, without a browser
 - **`Scraper.getProfile()` returned `HTTP 404 {"message":"Query not found"}` for every call.** The repo carried two independent tables of X GraphQL query IDs, and 11 of the client's had gone stale while the shared map stayed current. Query IDs now have exactly one home (`src/scrapers/twitter/http/endpoints.js`), and a test fails if a second copy reappears.
 - **The HTTP client could not obtain a guest token at all.** X answers a request with no browser `User-Agent` with a misleading `HTTP 404 "Sorry, that page does not exist"`, which reads like a removed endpoint rather than a rejected client. Every request the client makes now carries one.
-- **`xactions profile` printed `Followers: 0` and exited 0.** X stopped serving profile and timeline content to logged-out browsers, so the Puppeteer scrape found an empty page and the CLI reported the nothing it found as success. `profile`, `tweets`, `followers`, `following`, `search`, and `non-followers` now use the HTTP client, which is roughly an order of magnitude faster and needs no Chromium download.
-- **`xactions non-followers` reported your entire following list as non-followers.** It filtered on a `followsBack` flag the GraphQL follow lists do not carry, so the predicate matched everything. It now diffs the follower and following lists.
+- **`medirus profile` printed `Followers: 0` and exited 0.** X stopped serving profile and timeline content to logged-out browsers, so the Puppeteer scrape found an empty page and the CLI reported the nothing it found as success. `profile`, `tweets`, `followers`, `following`, `search`, and `non-followers` now use the HTTP client, which is roughly an order of magnitude faster and needs no Chromium download.
+- **`medirus non-followers` reported your entire following list as non-followers.** It filtered on a `followsBack` flag the GraphQL follow lists do not carry, so the predicate matched everything. It now diffs the follower and following lists.
 - **The MCP server answered AI agents with every field set to `null`** (issue #27). `x_get_profile` and `x_get_tweets` had the same browser-path problem, which is worse in an agent context: an assistant cannot tell an empty result from a missing one, so it reports confidently wrong answers. Both now prefer the HTTP client and fall back to the browser.
-- **Unauthenticated failures now say what to do.** X restricts search, followers, likes, bookmarks, and DMs to logged-in sessions and answers a guest request with a bare `404`. That surfaced as `HTTP 404: Not Found`, which sent people looking for a bug in XActions. It now raises `AUTH_REQUIRED` naming the endpoint and the fix. Errors also carry `endpoint`, `httpStatus`, and `rateLimitReset`, which positional constructor calls had been silently dropping.
-- **`xactions login` now captures `ct0` as well as `auth_token`.** Without the CSRF token X treats the session as logged out, so session-tier endpoints kept failing after an apparently successful login.
+- **Unauthenticated failures now say what to do.** X restricts search, followers, likes, bookmarks, and DMs to logged-in sessions and answers a guest request with a bare `404`. That surfaced as `HTTP 404: Not Found`, which sent people looking for a bug in Medirus. It now raises `AUTH_REQUIRED` naming the endpoint and the fix. Errors also carry `endpoint`, `httpStatus`, and `rateLimitReset`, which positional constructor calls had been silently dropping.
+- **`medirus login` now captures `ct0` as well as `auth_token`.** Without the CSRF token X treats the session as logged out, so session-tier endpoints kept failing after an apparently successful login.
 
 #### Paid API
 - **Every `/api/ai/*` endpoint returned `500` instead of `402`.** `@x402/core` v2 moved payment terms behind an `accepts` key; the flat v1 route shape made the SDK throw during route validation on every request. All 95 payment tests now pass against a live server.
@@ -81,8 +81,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 #### Build fix
 - Fixed a Command Center bundler bug where a tool containing a `$`-anchored regex template literal (e.g. `` `/${x}/?$` ``) corrupted the generated file, `String.replace` was interpreting the `$\`` sequence as a special replacement pattern. The injector now uses a function replacer.
 
-#### ⚡ XActions Command Center: one script for every tool
-- New `scripts/twitter/xactions-command-center.js`: paste one script into the browser console and get a searchable command palette of all 68 browser tools, no more hunting for the right file. Search and arrow-key navigation, nine categories (Scrape, Analytics, Grow, Engage, Clean Up, Moderate, Communities, Profile, Utilities), favorites and recents, and a per-tool options form (rendered from each tool's own config, with an "Edit as JSON" mode) so you never edit source by hand.
+#### ⚡ Medirus Command Center: one script for every tool
+- New `scripts/twitter/medirus-command-center.js`: paste one script into the browser console and get a searchable command palette of all 68 browser tools, no more hunting for the right file. Search and arrow-key navigation, nine categories (Scrape, Analytics, Grow, Engage, Clean Up, Moderate, Communities, Profile, Utilities), favorites and recents, and a per-tool options form (rendered from each tool's own config, with an "Edit as JSON" mode) so you never edit source by hand.
 - Safety built in: every tool is tagged Safe / Writes / Bulk-irreversible, destructive tools require a second confirming click and show a warning, the palette tells you which page each tool expects (and warns if you're not on it), and a run dock lets you Stop long-running tools individually or all at once.
 - Works within x.com's strict CSP: it bundles every tool directly (no remote fetch, no `eval`). Reopen anytime with the floating ⚡ button or Cmd/Ctrl+K.
 - Generated by a new build (`scripts/build-toolkit.mjs` + `_command-center-shell.js`) that stays in sync with the tool files and fails the build on any drift. Docs: `scripts/twitter/README-command-center.md`.
@@ -97,7 +97,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 #### Hosted API server crash on boot
-- `api/routes/teams.js` default-imported `authMiddleware` from a module that only has named exports — in ESM that's a hard `SyntaxError` at startup, not a warning, so the hosted API server crashed before it could ever answer a health check. This is why xactions.app's dashboard pages (graph, analytics, unfollowers, admin, price-correlation) were showing "backend offline." Fixed and verified with a full local Docker build + boot against a real Postgres container: server starts cleanly, migrations run, `/api/health`, register, login, and authenticated reads all respond correctly. Swept the whole `api/`, `src/`, and `worker/` tree for the same class of bug — no other instances found.
+- `api/routes/teams.js` default-imported `authMiddleware` from a module that only has named exports — in ESM that's a hard `SyntaxError` at startup, not a warning, so the hosted API server crashed before it could ever answer a health check. This is why medirus.online's dashboard pages (graph, analytics, unfollowers, admin, price-correlation) were showing "backend offline." Fixed and verified with a full local Docker build + boot against a real Postgres container: server starts cleanly, migrations run, `/api/health`, register, login, and authenticated reads all respond correctly. Swept the whole `api/`, `src/`, and `worker/` tree for the same class of bug — no other instances found.
 
 #### Browser console scripts: 64 files audited
 - Every script in `scripts/twitter/` (beyond the two already rewritten) was read end-to-end and fixed where real bugs were found. Highlights: all scripts using top-level `const CONFIG` broke on re-paste into an already-open DevTools console (a `SyntaxError`, since `const`/`let` bindings persist across console pastes in the same tab) — fixed to `var` everywhere. Added consistent `window.stopX()` abort switches to every long-running loop that lacked one. Fixed stale-DOM bugs in `mass-unblock.js`/`mass-unmute.js` (cached elements pointing at rows already removed from a virtualized list), a wrong-author-attribution bug on quote-tweets in `bookmark-exporter.js`, a duplicate-processing risk in the hashtag/location commenters, several `window.location.href` reloads that silently killed the running script mid-workflow, and wired up half-implemented options (filters, reply templates, video quality selection) that were declared but never actually checked.
@@ -105,7 +105,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 #### Google Cloud Run deployment for the hosted API
-- `deploy/gcp/provision-api.sh` + `deploy/gcp/cloudbuild-api.yaml`: one-shot provisioning (Cloud SQL Postgres, Secret Manager, IAM) and build/deploy for the `xactions-api` Cloud Run service, reusing the existing Memorystore Redis instance instead of standing up new infra. `api/services/jobQueue.js`'s Bull queue now namespaces its Redis keys so it can safely share that instance.
+- `deploy/gcp/provision-api.sh` + `deploy/gcp/cloudbuild-api.yaml`: one-shot provisioning (Cloud SQL Postgres, Secret Manager, IAM) and build/deploy for the `medirus-api` Cloud Run service, reusing the existing Memorystore Redis instance instead of standing up new infra. `api/services/jobQueue.js`'s Bull queue now namespaces its Redis keys so it can safely share that instance.
 
 #### Cloudflare Workers Deployment
 - Full-site Cloudflare deploy: one Worker serves the landing page, dashboard, docs, blog, and static assets from Workers static assets, replacing the Vercel deployment
@@ -138,12 +138,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-#### xactions.app is live again, on Cloudflare Pages (free)
+#### medirus.online is live again, on Cloudflare Pages (free)
 - `deploy/cloudflare/`: build script + `_redirects` deploying the full site
   (landing page, dashboard app, docs, tutorials, blog, scripts directory)
   to Cloudflare Pages, free of charge (the prior Vercel deployment was
   disabled and the domain has been down)
-- Live now at the Pages project URL; `xactions.app` custom domain pending
+- Live now at the Pages project URL; `medirus.online` custom domain pending
   the nameserver switch to Cloudflare at the registrar
 - `deploy/gcp/` (Cloud Run + nginx) kept as a fallback path for
   environments without Cloudflare access
@@ -161,7 +161,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-#### Cloud Run deployment for xactions.app
+#### Cloud Run deployment for medirus.online
 - `deploy/gcp/`: Dockerfile, nginx config, and Cloud Build pipeline serving the landing page, dashboard, docs, tutorials, and blog with the same clean-URL routing the Vercel deployment had (Vercel deployment is disabled and the domain has been down)
 
 ## [3.2.0] - 2026-07-19
@@ -174,7 +174,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Captures X's own GraphQL responses: exact like/repost/reply/view/bookmark counts, full text of long posts, media URLs, language codes; promoted posts skipped
 - Live filters applied at export time: keywords (include/exclude), only/skip specific users, min likes/reposts/views, date range, repost/reply/quote/pinned toggles, media, language
 - Exports: JSON, CSV, Markdown, TXT, HTML downloads plus clipboard copy (JSON or clear text)
-- Console API: `window.XActionsToolbox`
+- Console API: `window.MedirusToolbox`
 - Docs: `scripts/twitter/README-scraper-toolbox.md`
 
 ### Fixed
@@ -192,9 +192,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 #### Plugin System
-- Community plugin architecture — create `xactions-plugin-*` npm packages
+- Community plugin architecture — create `medirus-plugin-*` npm packages
 - Plugin loader, manager, and template in `src/plugins/`
-- CLI commands: `xactions plugin install/list/remove`
+- CLI commands: `medirus plugin install/list/remove`
 - MCP server auto-discovers and registers plugin tools
 
 #### Real-Time Streaming
@@ -207,7 +207,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Declarative JSON automation pipelines with triggers, actions, and conditions
 - Cron scheduling, webhook triggers, event-based triggers
 - 3 example workflows: competitor monitor, auto-engage keywords, follower growth report
-- CLI: `xactions workflow create/run/list`
+- CLI: `medirus workflow create/run/list`
 - MCP tools: `x_workflow_create`, `x_workflow_run`, `x_workflow_list`
 
 #### Cross-Platform Scrapers
@@ -277,8 +277,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 #### Other
 - TypeScript type declarations (`types/index.d.ts`)
 - Docker support (Dockerfile + docker-compose)
-- New npm exports: `xactions/streaming`, `xactions/analytics`, `xactions/plugins`
-- `xactions-mcp` and `xactions-agent` bin commands
+- New npm exports: `medirus/streaming`, `medirus/analytics`, `medirus/plugins`
+- `medirus-mcp` and `medirus-agent` bin commands
 
 ### Changed
 - MCP server expanded from ~200 to 140+ registered tools

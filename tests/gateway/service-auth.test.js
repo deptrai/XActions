@@ -71,7 +71,7 @@ afterEach(teardown);
 
 describe('serviceAuth middleware — Bearer→consumer derivation', () => {
   it('HAPPY_SERVICE_KEY: valid Bearer maps to configured consumer_id', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = VALID_SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = VALID_SERVICE_MAP;
     _resetServiceKeyMap();
     const req = makeReq({ bearer: JEV_KEY, consumerId: 'chainlens' });
     const res = mockRes();
@@ -88,9 +88,9 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
     expect(req.consumerHint).toBe('chainlens'); // observability hint preserved
   });
 
-  it('HAPPY_LEGACY_KEY: XACTIONS_MCP_API_KEY maps to internal', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = '';
-    process.env.XACTIONS_MCP_API_KEY = LEGACY_KEY;
+  it('HAPPY_LEGACY_KEY: MEDIRUS_MCP_API_KEY maps to internal', async () => {
+    process.env.MEDIRUS_SERVICE_KEYS = '';
+    process.env.MEDIRUS_MCP_API_KEY = LEGACY_KEY;
     const req = makeReq({ bearer: LEGACY_KEY });
     const res = mockRes();
     const { state, next } = captureNext();
@@ -104,9 +104,9 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
   });
 
   it('HAPPY_ANON: no Authorization header → anonymous consumer (Story 50.4 free-tier lane)', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = '';
-    process.env.XACTIONS_MCP_API_KEY = '';
-    process.env.XACTIONS_API_TOKEN = '';
+    process.env.MEDIRUS_SERVICE_KEYS = '';
+    process.env.MEDIRUS_MCP_API_KEY = '';
+    process.env.MEDIRUS_API_TOKEN = '';
     process.env.NODE_ENV = 'development';
     const req = makeReq({});
     const res = mockRes();
@@ -124,9 +124,9 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
   });
 
   it('EDGE_PROD_NO_KEYS: prod + no keys + invalid bearer → fail-closed 401', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = '';
-    process.env.XACTIONS_MCP_API_KEY = '';
-    process.env.XACTIONS_API_TOKEN = '';
+    process.env.MEDIRUS_SERVICE_KEYS = '';
+    process.env.MEDIRUS_MCP_API_KEY = '';
+    process.env.MEDIRUS_API_TOKEN = '';
     process.env.NODE_ENV = 'production';
     const req = makeReq({ bearer: 'anything' });
     const res = mockRes();
@@ -142,9 +142,9 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
   });
 
   it('VG-1: EDGE_PROD_MISSING_HEADER: prod + no keys + no authorization header → anonymous free-tier lane (Story 50.4)', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = '';
-    process.env.XACTIONS_MCP_API_KEY = '';
-    process.env.XACTIONS_API_TOKEN = '';
+    process.env.MEDIRUS_SERVICE_KEYS = '';
+    process.env.MEDIRUS_MCP_API_KEY = '';
+    process.env.MEDIRUS_API_TOKEN = '';
     process.env.NODE_ENV = 'production';
     const req = makeReq({}); // no bearer header at all
     const res = mockRes();
@@ -163,7 +163,7 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
   });
 
   it('ERR_INVALID_BEARER: unknown Bearer → 401', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = VALID_SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = VALID_SERVICE_MAP;
     const req = makeReq({ bearer: 'wrong-token-xxx' });
     const res = mockRes();
     const { state, next } = captureNext();
@@ -178,7 +178,7 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
   });
 
   it('ERR_MALFORMED: non-Bearer scheme → 401', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = VALID_SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = VALID_SERVICE_MAP;
     const req = { headers: { authorization: 'Token abc123' } };
     const res = mockRes();
     const { state, next } = captureNext();
@@ -190,7 +190,7 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
   });
 
   it('ERR_SPOOF: forged X-Consumer-Id cannot override Bearer-derived identity', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = VALID_SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = VALID_SERVICE_MAP;
     _resetServiceKeyMap();
     const req = makeReq({ bearer: JEV_KEY, consumerId: 'internal' });
     const res = mockRes();
@@ -204,8 +204,8 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
   });
 
   it('EDGE_MALFORMED_KEYS_ENV: malformed JSON → empty map + WARN (fail-closed on named keys)', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = '{not-valid-json';
-    process.env.XACTIONS_MCP_API_KEY = LEGACY_KEY;
+    process.env.MEDIRUS_SERVICE_KEYS = '{not-valid-json';
+    process.env.MEDIRUS_MCP_API_KEY = LEGACY_KEY;
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     _resetServiceKeyMap();
     const map = loadServiceKeyMap();
@@ -221,7 +221,7 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
   });
 
   it('EDGE_UNKNOWN_CONSUMER: Bearer valid but maps to unknown consumer → normalizeConsumerId → internal', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = VALID_SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = VALID_SERVICE_MAP;
     const req = makeReq({ bearer: UNKNOWN_CONSUMER_KEY });
     const res = mockRes();
     const { state, next } = captureNext();
@@ -233,7 +233,7 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
   });
 
   it('EDGE_EMPTY_HEADER: empty X-Consumer-Id → consumerHint normalized to internal', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = VALID_SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = VALID_SERVICE_MAP;
     _resetServiceKeyMap();
     const req = { headers: { authorization: `Bearer ${JEV_KEY}`, 'x-consumer-id': '' } };
     const res = mockRes();
@@ -247,7 +247,7 @@ describe('serviceAuth middleware — Bearer→consumer derivation', () => {
   });
 
   it('EDGE_MULTI_HEADER: duplicate X-Consumer-Id → first header wins', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = VALID_SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = VALID_SERVICE_MAP;
     const req = { headers: { authorization: `Bearer ${JEV_KEY}`, 'x-consumer-id': ['chainlens', 'nowing'] } };
     const res = mockRes();
     const { state, next } = captureNext();
@@ -279,7 +279,7 @@ describe('eitherAuth — JWT-first then serviceAuth fallback', () => {
   });
 
   it('fallback: expired JWT → serviceAuth tries Bearer-as-service-key → fails → 401', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = VALID_SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = VALID_SERVICE_MAP;
     const expired = jwt.sign({ userId: testUser.id, username: testUser.username }, TEST_SECRET, { expiresIn: '-1s' });
     const req = makeReq({ bearer: expired });
     const res = mockRes();
@@ -293,7 +293,7 @@ describe('eitherAuth — JWT-first then serviceAuth fallback', () => {
   });
 
   it('fallback: valid service key → JWT fails → serviceAuth succeeds', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = VALID_SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = VALID_SERVICE_MAP;
     _resetServiceKeyMap();
     const req = makeReq({ bearer: JEV_KEY, consumerId: 'nowing' });
     const res = mockRes();
@@ -308,7 +308,7 @@ describe('eitherAuth — JWT-first then serviceAuth fallback', () => {
   });
 
   it('EDGE_COOKIE_PLUS_BEARER: cookie ignored — Authorization Bearer resolves via serviceAuth', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = VALID_SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = VALID_SERVICE_MAP;
     _resetServiceKeyMap();
     const req = {
       headers: {
@@ -350,7 +350,7 @@ describe('platform.js route-level auth scoping (Story 50.1 ACs)', () => {
   });
 
   it('service Bearer reaches POST /:platform/scrape handler (not blocked by router.use)', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = VALID_SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = VALID_SERVICE_MAP;
     _resetServiceKeyMap();
 
     // Call scrape with service key + missing action → handler validates action and returns 400
@@ -369,7 +369,7 @@ describe('platform.js route-level auth scoping (Story 50.1 ACs)', () => {
   });
 
   it('EDGE_ACCOUNTIDS_NO_USER: service caller with accountIds gets 400 validation error (no TypeError crash)', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = VALID_SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = VALID_SERVICE_MAP;
     _resetServiceKeyMap();
 
     const res = await request(app)
@@ -385,7 +385,7 @@ describe('platform.js route-level auth scoping (Story 50.1 ACs)', () => {
   });
 
   it('non-scrape routes remain user-JWT only: service key gets 401 on /accounts', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = VALID_SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = VALID_SERVICE_MAP;
     _resetServiceKeyMap();
 
     const res = await request(app)

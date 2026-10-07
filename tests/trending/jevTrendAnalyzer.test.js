@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — jevTrendAnalyzer Tests (Story 42.6)
+// Medirus — jevTrendAnalyzer Tests (Story 42.6)
 // by nichxbt
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';

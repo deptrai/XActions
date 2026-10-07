@@ -29,10 +29,10 @@ Business analytics, brand monitoring, social listening, and advertising tools fo
 ## 📦 Node.js Module
 
 ```javascript
-import { monitorBrandMentions, getAudienceInsights, analyzeCompetitors } from 'xactions';
+import { monitorBrandMentions, getAudienceInsights, analyzeCompetitors } from 'medirus';
 
 // Monitor brand mentions
-const mentions = await monitorBrandMentions(page, 'XActions', { limit: 50 });
+const mentions = await monitorBrandMentions(page, 'Medirus', { limit: 50 });
 console.log(`Sentiment: ${mentions.analysis.sentiment}`);
 
 // Audience insights
@@ -46,7 +46,7 @@ const competitors = await analyzeCompetitors(page, ['@competitor1', '@competitor
 
 ```
 Tool: x_brand_monitor
-Input: { "brand": "XActions", "limit": 50, "sentiment": true }
+Input: { "brand": "Medirus", "limit": 50, "sentiment": true }
 
 Tool: x_competitor_analysis
 Input: { "handles": ["@competitor1", "@competitor2"] }

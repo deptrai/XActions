@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions analytics` command group.
+ * `medirus analytics` command group.
  */
 import chalk from 'chalk';
 import ora from 'ora';
@@ -113,7 +113,7 @@ program
 
       if (!monitor) {
         spinner.fail(`No active monitor found for @${username}`);
-        console.log(chalk.yellow('Start one first with: xactions monitor @' + username));
+        console.log(chalk.yellow('Start one first with: medirus monitor @' + username));
         return;
       }
 
@@ -158,9 +158,9 @@ program
     console.log(`  ${chalk.cyan('mastodon')}  Mastodon — REST API (any instance, no browser needed)`);
     console.log(`  ${chalk.cyan('threads')}   Threads — Puppeteer-based scraping`);
     console.log();
-    console.log(chalk.gray('Usage: xactions scrape --platform <platform> --action <action> --username <target>'));
-    console.log(chalk.gray('Example: xactions scrape --platform bluesky --action profile --username user.bsky.social'));
-    console.log(chalk.gray('Example: xactions scrape --platform mastodon --action tweets --username Gargron --instance https://mastodon.social'));
+    console.log(chalk.gray('Usage: medirus scrape --platform <platform> --action <action> --username <target>'));
+    console.log(chalk.gray('Example: medirus scrape --platform bluesky --action profile --username user.bsky.social'));
+    console.log(chalk.gray('Example: medirus scrape --platform mastodon --action tweets --username Gargron --instance https://mastodon.social'));
     console.log();
   });
 
@@ -194,8 +194,8 @@ analyticsCmd
         const raw = Buffer.concat(chunks).toString('utf-8').trim();
         if (!raw) {
           spinner.fail('No input provided');
-          console.log(chalk.yellow('Usage: xactions analytics buzzwords --file <path> or pipe JSON array via stdin'));
-          console.log(chalk.gray('Example: cat posts.json | xactions analytics buzzwords --lang vi'));
+          console.log(chalk.yellow('Usage: medirus analytics buzzwords --file <path> or pipe JSON array via stdin'));
+          console.log(chalk.gray('Example: cat posts.json | medirus analytics buzzwords --lang vi'));
           return;
         }
         items = JSON.parse(raw);

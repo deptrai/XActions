@@ -73,7 +73,7 @@ function buildRawTweet(overrides = {}) {
             display_url: 'example.com/full-url',
           },
         ],
-        hashtags: [{ text: 'testing' }, { text: 'xactions' }],
+        hashtags: [{ text: 'testing' }, { text: 'medirus' }],
         user_mentions: [
           { screen_name: 'nichxbt', id_str: '9999999' },
         ],
@@ -579,7 +579,7 @@ describe('parseTweetData', () => {
     // URLs, hashtags, mentions
     expect(result.urls).toHaveLength(1);
     expect(result.urls[0].expandedUrl).toBe('https://example.com/full-url');
-    expect(result.hashtags).toEqual(['testing', 'xactions']);
+    expect(result.hashtags).toEqual(['testing', 'medirus']);
     expect(result.mentions).toHaveLength(1);
     expect(result.mentions[0].username).toBe('nichxbt');
 

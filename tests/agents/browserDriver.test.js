@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — BrowserDriver Tests (unit-level, no real browser)
+// Medirus — BrowserDriver Tests (unit-level, no real browser)
 // by nichxbt
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';

@@ -7,7 +7,7 @@
  * app issues - mapped to the crawler's ACTION keys and persisted through
  * DocIdStore so all future scrapes (any account, guest included) reuse them.
  *
- * First run: `xactions fb capture-docids` (visible browser, log in by hand,
+ * First run: `medirus fb capture-docids` (visible browser, log in by hand,
  * pass --save-cookies). Later runs - and the automatic refresh path in
  * doc-id-store.noteDocIdFailure - reuse the saved cookies and run headless.
  *
@@ -24,7 +24,7 @@ import { createBrowser, createPage } from '../../browser.js';
 import { loginWithCookie as loginWithFbCookie } from './url-helpers.js';
 
 const COOKIE_KEYS = ['c_user', 'xs', 'sb', 'datr', 'fr', 'fbl_st'];
-const SAVED_COOKIES_PATH = path.join(os.homedir(), '.xactions', 'facebook-cookies.json');
+const SAVED_COOKIES_PATH = path.join(os.homedir(), '.medirus', 'facebook-cookies.json');
 const FACEBOOK_BASE = 'https://www.facebook.com';
 
 /** Pages visited in order so the web app fires the queries we want to capture. */
@@ -165,7 +165,7 @@ export async function captureDocIds({
       if (headless) {
         throw new Error(
           'Headless capture can phai co cookie (c_user + xs). ' +
-            'Chay `xactions fb capture-docids` (khong --headless) de dang nhap tay, them --save-cookies, ' +
+            'Chay `medirus fb capture-docids` (khong --headless) de dang nhap tay, them --save-cookies, ' +
             'hoac dat FACEBOOK_COOKIES (JSON).'
         );
       }
@@ -250,7 +250,7 @@ export async function maybeAutoRefreshDocIds({ maxAgeMs, reason = 'stale' } = {}
     if (now - lastNoCookieWarnAt > NO_COOKIE_WARN_INTERVAL_MS) {
       lastNoCookieWarnAt = now;
       console.warn(
-        '[FACEBOOK] doc_ids qua cu hoac bi rotate. Chay `xactions fb capture-docids --save-cookies` ' +
+        '[FACEBOOK] doc_ids qua cu hoac bi rotate. Chay `medirus fb capture-docids --save-cookies` ' +
           'mot lan de cac lan tu dong refresh sau nay chay headless duoc.'
       );
     }

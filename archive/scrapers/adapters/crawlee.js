@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Scraper Adapter — Crawlee
+ * Medirus Scraper Adapter — Crawlee
  *
  * Adapter wrapping Crawlee (by Apify) — the best-in-class Node.js crawling framework.
  * Adds smart request queuing, automatic retries, proxy rotation, session management,

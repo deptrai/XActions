@@ -16,7 +16,7 @@ describe('Health & Discovery', () => {
   it(`[${nextTestId(TEST_SCOPE, 'E2E', 'P2')}] GET /api/health returns 200 with service info`, async () => {
     const res = await request(app).get('/api/health');
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ status: 'ok', service: 'xactions-api' });
+    expect(res.body).toMatchObject({ status: 'ok', service: 'medirus-api' });
     expect(res.body.timestamp).toBeDefined();
   });
 

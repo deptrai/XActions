@@ -209,7 +209,7 @@ export class FacebookClient extends AbstractApiClient {
     this.browserBridge = deps.browserBridge || null;
     this.cdpUrl = deps.cdpUrl || null;
     this.launchChrome = Boolean(deps.launchChrome);
-    this.adapterName = deps.adapterName || process.env.XACTIONS_SCRAPER_ADAPTER || 'playwright';
+    this.adapterName = deps.adapterName || process.env.MEDIRUS_SCRAPER_ADAPTER || 'playwright';
     this.headless = deps.headless ?? true;
     this.userDataDir = deps.userDataDir || null;
     this.profileDir = deps.profileDir || null;

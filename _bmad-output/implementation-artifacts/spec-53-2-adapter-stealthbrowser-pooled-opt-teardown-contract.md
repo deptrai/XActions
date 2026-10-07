@@ -7,7 +7,7 @@ review_loop_iteration: 0
 followup_review_recommended: false
 context:
   - '_bmad-output/implementation-artifacts/epic-53-context.md'
-  - '_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
+  - '_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
 baseline_revision: '9b2d487a0cc27122e6d0bc4a5befa2d38c44f3ba'
 warnings: []
 deferred: []
@@ -27,7 +27,7 @@ deferred: []
 - `pooled` mặc định falsy → code path hiện tại byte-identical (AD-24 rule 1: opt-in, không đổi default).
 - Pool là per-backend: default registry key = backend string ('chrome' | 'obscura'); `requiresAuth && obscura` guard phải chạy TRƯỚC acquire (PlatformError, không fallback sang obscura).
 - `pooled: true` → lấy/tạo default pool cho resolved backend; `pooled` là `BrowserPool` instance → dùng pool đó verbatim.
-- Default pool size: `parseInt(process.env.XACTIONS_BROWSER_POOL_SIZE)` nếu > 0, ngược lại 4 (vì caller đã opt-in tường minh — env chỉ là ceiling hint).
+- Default pool size: `parseInt(process.env.MEDIRUS_BROWSER_POOL_SIZE)` nếu > 0, ngược lại 4 (vì caller đã opt-in tường minh — env chỉ là ceiling hint).
 - Pooled handle PHẢI expose: `_pooled: true`, `_pool`, `_lease {page, context, backend, waitMs, pageMs}`, `__backend` + `__fingerprint` (stealthBrowser path) và `_native` = lease `context` (để introspection/`.newPage()` native hoạt động trên context nếu ai bypass helper).
 - `createStealthPage(pooledHandle)` → return `lease.page` as-is (page đã được pool patch stealth + gán `__backend`); KHÔNG tạo page thứ hai, KHÔNG re-apply patches. Document: per-call options (`userAgent`, `fingerprint`, …) bị ignore trên pooled handle — cấu hình ở pool-level (BrowserPoolOptions) hoặc release + dùng non-pooled.
 - `closeStealthBrowser(pooledHandle)` → `pool.release(lease.page)` một lần duy nhất (idempotent: gọi 2 lần = no-op lần 2), KHÔNG gọi `context.close()`/`browser.close()`/`disconnect()` trực tiếp — release() của pool đã close context+page (AD-24 rule 4).
@@ -56,7 +56,7 @@ deferred: []
 | ADAPTER_POOLED | `adapter.launch({pooled:true})` → `newPage` → `closeBrowser` | `_pooled` AdapterBrowser → lease.page → release; shared browser không `close()`/`disconnect()` | — |
 | BYO_POOL | `pooled: existingPool` | Acquire từ pool đó; default registry không bị đụng | PoolDrainingError nếu pool đang drain |
 | DEFAULT_POOL_REUSE | 2× `launch({pooled:true,backend:'chrome'})` | Cùng một default pool instance (Map theo backend) | — |
-| ENV_SIZE | `XACTIONS_BROWSER_POOL_SIZE=2` + `pooled:true` | Default pool size=2 | env rác/`0`/unset → size 4 |
+| ENV_SIZE | `MEDIRUS_BROWSER_POOL_SIZE=2` + `pooled:true` | Default pool size=2 | env rác/`0`/unset → size 4 |
 
 ## Code Map
 

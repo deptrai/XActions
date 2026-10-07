@@ -8,7 +8,7 @@
 **Source:**
 - `_bmad-output/planning-artifacts/epics.md` Epic 13, Story 13.1
 - `_bmad-output/planning-artifacts/prd.md` FR-65
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` AD-1, AD-2, AD-3, AD-14
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` AD-1, AD-2, AD-3, AD-14
 - `src/core/signer-pool.js` (stub sẵn tại dòng 8–94)
 - `src/core/base-client.js` (AbstractApiClient, phương thức `request` dòng 232–472)
 - `types/core.d.ts` (khai báo PreSignedTokenRing / SignerWorkerPagePool dòng 343–355)
@@ -30,7 +30,7 @@ baseline_commit: 5cb22cf
 
 As a **Power User / AI Agent**,  
 I want **hệ thống ký request phân tầng: vòng token đã ký trước O(1) cho session token (`msToken`, `lsd`, `fb_dtsg`) và worker page pool 4–8 tab để ký động (`a_bogus`, `x-client-transaction-id`)**,  
-so that **XActions tăng tốc độ 5–10x, giảm RAM ≥85% và có thể cào đồng thời hàng trăm request mà không bị nghẽn Chromium IPC hoặc treo vĩnh viễn khi tab signer crash**.
+so that **Medirus tăng tốc độ 5–10x, giảm RAM ≥85% và có thể cào đồng thời hàng trăm request mà không bị nghẽn Chromium IPC hoặc treo vĩnh viễn khi tab signer crash**.
 
 ---
 
@@ -409,7 +409,7 @@ Nếu `this.cookies` không rỗng và `options.headers.cookie` chưa được s
 | `got-scraping` | `^3.2.15` | HTTP client mặc định cho `client: 'got'`, TLS/JA4 spoofing, header generator, proxy support qua `proxyUrl`. |
 | `undici` | `^7.29.0` | HTTP client cho `client: 'undici'`, hỗ trợ `ProxyAgent`, `Socks5ProxyAgent` làm `dispatcher`. |
 | `playwright` | `^1.62.1` | Browser engine cho `SignerWorkerPagePool` (không import static trong `src/core`, chỉ dùng qua adapter). |
-| `puppeteer` | `^24.34.0` | Thay thế cho Playwright khi `XACTIONS_SCRAPER_ADAPTER=puppeteer`. |
+| `puppeteer` | `^24.34.0` | Thay thế cho Playwright khi `MEDIRUS_SCRAPER_ADAPTER=puppeteer`. |
 | `p-limit` | `^7.2.0` | Giới hạn concurrency khi init/spawn page. |
 | `vitest` | `^4.0.18` | Test framework. |
 | `typescript` | `^5.9.3` | `npm run typecheck`. |

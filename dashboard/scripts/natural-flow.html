@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Natural Flow — Free X/Twitter Script | XActions</title>
+  <title>Natural Flow — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="scripts/naturalFlow.js">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, natural, flow, growth">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, natural, flow, growth">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Natural Flow — XActions">
+  <meta property="og:title" content="Natural Flow — Medirus">
   <meta property="og:description" content="scripts/naturalFlow.js">
-  <meta property="og:url" content="https://xactions.app/scripts/natural-flow">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/natural-flow">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Natural Flow — XActions">
+  <meta name="twitter:title" content="Natural Flow — Medirus">
   <meta name="twitter:description" content="scripts/naturalFlow.js">
 
-  <link rel="canonical" href="https://xactions.app/scripts/natural-flow">
+  <link rel="canonical" href="https://medirus.online/scripts/natural-flow">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Natural Flow — Free X/Twitter Script | XActions",
+    "headline": "Natural Flow — Free X/Twitter Script | Medirus",
     "description": "scripts/naturalFlow.js",
-    "url": "https://xactions.app/scripts/natural-flow",
+    "url": "https://medirus.online/scripts/natural-flow",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Growth",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, natural, flow, growth"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, natural, flow, growth"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Growth", "item": "https://xactions.app/scripts#growth" },
-      { "@type": "ListItem", "position": 4, "name": "Natural Flow", "item": "https://xactions.app/scripts/natural-flow" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Growth", "item": "https://medirus.online/scripts#growth" },
+      { "@type": "ListItem", "position": 4, "name": "Natural Flow", "item": "https://medirus.online/scripts/natural-flow" }
     ]
   }
   </script>
@@ -343,11 +343,11 @@
   // FLOATING HUD — on-page stats overlay
   // =============================================
   const createHUD = () =&gt; {
-    const existing = document.getElementById('xactions-hud');
+    const existing = document.getElementById('medirus-hud');
     if (existing) existing.remove();
 
     const hud = document.createElement('div');
-    hud.id = 'xactions-hud';
+    hud.id = 'medirus-hud';
     hud.innerHTML = `
       &lt;div style=&quot;
         position: fixed; bottom: 20px; right: 20px; z-index: 999999;
@@ -404,7 +404,7 @@
   };
 
   const removeHUD = () =&gt; {
-    const hud = document.getElementById('xactions-hud');
+    const hud = document.getElementById('medirus-hud');
     if (hud) hud.remove();
   };
 
@@ -414,16 +414,16 @@
   let aborted = false;
   let paused = false;
 
-  window.XActions = window.XActions || {};
-  window.XActions.stop = () =&gt; { aborted = true; console.log('🛑 Stopping...'); };
-  window.XActions.pause = () =&gt; { paused = !paused; console.log(paused ? '⏸ Paused' : '▶ Resumed'); };
+  window.Medirus = window.Medirus || {};
+  window.Medirus.stop = () =&gt; { aborted = true; console.log('🛑 Stopping...'); };
+  window.Medirus.pause = () =&gt; { paused = !paused; console.log(paused ? '⏸ Paused' : '▶ Resumed'); };
 
   const stats = { liked: 0, replied: 0, retweeted: 0, bookmarked: 0, followed: 0, scrolled: 0, skipped: 0 };
   const actionLog = [];
   const seen = new Set();
 
-  const STATE_KEY = 'xactions_natural_flow';
-  const HISTORY_KEY = 'xactions_nf_history';
+  const STATE_KEY = 'medirus_natural_flow';
+  const HISTORY_KEY = 'medirus_nf_history';
 
   const getState = () =&gt; { try { return JSON.parse(sessionStorage.getItem(STATE_KEY)); } catch { return null; } };
   const setState = (s) =&gt; sessionStorage.setItem(STATE_KEY, JSON.stringify(s));
@@ -891,7 +891,7 @@
         const blob = new Blob([JSON.stringify(actionLog, null, 2)], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `xactions-natural-flow-${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `medirus-natural-flow-${new Date().toISOString().slice(0, 10)}.json`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -909,7 +909,7 @@
     const W = 52;
     console.log('╔' + '═'.repeat(W) + '╗');
     console.log('║  🌊 NATURAL FLOW — Human-Like Session        ║');
-    console.log('║  by nichxbt — XActions                        ║');
+    console.log('║  by nichxbt — Medirus                        ║');
     console.log('╚' + '═'.repeat(W) + '╝');
     console.log('\n🏃 DRY RUN — previewing the full session.\n');
 
@@ -939,10 +939,10 @@
     const W = 52;
     console.log('╔' + '═'.repeat(W) + '╗');
     console.log('║  🌊 NATURAL FLOW — Human-Like Session        ║');
-    console.log('║  by nichxbt — XActions                        ║');
+    console.log('║  by nichxbt — Medirus                        ║');
     console.log('╚' + '═'.repeat(W) + '╝');
     console.log(`\n⚠️ LIVE MODE — Phase ${state.phase}/4`);
-    console.log(`   ℹ️ XActions.stop() or click 🛑 to abort\n`);
+    console.log(`   ℹ️ Medirus.stop() or click 🛑 to abort\n`);
 
     createHUD();
     updateHUD('phase', `Phase ${state.phase}/4`);
@@ -1056,7 +1056,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -1068,14 +1068,14 @@
         <h3>🌊 Growth</h3>
         <a href="/scripts/follow-list">📋 Follow &amp; Manage Lists</a>
 <a href="/scripts/follow-account">➕ Follow Account</a>
-<a href="/scripts/follow-back">🔗 Follow Back - XActions</a>
+<a href="/scripts/follow-back">🔗 Follow Back - Medirus</a>
 <a href="/scripts/follow-engagers">🎯 Follow Engagers</a>
 <a href="/scripts/follow-target-users">🎯 Follow Target Users</a>
 <a href="/scripts/growth-suite">🚀 Growth Suite</a>
 <a href="/scripts/keyword-follow">🔑 Keyword Follow</a>
 <a href="/scripts/algorithm-trainer">🧠 Phase 1</a>
 <a href="/scripts/thought-leader-cultivator">🧠 Thought Leader Cultivator</a>
-<a href="/scripts/algorithm-builder">🧠 XActions Algorithm Builder</a>
+<a href="/scripts/algorithm-builder">🧠 Medirus Algorithm Builder</a>
       </div>
       <div class="sidebar-card">
         <h3>🔗 Quick Links</h3>

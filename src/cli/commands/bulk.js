@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions bulk` command group.
+ * `medirus bulk` command group.
  */
 import chalk from 'chalk';
 

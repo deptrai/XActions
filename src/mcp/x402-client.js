@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * x402 Payment Client for XActions API
+ * x402 Payment Client for Medirus API
  * 
  * Handles automatic payment for AI API calls using the x402 protocol:
  * 1. Makes request to endpoint
@@ -148,7 +148,7 @@ async function getChainForNetwork(networkName) {
  * Create an x402-enabled API client
  * 
  * @param {Object} config - Configuration options
- * @param {string} config.apiUrl - Base URL for XActions API
+ * @param {string} config.apiUrl - Base URL for Medirus API
  * @param {string} config.privateKey - Wallet private key for payments (0x prefixed)
  * @param {string} config.sessionCookie - X/Twitter session cookie (optional)
  * @param {string} config.network - Preferred network ('base-sepolia', 'base', 'ethereum', 'arbitrum')
@@ -156,7 +156,7 @@ async function getChainForNetwork(networkName) {
  */
 export async function createX402Client(config) {
   const { 
-    apiUrl = 'https://api.xactions.app', 
+    apiUrl = 'https://api.medirus.online', 
     privateKey, 
     sessionCookie,
     network = 'base-sepolia', // Default to testnet
@@ -210,7 +210,7 @@ export async function createX402Client(config) {
     
     const headers = {
       'Content-Type': 'application/json',
-      'User-Agent': 'XActions-MCP/2.0 (x402)',
+      'User-Agent': 'Medirus-MCP/2.0 (x402)',
     };
     
     if (sessionCookie) {

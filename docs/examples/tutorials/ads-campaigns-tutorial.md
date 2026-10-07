@@ -1,8 +1,8 @@
 ---
 title: "Business Ads & Campaigns — Tutorial"
-description: "Navigate to the ads dashboard, create campaigns, boost posts, and view campaign analytics on X/Twitter using XActions."
-keywords: ["x ads manager", "twitter ad campaigns", "boost post twitter", "x business ads", "xactions ads manager"]
-canonical: "https://xactions.app/examples/ads-campaigns"
+description: "Navigate to the ads dashboard, create campaigns, boost posts, and view campaign analytics on X/Twitter using Medirus."
+keywords: ["x ads manager", "twitter ad campaigns", "boost post twitter", "x business ads", "medirus ads manager"]
+canonical: "https://medirus.online/examples/ads-campaigns"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
@@ -66,7 +66,7 @@ const CONFIG = {
 
 ```javascript
 (() => {
-  console.log('📢 ADS MANAGER - XActions by nichxbt\n');
+  console.log('📢 ADS MANAGER - Medirus by nichxbt\n');
 
   console.log('══════════════════════════════════════════════════');
   console.log('📚 CAMPAIGN CREATION GUIDE');
@@ -118,7 +118,7 @@ Navigate to your profile page first, then paste:
 (async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('🚀 FIND BOOSTABLE POSTS - XActions by nichxbt\n');
+  console.log('🚀 FIND BOOSTABLE POSTS - Medirus by nichxbt\n');
 
   const tweets = document.querySelectorAll('article[data-testid="tweet"]');
   const boostable = [];
@@ -183,7 +183,7 @@ Navigate to your profile page first, then paste:
 (async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('📊 SCAN CAMPAIGNS - XActions by nichxbt\n');
+  console.log('📊 SCAN CAMPAIGNS - Medirus by nichxbt\n');
 
   const campaigns = [];
   let previousCount = 0;
@@ -233,7 +233,7 @@ Navigate to your profile page first, then paste:
       console.log(`      Status: ${c.status} | Budget: ${c.budget} | Spent: ${c.spent} | Impressions: ${c.impressions}`);
     });
 
-    sessionStorage.setItem('xactions_ads', JSON.stringify({
+    sessionStorage.setItem('medirus_ads', JSON.stringify({
       scannedAt: new Date().toISOString(),
       campaigns,
     }));
@@ -247,7 +247,7 @@ Navigate to your profile page first, then paste:
 ### Expected Console Output (Boostable Posts)
 
 ```
-🚀 FIND BOOSTABLE POSTS - XActions by nichxbt
+🚀 FIND BOOSTABLE POSTS - Medirus by nichxbt
 
 📋 Posts available for boosting (8):
 ────────────────────────────────────────────────────────────────
@@ -300,5 +300,5 @@ Navigate to your profile page first, then paste:
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

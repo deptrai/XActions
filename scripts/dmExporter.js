@@ -14,7 +14,7 @@
   };
 
   const run = async () => {
-    console.log('✉️ XActions DM Exporter');
+    console.log('✉️ Medirus DM Exporter');
     console.log('======================');
 
     // Scrape conversation list

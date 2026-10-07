@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Portability API Routes
+ * Medirus Portability API Routes
  * Export accounts, migrate to other platforms, compare exports.
  *
  * POST /api/portability/export      — Start export (background job)

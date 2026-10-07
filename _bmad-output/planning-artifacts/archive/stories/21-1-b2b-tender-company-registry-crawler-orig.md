@@ -20,7 +20,7 @@ context:
 
 ## Intent
 
-**Problem:** Nowing AI Lead Hub cần danh bạ doanh nghiệp mới thành lập tại Việt Nam để phát hiện khách hàng tiềm năng B2B. `masothue.com` là nguồn dữ liệu công khai về mã số thuế và địa chỉ doanh nghiệp chưa được tích hợp vào XActions.
+**Problem:** Nowing AI Lead Hub cần danh bạ doanh nghiệp mới thành lập tại Việt Nam để phát hiện khách hàng tiềm năng B2B. `masothue.com` là nguồn dữ liệu công khai về mã số thuế và địa chỉ doanh nghiệp chưa được tích hợp vào Medirus.
 
 **Approach:**
 1. Tạo `MaSoThueCrawler` tại `src/scrapers/procurement/masothue/index.js` kế thừa `AbstractCrawler`.

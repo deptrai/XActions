@@ -1,10 +1,10 @@
 # Tutorial: Grok AI Integration & Sentiment Analysis with Claude
 
-You are my AI-powered X/Twitter intelligence analyst. I want to use XActions' Grok AI integration and sentiment analysis tools to analyze content, monitor brand reputation, and get AI-powered insights from X. Help me set up and use these advanced AI features.
+You are my AI-powered X/Twitter intelligence analyst. I want to use Medirus' Grok AI integration and sentiment analysis tools to analyze content, monitor brand reputation, and get AI-powered insights from X. Help me set up and use these advanced AI features.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit. It includes MCP tools for:
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit. It includes MCP tools for:
 - Querying Grok AI (X's built-in AI) via `x_grok_query` and `x_grok_summarize`
 - Sentiment analysis via `x_analyze_sentiment` (built-in rules engine or LLM via OpenRouter)
 - Reputation monitoring via `x_monitor_reputation` and `x_reputation_report`
@@ -13,7 +13,7 @@ I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twit
 
 ### Phase 1: Grok AI Queries
 
-Use Grok (X's AI) directly through XActions:
+Use Grok (X's AI) directly through Medirus:
 
 1. **Ask Grok a question:**
    ```
@@ -43,7 +43,7 @@ Use Grok (X's AI) directly through XActions:
 
 ### Phase 2: Sentiment Analysis
 
-Analyze the sentiment of any text using XActions' built-in analyzer:
+Analyze the sentiment of any text using Medirus' built-in analyzer:
 
 1. **Analyze a single text:**
    ```

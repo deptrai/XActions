@@ -27,7 +27,7 @@
 
   <!-- Title -->
   <g filter="url(#glow)" style="animation: slideUp 0.6s ease-out both">
-    <text x="360" y="88" text-anchor="middle" font-family="'SF Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace" font-size="64" font-weight="800" fill="url(#textGrad)" letter-spacing="8">XACTIONS</text>
+    <text x="360" y="88" text-anchor="middle" font-family="'SF Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace" font-size="64" font-weight="800" fill="url(#textGrad)" letter-spacing="8">MEDIRUS</text>
   </g>
 
   <!-- Subtitle -->
@@ -40,7 +40,7 @@
   <g style="animation: slideUp 0.5s ease-out 0.7s both">
     <rect x="220" y="158" width="280" height="30" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
     <text x="234" y="178" font-family="'SF Mono', 'Cascadia Code', 'Fira Code', monospace" font-size="13" fill="#7ee787">$</text>
-    <text x="248" y="178" font-family="'SF Mono', 'Cascadia Code', 'Fira Code', monospace" font-size="13" fill="#e6edf3">npm install xactions</text>
+    <text x="248" y="178" font-family="'SF Mono', 'Cascadia Code', 'Fira Code', monospace" font-size="13" fill="#e6edf3">npm install medirus</text>
     <rect x="418" y="166" width="2" height="16" fill="#e6edf3" style="animation: blink 1.2s step-end infinite"/>
   </g>
 

@@ -317,7 +317,7 @@ describe('Story 15.1.4: Threads Hybrid Caller Migration & Package Exports', () =
 
   it('AC-2: scrape(threads, search) maps to search action', async () => {
     const result = await scrape('threads', 'search', {
-      query: 'xactions',
+      query: 'medirus',
       baseUrl: serverUrl,
       limit: 10,
       store: mockStore,
@@ -349,7 +349,7 @@ describe('Story 15.1.4: Threads Hybrid Caller Migration & Package Exports', () =
     expect(result).toBeDefined();
   });
 
-  it('AC-3: package.json exports xactions/scrapers/social/threads', async () => {
+  it('AC-3: package.json exports medirus/scrapers/social/threads', async () => {
     const pkg = await import('../../../../package.json', { assert: { type: 'json' } });
     expect(pkg.exports['./scrapers/social/threads']).toBe('./src/scrapers/social/threads/index.js');
     expect(pkg.exports['./scrapers/social']).toBe('./src/scrapers/social/index.js');

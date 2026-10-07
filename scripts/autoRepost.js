@@ -46,7 +46,7 @@
 
   // ── MAIN ──────────────────────────────────────────────────
   (async () => {
-    console.log('🔄 AUTO REPOST — XActions by nichxbt');
+    console.log('🔄 AUTO REPOST — Medirus by nichxbt');
     console.log(`   Mode: ${CONFIG.dryRun ? '🔍 DRY RUN' : '⚡ LIVE'} | Max: ${CONFIG.maxReposts}`);
     console.log(`   Keywords: ${CONFIG.keywords.join(', ') || 'none'}`);
     console.log(`   Users: ${CONFIG.fromUsers.join(', ') || 'none'}\n`);

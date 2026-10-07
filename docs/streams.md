@@ -4,7 +4,7 @@
 
 ## Overview
 
-XActions Streams provides a real-time polling system that monitors X/Twitter accounts for changes:
+Medirus Streams provides a real-time polling system that monitors X/Twitter accounts for changes:
 
 - **Tweet Streams** — Watch for new tweets from any account
 - **Follower Streams** — Get alerted when followers change (new followers, unfollowers)
@@ -29,7 +29,7 @@ unfollowx stream start tweet @nichxbt --auth-token YOUR_TOKEN
 unfollowx stream start follower @nichxbt --interval 300 --auth-token YOUR_TOKEN
 
 # Monitor mentions of a keyword
-unfollowx stream start mention "xactions" --auth-token YOUR_TOKEN
+unfollowx stream start mention "medirus" --auth-token YOUR_TOKEN
 ```
 
 ### Manage streams (CLI)

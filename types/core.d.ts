@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * TypeScript declarations for the XActions core domain (Story 10.1).
+ * TypeScript declarations for the Medirus core domain (Story 10.1).
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -267,7 +267,7 @@ export const SuggestedActions: Readonly<{
   WAIT: 'wait';
   REDUCE_RATE: 'reduce_rate';
   CONTACT_SUPPORT: 'contact_support';
-  USE_ACTIONS_LIST: 'use_x_actions_list';
+  USE_ACTIONS_LIST: 'use_medirus_list';
   VERIFY_URL: 'verify_url';
   RETRY_WITH_DIFFERENT_ACCOUNT: 'retry_with_different_account';
 }>;

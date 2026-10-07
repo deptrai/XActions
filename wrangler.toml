@@ -1,4 +1,4 @@
-# Cloudflare Worker configuration for xactions.app
+# Cloudflare Worker configuration for medirus.online
 #
 # Deploy:  npm run deploy:cloudflare
 #   (= node scripts/build-cloudflare.mjs && wrangler deploy)
@@ -11,7 +11,7 @@
 #
 # by nichxbt
 
-name = "xactions"
+name = "medirus"
 main = "worker/index.js"
 compatibility_date = "2025-10-01"
 compatibility_flags = ["nodejs_compat"]
@@ -28,7 +28,7 @@ NODE_ENV = "production"
 # paid AI execution) proxy here. Empty string = those routes answer 503 with
 # setup instructions while the static site and edge API keep working.
 # Point it at your Railway/Fly/Docker deployment when one is live, e.g.
-# API_ORIGIN = "https://xactions-api.up.railway.app"
+# API_ORIGIN = "https://medirus-api.up.railway.app"
 API_ORIGIN = ""
 
 [observability]

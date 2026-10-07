@@ -31,7 +31,7 @@ const SELECTORS = {
 /**
  * Publish a long-form article
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').ArticleInput} article - { title, body, coverImage? }
+ * @param {import('./types/medirus.js').ArticleInput} article - { title, body, coverImage? }
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function publishArticle(page, article) {
@@ -87,7 +87,7 @@ export async function publishArticle(page, article) {
 /**
  * Save article as draft
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').ArticleInput} article - { title, body }
+ * @param {import('./types/medirus.js').ArticleInput} article - { title, body }
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function saveDraft(page, article) {

@@ -26,7 +26,7 @@
   const results = { muted: [], failed: [] };
 
   const run = async () => {
-    console.log('🔇 MANAGE MUTED WORDS — XActions by nichxbt');
+    console.log('🔇 MANAGE MUTED WORDS — Medirus by nichxbt');
 
     if (CONFIG.wordsToMute.length === 0) {
       console.error('❌ No words to mute! Edit CONFIG.wordsToMute array.');

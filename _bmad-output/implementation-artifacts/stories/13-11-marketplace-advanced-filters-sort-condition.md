@@ -47,7 +47,7 @@ Hoàn thiện phần còn lại của Facebook Marketplace Advanced Filters: th�
 
 ## Story
 
-As an XActions consumer (Nowing Lead Hub),
+As an Medirus consumer (Nowing Lead Hub),
 I want to sort and filter Facebook Marketplace results by price/date/condition via MCP and CLI,
 So that I can surface the most relevant listings without post-processing on the consumer side.
 
@@ -88,7 +88,7 @@ So that I can surface the most relevant listings without post-processing on the 
 **And** handler validation already reads these (verify + add input validation for new fields)
 
 ### AC-4: CLI flags
-**Given** `xactions scrape --action marketplace`
+**Given** `medirus scrape --action marketplace`
 **When** `--sort-by`, `--condition`, `--radius-km`, `--latitude`, `--longitude`, `--category-id` are passed
 **Then** they map into the `marketplace()` args and reach the crawler
 
@@ -151,7 +151,7 @@ So that I can surface the most relevant listings without post-processing on the 
 
 ## Auto Run Result
 
-**Summary.** Story 13.11 completed: `sortBy` (`relevance|price_asc|price_desc|date_listed`) and `condition` (`new|used`, single or array) added to `FacebookCrawler.marketplace()`, mapped to Facebook URL params (`sortBy=price_ascend|price_descend|creation_time_descend`, `itemCondition=new,used`) and to GraphQL `browse_request_params` (`sort_by`, `item_condition`). MCP `x_facebook_marketplace` inputSchema now exposes all geo/category/cursor params plus the two new ones, with handler validation. CLI `xactions scrape` gains `--sort-by`/`--condition`. REST `/api/facebook/scrape` forwards both new params (review patch).
+**Summary.** Story 13.11 completed: `sortBy` (`relevance|price_asc|price_desc|date_listed`) and `condition` (`new|used`, single or array) added to `FacebookCrawler.marketplace()`, mapped to Facebook URL params (`sortBy=price_ascend|price_descend|creation_time_descend`, `itemCondition=new,used`) and to GraphQL `browse_request_params` (`sort_by`, `item_condition`). MCP `x_facebook_marketplace` inputSchema now exposes all geo/category/cursor params plus the two new ones, with handler validation. CLI `medirus scrape` gains `--sort-by`/`--condition`. REST `/api/facebook/scrape` forwards both new params (review patch).
 
 **Files changed.**
 - `src/scrapers/social/facebook/crawler.js` — sortBy/condition validation (XACT_4001), GraphQL param mapping, checkpoint targetKey extension, optionalArgs + JSDoc.

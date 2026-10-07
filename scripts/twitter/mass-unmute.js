@@ -69,7 +69,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🔊 XActions — Mass Unmute                                   ║
+║  🔊 Medirus — Mass Unmute                                   ║
 ║  Unmute multiple users                                       ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unmuted             ║' : '║  🔴 LIVE MODE - Accounts WILL be unmuted                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -228,7 +228,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unmuted      
   console.log('═'.repeat(60));
 
   // Save log
-  const storageKey = 'xactions_unmute_log';
+  const storageKey = 'medirus_unmute_log';
   const log = {
     timestamp: new Date().toISOString(),
     // Record the accounts actually unmuted; slicing the candidate list

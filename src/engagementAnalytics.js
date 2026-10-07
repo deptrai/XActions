@@ -44,7 +44,7 @@
   };
 
   const run = async () => {
-    console.log('📊 ENGAGEMENT ANALYTICS - XActions by nichxbt');
+    console.log('📊 ENGAGEMENT ANALYTICS - Medirus by nichxbt');
 
     const username = getUsername();
     if (!username || ['home', 'explore', 'notifications', 'messages', 'i'].includes(username)) {
@@ -165,7 +165,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `xactions-analytics-${username}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-analytics-${username}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       console.log('\n📥 Full report downloaded as JSON');
     }

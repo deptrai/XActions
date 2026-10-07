@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — jev-verify harness unit tests (fetch stubbed — no real API calls)
+// Medirus — jev-verify harness unit tests (fetch stubbed — no real API calls)
 // Covers: buildQuestions isSpam parity, evaluate, summarize, checkFloors,
 // validateCorpusItems, and main() gate wiring → exit codes → --out payload.
 // by nichxbt

@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interact By Hashtag — Free X/Twitter Script | XActions</title>
+  <title>Interact By Hashtag — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Interact with posts containing specific hashtags">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, interact, hashtag, engagement">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, interact, hashtag, engagement">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Interact By Hashtag — XActions">
+  <meta property="og:title" content="Interact By Hashtag — Medirus">
   <meta property="og:description" content="Interact with posts containing specific hashtags">
-  <meta property="og:url" content="https://xactions.app/scripts/interact-by-hashtag">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/interact-by-hashtag">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Interact By Hashtag — XActions">
+  <meta name="twitter:title" content="Interact By Hashtag — Medirus">
   <meta name="twitter:description" content="Interact with posts containing specific hashtags">
 
-  <link rel="canonical" href="https://xactions.app/scripts/interact-by-hashtag">
+  <link rel="canonical" href="https://medirus.online/scripts/interact-by-hashtag">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Interact By Hashtag — Free X/Twitter Script | XActions",
+    "headline": "Interact By Hashtag — Free X/Twitter Script | Medirus",
     "description": "Interact with posts containing specific hashtags",
-    "url": "https://xactions.app/scripts/interact-by-hashtag",
+    "url": "https://medirus.online/scripts/interact-by-hashtag",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Engagement",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, interact, hashtag, engagement"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, interact, hashtag, engagement"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://xactions.app/scripts#engagement" },
-      { "@type": "ListItem", "position": 4, "name": "Interact By Hashtag", "item": "https://xactions.app/scripts/interact-by-hashtag" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://medirus.online/scripts#engagement" },
+      { "@type": "ListItem", "position": 4, "name": "Interact By Hashtag", "item": "https://medirus.online/scripts/interact-by-hashtag" }
     ]
   }
   </script>
@@ -137,7 +137,7 @@
         <ol class="usage-steps"><li>Configure hashtags below</li>
 <li>Open Chrome DevTools (F12)</li>
 <li>Paste this script and press Enter</li>
-<li>Run XActions.Hashtag.search() and interact!</li></ol>
+<li>Run Medirus.Hashtag.search() and interact!</li></ol>
         
 
         
@@ -179,7 +179,7 @@
  * 1. Configure hashtags below
  * 2. Open Chrome DevTools (F12)
  * 3. Paste this script and press Enter
- * 4. Run XActions.Hashtag.search() and interact!
+ * 4. Run Medirus.Hashtag.search() and interact!
  * 
  * ============================================================
  * ⚙️ CONFIGURATION
@@ -320,9 +320,9 @@ var CONFIG = {
     return link?.href?.match(/status\/(\d+)/)?.[1];
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Hashtag = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Hashtag = {
     config: CONFIG,
     state,
     
@@ -338,7 +338,7 @@ var CONFIG = {
 
       // Type into X's own search box and submit through it (a real in-app
       // search) instead of assigning location.href. Setting location.href
-      // forces a hard page reload, which wipes this injected script (window.XActions
+      // forces a hard page reload, which wipes this injected script (window.Medirus
       // included) - so the &quot;run search(), then run interact()&quot; flow documented
       // above would break as soon as search() ran.
       const input = document.querySelector(SELECTORS.searchInput);
@@ -348,7 +348,7 @@ var CONFIG = {
         input.dispatchEvent(new Event('input', { bubbles: true }));
         await sleep(300);
         input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-        console.log('✅ Search submitted. Once results load, run XActions.Hashtag.interact().');
+        console.log('✅ Search submitted. Once results load, run Medirus.Hashtag.interact().');
       } else {
         console.warn('⚠️ Search box not found on this page. Falling back to a full navigation - this reloads the page and clears the script, so paste it again once results load.');
         window.location.href = `https://x.com/search?q=%23${tag}&amp;src=typed_query&amp;f=live`;
@@ -445,7 +445,7 @@ var CONFIG = {
       console.log('╔════════════════════════════════════════════════════════════╗');
       console.log('║  🎉 HASHTAG INTERACTION COMPLETE!                          ║');
       console.log('╚════════════════════════════════════════════════════════════╝');
-      window.XActions.Hashtag.stats();
+      window.Medirus.Hashtag.stats();
     },
     
     // Search and interact with all configured hashtags
@@ -460,8 +460,8 @@ var CONFIG = {
       console.log('📋 Run these commands in sequence:');
       
       CONFIG.hashtags.forEach((tag, i) =&gt; {
-        console.log(`   ${i + 1}. XActions.Hashtag.search(&quot;${tag}&quot;)`);
-        console.log(`      Then: XActions.Hashtag.interact()`);
+        console.log(`   ${i + 1}. Medirus.Hashtag.search(&quot;${tag}&quot;)`);
+        console.log(`      Then: Medirus.Hashtag.interact()`);
       });
       console.log('');
     },
@@ -507,20 +507,20 @@ var CONFIG = {
       console.log('');
       console.log('📋 HASHTAG INTERACTION COMMANDS:');
       console.log('');
-      console.log('   XActions.Hashtag.search(&quot;crypto&quot;)   - Search hashtag');
-      console.log('   XActions.Hashtag.interact()         - Interact with results');
-      console.log('   XActions.Hashtag.addHashtag(&quot;tag&quot;)  - Add hashtag');
-      console.log('   XActions.Hashtag.removeHashtag(&quot;t&quot;) - Remove hashtag');
-      console.log('   XActions.Hashtag.interactAll()      - Show guide for all');
-      console.log('   XActions.Hashtag.stop()             - Stop interaction');
-      console.log('   XActions.Hashtag.stats()            - Show statistics');
+      console.log('   Medirus.Hashtag.search(&quot;crypto&quot;)   - Search hashtag');
+      console.log('   Medirus.Hashtag.interact()         - Interact with results');
+      console.log('   Medirus.Hashtag.addHashtag(&quot;tag&quot;)  - Add hashtag');
+      console.log('   Medirus.Hashtag.removeHashtag(&quot;t&quot;) - Remove hashtag');
+      console.log('   Medirus.Hashtag.interactAll()      - Show guide for all');
+      console.log('   Medirus.Hashtag.stop()             - Stop interaction');
+      console.log('   Medirus.Hashtag.stats()            - Show statistics');
       console.log('');
     }
   };
   
   console.log('✅ Interact By Hashtag loaded!');
   console.log(`📋 Configured hashtags: ${CONFIG.hashtags.map(t =&gt; '#' + t).join(', ')}`);
-  console.log('   Run XActions.Hashtag.help() for commands.');
+  console.log('   Run Medirus.Hashtag.help() for commands.');
   console.log('');
 })();
 </code></pre>
@@ -528,7 +528,7 @@ var CONFIG = {
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -541,7 +541,7 @@ var CONFIG = {
         <a href="/scripts/auto-commenter">💬 Auto Commenter</a>
 <a href="/scripts/auto-engage">⚡ Auto Engage</a>
 <a href="/scripts/auto-liker">❤️ Auto Liker</a>
-<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - XActions</a>
+<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - Medirus</a>
 <a href="/scripts/auto-repost">🔁 Auto Repost</a>
 <a href="/scripts/auto-plug-replies">🔌 Auto-Plug Replies</a>
 <a href="/scripts/auto-reply">💬 Auto-Reply / Auto-Respond</a>

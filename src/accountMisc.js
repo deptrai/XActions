@@ -8,7 +8,7 @@
 // 1. Go to https://x.com (must be logged in)
 // 2. Open Developer Console (F12 or Ctrl+Shift+J / Cmd+Option+J)
 // 3. Paste this script and press Enter
-// 4. Call functions via window.XActions.accountMisc.*
+// 4. Call functions via window.Medirus.accountMisc.*
 //
 // AVAILABLE TOOLS:
 //   viewJoinDate('username')         — Scrape the "Joined" date from a profile
@@ -242,8 +242,8 @@
       scrapedAt: new Date().toISOString(),
     };
 
-    sessionStorage.setItem('xactions_login_history', JSON.stringify(result));
-    console.log('💾 Saved to sessionStorage: xactions_login_history');
+    sessionStorage.setItem('medirus_login_history', JSON.stringify(result));
+    console.log('💾 Saved to sessionStorage: medirus_login_history');
     return result;
   };
 
@@ -313,8 +313,8 @@
       scrapedAt: new Date().toISOString(),
     };
 
-    sessionStorage.setItem('xactions_connected_accounts', JSON.stringify(result));
-    console.log('💾 Saved to sessionStorage: xactions_connected_accounts');
+    sessionStorage.setItem('medirus_connected_accounts', JSON.stringify(result));
+    console.log('💾 Saved to sessionStorage: medirus_connected_accounts');
     return result;
   };
 
@@ -512,11 +512,11 @@
     };
 
     // Download as JSON
-    const filename = `xactions-account-summary-${username}-${new Date().toISOString().slice(0, 10)}.json`;
+    const filename = `medirus-account-summary-${username}-${new Date().toISOString().slice(0, 10)}.json`;
     download(result, filename);
 
-    sessionStorage.setItem('xactions_account_summary', JSON.stringify(result));
-    console.log('💾 Saved to sessionStorage: xactions_account_summary');
+    sessionStorage.setItem('medirus_account_summary', JSON.stringify(result));
+    console.log('💾 Saved to sessionStorage: medirus_account_summary');
     return result;
   };
 
@@ -571,10 +571,10 @@
     return result;
   };
 
-  // ─── Expose on window.XActions ─────────────────────────────
+  // ─── Expose on window.Medirus ─────────────────────────────
 
-  window.XActions = window.XActions || {};
-  window.XActions.accountMisc = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.accountMisc = {
     viewJoinDate,
     viewLoginHistory,
     viewConnectedAccounts,
@@ -587,11 +587,11 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║        🛠️  XActions Account Misc Tools — Loaded         ║
+║        🛠️  Medirus Account Misc Tools — Loaded         ║
 ╠══════════════════════════════════════════════════════════╣
 ║                                                          ║
 ║  All functions available at:                             ║
-║    window.XActions.accountMisc.<function>                 ║
+║    window.Medirus.accountMisc.<function>                 ║
 ║                                                          ║
 ║  1. viewJoinDate('username')                             ║
 ║     ↳ Scrape the "Joined" date from any profile          ║
@@ -612,7 +612,7 @@
 ║     ↳ Calculate account age in days/months/years         ║
 ║                                                          ║
 ╠══════════════════════════════════════════════════════════╣
-║  💡 Example: XActions.accountMisc.viewJoinDate('nichxbt')║
+║  💡 Example: Medirus.accountMisc.viewJoinDate('nichxbt')║
 ║  📖 Data saved to sessionStorage after each operation    ║
 ╚══════════════════════════════════════════════════════════╝
   `);

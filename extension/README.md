@@ -1,6 +1,6 @@
-# XActions Browser Extension
+# Medirus Browser Extension
 
-> Run XActions automations on X/Twitter directly from your browser toolbar. No console access needed. Dark-themed popup with 11 automation cards, live dashboard, category filtering, search, progress tracking, and keyboard shortcuts.
+> Run Medirus automations on X/Twitter directly from your browser toolbar. No console access needed. Dark-themed popup with 11 automation cards, live dashboard, category filtering, search, progress tracking, and keyboard shortcuts.
 
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue)
 ![Chrome](https://img.shields.io/badge/Chrome-✓-green)
@@ -114,4 +114,4 @@ popup.js                    service-worker.js              bridge.js            
 
 ## Credits
 
-Built by [nichxbt](https://x.com/nichxbt) as part of [XActions](https://github.com/nirholas/XActions).
+Built by [nichxbt](https://x.com/nichxbt) as part of [Medirus](https://github.com/nirholas/XActions).

@@ -16,7 +16,7 @@ import {
   RefreshCw,
   AlertTriangle,
 } from 'lucide-react';
-import type { ApiResult } from '@xactions/api-client';
+import type { ApiResult } from '@medirus/api-client';
 import { api } from '@/lib/api';
 import { isAsyncAccepted, pollOperation } from '@/lib/scrape-poll';
 import type { AsyncAccepted } from '@/lib/scrape-poll';
@@ -163,7 +163,7 @@ const CATEGORY_DATA: Record<Category, { label: string; icon: any; col1: string; 
     items: [
       {
         id: 'e1',
-        title: 'CÔNG TY CỔ PHẦN CÔNG NGHỆ TRÍ TUỆ NHÂN TẠO XACTIONS',
+        title: 'CÔNG TY CỔ PHẦN CÔNG NGHỆ TRÍ TUỆ NHÂN TẠO MEDIRUS',
         source: 'MaSoThue',
         field1: 'MST: 0317894562 • Active',
         field2: 'Software & Data Mining • Nguyễn Văn A',
@@ -302,7 +302,7 @@ export default function UniversalExplorerPage() {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', `xactions-${activeCategory}-export.csv`);
+    link.setAttribute('download', `medirus-${activeCategory}-export.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

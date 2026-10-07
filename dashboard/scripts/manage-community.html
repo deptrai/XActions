@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Manage Communities — Free X/Twitter Script | XActions</title>
+  <title>Manage Communities — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Manage X Community members, roles, settings,">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, manage, community, lists &amp; communities">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, manage, community, lists &amp; communities">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Manage Communities — XActions">
+  <meta property="og:title" content="Manage Communities — Medirus">
   <meta property="og:description" content="Manage X Community members, roles, settings,">
-  <meta property="og:url" content="https://xactions.app/scripts/manage-community">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/manage-community">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Manage Communities — XActions">
+  <meta name="twitter:title" content="Manage Communities — Medirus">
   <meta name="twitter:description" content="Manage X Community members, roles, settings,">
 
-  <link rel="canonical" href="https://xactions.app/scripts/manage-community">
+  <link rel="canonical" href="https://medirus.online/scripts/manage-community">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Manage Communities — Free X/Twitter Script | XActions",
+    "headline": "Manage Communities — Free X/Twitter Script | Medirus",
     "description": "Manage X Community members, roles, settings,",
-    "url": "https://xactions.app/scripts/manage-community",
+    "url": "https://medirus.online/scripts/manage-community",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Lists & Communities",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, manage, community, lists & communities"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, manage, community, lists & communities"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Lists & Communities", "item": "https://xactions.app/scripts#lists-communities" },
-      { "@type": "ListItem", "position": 4, "name": "Manage Communities", "item": "https://xactions.app/scripts/manage-community" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Lists & Communities", "item": "https://medirus.online/scripts#lists-communities" },
+      { "@type": "ListItem", "position": 4, "name": "Manage Communities", "item": "https://medirus.online/scripts/manage-community" }
     ]
   }
   </script>
@@ -142,8 +142,8 @@
 
         <div class="controls-box">
         <h3>Runtime Controls</h3>
-        <pre><code>window.XActions.abort()   — stop the script
-window.XActions.status()  — check progress</code></pre>
+        <pre><code>window.Medirus.abort()   — stop the script
+window.Medirus.status()  — check progress</code></pre>
       </div>
         <section class="config-section">
         <h2>Configuration Options</h2>
@@ -222,8 +222,8 @@ window.XActions.status()  — check progress</code></pre>
  * 4. Paste and run
  *
  * 🎮 CONTROLS:
- *   window.XActions.abort()   — stop the script
- *   window.XActions.status()  — check progress
+ *   window.Medirus.abort()   — stop the script
+ *   window.Medirus.status()  — check progress
  * ============================================================
  */
 // by nichxbt
@@ -306,7 +306,7 @@ window.XActions.status()  — check progress</code></pre>
     startTime: Date.now(),
   };
 
-  window.XActions = {
+  window.Medirus = {
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
     status() {
       const el = ((Date.now() - stats.startTime) / 1000).toFixed(0);
@@ -589,7 +589,7 @@ window.XActions.status()  — check progress</code></pre>
 
     console.log(`📋 Action: ${CONFIG.action}`);
 
-    const sessionKey = 'xactions_manageCommunity';
+    const sessionKey = 'medirus_manageCommunity';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     const actions = {
@@ -631,7 +631,7 @@ window.XActions.status()  — check progress</code></pre>
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -641,11 +641,11 @@ window.XActions.status()  — check progress</code></pre>
     <aside class="sidebar-right">
       <div class="sidebar-card">
         <h3>🏘️ Lists &amp; Communities</h3>
-        <a href="/scripts/add-to-list">➕ Add To List - XActions</a>
+        <a href="/scripts/add-to-list">➕ Add To List - Medirus</a>
 <a href="/scripts/advanced-lists">📝 Advanced Lists</a>
 <a href="/scripts/block-list-manager">📝 Block List Manager</a>
 <a href="/scripts/create-community">🏘️ Create Communities</a>
-<a href="/scripts/follow-list-members">👣 Follow List Members - XActions</a>
+<a href="/scripts/follow-list-members">👣 Follow List Members - Medirus</a>
 <a href="/scripts/join-communities">🏘️ Join Communities</a>
 <a href="/scripts/leave-all-communities">🚪 Leave All Communities</a>
 <a href="/scripts/leave-community">🚪 Leave Specific Community</a>

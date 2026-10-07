@@ -26,10 +26,10 @@ Scans your posts for users who actively engage (like, retweet, reply). Adds them
 
 Complete DOM actions library (~2100 lines). Provides namespaced functions:
 
-- `XActions.tweet.post()`, `XActions.tweet.like()`, `XActions.tweet.retweet()`
-- `XActions.user.follow()`, `XActions.user.unfollow()`
-- `XActions.dm.send()`
-- `XActions.bookmark.add()`
+- `Medirus.tweet.post()`, `Medirus.tweet.like()`, `Medirus.tweet.retweet()`
+- `Medirus.user.follow()`, `Medirus.user.unfollow()`
+- `Medirus.dm.send()`
+- `Medirus.bookmark.add()`
 
 Used internally by other automation scripts. Can also be used standalone after pasting `core.js`.
 

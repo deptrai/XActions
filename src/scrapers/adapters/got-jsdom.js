@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Scraper Adapter — Got + JSDOM
+ * Medirus Scraper Adapter — Got + JSDOM
  * Lightweight DOM adapter for testing and lightweight HTML scraping without full Chromium.
  *
  * @author nich (@nichxbt)

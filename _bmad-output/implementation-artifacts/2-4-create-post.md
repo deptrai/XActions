@@ -8,7 +8,7 @@ Status: done
 
 ## Story
 
-As a multi-account operator using XActions,
+As a multi-account operator using Medirus,
 I want to create a Facebook text post (with optional media) with a dry-run preview,
 So that I can confirm content before it goes live.
 

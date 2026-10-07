@@ -320,7 +320,7 @@ NEW:
 ```
 NEW:
 * **And** action discovery qua `FacebookCrawler.listActions()`, MCP
-  `x_actions_list` và CLI `xactions actions --platform facebook` trả về
+  `medirus_list` và CLI `medirus actions --platform facebook` trả về
   `requiresAuth` đã phân giải cho từng action; `api/routes/facebook.js`
   validation vẫn chấp nhận cùng action set, response shape không đổi với
   consumer (trừ trường `requiresAuth` additive trong discovery output).
@@ -343,7 +343,7 @@ NEW:
 | T7 | `FacebookClient`: sửa `requestGraphQl` (dòng 436) bỏ fallback `'default'` (dùng `null`); sửa `buildGraphQlBody` (dòng 389) hỗ trợ guest body mode (`__user: '0'`, `av: '0'`) khi không có `c_user` (F3, F4) | `src/scrapers/social/facebook/client.js` | 3h |
 | T8 | `AbstractApiClient`: nhận signal `options.requiresAuth`; nới guard dòng 486 khi `options.requiresAuth === false` để standalone mode không có `accountPool` không bị ném `XACT_4010` (F5) | `src/core/base-client.js` | 1.5h |
 | T5 | Tests: no-auth action không gọi `accountPool.getNextAvailable`, không throw `XACT_4010` khi pool rỗng (kể cả standalone); auth action vẫn rút pool; explicit accountId trên no-auth action được tôn trọng + sticky; opt-in accountId đang hibernation bị từ chối `XACT_4291`; `listActions()` expose đúng | `tests/core/base-crawler.test.js`, `tests/core/crawler-governor.test.js`, `tests/scrapers/social/facebook/crawler-*.test.js`, `tests/scrapers/social/facebook/client.test.js` | 3h |
-| T6 | Verify MCP `x_actions_list` surface trường `requiresAuth`; chạy full test suite + lint | `src/mcp/server.js`, CI | 1h |
+| T6 | Verify MCP `medirus_list` surface trường `requiresAuth`; chạy full test suite + lint | `src/mcp/server.js`, CI | 1h |
 
 **Thứ tự thực hiện:** T1 → T2 → T3 → T4 → T7 → T8 → T5 → T6. Nên hoàn tất **trước khi Story 13.9 vào sprint**.
 
@@ -359,7 +359,7 @@ NEW:
 2. Gọi `crawler.start({ action: 'marketplace', args: { query: 'iphone' } })` với `AccountPool` rỗng (kể cả standalone không có `accountPool`) → **thành công**, gửi GraphQL body với `__user: '0'` và nhận session proxy ngẫu nhiên mỗi request (Rotating Residential).
 3. Gọi `crawler.start({ action: 'group_posts', ... })` với pool rỗng → throw `XACT_4010` như cũ.
 4. Truyền `session: { accountId: 'fb:hibernating' }` vào action `marketplace` → bị chặn với mã `XACT_4291` (`hibernation`) thay vì bypass governor.
-5. `listActions()` của Facebook và MCP `x_actions_list` trả về `requiresAuth: false` cho `marketplace`/`search`/`page_posts`/`profile`, `true` cho `group_posts`/`group_members`.
+5. `listActions()` của Facebook và MCP `medirus_list` trả về `requiresAuth: false` cho `marketplace`/`search`/`page_posts`/`profile`, `true` cho `group_posts`/`group_members`.
 6. Twitter/Threads crawler: hành vi byte-for-byte không đổi (không descriptor khai báo).
 
 ---

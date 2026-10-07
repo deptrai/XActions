@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation - Quota Supervisor
+// Medirus Automation - Quota Supervisor
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -12,12 +12,12 @@
 // 3. All other automation scripts will respect these limits
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, storage } = window.XActions.Core;
+  const { log, storage } = window.Medirus.Core;
 
   // ============================================
   // QUOTA CONFIGURATION
@@ -66,7 +66,7 @@
   // ============================================
   // QUOTA STATE
   // ============================================
-  const KEY = 'xactions_quota_state';
+  const KEY = 'medirus_quota_state';
   
   const getState = () => {
     const saved = storage.get(KEY);
@@ -203,7 +203,7 @@
     log(`😴 Quota hit! Sleeping for ${sleepMinutes} minutes (${reason})`, 'warning');
     
     if (QUOTAS.NOTIFY.enabled && QUOTAS.NOTIFY.onQuotaHit) {
-      notify(`XActions: Sleeping ${sleepMinutes}min`, reason);
+      notify(`Medirus: Sleeping ${sleepMinutes}min`, reason);
     }
     
     return sleepMinutes;
@@ -337,7 +337,7 @@
   // ============================================
   // EXPORT
   // ============================================
-  window.XActions.Quota = {
+  window.Medirus.Quota = {
     canPerform,
     recordAction,
     perform,

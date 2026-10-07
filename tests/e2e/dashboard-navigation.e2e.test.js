@@ -132,7 +132,7 @@ test.describe('Dashboard navigation and routing', () => {
     await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
     await page.waitForSelector('.sidebar-left', { state: 'visible', timeout: 10000 });
     await expect(page.locator('.sidebar-left')).toBeVisible();
-    await expect(page.locator('#main-content')).toContainText('XActions Automation');
+    await expect(page.locator('#main-content')).toContainText('Medirus Automation');
   });
 
   test('platform page detects /platforms/x and renders X actions', async ({ page }) => {

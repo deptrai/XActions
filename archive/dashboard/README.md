@@ -1,6 +1,6 @@
 # 📦 Archived Dashboard Pages
 
-These dashboard pages have been archived as XActions transitioned to a **100% free, documentation-focused site** on January 25, 2026.
+These dashboard pages have been archived as Medirus transitioned to a **100% free, documentation-focused site** on January 25, 2026.
 
 ## Archived Files
 
@@ -10,7 +10,7 @@ These dashboard pages have been archived as XActions transitioned to a **100% fr
 
 ## Why Archived?
 
-XActions no longer has:
+Medirus no longer has:
 - ❌ Paid tiers
 - ❌ Credit systems
 - ❌ Subscriptions

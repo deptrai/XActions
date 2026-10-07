@@ -1,4 +1,4 @@
-# Adversarial-Divergence Review — xactions-api-contract-epic46 Spine
+# Adversarial-Divergence Review — medirus-api-contract-epic46 Spine
 
 **Reviewer lens:** construct two units one level down (Story 46.1 spec+UI, Story 46.2 Zod+envelopes, Story 46.3 client codegen, Epic 47 consumer) that each obey every AD to the letter yet still build incompatibly. Every surviving pair = a hole.
 
@@ -133,18 +133,18 @@ Companion sub-hole — **the 402 body is not the AD-2 envelope.** `PaymentRequir
 
 ---
 
-## Finding 9 — `workspaces` mechanism pinned, package manager not: npm vs pnpm divergence on `@xactions/api-client` resolution
+## Finding 9 — `workspaces` mechanism pinned, package manager not: npm vs pnpm divergence on `@medirus/api-client` resolution
 
 **The pair:**
 
 - **Unit A** adds `"workspaces": ["packages/*"]` to root `package.json` and runs `npm run generate:api-client` — satisfies AD-8's letter.
-- **Unit B** notices the repo also carries `pnpm-lock.yaml` beside `package-lock.json` and uses pnpm — where the `workspaces` field is silently **ignored** (pnpm requires `pnpm-workspace.yaml`, which does not exist). `@xactions/api-client` doesn't resolve; Epic 47 can't import it.
+- **Unit B** notices the repo also carries `pnpm-lock.yaml` beside `package-lock.json` and uses pnpm — where the `workspaces` field is silently **ignored** (pnpm requires `pnpm-workspace.yaml`, which does not exist). `@medirus/api-client` doesn't resolve; Epic 47 can't import it.
 
-Root `package.json` currently has **no `workspaces` field at all**, and the only existing package (`packages/xactions-mcp`) is named `xactions-mcp`, not `@xactions/*` — so even the naming precedent is unestablished. Additionally `apps/` already contains `api/` and `web/` skeletons, which a third implementer may read as the intended monorepo root — putting the client in `packages/` while apps resolve differently.
+Root `package.json` currently has **no `workspaces` field at all**, and the only existing package (`packages/medirus-mcp`) is named `medirus-mcp`, not `@medirus/*` — so even the naming precedent is unestablished. Additionally `apps/` already contains `api/` and `web/` skeletons, which a third implementer may read as the intended monorepo root — putting the client in `packages/` while apps resolve differently.
 
-**AD text that permits it:** AD-8 "resolve thành `@xactions/api-client` qua root `workspaces`" pins npm semantics without pinning the package manager; AD-9's CI doesn't require an install-time check that `@xactions/api-client` resolves.
+**AD text that permits it:** AD-8 "resolve thành `@medirus/api-client` qua root `workspaces`" pins npm semantics without pinning the package manager; AD-9's CI doesn't require an install-time check that `@medirus/api-client` resolves.
 
-**Fix:** name the package manager (npm, matching `package-lock.json`), require adding `workspaces` in the same PR, and add a CI smoke check `node -e "require.resolve('@xactions/api-client')"`. Or drop the workspaces mechanism and use a tsconfig path alias — but say which.
+**Fix:** name the package manager (npm, matching `package-lock.json`), require adding `workspaces` in the same PR, and add a CI smoke check `node -e "require.resolve('@medirus/api-client')"`. Or drop the workspaces mechanism and use a tsconfig path alias — but say which.
 
 ---
 

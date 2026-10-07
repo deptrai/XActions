@@ -1,11 +1,11 @@
 # Create Threads -- Tutorial
 
-> Step-by-step guide to composing and publishing multi-tweet threads using XActions browser scripts and Node.js/Puppeteer.
+> Step-by-step guide to composing and publishing multi-tweet threads using Medirus browser scripts and Node.js/Puppeteer.
 
 ## Prerequisites
 - Logged into x.com in your browser
 - Browser DevTools console (F12 -> Console tab)
-- For Node.js usage: `npm install xactions` and a valid session cookie
+- For Node.js usage: `npm install medirus` and a valid session cookie
 
 ## Quick Start
 1. Navigate to x.com
@@ -56,33 +56,33 @@ const CONFIG = {
 };
 ```
 
-This script exposes commands on `window.XActions`:
+This script exposes commands on `window.Medirus`:
 
 ```js
 // Load your thread
-XActions.thread([
+Medirus.thread([
   "First tweet of my thread",
   "Second tweet with more context...",
   "Third tweet -- the conclusion!",
 ]);
 
 // Preview with character counts
-XActions.preview();
+Medirus.preview();
 
 // Publish (respects CONFIG.dryRun)
-XActions.publish();
+Medirus.publish();
 
 // Draft management
-XActions.saveDraft('myThread');
-XActions.loadDraft('myThread');
-XActions.listDrafts();
-XActions.deleteDraft('myThread');
+Medirus.saveDraft('myThread');
+Medirus.loadDraft('myThread');
+Medirus.listDrafts();
+Medirus.deleteDraft('myThread');
 
 // Export thread as JSON file
-XActions.exportThread();
+Medirus.exportThread();
 
 // Abort mid-publish
-XActions.abort();
+Medirus.abort();
 ```
 
 ### `src/postComposer.js` -- `postThread` (Node.js / Puppeteer)
@@ -141,10 +141,10 @@ The script will:
 1. Paste `src/threadComposer.js` into the console
 2. Load your thread content:
    ```js
-   XActions.thread([
+   Medirus.thread([
      "Hot take: browser automation is underrated",
      "Most people think you need API access to automate X",
-     "But with XActions, you can do everything from the console",
+     "But with Medirus, you can do everything from the console",
      "No API keys. No rate limit fees. Just paste and go.",
    ]);
    ```
@@ -154,8 +154,8 @@ The script will:
    Tweet 2/4 -- 55/280 chars [OK]
    ...
    ```
-4. Save as draft if needed: `XActions.saveDraft('my-hot-take')`
-5. Publish: Set `CONFIG.dryRun = false` and call `XActions.publish()`
+4. Save as draft if needed: `Medirus.saveDraft('my-hot-take')`
+5. Publish: Set `CONFIG.dryRun = false` and call `Medirus.publish()`
 
 ### Using `postComposer.js` (Node.js / Puppeteer)
 
@@ -189,8 +189,8 @@ The script will:
 - **First tweet matters**: The first tweet is what appears in the timeline. Make it compelling to drive clicks.
 - **Auto-numbering**: Enable `autoNumber: true` in `threadComposer.js` to add "1/N" labels automatically.
 - **Thread emoji**: The thread composer adds a thread emoji to the first tweet by default. Disable with `addThreadEmoji: false`.
-- **Save drafts**: Use `XActions.saveDraft('name')` to save threads to localStorage for later editing.
-- **Export**: Use `XActions.exportThread()` to download your thread as a JSON file.
+- **Save drafts**: Use `Medirus.saveDraft('name')` to save threads to localStorage for later editing.
+- **Export**: Use `Medirus.exportThread()` to download your thread as a JSON file.
 - **Media per tweet**: When using the Puppeteer `postThread`, pass objects with `{ text, media }` to attach images to specific tweets.
 
 ## Troubleshooting
@@ -201,7 +201,7 @@ The script will:
 | Tweet exceeds 280 chars | The script validates lengths. Shorten the offending tweet or upgrade to Premium for 25,000 chars. |
 | Thread only partially posted | Network issues can interrupt posting. Check your posted tweets and re-post missing ones manually. |
 | Compose box not found | Make sure you are logged into x.com. Try clicking the compose button manually first. |
-| Draft not loading | Drafts are stored in `localStorage`. Clearing browser data removes them. Use `XActions.exportThread()` for permanent backups. |
+| Draft not loading | Drafts are stored in `localStorage`. Clearing browser data removes them. Use `Medirus.exportThread()` for permanent backups. |
 
 ## Related Scripts
 

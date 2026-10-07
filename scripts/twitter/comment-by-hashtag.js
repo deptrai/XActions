@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * =============================================================================
- * XActions - Comment By Hashtag
+ * Medirus - Comment By Hashtag
  * =============================================================================
  * 
  * @name        Comment By Hashtag
@@ -10,7 +10,7 @@
  * @author      nichxbt
  * @version     1.0.0
  * @date        2026-01-26
- * @website     https://xactions.app
+ * @website     https://medirus.online
  * 
  * Usage:
  *   1. Go to x.com and make sure you're logged in
@@ -87,12 +87,12 @@
       error: 'color: #E0245E; font-weight: bold;',
       warn: 'color: #FFAD1F; font-weight: bold;'
     };
-    console.log(`%c[XActions] ${msg}`, styles[type] || styles.info);
+    console.log(`%c[Medirus] ${msg}`, styles[type] || styles.info);
   };
 
   const getProcessedTweets = () => {
     try {
-      return JSON.parse(sessionStorage.getItem('xactions_commented_tweets') || '[]');
+      return JSON.parse(sessionStorage.getItem('medirus_commented_tweets') || '[]');
     } catch {
       return [];
     }
@@ -102,7 +102,7 @@
     const tweets = getProcessedTweets();
     if (!tweets.includes(tweetId)) {
       tweets.push(tweetId);
-      sessionStorage.setItem('xactions_commented_tweets', JSON.stringify(tweets));
+      sessionStorage.setItem('medirus_commented_tweets', JSON.stringify(tweets));
     }
   };
 
@@ -261,7 +261,7 @@
   console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║   🏷️  XACTIONS - COMMENT BY HASHTAG                          ║
+║   🏷️  MEDIRUS - COMMENT BY HASHTAG                          ║
 ║                                                               ║
 ║   Automatically comment on tweets with specific hashtags      ║
 ║                                                               ║

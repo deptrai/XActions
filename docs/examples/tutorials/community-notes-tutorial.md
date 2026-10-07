@@ -1,15 +1,15 @@
 ---
 title: "Community Notes — Tutorial"
-description: "View, write, and rate Community Notes on X/Twitter posts using XActions. Scan your timeline for noted tweets and contribute notes."
-keywords: ["twitter community notes", "x community notes script", "rate community notes", "write community note", "xactions community notes"]
-canonical: "https://xactions.app/examples/community-notes"
+description: "View, write, and rate Community Notes on X/Twitter posts using Medirus. Scan your timeline for noted tweets and contribute notes."
+keywords: ["twitter community notes", "x community notes script", "rate community notes", "write community note", "medirus community notes"]
+canonical: "https://medirus.online/examples/community-notes"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Community Notes — Tutorial
 
-> Step-by-step guide to viewing, writing, and rating Community Notes on X/Twitter posts using XActions.
+> Step-by-step guide to viewing, writing, and rating Community Notes on X/Twitter posts using Medirus.
 
 **Works on:** Browser Console
 **Difficulty:** Intermediate
@@ -92,7 +92,7 @@ Scan your timeline for tweets that have Community Notes attached:
 (async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('📝 VIEW COMMUNITY NOTES - XActions by nichxbt');
+  console.log('📝 VIEW COMMUNITY NOTES - Medirus by nichxbt');
 
   const SEL = {
     communityNote: '[data-testid="communityNote"]',
@@ -141,7 +141,7 @@ Scan your timeline for tweets that have Community Notes attached:
 ### Expected Output (View)
 
 ```
-📝 VIEW COMMUNITY NOTES - XActions by nichxbt
+📝 VIEW COMMUNITY NOTES - Medirus by nichxbt
 📝 Note #1 found on tweet by @example_user:
    Tweet: "Breaking: Major event happened today that changes everything about..."
    Note: "This claim is missing important context. According to official sources..."
@@ -170,7 +170,7 @@ To write a note on a specific tweet (requires Community Notes enrollment):
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('✍️ WRITE COMMUNITY NOTE - XActions by nichxbt');
+  console.log('✍️ WRITE COMMUNITY NOTE - Medirus by nichxbt');
 
   if (!CONFIG.tweetUrl) {
     console.error('❌ Set CONFIG.tweetUrl to the tweet you want to annotate');
@@ -244,7 +244,7 @@ Scroll through your timeline and rate Community Notes as helpful or not helpful:
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log(`📝 RATE COMMUNITY NOTES - XActions by nichxbt`);
+  console.log(`📝 RATE COMMUNITY NOTES - Medirus by nichxbt`);
   console.log(`Rating as: ${CONFIG.rateAsHelpful ? 'Helpful' : 'Not Helpful'}`);
 
   if (CONFIG.dryRun) {
@@ -312,7 +312,7 @@ Browse your timeline and export all noted tweets as JSON:
 (async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  console.log('🔍 BROWSE COMMUNITY NOTES - XActions by nichxbt');
+  console.log('🔍 BROWSE COMMUNITY NOTES - Medirus by nichxbt');
   console.log('💡 Tip: Visit x.com/i/communitynotes for the full dashboard');
 
   const notedTweets = [];
@@ -368,9 +368,9 @@ Browse your timeline and export all noted tweets as JSON:
 
 3. **Include sources** -- When writing a note, always include links to authoritative sources. Notes with citations are rated more favorably.
 
-4. **Abort at any time** -- If the full script from `src/communityNotes.js` is running, type `XActions.abort()` in the console to stop it.
+4. **Abort at any time** -- If the full script from `src/communityNotes.js` is running, type `Medirus.abort()` in the console to stop it.
 
-5. **Check status** -- While the script is running, type `XActions.status()` to see progress.
+5. **Check status** -- While the script is running, type `Medirus.status()` to see progress.
 
 ---
 
@@ -397,5 +397,5 @@ Browse your timeline and export all noted tweets as JSON:
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

@@ -1,5 +1,5 @@
 /**
- * PromoVideo — XActions promotional/marketing video
+ * PromoVideo — Medirus promotional/marketing video
  * Use case: Product demo, GitHub README hero video, social media ads.
  *
  * Scenes: Logo reveal → Feature showcase → Tool demo → CTA
@@ -122,9 +122,9 @@ const FeatureShowcase = () => {
 const CodeDemo = () => {
   const frame = useCurrentFrame();
   const lines = [
-    '$ npx xactions-mcp',
+    '$ npx medirus-mcp',
     '',
-    '⚡ XActions MCP Server v3.0.0',
+    '⚡ Medirus MCP Server v3.0.0',
     '✅ Authenticated',
     '📋 Tools available: 77',
     '',
@@ -247,7 +247,7 @@ const CTA = () => {
       </FadeIn>
 
       <FadeIn delay={30} style={{ fontSize: 20, color: theme.textSecondary }}>
-        npx xactions-mcp  ·  npm install xactions  ·  xactions.app
+        npx medirus-mcp  ·  npm install medirus  ·  medirus.online
       </FadeIn>
     </AbsoluteFill>
   );

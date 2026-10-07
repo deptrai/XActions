@@ -2,7 +2,7 @@
 /**
  * BrowserPool Telemetry & Release Verify Gate Tests — Story 53.6.
  * Validates:
- * 1. TelemetryContext pooled dims (pooled, poolBackend, poolWaitMs) gated by XACTIONS_BROWSER_BACKEND_METRICS=1.
+ * 1. TelemetryContext pooled dims (pooled, poolBackend, poolWaitMs) gated by MEDIRUS_BROWSER_BACKEND_METRICS=1.
  * 2. TelemetryEmitter stripping behavior when metrics flag is off vs preserved when on.
  * 3. stealthBrowser & PuppeteerAdapter propagation of pool lease telemetry.
  * 4. scripts/browser-pool-spike.mjs evaluateGateConditions gate criteria evaluation.
@@ -16,22 +16,22 @@ import { launchStealthBrowser } from '../../src/scraping/stealthBrowser.js';
 import { PuppeteerAdapter } from '../../src/scrapers/adapters/puppeteer.js';
 
 describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => {
-  const originalEnv = process.env.XACTIONS_BROWSER_BACKEND_METRICS;
+  const originalEnv = process.env.MEDIRUS_BROWSER_BACKEND_METRICS;
 
   beforeEach(() => {
-    delete process.env.XACTIONS_BROWSER_BACKEND_METRICS;
+    delete process.env.MEDIRUS_BROWSER_BACKEND_METRICS;
   });
 
   afterEach(() => {
     if (originalEnv !== undefined) {
-      process.env.XACTIONS_BROWSER_BACKEND_METRICS = originalEnv;
+      process.env.MEDIRUS_BROWSER_BACKEND_METRICS = originalEnv;
     } else {
-      delete process.env.XACTIONS_BROWSER_BACKEND_METRICS;
+      delete process.env.MEDIRUS_BROWSER_BACKEND_METRICS;
     }
   });
 
   describe('TelemetryContext — pool dimensions', () => {
-    it('[P0] omits pooled, poolBackend, and poolWaitMs when XACTIONS_BROWSER_BACKEND_METRICS is unset', () => {
+    it('[P0] omits pooled, poolBackend, and poolWaitMs when MEDIRUS_BROWSER_BACKEND_METRICS is unset', () => {
       const ctx = new TelemetryContext({
         scraperId: 'twitter-scraper',
         platform: 'twitter',
@@ -49,8 +49,8 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
       expect(payload.poolWaitMs).toBeUndefined();
     });
 
-    it('[P0] attaches pooled, poolBackend, and poolWaitMs when XACTIONS_BROWSER_BACKEND_METRICS=1', () => {
-      process.env.XACTIONS_BROWSER_BACKEND_METRICS = '1';
+    it('[P0] attaches pooled, poolBackend, and poolWaitMs when MEDIRUS_BROWSER_BACKEND_METRICS=1', () => {
+      process.env.MEDIRUS_BROWSER_BACKEND_METRICS = '1';
 
       const ctx = new TelemetryContext({
         scraperId: 'twitter-scraper',
@@ -69,7 +69,7 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
     });
 
     it('[P1] setPoolTelemetry dynamically updates pool dimensions and browserBackend', () => {
-      process.env.XACTIONS_BROWSER_BACKEND_METRICS = '1';
+      process.env.MEDIRUS_BROWSER_BACKEND_METRICS = '1';
 
       const ctx = new TelemetryContext({
         scraperId: 'reddit-scraper',
@@ -97,7 +97,7 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
     });
 
     it('[P1] poolWaitMs NaN is dropped from payload (not emitted as NaN)', () => {
-      process.env.XACTIONS_BROWSER_BACKEND_METRICS = '1';
+      process.env.MEDIRUS_BROWSER_BACKEND_METRICS = '1';
 
       const ctx = new TelemetryContext({
         scraperId: 's', platform: 'p',
@@ -113,7 +113,7 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
     });
 
     it('[P1] poolWaitMs: 0 is preserved as 0 (not dropped)', () => {
-      process.env.XACTIONS_BROWSER_BACKEND_METRICS = '1';
+      process.env.MEDIRUS_BROWSER_BACKEND_METRICS = '1';
 
       const ctx = new TelemetryContext({
         scraperId: 's', platform: 'p',
@@ -129,7 +129,7 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
     });
 
     it('[P1] pooled: false is preserved as false (not dropped)', () => {
-      process.env.XACTIONS_BROWSER_BACKEND_METRICS = '1';
+      process.env.MEDIRUS_BROWSER_BACKEND_METRICS = '1';
 
       const ctx = new TelemetryContext({
         scraperId: 's', platform: 'p',
@@ -143,7 +143,7 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
     });
 
     it('[P1] toRunPayload runDetails overrides context-level pool dimensions', () => {
-      process.env.XACTIONS_BROWSER_BACKEND_METRICS = '1';
+      process.env.MEDIRUS_BROWSER_BACKEND_METRICS = '1';
 
       const ctx = new TelemetryContext({
         scraperId: 'test-scraper',
@@ -168,8 +168,8 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
   });
 
   describe('TelemetryEmitter — emitRun stripping vs preservation', () => {
-    it('[P0] strips all pool telemetry dimensions when XACTIONS_BROWSER_BACKEND_METRICS is unset', () => {
-      delete process.env.XACTIONS_BROWSER_BACKEND_METRICS;
+    it('[P0] strips all pool telemetry dimensions when MEDIRUS_BROWSER_BACKEND_METRICS is unset', () => {
+      delete process.env.MEDIRUS_BROWSER_BACKEND_METRICS;
 
       const emitter = new TelemetryEmitter();
       /** @type {any[]} */
@@ -194,8 +194,8 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
       expect(captured[0].poolWaitMs).toBeUndefined();
     });
 
-    it('[P0] strips pool dims when XACTIONS_BROWSER_BACKEND_METRICS=0 (truthy-string edge case)', () => {
-      process.env.XACTIONS_BROWSER_BACKEND_METRICS = '0';
+    it('[P0] strips pool dims when MEDIRUS_BROWSER_BACKEND_METRICS=0 (truthy-string edge case)', () => {
+      process.env.MEDIRUS_BROWSER_BACKEND_METRICS = '0';
 
       const emitter = new TelemetryEmitter();
       /** @type {any[]} */
@@ -210,8 +210,8 @@ describe('Story 53.6 — BrowserPool Telemetry Dimensions & Verify Gate', () => 
       expect(captured[0].poolWaitMs).toBeUndefined();
     });
 
-    it('[P0] preserves pool telemetry dimensions when XACTIONS_BROWSER_BACKEND_METRICS=1', () => {
-      process.env.XACTIONS_BROWSER_BACKEND_METRICS = '1';
+    it('[P0] preserves pool telemetry dimensions when MEDIRUS_BROWSER_BACKEND_METRICS=1', () => {
+      process.env.MEDIRUS_BROWSER_BACKEND_METRICS = '1';
 
       const emitter = new TelemetryEmitter();
       /** @type {any[]} */

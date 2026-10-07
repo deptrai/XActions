@@ -283,11 +283,11 @@
     // Save results
     try {
       localStorage.setItem(
-        `xactions_shadowban_${username}`,
+        `medirus_shadowban_${username}`,
         JSON.stringify(results)
       );
       console.log(`\n💾 Results saved. Compare over time with:`);
-      console.log(`   JSON.parse(localStorage.getItem("xactions_shadowban_${username}"))`);
+      console.log(`   JSON.parse(localStorage.getItem("medirus_shadowban_${username}"))`);
     } catch {}
 
     console.log('');

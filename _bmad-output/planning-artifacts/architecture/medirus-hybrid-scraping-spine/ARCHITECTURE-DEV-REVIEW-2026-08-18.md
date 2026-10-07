@@ -1,4 +1,4 @@
-# Dev Review — XActions Universal Hybrid Scraping Architecture (r3)
+# Dev Review — Medirus Universal Hybrid Scraping Architecture (r3)
 
 **Persona:** Amelia / Senior Software Engineer  
 **Target:** `ARCHITECTURE-SPINE.md` (r3), `epics.md`, `package.json`, `src/scrapers/**`, `src/mcp/server.js`  
@@ -79,7 +79,7 @@
 ### H4 — Redis consumer group `nowing_nlp_workers` chưa được tạo
 * **AD liên quan:** AD-7
 * **Vấn đề:** `XREADGROUP` yêu cầu group đã tồn tại. Nếu `XADD` xảy ra trước khi Nowing tạo group, consumer không đọc được messages cũ.
-* **Đề xuất:** XActions khởi động phải tự tạo consumer group nếu chưa có (`XGROUP CREATE stream:social:raw_posts nowing_nlp_workers $ MKSTREAM`). Ghi rõ trong AD-7.
+* **Đề xuất:** Medirus khởi động phải tự tạo consumer group nếu chưa có (`XGROUP CREATE stream:social:raw_posts nowing_nlp_workers $ MKSTREAM`). Ghi rõ trong AD-7.
 
 ### H5 — `xspace-agents` và `python/` nằm trong cùng repo, gây noise
 * **AD liên quan:** —

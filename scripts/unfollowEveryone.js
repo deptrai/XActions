@@ -115,7 +115,7 @@
     if (CONFIG.exportOnComplete && unfollowedList.length > 0) {
       download(
         { unfollowed: unfollowedList, stats: { total: unfollowed, skipped }, exportedAt: new Date().toISOString() },
-        `xactions-unfollow-everyone-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-unfollow-everyone-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
 

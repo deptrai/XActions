@@ -727,7 +727,7 @@ export const globalProxyPool = new ProxyIpPool();
   const envUrls = [
     process.env.PROXY_URL,
     process.env.PROXY_URLS,
-    process.env.XACTIONS_PROXIES,
+    process.env.MEDIRUS_PROXIES,
     process.env.XEEPY_PROXY_URL,
     process.env.FACEBOOK_PROXY && process.env.FACEBOOK_PROXY_AUTH_USERNAME && process.env.FACEBOOK_PROXY_AUTH_PASSWORD
       ? `${process.env.FACEBOOK_PROXY.replace(/^https?:\/\//, `http://${encodeURIComponent(process.env.FACEBOOK_PROXY_AUTH_USERNAME)}:${encodeURIComponent(process.env.FACEBOOK_PROXY_AUTH_PASSWORD)}@`)}`

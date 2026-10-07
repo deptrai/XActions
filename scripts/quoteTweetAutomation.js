@@ -136,7 +136,7 @@
 
   // ── MAIN ──────────────────────────────────────────────────
   (async () => {
-    console.log('🔁 QUOTE TWEET AUTOMATION — XActions by nichxbt');
+    console.log('🔁 QUOTE TWEET AUTOMATION — Medirus by nichxbt');
     console.log(`   Mode: ${CONFIG.dryRun ? '🔍 DRY RUN' : '⚡ LIVE'} | Max: ${CONFIG.maxQuotes}\n`);
 
     console.log('🔍 Collecting target tweets...\n');

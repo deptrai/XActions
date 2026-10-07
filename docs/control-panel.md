@@ -1,6 +1,6 @@
 # Control Panel — Browser Automation UI
 
-> A floating, draggable control panel for running XActions automations directly on x.com — no terminal needed.
+> A floating, draggable control panel for running Medirus automations directly on x.com — no terminal needed.
 
 ## Overview
 
@@ -150,20 +150,20 @@ Click **📋 Share** to copy the current automation configuration (selected auto
 
 ## Programmatic API
 
-The panel exposes a JavaScript API on `window.XActions.Panel`:
+The panel exposes a JavaScript API on `window.Medirus.Panel`:
 
 ```javascript
 // Add a task to the queue
-window.XActions.Panel.addTask('like-timeline', { target: 'nichxbt', limit: 100 });
+window.Medirus.Panel.addTask('like-timeline', { target: 'nichxbt', limit: 100 });
 
 // Run the queue
-window.XActions.Panel.runQueue();
+window.Medirus.Panel.runQueue();
 
 // Export results
-window.XActions.Panel.exportResults('json');
+window.Medirus.Panel.exportResults('json');
 
 // Share current config
-window.XActions.Panel.shareConfig();
+window.Medirus.Panel.shareConfig();
 ```
 
 ---

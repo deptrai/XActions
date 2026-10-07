@@ -104,18 +104,18 @@ This script provides the following capabilities:
 
   // ── Abort handle ───────────────────────────────────────────
   let aborted = false;
-  window.XActions = window.XActions || {};
-  window.XActions.stop = () => { aborted = true; console.log('🛑 Stopping after current tweet...'); };
+  window.Medirus = window.Medirus || {};
+  window.Medirus.stop = () => { aborted = true; console.log('🛑 Stopping after current tweet...'); };
 
   const run = async () => {
     console.log('╔════════════════════════════════════════════╗');
     console.log('║  🔑 KEYWORD LIKER                         ║');
-    console.log('║  by nichxbt — XActions                     ║');
+    console.log('║  by nichxbt — Medirus                     ║');
     console.log('╚════════════════════════════════════════════╝');
     console.log(`   Keywords: ${keywords.join(', ')}`);
     console.log(`   Max likes: ${CONFIG.maxLikes}`);
     console.log(`   Dry run: ${CONFIG.dryRun}`);
-    console.log(`   ℹ️ Type XActions.stop() to abort early\n`);
+    console.log(`   ℹ️ Type Medirus.stop() to abort early\n`);
 
     for (let round = 0; round < CONFIG.scrollRounds && !aborted; round++) {
       const articles = document.querySelectorAll(SEL.tweet);
@@ -249,14 +249,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -294,4 +294,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

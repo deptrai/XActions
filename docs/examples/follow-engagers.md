@@ -60,7 +60,7 @@ This powerful feature helps you build a targeted audience by following people wh
 
 ```javascript
 // ============================================
-// XActions - Follow Engagers (Browser Console)
+// Medirus - Follow Engagers (Browser Console)
 // Author: nich (@nichxbt)
 // Go to: x.com/.../status/.../likes or /retweets
 // Open console (F12), paste this
@@ -111,7 +111,7 @@ This powerful feature helps you build a targeted audience by following people wh
   
   const engagementType = isLikesPage ? 'Likers' : isRetweetsPage ? 'Retweeters' : 'Quoters';
   
-  console.log('👥 XActions - Follow Engagers');
+  console.log('👥 Medirus - Follow Engagers');
   console.log('='.repeat(50));
   console.log(`📍 Mode: Following ${engagementType}`);
   console.log('⚙️  Settings:');
@@ -389,7 +389,7 @@ This powerful feature helps you build a targeted audience by following people wh
 
 ```javascript
 // ============================================
-// XActions - Follow Engagers (Node.js + Puppeteer)
+// Medirus - Follow Engagers (Node.js + Puppeteer)
 // Author: nich (@nichxbt)
 // 
 // Production-ready script for following users
@@ -917,7 +917,7 @@ class FollowEngagers {
   
   async run() {
     console.log('\n' + '═'.repeat(55));
-    console.log('  👥 XActions - Follow Engagers (Puppeteer)');
+    console.log('  👥 Medirus - Follow Engagers (Puppeteer)');
     console.log('═'.repeat(55));
     console.log(`\n📍 Tweet: ${this.config.TWEET_URL}`);
     console.log(`📊 Mode: ${this.config.ENGAGEMENT_TYPE}`);
@@ -1053,7 +1053,7 @@ MAX_FOLLOWERS: 10000, // Target smaller accounts more likely to engage back
 
 ## 🌐 Website Alternative
 
-Prefer a no-code solution? Use **[xactions.app](https://xactions.app)** for:
+Prefer a no-code solution? Use **[medirus.online](https://medirus.online)** for:
 
 ✅ **Visual interface** - No coding required  
 ✅ **One-click engager following** - Paste any tweet URL  
@@ -1064,7 +1064,7 @@ Prefer a no-code solution? Use **[xactions.app](https://xactions.app)** for:
 ✅ **Cloud execution** - Runs 24/7, no computer needed  
 ✅ **Compliance tools** - Built-in rate limiting and safety features  
 
-**Get started free at [xactions.app](https://xactions.app)**
+**Get started free at [medirus.online](https://medirus.online)**
 
 ---
 
@@ -1085,4 +1085,4 @@ This tool is for educational purposes. Use responsibly and in compliance with X 
 ---
 
 **Author:** nich ([@nichxbt](https://x.com/nichxbt))  
-**Project:** [XActions](https://github.com/nirholas/XActions)
+**Project:** [Medirus](https://github.com/nirholas/XActions)

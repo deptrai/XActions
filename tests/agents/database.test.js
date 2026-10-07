@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Database Tests
+// Medirus — Database Tests
 // by nichxbt
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -11,7 +11,7 @@ import path from 'path';
 // Each worker gets its own database file, outside the repo. A shared path under
 // data/ made parallel runs fight over the same file, and deleting the .db while
 // leaving the WAL sidecars behind failed the next open with a disk I/O error.
-const TEST_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'xactions-db-'));
+const TEST_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'medirus-db-'));
 const TEST_DB_PATH = path.join(TEST_DIR, 'test-agent.db');
 
 /** Remove the database and the WAL sidecars journal_mode = WAL leaves behind. */

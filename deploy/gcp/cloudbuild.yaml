@@ -1,4 +1,4 @@
-# Build + deploy the static XActions site (dashboard/) to Cloud Run.
+# Build + deploy the static Medirus site (dashboard/) to Cloud Run.
 # Submit from the repo root:
 #   gcloud builds submit --config deploy/gcp/cloudbuild.yaml --region us-central1 \
 #     --project aerial-vehicle-466722-p5
@@ -10,21 +10,21 @@ steps:
     args:
       - build
       - -t
-      - us-central1-docker.pkg.dev/aerial-vehicle-466722-p5/containers/xactions-web:latest
+      - us-central1-docker.pkg.dev/aerial-vehicle-466722-p5/containers/medirus-web:latest
       - -f
       - deploy/gcp/Dockerfile
       - .
   - name: gcr.io/cloud-builders/docker
     args:
       - push
-      - us-central1-docker.pkg.dev/aerial-vehicle-466722-p5/containers/xactions-web:latest
+      - us-central1-docker.pkg.dev/aerial-vehicle-466722-p5/containers/medirus-web:latest
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     entrypoint: gcloud
     args:
       - run
       - deploy
-      - xactions-web
-      - --image=us-central1-docker.pkg.dev/aerial-vehicle-466722-p5/containers/xactions-web:latest
+      - medirus-web
+      - --image=us-central1-docker.pkg.dev/aerial-vehicle-466722-p5/containers/medirus-web:latest
       - --region=us-central1
       - --platform=managed
       - --allow-unauthenticated
@@ -34,4 +34,4 @@ steps:
       - --max-instances=4
       - --service-account=three-ws@aerial-vehicle-466722-p5.iam.gserviceaccount.com
 images:
-  - us-central1-docker.pkg.dev/aerial-vehicle-466722-p5/containers/xactions-web:latest
+  - us-central1-docker.pkg.dev/aerial-vehicle-466722-p5/containers/medirus-web:latest

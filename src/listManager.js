@@ -14,7 +14,7 @@
     createList: {
       enabled: false,
       name: 'My List',
-      description: 'Created by XActions',
+      description: 'Created by Medirus',
       isPrivate: true,
     },
     // Add users to an existing list (navigate to list page first)
@@ -168,13 +168,13 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions-list-members-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-list-members-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     console.log('📥 List members exported as JSON');
   };
 
   const run = async () => {
-    console.log('📋 LIST MANAGER - XActions by nichxbt\n');
+    console.log('📋 LIST MANAGER - Medirus by nichxbt\n');
 
     if (CONFIG.createList.enabled) await createNewList();
     if (CONFIG.addUsers.enabled) await addUsersToList();

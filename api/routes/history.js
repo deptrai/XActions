@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions History & Analytics API Routes
+ * Medirus History & Analytics API Routes
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @license MIT
  */

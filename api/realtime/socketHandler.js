@@ -9,7 +9,7 @@ import {
   isConfidentUnfollowVerdict,
   resolveUnfollowMaxEvals,
 } from '../../src/automation/jevUnfollowGuard.js';
-// Payment routes archived - XActions is now 100% free and open-source
+// Payment routes archived - Medirus is now 100% free and open-source
 // All credit checks have been removed - unlimited operations for all users
 // Store active sessions
 /** @type {Map<string, Record<string, unknown>>} */
@@ -64,7 +64,7 @@ function getDashboardSocket(session) {
  */
 export function initializeSocketIO(httpServer) {
   const configuredOrigins = /** @type {string[]} */ ([
-    'https://xactions.app',
+    'https://medirus.online',
     'https://x.com',
     'https://twitter.com',
     process.env.FRONTEND_URL,
@@ -262,7 +262,7 @@ function handleAgentConnection(io, socket) {
     if (session) {
       session.status = 'completed';
       
-      // Record operation (XActions is now free - no credit deduction)
+      // Record operation (Medirus is now free - no credit deduction)
       const userId = getUserId(getSessionUser(session));
       const operation = typeof session.operation === 'string' ? session.operation : '';
       if (userId && operation) {
@@ -325,7 +325,7 @@ function handleAgentConnection(io, socket) {
     }
   });
 
-  socket.emit('connected', { sessionId, message: 'Agent connected to XActions' });
+  socket.emit('connected', { sessionId, message: 'Agent connected to Medirus' });
 }
 
 /**
@@ -393,7 +393,7 @@ function handleDashboardConnection(io, socket) {
       return;
     }
 
-    // XActions is now 100% free - no credit checks required
+    // Medirus is now 100% free - no credit checks required
     session.operation = operation;
     session.config = config;
     session.status = 'running';
@@ -534,10 +534,10 @@ function getSessionInfo(sessionId) {
 function generateAgentScript(sessionId) {
   const wsUrl = process.env.API_URL || 'http://localhost:3001';
   
-  return `// XActions Agent - Paste this in your x.com console
+  return `// Medirus Agent - Paste this in your x.com console
 (function() {
-  const XACTIONS_SESSION = '${sessionId}';
-  const XACTIONS_WS = '${wsUrl}';
+  const MEDIRUS_SESSION = '${sessionId}';
+  const MEDIRUS_WS = '${wsUrl}';
 
   function createSocketBridge(baseUrl, auth) {
     const handlers = {};
@@ -586,7 +586,7 @@ function generateAgentScript(sessionId) {
           const [eventName, payload] = JSON.parse(packet.slice(2));
           dispatch(eventName, payload);
         } catch (error) {
-          console.error('XActions packet parse failed:', error);
+          console.error('Medirus packet parse failed:', error);
         }
       }
     });
@@ -596,16 +596,16 @@ function generateAgentScript(sessionId) {
     return socket;
   }
 
-  const socket = createSocketBridge(XACTIONS_WS, { role: 'agent', sessionId: XACTIONS_SESSION });
+  const socket = createSocketBridge(MEDIRUS_WS, { role: 'agent', sessionId: MEDIRUS_SESSION });
 
   socket.on('connect', () => {
-    console.log('✅ Connected to XActions');
-    showNotification('Connected to XActions Dashboard!');
+    console.log('✅ Connected to Medirus');
+    showNotification('Connected to Medirus Dashboard!');
   });
 
   socket.on('connect_error', (error) => {
-    console.error('❌ XActions connection failed:', error.message);
-    showNotification('XActions connection failed. Check console for details.');
+    console.error('❌ Medirus connection failed:', error.message);
+    showNotification('Medirus connection failed. Check console for details.');
   });
 
   socket.on('execute', async (data) => {
@@ -618,11 +618,11 @@ function generateAgentScript(sessionId) {
   });
 
   socket.on('stop', () => {
-    window.XACTIONS_STOP = true;
+    window.MEDIRUS_STOP = true;
     console.log('⏹️ Stop requested');
   });
 
-  window.XACTIONS_SOCKET = socket;
+  window.MEDIRUS_SOCKET = socket;
   
   function showNotification(msg) {
     const div = document.createElement('div');
@@ -634,7 +634,7 @@ function generateAgentScript(sessionId) {
   
   // Operation implementations will be injected by the server
   async function executeOperation(socket, operation, config) {
-    window.XACTIONS_STOP = false;
+    window.MEDIRUS_STOP = false;
     
     const operations = {
       unfollowNonFollowers: unfollowNonFollowersOp,
@@ -696,7 +696,7 @@ function generateAgentScript(sessionId) {
     await sleep(2000);
 
     let stalledSweeps = 0;
-    while (unfollowed < max && !window.XACTIONS_STOP) {
+    while (unfollowed < max && !window.MEDIRUS_STOP) {
       const cells = document.querySelectorAll('[data-testid="UserCell"]');
 
       // Evaluate this sweep's un-seen non-follower candidates once per pass.
@@ -736,7 +736,7 @@ function generateAgentScript(sessionId) {
       let found = false;
 
       for (const cell of cells) {
-        if (window.XACTIONS_STOP) break;
+        if (window.MEDIRUS_STOP) break;
 
         // Check if they don't follow back (no "Follows you" badge)
         const followsYou = cell.querySelector('[data-testid="userFollowIndicator"]');
@@ -794,7 +794,7 @@ function generateAgentScript(sessionId) {
       operation: 'unfollowNonFollowers',
       unfollowed,
       keptByJev: keptByJev,
-      stopped: window.XACTIONS_STOP
+      stopped: window.MEDIRUS_STOP
     });
   }
   
@@ -815,7 +815,7 @@ function generateAgentScript(sessionId) {
     window.location.href = 'https://x.com/' + username + '/following';
     await sleep(2000);
     
-    while (unfollowed < max && !window.XACTIONS_STOP) {
+    while (unfollowed < max && !window.MEDIRUS_STOP) {
       const btn = document.querySelector('[data-testid$="-unfollow"]');
       if (!btn) {
         window.scrollBy(0, 500);
@@ -852,7 +852,7 @@ function generateAgentScript(sessionId) {
     socket.emit('complete', { 
       operation: 'unfollowEveryone',
       unfollowed,
-      stopped: window.XACTIONS_STOP
+      stopped: window.MEDIRUS_STOP
     });
   }
   
@@ -876,7 +876,7 @@ function generateAgentScript(sessionId) {
     let lastSize = 0;
     let stuckCount = 0;
     
-    while (stuckCount < 5 && !window.XACTIONS_STOP) {
+    while (stuckCount < 5 && !window.MEDIRUS_STOP) {
       const cells = document.querySelectorAll('[data-testid="UserCell"]');
       cells.forEach(cell => {
         const handle = cell.querySelector('a[href^="/"]')?.href?.split('/').pop();
@@ -901,11 +901,11 @@ function generateAgentScript(sessionId) {
     }
     
     // Check against stored followers (from localStorage)
-    const stored = JSON.parse(localStorage.getItem('xactions_followers') || '[]');
+    const stored = JSON.parse(localStorage.getItem('medirus_followers') || '[]');
     const unfollowers = stored.filter(h => !followers.has(h));
     
     // Save current followers
-    localStorage.setItem('xactions_followers', JSON.stringify([...followers]));
+    localStorage.setItem('medirus_followers', JSON.stringify([...followers]));
     
     socket.emit('complete', { 
       operation: 'detectUnfollowers',
@@ -916,7 +916,7 @@ function generateAgentScript(sessionId) {
     });
   }
   
-  console.log('⚡ XActions Agent loaded. Connecting to dashboard...');
+  console.log('⚡ Medirus Agent loaded. Connecting to dashboard...');
 })();`;
 }
 

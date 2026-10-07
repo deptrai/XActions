@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Social Graph Builder
+ * Medirus Social Graph Builder
  * Builds graph data structures from scraper data
  *
  * Crawls N degrees deep from a seed account, creating nodes (accounts)

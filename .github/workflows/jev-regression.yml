@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# XActions — Jev Regression Guard
+# Medirus — Jev Regression Guard
 # Runs the jev-verify corpus against the live Jev API on relevant changes
 # (path-filtered), weekly cron, and manual dispatch. Enforces accuracy floors
 # (vi≥85%, spam≥95%, relevance≥75%) + baseline drift warnings via --ci mode.

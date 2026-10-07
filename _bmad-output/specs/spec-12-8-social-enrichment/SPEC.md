@@ -1,13 +1,13 @@
 ---
 id: SPEC-12-8-social-enrichment
-story: 12-8-xactions-social-enrichment-parallel-scrape-cross-repo-spec
+story: 12-8-medirus-social-enrichment-parallel-scrape-cross-repo-spec
 epic: 12
 companions: []
 sources:
-  - ../../jev-trading/_bmad-output/implementation-artifacts/stories/12-8-xactions-social-enrichment-parallel-scrape-cross-repo-spec.md
+  - ../../jev-trading/_bmad-output/implementation-artifacts/stories/12-8-medirus-social-enrichment-parallel-scrape-cross-repo-spec.md
 ---
 
-> **Contract addendum.** Additive-only extension to `spec-xactions-public-scrape-gateway`. Nothing here removes or renames an existing field; a gateway that ships this spec still answers old jev-trading builds bit-for-bit identically.
+> **Contract addendum.** Additive-only extension to `spec-medirus-public-scrape-gateway`. Nothing here removes or renames an existing field; a gateway that ships this spec still answers old jev-trading builds bit-for-bit identically.
 
 # Social Enrichment & Parallel Scrape
 

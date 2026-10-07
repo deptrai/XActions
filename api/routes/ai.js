@@ -4,7 +4,7 @@
  * 
  * These endpoints are protected by x402 payment protocol.
  * AI agents must include X-PAYMENT header with signed USDC payment.
- * Humans should use free browser scripts at https://xactions.app/run.html
+ * Humans should use free browser scripts at https://medirus.online/run.html
  * 
  * Pricing: See /api/ai/pricing for current rates
  */
@@ -382,7 +382,7 @@ router.post('/download/video', async (req, res) => {
       data: {
         tweetUrl,
         message: 'Video URL extraction requires browser context',
-        alternative: 'Use browser script at https://xactions.app/run.html',
+        alternative: 'Use browser script at https://medirus.online/run.html',
       },
       operation: 'download:video',
     });

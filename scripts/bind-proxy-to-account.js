@@ -20,10 +20,10 @@ async function updateProxyForAccount() {
 
   console.log(`✅ Đã cập nhật encryptedProxy cho ${updated.count} Facebook Account trong Database!`);
 
-  // Lưu cấu hình proxy vào ~/.xactions/proxy-config.json để CLI và Crawler tự động dùng
-  const xactionsDir = path.join(os.homedir(), '.xactions');
-  if (!fs.existsSync(xactionsDir)) {
-    fs.mkdirSync(xactionsDir, { recursive: true });
+  // Lưu cấu hình proxy vào ~/.medirus/proxy-config.json để CLI và Crawler tự động dùng
+  const medirusDir = path.join(os.homedir(), '.medirus');
+  if (!fs.existsSync(medirusDir)) {
+    fs.mkdirSync(medirusDir, { recursive: true });
   }
 
   const proxyConfig = {
@@ -38,8 +38,8 @@ async function updateProxyForAccount() {
     updatedAt: new Date().toISOString(),
   };
 
-  fs.writeFileSync(path.join(xactionsDir, 'proxy-config.json'), JSON.stringify(proxyConfig, null, 2));
-  console.log(`✅ Đã lưu cấu hình proxy vào ${path.join(xactionsDir, 'proxy-config.json')}`);
+  fs.writeFileSync(path.join(medirusDir, 'proxy-config.json'), JSON.stringify(proxyConfig, null, 2));
+  console.log(`✅ Đã lưu cấu hình proxy vào ${path.join(medirusDir, 'proxy-config.json')}`);
 
   const accounts = await prisma.facebookAccount.findMany({
     select: {

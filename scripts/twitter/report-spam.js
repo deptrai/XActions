@@ -82,7 +82,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🚨 XActions — Report Spam                                   ║
+║  🚨 Medirus — Report Spam                                   ║
 ║  Identify and report spam accounts                           ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - Accounts will NOT be reported           ║' : '║  🔴 LIVE MODE - Accounts WILL be reported                   ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -277,7 +277,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - Accounts will NOT be reported    
   }
 
   // Save log
-  const storageKey = 'xactions_spam_reports';
+  const storageKey = 'medirus_spam_reports';
   const log = spamAccounts.map(s => ({
     username: s.username,
     spamScore: s.spamScore,

@@ -1,15 +1,15 @@
 ---
 title: "Subscribe to X Premium — Tutorial"
-description: "Compare X Premium tiers, check your subscription status, and navigate to the signup flow using XActions."
-keywords: ["x premium subscription", "twitter premium tiers", "x premium signup script", "twitter blue subscribe", "xactions premium"]
-canonical: "https://xactions.app/examples/subscribe-premium"
+description: "Compare X Premium tiers, check your subscription status, and navigate to the signup flow using Medirus."
+keywords: ["x premium subscription", "twitter premium tiers", "x premium signup script", "twitter blue subscribe", "medirus premium"]
+canonical: "https://medirus.online/examples/subscribe-premium"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Subscribe to X Premium — Tutorial
 
-> Step-by-step guide to comparing X Premium tiers, checking your current status, and navigating through the subscription flow using XActions.
+> Step-by-step guide to comparing X Premium tiers, checking your current status, and navigating through the subscription flow using Medirus.
 
 **Works on:** Browser Console
 **Difficulty:** Beginner
@@ -64,7 +64,7 @@ const CONFIG = {
 (() => {
   'use strict';
 
-  console.log('💎 X PREMIUM — XActions by nichxbt');
+  console.log('💎 X PREMIUM — Medirus by nichxbt');
   console.log('');
 
   // Check current status
@@ -175,7 +175,7 @@ Run the complete `src/subscribePremium.js` script for the full experience includ
 
 ```
 ═══════════════════════════════════════════
-💎 XActions — Subscribe to X Premium
+💎 Medirus — Subscribe to X Premium
 ═══════════════════════════════════════════
 
 🔍 Checking current Premium status...
@@ -265,5 +265,5 @@ Run the complete `src/subscribePremium.js` script for the full experience includ
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

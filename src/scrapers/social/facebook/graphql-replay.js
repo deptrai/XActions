@@ -73,7 +73,7 @@ export class RedisReplayStore {
   #prefix;
   #ttlMs;
 
-  constructor(redisClient, prefix = 'xactions:graphql:replay:', ttlMs = DEFAULT_REPLAY_TTL_MS) {
+  constructor(redisClient, prefix = 'medirus:graphql:replay:', ttlMs = DEFAULT_REPLAY_TTL_MS) {
     this.#client = redisClient;
     this.#prefix = prefix;
     this.#ttlMs = ttlMs;

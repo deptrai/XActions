@@ -1,15 +1,15 @@
 ---
 title: "Use QR Codes — Tutorial"
 description: "Generate and share QR codes for any X/Twitter profile. Free browser script with overlay display and auto-download."
-keywords: ["twitter qr code", "x profile qr code", "share twitter profile qr", "xactions qr code", "generate qr code twitter"]
-canonical: "https://xactions.app/examples/qr-codes"
+keywords: ["twitter qr code", "x profile qr code", "share twitter profile qr", "medirus qr code", "generate qr code twitter"]
+canonical: "https://medirus.online/examples/qr-codes"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Use QR Codes — Tutorial
 
-> Step-by-step guide to generating and sharing QR codes for X/Twitter profiles using XActions.
+> Step-by-step guide to generating and sharing QR codes for X/Twitter profiles using Medirus.
 
 **Works on:** Browser Console
 **Difficulty:** Beginner
@@ -81,7 +81,7 @@ Go to the X profile you want to generate a QR code for, e.g., `x.com/nichxbt`.
   };
 
   const run = async () => {
-    console.log('📱 QR CODE SHARING - XActions by nichxbt');
+    console.log('📱 QR CODE SHARING - Medirus by nichxbt');
 
     let username = CONFIG.username;
     if (!username) {
@@ -103,7 +103,7 @@ Go to the X profile you want to generate a QR code for, e.g., `x.com/nichxbt`.
 
     // Display QR code as an overlay on the page
     const overlay = document.createElement('div');
-    overlay.id = 'xactions-qr-overlay';
+    overlay.id = 'medirus-qr-overlay';
     overlay.innerHTML = `
       <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:pointer;">
         <div style="background:white;border-radius:16px;padding:32px;text-align:center;max-width:400px;">
@@ -140,7 +140,7 @@ Go to the X profile you want to generate a QR code for, e.g., `x.com/nichxbt`.
 ### Expected Console Output
 
 ```
-📱 QR CODE SHARING - XActions by nichxbt
+📱 QR CODE SHARING - Medirus by nichxbt
 👤 Profile: @nichxbt
 🔗 URL: https://x.com/nichxbt
 📱 QR Code: https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=https%3A%2F%2Fx.com%2Fnichxbt
@@ -158,7 +158,7 @@ To generate QR codes in bulk for a list of usernames:
   const usernames = ['nichxbt', 'elonmusk', 'openai'];
   const size = 256;
 
-  console.log('📱 BULK QR CODE GENERATION - XActions by nichxbt');
+  console.log('📱 BULK QR CODE GENERATION - Medirus by nichxbt');
 
   for (const username of usernames) {
     const profileUrl = `https://x.com/${username}`;
@@ -222,5 +222,5 @@ To generate QR codes in bulk for a list of usernames:
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

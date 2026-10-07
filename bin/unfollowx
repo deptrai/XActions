@@ -5,7 +5,7 @@
  *
  * Maps known read-only legacy commands to the unified `scrape('twitter', ...)`
  * dispatcher. Unsupported commands return the standard 3-Layer JSON Envelope
- * with `suggestedAction: 'use_x_actions_list'`.
+ * with `suggestedAction: 'use_medirus_list'`.
  *
  * @author nich (@nichxbt)
  * @license MIT
@@ -46,11 +46,11 @@ async function main(argv) {
 
   if (!LEGACY_READ_COMMANDS.has(command)) {
     const envelope = wrapToolError(
-      new Error(`Legacy command "${command}" is not supported. Use the new xactions CLI or MCP tools.`),
+      new Error(`Legacy command "${command}" is not supported. Use the new medirus CLI or MCP tools.`),
       `unfollowx_${command}`,
       { args: { command } }
     );
-    envelope.error.suggestedAction = 'use_x_actions_list';
+    envelope.error.suggestedAction = 'use_medirus_list';
     console.log(JSON.stringify(envelope, null, 2));
     process.exitCode = 1;
     return;

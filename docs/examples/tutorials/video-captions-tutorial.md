@@ -1,6 +1,6 @@
 # Upload Video Captions -- Tutorial
 
-> Step-by-step guide to adding captions and subtitles to video tweets using XActions browser scripts.
+> Step-by-step guide to adding captions and subtitles to video tweets using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -55,7 +55,7 @@ SRT (SubRip) is the most common caption format. Each entry has an index, time ra
 ```
 1
 00:00:00,000 --> 00:00:05,000
-Welcome to this tutorial on XActions.
+Welcome to this tutorial on Medirus.
 
 2
 00:00:05,000 --> 00:00:10,000
@@ -80,7 +80,7 @@ WebVTT is the web-native caption format. It starts with a `WEBVTT` header:
 WEBVTT
 
 00:00:00.000 --> 00:00:05.000
-Welcome to this tutorial on XActions.
+Welcome to this tutorial on Medirus.
 
 00:00:05.000 --> 00:00:10.000
 Today we will learn about browser automation.

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Barrel Export
+ * Medirus Client — Barrel Export
  *
  * @author nich (@nichxbt)
  * @license MIT
@@ -17,7 +17,7 @@ export const SearchMode = Object.freeze({
 
 /**
  * @deprecated Legacy Scraper is decommissioned in Epic 26.
- * Use `scrape('twitter', action)` or `TwitterClient` / `TwitterCrawler` from `xactions/scrapers/social/twitter` instead.
+ * Use `scrape('twitter', action)` or `TwitterClient` / `TwitterCrawler` from `medirus/scrapers/social/twitter` instead.
  */
 export class Scraper {
   /** @param {Record<string, any>} [options] */

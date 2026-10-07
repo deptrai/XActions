@@ -409,7 +409,7 @@ Patterns:
 
 - Epic 15: `_bmad-output/planning-artifacts/epics.md` — Epic 15: Vietnam Viral Social — Threads & TikTok Scraper Engine, Story 15.1.1 (lines 789-799).
 - Previous story: `_bmad-output/implementation-artifacts/15-1-threads-scraper-adapter-meta-internal-graphql.md`.
-- Architecture: `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (AD-1, AD-2, AD-3, AD-4, AD-7, AD-8, AD-9, AD-11, AD-12, AD-14, AD-18).
+- Architecture: `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (AD-1, AD-2, AD-3, AD-4, AD-7, AD-8, AD-9, AD-11, AD-12, AD-14, AD-18).
 - Deprecation plan: `docs/deprecation-plan.md`.
 - Core contracts:
   - `src/core/types.js` (`ProfileItem`, `PostItem`, `CommentItem`, `CATEGORIES`).

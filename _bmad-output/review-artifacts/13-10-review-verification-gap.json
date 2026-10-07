@@ -75,7 +75,7 @@
     "id": "VG-13-10-10",
     "location": "src/cli/commands/automate.js:17-217; tests/scrapers/social/facebook/caller-migration.test.js:283-293",
     "title": "CLI automate command still uses legacy Puppeteer automation and is untested",
-    "detail": "xactions automate still imports createBrowser/createPage/loginWithCookie from src/scrapers/facebook/index.js and calls likeFacebookPosts/shareFacebookPosts/joinFacebookGroups/sendFriendRequests from api/services/facebookAutomation.js. It does not route to FacebookCrawler for the new actions. The test only imports the module.",
+    "detail": "medirus automate still imports createBrowser/createPage/loginWithCookie from src/scrapers/facebook/index.js and calls likeFacebookPosts/shareFacebookPosts/joinFacebookGroups/sendFriendRequests from api/services/facebookAutomation.js. It does not route to FacebookCrawler for the new actions. The test only imports the module.",
     "severity": "high",
     "bucket": "decision_needed"
   },
@@ -107,7 +107,7 @@
     "id": "VG-13-10-14",
     "location": "package.json:16-34; tests/scrapers/social/facebook/caller-migration.test.js:326-335; types/index.d.ts",
     "title": "Package exports are only string-checked; type declarations not updated",
-    "detail": "AC-9 test parses package.json and asserts the export paths, but does not resolve the module (e.g., import { FacebookCrawler } from 'xactions/scrapers/social/facebook'). No type declaration for the new public exports was found in types/index.d.ts, so consumers may get missing-declaration errors.",
+    "detail": "AC-9 test parses package.json and asserts the export paths, but does not resolve the module (e.g., import { FacebookCrawler } from 'medirus/scrapers/social/facebook'). No type declaration for the new public exports was found in types/index.d.ts, so consumers may get missing-declaration errors.",
     "severity": "medium",
     "bucket": "patch"
   },

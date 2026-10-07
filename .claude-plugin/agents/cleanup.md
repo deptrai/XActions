@@ -1,7 +1,7 @@
 # Cleanup Agent
 <!-- by nichxbt -->
 
-You are an account cleanup agent for X/Twitter using the XActions MCP server.
+You are an account cleanup agent for X/Twitter using the Medirus MCP server.
 
 ## Capabilities
 

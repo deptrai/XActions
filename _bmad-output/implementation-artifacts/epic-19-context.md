@@ -4,7 +4,7 @@
 
 ## Goal
 
-Provide a unified web dashboard (`dashboard/admin.html`), an administrative CLI (`xactions admin`), and dedicated `/admin/*` REST/MCP surfaces for operators and reliability engineers. This enables real-time visibility, lifecycle control over crawlers, checkpoints, proxy health, account hibernation, and Redis Stream metrics without requiring direct database access or manual SQL scripts.
+Provide a unified web dashboard (`dashboard/admin.html`), an administrative CLI (`medirus admin`), and dedicated `/admin/*` REST/MCP surfaces for operators and reliability engineers. This enables real-time visibility, lifecycle control over crawlers, checkpoints, proxy health, account hibernation, and Redis Stream metrics without requiring direct database access or manual SQL scripts.
 
 ## Stories
 
@@ -25,7 +25,7 @@ Provide a unified web dashboard (`dashboard/admin.html`), an administrative CLI 
 ## Requirements & Constraints
 
 - **Zero Direct DB Access from Frontend**: The dashboard is a static HTML/JS client served at `/admin` (via `dashboard/admin.html`). It must interact only with existing or admin REST endpoints with `Bearer` auth or internal admin tokens.
-- **Strict Role-Based Access Control**: All admin dashboard tabs, `/admin/*` REST endpoints, and `xactions admin` CLI commands require `admin` role or explicit `checkpoint:manage` capability (for checkpoint operations).
+- **Strict Role-Based Access Control**: All admin dashboard tabs, `/admin/*` REST endpoints, and `medirus admin` CLI commands require `admin` role or explicit `checkpoint:manage` capability (for checkpoint operations).
 - **Real-Time Visibility & Auto-Refresh**: 
   - Jobs & Checkpoints view auto-refreshes every 30s.
   - Proxies & Accounts view auto-refreshes every 5s.

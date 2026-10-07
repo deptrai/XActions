@@ -40,7 +40,7 @@
   };
 
   const run = async () => {
-    console.log('✏️ UPDATE PROFILE — XActions by nichxbt');
+    console.log('✏️ UPDATE PROFILE — Medirus by nichxbt');
     console.log('━'.repeat(45));
 
     // Validate lengths

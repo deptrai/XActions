@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced Premium — Free X/Twitter Script | XActions</title>
+  <title>Advanced Premium — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="src/advancedPremium.js">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, advanced, premium, other tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, advanced, premium, other tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Advanced Premium — XActions">
+  <meta property="og:title" content="Advanced Premium — Medirus">
   <meta property="og:description" content="src/advancedPremium.js">
-  <meta property="og:url" content="https://xactions.app/scripts/advanced-premium">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/advanced-premium">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Advanced Premium — XActions">
+  <meta name="twitter:title" content="Advanced Premium — Medirus">
   <meta name="twitter:description" content="src/advancedPremium.js">
 
-  <link rel="canonical" href="https://xactions.app/scripts/advanced-premium">
+  <link rel="canonical" href="https://medirus.online/scripts/advanced-premium">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Advanced Premium — Free X/Twitter Script | XActions",
+    "headline": "Advanced Premium — Free X/Twitter Script | Medirus",
     "description": "src/advancedPremium.js",
-    "url": "https://xactions.app/scripts/advanced-premium",
+    "url": "https://medirus.online/scripts/advanced-premium",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Other Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, advanced, premium, other tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, advanced, premium, other tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://xactions.app/scripts#other-tools" },
-      { "@type": "ListItem", "position": 4, "name": "Advanced Premium", "item": "https://xactions.app/scripts/advanced-premium" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://medirus.online/scripts#other-tools" },
+      { "@type": "ListItem", "position": 4, "name": "Advanced Premium", "item": "https://medirus.online/scripts/advanced-premium" }
     ]
   }
   </script>
@@ -170,7 +170,7 @@
   // ══════════════════════════════════════════════════════════
 
   function log(emoji, msg) {
-    console.log(`${emoji} [XActions Premium] ${msg}`);
+    console.log(`${emoji} [Medirus Premium] ${msg}`);
   }
 
   function clickEl(el) {
@@ -343,7 +343,7 @@
 
   async function giftPremium(username) {
     if (!username) {
-      log('❌', 'Please provide a username. Usage: XActions.advancedPremium.giftPremium(&quot;username&quot;)');
+      log('❌', 'Please provide a username. Usage: Medirus.advancedPremium.giftPremium(&quot;username&quot;)');
       return;
     }
 
@@ -499,7 +499,7 @@
 
     // Create overlay
     const overlay = document.createElement('div');
-    overlay.id = 'xactions-reader-overlay';
+    overlay.id = 'medirus-reader-overlay';
     overlay.style.cssText = `
       position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;
       background:#000;color:#e7e9ea;overflow-y:auto;padding:40px;
@@ -509,7 +509,7 @@
       &lt;div style=&quot;max-width:680px;margin:0 auto;&quot;&gt;
         &lt;div style=&quot;display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;&quot;&gt;
           &lt;h2 style=&quot;font-size:24px;margin:0;&quot;&gt;📖 Reader Mode&lt;/h2&gt;
-          &lt;button id=&quot;xactions-reader-close&quot; style=&quot;
+          &lt;button id=&quot;medirus-reader-close&quot; style=&quot;
             background:#1d9bf0;color:#fff;border:none;border-radius:20px;
             padding:8px 20px;cursor:pointer;font-size:14px;
           &quot;&gt;Close Reader&lt;/button&gt;
@@ -519,7 +519,7 @@
     `;
     document.body.appendChild(overlay);
 
-    document.getElementById('xactions-reader-close').addEventListener('click', () =&gt; {
+    document.getElementById('medirus-reader-close').addEventListener('click', () =&gt; {
       overlay.remove();
       log('✅', 'Reader mode closed.');
     });
@@ -602,7 +602,7 @@
   async function downloadVideo(tweetUrl) {
     if (!tweetUrl &amp;&amp; !window.location.pathname.match(/\/status\/\d+/)) {
       log('❌', 'Provide a tweet URL or navigate to a tweet with a video first.');
-      log('❌', 'Usage: XActions.advancedPremium.downloadVideo(&quot;https://x.com/user/status/123&quot;)');
+      log('❌', 'Usage: Medirus.advancedPremium.downloadVideo(&quot;https://x.com/user/status/123&quot;)');
       return;
     }
 
@@ -625,7 +625,7 @@
         log('🔄', 'Starting download...');
         const a = document.createElement('a');
         a.href = src;
-        a.download = `xactions_video_${Date.now()}.mp4`;
+        a.download = `medirus_video_${Date.now()}.mp4`;
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
@@ -673,7 +673,7 @@
 
       const a = document.createElement('a');
       a.href = best.name;
-      a.download = `xactions_video_${tweetId}.mp4`;
+      a.download = `medirus_video_${tweetId}.mp4`;
       a.target = '_blank';
       a.style.display = 'none';
       document.body.appendChild(a);
@@ -773,8 +773,8 @@
   // 🎯 Expose API &amp; Print Menu
   // ══════════════════════════════════════════════════════════
 
-  window.XActions = window.XActions || {};
-  window.XActions.advancedPremium = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.advancedPremium = {
     subscribePremium,
     cancelPremium,
     changeTier,
@@ -787,35 +787,35 @@
   };
 
   console.log('╔══════════════════════════════════════════════════════════════╗');
-  console.log('║  ⭐ XACTIONS ADVANCED PREMIUM                              ║');
+  console.log('║  ⭐ MEDIRUS ADVANCED PREMIUM                              ║');
   console.log('║  by nichxbt                                                 ║');
   console.log('╠══════════════════════════════════════════════════════════════╣');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.subscribePremium(tier)             ║');
+  console.log('║  Medirus.advancedPremium.subscribePremium(tier)             ║');
   console.log('║    → Subscribe to Premium (basic/premium/premium+)          ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.cancelPremium()                    ║');
+  console.log('║  Medirus.advancedPremium.cancelPremium()                    ║');
   console.log('║    → Cancel your Premium subscription                       ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.changeTier(tier)                   ║');
+  console.log('║  Medirus.advancedPremium.changeTier(tier)                   ║');
   console.log('║    → Upgrade/downgrade tier (basic/premium/premium+)        ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.giftPremium(&quot;username&quot;)            ║');
+  console.log('║  Medirus.advancedPremium.giftPremium(&quot;username&quot;)            ║');
   console.log('║    → Gift Premium to another user                           ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.topArticles(limit)                 ║');
+  console.log('║  Medirus.advancedPremium.topArticles(limit)                 ║');
   console.log('║    → Scrape top shared articles (default: 20)               ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.readerMode()                       ║');
+  console.log('║  Medirus.advancedPremium.readerMode()                       ║');
   console.log('║    → Toggle reader mode on current thread                   ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.setUndoTimer(seconds)              ║');
+  console.log('║  Medirus.advancedPremium.setUndoTimer(seconds)              ║');
   console.log('║    → Set undo timer (5/10/20/30/60 seconds)                 ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.downloadVideo(tweetUrl?)           ║');
+  console.log('║  Medirus.advancedPremium.downloadVideo(tweetUrl?)           ║');
   console.log('║    → Download video from tweet                              ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.verifiedOnlyReplies(enable?)       ║');
+  console.log('║  Medirus.advancedPremium.verifiedOnlyReplies(enable?)       ║');
   console.log('║    → Toggle verified-only replies (default: true)           ║');
   console.log('║                                                             ║');
   console.log('╚══════════════════════════════════════════════════════════════╝');
@@ -826,7 +826,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

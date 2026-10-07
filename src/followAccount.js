@@ -174,7 +174,7 @@
   // ── Main ──
   const run = async () => {
     console.log('═══════════════════════════════════════');
-    console.log('➕ XActions — Follow Accounts');
+    console.log('➕ Medirus — Follow Accounts');
     console.log('═══════════════════════════════════════');
 
     if (CONFIG.usernames.length === 0) {
@@ -199,7 +199,7 @@
     console.log('');
 
     // Load existing tracking data
-    const trackingData = JSON.parse(sessionStorage.getItem('xactions_followed') || '[]');
+    const trackingData = JSON.parse(sessionStorage.getItem('medirus_followed') || '[]');
     const previouslyFollowed = new Set(trackingData.flatMap(entry => entry.usernames || []));
 
     const results = {
@@ -302,8 +302,8 @@
         usernames: results.success,
         count: results.success.length,
       });
-      sessionStorage.setItem('xactions_followed', JSON.stringify(trackingData));
-      console.log('\n💾 Saved to sessionStorage (key: "xactions_followed")');
+      sessionStorage.setItem('medirus_followed', JSON.stringify(trackingData));
+      console.log('\n💾 Saved to sessionStorage (key: "medirus_followed")');
     }
 
     // ── Summary ──

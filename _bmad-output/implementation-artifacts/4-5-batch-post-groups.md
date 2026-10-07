@@ -8,11 +8,11 @@ Status: done
 
 <!-- Code-review patches applied (2 fixed + 2 defer). Held at in-progress — NOT done — pending live-DOM verification of group-composer selectors (see Review Findings + selectors-facebook.md verify-checklist). -->
 
-<!-- Epic 4 (Facebook Growth Automation, Cluster 1 — medium risk). Source: epics.md#Story 4.5 + PRD prd-XActions-2026-06-10-epic4 FR-19. Realizes UJ-6. -->
+<!-- Epic 4 (Facebook Growth Automation, Cluster 1 — medium risk). Source: epics.md#Story 4.5 + PRD prd-Medirus-2026-06-10-epic4 FR-19. Realizes UJ-6. -->
 
 ## Story
 
-As a multi-group operator using XActions,
+As a multi-group operator using Medirus,
 I want to post one content to multiple Facebook groups in a batch,
 so that I can distribute content efficiently with spam-safe delays.
 
@@ -137,7 +137,7 @@ Almost everything is reuse. The only genuinely new pieces are the group-composer
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 4.5: Batch post to multiple groups]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md#FR-19, §7 NFR-6/NFR-7/NFR-8, §8 SM-7/SM-C3, UJ-6]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-10-epic4/prd.md#FR-19, §7 NFR-6/NFR-7/NFR-8, §8 SM-7/SM-C3, UJ-6]
 - [Source: api/services/facebookAutomation.js#joinFacebookGroups (clone template), #createFacebookPost/createSinglePost (composer reuse), #assertFacebookUrl, #GROUP_ACTION_DELAY_FLOOR_MS]
 - [Source: _bmad-output/implementation-artifacts/4-4-join-groups.md (delay floor + capture-Map + UNVERIFIED-selector posture), 4-2-auto-share-post.md (dedupe guard), 2-4-create-post.md (composer + content guard + postUrl caveat)]
 

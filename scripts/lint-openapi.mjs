@@ -19,7 +19,7 @@ const execFileAsync = promisify(execFile);
 const { generateSpec } = await import('../api/openapi.js');
 const spec = generateSpec();
 
-const dir = await mkdtemp(path.join(tmpdir(), 'xactions-openapi-'));
+const dir = await mkdtemp(path.join(tmpdir(), 'medirus-openapi-'));
 const specPath = path.join(dir, 'openapi.json');
 await writeFile(specPath, JSON.stringify(spec, null, 2));
 

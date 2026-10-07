@@ -1,6 +1,6 @@
-# Press & Coverage Strategy for XActions
+# Press & Coverage Strategy for Medirus
 
-> How to get independent, third-party coverage of XActions — the key ingredient for Wikipedia notability and Google Knowledge Panel eligibility.
+> How to get independent, third-party coverage of Medirus — the key ingredient for Wikipedia notability and Google Knowledge Panel eligibility.
 
 ---
 
@@ -8,7 +8,7 @@
 
 Google requires **independent, reliable sources** to confirm entity notability. Self-published content (your own blog, README, tweets) doesn't count. You need:
 
-- Articles ABOUT XActions written by someone else
+- Articles ABOUT Medirus written by someone else
 - Reviews, mentions, or features in recognized publications
 - Citations in developer resources and newsletters
 
@@ -33,18 +33,18 @@ Before pitching press, create content that journalists and bloggers naturally wa
 
 ### Assets to Create Before Pitching
 
-- [ ] **Demo video** (60-90 seconds) — Screen recording of XActions running
-- [ ] **Comparison chart** — XActions vs Twitter API vs Hypefury vs Tweethunter
+- [ ] **Demo video** (60-90 seconds) — Screen recording of Medirus running
+- [ ] **Comparison chart** — Medirus vs Twitter API vs Hypefury vs Tweethunter
 - [ ] **Stats/numbers** — GitHub stars, npm downloads, features count, time saved
 - [ ] **One-page press kit** — Logo, description, screenshots, key facts, founder bio
-- [ ] **Quotable founder bio** — "nich is a developer and open-source advocate who built XActions to democratize Twitter automation"
+- [ ] **Quotable founder bio** — "nich is a developer and open-source advocate who built Medirus to democratize Twitter automation"
 
 ---
 
 ## Tier 1: Self-Published (Build Foundation)
 
 Write these yourself to establish initial content presence. These don't count as "independent" for Wikipedia, but they:
-- Rank in Google for XActions-related queries
+- Rank in Google for Medirus-related queries
 - Provide source material for journalists
 - Build SEO backlinks
 
@@ -55,10 +55,10 @@ Write these yourself to establish initial content presence. These don't count as
 | **Dev.to** | "How I Replaced Twitter's $100/mo API with Browser Automation" | twitter api alternative, browser automation |
 | **Dev.to** | "Building an MCP Server for Twitter — The Complete Guide" | mcp server twitter, model context protocol |
 | **Hashnode** | "Mass Unfollow on Twitter/X: The 2026 Developer's Guide" | mass unfollow twitter, twitter unfollow tool |
-| **Medium** | "XActions: Open-Source Twitter Automation Without API Keys" | twitter automation open source |
+| **Medium** | "Medirus: Open-Source Twitter Automation Without API Keys" | twitter automation open source |
 | **freeCodeCamp** | "How to Automate Twitter with JavaScript (No API Required)" | twitter bot javascript, automate twitter |
 | **LogRocket Blog** | "Advanced Browser Automation Patterns with Puppeteer" | puppeteer automation, browser scraping |
-| **Smashing Magazine** | "Building Developer Tools: Lessons from XActions" | building dev tools, open source startup |
+| **Smashing Magazine** | "Building Developer Tools: Lessons from Medirus" | building dev tools, open source startup |
 
 ### Cross-Posting Rules
 - Always set `canonical_url` to the original post
@@ -92,14 +92,14 @@ These count as independent reliable sources for Wikipedia and Knowledge Panel el
 | **TechCrunch** | Submit to tips@techcrunch.com | Focus on "free alternative" angle |
 | **The Verge** | tips@theverge.com | Twitter/X ecosystem story |
 | **Ars Technica** | Submit via tips page | Technical deep-dive angle |
-| **Hacker News** | Post as "Show HN: XActions — ..." | Self-post, but independent community discussion |
+| **Hacker News** | Post as "Show HN: Medirus — ..." | Self-post, but independent community discussion |
 | **Product Hunt** | Launch + community discussion | Independent reviews from PH users |
 
 ### YouTube Tech Channels
 
 | Channel | Subscribers | Why They'd Cover It |
 |---------|-----------|-------------------|
-| **Fireship** | 3M+ | "100 seconds of XActions" format |
+| **Fireship** | 3M+ | "100 seconds of Medirus" format |
 | **Traversy Media** | 2M+ | Tutorial-style coverage |
 | **The Coding Train** | 1.8M+ | Creative coding / automation |
 | **Web Dev Simplified** | 1.5M+ | Browser automation tutorial |
@@ -114,17 +114,17 @@ Encourage organic coverage through:
 
 ### GitHub Discussions
 - Create a "Show & Tell" discussion category
-- Encourage users to share how they use XActions
+- Encourage users to share how they use Medirus
 - Pin the best stories
 
 ### Twitter Threads
-- Regularly share XActions updates
-- Retweet/amplify community members who post about XActions
-- Create a #XActions hashtag
+- Regularly share Medirus updates
+- Retweet/amplify community members who post about Medirus
+- Create a #Medirus hashtag
 
 ### Reddit Posts
 - **r/programming** — "I built a free alternative to Twitter's $100/mo API"
-- **r/javascript** — Technical post about XActions architecture
+- **r/javascript** — Technical post about Medirus architecture
 - **r/webdev** — Browser automation use case
 - **r/SideProject** — The building story
 - **r/twitter** — Practical unfollow/automation tool
@@ -143,11 +143,11 @@ Encourage organic coverage through:
 ### Newsletter Submission Email
 
 ```
-Subject: XActions — Free, Open-Source X/Twitter Automation (No API Required)
+Subject: Medirus — Free, Open-Source X/Twitter Automation (No API Required)
 
 Hi [Editor Name],
 
-XActions is an open-source X/Twitter automation toolkit that replaces Twitter's
+Medirus is an open-source X/Twitter automation toolkit that replaces Twitter's
 $100/mo API with browser automation. It includes:
 
 - Mass unfollow non-followers
@@ -159,8 +159,8 @@ $100/mo API with browser automation. It includes:
 It's 100% free, Apache 2.0 licensed, and runs locally — no API keys or fees.
 
 GitHub: https://github.com/nirholas/XActions
-Website: https://xactions.app
-npm: https://npmjs.com/package/xactions
+Website: https://medirus.online
+npm: https://npmjs.com/package/medirus
 
 Happy to provide more details, screenshots, or a demo.
 
@@ -217,11 +217,11 @@ nich
 
 | Metric | Target | How to Measure |
 |--------|--------|---------------|
-| Independent articles mentioning XActions | 3+ | Google Alerts for "XActions" |
+| Independent articles mentioning Medirus | 3+ | Google Alerts for "Medirus" |
 | Newsletter inclusions | 2+ | Track submissions |
-| YouTube videos about XActions | 1+ | YouTube search |
+| YouTube videos about Medirus | 1+ | YouTube search |
 | Reddit threads with 50+ upvotes | 2+ | Track posts |
 | HN front page appearance | 1+ | HN Algolia search |
 | Wikipedia-eligible independent sources | 3+ | Manual review |
 
-Set up **Google Alerts** for "XActions" and "xactions twitter" to automatically track new mentions.
+Set up **Google Alerts** for "Medirus" and "medirus twitter" to automatically track new mentions.

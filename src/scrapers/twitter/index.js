@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * @deprecated This entire module is deprecated. Use `src/scrapers/social/twitter/` (TwitterCrawler / TwitterClient) instead.
- * Import via: `import { TwitterCrawler, TwitterClient } from 'xactions/scrapers/social/twitter'`
+ * Import via: `import { TwitterCrawler, TwitterClient } from 'medirus/scrapers/social/twitter'`
  * Or use the unified dispatcher: `scrape('twitter', action, options)` which now routes to the hybrid crawler.
  * This file is kept for backward compatibility and will be removed in Epic 20.2.
  *
- * XActions Twitter Scrapers (LEGACY — Puppeteer-based)
+ * Medirus Twitter Scrapers (LEGACY — Puppeteer-based)
  * 
  * Moved from src/scrapers/index.js to support multi-platform architecture.
  * All original exports are preserved for backward compatibility.
@@ -16,7 +16,7 @@
  *   createBrowser()                            // Legacy Puppeteer (no adapter wrapping)
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  */
 

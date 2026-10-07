@@ -19,7 +19,7 @@ Backend pump.fun (Stories 20.5–20.7) đã hoàn chỉnh với **8 actions** c�
 > "Một người dùng mở dashboard, nhìn thấy pump.fun như một platform đẳng cấp ngang X/Reddit, và trong ≤3 click chạy được một scrape trên mint address hoặc theo dõi livestream chat realtime."
 
 ### 1.3 Non-goals
-- **Không** tái triển khai trading UI (buy/sell/bonding curve) — XActions là scraping/automation toolkit, không phải sàn giao dịch.
+- **Không** tái triển khai trading UI (buy/sell/bonding curve) — Medirus là scraping/automation toolkit, không phải sàn giao dịch.
 - **Không** tạo route backend mới nếu `POST /api/platform/pumpfun/scrape` đã đủ dùng.
 - **Không** xây Solana wallet connect — auth xử lý qua Browser-as-Signer bridge (cookies/JWT từ session đăng nhập sẵn), không phải wallet adapter.
 
@@ -169,7 +169,7 @@ Tab component reuse pattern của `platform/page.tsx` (segmented `bg-slate-100 d
 **Spec chọn A** với copy trung thực: "Chat collection runs for the selected duration, then displays the full capture." Thanh progress đếm ngược; khi xong hiển thị tổng `messageCount` + bảng tin có timestamps. `Stop` = AbortController cancel request (backend crawler có signal forwarding sẵn từ Story 20.6).
 
 - Duration presets: 15s / 30s / 60s / 120s.
-- Cap thông báo: "XActions caps at 5 concurrent chat streams" → nếu nhận `XACT_4291` hiển thị "Stream limit reached — wait for an active stream to finish."
+- Cap thông báo: "Medirus caps at 5 concurrent chat streams" → nếu nhận `XACT_4291` hiển thị "Stream limit reached — wait for an active stream to finish."
 - Export: `Export JSON`/`CSV` serialize `result.messages` (reuse `exportToJSON`/`exportToCSV` client-side helper nếu có, else inline Blob download).
 
 ### 4.4 Tab "Account" — Authenticated Tools (US-5/6/7)
@@ -200,7 +200,7 @@ Detection: `POST /api/platform/pumpfun/scrape { action: 'fetch_my_profile' }` �
 
 **Auth UX edge cases:**
 - `XACT_4010` bất kỳ call nào → toàn tab Account disable inputs + banner đỏ "Session expired — refresh via Browser Bridge (see docs)".
-- Nút "How to connect" mở modal giải thích ngắn: "XActions reuses your logged-in pump.fun browser session via CDP cookie extraction. Run `xactions pumpfun auth` hoặc dùng Browser Bridge." — link sang `/docs/pumpfun-auth` (sẽ tạo docs page trong story kèm theo).
+- Nút "How to connect" mở modal giải thích ngắn: "Medirus reuses your logged-in pump.fun browser session via CDP cookie extraction. Run `medirus pumpfun auth` hoặc dùng Browser Bridge." — link sang `/docs/pumpfun-auth` (sẽ tạo docs page trong story kèm theo).
 
 ### 4.5 Error & Empty States (global)
 

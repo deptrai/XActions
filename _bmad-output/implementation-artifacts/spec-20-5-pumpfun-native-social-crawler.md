@@ -155,7 +155,7 @@ deferred: []
 ## Auto Run Result
 
 ### Summary
-Implemented `PumpFunCrawler` and `PumpFunClient` as a native social crawler for pump.fun Solana mint tokens under Story 20.5 (Epic 20). Provides `fetch_mint_social` action extracting theses (from position callouts), comment velocity (interpolated from reply samples), top holders, KOL activity (two-tier cache: Redis TTL 10m + static seed fallback), and livestream status (0ms in-memory set via 30s background poller) over unauthenticated HTTP/2 REST (`frontend-api-v3.pump.fun`) with zero headless browser usage. Wires into `scrape()` dispatcher via descriptor and `x_actions_list` discovery.
+Implemented `PumpFunCrawler` and `PumpFunClient` as a native social crawler for pump.fun Solana mint tokens under Story 20.5 (Epic 20). Provides `fetch_mint_social` action extracting theses (from position callouts), comment velocity (interpolated from reply samples), top holders, KOL activity (two-tier cache: Redis TTL 10m + static seed fallback), and livestream status (0ms in-memory set via 30s background poller) over unauthenticated HTTP/2 REST (`frontend-api-v3.pump.fun`) with zero headless browser usage. Wires into `scrape()` dispatcher via descriptor and `medirus_list` discovery.
 
 ### Files Changed
 - `src/scrapers/social/pumpfun/client.js` — `PumpFunClient extends AbstractApiClient` with Base58 validation, in-flight dedup ≤3s, 40 req/min/IP DistributedTokenBucket gate, curl transport fallback on 403, and JevChallengeDiagnoser on 200-empty.

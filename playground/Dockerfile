@@ -1,11 +1,11 @@
 # Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 #
-# XActions Playground.
+# Medirus Playground.
 #
 # Built from the repository root so the image can carry the three source
 # directories the service imports, without vendoring a copy of them:
 #
-#   docker build -f playground/Dockerfile -t xactions-playground .
+#   docker build -f playground/Dockerfile -t medirus-playground .
 #
 # The image installs only the playground's own five dependencies rather than
 # the repository's full set. Puppeteer, Prisma and Remotion are what the

@@ -26,7 +26,7 @@ Deliver an Instagram scraper that can collect public profile and media data via 
 
 ## Story
 
-As an XActions user,
+As an Medirus user,
 I want to scrape Instagram profiles, media, and hashtags,
 So that I can analyze visual social content and influencer data.
 

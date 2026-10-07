@@ -1,8 +1,8 @@
 ---
 title: "Download X (Twitter) Videos Free — No App Needed 2026"
 description: "Download any video from X/Twitter to your device in seconds. Free browser script — no app, no API, no watermark. All qualities available."
-keywords: ["download twitter video", "twitter video downloader free", "download X video 2026", "save twitter video to phone", "twitter video download no app", "how to download videos from X", "twitter video saver free no watermark", "download video from tweet", "X twitter video download script", "xactions video downloader"]
-canonical: "https://xactions.app/examples/video-downloader"
+keywords: ["download twitter video", "twitter video downloader free", "download X video 2026", "save twitter video to phone", "twitter video download no app", "how to download videos from X", "twitter video saver free no watermark", "download video from tweet", "X twitter video download script", "medirus video downloader"]
+canonical: "https://medirus.online/examples/video-downloader"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You're scrolling X and hit a viral 2-minute clip — a perfect demo of a coding technique, a hilarious skit, a breaking news moment. You want to save it locally so you can share it on Slack, embed it in a presentation, or just watch it offline. But X doesn't have a "Download" button. Third-party sites want you to paste URLs, watch ads, and download mystery files with watermarks.
 
-XActions finds every quality variant of the video embedded in the tweet's page data, picks the highest resolution, and downloads it as a clean MP4 — directly from Twitter's own CDN. No middleman, no watermark, no ads.
+Medirus finds every quality variant of the video embedded in the tweet's page data, picks the highest resolution, and downloads it as a clean MP4 — directly from Twitter's own CDN. No middleman, no watermark, no ads.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -45,7 +45,7 @@ XActions finds every quality variant of the video embedded in the tweet's page d
 └─────────────────────────────────────────────────────┘
 ```
 
-**After XActions:**
+**After Medirus:**
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -131,7 +131,7 @@ XActions finds every quality variant of the video embedded in the tweet's page d
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
 │  👤 nich @nichxbt · 2h                                   │
-│  Just shipped the new XActions dashboard 🚀              │
+│  Just shipped the new Medirus dashboard 🚀              │
 │                                                          │
 │  ┌──────────────────────────────────────────────┐        │
 │  │                                              │        │
@@ -160,8 +160,8 @@ XActions finds every quality variant of the video embedded in the tweet's page d
 
 ```javascript
 // ============================================
-// XActions - X/Twitter Video Downloader
-// by nichxbt — https://xactions.app
+// Medirus - X/Twitter Video Downloader
+// by nichxbt — https://medirus.online
 // Go to a tweet with a video, click play, then paste this
 // ============================================
 
@@ -232,7 +232,7 @@ XActions finds every quality variant of the video embedded in the tweet's page d
   };
 
   // Method 3: Network intercepts
-  const findVideoInNetwork = () => window.__XACTIONS_VIDEO_URLS || [];
+  const findVideoInNetwork = () => window.__MEDIRUS_VIDEO_URLS || [];
 
   // Method 4: Framework data
   const findVideoInNextData = () => {
@@ -249,24 +249,24 @@ XActions finds every quality variant of the video embedded in the tweet's page d
 
   // Set up network interceptor for future runs
   const setupInterceptor = () => {
-    if (window.__XACTIONS_INTERCEPTOR_ACTIVE) return;
-    window.__XACTIONS_VIDEO_URLS = window.__XACTIONS_VIDEO_URLS || [];
+    if (window.__MEDIRUS_INTERCEPTOR_ACTIVE) return;
+    window.__MEDIRUS_VIDEO_URLS = window.__MEDIRUS_VIDEO_URLS || [];
     const origFetch = window.fetch;
     window.fetch = async (...args) => {
       const url = args[0]?.toString?.() || args[0]?.url || args[0];
       if (url && (url.includes('.mp4') || url.includes('.m3u8') || url.includes('video.twimg'))) {
-        window.__XACTIONS_VIDEO_URLS.push({ url, quality: 'intercepted', type: url.includes('.m3u8') ? 'm3u8' : 'mp4', time: Date.now() });
+        window.__MEDIRUS_VIDEO_URLS.push({ url, quality: 'intercepted', type: url.includes('.m3u8') ? 'm3u8' : 'mp4', time: Date.now() });
       }
       return origFetch(...args);
     };
     const origXHR = window.XMLHttpRequest.prototype.open;
     window.XMLHttpRequest.prototype.open = function(method, url, ...rest) {
       if (url && (url.includes('.mp4') || url.includes('.m3u8') || url.includes('video.twimg'))) {
-        window.__XACTIONS_VIDEO_URLS.push({ url, quality: 'xhr', type: url.includes('.m3u8') ? 'm3u8' : 'mp4', time: Date.now() });
+        window.__MEDIRUS_VIDEO_URLS.push({ url, quality: 'xhr', type: url.includes('.m3u8') ? 'm3u8' : 'mp4', time: Date.now() });
       }
       return origXHR.call(this, method, url, ...rest);
     };
-    window.__XACTIONS_INTERCEPTOR_ACTIVE = true;
+    window.__MEDIRUS_INTERCEPTOR_ACTIVE = true;
   };
 
   const sortByQuality = (videos) =>
@@ -302,7 +302,7 @@ XActions finds every quality variant of the video embedded in the tweet's page d
   // Main
   const run = async () => {
     console.clear();
-    console.log('🎬 XActions — X/Twitter Video Downloader');
+    console.log('🎬 Medirus — X/Twitter Video Downloader');
     console.log('════════════════════════════════════════════════');
 
     const tweetId = getTweetId();
@@ -396,7 +396,7 @@ XActions finds every quality variant of the video embedded in the tweet's page d
 ### ✅ Expected Console Output
 
 ```
-🎬 XActions — X/Twitter Video Downloader
+🎬 Medirus — X/Twitter Video Downloader
 ════════════════════════════════════════════════
 📍 Tweet: @nichxbt/status/1893847265192837465
 
@@ -436,14 +436,14 @@ The file `nichxbt_1893847265192837465.mp4` drops into your downloads folder.
 ## 💻 Method 2: CLI (Command Line)
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Download a video by tweet URL
-npx xactions download-video https://x.com/nichxbt/status/1893847265192837465
+npx medirus download-video https://x.com/nichxbt/status/1893847265192837465
 
 # Specify output path and quality
-npx xactions download-video https://x.com/nichxbt/status/1893847265192837465 \
+npx medirus download-video https://x.com/nichxbt/status/1893847265192837465 \
   --quality highest \
   --output ./videos/my-video.mp4
 ```
@@ -451,7 +451,7 @@ npx xactions download-video https://x.com/nichxbt/status/1893847265192837465 \
 ### Example with all options:
 
 ```bash
-npx xactions download-video "https://x.com/nichxbt/status/1893847265192837465" \
+npx medirus download-video "https://x.com/nichxbt/status/1893847265192837465" \
   --quality highest \
   --output ./downloads/ \
   --filename "demo-video.mp4" \
@@ -462,7 +462,7 @@ npx xactions download-video "https://x.com/nichxbt/status/1893847265192837465" \
 ### ✅ CLI Output Preview
 
 ```
-⚡ XActions v3.5.0
+⚡ Medirus v3.5.0
 
 🎬 VIDEO DOWNLOADER
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -504,9 +504,9 @@ npx xactions download-video "https://x.com/nichxbt/status/1893847265192837465" \
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions", "mcp"]
+      "args": ["-y", "medirus", "mcp"]
     }
   }
 }
@@ -653,10 +653,10 @@ nichxbt_1893847265192837465.mp4
 ## ❓ FAQ
 
 ### Q: How do I download a video from Twitter / X for free?
-**A:** Go to the tweet with the video, click play on it, open your browser console (F12 → Console), paste the XActions video downloader script, and press Enter. The video downloads as an MP4 in the highest quality available — no app, no API key, no watermark, completely free.
+**A:** Go to the tweet with the video, click play on it, open your browser console (F12 → Console), paste the Medirus video downloader script, and press Enter. The video downloads as an MP4 in the highest quality available — no app, no API key, no watermark, completely free.
 
 ### Q: Can I download Twitter GIFs?
-**A:** Yes — X/Twitter stores all "GIFs" as MP4 video files internally. The XActions downloader works on them identically and downloads the MP4 version, which is actually higher quality and smaller in file size than the original GIF.
+**A:** Yes — X/Twitter stores all "GIFs" as MP4 video files internally. The Medirus downloader works on them identically and downloads the MP4 version, which is actually higher quality and smaller in file size than the original GIF.
 
 ### Q: What video quality can I get?
 **A:** X typically stores videos in 3 qualities: 480p (480×270), 360p (640×360), and 720p (1280×720). The script finds all variants and auto-downloads the highest. Some videos uploaded in 1080p will have a 1920×1080 variant available.
@@ -670,5 +670,5 @@ nichxbt_1893847265192837465.mp4
 ---
 
 <footer>
-Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

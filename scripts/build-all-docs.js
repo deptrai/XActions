@@ -24,7 +24,7 @@
  *   npm run site:docs
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 
@@ -38,7 +38,7 @@ const __dirname = path.dirname(__filename);
 const ROOT = path.join(__dirname, '..');
 const OUT_BASE = path.join(ROOT, 'dashboard', 'docs');
 const ASSET_SRC = path.join(ROOT, 'site', 'assets');
-const SITE_URL = 'https://xactions.app';
+const SITE_URL = 'https://medirus.online';
 const REPO_URL = 'https://github.com/nirholas/XActions';
 
 // ─── Sources ────────────────────────────────────────────────────────
@@ -337,7 +337,7 @@ function extractFrontmatterField(markdown, field) {
  * @returns {string}
  */
 function buildKeywords(slug, title, section) {
-  const base = ['xactions', 'twitter automation', 'x automation', 'free', 'open source'];
+  const base = ['medirus', 'twitter automation', 'x automation', 'free', 'open source'];
   const fromSlug = slug.split(/[-/]/).filter((w) => w.length > 2);
   const stop = new Set(['with', 'from', 'your', 'this', 'that', 'what', 'does', 'will', 'been']);
   const fromTitle = title
@@ -399,7 +399,7 @@ function renderMarkdown(markdown) {
     const html = originalLink(token);
     // External links open in a new tab, with rel hardening. Internal links
     // stay in place so the back button behaves.
-    if (/^https?:\/\//.test(token.href) && !token.href.includes('xactions.app')) {
+    if (/^https?:\/\//.test(token.href) && !token.href.includes('medirus.online')) {
       return html.replace('<a ', '<a target="_blank" rel="noopener noreferrer" ');
     }
     return html;
@@ -434,9 +434,9 @@ function generateHTML(page) {
     minutes,
   } = page;
 
-  const pageTitle = `${title} — XActions Docs`;
+  const pageTitle = `${title} — Medirus Docs`;
   const canonical = `${SITE_URL}${urlPath}`;
-  const seoDescription = (description || `${title} — XActions documentation`).slice(0, 158);
+  const seoDescription = (description || `${title} — Medirus documentation`).slice(0, 158);
   const ogImage = `${SITE_URL}/og-docs.png`;
 
   return `<!DOCTYPE html>
@@ -452,15 +452,15 @@ function generateHTML(page) {
 <meta name="color-scheme" content="light dark">
 
 <meta property="og:type" content="article">
-<meta property="og:title" content="${escapeHtml(title)} — XActions">
+<meta property="og:title" content="${escapeHtml(title)} — Medirus">
 <meta property="og:description" content="${escapeHtml(seoDescription)}">
 <meta property="og:url" content="${canonical}">
 <meta property="og:image" content="${ogImage}">
-<meta property="og:site_name" content="XActions">
+<meta property="og:site_name" content="Medirus">
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@nichxbt">
-<meta name="twitter:title" content="${escapeHtml(title)} — XActions">
+<meta name="twitter:title" content="${escapeHtml(title)} — Medirus">
 <meta name="twitter:description" content="${escapeHtml(seoDescription)}">
 <meta name="twitter:image" content="${ogImage}">
 
@@ -471,7 +471,7 @@ function generateHTML(page) {
 
 <script>
 /* Applied before first paint so a dark-theme reader never sees a white flash. */
-(function(){try{var t=localStorage.getItem('xactions-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+(function(){try{var t=localStorage.getItem('medirus-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
 </script>
 
 <script type="application/ld+json">
@@ -483,7 +483,7 @@ function generateHTML(page) {
   "url": "${canonical}",
   "image": "${ogImage}",
   "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-  "publisher": { "@type": "Organization", "name": "XActions", "url": "${SITE_URL}" },
+  "publisher": { "@type": "Organization", "name": "Medirus", "url": "${SITE_URL}" },
   "isAccessibleForFree": true,
   "license": "https://www.apache.org/licenses/LICENSE-2.0",
   "mainEntityOfPage": "${canonical}",
@@ -508,7 +508,7 @@ function generateHTML(page) {
 
 <header class="topbar">
   <button class="icon-btn menu-toggle" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button>
-  <a class="topbar__brand" href="/">⚡ XActions</a>
+  <a class="topbar__brand" href="/">⚡ Medirus</a>
   <div class="topbar__spacer"></div>
   <button class="search-trigger" data-search-trigger aria-label="Search documentation">
     <span aria-hidden="true">🔍</span><span class="search-trigger__label">Search docs</span><kbd>⌘K</kbd>
@@ -584,7 +584,7 @@ ${htmlContent}
 <footer class="site-footer">
   <div class="site-footer__inner">
     <div>
-      <h4>XActions</h4>
+      <h4>Medirus</h4>
       <p>Free, open-source X/Twitter automation.</p>
       <p>Built by <a href="https://x.com/nichxbt" target="_blank" rel="noopener">@nichxbt</a></p>
     </div>
@@ -611,7 +611,7 @@ ${htmlContent}
     </div>
   </div>
   <div class="site-footer__bottom">
-    <p>© 2024–2026 XActions. Apache-2.0 licensed. No API fees.</p>
+    <p>© 2024–2026 Medirus. Apache-2.0 licensed. No API fees.</p>
   </div>
 </footer>
 
@@ -780,7 +780,7 @@ async function build() {
         title,
         description: extractDescription(markdown)
           || extractFrontmatterField(markdown, 'description')
-          || `${title} — XActions documentation`,
+          || `${title} — Medirus documentation`,
         section: source.section,
         icon: source.icon,
         urlPath: `/docs/${source.outSubdir}/${slug}`,

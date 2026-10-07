@@ -10,7 +10,7 @@
   // ── CONFIG ────────────────────────────────────────────────
   const CONFIG = {
     triggers: [
-      { keywords: ['help', 'how to'], response: 'Check out XActions! 🚀' },
+      { keywords: ['help', 'how to'], response: 'Check out Medirus! 🚀' },
       // { keywords: ['keyword'], response: 'Your reply here' },
     ],
     maxReplies: 5,
@@ -36,12 +36,12 @@
 
   // ── MAIN ──────────────────────────────────────────────────
   (async () => {
-    console.log('🤖 AUTO-REPLY — XActions by nichxbt');
+    console.log('🤖 AUTO-REPLY — Medirus by nichxbt');
     console.log(`   Mode: ${CONFIG.dryRun ? '🔍 DRY RUN' : '⚡ LIVE'} | Max: ${CONFIG.maxReplies}`);
     console.log(`   Triggers: ${CONFIG.triggers.length} | Delay: ${CONFIG.delay}ms\n`);
 
     const replied = new Set(
-      JSON.parse(localStorage.getItem('xactions_autoreplied') || '[]')
+      JSON.parse(localStorage.getItem('medirus_autoreplied') || '[]')
     );
     let count = 0;
     const t0 = Date.now();
@@ -106,7 +106,7 @@
             sendBtn.click();
             count++;
             console.log(`💬 #${count} Replied to @${author}: "${replyText.slice(0, 40)}..."`);
-            localStorage.setItem('xactions_autoreplied', JSON.stringify([...replied]));
+            localStorage.setItem('medirus_autoreplied', JSON.stringify([...replied]));
           } else {
             console.warn('⚠️ Send button not found');
             document.body.click();

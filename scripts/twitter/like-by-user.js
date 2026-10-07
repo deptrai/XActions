@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 👤 Like By User - XActions
+ * 👤 Like By User - Medirus
  * ============================================
  * 
  * @name         like-by-user
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-01-26
- * @website      https://xactions.app
+ * @website      https://medirus.online
  * 
  * Usage:
  *   1. Go to the user's profile page (x.com/username)
@@ -138,9 +138,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  👤 LIKE BY USER - XActions                              ║
+║  👤 LIKE BY USER - Medirus                              ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

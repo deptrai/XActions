@@ -1,5 +1,5 @@
 /**
- * XActions — Automation Control Panel JS
+ * Medirus — Automation Control Panel JS
  * Handles API calls for start/stop, Socket.IO status updates, settings modals
  */
 

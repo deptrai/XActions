@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Core — Free X/Twitter Script | XActions</title>
-  <meta name="description" content="XActions Automation Framework - Core Utilities">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, core, automation">
+  <title>Core — Free X/Twitter Script | Medirus</title>
+  <meta name="description" content="Medirus Automation Framework - Core Utilities">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, core, automation">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Core — XActions">
-  <meta property="og:description" content="XActions Automation Framework - Core Utilities">
-  <meta property="og:url" content="https://xactions.app/scripts/core">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:title" content="Core — Medirus">
+  <meta property="og:description" content="Medirus Automation Framework - Core Utilities">
+  <meta property="og:url" content="https://medirus.online/scripts/core">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Core — XActions">
-  <meta name="twitter:description" content="XActions Automation Framework - Core Utilities">
+  <meta name="twitter:title" content="Core — Medirus">
+  <meta name="twitter:description" content="Medirus Automation Framework - Core Utilities">
 
-  <link rel="canonical" href="https://xactions.app/scripts/core">
+  <link rel="canonical" href="https://medirus.online/scripts/core">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Core — Free X/Twitter Script | XActions",
-    "description": "XActions Automation Framework - Core Utilities",
-    "url": "https://xactions.app/scripts/core",
+    "headline": "Core — Free X/Twitter Script | Medirus",
+    "description": "Medirus Automation Framework - Core Utilities",
+    "url": "https://medirus.online/scripts/core",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Automation",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, core, automation"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, core, automation"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Automation", "item": "https://xactions.app/scripts#automation" },
-      { "@type": "ListItem", "position": 4, "name": "Core", "item": "https://xactions.app/scripts/core" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Automation", "item": "https://medirus.online/scripts#automation" },
+      { "@type": "ListItem", "position": 4, "name": "Core", "item": "https://medirus.online/scripts/core" }
     ]
   }
   </script>
@@ -129,7 +129,7 @@
           <span>by <a href="https://x.com/nichxbt" rel="noopener">@nichxbt</a></span>
         </div>
 
-        <p>XActions Automation Framework - Core Utilities</p>
+        <p>Medirus Automation Framework - Core Utilities</p>
 
         
 
@@ -156,12 +156,12 @@
     DELAY_BETWEEN_ACTIONS: 2000,
     
     // Limits (to avoid rate limiting)
-    MAX_ACTIONS_PER_HOUR: 50,
+    MAMEDIRUS_PER_HOUR: 50,
     MAX_FOLLOWS_PER_DAY: 100,
     MAX_LIKES_PER_DAY: 200,
     
     // Storage keys prefix
-    STORAGE_PREFIX: 'xactions_',
+    STORAGE_PREFIX: 'medirus_',
     
     // Debug mode
     DEBUG: true,
@@ -175,15 +175,15 @@
           <div class="code-block">
             <button class="copy-btn" onclick="navigator.clipboard.writeText(this.nextElementSibling.querySelector('code').textContent).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Script',2000)})">Copy Script</button>
             <pre><code>// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation Framework - Core Utilities
+// Medirus Automation Framework - Core Utilities
 // https://github.com/nirholas/XActions
 //
 // This is the foundation module. Paste this FIRST, then paste any automation script.
 // All automations depend on this core module.
 
-window.XActions = window.XActions || {};
+window.Medirus = window.Medirus || {};
 
-window.XActions.Core = (() =&gt; {
+window.Medirus.Core = (() =&gt; {
   // ============================================
   // CONFIGURATION
   // ============================================
@@ -195,12 +195,12 @@ window.XActions.Core = (() =&gt; {
     DELAY_BETWEEN_ACTIONS: 2000,
     
     // Limits (to avoid rate limiting)
-    MAX_ACTIONS_PER_HOUR: 50,
+    MAMEDIRUS_PER_HOUR: 50,
     MAX_FOLLOWS_PER_DAY: 100,
     MAX_LIKES_PER_DAY: 200,
     
     // Storage keys prefix
-    STORAGE_PREFIX: 'xactions_',
+    STORAGE_PREFIX: 'medirus_',
     
     // Debug mode
     DEBUG: true,
@@ -694,13 +694,13 @@ window.XActions.Core = (() =&gt; {
   };
 })();
 
-console.log('✅ XActions Core loaded! Ready for automation scripts.');
+console.log('✅ Medirus Core loaded! Ready for automation scripts.');
 </code></pre>
           </div>
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -717,7 +717,7 @@ console.log('✅ XActions Core loaded! Ready for automation scripts.');
 <a href="/scripts/quota-supervisor">⚠️ Quota Supervisor</a>
 <a href="/scripts/rate-limiter">⏱️ Rate Limiter</a>
 <a href="/scripts/session-logger">📋 Session Logger</a>
-<a href="/scripts/rss-monitor">📡 XActions RSS &amp; Webhook Content Ingestion</a>
+<a href="/scripts/rss-monitor">📡 Medirus RSS &amp; Webhook Content Ingestion</a>
       </div>
       <div class="sidebar-card">
         <h3>🔗 Quick Links</h3>

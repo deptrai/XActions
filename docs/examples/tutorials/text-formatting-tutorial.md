@@ -1,6 +1,6 @@
 # Text Formatting in Posts -- Tutorial
 
-> Step-by-step guide to formatting tweet text with bold, italic, monospace, and other Unicode styles using XActions.
+> Step-by-step guide to formatting tweet text with bold, italic, monospace, and other Unicode styles using Medirus.
 
 ## Prerequisites
 - Logged into x.com in your browser

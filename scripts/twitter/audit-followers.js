@@ -56,7 +56,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🔍 XActions — Audit Followers                               ║
+║  🔍 Medirus — Audit Followers                               ║
 ║  Comprehensive follower quality analysis                     ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -294,7 +294,7 @@ var CONFIG = {
   }
 
   // Save audit results
-  const storageKey = `xactions_audit_${username}`;
+  const storageKey = `medirus_audit_${username}`;
   const data = {
     username,
     timestamp: new Date().toISOString(),

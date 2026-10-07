@@ -5,7 +5,7 @@ const commands = [
   { action: 'media', args: { username: 'nasa', limit: 5 } },
   { action: 'thread', args: { tweetId: '2095250561595535856' } },
   { action: 'trending', args: {} },
-  { action: 'search', args: { query: 'xactions', limit: 5 } },
+  { action: 'search', args: { query: 'medirus', limit: 5 } },
   { action: 'hashtag', args: { tag: 'javascript', limit: 5 } },
 ];
 

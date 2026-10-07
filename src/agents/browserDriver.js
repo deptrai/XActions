@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Browser Driver
+// Medirus — Browser Driver
 // Puppeteer stealth wrapper for X.com automation
 // by nichxbt
 

@@ -81,9 +81,9 @@ describe('GET /api/actions — public manifest (Story 50.5)', () => {
 
   it('M-6: cache hit on second identical request (X-Actions-Cache header)', async () => {
     const r1 = await request(app).get('/api/actions');
-    expect(r1.headers['x-actions-cache']).toBe('miss');
+    expect(r1.headers['medirus--cache']).toBe('miss');
     const r2 = await request(app).get('/api/actions');
-    expect(r2.headers['x-actions-cache']).toBe('hit');
+    expect(r2.headers['medirus--cache']).toBe('hit');
     expect(r2.body.generatedAt).toBe(r1.body.generatedAt); // same cached payload
   });
 

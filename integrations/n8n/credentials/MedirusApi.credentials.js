@@ -1,16 +1,16 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions API credentials for n8n
+// Medirus API credentials for n8n
 // by nichxbt
 
 /**
- * n8n credential type for connecting to XActions.
+ * n8n credential type for connecting to Medirus.
  * Supports two modes:
- *   1. Local — XActions runs on same machine, uses Puppeteer directly
- *   2. Remote — connects to an XActions API server via HTTP
+ *   1. Local — Medirus runs on same machine, uses Puppeteer directly
+ *   2. Remote — connects to an Medirus API server via HTTP
  */
-export class XActionsApi {
-  name = 'xActionsApi';
-  displayName = 'XActions API';
+export class MedirusApi {
+  name = 'medirusApi';
+  displayName = 'Medirus API';
   documentationUrl = 'https://github.com/nirholas/XActions';
 
   properties = [
@@ -23,7 +23,7 @@ export class XActionsApi {
         { name: 'Remote API Server', value: 'remote' },
       ],
       default: 'local',
-      description: 'Local mode runs scrapers directly via Puppeteer. Remote mode connects to an XActions API server.',
+      description: 'Local mode runs scrapers directly via Puppeteer. Remote mode connects to an Medirus API server.',
     },
     {
       displayName: 'API Base URL',
@@ -31,7 +31,7 @@ export class XActionsApi {
       type: 'string',
       default: 'http://localhost:3001',
       placeholder: 'http://localhost:3001',
-      description: 'Base URL of the XActions API server',
+      description: 'Base URL of the Medirus API server',
       displayOptions: {
         show: { mode: ['remote'] },
       },
@@ -42,7 +42,7 @@ export class XActionsApi {
       type: 'string',
       typeOptions: { password: true },
       default: '',
-      description: 'JWT token for authenticating with the XActions API',
+      description: 'JWT token for authenticating with the Medirus API',
       displayOptions: {
         show: { mode: ['remote'] },
       },

@@ -35,7 +35,7 @@ def test_wake_routes_to_first_breath_when_no_sanctum():
 def test_wake_loads_sanctum_when_present():
     with tempfile.TemporaryDirectory() as tmp:
         project_root = Path(tmp)
-        sanctum = project_root / "_bmad" / "memory" / "xactions-test-engineer"
+        sanctum = project_root / "_bmad" / "memory" / "medirus-test-engineer"
         sanctum.mkdir(parents=True)
         (sanctum / "CREED.md").write_text("# Creed")
         (sanctum / "MEMORY.md").write_text("# Memory")
@@ -61,7 +61,7 @@ def test_wake_loads_sanctum_when_present():
 def test_wake_pulse_appends_pulse_md():
     with tempfile.TemporaryDirectory() as tmp:
         project_root = Path(tmp)
-        sanctum = project_root / "_bmad" / "memory" / "xactions-test-engineer"
+        sanctum = project_root / "_bmad" / "memory" / "medirus-test-engineer"
         sanctum.mkdir(parents=True)
         (sanctum / "CREED.md").write_text("# Creed")
         (sanctum / "MEMORY.md").write_text("# Memory")

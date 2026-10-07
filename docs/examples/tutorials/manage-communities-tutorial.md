@@ -1,14 +1,14 @@
 ---
 title: "Manage Communities on X (Twitter) — Tutorial"
-description: "Manage X Community members, roles, rules, and posts using XActions browser scripts."
-keywords: ["manage twitter community", "x community admin", "xactions community management", "community members export", "community rules update"]
+description: "Manage X Community members, roles, rules, and posts using Medirus browser scripts."
+keywords: ["manage twitter community", "x community admin", "medirus community management", "community members export", "community rules update"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Manage Communities — Tutorial
 
-> Step-by-step guide to managing X Community members, roles, rules, and posting using XActions browser scripts.
+> Step-by-step guide to managing X Community members, roles, rules, and posting using Medirus browser scripts.
 
 **Works on:** Browser Console
 **Difficulty:** Intermediate
@@ -195,10 +195,10 @@ While the script is running:
 
 ```js
 // Check progress
-window.XActions.status();
+window.Medirus.status();
 
 // Stop the script
-window.XActions.abort();
+window.Medirus.abort();
 ```
 
 ---

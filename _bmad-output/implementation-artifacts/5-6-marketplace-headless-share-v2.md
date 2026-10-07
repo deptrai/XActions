@@ -10,7 +10,7 @@ Status: done
 
 ## Story
 
-As a growth marketer using XActions,
+As a growth marketer using Medirus,
 I want to scrape Facebook Marketplace listings and control browser visibility during automation,
 so that I can research products/prices and debug automation with a visible browser.
 

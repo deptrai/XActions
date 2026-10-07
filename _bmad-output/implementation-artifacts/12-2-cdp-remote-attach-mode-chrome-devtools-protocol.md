@@ -19,16 +19,16 @@ baseline_commit: 7a27c5e7f5c6c0f7a8f6b8e3b8c8d9e0f1a2b3c4d
 ## Story
 
 As a **Power User**,  
-I want **một helper CLI tự mở Chrome với cổng remote debugging 9222, để tôi đăng nhập LinkedIn/TopCV thủ công trên Chrome thật, rồi kết nối XActions qua CDP với độ trễ Gaussian 3-7s giữa các thao tác**,  
+I want **một helper CLI tự mở Chrome với cổng remote debugging 9222, để tôi đăng nhập LinkedIn/TopCV thủ công trên Chrome thật, rồi kết nối Medirus qua CDP với độ trễ Gaussian 3-7s giữa các thao tác**,  
 so that **hệ thống sử dụng nguyên vẹn profile, cookie và fingerprint thật của tôi để cào LinkedIn/TopCV mà không bị phát hiện automation**.
 
 ---
 
 ## Acceptance Criteria
 
-### AC-1: CLI helper `xactions auth --launch-chrome` mở Chrome với CDP port
+### AC-1: CLI helper `medirus auth --launch-chrome` mở Chrome với CDP port
 
-* **Given** user chạy `xactions auth --launch-chrome` từ terminal (primary CLI bin is `xactions`; legacy `unfollowx` is a non-executable stub and must not be assumed)
+* **Given** user chạy `medirus auth --launch-chrome` từ terminal (primary CLI bin is `medirus`; legacy `unfollowx` is a non-executable stub and must not be assumed)
 * **When** CLI xử lý lệnh
 * **Then** hệ thống phát hiện đường dẫn Chrome theo platform:  
   - macOS: `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`  
@@ -47,7 +47,7 @@ so that **hệ thống sử dụng nguyên vẹn profile, cookie và fingerprint
 
 * **Given** `src/core/cdp-launcher.js` export `launchBrowserWithCdp(cdpUrl)` nhận `cdpUrl` dạng `http://localhost:9222`
 * **When** gọi `await launchBrowserWithCdp('http://localhost:9222')`
-* **Then** nếu `XACTIONS_SCRAPER_ADAPTER=playwright` hoặc adapter mặc định là `playwright`, sử dụng `chromium.connectOverCDP(cdpUrl)` để lấy `Browser` từ Chrome thật
+* **Then** nếu `MEDIRUS_SCRAPER_ADAPTER=playwright` hoặc adapter mặc định là `playwright`, sử dụng `chromium.connectOverCDP(cdpUrl)` để lấy `Browser` từ Chrome thật
 * **And** nếu dùng `puppeteer`, sử dụng `puppeteer.connect({ browserWSEndpoint: <ws từ http://localhost:9222/json/version> })`
 * **And** trả về một `AdapterBrowser` hợp đồng hiện tại: `{ _native, _adapter: 'playwright' | 'puppeteer', _browserType: 'chromium' }`, tương thích với `createPage()` của `src/scrapers/twitter/index.js` và `src/scrapers/facebook/core.js`
 * **And** kết quả thành công phải có thể lưu thành `LoginResult = { accountId, cookies, tokens, expiresAt }` theo contract `AbstractLogin` để `SessionManager` lưu session (AD-5 Rule 3)
@@ -115,9 +115,9 @@ so that **hệ thống sử dụng nguyên vẹn profile, cookie và fingerprint
   - [x] 3.4 Thêm helper `delayWithJitter(min, max)` vào `AbstractCrawler`
 - [x] **Task 4: Xây dựng CLI `auth` với `--launch-chrome`** (AC-1, AC-7)
   - [x] 4.1 Tạo `src/cli/commands/auth.js` với `registerAuthCommand`
-  - [x] 4.2 Thêm `xactions auth --launch-chrome --port <n> --user-data-dir <path> --chrome-path <path> --headless`
+  - [x] 4.2 Thêm `medirus auth --launch-chrome --port <n> --user-data-dir <path> --chrome-path <path> --headless`
   - [x] 4.3 Đăng ký command trong `src/cli/index.js`
-  - [x] 4.4 Cập nhật `src/cli/commands/login.js` hướng dẫn `xactions auth --launch-chrome` khi dùng `--cdp`
+  - [x] 4.4 Cập nhật `src/cli/commands/login.js` hướng dẫn `medirus auth --launch-chrome` khi dùng `--cdp`
   - [x] 4.5 Hỗ trợ detect Chrome executable theo platform (macOS, Windows, Linux) và fallback `--chrome-path`
 - [x] **Task 5: Áp dụng Gaussian Jitter** (AC-5)
   - [x] 5.1 Triển khai `gaussianDelay` trong `src/utils/gaussian-delay.js` với Box-Muller transform
@@ -195,7 +195,7 @@ src/
     facebook/core.js         # UPDATE — createPage tương tự Twitter, truyền preserveProfile
   cli/
     commands/
-      auth.js                # NEW — xactions auth --launch-chrome
+      auth.js                # NEW — medirus auth --launch-chrome
       login.js               # UPDATE — xử lý --cdp stub từ 12.1 (dispatch hoặc loại bỏ)
     index.js                 # UPDATE — registerAuthCommand(program)
   utils/
@@ -251,9 +251,9 @@ types/
 
 * `[Source: _bmad-output/planning-artifacts/epics.md#Epic 12 / Story 12.2]` — User story, acceptance gốc, dependency với Epic 18.3.
 * `[Source: _bmad-output/planning-artifacts/prd.md#Nhóm 3: Xác Thực Không Ma Sát]` — FR-69 CDP Remote Attach Mode.
-* `[Source: _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md#AD-5]` — CDP Attach Mode, Chrome flags, Gaussian Jitter, Sticky IP.
-* `[Source: _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md#AD-15]` — Error message convention, TTY detection.
-* `[Source: _bmad-output/planning-artifacts/ux/EXPERIENCE-UNIVERSAL-2026-08-21.md#CDP Remote Attach Flow]` — Flow R1: `xactions auth --launch-chrome` → CDP → jitter 3-7s.
+* `[Source: _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md#AD-5]` — CDP Attach Mode, Chrome flags, Gaussian Jitter, Sticky IP.
+* `[Source: _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md#AD-15]` — Error message convention, TTY detection.
+* `[Source: _bmad-output/planning-artifacts/ux/EXPERIENCE-UNIVERSAL-2026-08-21.md#CDP Remote Attach Flow]` — Flow R1: `medirus auth --launch-chrome` → CDP → jitter 3-7s.
 * `[Source: src/scrapers/adapters/base.js]` — `BaseAdapter.connect()` abstract method (line 126-133).
 * `[Source: src/scrapers/adapters/playwright.js]` — `PlaywrightAdapter.connect()` dùng `connectOverCDP` (line 296-309).
 * `[Source: src/scrapers/adapters/puppeteer.js]` — `PuppeteerAdapter.connect()` fetch WS URL (line 235-258).
@@ -267,7 +267,7 @@ types/
 * `[Source: src/cli/commands/connect.js]` — Pattern register CLI command với spinner, message, cleanup.
 * `[Source: src/cli/index.js]` — Import và đăng ký command.
 * `[Source: src/agents/antiDetection.js]` — `gaussianRandom`, `addJitter`.
-* `[Source: package.json]` — Playwright, Puppeteer versions, CLI bin `xactions`.
+* `[Source: package.json]` — Playwright, Puppeteer versions, CLI bin `medirus`.
 * `[Source: types/core.d.ts]` — AbstractCrawler constructor types.
 
 ---
@@ -289,7 +289,7 @@ Devin (SWE-1.7 Max) + Serena LSP context.
 ### Completion Notes List
 
 * [x] `launchBrowserWithCdp(cdpUrl)` implemented and returns adapter-shaped browser.
-* [x] `xactions auth --launch-chrome` spawns Chrome with `--remote-debugging-port=9222`.
+* [x] `medirus auth --launch-chrome` spawns Chrome with `--remote-debugging-port=9222`.
 * [x] Gaussian Jitter helper created and used in CDP scraping path.
 * [x] Adapters implement `connect(cdpUrl, options)` (already done) and `newPage({ preserveProfile: true })`.
 * [x] `AbstractCrawler` accepts `cdpUrl` và CDP session passed from CLI.

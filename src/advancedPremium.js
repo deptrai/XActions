@@ -17,7 +17,7 @@
   // ══════════════════════════════════════════════════════════
 
   function log(emoji, msg) {
-    console.log(`${emoji} [XActions Premium] ${msg}`);
+    console.log(`${emoji} [Medirus Premium] ${msg}`);
   }
 
   function clickEl(el) {
@@ -190,7 +190,7 @@
 
   async function giftPremium(username) {
     if (!username) {
-      log('❌', 'Please provide a username. Usage: XActions.advancedPremium.giftPremium("username")');
+      log('❌', 'Please provide a username. Usage: Medirus.advancedPremium.giftPremium("username")');
       return;
     }
 
@@ -346,7 +346,7 @@
 
     // Create overlay
     const overlay = document.createElement('div');
-    overlay.id = 'xactions-reader-overlay';
+    overlay.id = 'medirus-reader-overlay';
     overlay.style.cssText = `
       position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;
       background:#000;color:#e7e9ea;overflow-y:auto;padding:40px;
@@ -356,7 +356,7 @@
       <div style="max-width:680px;margin:0 auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;">
           <h2 style="font-size:24px;margin:0;">📖 Reader Mode</h2>
-          <button id="xactions-reader-close" style="
+          <button id="medirus-reader-close" style="
             background:#1d9bf0;color:#fff;border:none;border-radius:20px;
             padding:8px 20px;cursor:pointer;font-size:14px;
           ">Close Reader</button>
@@ -366,7 +366,7 @@
     `;
     document.body.appendChild(overlay);
 
-    document.getElementById('xactions-reader-close').addEventListener('click', () => {
+    document.getElementById('medirus-reader-close').addEventListener('click', () => {
       overlay.remove();
       log('✅', 'Reader mode closed.');
     });
@@ -449,7 +449,7 @@
   async function downloadVideo(tweetUrl) {
     if (!tweetUrl && !window.location.pathname.match(/\/status\/\d+/)) {
       log('❌', 'Provide a tweet URL or navigate to a tweet with a video first.');
-      log('❌', 'Usage: XActions.advancedPremium.downloadVideo("https://x.com/user/status/123")');
+      log('❌', 'Usage: Medirus.advancedPremium.downloadVideo("https://x.com/user/status/123")');
       return;
     }
 
@@ -472,7 +472,7 @@
         log('🔄', 'Starting download...');
         const a = document.createElement('a');
         a.href = src;
-        a.download = `xactions_video_${Date.now()}.mp4`;
+        a.download = `medirus_video_${Date.now()}.mp4`;
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
@@ -520,7 +520,7 @@
 
       const a = document.createElement('a');
       a.href = best.name;
-      a.download = `xactions_video_${tweetId}.mp4`;
+      a.download = `medirus_video_${tweetId}.mp4`;
       a.target = '_blank';
       a.style.display = 'none';
       document.body.appendChild(a);
@@ -620,8 +620,8 @@
   // 🎯 Expose API & Print Menu
   // ══════════════════════════════════════════════════════════
 
-  window.XActions = window.XActions || {};
-  window.XActions.advancedPremium = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.advancedPremium = {
     subscribePremium,
     cancelPremium,
     changeTier,
@@ -634,35 +634,35 @@
   };
 
   console.log('╔══════════════════════════════════════════════════════════════╗');
-  console.log('║  ⭐ XACTIONS ADVANCED PREMIUM                              ║');
+  console.log('║  ⭐ MEDIRUS ADVANCED PREMIUM                              ║');
   console.log('║  by nichxbt                                                 ║');
   console.log('╠══════════════════════════════════════════════════════════════╣');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.subscribePremium(tier)             ║');
+  console.log('║  Medirus.advancedPremium.subscribePremium(tier)             ║');
   console.log('║    → Subscribe to Premium (basic/premium/premium+)          ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.cancelPremium()                    ║');
+  console.log('║  Medirus.advancedPremium.cancelPremium()                    ║');
   console.log('║    → Cancel your Premium subscription                       ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.changeTier(tier)                   ║');
+  console.log('║  Medirus.advancedPremium.changeTier(tier)                   ║');
   console.log('║    → Upgrade/downgrade tier (basic/premium/premium+)        ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.giftPremium("username")            ║');
+  console.log('║  Medirus.advancedPremium.giftPremium("username")            ║');
   console.log('║    → Gift Premium to another user                           ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.topArticles(limit)                 ║');
+  console.log('║  Medirus.advancedPremium.topArticles(limit)                 ║');
   console.log('║    → Scrape top shared articles (default: 20)               ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.readerMode()                       ║');
+  console.log('║  Medirus.advancedPremium.readerMode()                       ║');
   console.log('║    → Toggle reader mode on current thread                   ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.setUndoTimer(seconds)              ║');
+  console.log('║  Medirus.advancedPremium.setUndoTimer(seconds)              ║');
   console.log('║    → Set undo timer (5/10/20/30/60 seconds)                 ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.downloadVideo(tweetUrl?)           ║');
+  console.log('║  Medirus.advancedPremium.downloadVideo(tweetUrl?)           ║');
   console.log('║    → Download video from tweet                              ║');
   console.log('║                                                             ║');
-  console.log('║  XActions.advancedPremium.verifiedOnlyReplies(enable?)       ║');
+  console.log('║  Medirus.advancedPremium.verifiedOnlyReplies(enable?)       ║');
   console.log('║    → Toggle verified-only replies (default: true)           ║');
   console.log('║                                                             ║');
   console.log('╚══════════════════════════════════════════════════════════════╝');

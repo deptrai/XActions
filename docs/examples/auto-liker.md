@@ -50,7 +50,7 @@ This feature helps you engage with content automatically by:
 
 ```javascript
 // ============================================
-// XActions - Auto-Liker (Browser Console)
+// Medirus - Auto-Liker (Browser Console)
 // Author: nich (@nichxbt)
 // Go to: x.com/search or your timeline
 // Open console (F12), paste this
@@ -85,7 +85,7 @@ This feature helps you engage with content automatically by:
   // SCRIPT - Don't modify below this line
   // ==========================================
   
-  console.log('❤️  XActions - Auto-Liker');
+  console.log('❤️  Medirus - Auto-Liker');
   console.log('='.repeat(50));
   console.log('⚙️  Settings:');
   console.log(`   • Keywords: ${CONFIG.KEYWORDS.length ? CONFIG.KEYWORDS.join(', ') : 'ALL TWEETS'}`);
@@ -300,7 +300,7 @@ This feature helps you engage with content automatically by:
 
 **Output example:**
 ```
-❤️  XActions - Auto-Liker
+❤️  Medirus - Auto-Liker
 ==================================================
 ⚙️  Settings:
    • Keywords: ALL TWEETS
@@ -372,7 +372,7 @@ touch auto-liker.js
 
 ```javascript
 // ============================================
-// XActions - Auto-Liker (Node.js + Puppeteer)
+// Medirus - Auto-Liker (Node.js + Puppeteer)
 // Author: nich (@nichxbt)
 //
 // Usage:
@@ -603,7 +603,7 @@ async function autoLike(searchQuery, options = {}) {
   
   // Log session start
   console.log('\n' + '='.repeat(60));
-  console.log('❤️  XACTIONS AUTO-LIKER');
+  console.log('❤️  MEDIRUS AUTO-LIKER');
   console.log('='.repeat(60));
   
   logger.info(`Session ID: ${sessionId}`);
@@ -887,7 +887,7 @@ async function main() {
   
   if (args.includes('--help') || args.includes('-h')) {
     console.log(`
-❤️  XActions Auto-Liker
+❤️  Medirus Auto-Liker
 ======================
 
 Usage:
@@ -954,7 +954,7 @@ node auto-liker.js --help
 **Output example:**
 ```
 ============================================================
-❤️  XACTIONS AUTO-LIKER
+❤️  MEDIRUS AUTO-LIKER
 ============================================================
 [2026-01-01T14:30:00.000Z] [INFO] Session ID: abc123
 [2026-01-01T14:30:00.001Z] [INFO] Search query: javascript
@@ -1034,11 +1034,11 @@ Stop immediately if you see:
 
 ## 🌐 Website Alternative
 
-### Use XActions.app
+### Use Medirus.app
 
 Don't want to run scripts? Use our web dashboard instead!
 
-**[👉 xactions.app](https://xactions.app)**
+**[👉 medirus.online](https://medirus.online)**
 
 **Features:**
 - ✅ No coding required
@@ -1050,7 +1050,7 @@ Don't want to run scripts? Use our web dashboard instead!
 - ✅ Multi-account support (Pro)
 
 **How it works:**
-1. Sign in with your X account at [xactions.app](https://xactions.app)
+1. Sign in with your X account at [medirus.online](https://medirus.online)
 2. Navigate to **Automation** → **Auto-Liker**
 3. Configure your keywords and limits
 4. Click "Start" and watch the magic happen!

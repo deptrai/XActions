@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 /**
- * XActions Facebook Scrapers
+ * Medirus Facebook Scrapers
  * Puppeteer-based scrapers for Facebook (facebook.com)
  *
  * Uses the same Puppeteer stealth approach as Twitter and Threads scrapers.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license BSL 1.1
  */
 

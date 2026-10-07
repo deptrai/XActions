@@ -3,7 +3,7 @@
   "auth": {
     "cookiePresent": false,
     "csrfPresent": false,
-    "path": "auth_session (~/.xactions/cookies.json fallback)"
+    "path": "auth_session (~/.medirus/cookies.json fallback)"
   },
   "search": {
     "queries": [

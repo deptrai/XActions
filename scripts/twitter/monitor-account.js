@@ -72,7 +72,7 @@ var CONFIG = {
   
   const username = pathMatch[1];
   const pageType = pathMatch[2]; // 'followers' or 'following'
-  const storageKey = `xactions_monitor_${username}_${pageType}`;
+  const storageKey = `medirus_monitor_${username}_${pageType}`;
   
   console.log(`👤 Monitoring: @${username}`);
   console.log(`📋 Page type: ${pageType}`);

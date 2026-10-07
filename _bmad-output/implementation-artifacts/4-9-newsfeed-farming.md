@@ -6,11 +6,11 @@ baseline_commit: e2deee0
 
 Status: done
 
-<!-- Epic 4 (Facebook Growth Automation, Cluster 2 — medium-high risk). Source: epics.md#Story 4.9 + PRD prd-XActions-2026-06-10-epic4 FR-23. Realizes UJ-7. -->
+<!-- Epic 4 (Facebook Growth Automation, Cluster 2 — medium-high risk). Source: epics.md#Story 4.9 + PRD prd-Medirus-2026-06-10-epic4 FR-23. Realizes UJ-7. -->
 
 ## Story
 
-As a new-account operator using XActions,
+As a new-account operator using Medirus,
 I want to warm up an account with natural newsfeed scrolling and light reactions,
 so that I can build a normal behavioral fingerprint before running heavier automation.
 
@@ -99,7 +99,7 @@ Pattern: clone `warmupScrollFeed` (4.3) and add: longer cap, reaction probabilit
 
 ## Review Findings
 
-<!-- Code review 2026-06-19 (claude-opus-4-8). 4 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor, XActions domain. Verified vs source: findLikeButton ALWAYS throws on not-found (never returns {element:null}) → "null .click()" finding dismissed. warmupScrollFeed clone-base HAS try/catch (L1067); warmupAccount does NOT → missing-guard finding confirmed real. -->
+<!-- Code review 2026-06-19 (claude-opus-4-8). 4 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor, Medirus domain. Verified vs source: findLikeButton ALWAYS throws on not-found (never returns {element:null}) → "null .click()" finding dismissed. warmupScrollFeed clone-base HAS try/catch (L1067); warmupAccount does NOT → missing-guard finding confirmed real. -->
 
 ### Patch
 
@@ -150,7 +150,7 @@ Pattern: clone `warmupScrollFeed` (4.3) and add: longer cap, reaction probabilit
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 4.9: Newsfeed farming / account warming]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md#FR-23, §7 NFR-8 (mandatory warning), §4.3 Cluster 2]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-10-epic4/prd.md#FR-23, §7 NFR-8 (mandatory warning), §4.3 Cluster 2]
 - [Source: api/services/facebookAutomation.js#warmupScrollFeed (clone base), #findLikeButton (reaction reuse), #MAX_DURATION_SECONDS (clamp pattern)]
 - [Source: _bmad-output/implementation-artifacts/4-3-view-boost.md (scroll loop + seams + busy-spin backstop)]
 

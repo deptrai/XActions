@@ -87,7 +87,7 @@
   };
 
   const run = async () => {
-    console.log('📋 XActions List Manager');
+    console.log('📋 Medirus List Manager');
     console.log('========================');
 
     let result = {};

@@ -26,7 +26,7 @@ so that **tôi có thể phân tích sentiment và cấu trúc hội thoại v�
 
 - `_bmad-output/planning-artifacts/epics.md` — Epic 13, Story 13.7 [dòng 574-585]
 - `_bmad-output/planning-artifacts/prd.md` — FR-70 (Topological Comment Tree Extraction) [dòng 81]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2, AD-4, AD-6, AD-8, AD-9, AD-11, AD-14
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2, AD-4, AD-6, AD-8, AD-9, AD-11, AD-14
 - `_bmad-output/implementation-artifacts/14-1-hierarchical-comment-tree-extraction-algorithm.md` — `CommentTreeExtractor`, `FacebookCrawler.get_comments`, `CommentItem`, topological sort
 - `src/scrapers/social/facebook/crawler.js` — `DEFAULT_FB_DOC_IDS` [dòng 191-205], `FB_COMMENT_RELAY_PROVIDERS` [dòng 211-216], constructor `get_comments` action [dòng 281-288], `getComments` wrapper [dòng 904-907], `getCommentsForPost` [dòng 918-1064], `#normalizeComment` [dòng 453-523], `#extractPostExternalId` [dòng 408-423], `#extractCommentExternalId` [dòng 531-547], `#resolvePostFeedbackContext` [dòng 637-711], `#saveCheckpoint` [dòng 1102-1158], `#clampMaxDepth` [dòng 430-434], `#clampMaxComments` [dòng 441-445]
 - `src/scrapers/social/comment-tree.js` — `CommentTreeExtractor` BFS, cycle detection, topological sort [dòng 1-202]

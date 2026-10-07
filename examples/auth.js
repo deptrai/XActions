@@ -13,14 +13,14 @@
  * Two ways to supply a session, checked in this order:
  *
  *   1. `X_AUTH_TOKEN` and `X_CSRF_TOKEN` environment variables.
- *   2. `~/.xactions/cookies.json`, written by `xactions login`.
+ *   2. `~/.medirus/cookies.json`, written by `medirus login`.
  *
  * Both cookies matter. `auth_token` proves who you are; `ct0` is the CSRF
  * token X requires as a header before it treats the request as logged in.
  * With only `auth_token`, session-tier endpoints answer 404.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 
@@ -28,7 +28,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { Scraper } from '../src/client/index.js';
 
-const COOKIE_FILE = path.join(os.homedir(), '.xactions', 'cookies.json');
+const COOKIE_FILE = path.join(os.homedir(), '.medirus', 'cookies.json');
 
 /**
  * Open a Scraper for guest-tier reads (profiles, public timelines).
@@ -109,7 +109,7 @@ function loginInstructions() {
     '',
     '     or save them once with the CLI:',
     '',
-    '       npx xactions login',
+    '       npx medirus login',
     '',
     `Cookie file checked: ${COOKIE_FILE}`,
     '',

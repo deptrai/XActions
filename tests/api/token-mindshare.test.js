@@ -26,7 +26,7 @@ import os from 'os';
 import app from '../../api/server.js';
 import { makeTestToken, makeTestUserId, seedTestUser } from './fixtures/test-user.js';
 
-const DB_PATH = path.join(os.homedir(), '.xactions', 'analytics.db');
+const DB_PATH = path.join(os.homedir(), '.medirus', 'analytics.db');
 
 /**
  * Ensure token_mentions exists in analytics.db (schema mirrors 54.2 pipeline).
@@ -146,10 +146,10 @@ describe('Story 54.4: GET /api/analytics/token-mindshare', () => {
     expect(typeof payload.windowHours).toBe('number');
   });
 
-  it('Bearer service key (XACTIONS_SERVICE_KEYS) returns 200', async () => {
-    const origEnv = process.env.XACTIONS_SERVICE_KEYS;
+  it('Bearer service key (MEDIRUS_SERVICE_KEYS) returns 200', async () => {
+    const origEnv = process.env.MEDIRUS_SERVICE_KEYS;
     const testKey = 'test-service-key-mindshare-xyz';
-    process.env.XACTIONS_SERVICE_KEYS = JSON.stringify({
+    process.env.MEDIRUS_SERVICE_KEYS = JSON.stringify({
       [testKey]: { consumer_id: 'jev', tier: 'internal' },
     });
     const { _resetServiceKeyMap } = await import('../../api/middleware/serviceAuth.js');
@@ -165,9 +165,9 @@ describe('Story 54.4: GET /api/analytics/token-mindshare', () => {
       expect(Array.isArray(payload.tokens)).toBe(true);
     } finally {
       if (origEnv === undefined) {
-        delete process.env.XACTIONS_SERVICE_KEYS;
+        delete process.env.MEDIRUS_SERVICE_KEYS;
       } else {
-        process.env.XACTIONS_SERVICE_KEYS = origEnv;
+        process.env.MEDIRUS_SERVICE_KEYS = origEnv;
       }
       _resetServiceKeyMap();
     }

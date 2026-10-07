@@ -22,7 +22,7 @@
   // =============================================
 
   const run = async () => {
-    console.log('📊 CREATE POLL — XActions by nichxbt');
+    console.log('📊 CREATE POLL — Medirus by nichxbt');
 
     // Validate options count (2-4)
     if (CONFIG.options.length < 2 || CONFIG.options.length > 4) {

@@ -22,7 +22,7 @@
  * NFR4: no account/cookie/token logged in errors.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  */
 
 // ============================================================================

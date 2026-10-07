@@ -1,9 +1,9 @@
 {
-  "name": "xactions",
+  "name": "medirus",
   "version": "3.1.0",
   "description": "Complete X/Twitter automation toolkit — 87+ MCP tools for scraping, posting, engagement, analytics, and more. No API fees. Uses Puppeteer browser automation.",
   "author": "nichxbt",
-  "homepage": "https://xactions.app",
+  "homepage": "https://medirus.online",
   "repository": "https://github.com/nirholas/xactions",
   "license": "Apache-2.0",
   "tags": [
@@ -17,17 +17,17 @@
     "analytics"
   ],
   "setup": {
-    "install": "npm install xactions",
-    "instructions": "After installing, set XACTIONS_SESSION_COOKIE to your X/Twitter auth_token cookie (DevTools → Application → Cookies → auth_token on x.com)."
+    "install": "npm install medirus",
+    "instructions": "After installing, set MEDIRUS_SESSION_COOKIE to your X/Twitter auth_token cookie (DevTools → Application → Cookies → auth_token on x.com)."
   },
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "node",
       "args": [
-        "node_modules/xactions/src/mcp/server.js"
+        "node_modules/medirus/src/mcp/server.js"
       ],
       "env": {
-        "XACTIONS_MODE": "local"
+        "MEDIRUS_MODE": "local"
       }
     }
   },

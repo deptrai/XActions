@@ -34,7 +34,7 @@ export default function ExtensionPage() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Browser Extension</h1>
         </div>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          XActions Chrome/Edge extension — status and installation.
+          Medirus Chrome/Edge extension — status and installation.
         </p>
       </div>
 
@@ -57,7 +57,7 @@ export default function ExtensionPage() {
           {[
             { step: 1, text: 'Download the extension from the Chrome Web Store or load unpacked from extension/ directory' },
             { step: 2, text: 'Navigate to x.com and log in to your account' },
-            { step: 3, text: 'Click the XActions extension icon and authenticate with your API key' },
+            { step: 3, text: 'Click the Medirus extension icon and authenticate with your API key' },
             { step: 4, text: 'Extension will sync session cookies automatically' },
           ].map((s) => (
             <div key={s.step} className="flex items-start gap-3">

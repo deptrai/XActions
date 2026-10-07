@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XActions Scraper Toolbox — Free X/Twitter Script | XActions</title>
+  <title>Medirus Scraper Toolbox — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Interactive on-page control panel for scraping X/Twitter">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, scraper, toolbox, other tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, scraper, toolbox, other tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="XActions Scraper Toolbox — XActions">
+  <meta property="og:title" content="Medirus Scraper Toolbox — Medirus">
   <meta property="og:description" content="Interactive on-page control panel for scraping X/Twitter">
-  <meta property="og:url" content="https://xactions.app/scripts/scraper-toolbox">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/scraper-toolbox">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="XActions Scraper Toolbox — XActions">
+  <meta name="twitter:title" content="Medirus Scraper Toolbox — Medirus">
   <meta name="twitter:description" content="Interactive on-page control panel for scraping X/Twitter">
 
-  <link rel="canonical" href="https://xactions.app/scripts/scraper-toolbox">
+  <link rel="canonical" href="https://medirus.online/scripts/scraper-toolbox">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "XActions Scraper Toolbox — Free X/Twitter Script | XActions",
+    "headline": "Medirus Scraper Toolbox — Free X/Twitter Script | Medirus",
     "description": "Interactive on-page control panel for scraping X/Twitter",
-    "url": "https://xactions.app/scripts/scraper-toolbox",
+    "url": "https://medirus.online/scripts/scraper-toolbox",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Other Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, scraper, toolbox, other tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, scraper, toolbox, other tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://xactions.app/scripts#other-tools" },
-      { "@type": "ListItem", "position": 4, "name": "XActions Scraper Toolbox", "item": "https://xactions.app/scripts/scraper-toolbox" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://medirus.online/scripts#other-tools" },
+      { "@type": "ListItem", "position": 4, "name": "Medirus Scraper Toolbox", "item": "https://medirus.online/scripts/scraper-toolbox" }
     ]
   }
   </script>
@@ -112,9 +112,9 @@
 
     <main class="main-content" id="main-content">
       <header class="main-header">
-        <h1>⚡ XActions Scraper Toolbox</h1>
+        <h1>⚡ Medirus Scraper Toolbox</h1>
         <div class="breadcrumb">
-          <a href="/">Home</a> › <a href="/scripts">Scripts</a> › <a href="/scripts#other-tools">Other Tools</a> › XActions Scraper Toolbox
+          <a href="/">Home</a> › <a href="/scripts">Scripts</a> › <a href="/scripts#other-tools">Other Tools</a> › Medirus Scraper Toolbox
         </div>
       </header>
 
@@ -154,7 +154,7 @@
             <pre><code>// Copyright (c) 2024-2026 nich (@nichxbt). All rights reserved.
 /**
  * ============================================================
- * 🧰 XActions Scraper Toolbox
+ * 🧰 Medirus Scraper Toolbox
  * ============================================================
  *
  * @name        scraper-toolbox.js
@@ -196,7 +196,7 @@
  * Anything already on screen before you pasted the script is picked up
  * by a DOM sweep as a fallback (marked source:&quot;dom&quot;, approximate counts).
  *
- * Console API (after pasting): window.XActionsToolbox
+ * Console API (after pasting): window.MedirusToolbox
  *   .tweets()      all captured tweets
  *   .matched()     tweets passing current filters
  *   .export('json'|'csv'|'markdown'|'text'|'html')
@@ -204,17 +204,17 @@
  *   .start() .pause() .stop() .clear() .destroy()
  */
 
-(function xactionsScraperToolbox() {
+(function medirusScraperToolbox() {
   'use strict';
 
   // Re-pasting the script replaces any live instance cleanly
-  if (window.XActionsToolbox &amp;&amp; typeof window.XActionsToolbox.destroy === 'function') {
-    try { window.XActionsToolbox.destroy(); } catch (e) { /* ignore */ }
+  if (window.MedirusToolbox &amp;&amp; typeof window.MedirusToolbox.destroy === 'function') {
+    try { window.MedirusToolbox.destroy(); } catch (e) { /* ignore */ }
   }
 
   const VERSION = '1.0.0';
-  const LS_KEY = 'xactions_toolbox_config_v1';
-  const TAG = '[XActions Toolbox]';
+  const LS_KEY = 'medirus_toolbox_config_v1';
+  const TAG = '[Medirus Toolbox]';
 
   // ==========================================
   // CONFIG (edited live from the panel; persisted in localStorage)
@@ -827,7 +827,7 @@
     &lt;/tbody&gt;
   &lt;/table&gt;
   &lt;p style=&quot;margin-top: 40px; color: #888; font-size: 12px;&quot;&gt;
-    Generated by &lt;a href=&quot;https://github.com/nirholas/XActions&quot;&gt;XActions Scraper Toolbox&lt;/a&gt; v${VERSION} by @nichxbt
+    Generated by &lt;a href=&quot;https://github.com/nirholas/XActions&quot;&gt;Medirus Scraper Toolbox&lt;/a&gt; v${VERSION} by @nichxbt
   &lt;/p&gt;
 &lt;/body&gt;
 &lt;/html&gt;`;
@@ -865,7 +865,7 @@
   // PANEL UI
   // ==========================================
 
-  const PANEL_ID = 'xactions-toolbox';
+  const PANEL_ID = 'medirus-toolbox';
   let panel, els = {};
 
   const PANEL_HTML = `
@@ -1121,7 +1121,7 @@
     &lt;div class=&quot;xat-log&quot; id=&quot;xat-log&quot;&gt;&lt;/div&gt;
   &lt;/div&gt;
   &lt;div class=&quot;xat-footer&quot;&gt;
-    &lt;a href=&quot;https://github.com/nirholas/XActions&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;XActions&lt;/a&gt; Scraper Toolbox v${VERSION}
+    &lt;a href=&quot;https://github.com/nirholas/XActions&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Medirus&lt;/a&gt; Scraper Toolbox v${VERSION}
   &lt;/div&gt;`;
 
   function buildPanel() {
@@ -1427,7 +1427,7 @@
       panel.remove();
       panel = null;
     }
-    delete window.XActionsToolbox;
+    delete window.MedirusToolbox;
     console.log(`${TAG} Closed. fetch/XHR restored. Paste the script again to reopen.`);
   }
 
@@ -1446,7 +1446,7 @@
   updateStats();
   log(`Toolbox v${VERSION} ready on /${pageLabel()}. Capture is live even before you press Start.`);
 
-  window.XActionsToolbox = {
+  window.MedirusToolbox = {
     version: VERSION,
     tweets: allTweets,
     matched: matchedTweets,
@@ -1465,7 +1465,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

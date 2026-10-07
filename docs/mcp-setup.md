@@ -1,4 +1,4 @@
-# XActions MCP Server Setup Guide
+# Medirus MCP Server Setup Guide
 
 > Use AI agents (Claude, Cursor, Windsurf, GPT) to automate X/Twitter and Facebook — for free.
 
@@ -8,10 +8,10 @@
 
 ```bash
 # Add to your AI client config, then restart the client
-npx xactions-mcp
+npx medirus-mcp
 ```
 
-That's it. XActions will auto-install and start the MCP server.
+That's it. Medirus will auto-install and start the MCP server.
 
 ---
 
@@ -37,16 +37,16 @@ Most tools require an X/Twitter session cookie for authentication.
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
-### 2. Add XActions
+### 2. Add Medirus
 
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions-mcp"],
+      "args": ["-y", "medirus-mcp"],
       "env": {
-        "XACTIONS_SESSION_COOKIE": "your_auth_token_here"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token_here"
       }
     }
   }
@@ -55,12 +55,12 @@ Most tools require an X/Twitter session cookie for authentication.
 
 ### 3. Restart Claude Desktop
 
-Quit and reopen Claude Desktop. You should see XActions tools listed.
+Quit and reopen Claude Desktop. You should see Medirus tools listed.
 
 ### Auto-generate config
 
 ```bash
-npx xactions mcp-config
+npx medirus mcp-config
 ```
 
 This detects your OS and outputs the correct config snippet. Use `--write` to write it directly.
@@ -74,11 +74,11 @@ Add to your **Cursor Settings** → **MCP Servers**:
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions-mcp"],
+      "args": ["-y", "medirus-mcp"],
       "env": {
-        "XACTIONS_SESSION_COOKIE": "your_auth_token_here"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token_here"
       }
     }
   }
@@ -96,11 +96,11 @@ Add to your **Windsurf Settings** (`~/.codeium/windsurf/mcp_config.json`):
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions-mcp"],
+      "args": ["-y", "medirus-mcp"],
       "env": {
-        "XACTIONS_SESSION_COOKIE": "your_auth_token_here"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token_here"
       }
     }
   }
@@ -117,11 +117,11 @@ Add to your **VS Code** user `settings.json` or `.vscode/mcp.json`:
 {
   "mcp": {
     "servers": {
-      "xactions": {
+      "medirus": {
         "command": "npx",
-        "args": ["-y", "xactions-mcp"],
+        "args": ["-y", "medirus-mcp"],
         "env": {
-          "XACTIONS_SESSION_COOKIE": "your_auth_token_here"
+          "MEDIRUS_SESSION_COOKIE": "your_auth_token_here"
         }
       }
     }
@@ -136,18 +136,18 @@ Add to your **VS Code** user `settings.json` or `.vscode/mcp.json`:
 If you prefer a local install instead of npx:
 
 ```bash
-npm install -g xactions
+npm install -g medirus
 ```
 
-Then use `xactions-mcp` as the command instead of `npx`:
+Then use `medirus-mcp` as the command instead of `npx`:
 
 ```json
 {
   "mcpServers": {
-    "xactions": {
-      "command": "xactions-mcp",
+    "medirus": {
+      "command": "medirus-mcp",
       "env": {
-        "XACTIONS_SESSION_COOKIE": "your_auth_token_here"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token_here"
       }
     }
   }
@@ -160,9 +160,9 @@ Then use `xactions-mcp` as the command instead of `npx`:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `XACTIONS_SESSION_COOKIE` | For most tools | Your X/Twitter `auth_token` cookie |
+| `MEDIRUS_SESSION_COOKIE` | For most tools | Your X/Twitter `auth_token` cookie |
 | `OPENROUTER_API_KEY` | For AI tools | Free key from [openrouter.ai](https://openrouter.ai) |
-| `XACTIONS_MODE` | No | `local` (default, free) or `remote` |
+| `MEDIRUS_MODE` | No | `local` (default, free) or `remote` |
 | `DEBUG` | No | Set to `true` for verbose error stacks |
 
 ---
@@ -253,17 +253,17 @@ Try these with Claude, Cursor, or any MCP-compatible AI:
 
 ## Troubleshooting
 
-### `npx xactions-mcp` returns 404 / package not found
+### `npx medirus-mcp` returns 404 / package not found
 
-Make sure you have the latest version. If the `xactions-mcp` package hasn't been published yet, use either of these alternatives:
+Make sure you have the latest version. If the `medirus-mcp` package hasn't been published yet, use either of these alternatives:
 
 ```bash
-# Option 1: Use the -p flag to install from the xactions package
-npx -p xactions xactions-mcp
+# Option 1: Use the -p flag to install from the medirus package
+npx -p medirus medirus-mcp
 
 # Option 2: Install globally first
-npm install -g xactions
-xactions-mcp
+npm install -g medirus
+medirus-mcp
 ```
 
 For MCP client configs, the `-p` flag approach:
@@ -271,11 +271,11 @@ For MCP client configs, the `-p` flag approach:
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "-p", "xactions", "xactions-mcp"],
+      "args": ["-y", "-p", "medirus", "medirus-mcp"],
       "env": {
-        "XACTIONS_SESSION_COOKIE": "your_auth_token_here"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token_here"
       }
     }
   }
@@ -290,7 +290,7 @@ For MCP client configs, the `-p` flag approach:
 
 ### "Could not follow/unfollow/post"
 
-Auth is required for action tools. Make sure `XACTIONS_SESSION_COOKIE` is set in your MCP config `env`.
+Auth is required for action tools. Make sure `MEDIRUS_SESSION_COOKIE` is set in your MCP config `env`.
 
 ### "OPENROUTER_API_KEY required"
 
@@ -300,15 +300,15 @@ AI tools (voice analysis, tweet generation, thread summarization) need an OpenRo
 
 ```bash
 # Test manually
-node node_modules/xactions/src/mcp/server.js
+node node_modules/medirus/src/mcp/server.js
 
 # Or if globally installed
-xactions-mcp
+medirus-mcp
 ```
 
 ### Browser automation errors
 
-XActions uses Puppeteer for browser automation. If you see Chrome/Chromium errors:
+Medirus uses Puppeteer for browser automation. If you see Chrome/Chromium errors:
 
 ```bash
 # Install Chromium dependencies (Linux)
@@ -320,8 +320,8 @@ npx puppeteer browsers install chrome
 ## Links
 
 - **GitHub**: [github.com/nirholas/XActions](https://github.com/nirholas/XActions)
-- **npm**: [npmjs.com/package/xactions](https://www.npmjs.com/package/xactions)
-- **Dashboard**: [xactions.app](https://xactions.app)
+- **npm**: [npmjs.com/package/medirus](https://www.npmjs.com/package/medirus)
+- **Dashboard**: [medirus.online](https://medirus.online)
 - **Issues**: [github.com/nirholas/XActions/issues](https://github.com/nirholas/XActions/issues)
 
 ---

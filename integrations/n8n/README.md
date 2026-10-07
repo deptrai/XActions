@@ -1,14 +1,14 @@
-# n8n-nodes-xactions
+# n8n-nodes-medirus
 
-> XActions community node for [n8n](https://n8n.io) — automate X/Twitter, Bluesky, Mastodon & Threads from n8n workflows. No API fees.
+> Medirus community node for [n8n](https://n8n.io) — automate X/Twitter, Bluesky, Mastodon & Threads from n8n workflows. No API fees.
 
-## What is XActions?
+## What is Medirus?
 
-[XActions](https://github.com/nirholas/XActions) is an open-source X/Twitter automation toolkit that uses browser automation instead of the Twitter API. This n8n community node brings all of XActions' capabilities into n8n's visual workflow builder.
+[Medirus](https://github.com/nirholas/XActions) is an open-source X/Twitter automation toolkit that uses browser automation instead of the Twitter API. This n8n community node brings all of Medirus' capabilities into n8n's visual workflow builder.
 
 ## Nodes
 
-### XActions (Action)
+### Medirus (Action)
 
 Perform actions like scraping, posting, engagement, analytics, and streaming.
 
@@ -24,7 +24,7 @@ Perform actions like scraping, posting, engagement, analytics, and streaming.
 | **DMs** | Send DM, Get Conversations, Export DMs |
 | **Bookmarks** | Get Bookmarks, Add Bookmark, Clear Bookmarks |
 
-### XActions Trigger (Polling)
+### Medirus Trigger (Polling)
 
 Start workflows when events happen:
 
@@ -44,24 +44,24 @@ All scraping operations support:
 ## Execution Modes
 
 ### Local Mode (default)
-XActions runs on the same machine as n8n. Puppeteer browsers launch locally. Free, no API server needed.
+Medirus runs on the same machine as n8n. Puppeteer browsers launch locally. Free, no API server needed.
 
 ### Remote Mode
-Connect to an XActions API server via HTTP. Ideal when n8n and XActions run on different machines. Set the API base URL and JWT token in credentials.
+Connect to an Medirus API server via HTTP. Ideal when n8n and Medirus run on different machines. Set the API base URL and JWT token in credentials.
 
 ## Installation
 
 ### Community Nodes (recommended)
 
 1. In n8n, go to **Settings → Community Nodes**
-2. Search for `n8n-nodes-xactions`
+2. Search for `n8n-nodes-medirus`
 3. Click **Install**
 
 ### Manual Install
 
 ```bash
 # In your n8n installation directory
-npm install n8n-nodes-xactions
+npm install n8n-nodes-medirus
 ```
 
 ### From Source (development)
@@ -72,12 +72,12 @@ npm install
 npm run build
 
 # Link into n8n's custom nodes directory
-ln -s $(pwd) ~/.n8n/custom/n8n-nodes-xactions
+ln -s $(pwd) ~/.n8n/custom/n8n-nodes-medirus
 ```
 
 ## Credentials Setup
 
-1. In n8n, go to **Credentials → Add Credential → XActions API**
+1. In n8n, go to **Credentials → Add Credential → Medirus API**
 2. Choose mode:
    - **Local**: Set your X/Twitter auth cookie (`auth_token` from browser DevTools)
    - **Remote**: Set API base URL + JWT token
@@ -94,8 +94,8 @@ ln -s $(pwd) ~/.n8n/custom/n8n-nodes-xactions
 ### Monitor a user's tweets and analyze sentiment
 
 ```
-[XActions Trigger: New Tweet from @elonmusk]
-    → [XActions: Analyze Sentiment]
+[Medirus Trigger: New Tweet from @elonmusk]
+    → [Medirus: Analyze Sentiment]
     → [IF: sentiment < -0.3]
     → [Slack: Send Alert]
 ```
@@ -104,15 +104,15 @@ ln -s $(pwd) ~/.n8n/custom/n8n-nodes-xactions
 
 ```
 [Schedule Trigger: Every 4 hours]
-    → [XActions: Search Tweets "AI agents"]
-    → [XActions: Analyze Sentiment (filter positive)]
-    → [XActions: Like Tweet]
+    → [Medirus: Search Tweets "AI agents"]
+    → [Medirus: Analyze Sentiment (filter positive)]
+    → [Medirus: Like Tweet]
 ```
 
 ### Track follower changes to a spreadsheet
 
 ```
-[XActions Trigger: Follower Change for @myaccount]
+[Medirus Trigger: Follower Change for @myaccount]
     → [IF: event = "new_follower"]
     → [Google Sheets: Append Row]
 ```
@@ -120,8 +120,8 @@ ln -s $(pwd) ~/.n8n/custom/n8n-nodes-xactions
 ### Cross-platform content monitoring
 
 ```
-[XActions Trigger: New Mention on Bluesky]
-    → [XActions: Analyze Sentiment]
+[Medirus Trigger: New Mention on Bluesky]
+    → [Medirus: Analyze Sentiment]
     → [Discord: Post to #social-alerts]
 ```
 
@@ -134,19 +134,19 @@ ln -s $(pwd) ~/.n8n/custom/n8n-nodes-xactions
 
 ## Rate Limits
 
-XActions uses browser automation, so there are no API rate limits in the traditional sense. However:
+Medirus uses browser automation, so there are no API rate limits in the traditional sense. However:
 
 - Keep polling intervals reasonable (60s+ for tweets, 120s+ for followers)
 - Each poll opens a Puppeteer browser briefly — frequent polls use more CPU/RAM
 - The browser pool shares max 3 browsers across all streams
-- Consider using XActions' built-in streaming system for high-frequency monitoring
+- Consider using Medirus' built-in streaming system for high-frequency monitoring
 
 ## License
 
-MIT — same as XActions
+MIT — same as Medirus
 
 ## Links
 
-- [XActions Repository](https://github.com/nirholas/XActions)
-- [XActions Documentation](https://github.com/nirholas/XActions/tree/main/docs)
+- [Medirus Repository](https://github.com/nirholas/XActions)
+- [Medirus Documentation](https://github.com/nirholas/XActions/tree/main/docs)
 - [n8n Community](https://community.n8n.io)

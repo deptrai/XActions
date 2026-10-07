@@ -32,7 +32,7 @@ done
 
 ## Story
 
-As an **AI Agent using the XActions MCP server**,  
+As an **AI Agent using the Medirus MCP server**,  
 I want **admin tools exposed through MCP**,  
 so that **I can query system status, control proxies, wake accounts, and manage checkpoints without using the CLI or dashboard**.
 
@@ -71,7 +71,7 @@ so that **I can query system status, control proxies, wake accounts, and manage 
 
 - **Given** an admin token  
 - **When** `x_admin_proxies_list` / `x_admin_proxy_quarantine` / `x_admin_accounts_list` / `x_admin_account_wake` are called  
-- **Then** they return the same data as `xactions admin proxies` and `xactions admin accounts` CLI commands.
+- **Then** they return the same data as `medirus admin proxies` and `medirus admin accounts` CLI commands.
 
 ### AC-5: Checkpoint Management
 

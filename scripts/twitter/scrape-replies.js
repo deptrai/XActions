@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 💬 Scrape Replies - XActions
+ * 💬 Scrape Replies - Medirus
  * ============================================
  *
  * @name         scrape-replies
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Open a post's status page, e.g. x.com/nichxbt/status/1780000000000000000
@@ -196,9 +196,9 @@
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  💬 SCRAPE REPLIES - XActions                           ║
+║  💬 SCRAPE REPLIES - Medirus                           ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

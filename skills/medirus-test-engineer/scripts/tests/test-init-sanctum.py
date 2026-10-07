@@ -31,7 +31,7 @@ def test_init_sanctum_scaffolds_sanctum():
         assert result.returncode == 0
         assert "First Breath scaffolding complete" in result.stdout
 
-        sanctum = project_root / "_bmad" / "memory" / "xactions-test-engineer"
+        sanctum = project_root / "_bmad" / "memory" / "medirus-test-engineer"
         assert (sanctum / "CREED.md").exists()
         assert (sanctum / "PERSONA.md").exists()
         assert (sanctum / "BOND.md").exists()

@@ -41,7 +41,7 @@ export async function apiFetch(url, options = {}) {
  * Uses CSS variables so it inherits the dashboard theme automatically.
  */
 function show402Modal(paymentInfo, endpoint) {
-  document.getElementById('xactions-payment-modal')?.remove();
+  document.getElementById('medirus-payment-modal')?.remove();
 
   const price   = paymentInfo?.x402?.price   || paymentInfo?.amount   || 'required';
   const network = paymentInfo?.x402?.network || paymentInfo?.network  || 'Base (USDC)';
@@ -49,7 +49,7 @@ function show402Modal(paymentInfo, endpoint) {
   const label   = endpoint.split('/').slice(-2).join('/'); // e.g. "scrape/profile"
 
   const modal = document.createElement('div');
-  modal.id = 'xactions-payment-modal';
+  modal.id = 'medirus-payment-modal';
   modal.style.cssText = [
     'position:fixed;inset:0',
     'background:rgba(0,0,0,0.72)',
@@ -62,7 +62,7 @@ function show402Modal(paymentInfo, endpoint) {
   modal.innerHTML = `
     <style>
       @keyframes xaFadeIn { from { opacity:0; transform:scale(.97) } to { opacity:1; transform:scale(1) } }
-      #xactions-payment-modal .xa-card {
+      #medirus-payment-modal .xa-card {
         background: var(--bg-secondary, #16181c);
         border: 1px solid var(--border, #2f3336);
         border-radius: 16px;
@@ -71,18 +71,18 @@ function show402Modal(paymentInfo, endpoint) {
         width: 90%;
         color: var(--text-primary, #e7e9ea);
       }
-      #xactions-payment-modal h2 {
+      #medirus-payment-modal h2 {
         margin: 0 0 6px;
         font-size: 1.15rem;
         font-weight: 700;
       }
-      #xactions-payment-modal p {
+      #medirus-payment-modal p {
         margin: 0 0 18px;
         font-size: 0.875rem;
         color: var(--text-secondary, #71767b);
         line-height: 1.4;
       }
-      #xactions-payment-modal .xa-info {
+      #medirus-payment-modal .xa-info {
         background: var(--bg-tertiary, #202327);
         border-radius: 10px;
         padding: 14px 16px;
@@ -91,31 +91,31 @@ function show402Modal(paymentInfo, endpoint) {
         gap: 8px;
         font-size: 0.875rem;
       }
-      #xactions-payment-modal .xa-row {
+      #medirus-payment-modal .xa-row {
         display: flex;
         justify-content: space-between;
         align-items: baseline;
         gap: 8px;
       }
-      #xactions-payment-modal .xa-label {
+      #medirus-payment-modal .xa-label {
         color: var(--text-secondary, #71767b);
         white-space: nowrap;
       }
-      #xactions-payment-modal .xa-val {
+      #medirus-payment-modal .xa-val {
         font-weight: 600;
         text-align: right;
         word-break: break-all;
       }
-      #xactions-payment-modal code {
+      #medirus-payment-modal code {
         font-family: ui-monospace,"SFMono-Regular",monospace;
         font-size: 0.78rem;
         color: var(--text-secondary, #71767b);
       }
-      #xactions-payment-modal .xa-actions {
+      #medirus-payment-modal .xa-actions {
         display: flex;
         gap: 10px;
       }
-      #xactions-payment-modal .xa-btn {
+      #medirus-payment-modal .xa-btn {
         flex: 1;
         padding: 11px;
         border-radius: 9999px;
@@ -127,15 +127,15 @@ function show402Modal(paymentInfo, endpoint) {
         border: none;
         transition: opacity .15s;
       }
-      #xactions-payment-modal .xa-btn:hover { opacity: .85; }
-      #xactions-payment-modal .xa-primary {
+      #medirus-payment-modal .xa-btn:hover { opacity: .85; }
+      #medirus-payment-modal .xa-primary {
         background: var(--accent, #1d9bf0);
         color: #fff;
         display: flex;
         align-items: center;
         justify-content: center;
       }
-      #xactions-payment-modal .xa-secondary {
+      #medirus-payment-modal .xa-secondary {
         background: transparent;
         border: 1px solid var(--border, #2f3336) !important;
         color: var(--text-primary, #e7e9ea);

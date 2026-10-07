@@ -7,7 +7,7 @@ nextStep: '/Users/luisphan/.config/opencode/skills/bmad-testarch-test-design/ste
 lastSaved: '2026-08-12'
 ---
 
-# Test Design Progress — XActions
+# Test Design Progress — Medirus
 
 ## Step 1: Detect Mode & Prerequisites
 
@@ -19,13 +19,13 @@ lastSaved: '2026-08-12'
 
 | Input | Path | Status |
 |---|---|---|
-| PRD (core) | `planning-artifacts/prds/prd-XActions-2026-06-08/prd.md` | ✅ |
-| PRD (Epic 4) | `planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md` | ✅ |
+| PRD (core) | `planning-artifacts/prds/prd-Medirus-2026-06-08/prd.md` | ✅ |
+| PRD (Epic 4) | `planning-artifacts/prds/prd-Medirus-2026-06-10-epic4/prd.md` | ✅ |
 | Architecture | `planning-artifacts/architecture.md` | ✅ |
 | Epics | `planning-artifacts/epics.md` + `epics-full.md` | ✅ |
 | Sprint Status | `implementation-artifacts/sprint-status.yaml` | ✅ |
 | Story Impls | 30+ files in `implementation-artifacts/` | ✅ |
-| Decision Log | `planning-artifacts/prds/prd-XActions-2026-06-08/.decision-log.md` | ✅ |
+| Decision Log | `planning-artifacts/prds/prd-Medirus-2026-06-08/.decision-log.md` | ✅ |
 
 ### Project Status
 
@@ -68,10 +68,10 @@ All System-Level prerequisites met (PRD + Architecture + ADR/decision log).
 
 | Artifact | Path | Key Extracts |
 |---|---|---|
-| PRD (core) | `planning-artifacts/prds/prd-XActions-2026-06-08/prd.md` | Facebook Platform Extension: 14 FRs (FR-1..FR-14), 4 features (scrape, automate, multi-surface, persistence) |
-| PRD (Epic 4) | `planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md` | Growth automation PRD |
+| PRD (core) | `planning-artifacts/prds/prd-Medirus-2026-06-08/prd.md` | Facebook Platform Extension: 14 FRs (FR-1..FR-14), 4 features (scrape, automate, multi-surface, persistence) |
+| PRD (Epic 4) | `planning-artifacts/prds/prd-Medirus-2026-06-10-epic4/prd.md` | Growth automation PRD |
 | Architecture | `planning-artifacts/architecture.md` | Brownfield as-built: 7 surfaces (Browser/CLI/MCP/API/Dashboard/Extension/Library), Prisma/PostgreSQL, Redis/Bull, Puppeteer+Stealth |
-| Decision Log | `planning-artifacts/prds/prd-XActions-2026-06-08/.decision-log.md` | ADR-006 (adapter pattern), ADR-007 (automate tách riêng + dry-run default), ADR-010 (batch ≤20, delay 60-180s), ADR-012 (Facebook delay > Twitter) |
+| Decision Log | `planning-artifacts/prds/prd-Medirus-2026-06-08/.decision-log.md` | ADR-006 (adapter pattern), ADR-007 (automate tách riêng + dry-run default), ADR-010 (batch ≤20, delay 60-180s), ADR-012 (Facebook delay > Twitter) |
 | Epics (full) | `planning-artifacts/epics-full.md` | 7 epics, 48 stories, 54 FRs (FR1-FR54), 6 NFRs |
 | Sprint Status | `implementation-artifacts/sprint-status.yaml` | Epic 1-5b: done; Epic 6: in-progress (anti-detection) |
 
@@ -273,7 +273,7 @@ All System-Level prerequisites met (PRD + Architecture + ADR/decision log).
 |---|---|---|
 | Architecture Test Design | `_bmad-output/test-artifacts/test-design/test-design-architecture.md` | Risk assessment, testability concerns, mitigation plans, NFR requirements, assumptions |
 | QA Test Design | `_bmad-output/test-artifacts/test-design/test-design-qa.md` | Coverage matrix (61 scenarios), NFR coverage plan, execution strategy, effort estimates, code examples |
-| BMAD Handoff | `_bmad-output/test-artifacts/test-design/XActions-handoff.md` | TEA artifacts inventory, epic-level guidance, story-level guidance, risk-to-story mapping |
+| BMAD Handoff | `_bmad-output/test-artifacts/test-design/Medirus-handoff.md` | TEA artifacts inventory, epic-level guidance, story-level guidance, risk-to-story mapping |
 
 ### Validation Checklist Results
 

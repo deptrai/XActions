@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Cookie Parser
+ * Medirus Client — Cookie Parser
  *
  * Parses Set-Cookie headers from HTTP responses and updates the CookieJar.
  * Also provides helper functions to extract critical Twitter tokens (ct0, twid, auth_token).

@@ -115,7 +115,7 @@ deferred:
   - `[low]` `[patch]` (blind#9) dead `let filterWarning` never assigned — deleted.
   - `[low]` `[patch]` (blind#10) diff contained 4 unrelated data/*.json runtime artifacts — excluded from feature commit; committed separately as chore (precedent dd00d73).
   - `[medium]` `[patch]` (blind#11) API tests never hit canonical `/api/analytics/mindshare` alias; loose `[200,401]` anonymous assertion — verified → added alias test, Bearer service-key test, `?hours=12` test.
-  - `[medium]` `[patch]` (blind#12) API/MCP tests wrote to real `~/.xactions/analytics.db` without cleanup → added afterAll DELETE hooks for seeded source_ids.
+  - `[medium]` `[patch]` (blind#12) API/MCP tests wrote to real `~/.medirus/analytics.db` without cleanup → added afterAll DELETE hooks for seeded source_ids.
   - `[medium]` `[patch]` (blind#13) missing unit tests NON_STRING_TOKENID/singleton/hours → added (NON_STRING_TOKENID, SINGLETON, HOURS_FILTER, AUTHOR_AGGREGATION, CONFIG_AND_EDGE_CASES, UNINITIALIZED_TABLE).
   - `[low]` `[patch]` (blind#14) `followerBands: []` truthy past `||` → TypeError → Array.isArray+length>0 guard.
   - `[false]` `[reject]` (blind#15) Spec Change Log / Review Triage Log empty — disproven: populated by this review pass (this entry); not a code defect.
@@ -171,4 +171,4 @@ Deferred (noted from intent-alignment descriptive report):
 - **Review findings:** 27 findings — high 0, medium 17, low 9, false 1. All 26 true findings patched (see Review Triage Log); 1 rejected (blind#15 — log sections, populated by this pass); 1 defer noted (healthFn live-wiring, frontmatter `deferred`).
 - **Follow-up review recommendation:** `true` — ≥2 medium entries patched this pass. Named unverified risk: patches touched filtering (empty-tokenId), degraded passthrough, and `insufficientHistory` condition — a follow-up pass should confirm the patched condition logic and surface envelopes still satisfy the spec matrix rows INSUFFICIENT_HISTORY / DEGRADED / TOKEN_FILTER end-to-end.
 - **Verification performed:** `npx vitest run tests/analytics/mindshare.test.js tests/api/token-mindshare.test.js tests/mcp/token-mindshare-dispatch.test.js` → 30/30 pass; `npx vitest run tests/analytics/` → 310/310 pass (no regression); `node -e import` → `function function`.
-- **Residual risks:** aggregateWindow still does per-row JSON.parse (iterate caps memory but CPU cost remains at very high mention volume); `degraded` flag never fires in production until healthFn is wired to live pipeline (deferred); MCP/REST envelope is XActions-internal, provider-compat only at token-row level (spec-settled).
+- **Residual risks:** aggregateWindow still does per-row JSON.parse (iterate caps memory but CPU cost remains at very high mention volume); `degraded` flag never fires in production until healthFn is wired to live pipeline (deferred); MCP/REST envelope is Medirus-internal, provider-compat only at token-row level (spec-settled).

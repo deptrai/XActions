@@ -1,4 +1,4 @@
-# Post-Update Reviewer Gate — XActions Hybrid Scraping Architecture (r3)
+# Post-Update Reviewer Gate — Medirus Hybrid Scraping Architecture (r3)
 
 **Target:** `ARCHITECTURE-SPINE.md` (r3 — merge r1 fixes + Dual-Channel + Adaptive Governor)  
 **Reviewer:** Winston / BMad Architecture Agent  
@@ -48,8 +48,8 @@ R3 successfully merges the user's new Dual-Channel and Adaptive Governor ideas w
 ## Residual (not blockers)
 
 Open questions in section 6 remain:
-1. `intent_tag` ownership (Nowing vs XActions).
-2. Auth method for HTTP/SSE between Nowing and XActions.
+1. `intent_tag` ownership (Nowing vs Medirus).
+2. Auth method for HTTP/SSE between Nowing and Medirus.
 3. Per-platform rate limit constants need benchmarking.
 
 These can be resolved during implementation or integration stories without blocking Story 10.1.

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Scheduler Module
+// Medirus — Scheduler Module
 // Circadian rhythm activity scheduler with human-like variance
 // by nichxbt
 

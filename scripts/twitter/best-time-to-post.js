@@ -51,7 +51,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  ⏰ XActions — Best Time To Post                             ║
+║  ⏰ Medirus — Best Time To Post                             ║
 ║  Analyze when your audience is most active                   ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -279,7 +279,7 @@ var CONFIG = {
   });
 
   // Save analysis
-  const storageKey = `xactions_best_time_${username}`;
+  const storageKey = `medirus_best_time_${username}`;
   localStorage.setItem(storageKey, JSON.stringify({
     username,
     timestamp: new Date().toISOString(),

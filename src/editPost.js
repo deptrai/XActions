@@ -163,7 +163,7 @@
   // ── Main ──
   const run = async () => {
     console.log('═══════════════════════════════════════');
-    console.log('✏️  XActions — Edit / Undo Post');
+    console.log('✏️  Medirus — Edit / Undo Post');
     console.log('═══════════════════════════════════════');
 
     if (CONFIG.mode === 'undo') {

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions admin` command group — status, proxies, accounts, checkpoints, and stream metrics.
+ * `medirus admin` command group — status, proxies, accounts, checkpoints, and stream metrics.
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -45,7 +45,7 @@ export function registerAdminCommand(program) {
     .command('stream')
     .description('Manage and inspect Nowing Redis Stream and NLP workers');
 
-  // xactions admin status
+  // medirus admin status
   adminCmd
     .command('status')
     .description('Show system and rate governor status (proxies, throttling, hibernation)')
@@ -80,7 +80,7 @@ export function registerAdminCommand(program) {
       }
     });
 
-  // xactions admin stream metrics
+  // medirus admin stream metrics
   streamCmd
     .command('metrics')
     .description('Display real-time stream metrics (events/sec, consumer lag, pending messages)')
@@ -127,7 +127,7 @@ export function registerAdminCommand(program) {
       }
     });
 
-  // xactions admin stream alerts
+  // medirus admin stream alerts
   streamCmd
     .command('alerts')
     .description('Display recent stream alerts and threshold status')
@@ -180,7 +180,7 @@ export function registerAdminCommand(program) {
       }
     });
 
-  // xactions admin stream test
+  // medirus admin stream test
   streamCmd
     .command('test')
     .description('Send a synthetic test alert to configured channels')
@@ -419,7 +419,7 @@ export function registerAdminCommand(program) {
       });
   };
 
-  // xactions admin proxies & alias xactions admin proxy
+  // medirus admin proxies & alias medirus admin proxy
   const proxiesCmd = adminCmd
     .command('proxies')
     .description('Manage proxy pool (list proxies and pool state)');
@@ -631,7 +631,7 @@ export function registerAdminCommand(program) {
       });
   };
 
-  // xactions admin accounts & alias xactions admin account
+  // medirus admin accounts & alias medirus admin account
   const accountsCmd = adminCmd
     .command('accounts')
     .description('Manage account pool (list, wake, and rotate accounts)');
@@ -884,7 +884,7 @@ export function registerAdminCommand(program) {
       });
   };
 
-  // xactions admin checkpoints & alias xactions admin checkpoint
+  // medirus admin checkpoints & alias medirus admin checkpoint
   const checkpointsCmd = adminCmd
     .command('checkpoints')
     .description('Manage crawl checkpoints (list, inspect, and update checkpoints)');

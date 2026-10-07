@@ -25,7 +25,7 @@
   };
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  const STORAGE_KEY = 'xactions_creator_subs';
+  const STORAGE_KEY = 'medirus_creator_subs';
 
   const SELECTORS = {
     monetizationSettings: 'a[href="/settings/monetization"]',
@@ -263,7 +263,7 @@
 
   const run = async () => {
     console.log('═══════════════════════════════════════════');
-    console.log('💰 XActions — Creator Subscriptions & Revenue');
+    console.log('💰 Medirus — Creator Subscriptions & Revenue');
     console.log('═══════════════════════════════════════════\n');
 
     if (CONFIG.checkEligibility) {

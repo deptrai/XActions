@@ -259,7 +259,7 @@ describe('Story 15.2 — TikTok Caller Migration & Package Exports', () => {
   });
 
   it('exposes TikTokClient and TikTokCrawler via package subpath', async () => {
-    const mod = await import('xactions/scrapers/tiktok');
+    const mod = await import('medirus/scrapers/tiktok');
     expect(typeof mod.TikTokClient).toBe('function');
     expect(typeof mod.TikTokCrawler).toBe('function');
     expect(typeof mod.scrapeTikTok).toBe('function');

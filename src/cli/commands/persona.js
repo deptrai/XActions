@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions persona` command group.
+ * `medirus persona` command group.
  */
 import chalk from 'chalk';
 import ora from 'ora';
@@ -113,7 +113,7 @@ personaCmd
     console.log(chalk.gray(`   Activity: ${activityPattern}`));
     console.log(chalk.gray(`   Topics: ${persona.niche.topics.join(', ')}`));
     console.log(chalk.gray(`   Saved to: ${filePath}`));
-    console.log(chalk.cyan(`\n🚀 Start with: xactions persona run ${persona.id}\n`));
+    console.log(chalk.cyan(`\n🚀 Start with: medirus persona run ${persona.id}\n`));
   });
 
 personaCmd
@@ -124,7 +124,7 @@ personaCmd
     const personas = listPersonas();
 
     if (personas.length === 0) {
-      console.log(chalk.yellow('No personas found. Create one with: xactions persona create'));
+      console.log(chalk.yellow('No personas found. Create one with: medirus persona create'));
       return;
     }
 
@@ -151,14 +151,14 @@ personaCmd
   .option('--token <token>', 'X auth token (overrides saved config)')
   .action(async (personaId, options) => {
     const config = await loadConfig();
-    const token = options.token || config.authToken || process.env.XACTIONS_SESSION_COOKIE;
+    const token = options.token || config.authToken || process.env.MEDIRUS_SESSION_COOKIE;
 
     if (!token) {
-      console.error(chalk.red('❌ No auth token. Run "xactions login" first, pass --token, or set XACTIONS_SESSION_COOKIE'));
+      console.error(chalk.red('❌ No auth token. Run "medirus login" first, pass --token, or set MEDIRUS_SESSION_COOKIE'));
       return;
     }
 
-    console.log(chalk.bold.cyan('\n🤖 XActions Algorithm Builder\n'));
+    console.log(chalk.bold.cyan('\n🤖 Medirus Algorithm Builder\n'));
     console.log(chalk.gray('Press Ctrl+C to stop gracefully\n'));
 
     try {

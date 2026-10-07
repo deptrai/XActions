@@ -13,7 +13,7 @@
 | 50.2 sync/async mode dispatch | v3.5.1 | `SYNC_BUDGET_MS=1500`, 202 degrade + `degraded_reason` |
 | 50.3 unified envelope + request_id | v3.5.1 | AD-5 envelope + C-10 error envelope + trace plumbing |
 | 50.4 quota + x402 + metrics | v3.5.2 | per-consumer token bucket, anonymous IP bucket, `/api/admin/gateway/metrics`, trace lookup |
-| 50.5 self-discovery catalog | v3.5.3 | `GET /api/actions` REST ≡ `x_actions_list` MCP, `/actions` catalog, `/gateway` playground |
+| 50.5 self-discovery catalog | v3.5.3 | `GET /api/actions` REST ≡ `medirus_list` MCP, `/actions` catalog, `/gateway` playground |
 | 50.6 pumpfun fetch_coin_meta | v3.5.4 | lightweight sync action |
 | 50.7 crypto/dexscreener | v3.5.5 | new platform — 5 keyless REST actions, all sync-capable |
 | 50.8 social/telegram skeleton | v3.5.6 | transport deferred, `coming_soon` marker, XACT_4001 stubs |

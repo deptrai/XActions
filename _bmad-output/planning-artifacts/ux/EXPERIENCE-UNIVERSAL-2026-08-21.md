@@ -3,7 +3,7 @@ status: final
 updated: 2026-08-26
 sources:
   - ARCHITECTURE-UX-REVIEW-2026-08-18.md
-  - architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md
+  - architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md
 ---
 
 # EXPERIENCE-UNIVERSAL-2026-08-21.md — Universal Operator, AI & Multi-Platform Flows
@@ -18,7 +18,7 @@ Tài liệu này bổ sung `EXPERIENCE.md` để cover các persona và flows m�
 2. **AI Agent (Claude / Cursor / Antigravity)** — gọi MCP tools để kích hoạt crawl, lấy schema, kiểm tra status.
 3. **Nowing Integrator** — nhận thin events từ Redis Stream, query schema, đối soát dữ liệu.
 4. **Data Scientist** — xuất dataset JSONL/CSV, resume/pause checkpoints.
-5. **CLI Power User** — chạy `xactions login --qr`, `xactions status`, `xactions admin`.
+5. **CLI Power User** — chạy `medirus login --qr`, `medirus status`, `medirus admin`.
 6. **Open/Federated Social Analyst** — cào và phân tích dữ liệu Bluesky/Mastodon công khai mà không cần auth, hoặc với optional auth để truy cập nội dung riêng tư hơn.
 
 ---
@@ -47,7 +47,7 @@ Tài liệu này bổ sung `EXPERIENCE.md` để cover các persona và flows m�
 
 ### Flow A1: AI agent khám phá action
 
-1. Agent gọi MCP `x_actions_list`.
+1. Agent gọi MCP `medirus_list`.
 2. Hệ thống trả `{ platform, actions: [{ action, description, requiredArgs, example }] }`.
 3. Agent gọi `x_crawl --platform shopee --action search_products --query "iphone 15"`.
 4. Response 3-Layer JSON Envelope: `result`, `metadata`, `artifactRef`.
@@ -64,21 +64,21 @@ Tài liệu này bổ sung `EXPERIENCE.md` để cover các persona và flows m�
 
 ### Flow C1: Terminal QR Login (TTY)
 
-1. User chạy `xactions login --qr --platform facebook`.
+1. User chạy `medirus login --qr --platform facebook`.
 2. Terminal hiển thị ASCII QR + countdown 60s.
 3. User quét bằng điện thoại.
 4. System polls cookie, hiển thị `✅ Account active`.
 
 ### Flow C2: Non-TTY QR Login
 
-1. User chạy trên server / CI: `xactions login --qr`.
+1. User chạy trên server / CI: `medirus login --qr`.
 2. Non-TTY detected → in URL + short code.
 3. User mở URL trên điện thoại hoặc app.
 4. Webhook/push confirm → CLI tiếp tục.
 
 ### Flow C3: Operator CLI Status
 
-1. User chạy `xactions status`.
+1. User chạy `medirus status`.
 2. CLI output blocks hiển thị:
    - Proxy pool: `12/15 healthy`
    - Governor throttle: `level 2`
@@ -87,9 +87,9 @@ Tài liệu này bổ sung `EXPERIENCE.md` để cover các persona và flows m�
 
 ### Flow C4: Admin CLI Checkpoints
 
-1. User chạy `xactions checkpoints list --platform shopee`.
+1. User chạy `medirus checkpoints list --platform shopee`.
 2. Plain text table hoặc `--json` để pipe.
-3. User chạy `xactions checkpoints retry --id <id>`.
+3. User chạy `medirus checkpoints retry --id <id>`.
 
 ---
 
@@ -97,7 +97,7 @@ Tài liệu này bổ sung `EXPERIENCE.md` để cover các persona và flows m�
 
 ### Flow R1: LinkedIn scrape qua CDP
 
-1. User chạy `xactions auth --launch-chrome`.
+1. User chạy `medirus auth --launch-chrome`.
 2. Chrome mở với `--remote-debugging-port=9222`.
 3. User đăng nhập LinkedIn thủ công.
 4. Agent gọi `x_crawl --platform linkedin --action search_jobs --query "AI Engineer"`.

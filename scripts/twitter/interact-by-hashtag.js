@@ -28,7 +28,7 @@
  * 1. Configure hashtags below
  * 2. Open Chrome DevTools (F12)
  * 3. Paste this script and press Enter
- * 4. Run XActions.Hashtag.search() and interact!
+ * 4. Run Medirus.Hashtag.search() and interact!
  * 
  * ============================================================
  * ⚙️ CONFIGURATION
@@ -169,9 +169,9 @@ var CONFIG = {
     return link?.href?.match(/status\/(\d+)/)?.[1];
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Hashtag = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Hashtag = {
     config: CONFIG,
     state,
     
@@ -187,7 +187,7 @@ var CONFIG = {
 
       // Type into X's own search box and submit through it (a real in-app
       // search) instead of assigning location.href. Setting location.href
-      // forces a hard page reload, which wipes this injected script (window.XActions
+      // forces a hard page reload, which wipes this injected script (window.Medirus
       // included) - so the "run search(), then run interact()" flow documented
       // above would break as soon as search() ran.
       const input = document.querySelector(SELECTORS.searchInput);
@@ -197,7 +197,7 @@ var CONFIG = {
         input.dispatchEvent(new Event('input', { bubbles: true }));
         await sleep(300);
         input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-        console.log('✅ Search submitted. Once results load, run XActions.Hashtag.interact().');
+        console.log('✅ Search submitted. Once results load, run Medirus.Hashtag.interact().');
       } else {
         console.warn('⚠️ Search box not found on this page. Falling back to a full navigation - this reloads the page and clears the script, so paste it again once results load.');
         window.location.href = `https://x.com/search?q=%23${tag}&src=typed_query&f=live`;
@@ -294,7 +294,7 @@ var CONFIG = {
       console.log('╔════════════════════════════════════════════════════════════╗');
       console.log('║  🎉 HASHTAG INTERACTION COMPLETE!                          ║');
       console.log('╚════════════════════════════════════════════════════════════╝');
-      window.XActions.Hashtag.stats();
+      window.Medirus.Hashtag.stats();
     },
     
     // Search and interact with all configured hashtags
@@ -309,8 +309,8 @@ var CONFIG = {
       console.log('📋 Run these commands in sequence:');
       
       CONFIG.hashtags.forEach((tag, i) => {
-        console.log(`   ${i + 1}. XActions.Hashtag.search("${tag}")`);
-        console.log(`      Then: XActions.Hashtag.interact()`);
+        console.log(`   ${i + 1}. Medirus.Hashtag.search("${tag}")`);
+        console.log(`      Then: Medirus.Hashtag.interact()`);
       });
       console.log('');
     },
@@ -356,19 +356,19 @@ var CONFIG = {
       console.log('');
       console.log('📋 HASHTAG INTERACTION COMMANDS:');
       console.log('');
-      console.log('   XActions.Hashtag.search("crypto")   - Search hashtag');
-      console.log('   XActions.Hashtag.interact()         - Interact with results');
-      console.log('   XActions.Hashtag.addHashtag("tag")  - Add hashtag');
-      console.log('   XActions.Hashtag.removeHashtag("t") - Remove hashtag');
-      console.log('   XActions.Hashtag.interactAll()      - Show guide for all');
-      console.log('   XActions.Hashtag.stop()             - Stop interaction');
-      console.log('   XActions.Hashtag.stats()            - Show statistics');
+      console.log('   Medirus.Hashtag.search("crypto")   - Search hashtag');
+      console.log('   Medirus.Hashtag.interact()         - Interact with results');
+      console.log('   Medirus.Hashtag.addHashtag("tag")  - Add hashtag');
+      console.log('   Medirus.Hashtag.removeHashtag("t") - Remove hashtag');
+      console.log('   Medirus.Hashtag.interactAll()      - Show guide for all');
+      console.log('   Medirus.Hashtag.stop()             - Stop interaction');
+      console.log('   Medirus.Hashtag.stats()            - Show statistics');
       console.log('');
     }
   };
   
   console.log('✅ Interact By Hashtag loaded!');
   console.log(`📋 Configured hashtags: ${CONFIG.hashtags.map(t => '#' + t).join(', ')}`);
-  console.log('   Run XActions.Hashtag.help() for commands.');
+  console.log('   Run Medirus.Hashtag.help() for commands.');
   console.log('');
 })();

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Thought Leader Agent (Main Orchestrator)
+// Medirus — Thought Leader Agent (Main Orchestrator)
 // 24/7 LLM-powered autonomous agent for X.com thought leadership
 // by nichxbt
 
@@ -796,7 +796,7 @@ class ThoughtLeaderAgent {
   static loadConfig(configPath) {
     const p = configPath || DEFAULT_CONFIG_PATH;
     if (!fs.existsSync(p)) {
-      throw new Error(`Config file not found: ${p}\nRun 'xactions agent setup' to create one.`);
+      throw new Error(`Config file not found: ${p}\nRun 'medirus agent setup' to create one.`);
     }
     return JSON.parse(fs.readFileSync(p, 'utf-8'));
   }

@@ -13,7 +13,7 @@ Status: done
 
 ## Story
 
-As a XActions user,
+As a Medirus user,
 I want an analytics dashboard with follower growth, following/followers ratio, engagement rate over time, best performing tweets, and daily/weekly/monthly stats aggregation,
 so that I can understand my account performance without relying on Social Blade or Followerwonk.
 

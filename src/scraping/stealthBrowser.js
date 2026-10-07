@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Stealth Browser
+ * Medirus Stealth Browser
  * Anti-detection Puppeteer wrapper with fingerprint randomization.
  *
  * Kills: Phantombuster (stealth scraping), Apify
@@ -24,9 +24,9 @@ import { PlatformError, ErrorTypes } from '../core/error-envelope.js';
  */
 const _defaultPools = new Map();
 
-/** Default pool size: `XACTIONS_BROWSER_POOL_SIZE` when > 0, else 4 (explicit opt-in). */
+/** Default pool size: `MEDIRUS_BROWSER_POOL_SIZE` when > 0, else 4 (explicit opt-in). */
 function _defaultPoolSize() {
-  const env = parseInt(process.env.XACTIONS_BROWSER_POOL_SIZE || '', 10);
+  const env = parseInt(process.env.MEDIRUS_BROWSER_POOL_SIZE || '', 10);
   return Number.isFinite(env) && env > 0 ? env : 4;
 }
 
@@ -119,12 +119,12 @@ const USER_AGENTS = [
 /**
  * Launch a stealth-configured Puppeteer browser
  *
- * Supports pluggable backends via `options.backend` (or env `XACTIONS_BROWSER_BACKEND`):
+ * Supports pluggable backends via `options.backend` (or env `MEDIRUS_BROWSER_BACKEND`):
  *   - 'chrome'  (default) — puppeteer.launch() with bundled/system Chrome
  *   - 'obscura' — puppeteer-core.connect() to an Obscura CDP endpoint
  *               (options.wsEndpoint or env `OBSCURA_WS_ENDPOINT`, default ws://127.0.0.1:9222)
  *
- * Supports automatic fallback via `options.fallbackBackend` (or env `XACTIONS_BROWSER_BACKEND_FALLBACK`, default 'chrome').
+ * Supports automatic fallback via `options.fallbackBackend` (or env `MEDIRUS_BROWSER_BACKEND_FALLBACK`, default 'chrome').
  * Enforces post-auth guard (AC-2): requests with `requiresAuth === true` reject 'obscura' and throw PlatformError.
  */
 export async function launchStealthBrowser(options = {}) {
@@ -142,8 +142,8 @@ export async function launchStealthBrowser(options = {}) {
     telemetryContext,
   } = options;
 
-  const primaryBackend = options.backend || process.env.XACTIONS_BROWSER_BACKEND || 'chrome';
-  const fallbackBackend = options.fallbackBackend !== undefined ? options.fallbackBackend : (process.env.XACTIONS_BROWSER_BACKEND_FALLBACK || 'chrome');
+  const primaryBackend = options.backend || process.env.MEDIRUS_BROWSER_BACKEND || 'chrome';
+  const fallbackBackend = options.fallbackBackend !== undefined ? options.fallbackBackend : (process.env.MEDIRUS_BROWSER_BACKEND_FALLBACK || 'chrome');
   const wsEndpoint = options.wsEndpoint || process.env.OBSCURA_WS_ENDPOINT || 'ws://127.0.0.1:9222';
 
   // Guard: post-auth actions cannot use obscura (AC-2)

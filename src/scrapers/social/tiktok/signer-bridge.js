@@ -199,7 +199,7 @@ export class TikTokBrowserBridge {
    */
   constructor(options = {}) {
     this.baseUrl = options.baseUrl ? options.baseUrl.replace(/\/+$/, '') : 'https://www.tiktok.com';
-    this.adapterName = options.adapterName || process.env.XACTIONS_SCRAPER_ADAPTER || 'playwright';
+    this.adapterName = options.adapterName || process.env.MEDIRUS_SCRAPER_ADAPTER || 'playwright';
     this.adapter = options.adapter || null;
     this.headless = options.headless ?? true;
     this.proxy = options.proxy || null;

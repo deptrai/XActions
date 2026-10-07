@@ -1,6 +1,6 @@
 # Track 09 — Python SDK
 
-> Build a Python SDK that wraps XActions' Node.js Scraper class, giving Python developers the same ergonomic API that twikit (4k stars, Python-native) offers. Python is the #1 language for data science, AI agents, and automation — this track makes XActions accessible to that ecosystem. The Python SDK communicates with the Node.js library via a local subprocess bridge or can be used standalone with pure-Python HTTP requests.
+> Build a Python SDK that wraps Medirus' Node.js Scraper class, giving Python developers the same ergonomic API that twikit (4k stars, Python-native) offers. Python is the #1 language for data science, AI agents, and automation — this track makes Medirus accessible to that ecosystem. The Python SDK communicates with the Node.js library via a local subprocess bridge or can be used standalone with pure-Python HTTP requests.
 
 ---
 
@@ -40,7 +40,7 @@ The pure Python approach is preferred because:
 
 ```
 src/python/
-  xactions/
+  medirus/
     __init__.py          <- Package root, version, top-level imports
     client.py            <- Scraper class (main entry point)
     auth.py              <- CookieAuth, CredentialAuth, GuestAuth
@@ -82,13 +82,13 @@ src/python/
 Create the Python package structure with proper packaging files.
 
 Create src/python/pyproject.toml with:
-- PEP 621 metadata (name=xactions, version=1.0.0, requires-python>=3.9)
+- PEP 621 metadata (name=medirus, version=1.0.0, requires-python>=3.9)
 - Dependencies: httpx>=0.25.0, aiofiles>=23.0.0
 - Optional deps: async (aiohttp), tls (curl-cffi), dev (pytest, pytest-asyncio, pytest-httpx, ruff)
 - Tool config: ruff (line-length=120, target-version=py39), pytest (asyncio_mode=auto)
 - Build system: setuptools>=68.0
 
-Create src/python/xactions/__init__.py:
+Create src/python/medirus/__init__.py:
 - Package docstring with usage example
 - __version__ = "1.0.0", __author__ = "nich (@nichxbt)"
 - Import and export: Scraper, Tweet, Profile, Space, Message, ScraperError, AuthenticationError, RateLimitError, NotFoundError, CookieAuth, CredentialAuth
@@ -96,7 +96,7 @@ Create src/python/xactions/__init__.py:
 
 ### Prompt 2: Python Constants and GraphQL Registry
 
-Create src/python/xactions/constants.py.
+Create src/python/medirus/constants.py.
 
 Port the GraphQL endpoint registry from the Node.js version (src/client/api/graphqlQueries.js).
 
@@ -113,7 +113,7 @@ All query IDs must match the Node.js version exactly. Include a comment about pe
 
 ### Prompt 3: Python Error Classes
 
-Create src/python/xactions/errors.py.
+Create src/python/medirus/errors.py.
 
 Mirror the Node.js error hierarchy:
 - ScraperError(Exception) — base error with code, endpoint, http_status, rate_limit_reset
@@ -126,7 +126,7 @@ All exceptions use Python conventions. Include __repr__ for debugging.
 
 ### Prompt 4: Python Data Models
 
-Create src/python/xactions/models.py.
+Create src/python/medirus/models.py.
 
 Use Python dataclasses with from_graphql class methods, mirroring the Node.js models.
 
@@ -149,7 +149,7 @@ All models include to_dict(), __str__, __repr__ methods. Handle missing fields g
 
 ### Prompt 5: Python HTTP Client
 
-Create src/python/xactions/http.py.
+Create src/python/medirus/http.py.
 
 A Python HTTP client using httpx (async+sync) with rate limiting, retry, and optional TLS bypass via curl-cffi.
 
@@ -169,7 +169,7 @@ Support both sync and async usage patterns. Full implementation with exponential
 
 ### Prompt 6: Python Cookie Auth
 
-Create src/python/xactions/auth.py.
+Create src/python/medirus/auth.py.
 
 Port the auth system from Node.js (Track 02).
 
@@ -206,7 +206,7 @@ All auth flows mirror the Node.js implementation exactly. Use httpx for HTTP req
 
 ### Prompt 7: Python Tweet API
 
-Create src/python/xactions/api/__init__.py and src/python/xactions/api/tweets.py.
+Create src/python/medirus/api/__init__.py and src/python/medirus/api/tweets.py.
 
 Port tweet operations from Node.js (src/client/api/tweets.js).
 
@@ -230,7 +230,7 @@ Full real implementation, no mocks. Same endpoint logic as Node.js.
 
 ### Prompt 8: Python User and Search API
 
-Create src/python/xactions/api/users.py and src/python/xactions/api/search.py.
+Create src/python/medirus/api/users.py and src/python/medirus/api/search.py.
 
 users.py functions:
 - get_user_by_screen_name(http, username) -> Profile
@@ -250,7 +250,7 @@ All are async generators with cursor-based pagination. Same parsing logic as Nod
 
 ### Prompt 9: Python Scraper Client Class
 
-Create src/python/xactions/client.py.
+Create src/python/medirus/client.py.
 
 The main entry point — equivalent to src/client/Scraper.js.
 
@@ -269,7 +269,7 @@ Every method has both sync and async variants. Sync API uses _run() helper with 
 
 ### Prompt 10: Python Pagination Utilities
 
-Create src/python/xactions/pagination.py.
+Create src/python/medirus/pagination.py.
 
 Port the AsyncCursor pattern from Node.js (Track 05).
 
@@ -284,13 +284,13 @@ paginate_timeline() factory function creating AsyncCursor for timeline endpoints
 
 ### Prompt 11: Node.js Bridge Mode (Optional)
 
-Create src/python/xactions/bridge.py.
+Create src/python/medirus/bridge.py.
 
-Optional mode that spawns a Node.js subprocess to use the full XActions Node.js library.
+Optional mode that spawns a Node.js subprocess to use the full Medirus Node.js library.
 
 NodeBridge class:
-- Constructor: node_path, xactions_path
-- _find_xactions(): find XActions Node.js installation (npm global, local node_modules, env var)
+- Constructor: node_path, medirus_path
+- _find_medirus(): find Medirus Node.js installation (npm global, local node_modules, env var)
 - start(): spawn Node.js subprocess with JSON-RPC bridge script
 - _generate_bridge_script(): inline Node.js script accepting commands on stdin
 - call(method, params) -> Any: send JSON-RPC request, read response line
@@ -303,7 +303,7 @@ Bridge script handles: login, getProfile, getTweet, searchTweets, getFollowers, 
 Create src/python/README.md with comprehensive documentation.
 
 Sections:
-- Installation (pip install xactions, with [tls], [async], [all] extras)
+- Installation (pip install medirus, with [tls], [async], [all] extras)
 - Quick Start (login, get profile, get tweet, search, post, like, follow)
 - Async Usage (async with context manager)
 - Features list
@@ -343,16 +343,16 @@ Create .github/workflows/python-tests.yml:
 
 ### Prompt 15: Python CLI Tool
 
-Add to pyproject.toml: [project.scripts] xactions-py = "xactions.cli:main"
+Add to pyproject.toml: [project.scripts] medirus-py = "medirus.cli:main"
 
-Create src/python/xactions/cli.py with argparse:
+Create src/python/medirus/cli.py with argparse:
 - Subcommands: login, profile, tweet, search, post, followers, trends
 - Cookie persistence (auto-save/load)
 - Emoji-rich output (same style as Node.js CLI)
 - JSON output flag
 - Error handling with user-friendly messages
 
-Test: xactions-py --help, xactions-py profile elonmusk, xactions-py search "#python"
+Test: medirus-py --help, medirus-py profile elonmusk, medirus-py search "#python"
 
 ---
 
@@ -365,11 +365,11 @@ After all 15 prompts are complete, verify:
 cd src/python && pip install -e ".[dev]"
 
 # Imports work
-python -c "from xactions import Scraper, Tweet, Profile; print('OK Python SDK loads')"
+python -c "from medirus import Scraper, Tweet, Profile; print('OK Python SDK loads')"
 
 # Models work
 python -c "
-from xactions.models import Tweet, Profile
+from medirus.models import Tweet, Profile
 t = Tweet(id='123', text='hello', likes=42)
 print(f'OK Tweet: {t.text} - {t.likes} likes')
 p = Profile(username='test', followers_count=1000)
@@ -378,7 +378,7 @@ print(f'OK Profile: @{p.username} - {p.followers_count} followers')
 
 # Auth works
 python -c "
-from xactions.auth import CookieAuth
+from medirus.auth import CookieAuth
 auth = CookieAuth(cookies='auth_token=test; ct0=csrf')
 print(f'OK Authenticated: {auth.is_authenticated()}')
 print(f'OK Auth token: {auth.get_auth_token()}')
@@ -386,7 +386,7 @@ print(f'OK Auth token: {auth.get_auth_token()}')
 
 # Scraper instantiation
 python -c "
-from xactions import Scraper
+from medirus import Scraper
 s = Scraper()
 print(f'OK Scraper created, logged in: {s.is_logged_in()}')
 "
@@ -395,7 +395,7 @@ print(f'OK Scraper created, logged in: {s.is_logged_in()}')
 cd src/python && pytest -v
 
 # CLI works
-xactions-py --help
+medirus-py --help
 
 # Lint clean
 cd src/python && ruff check .

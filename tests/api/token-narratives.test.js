@@ -6,7 +6,7 @@
  * - Canonical `/api/analytics/narratives` + alias `/api/analytics/token-narratives`.
  * - Response envelope { scope: 'watchlist', narratives: [...], degraded, windowHours }.
  * - ?hours=N forwarded into computeNarratives.
- * - Bearer service key lane (XACTIONS_SERVICE_KEYS).
+ * - Bearer service key lane (MEDIRUS_SERVICE_KEYS).
  *
  * Engine internals are seam-tested in tests/analytics/narrativeTracker.test.js;
  * this file covers the HTTP contract only.
@@ -24,7 +24,7 @@ import os from 'os';
 import app from '../../api/server.js';
 import { makeTestToken, makeTestUserId, seedTestUser } from './fixtures/test-user.js';
 
-const DB_PATH = path.join(os.homedir(), '.xactions', 'analytics.db');
+const DB_PATH = path.join(os.homedir(), '.medirus', 'analytics.db');
 
 /**
  * Ensure token_mentions + narrative tables exist in the real analytics.db.
@@ -140,10 +140,10 @@ describe('Story 54.5: GET /api/analytics/narratives', () => {
     expect([200, 401]).toContain(res.status);
   });
 
-  it('Bearer service key (XACTIONS_SERVICE_KEYS) returns 200', async () => {
-    const origEnv = process.env.XACTIONS_SERVICE_KEYS;
+  it('Bearer service key (MEDIRUS_SERVICE_KEYS) returns 200', async () => {
+    const origEnv = process.env.MEDIRUS_SERVICE_KEYS;
     const testKey = 'test-service-key-narratives-xyz';
-    process.env.XACTIONS_SERVICE_KEYS = JSON.stringify({
+    process.env.MEDIRUS_SERVICE_KEYS = JSON.stringify({
       [testKey]: { consumer_id: 'jev', tier: 'internal' },
     });
     const { _resetServiceKeyMap } = await import('../../api/middleware/serviceAuth.js');
@@ -159,9 +159,9 @@ describe('Story 54.5: GET /api/analytics/narratives', () => {
       expect(Array.isArray(payload.narratives)).toBe(true);
     } finally {
       if (origEnv === undefined) {
-        delete process.env.XACTIONS_SERVICE_KEYS;
+        delete process.env.MEDIRUS_SERVICE_KEYS;
       } else {
-        process.env.XACTIONS_SERVICE_KEYS = origEnv;
+        process.env.MEDIRUS_SERVICE_KEYS = origEnv;
       }
       _resetServiceKeyMap();
     }

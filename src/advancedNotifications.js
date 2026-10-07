@@ -271,7 +271,7 @@
         if (result === 'granted') {
           console.log('✅ Desktop notifications enabled!');
           // Send a test notification
-          new Notification('XActions', {
+          new Notification('Medirus', {
             body: 'Desktop notifications enabled successfully!',
             icon: 'https://abs.twimg.com/favicons/twitter.3.ico',
           });
@@ -398,11 +398,11 @@
   };
 
   // ═══════════════════════════════════════════════════════════════
-  // Expose on window.XActions.advancedNotifications
+  // Expose on window.Medirus.advancedNotifications
   // ═══════════════════════════════════════════════════════════════
 
-  if (!window.XActions) window.XActions = {};
-  window.XActions.advancedNotifications = {
+  if (!window.Medirus) window.Medirus = {};
+  window.Medirus.advancedNotifications = {
     clearAllNotifications,
     configureEmailNotifications,
     configurePushNotifications,
@@ -413,31 +413,31 @@
   // ─── Menu ────────────────────────────────────────────────────
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║           🔔 XActions — Advanced Notifications              ║
+║           🔔 Medirus — Advanced Notifications              ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
 ║  1. Clear all notifications (mark as read):                  ║
-║     XActions.advancedNotifications.clearAllNotifications()    ║
+║     Medirus.advancedNotifications.clearAllNotifications()    ║
 ║                                                              ║
 ║  2. Email notification preferences:                          ║
-║     XActions.advancedNotifications                            ║
+║     Medirus.advancedNotifications                            ║
 ║       .configureEmailNotifications({                          ║
 ║         enableAll: false,                                     ║
 ║         toggleCategories: { "Direct message": true }          ║
 ║       })                                                      ║
 ║                                                              ║
 ║  3. Push notification preferences:                           ║
-║     XActions.advancedNotifications                            ║
+║     Medirus.advancedNotifications                            ║
 ║       .configurePushNotifications({                           ║
 ║         enableAll: true                                       ║
 ║       })                                                      ║
 ║                                                              ║
 ║  4. Desktop notification preferences:                        ║
-║     XActions.advancedNotifications                            ║
+║     Medirus.advancedNotifications                            ║
 ║       .configureDesktopNotifications({ enable: true })        ║
 ║                                                              ║
 ║  5. Filter verified-only notifications:                      ║
-║     XActions.advancedNotifications.filterVerifiedOnly()       ║
+║     Medirus.advancedNotifications.filterVerifiedOnly()       ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
   `);

@@ -3,8 +3,8 @@
  * extractUserFromCell Test Suite
  *
  * Comprehensive tests for the core user extraction function used by
- * all XActions automation scripts. Because core.js is a browser script
- * that self-assigns to `window.XActions.Core`, we bootstrap a minimal
+ * all Medirus automation scripts. Because core.js is a browser script
+ * that self-assigns to `window.Medirus.Core`, we bootstrap a minimal
  * jsdom environment and eval the source so the real implementation runs
  * against our mock DOM structures.
  *
@@ -55,8 +55,8 @@ beforeAll(() => {
   // Evaluate core.js in the jsdom context
   window.eval(coreSource);
 
-  extractUserFromCell = window.XActions.Core.extractUserFromCell;
-  parseCount = window.XActions.Core.parseCount;
+  extractUserFromCell = window.Medirus.Core.extractUserFromCell;
+  parseCount = window.Medirus.Core.parseCount;
 });
 
 // ---------------------------------------------------------------------------

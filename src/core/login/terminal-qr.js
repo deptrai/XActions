@@ -65,7 +65,7 @@ export class TerminalQrLogin extends AbstractLogin {
     const defaultCookieFilename = this.platform.toLowerCase() === 'twitter' 
       ? 'cookies.json' 
       : `cookies-${this.platform.toLowerCase()}.json`;
-    this.cookiePath = options.cookiePath || path.join(os.homedir(), '.xactions', defaultCookieFilename);
+    this.cookiePath = options.cookiePath || path.join(os.homedir(), '.medirus', defaultCookieFilename);
   }
 
   /**

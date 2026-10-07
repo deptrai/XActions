@@ -141,7 +141,7 @@ Production-ready multi-account automation with account rotation, rate limiting, 
 
 ```javascript
 // ============================================
-// XActions - Multi-Account Manager (Puppeteer)
+// Medirus - Multi-Account Manager (Puppeteer)
 // Author: nich (@nichxbt)
 // Production-ready multi-account automation
 // ============================================
@@ -554,7 +554,7 @@ class ActionExecutor {
 // ============================================
 async function runMultiAccountAutomation(tasks) {
   console.log('\n' + '═'.repeat(60));
-  console.log('👥 XActions Multi-Account Manager');
+  console.log('👥 Medirus Multi-Account Manager');
   console.log('═'.repeat(60));
 
   const manager = new MultiAccountManager();
@@ -841,11 +841,11 @@ async function checkAccountHealth(page, username, logger) {
 
 ## 🌐 Website Alternative
 
-Don't want to run scripts? **[xactions.app](https://xactions.app)** Pro tier includes multi-account management with a visual dashboard:
+Don't want to run scripts? **[medirus.online](https://medirus.online)** Pro tier includes multi-account management with a visual dashboard:
 
 ### ✨ Pro Tier Features
 
-| Feature | Script | xactions.app Pro |
+| Feature | Script | medirus.online Pro |
 |---------|--------|------------------|
 | Multi-account support | ✅ | ✅ |
 | Visual dashboard | ❌ | ✅ |
@@ -856,9 +856,9 @@ Don't want to run scripts? **[xactions.app](https://xactions.app)** Pro tier inc
 | Analytics & reports | Basic logs | ✅ Advanced |
 | Priority support | Community | ✅ 24/7 |
 
-### 🚀 Getting Started with xactions.app
+### 🚀 Getting Started with medirus.online
 
-1. Go to [xactions.app/pricing](https://xactions.app/pricing)
+1. Go to [medirus.online/pricing](https://medirus.online/pricing)
 2. Sign up for Pro tier
 3. Connect your accounts via secure OAuth
 4. Configure automation rules in the dashboard
@@ -889,4 +889,4 @@ Apache 2.0 License - See [LICENSE](../../LICENSE)
 ---
 
 *Author: nich ([@nichxbt](https://x.com/nichxbt))*  
-*Part of the [XActions](https://github.com/nirholas/XActions) toolkit*
+*Part of the [Medirus](https://github.com/nirholas/XActions) toolkit*

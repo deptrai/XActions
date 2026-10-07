@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions RSS & Webhook Content Ingestion
+ * Medirus RSS & Webhook Content Ingestion
  * Monitor RSS feeds and accept webhooks to auto-create tweets.
  *
  * Kills: Hypefury (auto-plug, RSS), Taplio
@@ -14,7 +14,7 @@ import fsp from 'fs/promises';
 import path from 'path';
 import os from 'os';
 
-const CONFIG_DIR = path.join(os.homedir(), '.xactions');
+const CONFIG_DIR = path.join(os.homedir(), '.medirus');
 const FEEDS_FILE = path.join(CONFIG_DIR, 'rss-feeds.json');
 const SEEN_FILE = path.join(CONFIG_DIR, 'rss-seen.json');
 const DRAFTS_FILE = path.join(CONFIG_DIR, 'drafts.json');

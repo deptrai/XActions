@@ -1,12 +1,12 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Cross-platform syndication commands for XActions CLI (Story 30.1, Story 30.2, Story 31.1).
+ * Cross-platform syndication commands for Medirus CLI (Story 30.1, Story 30.2, Story 31.1).
  *
  * Exposes multi-platform write operations:
- * - `xactions publish-all`
- * - `xactions like-all`
- * - `xactions follow-all`
- * - `xactions download-media`
+ * - `medirus publish-all`
+ * - `medirus like-all`
+ * - `medirus follow-all`
+ * - `medirus download-media`
  *
  * @author nich (@nichxbt)
  * @license Apache-2.0

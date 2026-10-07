@@ -4,7 +4,7 @@
 **Epic:** 11 — Resilient Network & Proxy Pool Management  
 **Status:** done  
 **Owner:** DEV  
-**Source:** `epics.md` Story 11.2, `ARCHITECTURE-SPINE.md` AD-3, AD-13, AD-14, AD-2, AD-8, `prd-XActions-2026-08-18-universal-scraping-engine/prd.md` FR-66A/B, `11-1-proxyippool-accountpool-sticky-round-robin.md` implementation patterns, current `src/proxy/**`, `src/core/**`, `types/**`, 2024–2025 provider documentation.
+**Source:** `epics.md` Story 11.2, `ARCHITECTURE-SPINE.md` AD-3, AD-13, AD-14, AD-2, AD-8, `prd-Medirus-2026-08-18-universal-scraping-engine/prd.md` FR-66A/B, `11-1-proxyippool-accountpool-sticky-round-robin.md` implementation patterns, current `src/proxy/**`, `src/core/**`, `types/**`, 2024–2025 provider documentation.
 
 ---
 
@@ -208,7 +208,7 @@ So that **auth-required platforms can bind a single, persistent exit IP to an ac
   4. Legacy CLI mapping.
 
 **11.2 compliance:**
-- All provider failures throw `PlatformError` with `code`, `type`, `retryAfterMs`, and `suggestedAction`. Invalid config → `invalid_args` / `XACT_4001` / `suggestedAction: use_x_actions_list`. Pool/gateway exhausted → `proxy_exhausted` / `XACT_5030` / `suggestedAction: wait` / `retryAfterMs: 30000`.
+- All provider failures throw `PlatformError` with `code`, `type`, `retryAfterMs`, and `suggestedAction`. Invalid config → `invalid_args` / `XACT_4001` / `suggestedAction: use_medirus_list`. Pool/gateway exhausted → `proxy_exhausted` / `XACT_5030` / `suggestedAction: wait` / `retryAfterMs: 30000`.
 - The new `DynamicTunnelProvider` and `StaticProxyProvider` expose enough status for `GovernorStatus` (`healthyCount`, `totalCount`, `isAllQuarantined`) without changing `src/core/status-api.js`.
 
 ### AD-2 — Unified Base Scraper & Client Interfaces
@@ -400,7 +400,7 @@ npx vitest run tests/proxy/proxy-pool.test.js tests/proxy/providers.test.js test
 
 ### Commit patterns
 - 11.1 implementation was done in iterative chunks: core → tests → review patches → types → API.
-- The project uses both `Vonic` and `nirholas` as authors; this story should be committed as `nirholas <nirholas@xactions.app>` per project rules.
+- The project uses both `Vonic` and `nirholas` as authors; this story should be committed as `nirholas <nirholas@medirus.online>` per project rules.
 - No `api/`, `prisma/`, `dashboard/` modifications occurred during 11.1; the same boundary applies to 11.2.
 
 ---
@@ -476,12 +476,12 @@ npx vitest run tests/proxy/proxy-pool.test.js tests/proxy/providers.test.js test
 
 ### Planning artifacts
 - `_bmad-output/planning-artifacts/epics.md:189-201` — Story 11.2 source.
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:133-145` — AD-3.
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:219-229` — AD-13.
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:230-241` — AD-14.
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:125-132` — AD-2.
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:183-191` — AD-8.
-- `_bmad-output/planning-artifacts/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md:62-65` — FR-66A/B.
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:133-145` — AD-3.
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:219-229` — AD-13.
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:230-241` — AD-14.
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:125-132` — AD-2.
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:183-191` — AD-8.
+- `_bmad-output/planning-artifacts/prds/prd-Medirus-2026-08-18-universal-scraping-engine/prd.md:62-65` — FR-66A/B.
 
 ### Current sprint status
 - `sprint-status.yaml:46` already marks `11-2-static-dynamic-residential-tunnel-proxy-providers: ready-for-dev`.

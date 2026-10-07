@@ -84,8 +84,8 @@ var CONFIG = {
   console.log('');
   
   // Create helper functions
-  window.XActions = window.XActions || {};
-  window.XActions.Banner = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Banner = {
     
     // Click the banner area to trigger file selection
     selectFile: () => {
@@ -126,13 +126,13 @@ var CONFIG = {
       console.log('');
       console.log('📋 AVAILABLE COMMANDS:');
       console.log('');
-      console.log('   XActions.Banner.selectFile()');
+      console.log('   Medirus.Banner.selectFile()');
       console.log('   → Opens file picker to select new banner');
       console.log('');
-      console.log('   XActions.Banner.save()');
+      console.log('   Medirus.Banner.save()');
       console.log('   → Saves the profile changes');
       console.log('');
-      console.log('   XActions.Banner.cancel()');
+      console.log('   Medirus.Banner.cancel()');
       console.log('   → Cancels changes and closes editor');
       console.log('');
       console.log('📐 BANNER DIMENSIONS:');
@@ -147,13 +147,13 @@ var CONFIG = {
   console.log('');
   console.log('📋 INSTRUCTIONS:');
   console.log('');
-  console.log('   Step 1: Run XActions.Banner.selectFile()');
+  console.log('   Step 1: Run Medirus.Banner.selectFile()');
   console.log('           Or click on the banner area directly');
   console.log('   Step 2: Choose your image file (1500x500 recommended)');
   console.log('   Step 3: Adjust the crop if needed');
-  console.log('   Step 4: Click Apply, then run XActions.Banner.save()');
+  console.log('   Step 4: Click Apply, then run Medirus.Banner.save()');
   console.log('');
-  console.log('💡 Type XActions.Banner.help() for more info');
+  console.log('💡 Type Medirus.Banner.help() for more info');
   console.log('');
   
   // Auto-click banner area if enabled

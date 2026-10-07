@@ -6,7 +6,7 @@ async function runBrowserE2E() {
   console.log('🎮 BROWSER PILOT: BẮT ĐẦU KIỂM THỬ LIVE E2E TRÊN BROWSER');
   console.log('====================================================');
 
-  const secret = 'xactions-super-secret-jwt-key-2026';
+  const secret = 'medirus-super-secret-jwt-key-2026';
   const token = jwt.sign(
     { id: 'test_dashboard_proxies_1788247647585_2lmfai', userId: 'test_dashboard_proxies_1788247647585_2lmfai', isAdmin: true },
     secret,

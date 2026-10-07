@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Database & Metrics Module
+// Medirus — Database & Metrics Module
 // SQLite-based action logging and metrics for the Thought Leader Agent
 // by nichxbt
 
@@ -82,9 +82,9 @@ class AgentDatabase {
         cost_usd REAL DEFAULT 0.0
       );
 
-      CREATE INDEX IF NOT EXISTS idx_actions_type ON actions(type);
-      CREATE INDEX IF NOT EXISTS idx_actions_timestamp ON actions(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_actions_target ON actions(target_id);
+      CREATE INDEX IF NOT EXISTS idmedirus_type ON actions(type);
+      CREATE INDEX IF NOT EXISTS idmedirus_timestamp ON actions(timestamp);
+      CREATE INDEX IF NOT EXISTS idmedirus_target ON actions(target_id);
       CREATE INDEX IF NOT EXISTS idx_follows_username ON follows(username);
       CREATE INDEX IF NOT EXISTS idx_content_posted ON content(posted_at);
       CREATE INDEX IF NOT EXISTS idx_llm_usage_date ON llm_usage(date);

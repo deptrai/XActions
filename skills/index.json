@@ -58,7 +58,7 @@
       "name": "Billing Management",
       "version": "1.0",
       "path": "skills/billing-management/SKILL.md",
-      "description": "Manage XActions subscriptions and billing via Stripe checkout."
+      "description": "Manage Medirus subscriptions and billing via Stripe checkout."
     },
     {
       "id": "blocking-muting-management",
@@ -370,23 +370,23 @@
       "name": "x402 Payments",
       "version": "1.0",
       "path": "skills/x402-payments/SKILL.md",
-      "description": "Enable x402 crypto payment protocol for XActions API access — multi-chain, multi-currency."
+      "description": "Enable x402 crypto payment protocol for Medirus API access — multi-chain, multi-currency."
     },
     {
-      "id": "xactions-cli",
-      "name": "XActions CLI",
+      "id": "medirus-cli",
+      "name": "Medirus CLI",
       "version": "4.0",
-      "path": "skills/xactions-cli/SKILL.md",
-      "description": "Command-line interface for scraping, MCP server config, and automation — `npm install -g xactions`.",
+      "path": "skills/medirus-cli/SKILL.md",
+      "description": "Command-line interface for scraping, MCP server config, and automation — `npm install -g medirus`.",
       "tags": [
         "cli"
       ]
     },
     {
-      "id": "xactions-mcp-server",
-      "name": "XActions MCP Server",
+      "id": "medirus-mcp-server",
+      "name": "Medirus MCP Server",
       "version": "4.0",
-      "path": "skills/xactions-mcp-server/SKILL.md",
+      "path": "skills/medirus-mcp-server/SKILL.md",
       "description": "144 MCP tools for AI agents to automate X/Twitter (scrape, post, engage, analyze).",
       "tags": [
         "mcp"
@@ -423,10 +423,10 @@
       "viral-thread-generation"
     ],
     "mcp": [
-      "xactions-mcp-server"
+      "medirus-mcp-server"
     ],
     "cli": [
-      "xactions-cli"
+      "medirus-cli"
     ]
   }
 }

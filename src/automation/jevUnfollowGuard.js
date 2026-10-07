@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions — JevUnfollowGuard (Story 42.8)
+ * Medirus — JevUnfollowGuard (Story 42.8)
  *
  * Cognitive second opinion before `unfollowNonFollowers` drops an account that
  * does not follow back. Each candidate is classified by Jev `Choice` into one

@@ -11,7 +11,7 @@
 |---|---|
 | 46.1 Swagger UI & OpenAPI 3.1 JSON Endpoint | `GET /openapi.json` (383 paths, 5 schemes), self-hosted Swagger UI via swagger-ui-express |
 | 46.2 Zod Schemas & Uniform Response Envelopes | Zod schemas for all request/response shapes, uniform `{success, data, error}` envelope across all routes |
-| 46.3 CLI Generator for TypeScript API Client | `xactions api-client` command generates typed TypeScript client from OpenAPI spec |
+| 46.3 CLI Generator for TypeScript API Client | `medirus api-client` command generates typed TypeScript client from OpenAPI spec |
 | 46.4 Contract Rollout — Social & User-Facing Mounts | Social routes (twitter, facebook, bluesky, mastodon, threads) on uniform envelope |
 | 46.5 Contract Rollout — Data, Ops & Admin Mounts | Data/ops/admin routes on uniform envelope, webhook admin endpoints |
 

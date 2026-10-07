@@ -12,7 +12,7 @@ baseline_commit: 'dc357202b35518f9ec42689e4e949d27f536e773'
 context:
   - _bmad-output/planning-artifacts/epics.md#epic-35
   - _bmad-output/planning-artifacts/prd.md#fr-98
-  - _bmad-output/planning-artifacts/architecture/xactions-epic35-reddit-medium-instagram/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/medirus-epic35-reddit-medium-instagram/ARCHITECTURE-SPINE.md
   - _bmad-output/planning-artifacts/research/technical-scraping-reddit-medium-instagram-2026-09-08/research.md
   - src/core/base-client.js
   - src/core/base-crawler.js
@@ -33,7 +33,7 @@ context:
 
 ## Intent
 
-**Problem:** Nowing AI Lead Hub cần cào dữ liệu từ **Reddit** — nền tảng cộng đồng lớn nhất phương Tây — để phục vụ lead generation, sentiment analysis, và market intelligence. XActions hiện thiếu adapter cho Reddit trong `src/scrapers/social/`.
+**Problem:** Nowing AI Lead Hub cần cào dữ liệu từ **Reddit** — nền tảng cộng đồng lớn nhất phương Tây — để phục vụ lead generation, sentiment analysis, và market intelligence. Medirus hiện thiếu adapter cho Reddit trong `src/scrapers/social/`.
 
 **Approach:**
 1. Tạo `RedditClient` tại `src/scrapers/social/reddit/client.js` kế thừa `AbstractApiClient`, dùng **official Reddit REST API** (`https://api.reddit.com` / `https://www.reddit.com`) với **OAuth2 read-only** mode, **RSS fallback** (`/r/{sub}/new.rss`) khi `.json` endpoint trả 403/bot challenge, và **Puppeteer stealth bridge** tùy chọn cho các action cần full data khi không có OAuth/residential proxy.
@@ -49,7 +49,7 @@ context:
 **Always:**
 - Chủ yếu dùng **official Reddit REST API** (`https://api.reddit.com` hoặc `https://www.reddit.com`) và **RSS fallback** (`/r/{sub}/new.rss`) cho public subreddits — không reverse engineer private API.
 - Auth mode: **OAuth2 client_credentials** (read-only, no user context) hoặc **public JSON endpoints** (`https://www.reddit.com/r/{sub}/new.json` với `.json` suffix) khi không có OAuth.
-- `User-Agent` bắt buộc: `xactions:reddit-scraper:v1.0.0 by u/<username>` (hoặc `xactions/1.0` nếu không có username).
+- `User-Agent` bắt buộc: `medirus:reddit-scraper:v1.0.0 by u/<username>` (hoặc `medirus/1.0` nếu không có username).
 - Rate limiting: respect `x-ratelimit-remaining`, `x-ratelimit-reset`, `x-ratelimit-used` headers; pause khi `remaining <= 1`.
 - Tất cả items phải qua `this.validateItem(item)` trước khi trả về hoặc lưu.
 - Kế thừa `AbstractCrawler` và `AbstractApiClient` — không tạo API surface riêng.
@@ -334,7 +334,7 @@ context:
     - `url` is a subreddit URL/name → `scrape('reddit', 'subreddit', { name, limit })`
     - `url` is a post/comment thread URL → extract `postId` and call `post_comments`
   - `x_crawl_comments_tree` accepts `platform: "reddit"` and routes to `scrape('reddit', 'post_comments', { postId, subreddit?, limit })`
-  - `x_actions_list` and `x_list_platforms` enumerate `reddit` as a supported platform.
+  - `medirus_list` and `x_list_platforms` enumerate `reddit` as a supported platform.
   - Multi-platform tools (`x_get_profile`, `x_get_tweets`, `x_search_tweets`) include `reddit` in their `platform` enum and, when `platform === 'reddit'`, route directly to the unified dispatcher (`scrape('reddit', 'user' | 'subreddit' | 'search', ...)`).
 
 ### Web Dashboard Exposure
@@ -375,7 +375,7 @@ context:
 - [x] [Review][Patch] Strip the `t3_` prefix from `postId` arguments in `#extractPostId()` before building `/comments/{postId}` paths. [src/scrapers/social/reddit/crawler.js:253-255]
 - [x] [Review][Patch] Validate `limit` and `depth` for `NaN`/non-numeric input before using them as query parameters. [src/scrapers/social/reddit/crawler.js:323,452,496-497]
 - [x] [Review][Patch] Fix `RedditPlatformResponseValidator.#getHeaders()` to handle `Headers` instances, not only plain objects. [src/scrapers/social/reddit/validator.js:77-88]
-- [x] [Review][Patch] Correct the `User-Agent` fallback to match the spec (`xactions/1.0`). [src/scrapers/social/reddit/client.js:38]
+- [x] [Review][Patch] Correct the `User-Agent` fallback to match the spec (`medirus/1.0`). [src/scrapers/social/reddit/client.js:38]
 - [x] [Review][Patch] Make `normalizeRedditPost()` push the external `post.url` into `mediaUrls` when it looks like an image/video. [src/scrapers/social/reddit/normalizer.js:67-90]
 - [x] [Review][Patch] Validate the synthetic `profilePost` with `this.validateItem()` before calling `store.storeContent()` in `getUser()`. [src/scrapers/social/reddit/crawler.js:395-413]
 - [x] [Review][Patch] Add the explicit `category = 'social'` class field to `RedditCrawler` to match the spec. [src/scrapers/social/reddit/crawler.js:28-37]

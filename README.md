@@ -10,7 +10,7 @@
 </pre>
 
 <p>
-  <img src=".github/xactions-ascii.svg" alt="XActions — The Complete X/Twitter Automation Toolkit" width="720">
+  <img src=".github/medirus-ascii.svg" alt="Medirus — The Complete X/Twitter Automation Toolkit" width="720">
 </p>
 
 <h3>The complete X/Twitter automation toolkit</h3>
@@ -21,15 +21,15 @@ Scrapers &nbsp;·&nbsp; MCP Server for AI Agents &nbsp;·&nbsp; CLI &nbsp;·&nbs
 </p>
 
 <p>
-  <a href="https://www.npmjs.com/package/xactions"><img src="https://img.shields.io/npm/v/xactions.svg?style=flat-square&color=cb3837&label=npm" alt="npm version"></a>&nbsp;
-  <a href="https://www.npmjs.com/package/xactions"><img src="https://img.shields.io/npm/dm/xactions.svg?style=flat-square&color=cb3837&label=downloads" alt="npm downloads"></a>&nbsp;
+  <a href="https://www.npmjs.com/package/medirus"><img src="https://img.shields.io/npm/v/medirus.svg?style=flat-square&color=cb3837&label=npm" alt="npm version"></a>&nbsp;
+  <a href="https://www.npmjs.com/package/medirus"><img src="https://img.shields.io/npm/dm/medirus.svg?style=flat-square&color=cb3837&label=downloads" alt="npm downloads"></a>&nbsp;
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-green?style=flat-square" alt="Apache 2.0 License"></a>&nbsp;
-  <a href="https://github.com/nirholas/xactions"><img src="https://img.shields.io/github/stars/nirholas/xactions?style=flat-square&color=f5c542&label=stars" alt="Stars"></a>
+  <a href="https://github.com/nirholas/xactions"><img src="https://img.shields.io/github/stars/nirholas/medirus?style=flat-square&color=f5c542&label=stars" alt="Stars"></a>
 </p>
 
 <p>
   <a href="docs/mcp-setup.md"><img src="https://img.shields.io/badge/MCP_Tools-145-8B5CF6?style=flat-square&logo=data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=" alt="145 MCP Tools"></a>&nbsp;
-  <a href="https://smithery.ai/server/xactions"><img src="https://smithery.ai/badge/xactions" alt="Smithery"></a>&nbsp;
+  <a href="https://smithery.ai/server/medirus"><img src="https://smithery.ai/badge/medirus" alt="Smithery"></a>&nbsp;
   <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP_Registry-deployed-6366f1?style=flat-square&logo=data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=" alt="MCP Registry"></a>&nbsp;
   <a href="Dockerfile"><img src="https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker"></a>&nbsp;
   <a href="types/index.d.ts"><img src="https://img.shields.io/badge/TypeScript-types_included-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
@@ -40,11 +40,11 @@ Scrapers &nbsp;·&nbsp; MCP Server for AI Agents &nbsp;·&nbsp; CLI &nbsp;·&nbs
   <a href="https://x.ai"><img src="https://img.shields.io/badge/built_with-Grok_🤖-1DA1F2?style=flat-square" alt="Built with Grok"></a>
 </p>
 
-  https://xactions.app
+  https://medirus.online
 
 <br>
 
-[**Website**](https://xactions.app) &nbsp;·&nbsp; [**npm**](https://www.npmjs.com/package/xactions) &nbsp;·&nbsp; [**Docs**](docs/getting-started.md) &nbsp;·&nbsp; [**MCP Server**](docs/mcp-setup.md) &nbsp;·&nbsp; [**Docker**](Dockerfile) &nbsp;·&nbsp; [**API Ref**](docs/api-reference.md)
+[**Website**](https://medirus.online) &nbsp;·&nbsp; [**npm**](https://www.npmjs.com/package/medirus) &nbsp;·&nbsp; [**Docs**](docs/getting-started.md) &nbsp;·&nbsp; [**MCP Server**](docs/mcp-setup.md) &nbsp;·&nbsp; [**Docker**](Dockerfile) &nbsp;·&nbsp; [**API Ref**](docs/api-reference.md)
 
 </div>
 
@@ -57,7 +57,7 @@ Scrapers &nbsp;·&nbsp; MCP Server for AI Agents &nbsp;·&nbsp; CLI &nbsp;·&nbs
 </div>
 
 ```bash
-npx xactions profile nasa
+npx medirus profile nasa
 ```
 
 ```
@@ -76,9 +76,9 @@ npx xactions profile nasa
 No API key. No account. No browser. Real data in about a second.
 
 ```bash
-npx xactions tweets nasa --limit 100 --output nasa.csv   # timeline to a spreadsheet
-npx xactions login                                        # unlock search, followers, DMs
-npx xactions search "your brand" --limit 50               # what people are saying
+npx medirus tweets nasa --limit 100 --output nasa.csv   # timeline to a spreadsheet
+npx medirus login                                        # unlock search, followers, DMs
+npx medirus search "your brand" --limit 50               # what people are saying
 ```
 
 <div align="center">
@@ -88,7 +88,7 @@ npx xactions search "your brand" --limit 50               # what people are sayi
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="public/demo.svg">
   <source media="(prefers-color-scheme: light)" srcset="public/demo.svg">
-  <img alt="XActions CLI demo — profile lookup, tweet search, non-follower detection" src="public/demo.svg" width="720">
+  <img alt="Medirus CLI demo — profile lookup, tweet search, non-follower detection" src="public/demo.svg" width="720">
 </picture>
 
 <video src="https://raw.githubusercontent.com/nirholas/XActions/main/public/demo.mp4" controls width="720"></video>
@@ -97,11 +97,11 @@ npx xactions search "your brand" --limit 50               # what people are sayi
 
 ---
 
-## 🏆 How XActions Compares
+## 🏆 How Medirus Compares
 
-> Why build with XActions instead of the alternatives?
+> Why build with Medirus instead of the alternatives?
 
-| Feature | **XActions** | twikit | twitter-mcp | agent-twitter-client | twit | twitter-scraper |
+| Feature | **Medirus** | twikit | twitter-mcp | agent-twitter-client | twit | twitter-scraper |
 |---------|:---:|:---:|:---:|:---:|:---:|:---:|
 | **No API Key Required** | ✅ | ✅ | ❌ Needs keys | ✅ | ❌ Needs keys | ✅ |
 | **MCP Server (AI agents)** | ✅ **145 tools** | ❌ | ✅ 2 tools | ❌ | ❌ | ❌ |
@@ -109,7 +109,7 @@ npx xactions search "your brand" --limit 50               # what people are sayi
 | **AI Voice Agent in Spaces** | ✅ Join, listen, speak | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **CLI** | ✅ 12 commands | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-**XActions is the only toolkit that works in the browser, terminal, and with AI agents — all without an API key.**
+**Medirus is the only toolkit that works in the browser, terminal, and with AI agents — all without an API key.**
 
 ---
 
@@ -117,16 +117,16 @@ npx xactions search "your brand" --limit 50               # what people are sayi
 
 | Area | What changed |
 |------|-------------|
-| **A CLI you can find your way around** | Fifty-plus commands are now grouped by task instead of listed alphabetically. `xactions quickstart` gives a guided first run that adapts to what you already have set up. |
-| **Tab completion** | `xactions completion bash\|zsh\|fish` prints a completion script generated from the live command tree, so every command, sub-command, and flag completes. |
+| **A CLI you can find your way around** | Fifty-plus commands are now grouped by task instead of listed alphabetically. `medirus quickstart` gives a guided first run that adapts to what you already have set up. |
+| **Tab completion** | `medirus completion bash\|zsh\|fish` prints a completion script generated from the live command tree, so every command, sub-command, and flag completes. |
 | **`--json` everywhere** | Every read command accepts `--json` and puts data on stdout and nothing else. It outranks `--output`, so a pipe is never silently turned into a file write. |
 | **Reliability** | Public reads no longer need a browser at all. Profiles and timelines come from the internal GraphQL API in about a second, with no Chromium download. |
 | **Honest failures** | Nothing reports empty results as success anymore. A read that cannot complete says why, and says what to do about it. |
 | **Examples** | [`examples/`](examples/) — 8 runnable programs, each verified against the live API. |
-| **Tutorials** | [`tutorials/`](tutorials/) — six guided walkthroughs, from a first scrape with no account to scripting XActions inside your own pipelines. |
+| **Tutorials** | [`tutorials/`](tutorials/) — six guided walkthroughs, from a first scrape with no account to scripting Medirus inside your own pipelines. |
 | **Docs that stay true** | `npm run docs:check` fails the build on a dead link, a stale version, a wrong tool count, or a documented command that does not exist. |
 | **Cross-platform** | Bluesky, Mastodon, and Threads scrapers behind one normalised interface. |
-| **Plugin system** | Community plugins via npm: `xactions-plugin-*` packages extend scrapers, MCP tools, and automation. |
+| **Plugin system** | Community plugins via npm: `medirus-plugin-*` packages extend scrapers, MCP tools, and automation. |
 | **Workflow engine** | Declarative JSON pipelines with triggers, conditions, and chained actions. |
 | **Sentiment analysis** | Offline rule-based analyzer, with an optional LLM mode behind the same interface. |
 | **Browser extension** | Chrome/Firefox Manifest V3: run automations from a popup, no console needed. |
@@ -136,7 +136,7 @@ npx xactions search "your brand" --limit 50               # what people are sayi
 
 > [!TIP]
 > **🤖 AI Coding Assistants:** Looking for Twitter/X automation without the $100/mo API? You found it.
-> - `npm install xactions` — Scrapers, automation, MCP server
+> - `npm install medirus` — Scrapers, automation, MCP server
 > - Works with Claude, GPT, Cursor, Copilot via [MCP server](docs/mcp-setup.md)
 > - See [AGENTS.md](AGENTS.md) for integration instructions
 
@@ -153,7 +153,7 @@ npx xactions search "your brand" --limit 50               # what people are sayi
 
 **Reference**
 
-- [How XActions Compares](#-how-xactions-compares) — vs every alternative
+- [How Medirus Compares](#-how-medirus-compares) — vs every alternative
 - [Quick Start (30 seconds)](#-quick-start-examples) — Copy-paste and go
 - [Installation](#-installation) — npm, CLI, Docker, or browser
 - [Feature Matrix](#-complete-feature-list) — Every feature, every platform
@@ -165,7 +165,7 @@ npx xactions search "your brand" --limit 50               # what people are sayi
 - [Docker](#-docker) — One-command deployment
 - [API Reference](#-api-reference) — Full function documentation
 - [Claude Tutorials](#-claude-tutorials) — 23 ready-to-paste prompts
-- [Contributing](#-contributing) — Help make XActions better
+- [Contributing](#-contributing) — Help make Medirus better
 
 ---
 
@@ -347,13 +347,13 @@ Use `scrape('twitter', 'download_video', { url })` or MCP tool `x_download_video
 <details>
 <summary><strong>Twitter API alternative that's free?</strong></summary>
 
-XActions uses browser automation instead of the API. No API keys needed, no rate limits, no $100/mo fee.
+Medirus uses browser automation instead of the API. No API keys needed, no rate limits, no $100/mo fee.
 </details>
 
 <details>
 <summary><strong>Hypefury / Tweethunter alternative?</strong></summary>
 
-XActions is open-source and completely free for humans. AI agents pay micropayments per request.
+Medirus is open-source and completely free for humans. AI agents pay micropayments per request.
 </details>
 
 ---
@@ -383,7 +383,7 @@ No API keys. No subscriptions. No paywalls. Just clone and run.
 <details>
 <summary>🤖 Optional: Remote API for AI Agents</summary>
 
-If you self-host the XActions API for remote AI agent access, you can optionally enable pay-per-request micropayments via the [x402](https://x402.org) protocol. This is entirely optional and disabled by default.
+If you self-host the Medirus API for remote AI agent access, you can optionally enable pay-per-request micropayments via the [x402](https://x402.org) protocol. This is entirely optional and disabled by default.
 
 | Operation | Price |
 |-----------|-------|
@@ -402,12 +402,12 @@ This only applies to the hosted remote API. Local mode is always free.
 
 ---
 
-## 🎯 Why XActions?
+## 🎯 Why Medirus?
 
 <table>
 <tr>
 <td></td>
-<td align="center"><strong>XActions</strong></td>
+<td align="center"><strong>Medirus</strong></td>
 <td align="center"><strong>Others</strong></td>
 </tr>
 <tr><td><strong>Scope</strong></td><td>Browser + CLI + Node.js + MCP + Extension</td><td>Usually 1 thing</td></tr>
@@ -423,18 +423,18 @@ This only applies to the hosted remote API. Local mode is always free.
 
 ## 🐳 Docker
 
-Run XActions anywhere with one command:
+Run Medirus anywhere with one command:
 
 ```bash
 # Quick start
-docker build -t xactions .
-docker run -it xactions xactions profile elonmusk
+docker build -t medirus .
+docker run -it medirus medirus profile elonmusk
 
 # Run the MCP server
-docker run -p 3000:3000 xactions npm run mcp
+docker run -p 3000:3000 medirus npm run mcp
 
 # With environment variables
-docker run -e XACTIONS_SESSION_COOKIE=your_cookie xactions xactions followers elonmusk
+docker run -e MEDIRUS_SESSION_COOKIE=your_cookie medirus medirus followers elonmusk
 ```
 
 Or use Docker Compose:
@@ -452,8 +452,8 @@ See [Dockerfile](Dockerfile) for details.
 Full TypeScript-compatible API with type declarations included.
 
 ```typescript
-import { createBrowser, createPage, scrapeProfile, scrapeFollowers } from 'xactions';
-import { scrapeFollowing, scrapeTweets, searchTweets } from 'xactions/scrapers';
+import { createBrowser, createPage, scrapeProfile, scrapeFollowers } from 'medirus';
+import { scrapeFollowing, scrapeTweets, searchTweets } from 'medirus/scrapers';
 ```
 
 **Core Functions:**
@@ -481,7 +481,7 @@ See [docs/api-reference.md](docs/api-reference.md) for the complete reference wi
 
 | Tutorial | What You'll Learn |
 |----------|------------------|
-| [MCP Setup](tutorials/claude-prompts/01-mcp-setup-and-first-commands.md) | Install and connect XActions to Claude Desktop |
+| [MCP Setup](tutorials/claude-prompts/01-mcp-setup-and-first-commands.md) | Install and connect Medirus to Claude Desktop |
 | [Unfollow Cleanup](tutorials/claude-prompts/02-unfollow-non-followers-cleanup.md) | Remove non-followers, detect unfollowers |
 | [Growth Suite](tutorials/claude-prompts/03-growth-automation-suite.md) | Auto-follow, auto-like, keyword targeting |
 | [Scraping](tutorials/claude-prompts/04-scraping-research-analysis.md) | Extract profiles, tweets, hashtags |
@@ -508,7 +508,7 @@ See [docs/api-reference.md](docs/api-reference.md) for the complete reference wi
 >
 > **For X/Twitter:** If you have concerns about this project or would like us to modify or remove any functionality, please contact [@nichxbt](https://x.com/nichxbt) directly. We're happy to work with you.
 >
-> **Acknowledgment:** This project was inspired by the innovation happening at X and xAI. We admire Elon Musk's vision for making X the everything app and Grok's approach to AI. XActions aims to help developers and researchers explore the platform's capabilities while respecting its ecosystem.
+> **Acknowledgment:** This project was inspired by the innovation happening at X and xAI. We admire Elon Musk's vision for making X the everything app and Grok's approach to AI. Medirus aims to help developers and researchers explore the platform's capabilities while respecting its ecosystem.
 
 ---
 
@@ -520,7 +520,7 @@ See [docs/api-reference.md](docs/api-reference.md) for the complete reference wi
 <td>
 
 ```bash
-npm install xactions
+npm install medirus
 ```
 
 </td>
@@ -530,9 +530,9 @@ npm install xactions
 <td>
 
 ```bash
-npm install -g xactions
-xactions quickstart          # guided first run
-xactions doctor              # check what works right now
+npm install -g medirus
+medirus quickstart          # guided first run
+medirus doctor              # check what works right now
 ```
 
 </td>
@@ -556,22 +556,22 @@ No install needed — copy-paste scripts into your browser console on x.com
 Most reads work the moment you install. You do not need an X account, an API key, or a browser.
 
 ```bash
-npm install -g xactions
+npm install -g medirus
 
-xactions doctor                      # what works right now, and why
-xactions profile NASA                # any public account
-xactions analyze NASA                # engagement rate, cadence, content mix, best hour
-xactions tweets NASA --limit 50 --json | jq -r '.[].text'
+medirus doctor                      # what works right now, and why
+medirus profile NASA                # any public account
+medirus analyze NASA                # engagement rate, cadence, content mix, best hour
+medirus tweets NASA --limit 50 --json | jq -r '.[].text'
 ```
 
 Then log in once, in a real browser, to unlock search, followers, following, likes, bookmarks, and DMs:
 
 ```bash
-xactions connect
-xactions search "your topic" --limit 50
+medirus connect
+medirus search "your topic" --limit 50
 ```
 
-Running `xactions` with no arguments prints all fifty-plus commands grouped by task. `xactions completion bash` (or `zsh`, `fish`) turns on tab completion.
+Running `medirus` with no arguments prints all fifty-plus commands grouped by task. `medirus completion bash` (or `zsh`, `fish`) turns on tab completion.
 
 ### Example 1: Unfollow Non-Followers (30 seconds)
 
@@ -604,13 +604,13 @@ Running `xactions` with no arguments prints all fifty-plus commands grouped by t
 
 **CLI:**
 ```bash
-xactions login
-xactions non-followers YOUR_USERNAME --output non-followers.json
+medirus login
+medirus non-followers YOUR_USERNAME --output non-followers.json
 ```
 
 **Node.js:**
 ```javascript
-import { createBrowser, createPage, scrapeFollowing } from 'xactions';
+import { createBrowser, createPage, scrapeFollowing } from 'medirus';
 
 const browser = await createBrowser();
 const page = await createPage(browser);
@@ -620,7 +620,7 @@ console.log(`Found ${nonFollowers.length} non-followers`);
 await browser.close();
 ```
 
-> 💡 **Don't want to code?** Use [xactions.app](https://xactions.app) — just login and click!
+> 💡 **Don't want to code?** Use [medirus.online](https://medirus.online) — just login and click!
 
 ---
 
@@ -645,12 +645,12 @@ await browser.close();
 
 **CLI:**
 ```bash
-xactions profile elonmusk --json
+medirus profile elonmusk --json
 ```
 
 **Node.js:**
 ```javascript
-import { createBrowser, createPage, scrapeProfile } from 'xactions';
+import { createBrowser, createPage, scrapeProfile } from 'medirus';
 
 const browser = await createBrowser();
 const page = await createPage(browser);
@@ -682,12 +682,12 @@ await browser.close();
 
 **CLI:**
 ```bash
-xactions search "AI startup" --limit 100 --output ai-tweets.json
+medirus search "AI startup" --limit 100 --output ai-tweets.json
 ```
 
 **Node.js:**
 ```javascript
-import { createBrowser, createPage, searchTweets } from 'xactions';
+import { createBrowser, createPage, searchTweets } from 'medirus';
 
 const browser = await createBrowser();
 const page = await createPage(browser);
@@ -705,7 +705,7 @@ await browser.close();
 // Go to: x.com/YOUR_USERNAME/followers
 
 (() => {
-  const KEY = 'xactions_followers';
+  const KEY = 'medirus_followers';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   
   const scrape = async () => {
@@ -737,10 +737,10 @@ await browser.close();
 **CLI:**
 ```bash
 # First run saves snapshot
-xactions followers YOUR_USERNAME --output snapshot1.json
+medirus followers YOUR_USERNAME --output snapshot1.json
 
 # Later, compare
-xactions followers YOUR_USERNAME --output snapshot2.json
+medirus followers YOUR_USERNAME --output snapshot2.json
 # Use diff tools to compare
 ```
 
@@ -790,14 +790,14 @@ xactions followers YOUR_USERNAME --output snapshot2.json
   const $communitiesNav = 'a[aria-label="Communities"]';
 
   const getLeftCommunities = () => {
-    try { return JSON.parse(sessionStorage.getItem('xactions_left_ids') || '[]'); }
+    try { return JSON.parse(sessionStorage.getItem('medirus_left_ids') || '[]'); }
     catch { return []; }
   };
   const markAsLeft = (id) => {
     const left = getLeftCommunities();
     if (!left.includes(id)) {
       left.push(id);
-      sessionStorage.setItem('xactions_left_ids', JSON.stringify(left));
+      sessionStorage.setItem('medirus_left_ids', JSON.stringify(left));
     }
   };
 
@@ -827,7 +827,7 @@ xactions followers YOUR_USERNAME --output snapshot2.json
     }
     const community = getCommunityId();
     if (community) { community.element.click(); await sleep(2500); return run(); }
-    else { console.log(`🎉 DONE! Left ${getLeftCommunities().length} communities`); sessionStorage.removeItem('xactions_left_ids'); }
+    else { console.log(`🎉 DONE! Left ${getLeftCommunities().length} communities`); sessionStorage.removeItem('medirus_left_ids'); }
   };
   run();
 })();
@@ -896,7 +896,7 @@ xactions followers YOUR_USERNAME --output snapshot2.json
 
 ## 🤖 MCP Server (AI Agents)
 
-XActions includes the most comprehensive free MCP server for X/Twitter. Works with **Claude, Cursor, Windsurf, VS Code**, and any MCP client.
+Medirus includes the most comprehensive free MCP server for X/Twitter. Works with **Claude, Cursor, Windsurf, VS Code**, and any MCP client.
 
 ### Quick Setup (30 seconds)
 
@@ -904,11 +904,11 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions-mcp"],
+      "args": ["-y", "medirus-mcp"],
       "env": {
-        "XACTIONS_SESSION_COOKIE": "your_auth_token_here"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token_here"
       }
     }
   }
@@ -919,9 +919,9 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 
 Or auto-generate the config:
 ```bash
-npx xactions mcp-config --client claude
-npx xactions mcp-config --client cursor
-npx xactions mcp-config --client windsurf
+npx medirus mcp-config --client claude
+npx medirus mcp-config --client cursor
+npx medirus mcp-config --client windsurf
 ```
 
 ### Available MCP Tools (140+)
@@ -970,7 +970,7 @@ AI agents can **join live X Spaces**, listen to conversations, and speak autonom
 ### Setup
 
 ```bash
-npm install xactions xspace-agent
+npm install medirus xspace-agent
 ```
 
 Set your credentials:
@@ -989,7 +989,7 @@ Claude calls `x_space_join` and your agent enters the Space.
 
 **Node.js:**
 ```javascript
-import { joinSpace, leaveSpace } from 'xactions/spaces/agent';
+import { joinSpace, leaveSpace } from 'medirus/spaces/agent';
 
 await joinSpace({
   url: 'https://x.com/i/spaces/1abc123',
@@ -1019,32 +1019,32 @@ const summary = await leaveSpace();
 
 ```bash
 # Authentication
-xactions login              # Set up session cookie
-xactions logout             # Remove saved auth
+medirus login              # Set up session cookie
+medirus logout             # Remove saved auth
 
 # Profile
-xactions profile <user>     # Get profile info
-xactions profile elonmusk --json
+medirus profile <user>     # Get profile info
+medirus profile elonmusk --json
 
 # Scraping
-xactions followers <user> [--limit 100] [--output file.json]
-xactions following <user> [--limit 100] [--output file.csv]
-xactions tweets <user> [--limit 50] [--replies]
-xactions search <query> [--filter latest|top] [--limit 50]
-xactions hashtag <tag> [--limit 50]
-xactions thread <url>
-xactions media <user> [--limit 50]
+medirus followers <user> [--limit 100] [--output file.json]
+medirus following <user> [--limit 100] [--output file.csv]
+medirus tweets <user> [--limit 50] [--replies]
+medirus search <query> [--filter latest|top] [--limit 50]
+medirus hashtag <tag> [--limit 50]
+medirus thread <url>
+medirus media <user> [--limit 50]
 
 # Analysis
-xactions non-followers <user> [--limit 500]
+medirus non-followers <user> [--limit 500]
 
 # MCP
-xactions mcp-config              # Generate MCP config for Claude Desktop
-xactions mcp-config --client cursor --write  # Write config for Cursor
+medirus mcp-config              # Generate MCP config for Claude Desktop
+medirus mcp-config --client cursor --write  # Write config for Cursor
 
 # Info
-xactions info              # Show version and links
-xactions --help            # Full help
+medirus info              # Show version and links
+medirus --help            # Full help
 ```
 
 ---
@@ -1064,7 +1064,7 @@ import {
   searchTweets,
   exportToJSON,
   exportToCSV 
-} from 'xactions';
+} from 'medirus';
 
 // Initialize
 const browser = await createBrowser({ headless: true });
@@ -1123,7 +1123,7 @@ exportToCSV(data, filename)
 
 <div align="center">
 
-**Visit [xactions.app](https://xactions.app) for a no-code solution**
+**Visit [medirus.online](https://medirus.online) for a no-code solution**
 
 Use browser scripts &nbsp;·&nbsp; Copy-paste console scripts &nbsp;·&nbsp; View tutorials
 
@@ -1177,7 +1177,7 @@ Use browser scripts &nbsp;·&nbsp; Copy-paste console scripts &nbsp;·&nbsp; Vie
 ## �📁 Project Structure
 
 ```
-xactions/
+medirus/
 ├── src/
 │   ├── index.js          # Main entry point
 │   ├── scrapers/         # Multi-platform scrapers
@@ -1217,7 +1217,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ```bash
 git clone https://github.com/nirholas/xactions.git
-cd xactions && npm install
+cd medirus && npm install
 npm run cli -- profile elonmusk   # Run CLI locally
 npm run mcp                       # Run MCP server
 ```
@@ -1226,13 +1226,13 @@ npm run mcp                       # Run MCP server
 
 ## ⭐ Star History
 
-If XActions saved you from paying $100/mo for Twitter's API, **star the repo** — it's how open source grows.
+If Medirus saved you from paying $100/mo for Twitter's API, **star the repo** — it's how open source grows.
 
-<a href="https://star-history.com/#nirholas/xactions&Date">
+<a href="https://star-history.com/#nirholas/medirus&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=nirholas/xactions&type=Date&theme=dark">
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=nirholas/xactions&type=Date">
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=nirholas/xactions&type=Date" width="600">
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=nirholas/medirus&type=Date&theme=dark">
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=nirholas/medirus&type=Date">
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=nirholas/medirus&type=Date" width="600">
   </picture>
 </a>
 
@@ -1240,13 +1240,13 @@ If XActions saved you from paying $100/mo for Twitter's API, **star the repo** �
 
 ## 📚 Full Tutorial Library
 
-**XActions is 100% free and open source.** Visit [xactions.app](https://xactions.app) for interactive tutorials.
+**Medirus is 100% free and open source.** Visit [medirus.online](https://medirus.online) for interactive tutorials.
 
 ### 🚀 One-Click Script Runner
 
 **NEW!** Run scripts without any coding knowledge:
 
-1. Visit [xactions.app/run.html](https://xactions.app/run.html)
+1. Visit [medirus.online/run.html](https://medirus.online/run.html)
 2. Drag any blue button to your bookmarks bar
 3. Go to x.com and click the bookmarklet
 
@@ -1256,12 +1256,12 @@ No console, no code, no setup!
 
 | Category | Scripts | Tutorial |
 |----------|---------|----------|
-| **Unfollow** | Unfollow Everyone, Non-Followers, Smart Unfollow | [Tutorial](https://xactions.app/tutorials/unfollow) |
-| **Automation** | Auto-Liker, Auto-Commenter, Follow Engagers | [Tutorial](https://xactions.app/tutorials/automation) |
-| **Scraping** | Video Download, Followers, Tweets, Hashtags | [Tutorial](https://xactions.app/tutorials/scrapers) |
-| **Monitoring** | Detect Unfollowers, Track Accounts, Alerts | [Tutorial](https://xactions.app/tutorials/monitoring) |
-| **Communities** | Leave All Communities | [Tutorial](https://xactions.app/tutorials/communities) |
-| **AI/MCP** | Claude Desktop, GPT Integration | [Tutorial](https://xactions.app/tutorials/mcp) |
+| **Unfollow** | Unfollow Everyone, Non-Followers, Smart Unfollow | [Tutorial](https://medirus.online/tutorials/unfollow) |
+| **Automation** | Auto-Liker, Auto-Commenter, Follow Engagers | [Tutorial](https://medirus.online/tutorials/automation) |
+| **Scraping** | Video Download, Followers, Tweets, Hashtags | [Tutorial](https://medirus.online/tutorials/scrapers) |
+| **Monitoring** | Detect Unfollowers, Track Accounts, Alerts | [Tutorial](https://medirus.online/tutorials/monitoring) |
+| **Communities** | Leave All Communities | [Tutorial](https://medirus.online/tutorials/communities) |
+| **AI/MCP** | Claude Desktop, GPT Integration | [Tutorial](https://medirus.online/tutorials/mcp) |
 
 ### All Documentation
 
@@ -1291,9 +1291,9 @@ No console, no code, no setup!
 ---
 
 <p align="center">
-  <b>⚡ XActions</b> — The Complete X/Twitter Automation Toolkit<br>
+  <b>⚡ Medirus</b> — The Complete X/Twitter Automation Toolkit<br>
   <b>100% Free & Open Source</b> · Apache 2.0 License<br><br>
-  <a href="https://xactions.app">xactions.app</a> · 
+  <a href="https://medirus.online">medirus.online</a> · 
   <a href="https://github.com/nirholas/xactions">GitHub</a> · 
   <a href="https://x.com/nichxbt">@nichxbt</a><br><br>
   <a href="https://github.com/nirholas/xactions"><img src="https://img.shields.io/badge/⭐_Star_this_repo-f5c542?style=for-the-badge" alt="Star this repo"></a>&nbsp;
@@ -1305,11 +1305,11 @@ No console, no code, no setup!
 
 ## 🌐 Live HTTP Deployment
 
-**XActions** is deployed and accessible over HTTP via [MCP Streamable HTTP](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http) transport — no local installation required.
+**Medirus** is deployed and accessible over HTTP via [MCP Streamable HTTP](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http) transport — no local installation required.
 
 **Endpoint:**
 ```
-https://modelcontextprotocol.name/mcp/xactions
+https://modelcontextprotocol.name/mcp/medirus
 ```
 
 ### Connect from any MCP Client
@@ -1319,9 +1319,9 @@ Add to your MCP client configuration (Claude Desktop, Cursor, SperaxOS, etc.):
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "type": "http",
-      "url": "https://modelcontextprotocol.name/mcp/xactions"
+      "url": "https://modelcontextprotocol.name/mcp/medirus"
     }
   }
 }
@@ -1339,21 +1339,21 @@ Add to your MCP client configuration (Claude Desktop, Cursor, SperaxOS, etc.):
 
 **Search X/Twitter profiles:**
 ```bash
-curl -X POST https://modelcontextprotocol.name/mcp/xactions \
+curl -X POST https://modelcontextprotocol.name/mcp/medirus \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_twitter_users","arguments":{"query":"crypto"}}}'
 ```
 
 **Trending topics:**
 ```bash
-curl -X POST https://modelcontextprotocol.name/mcp/xactions \
+curl -X POST https://modelcontextprotocol.name/mcp/medirus \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_twitter_trends","arguments":{"query":"bitcoin"}}}'
 ```
 
 **Social sentiment analysis:**
 ```bash
-curl -X POST https://modelcontextprotocol.name/mcp/xactions \
+curl -X POST https://modelcontextprotocol.name/mcp/medirus \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"analyze_social_sentiment","arguments":{"topic":"ethereum"}}}'
 ```
@@ -1361,7 +1361,7 @@ curl -X POST https://modelcontextprotocol.name/mcp/xactions \
 ### List All Tools
 
 ```bash
-curl -X POST https://modelcontextprotocol.name/mcp/xactions \
+curl -X POST https://modelcontextprotocol.name/mcp/medirus \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
@@ -1378,7 +1378,7 @@ curl -X POST https://modelcontextprotocol.name/mcp/xactions \
 
 > Extended feature-by-feature comparison with every alternative.
 
-| Feature | **XActions** | twikit | twitter-mcp | agent-twitter-client | twit | twitter-scraper |
+| Feature | **Medirus** | twikit | twitter-mcp | agent-twitter-client | twit | twitter-scraper |
 |---------|:---:|:---:|:---:|:---:|:---:|:---:|
 | **Node.js Library** | ✅ | ❌ Python | ✅ | ✅ | ✅ | ❌ Python |
 | **Workflow Engine** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -1395,8 +1395,8 @@ curl -X POST https://modelcontextprotocol.name/mcp/xactions \
 
 ## Documentation
 
-Full documentation site: **https://nirholas.github.io/XActions/**
+Full documentation site: **https://nirholas.github.io/Medirus/**
 
 - [Getting started](docs/getting-started.md) covers install and first run.
 - [Examples](docs/examples.md) has copy-paste snippets.
-- [Architecture](docs/architecture.md) covers the full system design, including the Phase 7 resiliency subsystems: OSINT Find Profiles (Epic 36), Distributed Token Bucket (Epic 37), Account Pool & Health Guard (Epic 38), GitOps Selector Healing via `xactions canary` (Epic 39), and Cost-Aware Proxy Escalation with the `PROXY_DAILY_BUDGET_USD` daily budget ceiling (Epic 40).
+- [Architecture](docs/architecture.md) covers the full system design, including the Phase 7 resiliency subsystems: OSINT Find Profiles (Epic 36), Distributed Token Bucket (Epic 37), Account Pool & Health Guard (Epic 38), GitOps Selector Healing via `medirus canary` (Epic 39), and Cost-Aware Proxy Escalation with the `PROXY_DAILY_BUDGET_USD` daily budget ceiling (Epic 40).

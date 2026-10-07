@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Community Manager — Free X/Twitter Script | XActions</title>
+  <title>Community Manager — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="src/communityManager.js">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, community, manager, other tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, community, manager, other tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Community Manager — XActions">
+  <meta property="og:title" content="Community Manager — Medirus">
   <meta property="og:description" content="src/communityManager.js">
-  <meta property="og:url" content="https://xactions.app/scripts/community-manager">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/community-manager">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Community Manager — XActions">
+  <meta name="twitter:title" content="Community Manager — Medirus">
   <meta name="twitter:description" content="src/communityManager.js">
 
-  <link rel="canonical" href="https://xactions.app/scripts/community-manager">
+  <link rel="canonical" href="https://medirus.online/scripts/community-manager">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Community Manager — Free X/Twitter Script | XActions",
+    "headline": "Community Manager — Free X/Twitter Script | Medirus",
     "description": "src/communityManager.js",
-    "url": "https://xactions.app/scripts/community-manager",
+    "url": "https://medirus.online/scripts/community-manager",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Other Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, community, manager, other tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, community, manager, other tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://xactions.app/scripts#other-tools" },
-      { "@type": "ListItem", "position": 4, "name": "Community Manager", "item": "https://xactions.app/scripts/community-manager" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://medirus.online/scripts#other-tools" },
+      { "@type": "ListItem", "position": 4, "name": "Community Manager", "item": "https://medirus.online/scripts/community-manager" }
     ]
   }
   </script>
@@ -1088,8 +1088,8 @@
     log('✅', `Scraped ${members.length} members from community ${communityId}`);
 
     // Store in sessionStorage for re-use
-    sessionStorage.setItem(`xactions_community_members_${communityId}`, JSON.stringify(members));
-    log('✅', `Members saved to sessionStorage key: xactions_community_members_${communityId}`);
+    sessionStorage.setItem(`medirus_community_members_${communityId}`, JSON.stringify(members));
+    log('✅', `Members saved to sessionStorage key: medirus_community_members_${communityId}`);
 
     return members;
   };
@@ -1313,18 +1313,18 @@
     console.table(sortedAuthors.map(([author, count]) =&gt; ({ author, posts: count })));
 
     // Store in sessionStorage
-    sessionStorage.setItem(`xactions_community_analytics_${communityId}`, JSON.stringify(analytics));
-    log('✅', `Analytics saved to sessionStorage key: xactions_community_analytics_${communityId}`);
+    sessionStorage.setItem(`medirus_community_analytics_${communityId}`, JSON.stringify(analytics));
+    log('✅', `Analytics saved to sessionStorage key: medirus_community_analytics_${communityId}`);
 
     return analytics;
   };
 
   // ══════════════════════════════════════════════════════════
-  // 🌐 Expose on window.XActions.communityManager
+  // 🌐 Expose on window.Medirus.communityManager
   // ══════════════════════════════════════════════════════════
 
-  window.XActions = window.XActions || {};
-  window.XActions.communityManager = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.communityManager = {
     createCommunity,
     editCommunitySettings,
     postInCommunity,
@@ -1343,10 +1343,10 @@
 
   console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
-║           🏘️  XActions Community Manager — by nichxbt         ║
+║           🏘️  Medirus Community Manager — by nichxbt         ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  All functions available on window.XActions.communityManager  ║
+║  All functions available on window.Medirus.communityManager  ║
 ║                                                               ║
 ║  1. 🏗️  createCommunity({ name, description, rules, isPrivate })
 ║     Create a new community with custom settings               ║
@@ -1381,7 +1381,7 @@
 ║                                                               ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║  💡 Example:                                                  ║
-║  const cm = window.XActions.communityManager;                 ║
+║  const cm = window.Medirus.communityManager;                 ║
 ║  await cm.createCommunity({ name: &quot;My Group&quot; });              ║
 ║  await cm.postInCommunity(&quot;123456&quot;, &quot;Hello community!&quot;);      ║
 ║  await cm.viewCommunityMembers(&quot;123456&quot;, 100);                ║
@@ -1394,7 +1394,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

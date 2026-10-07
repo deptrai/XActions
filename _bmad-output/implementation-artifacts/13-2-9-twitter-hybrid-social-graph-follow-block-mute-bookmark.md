@@ -72,7 +72,7 @@ Story 13.2.9 triển khai 8 action quản trị quan hệ xã hội (social grap
 
 - `_bmad-output/planning-artifacts/epics.md` — Story 13.2.9 [dòng 539-551]
 - `_bmad-output/planning-artifacts/prd.md` — FR-71, NFR-11/12/13/16 [dòng 79, 114-120]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-3, AD-11, AD-13, AD-14
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-3, AD-11, AD-13, AD-14
 - `_bmad-output/implementation-artifacts/13-2-8-twitter-hybrid-engagement-like-retweet.md` — mẫu triển khai engagement mutations, idempotent handler
 - `src/core/base-crawler.js` — `AbstractCrawler.registerAction`, `ActionDescriptor`
 - `src/core/base-client.js` — `AbstractApiClient.request`, `requestRest`, `requestGraphQl`

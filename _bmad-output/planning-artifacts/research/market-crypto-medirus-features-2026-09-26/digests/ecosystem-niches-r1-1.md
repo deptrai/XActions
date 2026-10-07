@@ -26,8 +26,8 @@ Session: https://v2.chainlens.app/c/baccbc4c-df9d-4ba2-be8e-d3073f935a4a
 - **AI Agents**: AgentX, CryptoGPT-Solana — LLM-powered trading assistants
 - Trend: AI + copy-trading signals integration, DePIN on Solana
 
-## XActions Angle
-- XActions has pump.fun scraper already (see domain-pump-fun-api-surface-2026-09-25)
-- SocialFi = XActions' home turf (X/Twitter automation)
+## Medirus Angle
+- Medirus has pump.fun scraper already (see domain-pump-fun-api-surface-2026-09-25)
+- SocialFi = Medirus' home turf (X/Twitter automation)
 - AI Agents = personaEngine.js + algorithmBuilder.js already exist
 - Copy-trading signals could leverage whale/position data from pump.fun scraper

@@ -3,7 +3,7 @@ id: SPEC-53-4-obscura-pool-of-processes
 companions:
   - shard-policy.md
   - ../../implementation-artifacts/epic-53-context.md
-  - ../../planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
+  - ../../planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
 sources:
   - ../../planning-artifacts/epics.md
 ---
@@ -82,7 +82,7 @@ contexts — làm pool backend-aware đúng AD-24.
   `drain()` + rebuild; env re-read không hot-reload.
 - Acquire result và `stats()` expose endpoint identity (`endpoint` field) để
   53.6 telemetry dim `poolEndpoint` dựng trên schema có sẵn.
-- Opt-in nghiêm ngặt: `XACTIONS_BROWSER_POOL_SIZE=0` (default) giữ byte-identical
+- Opt-in nghiêm ngặt: `MEDIRUS_BROWSER_POOL_SIZE=0` (default) giữ byte-identical
   behavior; fleet sharding không kích hoạt ngầm.
 - Acquire serialized qua connect-lock hiện có — concurrent acquires không
   double-connect cùng endpoint.

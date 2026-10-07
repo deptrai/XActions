@@ -7,11 +7,11 @@ sources:
   - ../planning-artifacts/prd.md
 ---
 
-# XActions Frontend Platform Suites — UX & Feature Specification
+# Medirus Frontend Platform Suites — UX & Feature Specification
 
 ## Why
 
-XActions đã hoàn thiện lớp nền tảng Backend vững chắc với 28 platforms và 242 actions được chuẩn hóa qua `UniversalActionDispatcher` và `Public Scrape Gateway` (Epic 50). Tuy nhiên, trên Frontend (`apps/web` Next.js 15), ngoài `/pumpfun` và `/facebook`, đại đa số các tính năng dữ liệu cao cấp vẫn chỉ được hiển thị ở dạng catalog thô tại `/actions` hoặc dữ liệu mẫu tĩnh (mock static) tại `/explorer`. 
+Medirus đã hoàn thiện lớp nền tảng Backend vững chắc với 28 platforms và 242 actions được chuẩn hóa qua `UniversalActionDispatcher` và `Public Scrape Gateway` (Epic 50). Tuy nhiên, trên Frontend (`apps/web` Next.js 15), ngoài `/pumpfun` và `/facebook`, đại đa số các tính năng dữ liệu cao cấp vẫn chỉ được hiển thị ở dạng catalog thô tại `/actions` hoặc dữ liệu mẫu tĩnh (mock static) tại `/explorer`. 
 
 Người dùng (growth hacker, nhà nghiên cứu dữ liệu, trader crypto, chuyên viên tuyển dụng B2B) hiện phải tự tạo script hoặc gọi raw API qua `/gateway` thay vì có một giao diện trực quan, giàu tính tương tác và chuẩn mực về trải nghiệm người dùng (UX). 
 
@@ -82,6 +82,6 @@ Spec này quy định chi tiết 5 bộ giao diện người dùng (Platform Sui
 
 ## Non-goals
 
-- **NG-1** — Không xây dựng chức năng đăng tin tuyển dụng hoặc thanh toán ứng tuyển trên XActions. XActions đóng vai trò aggregator và reader.
+- **NG-1** — Không xây dựng chức năng đăng tin tuyển dụng hoặc thanh toán ứng tuyển trên Medirus. Medirus đóng vai trò aggregator và reader.
 - **NG-2** — Không thực hiện giao dịch token trên sàn DEX (swap/buy/sell). Giao diện chỉ hiển thị biểu đồ và số liệu phân tích, dẫn link ra Dexscreener hoặc Pump.fun.
 - **NG-3** — Không lưu trữ vĩnh viễn toàn bộ cơ sở dữ liệu doanh nghiệp Việt Nam vào Postgres local; chỉ lưu cache ngắn hạn (Redis LRU) cho các lượt tìm kiếm phổ biến.

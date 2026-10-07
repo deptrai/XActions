@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Saved Search Manager — Free X/Twitter Script | XActions</title>
+  <title>Saved Search Manager — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="src/savedSearchManager.js">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, saved, search, manager, other tools">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, saved, search, manager, other tools">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Saved Search Manager — XActions">
+  <meta property="og:title" content="Saved Search Manager — Medirus">
   <meta property="og:description" content="src/savedSearchManager.js">
-  <meta property="og:url" content="https://xactions.app/scripts/saved-search-manager">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/saved-search-manager">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Saved Search Manager — XActions">
+  <meta name="twitter:title" content="Saved Search Manager — Medirus">
   <meta name="twitter:description" content="src/savedSearchManager.js">
 
-  <link rel="canonical" href="https://xactions.app/scripts/saved-search-manager">
+  <link rel="canonical" href="https://medirus.online/scripts/saved-search-manager">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Saved Search Manager — Free X/Twitter Script | XActions",
+    "headline": "Saved Search Manager — Free X/Twitter Script | Medirus",
     "description": "src/savedSearchManager.js",
-    "url": "https://xactions.app/scripts/saved-search-manager",
+    "url": "https://medirus.online/scripts/saved-search-manager",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Other Tools",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, saved, search, manager, other tools"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, saved, search, manager, other tools"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://xactions.app/scripts#other-tools" },
-      { "@type": "ListItem", "position": 4, "name": "Saved Search Manager", "item": "https://xactions.app/scripts/saved-search-manager" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Other Tools", "item": "https://medirus.online/scripts#other-tools" },
+      { "@type": "ListItem", "position": 4, "name": "Saved Search Manager", "item": "https://medirus.online/scripts/saved-search-manager" }
     ]
   }
   </script>
@@ -665,9 +665,9 @@
     }
 
     console.log(`\n✅ Scraped ${tweets.length} tweets for ${tag}`);
-    console.log('💡 Access full data: window.XActions.savedSearch._lastResults');
+    console.log('💡 Access full data: window.Medirus.savedSearch._lastResults');
 
-    window.XActions.savedSearch._lastResults = tweets;
+    window.Medirus.savedSearch._lastResults = tweets;
     return tweets;
   };
 
@@ -727,9 +727,9 @@
     }
 
     console.log(`\n✅ Scraped ${tweets.length} tweets from For You timeline`);
-    console.log('💡 Access full data: window.XActions.savedSearch._lastResults');
+    console.log('💡 Access full data: window.Medirus.savedSearch._lastResults');
 
-    window.XActions.savedSearch._lastResults = tweets;
+    window.Medirus.savedSearch._lastResults = tweets;
     return tweets;
   };
 
@@ -788,17 +788,17 @@
     }
 
     console.log(`\n✅ Scraped ${tweets.length} tweets from Following timeline`);
-    console.log('💡 Access full data: window.XActions.savedSearch._lastResults');
+    console.log('💡 Access full data: window.Medirus.savedSearch._lastResults');
 
-    window.XActions.savedSearch._lastResults = tweets;
+    window.Medirus.savedSearch._lastResults = tweets;
     return tweets;
   };
 
   // ──────────────────────────────────────────────────────────────
-  // Expose on window.XActions.savedSearch
+  // Expose on window.Medirus.savedSearch
   // ──────────────────────────────────────────────────────────────
-  window.XActions = window.XActions || {};
-  window.XActions.savedSearch = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.savedSearch = {
     saveSearch,
     deleteSavedSearch,
     viewSavedSearches,
@@ -822,32 +822,32 @@
   console.log('📋 Available commands:');
   console.log('');
   console.log('  1. Save a search:');
-  console.log('     await window.XActions.savedSearch.saveSearch(&quot;your query&quot;)');
+  console.log('     await window.Medirus.savedSearch.saveSearch(&quot;your query&quot;)');
   console.log('');
   console.log('  2. Delete a saved search:');
-  console.log('     await window.XActions.savedSearch.deleteSavedSearch(&quot;query text&quot;)');
+  console.log('     await window.Medirus.savedSearch.deleteSavedSearch(&quot;query text&quot;)');
   console.log('');
   console.log('  3. View saved searches:');
-  console.log('     await window.XActions.savedSearch.viewSavedSearches()');
+  console.log('     await window.Medirus.savedSearch.viewSavedSearches()');
   console.log('');
   console.log('  4. Trending for location:');
-  console.log('     await window.XActions.savedSearch.trendingForLocation(&quot;New York&quot;)');
-  console.log('     await window.XActions.savedSearch.trendingForLocation()  // current location');
+  console.log('     await window.Medirus.savedSearch.trendingForLocation(&quot;New York&quot;)');
+  console.log('     await window.Medirus.savedSearch.trendingForLocation()  // current location');
   console.log('');
   console.log('  5. Scrape hashtag page:');
-  console.log('     await window.XActions.savedSearch.scrapeHashtag(&quot;AI&quot;, 50)');
+  console.log('     await window.Medirus.savedSearch.scrapeHashtag(&quot;AI&quot;, 50)');
   console.log('');
   console.log('  6. Scrape For You timeline:');
-  console.log('     await window.XActions.savedSearch.scrapeForYou(100)');
+  console.log('     await window.Medirus.savedSearch.scrapeForYou(100)');
   console.log('');
   console.log('  7. Scrape Following timeline:');
-  console.log('     await window.XActions.savedSearch.scrapeFollowing(100)');
+  console.log('     await window.Medirus.savedSearch.scrapeFollowing(100)');
   console.log('');
   console.log('  🛑 Abort any running operation:');
-  console.log('     window.XActions.savedSearch.abort()');
+  console.log('     window.Medirus.savedSearch.abort()');
   console.log('');
   console.log('  📦 Access last scrape results:');
-  console.log('     window.XActions.savedSearch._lastResults');
+  console.log('     window.Medirus.savedSearch._lastResults');
   console.log('');
   console.log('✅ Ready! Use the commands above in the console.');
 })();
@@ -856,7 +856,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

@@ -1,4 +1,4 @@
-// XActions Extension — Background Service Worker
+// Medirus Extension — Background Service Worker
 // Manages automation state, badge updates, alarm scheduling
 // by nichxbt
 
@@ -15,7 +15,7 @@ const state = {
 // INITIALIZATION
 // ============================================
 chrome.runtime.onInstalled.addListener(async (details) => {
-  console.log('✅ XActions extension installed');
+  console.log('✅ Medirus extension installed');
   await chrome.storage.local.set({
     automations: {},
     activityLog: [],
@@ -33,20 +33,20 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   // Context menus
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
-      id: 'xactions-download-video',
-      title: 'Download video (XActions)',
+      id: 'medirus-download-video',
+      title: 'Download video (Medirus)',
       contexts: ['link', 'video', 'page'],
       documentUrlPatterns: ['https://x.com/*', 'https://twitter.com/*'],
     });
     chrome.contextMenus.create({
-      id: 'xactions-unroll-thread',
-      title: 'Unroll thread (XActions)',
+      id: 'medirus-unroll-thread',
+      title: 'Unroll thread (Medirus)',
       contexts: ['link', 'page'],
       documentUrlPatterns: ['https://x.com/*', 'https://twitter.com/*'],
     });
     chrome.contextMenus.create({
-      id: 'xactions-analyze-account',
-      title: 'Analyze account (XActions)',
+      id: 'medirus-analyze-account',
+      title: 'Analyze account (Medirus)',
       contexts: ['link', 'page'],
       documentUrlPatterns: ['https://x.com/*', 'https://twitter.com/*'],
     });
@@ -276,7 +276,7 @@ async function syncState() {
 // ALARMS (periodic check for pausing/resuming)
 // ============================================
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === 'xactions-health-check') {
+  if (alarm.name === 'medirus-health-check') {
     // Periodically verify content scripts are still active
     const tabs = await getXTabs();
     for (const tab of tabs) {
@@ -291,7 +291,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 });
 
 // Set up periodic health check
-chrome.alarms.create('xactions-health-check', { periodInMinutes: 1 });
+chrome.alarms.create('medirus-health-check', { periodInMinutes: 1 });
 
 // ============================================
 // CONTEXT MENUS
@@ -300,7 +300,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (!tab?.id) return;
 
   switch (info.menuItemId) {
-    case 'xactions-download-video':
+    case 'medirus-download-video':
       try {
         await chrome.tabs.sendMessage(tab.id, {
           type: 'RUN_AUTOMATION',
@@ -310,7 +310,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       } catch (e) { /* content script not ready */ }
       break;
 
-    case 'xactions-unroll-thread':
+    case 'medirus-unroll-thread':
       try {
         await chrome.tabs.sendMessage(tab.id, {
           type: 'RUN_AUTOMATION',
@@ -320,7 +320,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       } catch (e) { /* content script not ready */ }
       break;
 
-    case 'xactions-analyze-account':
+    case 'medirus-analyze-account':
       try {
         await chrome.tabs.sendMessage(tab.id, {
           type: 'RUN_AUTOMATION',
@@ -353,7 +353,7 @@ chrome.webRequest?.onCompleted?.addListener?.(
         chrome.notifications.create('rate-limit', {
           type: 'basic',
           iconUrl: 'icons/icon128.png',
-          title: 'XActions — Rate Limited',
+          title: 'Medirus — Rate Limited',
           message: 'X/Twitter rate limit detected. Automations paused automatically.',
         });
       } catch { /* notifications may not be available */ }

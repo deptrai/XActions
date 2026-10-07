@@ -31,7 +31,7 @@
   const processedCommunities = new Set();
 
   const run = async () => {
-    console.log('🏘️ JOIN COMMUNITIES - XActions by nichxbt');
+    console.log('🏘️ JOIN COMMUNITIES - Medirus by nichxbt');
 
     if (CONFIG.dryRun) {
       console.log('⚠️ DRY RUN MODE - Set CONFIG.dryRun = false to actually join');

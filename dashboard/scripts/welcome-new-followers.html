@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome New Followers — Free X/Twitter Script | XActions</title>
+  <title>Welcome New Followers — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Automatically send DM welcome messages to new">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, welcome, new, followers, follower monitoring">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, welcome, new, followers, follower monitoring">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Welcome New Followers — XActions">
+  <meta property="og:title" content="Welcome New Followers — Medirus">
   <meta property="og:description" content="Automatically send DM welcome messages to new">
-  <meta property="og:url" content="https://xactions.app/scripts/welcome-new-followers">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/welcome-new-followers">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Welcome New Followers — XActions">
+  <meta name="twitter:title" content="Welcome New Followers — Medirus">
   <meta name="twitter:description" content="Automatically send DM welcome messages to new">
 
-  <link rel="canonical" href="https://xactions.app/scripts/welcome-new-followers">
+  <link rel="canonical" href="https://medirus.online/scripts/welcome-new-followers">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Welcome New Followers — Free X/Twitter Script | XActions",
+    "headline": "Welcome New Followers — Free X/Twitter Script | Medirus",
     "description": "Automatically send DM welcome messages to new",
-    "url": "https://xactions.app/scripts/welcome-new-followers",
+    "url": "https://medirus.online/scripts/welcome-new-followers",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Follower Monitoring",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, welcome, new, followers, follower monitoring"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, welcome, new, followers, follower monitoring"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Follower Monitoring", "item": "https://xactions.app/scripts#follower-monitoring" },
-      { "@type": "ListItem", "position": 4, "name": "Welcome New Followers", "item": "https://xactions.app/scripts/welcome-new-followers" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Follower Monitoring", "item": "https://medirus.online/scripts#follower-monitoring" },
+      { "@type": "ListItem", "position": 4, "name": "Welcome New Followers", "item": "https://medirus.online/scripts/welcome-new-followers" }
     ]
   }
   </script>
@@ -142,7 +142,7 @@
 
         <div class="controls-box">
         <h3>Runtime Controls</h3>
-        <pre><code>window.XActions.pause()  / .resume() / .abort() / .status()</code></pre>
+        <pre><code>window.Medirus.pause()  / .resume() / .abort() / .status()</code></pre>
       </div>
         <section class="config-section">
         <h2>Configuration Options</h2>
@@ -218,7 +218,7 @@
  * This script uses conservative delays (60s+ between DMs).
  *
  * 🎮 CONTROLS:
- *   window.XActions.pause()  / .resume() / .abort() / .status()
+ *   window.Medirus.pause()  / .resume() / .abort() / .status()
  * ============================================================
  */
 (() =&gt; {
@@ -261,7 +261,7 @@
   const startTime = Date.now();
   const newFollowersList = [];
 
-  const STORAGE_KEY = 'xactions_known_followers';
+  const STORAGE_KEY = 'medirus_known_followers';
 
   const getKnown = () =&gt; {
     try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); } catch { return new Set(); }
@@ -270,7 +270,7 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...set]));
   };
 
-  window.XActions = {
+  window.Medirus = {
     pause()  { paused = true;  console.log('⏸️ Paused.'); },
     resume() { paused = false; console.log('▶️ Resumed.'); },
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
@@ -420,7 +420,7 @@
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-new-followers-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-new-followers-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 New followers list exported.');
     }
@@ -433,7 +433,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

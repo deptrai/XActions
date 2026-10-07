@@ -3,7 +3,7 @@
  * Streaming dataset artifact exporter for MCP tool results.
  *
  * Writes JSONL (default) or CSV artifacts with sanitized content to
- * XACTIONS_ARTIFACT_DIR or _bmad-output/datasets/.
+ * MEDIRUS_ARTIFACT_DIR or _bmad-output/datasets/.
  * Uses streaming writes to avoid OOM with large payloads.
  *
  * @author nich (@nichxbt)
@@ -109,7 +109,7 @@ export async function exportArtifact(records, options) {
   const { tool, platform, format = 'jsonl' } = options;
   const normalizedFormat = String(format).toLowerCase().trim() === 'csv' ? 'csv' : 'jsonl';
 
-  const baseDir = process.env.XACTIONS_ARTIFACT_DIR || '_bmad-output/datasets/';
+  const baseDir = process.env.MEDIRUS_ARTIFACT_DIR || '_bmad-output/datasets/';
   const targetDir = path.resolve(process.cwd(), baseDir);
   await fs.mkdir(targetDir, { recursive: true });
 

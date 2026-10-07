@@ -74,7 +74,7 @@
   // ── MAIN ──────────────────────────────────────────────────
   (async () => {
     const emoji = { like: '❤️', bookmark: '🔖', reply: '💬' }[CONFIG.action] || '🔧';
-    console.log(`${emoji} ENGAGEMENT MANAGER — XActions by nichxbt`);
+    console.log(`${emoji} ENGAGEMENT MANAGER — Medirus by nichxbt`);
     console.log(`   Action: ${CONFIG.action} | Max: ${CONFIG.maxTweets} | Delay: ${CONFIG.delay}ms\n`);
 
     if (!actions[CONFIG.action]) {

@@ -188,20 +188,20 @@ describe('Story 13.4 — Facebook Browser-as-Signer Bridge', () => {
     expect(client.httpFallback).toBe(false);
   });
 
-  it('[P0] should default the browser adapter to Playwright and honor XACTIONS_SCRAPER_ADAPTER=puppeteer (AC-5)', () => {
+  it('[P0] should default the browser adapter to Playwright and honor MEDIRUS_SCRAPER_ADAPTER=puppeteer (AC-5)', () => {
     const clientDefault = new FacebookClient({ baseUrl: serverUrl, launchChrome: true });
     expect(clientDefault.adapterName).toBe('playwright');
 
-    const previous = process.env.XACTIONS_SCRAPER_ADAPTER;
-    process.env.XACTIONS_SCRAPER_ADAPTER = 'puppeteer';
+    const previous = process.env.MEDIRUS_SCRAPER_ADAPTER;
+    process.env.MEDIRUS_SCRAPER_ADAPTER = 'puppeteer';
     try {
       const clientPuppeteer = new FacebookClient({ baseUrl: serverUrl, launchChrome: true });
       expect(clientPuppeteer.adapterName).toBe('puppeteer');
     } finally {
       if (previous === undefined) {
-        delete process.env.XACTIONS_SCRAPER_ADAPTER;
+        delete process.env.MEDIRUS_SCRAPER_ADAPTER;
       } else {
-        process.env.XACTIONS_SCRAPER_ADAPTER = previous;
+        process.env.MEDIRUS_SCRAPER_ADAPTER = previous;
       }
     }
   });
@@ -476,8 +476,8 @@ describe('Story 13.4 — Facebook Browser-as-Signer Bridge', () => {
     expect(bridgeDefault.adapter.name).toBe('playwright');
     await bridgeDefault.close();
 
-    const previous = process.env.XACTIONS_SCRAPER_ADAPTER;
-    process.env.XACTIONS_SCRAPER_ADAPTER = 'puppeteer';
+    const previous = process.env.MEDIRUS_SCRAPER_ADAPTER;
+    process.env.MEDIRUS_SCRAPER_ADAPTER = 'puppeteer';
     try {
       const bridgePuppeteer = new mod.FacebookBrowserBridge({
         baseUrl: serverUrl,
@@ -489,9 +489,9 @@ describe('Story 13.4 — Facebook Browser-as-Signer Bridge', () => {
       await bridgePuppeteer.close();
     } finally {
       if (previous === undefined) {
-        delete process.env.XACTIONS_SCRAPER_ADAPTER;
+        delete process.env.MEDIRUS_SCRAPER_ADAPTER;
       } else {
-        process.env.XACTIONS_SCRAPER_ADAPTER = previous;
+        process.env.MEDIRUS_SCRAPER_ADAPTER = previous;
       }
     }
   });

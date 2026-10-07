@@ -32,7 +32,7 @@ describe('GET /.well-known/agent.json', () => {
     const res = await fetch(`${BASE}/.well-known/agent.json`);
     expect(res.status).toBe(200);
     const card = await res.json();
-    expect(card.name).toContain('XActions');
+    expect(card.name).toContain('Medirus');
     expect(card.url).toBeDefined();
     expect(card.version).toBe(VERSION);
     expect(Array.isArray(card.skills)).toBe(true);
@@ -45,7 +45,7 @@ describe('GET /a2a/health', () => {
     expect(res.status).toBe(200);
     const health = await res.json();
     expect(health.status).toBe('healthy');
-    expect(health.agent).toContain('XActions');
+    expect(health.agent).toContain('Medirus');
     expect(typeof health.uptime).toBe('number');
     expect(typeof health.skills).toBe('number');
   });
@@ -107,7 +107,7 @@ describe('POST /a2a/tasks', () => {
         params: {
           message: {
             role: 'user',
-            parts: [{ type: 'text', text: 'get profile for XActions' }],
+            parts: [{ type: 'text', text: 'get profile for Medirus' }],
           },
         },
         id: 'test-sub-1',

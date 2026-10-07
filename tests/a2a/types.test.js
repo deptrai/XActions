@@ -58,8 +58,8 @@ describe('ERROR_CODES', () => {
 
 describe('createAgentCard', () => {
   it('returns a card with required fields', () => {
-    const card = createAgentCard({ name: 'XActions Agent', url: 'http://localhost:3100' });
-    expect(card.name).toBe('XActions Agent');
+    const card = createAgentCard({ name: 'Medirus Agent', url: 'http://localhost:3100' });
+    expect(card.name).toBe('Medirus Agent');
     expect(card.url).toBe('http://localhost:3100');
     expect(card.version).toBe('1.0.0');
     expect(card.capabilities).toBeDefined();
@@ -121,7 +121,7 @@ describe('createFilePart', () => {
 
 describe('validateAgentCard', () => {
   it('returns valid for correct card', () => {
-    const card = createAgentCard({ name: 'XActions Agent', url: 'http://localhost:3100' });
+    const card = createAgentCard({ name: 'Medirus Agent', url: 'http://localhost:3100' });
     const result = validateAgentCard(card);
     expect(result.valid).toBe(true);
     expect(result.errors).toHaveLength(0);

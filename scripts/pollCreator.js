@@ -39,7 +39,7 @@
   };
 
   const run = async () => {
-    console.log('📊 XActions Poll Creator');
+    console.log('📊 Medirus Poll Creator');
     console.log('========================');
 
     if (POLL.options.length < 2 || POLL.options.length > 4) {

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Proxy Manager
+ * Medirus Proxy Manager
  * Proxy rotation + health tracking for Puppeteer scraping.
  *
  * Kills: Phantombuster (proxy pool), Apify (proxy management)
@@ -47,8 +47,8 @@ export class ProxyManager {
    * Load from environment variables
    */
   loadFromEnv() {
-    const envProxies = process.env.XACTIONS_PROXIES;
-    const envFile = process.env.XACTIONS_PROXY_FILE;
+    const envProxies = process.env.MEDIRUS_PROXIES;
+    const envFile = process.env.MEDIRUS_PROXY_FILE;
 
     if (envProxies) {
       const proxies = envProxies.split(',').map(p => p.trim()).filter(Boolean);

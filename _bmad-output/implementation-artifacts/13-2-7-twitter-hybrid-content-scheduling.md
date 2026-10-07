@@ -70,7 +70,7 @@ Story 13.2.7 triển khai **action `schedule`** cho `TwitterCrawler`, kế thừ
 
 - `_bmad-output/planning-artifacts/epics.md` — Story 13.2.7 [dòng 514-520]
 - `_bmad-output/planning-artifacts/prd.md` — FR-71, NFR-11/12/13/16 [dòng 79, 114-120]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 [dòng 125-133], AD-2 [dòng 134-141], AD-3 [dòng 142-163], AD-4 [dòng 164-174], AD-11 [dòng 233-243], AD-13 [dòng 250-260], AD-14 [dòng 272-283], AD-18 [dòng 311-318]
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 [dòng 125-133], AD-2 [dòng 134-141], AD-3 [dòng 142-163], AD-4 [dòng 164-174], AD-11 [dòng 233-243], AD-13 [dòng 250-260], AD-14 [dòng 272-283], AD-18 [dòng 311-318]
 - `_bmad-output/implementation-artifacts/13-2-refactor-twitter-scraper-to-hybrid-architecture.md` — nền tảng Story 13.2
 - `_bmad-output/implementation-artifacts/13-2-1-twitter-hybrid-profile-relationships.md` — `ProfileItem`, `PostItem`, `PlatformError`
 - `_bmad-output/implementation-artifacts/13-2-6-twitter-hybrid-content-composition-post-reply-quote.md` — write pattern, `composeContent`, `CreateTweet`, dry-run gate, delay floor, telemetry, validation
@@ -116,7 +116,7 @@ Story 13.2.7 triển khai **action `schedule`** cho `TwitterCrawler`, kế thừ
 
 | action | requiredArgs | optionalArgs | example | outputType | requiresAuth |
 |---|---|---|---|---|---|
-| `schedule` | `['text', 'publishAt']` | `['mediaIds', 'premium', 'sensitive', 'dryRun']` | `{ text: 'Hello future XActions', publishAt: '2026-09-01T12:00:00Z', dryRun: false }` | `{ tweet: PostItem }` | `true` |
+| `schedule` | `['text', 'publishAt']` | `['mediaIds', 'premium', 'sensitive', 'dryRun']` | `{ text: 'Hello future Medirus', publishAt: '2026-09-01T12:00:00Z', dryRun: false }` | `{ tweet: PostItem }` | `true` |
 
 * **And** action name phải `snake_case` theo regex `/^[a-z0-9_]+$/`.
 * **And** `listActions()` trả về action `schedule` với `requiresAuth: true`.

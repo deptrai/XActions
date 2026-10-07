@@ -1,6 +1,6 @@
-# XActions Refactoring Master Plan
+# Medirus Refactoring Master Plan
 
-This plan tracks the multi-phase refactoring of the XActions Node/MCP/CLI codebase.
+This plan tracks the multi-phase refactoring of the Medirus Node/MCP/CLI codebase.
 
 ## Legend
 
@@ -94,8 +94,8 @@ Context: `tsconfig.json` currently type-checks only `src/core/**/*.js`. Phase 4 
   - `npx vitest run tests/scrapers tests/cli` passes (1081 passed, 14 skipped).
 - [x] 4.7 — Type `src/scrapers/index.js` and `src/index.js` / `src/algorithmBuilder.js`
   - Added JSDoc types across `src/algorithmBuilder.js` (actions, scraping, session flow).
-  - Added `VisibleTweet`, `VisibleUser`, `Persona*`, `ThreadItem`, `TierInfo`, and other types to `src/types/xactions.d.ts`.
-  - Typed `src/scrapers/index.js` page-launch helpers and `__xactions_browser` extension.
+  - Added `VisibleTweet`, `VisibleUser`, `Persona*`, `ThreadItem`, `TierInfo`, and other types to `src/types/medirus.d.ts`.
+  - Typed `src/scrapers/index.js` page-launch helpers and `__medirus_browser` extension.
   - Fixed barrel re-exports in `src/index.js` and added JSDoc for `browserScripts`, `managers`, `plugins`.
   - Also typed the root manager files (`articlePublisher`, `bookmarkManager`, `businessTools`, `creatorStudio`, `discoveryExplore`, `dmManager`, `engagementManager`, `grokIntegration`, `notificationManager`, `pollCreator`, `postComposer`, `premiumManager`, `profileManager`, `settingsManager`, `spacesManager`) and `src/personaEngine.js`.
   - `npm run typecheck` passes with **0 errors**.
@@ -103,7 +103,7 @@ Context: `tsconfig.json` currently type-checks only `src/core/**/*.js`. Phase 4 
   - Replaced `Object` JSDoc with `Record<string, unknown>`, casted page-evaluate results, and resolved plugin registry unknowns.
   - `tests/plugins/loader.test.js` passes (17 tests).
 - [x] 4.9 — Type `src/workflows`
-  - Added shared `Workflow*` interfaces to `src/types/xactions.d.ts`.
+  - Added shared `Workflow*` interfaces to `src/types/medirus.d.ts`.
   - Typed `src/workflows/{actions,conditions,engine,index,store,triggers}.js` with JSDoc.
   - `npm run typecheck` passes with **0 errors**; `npx vitest run tests/workflows` passes (137 tests).
 - [x] 4.10 — Type `api/` (Prisma, services, routes)
@@ -130,4 +130,4 @@ Status: All phases in the master plan are completed. `npm run typecheck` is clea
 ## Notes
 
 - This file was recreated during Phase 2 because `.devin/plans/` was not present in the repo. Commit it so the plan persists.
-- Always commit and push as `nirholas <nich@xactions.app>`.
+- Always commit and push as `nirholas <nich@medirus.online>`.

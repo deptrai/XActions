@@ -44,8 +44,8 @@ const CONFIG = {
 ## Controls
 
 ```js
-window.XActions.abort()    // Stop the script
-window.XActions.status()   // Check progress
+window.Medirus.abort()    // Stop the script
+window.Medirus.status()   // Check progress
 ```
 
 ## Notes

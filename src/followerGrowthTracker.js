@@ -92,7 +92,7 @@
     console.log(`📊 Current: ${fmt(snapshot.followers)} followers | ${fmt(snapshot.following)} following | ratio: ${snapshot.ratio}`);
 
     // Load history
-    const storageKey = `xactions_growth_${snapshot.username}`;
+    const storageKey = `medirus_growth_${snapshot.username}`;
     let history = [];
     try {
       history = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -224,7 +224,7 @@
 
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' }));
-      a.download = `xactions-growth-${snapshot.username}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-growth-${snapshot.username}-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
     }
 
@@ -236,7 +236,7 @@
   // Auto-schedule if configured
   if (CONFIG.autoSchedule) {
     console.log(`\n⏰ Auto-snapshot scheduled every ${CONFIG.intervalMs / 60000} minutes.`);
-    console.log('   Keep this tab open. Kill with: clearInterval(window._xactionsGrowthInterval)');
-    window._xactionsGrowthInterval = setInterval(run, CONFIG.intervalMs);
+    console.log('   Keep this tab open. Kill with: clearInterval(window._medirusGrowthInterval)');
+    window._medirusGrowthInterval = setInterval(run, CONFIG.intervalMs);
   }
 })();

@@ -8,7 +8,7 @@ Status: done
 
 ## Story
 
-As a dashboard user of XActions,
+As a dashboard user of Medirus,
 I want Facebook automation jobs tracked in the database with real-time progress,
 so that I can monitor long-running jobs and review their history.
 

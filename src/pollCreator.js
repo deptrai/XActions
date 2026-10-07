@@ -36,7 +36,7 @@ const SELECTORS = {
  * @param {import('puppeteer').Page} page
  * @param {string} question - Poll question text
  * @param {string[]} choices - 2-4 poll options
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function createPoll(page, question, choices, options = {}) {

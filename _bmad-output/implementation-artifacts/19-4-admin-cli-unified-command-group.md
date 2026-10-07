@@ -17,9 +17,9 @@ Status: done
 
 ## ⚠️ Critical Constraints / Architecture Variance
 
-1. **Command-Group Skeleton Only** — This story sets up the `xactions admin` command group so that `xactions admin --help` lists all planned subcommands (`status`, `proxies`, `accounts`, `checkpoints`, `stream`). The functional implementation of `status` is in Story 19.4.1 (already `done`) and `stream metrics/alerts` already exists in `src/cli/commands/admin.js`; `proxies`, `accounts`, and `checkpoints` subcommands should be registered as command groups with `--help` descriptions and at least one initial `list` subcommand each to satisfy the help contract, but their full write/operate actions live in Stories 19.4.2–19.4.4.
-2. **Do Not Duplicate Existing Commands** — `xactions admin status` and `xactions admin stream [metrics|alerts]` already exist. Only register them once. Do not move or rename them.
-3. **Backward Compatibility** — The existing top-level `xactions checkpoints ...` and `xactions stream ...` command trees must remain fully functional and registered in `src/cli/index.js`. Any new `admin` subcommands may reuse or wrap their logic, but must not break existing callers.
+1. **Command-Group Skeleton Only** — This story sets up the `medirus admin` command group so that `medirus admin --help` lists all planned subcommands (`status`, `proxies`, `accounts`, `checkpoints`, `stream`). The functional implementation of `status` is in Story 19.4.1 (already `done`) and `stream metrics/alerts` already exists in `src/cli/commands/admin.js`; `proxies`, `accounts`, and `checkpoints` subcommands should be registered as command groups with `--help` descriptions and at least one initial `list` subcommand each to satisfy the help contract, but their full write/operate actions live in Stories 19.4.2–19.4.4.
+2. **Do Not Duplicate Existing Commands** — `medirus admin status` and `medirus admin stream [metrics|alerts]` already exist. Only register them once. Do not move or rename them.
+3. **Backward Compatibility** — The existing top-level `medirus checkpoints ...` and `medirus stream ...` command trees must remain fully functional and registered in `src/cli/index.js`. Any new `admin` subcommands may reuse or wrap their logic, but must not break existing callers.
 4. **Shared Conventions** — All new subcommands must use `--url`, `--token`, `--json` options, the `baseUrl` resolution pattern, `printCliError()` for errors, and HTTP-first/in-process fallback already established by 19.4.1.
 5. **No Puppeteer / Browser Code** — This is a CLI-only story. Do not import puppeteer or browser automation modules.
 6. **No Inline Epic/Story References in Source** — Do not add comments like `# Story 19.4` to source files.
@@ -30,15 +30,15 @@ Status: done
 ## Story
 
 As an **Internal Automation Operator**,  
-I want **a unified `xactions admin` command group with clearly listed subcommands for status, proxies, accounts, checkpoints, and stream operations**,  
+I want **a unified `medirus admin` command group with clearly listed subcommands for status, proxies, accounts, checkpoints, and stream operations**,  
 so that **I can discover all operational controls from a single CLI entry point without reading the dashboard or source code**.
 
 ## Acceptance Criteria
 
-### AC-1: `xactions admin --help` lists all planned subcommands
+### AC-1: `medirus admin --help` lists all planned subcommands
 
-- **Given** the `xactions admin` command group
-- **When** the operator runs `xactions admin --help`
+- **Given** the `medirus admin` command group
+- **When** the operator runs `medirus admin --help`
 - **Then** the output includes subcommands `status`, `proxies`, `accounts`, `checkpoints`, `stream`
 - **And** each subcommand has a concise description
 
@@ -47,15 +47,15 @@ so that **I can discover all operational controls from a single CLI entry point 
 ### AC-2: Subcommand groups expose their own `--help`
 
 - **Given** the unified admin command group
-- **When** the operator runs `xactions admin <subcommand> --help` for any of `proxies`, `accounts`, `checkpoints`, `stream`
+- **When** the operator runs `medirus admin <subcommand> --help` for any of `proxies`, `accounts`, `checkpoints`, `stream`
 - **Then** the help text explains the subcommand and its available actions
 - **And** at minimum a `list` action is documented under each group
 
-### AC-3: Existing `xactions admin status` and `xactions admin stream metrics/alerts` remain unchanged
+### AC-3: Existing `medirus admin status` and `medirus admin stream metrics/alerts` remain unchanged
 
 - **Given** the existing `src/cli/commands/admin.js`
 - **When** this story is implemented
-- **Then** `xactions admin status`, `xactions admin stream metrics`, and `xactions admin stream alerts` continue to work exactly as before
+- **Then** `medirus admin status`, `medirus admin stream metrics`, and `medirus admin stream alerts` continue to work exactly as before
 - **And** their option flags (`--url`, `--token`, `--json`) and output formatting are preserved
 
 [Source: `src/cli/commands/admin.js:23–162`; `tests/cli/admin-status.test.js`]
@@ -63,7 +63,7 @@ so that **I can discover all operational controls from a single CLI entry point 
 ### AC-4: New `list` subcommands for proxies, accounts, checkpoints
 
 - **Given** the operator has admin permissions
-- **When** they run `xactions admin proxies list`, `xactions admin accounts list`, or `xactions admin checkpoints list`
+- **When** they run `medirus admin proxies list`, `medirus admin accounts list`, or `medirus admin checkpoints list`
 - **Then** the command first attempts the appropriate `/api/admin/*` or `/api/checkpoints` REST endpoint with optional Bearer token
 - **And** on HTTP 200 it extracts the data from the success envelope (`data.proxies`, `data.accounts`, `data.result || data`)
 - **And** if the endpoint is unreachable or returns a non-2xx, it falls back to the equivalent in-process domain call (`globalProxyPool.listProxies()`, `globalAccountPool.listAccountDetails(...)`, `listCheckpoints(...)`)
@@ -92,20 +92,20 @@ so that **I can discover all operational controls from a single CLI entry point 
   - [x] 1.1 Read `src/cli/commands/admin.js`, `src/cli/commands/checkpoints.js`, `src/cli/commands/stream.js`, `src/cli/index.js`, `src/cli/shared.js`
   - [x] 1.2 Confirm existing `status` and `stream` subcommands are preserved
   - [x] 1.3 Design subcommand hierarchy: `proxies [list]`, `accounts [list]`, `checkpoints [list]`
-- [x] Task 2: Add subcommand groups to `xactions admin` (AC: #1, #2, #3)
+- [x] Task 2: Add subcommand groups to `medirus admin` (AC: #1, #2, #3)
   - [x] 2.1 Register `adminCmd.command('proxies')` with `.description(...)` and a `list` subcommand
   - [x] 2.2 Register `adminCmd.command('accounts')` with `.description(...)` and a `list` subcommand
   - [x] 2.3 Register `adminCmd.command('checkpoints')` with `.description(...)` and a `list` subcommand
-  - [x] 2.4 Ensure `xactions admin --help` and `xactions admin <group> --help` display correctly
-- [x] Task 3: Implement `xactions admin proxies list` (AC: #4, #5, #6)
+  - [x] 2.4 Ensure `medirus admin --help` and `medirus admin <group> --help` display correctly
+- [x] Task 3: Implement `medirus admin proxies list` (AC: #4, #5, #6)
   - [x] 3.1 HTTP fetch to `/api/admin/proxies` with `--url`/`--token`/`--json`
   - [x] 3.2 In-process fallback to `globalProxyPool.listProxies()`
   - [x] 3.3 Print summary table or raw JSON
-- [x] Task 4: Implement `xactions admin accounts list` (AC: #4, #5, #6)
+- [x] Task 4: Implement `medirus admin accounts list` (AC: #4, #5, #6)
   - [x] 4.1 HTTP fetch to `/api/admin/accounts?platform=...` with optional `--platform`
   - [x] 4.2 In-process fallback to `globalAccountPool.listAccountDetails(platform)`
   - [x] 4.3 Print summary table or raw JSON
-- [x] Task 5: Implement `xactions admin checkpoints list` (AC: #4, #5, #6)
+- [x] Task 5: Implement `medirus admin checkpoints list` (AC: #4, #5, #6)
   - [x] 5.1 HTTP fetch to `/api/checkpoints` with filter/pagination options
   - [x] 5.2 In-process fallback to `listCheckpoints({..., prisma})`
   - [x] 5.3 Print summary table or raw JSON and disconnect Prisma safely
@@ -123,10 +123,10 @@ so that **I can discover all operational controls from a single CLI entry point 
 
 ### What Already Exists (Do Not Rebuild)
 
-- **`xactions admin status`**: `src/cli/commands/admin.js:24–58` — full implementation with HTTP/in-process fallback and `printGovernorStatus`.
-- **`xactions admin stream metrics` and `xactions admin stream alerts`**: `src/cli/commands/admin.js:60–161` — same pattern.
-- **`xactions checkpoints ...`**: `src/cli/commands/checkpoints.js` — existing top-level command group with `list`, `show`, `resume`, `pause`, `retry`.
-- **`xactions stream ...`**: `src/cli/commands/stream.js` — existing top-level command group for streaming.
+- **`medirus admin status`**: `src/cli/commands/admin.js:24–58` — full implementation with HTTP/in-process fallback and `printGovernorStatus`.
+- **`medirus admin stream metrics` and `medirus admin stream alerts`**: `src/cli/commands/admin.js:60–161` — same pattern.
+- **`medirus checkpoints ...`**: `src/cli/commands/checkpoints.js` — existing top-level command group with `list`, `show`, `resume`, `pause`, `retry`.
+- **`medirus stream ...`**: `src/cli/commands/stream.js` — existing top-level command group for streaming.
 - **REST endpoints**:
   - `GET /api/admin/proxies` → `api/routes/admin.js:387–406`
   - `POST /api/admin/proxies/:key/quarantine|release` → `api/routes/admin.js:427–484`
@@ -170,7 +170,7 @@ so that **I can discover all operational controls from a single CLI entry point 
 
 ### UX Requirements
 
-- `xactions admin --help` must read like a single operational dashboard entry point.
+- `medirus admin --help` must read like a single operational dashboard entry point.
 - Each `list` output should show a count and a short aligned table of key fields.
 - JSON mode must produce the full response object exactly as the REST endpoint returns it.
 
@@ -198,7 +198,7 @@ claude-opus-5[1m]
 
 ### Completion Notes List
 
-- 2026-09-04: Added `proxies`, `accounts`, `checkpoints` subcommand groups to `xactions admin` with `list` actions.
+- 2026-09-04: Added `proxies`, `accounts`, `checkpoints` subcommand groups to `medirus admin` with `list` actions.
 - 2026-09-04: Implemented HTTP-first / in-process fallback for `admin proxies list`, `admin accounts list`, `admin checkpoints list`.
 - 2026-09-04: Added `tests/cli/admin-unified.test.js` with 10 tests covering command registration, help text, options, and preservation of existing `status`/`stream` commands.
 - 2026-09-04: All CLI tests pass: `tests/cli/admin-unified.test.js` (10/10), `tests/cli/admin-status.test.js` (5/5), `tests/cli/*.test.js` (73/73).

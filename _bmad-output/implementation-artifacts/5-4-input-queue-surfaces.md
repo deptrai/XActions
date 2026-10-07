@@ -2,11 +2,11 @@
 
 Status: done
 
-<!-- Port from SST_TOOL_FB Main.cs:Post() file-queue (P10) → XActions surfaces. Plan: facebook-messenger-port-plan.md (Epic 5, Story 5.4). Final story of the Messenger Port — wires Story 5.2 campaign into CLI/MCP/REST + file/queue inputs. -->
+<!-- Port from SST_TOOL_FB Main.cs:Post() file-queue (P10) → Medirus surfaces. Plan: facebook-messenger-port-plan.md (Epic 5, Story 5.4). Final story of the Messenger Port — wires Story 5.2 campaign into CLI/MCP/REST + file/queue inputs. -->
 
 ## Story
 
-As a multi-account operator using XActions,
+As a multi-account operator using Medirus,
 I want to drive a Messenger-share campaign from file/queue inputs (recipients, content, post link) and run it through the CLI, MCP, and REST surfaces with dry-run preview,
 so that I can launch share campaigns at scale the same way I run `like`/`comment`/`post`, without writing code.
 
@@ -20,7 +20,7 @@ The C# tool drove campaigns from flat text files, popped FIFO and thread-safe ac
 - **content file** — message body, may contain `**`-delimited segments; a random segment is picked per send (Story 5.2 `pickRandomSegment`).
 - **`txtlinkss.txt`** (links) — the post URL(s) to share.
 
-Pop semantics in C#: a shared list + lock; each worker `RemoveAt(0)` under lock so no item is processed twice across the `SemaphoreSlim` pool. XActions is single-campaign-per-invocation, so the FIFO here is about **deterministic ordering + no double-send within a run**, not cross-process locking.
+Pop semantics in C#: a shared list + lock; each worker `RemoveAt(0)` under lock so no item is processed twice across the `SemaphoreSlim` pool. Medirus is single-campaign-per-invocation, so the FIFO here is about **deterministic ordering + no double-send within a run**, not cross-process locking.
 
 ## Reconciliation note (READ FIRST — guardrail)
 

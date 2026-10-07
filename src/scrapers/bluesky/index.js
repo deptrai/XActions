@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // LEGACY — see docs/deprecation-plan.md
 /**
- * XActions Bluesky Scrapers (Legacy)
+ * Medirus Bluesky Scrapers (Legacy)
  * AT Protocol-based scrapers for Bluesky (bsky.social)
  *
  * @deprecated Legacy Bluesky scraper module. Replaced by `src/scrapers/social/bluesky/index.js` (`BlueskyCrawler`, `BlueskyClient`) on AbstractCrawler/AbstractApiClient. See docs/deprecation-plan.md.
@@ -10,7 +10,7 @@
  * Public data requires no authentication.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  */
 

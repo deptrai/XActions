@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leave All Communities — Free X/Twitter Script | XActions</title>
+  <title>Leave All Communities — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Leave all X Communities you've joined. Navigates">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, leave, all, communities, lists &amp; communities">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, leave, all, communities, lists &amp; communities">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Leave All Communities — XActions">
+  <meta property="og:title" content="Leave All Communities — Medirus">
   <meta property="og:description" content="Leave all X Communities you've joined. Navigates">
-  <meta property="og:url" content="https://xactions.app/scripts/leave-all-communities">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/leave-all-communities">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Leave All Communities — XActions">
+  <meta name="twitter:title" content="Leave All Communities — Medirus">
   <meta name="twitter:description" content="Leave all X Communities you've joined. Navigates">
 
-  <link rel="canonical" href="https://xactions.app/scripts/leave-all-communities">
+  <link rel="canonical" href="https://medirus.online/scripts/leave-all-communities">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Leave All Communities — Free X/Twitter Script | XActions",
+    "headline": "Leave All Communities — Free X/Twitter Script | Medirus",
     "description": "Leave all X Communities you've joined. Navigates",
-    "url": "https://xactions.app/scripts/leave-all-communities",
+    "url": "https://medirus.online/scripts/leave-all-communities",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Lists & Communities",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, leave, all, communities, lists & communities"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, leave, all, communities, lists & communities"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Lists & Communities", "item": "https://xactions.app/scripts#lists-communities" },
-      { "@type": "ListItem", "position": 4, "name": "Leave All Communities", "item": "https://xactions.app/scripts/leave-all-communities" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Lists & Communities", "item": "https://medirus.online/scripts#lists-communities" },
+      { "@type": "ListItem", "position": 4, "name": "Leave All Communities", "item": "https://medirus.online/scripts/leave-all-communities" }
     ]
   }
   </script>
@@ -141,7 +141,7 @@
 
         <div class="controls-box">
         <h3>Runtime Controls</h3>
-        <pre><code>window.XActions.pause()  / .resume() / .abort() / .status()</code></pre>
+        <pre><code>window.Medirus.pause()  / .resume() / .abort() / .status()</code></pre>
       </div>
         <section class="config-section">
         <h2>Configuration Options</h2>
@@ -202,7 +202,7 @@
  * skip already-left communities.
  *
  * 🎮 CONTROLS:
- *   window.XActions.pause()  / .resume() / .abort() / .status()
+ *   window.Medirus.pause()  / .resume() / .abort() / .status()
  * ============================================================
  */
 (() =&gt; {
@@ -240,7 +240,7 @@
   const leftLog = [];
 
   // Persistent storage (survives page reloads)
-  const STORAGE_KEY = 'xactions_leave_communities';
+  const STORAGE_KEY = 'medirus_leave_communities';
   const getLeftIds = () =&gt; {
     try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); } catch { return new Set(); }
   };
@@ -252,7 +252,7 @@
   const leftIds = getLeftIds();
   const whitelistSet = new Set(CONFIG.whitelist.map(String));
 
-  window.XActions = {
+  window.Medirus = {
     pause()  { paused = true;  console.log('⏸️ Paused.'); },
     resume() { paused = false; console.log('▶️ Resumed.'); },
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
@@ -329,7 +329,7 @@
 
     console.log(`📋 Previously left: ${leftIds.size} | Whitelist: ${whitelistSet.size} | Dry run: ${CONFIG.dryRun}`);
     if (leftIds.size &gt; 0) console.log('   ℹ️ Resuming — will skip already-left communities');
-    console.log('   💡 Call XActions.reset() to clear progress.\n');
+    console.log('   💡 Call Medirus.reset() to clear progress.\n');
 
     // Are we inside a community? Leave it first
     const insideCommunity = /\/i\/communities\/\d+/.test(window.location.href);
@@ -435,7 +435,7 @@
     if (CONFIG.exportOnComplete &amp;&amp; leftLog.length &gt; 0) {
       const blob = new Blob([JSON.stringify({ summary: { leftThisRun: left, totalLeft: leftIds.size, errors }, communities: leftLog }, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-communities-left-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-communities-left-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Results exported.');
     }
@@ -450,7 +450,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -460,11 +460,11 @@
     <aside class="sidebar-right">
       <div class="sidebar-card">
         <h3>🚪 Lists &amp; Communities</h3>
-        <a href="/scripts/add-to-list">➕ Add To List - XActions</a>
+        <a href="/scripts/add-to-list">➕ Add To List - Medirus</a>
 <a href="/scripts/advanced-lists">📝 Advanced Lists</a>
 <a href="/scripts/block-list-manager">📝 Block List Manager</a>
 <a href="/scripts/create-community">🏘️ Create Communities</a>
-<a href="/scripts/follow-list-members">👣 Follow List Members - XActions</a>
+<a href="/scripts/follow-list-members">👣 Follow List Members - Medirus</a>
 <a href="/scripts/join-communities">🏘️ Join Communities</a>
 <a href="/scripts/leave-community">🚪 Leave Specific Community</a>
 <a href="/scripts/list-manager">📝 List Manager</a>

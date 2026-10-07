@@ -51,7 +51,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🔎 XActions — Competitor Analysis                           ║
+║  🔎 Medirus — Competitor Analysis                           ║
 ║  Analyze competitor accounts for insights                    ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -305,7 +305,7 @@ var CONFIG = {
   });
 
   // Save analysis
-  const storageKey = `xactions_competitor_${username}`;
+  const storageKey = `medirus_competitor_${username}`;
   const data = {
     username,
     timestamp: new Date().toISOString(),

@@ -1,12 +1,12 @@
 # Schedule Posts -- Tutorial
 
-> Step-by-step guide to scheduling tweets for future publication using XActions browser scripts and Node.js/Puppeteer.
+> Step-by-step guide to scheduling tweets for future publication using Medirus browser scripts and Node.js/Puppeteer.
 
 ## Prerequisites
 - Logged into x.com in your browser
 - Browser DevTools console (F12 -> Console tab)
 - **X Premium subscription** (scheduling is a Premium feature)
-- For Node.js usage: `npm install xactions` and a valid session cookie
+- For Node.js usage: `npm install medirus` and a valid session cookie
 
 ## Quick Start
 1. Navigate to x.com

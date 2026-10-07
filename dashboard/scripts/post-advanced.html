@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wait for an element to appear in the DOM — Free X/Twitter Script | XActions</title>
+  <title>Wait for an element to appear in the DOM — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="src/postAdvanced.js">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, post, advanced, posting">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, post, advanced, posting">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Wait for an element to appear in the DOM — XActions">
+  <meta property="og:title" content="Wait for an element to appear in the DOM — Medirus">
   <meta property="og:description" content="src/postAdvanced.js">
-  <meta property="og:url" content="https://xactions.app/scripts/post-advanced">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/post-advanced">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Wait for an element to appear in the DOM — XActions">
+  <meta name="twitter:title" content="Wait for an element to appear in the DOM — Medirus">
   <meta name="twitter:description" content="src/postAdvanced.js">
 
-  <link rel="canonical" href="https://xactions.app/scripts/post-advanced">
+  <link rel="canonical" href="https://medirus.online/scripts/post-advanced">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Wait for an element to appear in the DOM — Free X/Twitter Script | XActions",
+    "headline": "Wait for an element to appear in the DOM — Free X/Twitter Script | Medirus",
     "description": "src/postAdvanced.js",
-    "url": "https://xactions.app/scripts/post-advanced",
+    "url": "https://medirus.online/scripts/post-advanced",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Posting",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, post, advanced, posting"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, post, advanced, posting"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Posting", "item": "https://xactions.app/scripts#posting" },
-      { "@type": "ListItem", "position": 4, "name": "Wait for an element to appear in the DOM", "item": "https://xactions.app/scripts/post-advanced" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Posting", "item": "https://medirus.online/scripts#posting" },
+      { "@type": "ListItem", "position": 4, "name": "Wait for an element to appear in the DOM", "item": "https://medirus.online/scripts/post-advanced" }
     ]
   }
   </script>
@@ -172,8 +172,8 @@
 // - Post with voice (voice tweet)
 //
 // Usage:
-//   Paste in console, then call functions via window.XActions.postAdvanced.*
-//   Example: XActions.postAdvanced.undoPost()
+//   Paste in console, then call functions via window.Medirus.postAdvanced.*
+//   Example: Medirus.postAdvanced.undoPost()
 
 (() =&gt; {
   'use strict';
@@ -341,7 +341,7 @@
    * for the toast with an &quot;Undo&quot; button to appear, then clicks it.
    *
    * Usage:
-   *   XActions.postAdvanced.undoPost()
+   *   Medirus.postAdvanced.undoPost()
    *   // Then post your tweet normally — it will be undone within the grace period
    *
    * Or call it right after clicking the post button (within ~5 seconds).
@@ -1193,12 +1193,12 @@
   };
 
   // ==========================================================================
-  // Expose on window.XActions.postAdvanced
+  // Expose on window.Medirus.postAdvanced
   // ==========================================================================
 
-  if (!window.XActions) window.XActions = {};
+  if (!window.Medirus) window.Medirus = {};
 
-  window.XActions.postAdvanced = {
+  window.Medirus.postAdvanced = {
     undoPost,
     postLongContent,
     formatSelectedText,
@@ -1223,58 +1223,58 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║               XActions — Advanced Post Features              ║
+║               Medirus — Advanced Post Features              ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  🔄 XActions.postAdvanced.undoPost()                         ║
+║  🔄 Medirus.postAdvanced.undoPost()                         ║
 ║     Watch for and click Undo after posting                   ║
 ║                                                              ║
-║  📝 XActions.postAdvanced.postLongContent(text)              ║
+║  📝 Medirus.postAdvanced.postLongContent(text)              ║
 ║     Post up to 25K chars (Premium)                           ║
 ║                                                              ║
-║  🅱️  XActions.postAdvanced.boldText()                        ║
-║  🔤 XActions.postAdvanced.italicText()                       ║
-║  ✂️  XActions.postAdvanced.strikethroughText()                ║
-║  🎨 XActions.postAdvanced.formatSelectedText(type)           ║
+║  🅱️  Medirus.postAdvanced.boldText()                        ║
+║  🔤 Medirus.postAdvanced.italicText()                       ║
+║  ✂️  Medirus.postAdvanced.strikethroughText()                ║
+║  🎨 Medirus.postAdvanced.formatSelectedText(type)           ║
 ║     Format selected text (bold/italic/strikethrough)         ║
 ║                                                              ║
-║  📍 XActions.postAdvanced.addLocation(placeName)             ║
+║  📍 Medirus.postAdvanced.addLocation(placeName)             ║
 ║     Tag a location on your post                              ║
 ║                                                              ║
-║  🏷️  XActions.postAdvanced.tagPeopleInMedia([usernames])     ║
+║  🏷️  Medirus.postAdvanced.tagPeopleInMedia([usernames])     ║
 ║     Tag people in uploaded photos                            ║
 ║                                                              ║
-║  ⚠️  XActions.postAdvanced.markSensitiveContent()            ║
+║  ⚠️  Medirus.postAdvanced.markSensitiveContent()            ║
 ║     Flag media as potentially sensitive                      ║
 ║                                                              ║
-║  💾 XActions.postAdvanced.saveDraft()                        ║
-║  📂 XActions.postAdvanced.loadDrafts()                       ║
-║  🗑️  XActions.postAdvanced.deleteAllDrafts()                 ║
+║  💾 Medirus.postAdvanced.saveDraft()                        ║
+║  📂 Medirus.postAdvanced.loadDrafts()                       ║
+║  🗑️  Medirus.postAdvanced.deleteAllDrafts()                 ║
 ║     Manage compose drafts                                    ║
 ║                                                              ║
-║  ⭐ XActions.postAdvanced.highlightPost(postUrl?)            ║
+║  ⭐ Medirus.postAdvanced.highlightPost(postUrl?)            ║
 ║     Highlight post on profile (Premium)                      ║
 ║                                                              ║
-║  🎬 XActions.postAdvanced.addVideoCaptions()                 ║
+║  🎬 Medirus.postAdvanced.addVideoCaptions()                 ║
 ║     Add .srt subtitles to uploaded video                     ║
 ║                                                              ║
-║  🔵 XActions.postAdvanced.postToCircle(text?)                ║
+║  🔵 Medirus.postAdvanced.postToCircle(text?)                ║
 ║     Post to Twitter Circle (limited audience)                ║
 ║                                                              ║
-║  🎙️  XActions.postAdvanced.postWithVoice()                   ║
+║  🎙️  Medirus.postAdvanced.postWithVoice()                   ║
 ║     Create a voice tweet                                     ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
 
-  console.log('✅ XActions Advanced Post loaded — access via XActions.postAdvanced.*');
+  console.log('✅ Medirus Advanced Post loaded — access via Medirus.postAdvanced.*');
 })();
 </code></pre>
           </div>
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -1288,12 +1288,12 @@
 <a href="/scripts/content-calendar">📅 Content Calendar &amp; Tweet Scheduler</a>
 <a href="/scripts/create-poll">📊 Create Poll</a>
 <a href="/scripts/edit-post">✏️ Edit Post</a>
-<a href="/scripts/pin-tweet">📌 Pin Tweet - XActions</a>
+<a href="/scripts/pin-tweet">📌 Pin Tweet - Medirus</a>
 <a href="/scripts/pin-tweet-manager">📌 Pin Tweet Manager</a>
 <a href="/scripts/poll-creator">📊 Poll Creator - Create and manage polls</a>
 <a href="/scripts/post-composer">✏️ Post Composer - Full content creation automation</a>
 <a href="/scripts/post-thread">🧵 Post Thread</a>
-<a href="/scripts/post-tweet">✍️ Post Tweet - XActions</a>
+<a href="/scripts/post-tweet">✍️ Post Tweet - Medirus</a>
       </div>
       <div class="sidebar-card">
         <h3>🔗 Quick Links</h3>

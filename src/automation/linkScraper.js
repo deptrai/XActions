@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation - Link Scraper
+// Medirus Automation - Link Scraper
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -13,12 +13,12 @@
 // 3. Let it scroll and collect all links!
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, sleep, scrollBy, storage, SELECTORS } = window.XActions.Core;
+  const { log, sleep, scrollBy, storage, SELECTORS } = window.Medirus.Core;
 
   // ============================================
   // CONFIGURATION
@@ -283,7 +283,7 @@
   run();
 
   // Expose data for manual access
-  window.XActions.linkData = () => links;
+  window.Medirus.linkData = () => links;
   window.stopLinkScraper = () => {
     OPTIONS.MAX_SCROLLS = 0;
     log('Stopping...', 'warning');

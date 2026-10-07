@@ -45,7 +45,7 @@
   };
 
   const run = async () => {
-    console.log('🗑️ BULK DELETE TWEETS — XActions by nichxbt');
+    console.log('🗑️ BULK DELETE TWEETS — Medirus by nichxbt');
     console.log(CONFIG.dryRun ? '🔍 DRY RUN — preview only' : '⚠️ LIVE MODE — tweets WILL be deleted!');
 
     const pathMatch = window.location.pathname.match(/^\/([A-Za-z0-9_]+)/);
@@ -168,7 +168,7 @@
     if (deletedLog.length > 0) {
       download(
         { stats: { deleted, errors, dryRun: CONFIG.dryRun }, tweets: deletedLog },
-        `xactions-deleted-tweets-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-deleted-tweets-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
 

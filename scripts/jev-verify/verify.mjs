@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
-// XActions — Jev verification harness + CI regression guard
+// Medirus — Jev verification harness + CI regression guard
 // Đo Jev trên corpus tweet thật: Việt/slang/mixed/English + spam detection.
 // Chạy: TYPESAFE_API_KEY=... node scripts/jev-verify/verify.mjs [--mock] [--ci] [--validate] [--out <path>]
 //

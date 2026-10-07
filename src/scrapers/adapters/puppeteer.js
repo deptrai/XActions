@@ -1,9 +1,9 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Scraper Adapter — Puppeteer
+ * Medirus Scraper Adapter — Puppeteer
  *
  * Adapter wrapping puppeteer-extra with stealth plugin.
- * This is the default adapter — matches the original XActions scraper behavior.
+ * This is the default adapter — matches the original Medirus scraper behavior.
  *
  * @author nich (@nichxbt)
  * @license MIT
@@ -56,8 +56,8 @@ export class PuppeteerAdapter extends BaseAdapter {
    * @returns {Promise<AdapterBrowser & { _backend?: string }>}
    */
   async launch(options = {}) {
-    const primaryBackend = options.backend || process.env.XACTIONS_BROWSER_BACKEND || 'chrome';
-    const fallbackBackend = options.fallbackBackend !== undefined ? options.fallbackBackend : (process.env.XACTIONS_BROWSER_BACKEND_FALLBACK || 'chrome');
+    const primaryBackend = options.backend || process.env.MEDIRUS_BROWSER_BACKEND || 'chrome';
+    const fallbackBackend = options.fallbackBackend !== undefined ? options.fallbackBackend : (process.env.MEDIRUS_BROWSER_BACKEND_FALLBACK || 'chrome');
     const requiresAuth = options.requiresAuth ?? false;
     const wsEndpoint = options.wsEndpoint || process.env.OBSCURA_WS_ENDPOINT || 'ws://127.0.0.1:9222';
 

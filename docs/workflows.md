@@ -18,7 +18,7 @@ The workflow engine lets you define automation pipelines as JSON:
 ### Create and Run a Workflow
 
 ```javascript
-import * as workflows from 'xactions';
+import * as workflows from 'medirus';
 
 // Define a workflow
 const definition = {
@@ -224,7 +224,7 @@ No automatic trigger — must be invoked explicitly via `run()`.
 Register your own actions:
 
 ```javascript
-import { registerAction } from 'xactions';
+import { registerAction } from 'medirus';
 
 registerAction('sendDiscordWebhook', {
   description: 'Send a message to Discord',
@@ -306,7 +306,7 @@ Every workflow execution produces a run record:
 ### Query Runs
 
 ```javascript
-import * as workflows from 'xactions';
+import * as workflows from 'medirus';
 
 // Get all runs for a workflow
 const runs = await workflows.runs('morning-engagement', 50);

@@ -61,7 +61,7 @@ const CONFIG = {
 };
 
 (() => {
-  const STORAGE_PREFIX = 'xactions_continuous_';
+  const STORAGE_PREFIX = 'medirus_continuous_';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   // Parse page info
@@ -226,7 +226,7 @@ const CONFIG = {
   // Initial run
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  🔭 XActions Continuous Monitor                          ║
+║  🔭 Medirus Continuous Monitor                          ║
 ║                                                           ║
 ║  Target: @${targetUser.padEnd(20)}                        ║
 ║  Tracking: ${pageType.padEnd(18)}                         ║
@@ -244,12 +244,12 @@ const CONFIG = {
   const intervalId = setInterval(runCheck, intervalMs);
 
   // Provide stop function
-  window.stopXActionsMonitor = () => {
+  window.stopMedirusMonitor = () => {
     clearInterval(intervalId);
     console.log('\n🛑 Monitoring stopped.');
   };
 
-  console.log('💡 Tip: Run stopXActionsMonitor() to stop monitoring.\n');
+  console.log('💡 Tip: Run stopMedirusMonitor() to stop monitoring.\n');
 })();
 
 ```
@@ -309,14 +309,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -351,4 +351,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

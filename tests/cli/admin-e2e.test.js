@@ -1,8 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // by nichxbt
 /**
- * E2E CLI Tests — Story 19.4: xactions admin unified command group.
- * Spawns the real `xactions admin` binary and asserts stdout.
+ * E2E CLI Tests — Story 19.4: medirus admin unified command group.
+ * Spawns the real `medirus admin` binary and asserts stdout.
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -22,7 +22,7 @@ function runAdmin(args) {
   });
 }
 
-describe('E2E CLI: xactions admin (Story 19.4)', () => {
+describe('E2E CLI: medirus admin (Story 19.4)', () => {
   it('proxies list --json returns a success envelope from the in-process pool', async () => {
     const { stdout, stderr } = await runAdmin(['proxies', 'list', '--json']);
     expect(stderr).toBe('');

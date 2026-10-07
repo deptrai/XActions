@@ -21,11 +21,11 @@ describe('Story 27.4 — Obscura Browser Backend', () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
-    delete process.env.XACTIONS_BROWSER_BACKEND;
-    delete process.env.XACTIONS_BROWSER_BACKEND_FALLBACK;
+    delete process.env.MEDIRUS_BROWSER_BACKEND;
+    delete process.env.MEDIRUS_BROWSER_BACKEND_FALLBACK;
     delete process.env.OBSCURA_WS_ENDPOINT;
     delete process.env.OBSCURA_STORAGE_DIR;
-    delete process.env.XACTIONS_BROWSER_BACKEND_METRICS;
+    delete process.env.MEDIRUS_BROWSER_BACKEND_METRICS;
   });
 
   afterEach(() => {
@@ -52,7 +52,7 @@ describe('Story 27.4 — Obscura Browser Backend', () => {
     });
 
     it('[P0] rejects obscura backend via env when requiresAuth === true', async () => {
-      process.env.XACTIONS_BROWSER_BACKEND = 'obscura';
+      process.env.MEDIRUS_BROWSER_BACKEND = 'obscura';
       let caughtError = null;
       try {
         await launchStealthBrowser({
@@ -411,8 +411,8 @@ describe('Story 27.4 — Obscura Browser Backend', () => {
   });
 
   describe('AC-2c: Telemetry emission', () => {
-    it('[P0] attaches browserBackend to telemetry run when XACTIONS_BROWSER_BACKEND_METRICS=1', () => {
-      process.env.XACTIONS_BROWSER_BACKEND_METRICS = '1';
+    it('[P0] attaches browserBackend to telemetry run when MEDIRUS_BROWSER_BACKEND_METRICS=1', () => {
+      process.env.MEDIRUS_BROWSER_BACKEND_METRICS = '1';
 
       const ctx = new TelemetryContext({
         scraperId: 'reddit-public',
@@ -436,8 +436,8 @@ describe('Story 27.4 — Obscura Browser Backend', () => {
       expect(emitted[0].browserBackend).toBe('obscura');
     });
 
-    it('[P0] omits browserBackend from telemetry run when XACTIONS_BROWSER_BACKEND_METRICS is off', () => {
-      delete process.env.XACTIONS_BROWSER_BACKEND_METRICS;
+    it('[P0] omits browserBackend from telemetry run when MEDIRUS_BROWSER_BACKEND_METRICS is off', () => {
+      delete process.env.MEDIRUS_BROWSER_BACKEND_METRICS;
 
       const ctx = new TelemetryContext({
         scraperId: 'reddit-public',

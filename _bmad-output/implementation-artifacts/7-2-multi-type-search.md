@@ -323,7 +323,7 @@ const scrapeArgs = {
 - `api/routes/facebook.js` — `POST /api/facebook/scrape` (lines 143–207).
 - `_bmad-output/architecture-artifacts/epic7-2026-08-14/STORIES.md` — Story 7.2 AC and implementation notes.
 - `_bmad-output/architecture-artifacts/epic7-2026-08-14/ARCHITECTURE-SPINE.md` — component map and data flows.
-- `_bmad-output/planning-artifacts/prds/prd-XActions-2026-08-14-epic7/prd.md` — FR-57, NFR-14, NFR-15.
+- `_bmad-output/planning-artifacts/prds/prd-Medirus-2026-08-14-epic7/prd.md` — FR-57, NFR-14, NFR-15.
 
 ## Dev Agent Record
 

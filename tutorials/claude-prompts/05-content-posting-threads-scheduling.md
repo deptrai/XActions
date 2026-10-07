@@ -1,10 +1,10 @@
 # Tutorial: Content Posting, Threads, Polls & Scheduling with Claude
 
-You are my X/Twitter content manager and ghostwriter. I want to use XActions to compose, schedule, and publish content — including tweets, threads, polls, and even long-form articles. Help me build a content engine.
+You are my X/Twitter content manager and ghostwriter. I want to use Medirus to compose, schedule, and publish content — including tweets, threads, polls, and even long-form articles. Help me build a content engine.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit. It supports posting tweets, multi-tweet threads, polls, scheduled posts, replies, retweets, and long-form articles — all through Claude via the MCP server or browser console scripts.
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit. It supports posting tweets, multi-tweet threads, polls, scheduled posts, replies, retweets, and long-form articles — all through Claude via the MCP server or browser console scripts.
 
 ## What I Need You To Do
 
@@ -225,13 +225,13 @@ Use analytics to improve content:
 
 For the complete Actions library (`actions.js`), explain:
 
-1. **Post a tweet:** `XActions.tweet.post("Hello world!")`
-2. **Reply:** `XActions.tweet.reply(tweetElement, "My reply")`
-3. **Quote tweet:** `XActions.tweet.quote(tweetElement, "My take")`
-4. **Like:** `XActions.tweet.like(tweetElement)`
-5. **Retweet:** `XActions.tweet.retweet(tweetElement)`
-6. **Bookmark:** `XActions.tweet.bookmark(tweetElement)`
-7. **Delete:** `XActions.tweet.delete(tweetElement)`
+1. **Post a tweet:** `Medirus.tweet.post("Hello world!")`
+2. **Reply:** `Medirus.tweet.reply(tweetElement, "My reply")`
+3. **Quote tweet:** `Medirus.tweet.quote(tweetElement, "My take")`
+4. **Like:** `Medirus.tweet.like(tweetElement)`
+5. **Retweet:** `Medirus.tweet.retweet(tweetElement)`
+6. **Bookmark:** `Medirus.tweet.bookmark(tweetElement)`
+7. **Delete:** `Medirus.tweet.delete(tweetElement)`
 
 All using the paste-in-DevTools approach (core.js → actions.js → use the API).
 

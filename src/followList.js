@@ -91,7 +91,7 @@
     startTime: Date.now(),
   };
 
-  window.XActions = {
+  window.Medirus = {
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
     status() {
       const el = ((Date.now() - stats.startTime) / 1000).toFixed(0);
@@ -302,7 +302,7 @@
     console.log(`📋 Action: ${CONFIG.action}`);
     if (CONFIG.listUrl) console.log(`📋 List: ${CONFIG.listUrl}`);
 
-    const sessionKey = 'xactions_followList';
+    const sessionKey = 'medirus_followList';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     const actions = { follow: followList, unfollow: unfollowList, pin: pinList, browse: browseList, discover: discoverLists };

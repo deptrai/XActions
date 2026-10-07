@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions tools` command group.
+ * `medirus tools` command group.
  * Provides developer tools like suggest-selector for assisted selector re-discovery.
  *
  * @author nich (@nichxbt)

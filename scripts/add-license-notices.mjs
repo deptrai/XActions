@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 
-const ROOT = resolve('/workspaces/XActions');
+const ROOT = resolve('/workspaces/Medirus');
 
 const MIT = '// Copyright (c) 2024-2026 nich (@nichxbt). MIT License.';
 const BSL = '// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.';

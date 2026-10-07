@@ -53,7 +53,7 @@ Args: {
 ### Node.js
 
 ```javascript
-import { parseBulkInput, bulkExecute, bulkScrape } from 'xactions/src/bulk/bulkOperations.js';
+import { parseBulkInput, bulkExecute, bulkScrape } from 'medirus/src/bulk/bulkOperations.js';
 
 // Parse any file format
 const usernames = await parseBulkInput('accounts.csv');
@@ -140,7 +140,7 @@ Operations pause when:
 
 ### Resume
 
-Progress is saved to `~/.xactions/bulk-progress-{action}-{timestamp}.json`. Use `--resume` to continue.
+Progress is saved to `~/.medirus/bulk-progress-{action}-{timestamp}.json`. Use `--resume` to continue.
 
 ---
 

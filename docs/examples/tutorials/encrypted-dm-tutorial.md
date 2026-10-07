@@ -1,14 +1,14 @@
 ---
 title: "Encrypted Direct Messages on X (Twitter) — Tutorial"
-description: "Send encrypted DMs, check encryption status, and enable encrypted mode on X/Twitter using XActions."
-keywords: ["twitter encrypted dm", "x encrypted messages", "xactions encrypted dm", "end to end encryption twitter", "secure dm twitter"]
+description: "Send encrypted DMs, check encryption status, and enable encrypted mode on X/Twitter using Medirus."
+keywords: ["twitter encrypted dm", "x encrypted messages", "medirus encrypted dm", "end to end encryption twitter", "secure dm twitter"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Encrypted Direct Messages — Tutorial
 
-> Step-by-step guide to enabling encryption, checking encryption status, and sending encrypted DMs on X/Twitter using XActions browser scripts.
+> Step-by-step guide to enabling encryption, checking encryption status, and sending encrypted DMs on X/Twitter using Medirus browser scripts.
 
 **Works on:** Browser Console
 **Difficulty:** Intermediate
@@ -174,7 +174,7 @@ Set `dryRun: false` and paste again. The script will:
 - **Use `'check'` freely.** The check action is read-only and safe to run with `dryRun: false` since it does not modify anything.
 - **Encryption is per-conversation.** Enabling encryption on one conversation does not affect others.
 - **Look for the lock icon.** Encrypted conversations display a lock icon in the conversation header.
-- **State tracking.** Progress is saved to `sessionStorage` under `xactions_encryptedDM`.
+- **State tracking.** Progress is saved to `sessionStorage` under `medirus_encryptedDM`.
 
 ---
 

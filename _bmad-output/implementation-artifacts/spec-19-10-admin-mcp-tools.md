@@ -14,9 +14,9 @@ context:
 
 ## Intent
 
-**Problem:** XActions MCP server hiện có 140+ công cụ scraping/automation nhưng chưa có công cụ admin nào. AI agents không thể hỏi trạng thái hệ thống, kiểm soát proxy pool, đánh thức account, hay quản lý checkpoints qua MCP.
+**Problem:** Medirus MCP server hiện có 140+ công cụ scraping/automation nhưng chưa có công cụ admin nào. AI agents không thể hỏi trạng thái hệ thống, kiểm soát proxy pool, đánh thức account, hay quản lý checkpoints qua MCP.
 
-**Approach:** Thêm một nhóm `x_admin_*` tools vào `src/mcp/server.js`, mapping trực tiếp đến các singleton/REST APIs đã dùng bởi `xactions admin` CLI và dashboard. Tools yêu cầu quyền `admin` và trả về cùng JSON envelope 3 lớp.
+**Approach:** Thêm một nhóm `x_admin_*` tools vào `src/mcp/server.js`, mapping trực tiếp đến các singleton/REST APIs đã dùng bởi `medirus admin` CLI và dashboard. Tools yêu cầu quyền `admin` và trả về cùng JSON envelope 3 lớp.
 
 ## Boundaries & Constraints
 

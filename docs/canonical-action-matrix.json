@@ -399,7 +399,7 @@
             "dryRun"
           ],
           "example": {
-            "text": "Hello XActions",
+            "text": "Hello Medirus",
             "mediaIds": [
               "123"
             ],
@@ -470,7 +470,7 @@
             "dryRun"
           ],
           "example": {
-            "text": "Hello future XActions",
+            "text": "Hello future Medirus",
             "publishAt": "2026-09-01T12:00:00Z",
             "dryRun": false
           },
@@ -1039,7 +1039,7 @@
             "password"
           ],
           "example": {
-            "text": "Hello Bluesky from XActions",
+            "text": "Hello Bluesky from Medirus",
             "dryRun": false
           },
           "outputType": "{ uri: string, cid: string, success: boolean }",
@@ -1385,7 +1385,7 @@
             "accessToken"
           ],
           "example": {
-            "text": "Hello Mastodon from XActions",
+            "text": "Hello Mastodon from Medirus",
             "dryRun": false
           },
           "outputType": "{ status: any, success: boolean }",
@@ -1837,7 +1837,7 @@
             "maxBatch"
           ],
           "example": {
-            "text": "Hello Facebook from XActions Hybrid Crawler!"
+            "text": "Hello Facebook from Medirus Hybrid Crawler!"
           },
           "outputType": "{ results: { targetUrl: string, postId?: string, error?: string }[], dryRun: boolean }",
           "requiresAuth": true,
@@ -2171,7 +2171,7 @@
             "dryRun"
           ],
           "example": {
-            "text": "Hello Threads from XActions",
+            "text": "Hello Threads from Medirus",
             "dryRun": false
           },
           "outputType": "{ success: boolean, id?: string, dryRun?: boolean }",

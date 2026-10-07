@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation - Multi-Account Manager
+// Medirus Automation - Multi-Account Manager
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -16,12 +16,12 @@
 // 3. Use the manager functions to add/manage accounts
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, sleep, storage } = window.XActions.Core;
+  const { log, sleep, storage } = window.Medirus.Core;
 
   // ============================================
   // STORAGE KEYS
@@ -141,7 +141,7 @@
       
       if (accounts.length === 0) {
         console.log('No accounts added yet.');
-        console.log('Use: XActions.Accounts.add("username", "password")');
+        console.log('Use: Medirus.Accounts.add("username", "password")');
       } else {
         accounts.forEach((a, i) => {
           const lastUsed = a.lastUsed ? new Date(a.lastUsed).toLocaleString() : 'Never';
@@ -397,7 +397,7 @@
   // ============================================
   // EXPOSE API
   // ============================================
-  window.XActions.Accounts = {
+  window.Medirus.Accounts = {
     // Account management
     add: AccountManager.addAccount,
     remove: AccountManager.removeAccount,
@@ -423,7 +423,7 @@
   // ============================================
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  👥 XActions Multi-Account Manager                       ║
+║  👥 Medirus Multi-Account Manager                       ║
 ╠═══════════════════════════════════════════════════════════╣
 ║                                                           ║
 ║  Commands:                                                ║
@@ -447,7 +447,7 @@
   `);
 
   // Global shortcut
-  window.XAccounts = window.XActions.Accounts;
+  window.XAccounts = window.Medirus.Accounts;
 
   const accounts = AccountManager.getAccounts();
   if (accounts.length > 0) {

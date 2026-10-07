@@ -78,7 +78,7 @@ var CONFIG = {
   const $tweet = 'article[data-testid="tweet"]';
   const $userCell = '[data-testid="UserCell"]';
   
-  const STORAGE_KEY = 'xactions_protected_users';
+  const STORAGE_KEY = 'medirus_protected_users';
   
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║  🛡️ PROTECT ACTIVE USERS                                   ║');

@@ -14,7 +14,7 @@ Status: done
 
 ## Story
 
-As a growth marketer using XActions,
+As a growth marketer using Medirus,
 I want to scrape a public Facebook profile/page,
 so that I can analyze Facebook accounts with the same normalized format as Twitter.
 
@@ -93,7 +93,7 @@ Current behavior (must preserve):
 - `needsPuppeteer` already includes `facebook`/`fb` (added in 1.1).
 - Auto-creates browser via `mod.createBrowser(options.browserOptions || {})`, then `mod.createPage(browser)`.
 - Line 213-216: `if (options.authToken && mod.loginWithCookie) { await mod.loginWithCookie(page, options.authToken); }` — **string path, Twitter only. Keep it.**
-- Line 219: stores `page.__xactions_browser = browser` for cleanup.
+- Line 219: stores `page.__medirus_browser = browser` for cleanup.
 - target resolved from `options.username || options.query || ...` (line 223); `fn(page, target, options)` (line 232).
 - Auto-closes browser at line 236-238 unless `options.autoClose === false`.
 
@@ -131,7 +131,7 @@ Additive — do not alter the existing string path or other platforms.
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 1.2]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md#FR-1, NFR4, NFR5]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-08/prd.md#FR-1, NFR4, NFR5]
 - [Source: _bmad-output/planning-artifacts/architecture.md#Addendum A.4 Normalized Shape, A.5 ADR-006]
 - [Source: src/scrapers/threads/index.js#scrapeProfile lines 66-119 — clone template]
 - [Source: src/scrapers/index.js#scrape puppeteer branch lines 205-240 — dispatcher UPDATE]

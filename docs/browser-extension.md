@@ -1,6 +1,6 @@
 # Browser Extension
 
-Chrome/Edge extension for XActions. Run automation directly from the browser toolbar — no DevTools console needed.
+Chrome/Edge extension for Medirus. Run automation directly from the browser toolbar — no DevTools console needed.
 
 ---
 
@@ -13,7 +13,7 @@ Chrome/Edge extension for XActions. Run automation directly from the browser too
 3. Enable **Developer mode** (toggle in top right)
 4. Click **Load unpacked**
 5. Select the `extension/` folder
-6. The XActions icon appears in your toolbar
+6. The Medirus icon appears in your toolbar
 
 ### Permissions
 
@@ -36,7 +36,7 @@ Host permissions: `https://x.com/*` and `https://twitter.com/*` only.
 
 ### Popup Interface
 
-Click the XActions icon in your toolbar to open the popup:
+Click the Medirus icon in your toolbar to open the popup:
 
 - **Connection status** — green dot when connected to x.com, red when disconnected
 - **Account info** — shows your X username and avatar when connected
@@ -63,7 +63,7 @@ Click the XActions icon in your toolbar to open the popup:
 ### Running an Automation
 
 1. Navigate to [x.com](https://x.com) in your browser
-2. Click the XActions icon
+2. Click the Medirus icon
 3. Verify the green "Connected" status
 4. Go to the **Automations** tab
 5. Select an automation (e.g., "Unfollow Non-Followers")
@@ -122,14 +122,14 @@ Creates icons from the source SVG at all required sizes (16, 32, 48, 128px).
 
 1. Make edits to files in `extension/`
 2. Go to `chrome://extensions`
-3. Click the refresh icon on the XActions extension card
+3. Click the refresh icon on the Medirus extension card
 4. Open a new x.com tab to test
 
 ### Debugging
 
-- **Popup:** Right-click the XActions icon → "Inspect Popup"
+- **Popup:** Right-click the Medirus icon → "Inspect Popup"
 - **Service worker:** Click "Service Worker" link on `chrome://extensions`
-- **Content script:** Open DevTools on any x.com tab → Sources → Content Scripts → XActions
+- **Content script:** Open DevTools on any x.com tab → Sources → Content Scripts → Medirus
 
 ---
 

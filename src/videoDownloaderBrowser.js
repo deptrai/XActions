@@ -164,15 +164,15 @@
    * Strategy 5: Network interceptor — capture future video loads
    */
   const setupInterceptor = () => {
-    if (window.__XACTIONS_VD_INTERCEPTOR) return;
+    if (window.__MEDIRUS_VD_INTERCEPTOR) return;
 
-    window.__XACTIONS_VD_CAPTURED = window.__XACTIONS_VD_CAPTURED || [];
+    window.__MEDIRUS_VD_CAPTURED = window.__MEDIRUS_VD_CAPTURED || [];
 
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const url = args[0]?.toString?.() || args[0]?.url || args[0];
       if (url && (url.includes('.mp4') || url.includes('.m3u8') || url.includes('video.twimg'))) {
-        window.__XACTIONS_VD_CAPTURED.push({
+        window.__MEDIRUS_VD_CAPTURED.push({
           url,
           quality: 'intercepted',
           type: url.includes('.m3u8') ? 'm3u8' : 'mp4',
@@ -187,7 +187,7 @@
     const originalXHROpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function (method, url, ...rest) {
       if (url && (url.includes('.mp4') || url.includes('.m3u8') || url.includes('video.twimg'))) {
-        window.__XACTIONS_VD_CAPTURED.push({
+        window.__MEDIRUS_VD_CAPTURED.push({
           url,
           quality: 'intercepted-xhr',
           type: url.includes('.m3u8') ? 'm3u8' : 'mp4',
@@ -199,11 +199,11 @@
       return originalXHROpen.call(this, method, url, ...rest);
     };
 
-    window.__XACTIONS_VD_INTERCEPTOR = true;
+    window.__MEDIRUS_VD_INTERCEPTOR = true;
     console.log('🔍 Video network interceptor activated');
   };
 
-  const getInterceptedVideos = () => window.__XACTIONS_VD_CAPTURED || [];
+  const getInterceptedVideos = () => window.__MEDIRUS_VD_CAPTURED || [];
 
   // ─── Dedup & Sort ─────────────────────────────────────────
 
@@ -305,7 +305,7 @@
   // ─── Feature 1: Download Video From Current Tweet ─────────
 
   const downloadCurrent = async () => {
-    console.log('🎬 XActions Video Downloader');
+    console.log('🎬 Medirus Video Downloader');
     console.log('═'.repeat(50));
 
     if (!isTweetPage()) {
@@ -378,10 +378,10 @@
     window.location.href = tweetUrl;
     console.log('⏳ Page is loading... Run downloadCurrent() once the video is visible.');
     console.log('💡 Tip: After the page loads, click PLAY on the video, then run:');
-    console.log(`   window.XActions.videoDownloader.downloadCurrent()`);
+    console.log(`   window.Medirus.videoDownloader.downloadCurrent()`);
 
     // Store intent in sessionStorage so user can resume
-    sessionStorage.setItem('xactions_vd_pending', JSON.stringify({ tweetUrl, tweetId, author }));
+    sessionStorage.setItem('medirus_vd_pending', JSON.stringify({ tweetUrl, tweetId, author }));
 
     return null;
   };
@@ -389,7 +389,7 @@
   // ─── Feature 3: Download GIF ──────────────────────────────
 
   const downloadGif = async () => {
-    console.log('🎬 XActions GIF Downloader');
+    console.log('🎬 Medirus GIF Downloader');
     console.log('═'.repeat(50));
     console.log('ℹ️  GIFs on X/Twitter are actually MP4 videos\n');
 
@@ -436,7 +436,7 @@
       return [];
     }
 
-    console.log('🎬 XActions Batch Video Downloader');
+    console.log('🎬 Medirus Batch Video Downloader');
     console.log('═'.repeat(50));
     console.log(`📦 Processing ${tweetUrls.length} tweet(s)\n`);
 
@@ -480,10 +480,10 @@
     // Save queued URLs to sessionStorage
     const queued = results.filter(r => r.status === 'queued');
     if (queued.length > 0) {
-      sessionStorage.setItem('xactions_vd_batch', JSON.stringify(queued));
+      sessionStorage.setItem('medirus_vd_batch', JSON.stringify(queued));
       console.log(`\n📋 ${queued.length} tweet(s) queued in sessionStorage.`);
-      console.log('   Navigate to each tweet, then run: window.XActions.videoDownloader.downloadCurrent()');
-      console.log('   Or retrieve the queue: JSON.parse(sessionStorage.getItem("xactions_vd_batch"))');
+      console.log('   Navigate to each tweet, then run: window.Medirus.videoDownloader.downloadCurrent()');
+      console.log('   Or retrieve the queue: JSON.parse(sessionStorage.getItem("medirus_vd_batch"))');
     }
 
     console.log('\n═'.repeat(50));
@@ -495,7 +495,7 @@
   // ─── Feature 5: Get Video Info ────────────────────────────
 
   const getVideoInfo = async () => {
-    console.log('🎬 XActions Video Info');
+    console.log('🎬 Medirus Video Info');
     console.log('═'.repeat(50));
 
     if (!isTweetPage()) {
@@ -595,13 +595,13 @@
   // ─── Resume Pending Download (from navigation) ────────────
 
   const checkPending = () => {
-    const pending = sessionStorage.getItem('xactions_vd_pending');
+    const pending = sessionStorage.getItem('medirus_vd_pending');
     if (pending) {
       try {
         const { tweetId } = JSON.parse(pending);
         if (getTweetId() === tweetId) {
           console.log('🔄 Resuming pending download...');
-          sessionStorage.removeItem('xactions_vd_pending');
+          sessionStorage.removeItem('medirus_vd_pending');
           setTimeout(() => downloadCurrent(), 2000);
         }
       } catch (e) {
@@ -615,10 +615,10 @@
   setupInterceptor();
   checkPending();
 
-  // ─── Expose on window.XActions ────────────────────────────
+  // ─── Expose on window.Medirus ────────────────────────────
 
-  window.XActions = window.XActions || {};
-  window.XActions.videoDownloader = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.videoDownloader = {
     downloadCurrent,
     downloadFromUrl,
     downloadGif,
@@ -630,11 +630,11 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║        🎬  XActions Video Downloader — Loaded           ║
+║        🎬  Medirus Video Downloader — Loaded           ║
 ╠══════════════════════════════════════════════════════════╣
 ║                                                          ║
 ║  All functions available at:                             ║
-║    window.XActions.videoDownloader.<function>             ║
+║    window.Medirus.videoDownloader.<function>             ║
 ║                                                          ║
 ║  1. downloadCurrent()                                    ║
 ║     ↳ Download video from current tweet page             ║

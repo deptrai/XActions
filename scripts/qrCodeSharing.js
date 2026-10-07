@@ -60,7 +60,7 @@
   };
 
   const run = async () => {
-    console.log('📱 QR CODE SHARING — XActions by nichxbt');
+    console.log('📱 QR CODE SHARING — Medirus by nichxbt');
     console.log('━'.repeat(45));
 
     const pathMatch = window.location.pathname.match(/^\/([A-Za-z0-9_]+)/);
@@ -86,7 +86,7 @@
 
     // Show overlay
     const overlay = document.createElement('div');
-    overlay.id = 'xactions-qr-overlay';
+    overlay.id = 'medirus-qr-overlay';
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:pointer;';
     const card = document.createElement('div');
     card.style.cssText = 'background:white;border-radius:16px;padding:32px;text-align:center;max-width:400px;';
@@ -102,7 +102,7 @@
 
     const footer = document.createElement('p');
     footer.style.cssText = 'margin:12px 0 0;color:#999;font-size:12px;';
-    footer.textContent = 'Click outside to close • XActions by nichxbt';
+    footer.textContent = 'Click outside to close • Medirus by nichxbt';
     card.appendChild(footer);
 
     card.onclick = (e) => e.stopPropagation();

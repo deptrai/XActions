@@ -29,14 +29,14 @@ describe('Story 19.10 — Admin MCP Tools', () => {
     await prisma.user.deleteMany({
       where: {
         email: {
-          in: ['e2e_mcp_admin@xactions.test', 'e2e_mcp_user@xactions.test'],
+          in: ['e2e_mcp_admin@medirus.test', 'e2e_mcp_user@medirus.test'],
         },
       },
     });
 
     adminUser = await prisma.user.create({
       data: {
-        email: 'e2e_mcp_admin@xactions.test',
+        email: 'e2e_mcp_admin@medirus.test',
         username: 'e2e_mcp_admin',
         password: 'e2e-password',
         isAdmin: true,
@@ -45,7 +45,7 @@ describe('Story 19.10 — Admin MCP Tools', () => {
 
     nonAdminUser = await prisma.user.create({
       data: {
-        email: 'e2e_mcp_user@xactions.test',
+        email: 'e2e_mcp_user@medirus.test',
         username: 'e2e_mcp_user',
         password: 'e2e-password',
         isAdmin: false,
@@ -55,7 +55,7 @@ describe('Story 19.10 — Admin MCP Tools', () => {
     adminToken = jwt.sign({ userId: adminUser.id, isAdmin: true }, JWT_SECRET, { expiresIn: '1h' });
 
     // Initialize local backend so singletons are loaded without starting stdio.
-    process.env.XACTIONS_MODE = 'local';
+    process.env.MEDIRUS_MODE = 'local';
     mod = await import('../../src/mcp/server.js');
     await mod.initializeBackend();
   });
@@ -64,7 +64,7 @@ describe('Story 19.10 — Admin MCP Tools', () => {
     await prisma.user.deleteMany({
       where: { id: { in: [adminUser.id, nonAdminUser.id] } },
     });
-    if (process.env.XACTIONS_MODE === undefined) delete process.env.XACTIONS_MODE;
+    if (process.env.MEDIRUS_MODE === undefined) delete process.env.MEDIRUS_MODE;
   });
 
   it('TOOLS array includes all 9 x_admin_* tools', () => {

@@ -4,7 +4,7 @@
  * Run: npx stryker run stryker.x402-middleware.config.js
  *
  * P0 areas: payment verification, credit deduction, idempotency, error handling.
- * Verdict per bmad-xactions-mutation-gate: FAIL if total < 60% OR p0Survived > 0.
+ * Verdict per bmad-medirus-mutation-gate: FAIL if total < 60% OR p0Survived > 0.
  *
  * @type {import('@stryker-mutator/core/core/StrykerOptions').StrykerOptions}
  */

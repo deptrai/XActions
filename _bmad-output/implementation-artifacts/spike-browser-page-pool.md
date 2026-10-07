@@ -42,7 +42,7 @@ Chứng minh một **browser-page-pool** có thể:
 | Q3 | Một browser chịu được bao nhiêu page concurrent trước khi renderer contention? | Xác định pool ceiling thực tế |
 | Q4 | Obscura (CDP) có hỗ trợ multi-page trên 1 connection không? | `browser.pages()` / `newPage()` semantics trên non-Chromium engine |
 | Q5 | Teardown: `page.close()` trên shared browser có giết browser không? | Contract hiện tại `close()` giết chrome, `disconnect()` giữ obscura |
-| Q6 | Proxy per-page vs per-browser? | XActions proxy-pool cấp proxy theo account — page-level proxy auth khác browser-level `--proxy-server` |
+| Q6 | Proxy per-page vs per-browser? | Medirus proxy-pool cấp proxy theo account — page-level proxy auth khác browser-level `--proxy-server` |
 | Q7 | Backpressure: khi pool cạn, job xếp hàng hay fail? | Tương tác với Bull `concurrency` + `adaptive-governor` |
 
 ## 4. Đề xuất kiến trúc (2 hướng)
@@ -62,7 +62,7 @@ Bull Worker Process
 - `BrowserPool` là **module-level singleton** trong worker process, lazy-init khi job đầu tiên cần backend đó.
 - `acquirePage()` trả `AdapterPage` bọc `{_native, _adapter, _backend, _poolId}`.
 - `releasePage()` → `page.close()` (không đụng browser).
-- Pool config: `XACTIONS_BROWSER_POOL_SIZE` (default 0 = off, opt-in), `XACTIONS_BROWSER_POOL_MAX_PAGES_PER_BROWSER`.
+- Pool config: `MEDIRUS_BROWSER_POOL_SIZE` (default 0 = off, opt-in), `MEDIRUS_BROWSER_POOL_MAX_PAGES_PER_BROWSER`.
 - **Giữ `requiresAuth` guard**: post-auth job vẫn force `chrome` backend + có thể force dedicated browser (không pool) nếu fingerprint/account cần cô lập tuyệt đối.
 
 **Ưu**: ít invasive nhất, giữ nguyên `adapter.launch()` contract, dễ A/B.
@@ -98,7 +98,7 @@ Bull Worker Process
 
 ## 7. Kết quả mong đợi
 
-- **Go**: page-pool cho **public scraping lane** (chrome + obscura) với `XACTIONS_BROWSER_POOL_SIZE` opt-in. RAM/job giảm ~5–10x.
+- **Go**: page-pool cho **public scraping lane** (chrome + obscura) với `MEDIRUS_BROWSER_POOL_SIZE` opt-in. RAM/job giảm ~5–10x.
 - **No-go**: document rõ ràng tại sao (state leak / Obscura không multi-page / contention), giữ launch-per-job.
 - **Partial**: pool chỉ cho chrome, hoặc chỉ public, hoặc cần per-page browser-context (Chrome `createBrowserContext` cho isolation).
 

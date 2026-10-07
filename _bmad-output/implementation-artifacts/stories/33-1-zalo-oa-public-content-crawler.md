@@ -35,7 +35,7 @@ context:
    - `oa_followers`: cào danh sách người theo dõi OA (`/v3.0/oa/user/getfollowers`).
    - `oa_detail` (alias `oa_info`): cào thông tin chi tiết OA (`/v3.0/oa/info`).
    - `marketplace_products` (alias `marketplace_search`): cào danh mục sản phẩm của OA Shop (`/v3.0/oa/product/getslice`).
-4. Chuẩn hóa dữ liệu sang `PostItem` và `ProfileItem` chuẩn XActions với `platform: 'zalo'`, `category: 'social'`, định danh ID tiền tố `zalo:`.
+4. Chuẩn hóa dữ liệu sang `PostItem` và `ProfileItem` chuẩn Medirus với `platform: 'zalo'`, `category: 'social'`, định danh ID tiền tố `zalo:`.
 5. Tích hợp `ZaloPlatformResponseValidator` kiểm tra mã lỗi nghiệp vụ Zalo (`error !== 0`, `-216` token hết hạn, `-211` vượt hạn ngạch).
 6. Tự động lưu trữ qua `PrismaStore` và phát `ThinEvent` tới Redis Stream `stream:social:raw_posts`.
 7. Đăng ký alias trong unified dispatcher `src/scrapers/index.js`: `zalo`, `zalo_oa`, `zalo_official_account`.
@@ -295,7 +295,7 @@ So that **Nowing AI can monitor Zalo Official Accounts, public broadcasts, and Z
 
 ### 3. Zalo Error Codes Matrix
 
-| Zalo Error Code | Zalo Message | Ý nghĩa | Mapping XActions Error | Trạng thái xử lý |
+| Zalo Error Code | Zalo Message | Ý nghĩa | Mapping Medirus Error | Trạng thái xử lý |
 |---|---|---|---|---|
 | `0` | Success | Thành công | Không có lỗi | Xử lý dữ liệu bình thường |
 | `-216` | Access token invalid | Token hết hạn / sai / bị thu hồi | `XACT_4003` (`auth_expired`) | Cách ly tài khoản (`hibernateAccount`), đổi token |

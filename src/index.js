@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). MIT License.
 /**
- * XActions - The Complete X/Twitter Automation Toolkit
+ * Medirus - The Complete X/Twitter Automation Toolkit
  * 
  * "Don't Panic." - The Hitchhiker's Guide to the Galaxy
  * 
@@ -15,7 +15,7 @@
  * No Twitter API required - saves $100-$5000+/month!
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  * @towel Always know where yours is
  */
@@ -85,7 +85,7 @@ export * as mcp from './mcp/server.js';
 /**
  * Catalog of all browser console scripts.
  * These are IIFEs meant to be pasted into x.com Developer Console.
- * Use: `import { browserScripts } from 'xactions'` to get script metadata.
+ * Use: `import { browserScripts } from 'medirus'` to get script metadata.
  */
 export const browserScripts = {
   // --- Unfollow Management ---
@@ -181,7 +181,7 @@ export const browserScripts = {
  * 
  * ```javascript
  * // Puppeteer scrapers
- * import { createBrowser, createPage, scrapeProfile, scrapeFollowers } from 'xactions';
+ * import { createBrowser, createPage, scrapeProfile, scrapeFollowers } from 'medirus';
  * 
  * const browser = await createBrowser();
  * const page = await createPage(browser);
@@ -190,10 +190,10 @@ export const browserScripts = {
  * await browser.close();
  * 
  * // Puppeteer managers
- * import { dmManager, profileManager, engagementManager } from 'xactions';
+ * import { dmManager, profileManager, engagementManager } from 'medirus';
  * 
  * // Browser scripts catalog
- * import { browserScripts } from 'xactions';
+ * import { browserScripts } from 'medirus';
  * console.log(Object.keys(browserScripts)); // List all browser scripts
  * ```
  */

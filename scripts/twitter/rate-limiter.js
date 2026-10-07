@@ -25,8 +25,8 @@
  * 📋 USAGE INSTRUCTIONS:
  * ============================================================
  * 
- * 1. Paste this script FIRST before other XActions scripts
- * 2. Other scripts can use XActions.RateLimit
+ * 1. Paste this script FIRST before other Medirus scripts
+ * 2. Other scripts can use Medirus.RateLimit
  * 3. Monitors and enforces safe limits
  * 
  * ============================================================
@@ -45,7 +45,7 @@
   console.log('╚════════════════════════════════════════════════════════════╝');
   console.log('');
   
-  const STORAGE_KEY = 'xactions_ratelimit';
+  const STORAGE_KEY = 'medirus_ratelimit';
   
   // Default rate limits (conservative/safe)
   const defaultLimits = {
@@ -193,9 +193,9 @@
     return true;
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.RateLimit = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.RateLimit = {
     
     // Check if action is allowed
     check: canPerformAction,
@@ -356,24 +356,24 @@
       console.log('');
       console.log('📋 RATE LIMITER COMMANDS:');
       console.log('');
-      console.log('   XActions.RateLimit.check("follow")');
-      console.log('   XActions.RateLimit.record("follow")');
-      console.log('   XActions.RateLimit.wait("follow")');
-      console.log('   XActions.RateLimit.perform("follow", fn)');
-      console.log('   XActions.RateLimit.quotas()');
-      console.log('   XActions.RateLimit.remaining("follow")');
-      console.log('   XActions.RateLimit.nextAllowed("follow")');
-      console.log('   XActions.RateLimit.setLimits("follow", {perHour: 30})');
-      console.log('   XActions.RateLimit.getLimits("follow")');
+      console.log('   Medirus.RateLimit.check("follow")');
+      console.log('   Medirus.RateLimit.record("follow")');
+      console.log('   Medirus.RateLimit.wait("follow")');
+      console.log('   Medirus.RateLimit.perform("follow", fn)');
+      console.log('   Medirus.RateLimit.quotas()');
+      console.log('   Medirus.RateLimit.remaining("follow")');
+      console.log('   Medirus.RateLimit.nextAllowed("follow")');
+      console.log('   Medirus.RateLimit.setLimits("follow", {perHour: 30})');
+      console.log('   Medirus.RateLimit.getLimits("follow")');
       console.log('');
       console.log('📦 PRESETS:');
-      console.log('   XActions.RateLimit.presets.safe()');
-      console.log('   XActions.RateLimit.presets.moderate()');
-      console.log('   XActions.RateLimit.presets.aggressive()');
+      console.log('   Medirus.RateLimit.presets.safe()');
+      console.log('   Medirus.RateLimit.presets.moderate()');
+      console.log('   Medirus.RateLimit.presets.aggressive()');
       console.log('');
       console.log('🔄 RESET:');
-      console.log('   XActions.RateLimit.reset()');
-      console.log('   XActions.RateLimit.resetLimits()');
+      console.log('   Medirus.RateLimit.reset()');
+      console.log('   Medirus.RateLimit.resetLimits()');
       console.log('');
       console.log('📊 ACTION TYPES:');
       console.log('   follow, unfollow, like, retweet, tweet, reply, dm, search');
@@ -382,7 +382,7 @@
   };
   
   console.log('⏱️ Rate Limiter loaded!');
-  console.log('   Run XActions.RateLimit.quotas() to see usage.');
-  console.log('   Run XActions.RateLimit.help() for commands.');
+  console.log('   Run Medirus.RateLimit.quotas() to see usage.');
+  console.log('   Run Medirus.RateLimit.help() for commands.');
   console.log('');
 })();

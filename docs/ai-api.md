@@ -1,4 +1,4 @@
-# 🤖 XActions AI API Documentation
+# 🤖 Medirus AI API Documentation
 
 Free & open-source API for AI agents. Use locally with Puppeteer (free, no limits) or self-host the remote API with optional x402 micropayments.
 
@@ -6,14 +6,14 @@ Free & open-source API for AI agents. Use locally with Puppeteer (free, no limit
 
 ## 📋 Overview
 
-XActions is **100% free** for all users:
+Medirus is **100% free** for all users:
 
 | Mode | Access | Cost |
 |------|--------|------|
 | **🆓 Local (default)** | Browser scripts, CLI, Node.js library, local MCP server | **FREE** |
 | **☁️ Remote (self-hosted)** | Self-hosted API for remote AI agent access | **FREE** (optionally supports x402 micropayments) |
 
-> **Note:** x402 micropayments are entirely optional. They're only relevant if you self-host the XActions API and want to monetize remote access for AI agents.
+> **Note:** x402 micropayments are entirely optional. They're only relevant if you self-host the Medirus API and want to monetize remote access for AI agents.
 
 ---
 
@@ -74,7 +74,7 @@ If you enable x402 on your self-hosted API, the protocol handles HTTP-native mic
 #### 1. Make Initial Request
 
 ```javascript
-const response = await fetch('https://api.xactions.app/api/ai/scrape/profile', {
+const response = await fetch('https://api.medirus.online/api/ai/scrape/profile', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -129,7 +129,7 @@ const signedPayment = btoa(JSON.stringify({
 #### 4. Retry with Payment
 
 ```javascript
-const paidResponse = await fetch('https://api.xactions.app/api/ai/scrape/profile', {
+const paidResponse = await fetch('https://api.medirus.online/api/ai/scrape/profile', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -354,7 +354,7 @@ Search for tweets matching a query.
 **Request:**
 ```json
 {
-  "query": "xactions automation",
+  "query": "medirus automation",
   "limit": 50,
   "filter": "latest"
 }
@@ -367,7 +367,7 @@ Search for tweets matching a query.
 {
   "success": true,
   "data": {
-    "query": "xactions automation",
+    "query": "medirus automation",
     "resultCount": 50,
     "tweets": [
       {
@@ -591,9 +591,9 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 import base64
 
-class XActionsClient:
+class MedirusClient:
     def __init__(self, private_key: str, session_cookie: str):
-        self.base_url = "https://api.xactions.app"
+        self.base_url = "https://api.medirus.online"
         self.private_key = private_key
         self.session_cookie = session_cookie
         self.account = Account.from_key(private_key)
@@ -660,7 +660,7 @@ class XActionsClient:
         })
 
 # Usage
-client = XActionsClient(
+client = MedirusClient(
     private_key="0x...",
     session_cookie="your_auth_token"
 )
@@ -674,9 +674,9 @@ print(profile)
 ```javascript
 import { Wallet } from 'ethers';
 
-class XActionsClient {
+class MedirusClient {
   constructor(privateKey, sessionCookie) {
-    this.baseUrl = 'https://api.xactions.app';
+    this.baseUrl = 'https://api.medirus.online';
     this.wallet = new Wallet(privateKey);
     this.sessionCookie = sessionCookie;
   }
@@ -741,7 +741,7 @@ class XActionsClient {
 }
 
 // Usage
-const client = new XActionsClient(
+const client = new MedirusClient(
   '0x...',
   'your_auth_token'
 );
@@ -754,7 +754,7 @@ console.log(profile);
 
 ```bash
 # Step 1: Make initial request (will return 402)
-curl -X POST https://api.xactions.app/api/ai/scrape/profile \
+curl -X POST https://api.medirus.online/api/ai/scrape/profile \
   -H "Content-Type: application/json" \
   -H "X-Session-Cookie: your_auth_token" \
   -d '{"username": "elonmusk"}'
@@ -763,7 +763,7 @@ curl -X POST https://api.xactions.app/api/ai/scrape/profile \
 # (Use your preferred signing tool)
 
 # Step 3: Retry with payment
-curl -X POST https://api.xactions.app/api/ai/scrape/profile \
+curl -X POST https://api.medirus.online/api/ai/scrape/profile \
   -H "Content-Type: application/json" \
   -H "X-Session-Cookie: your_auth_token" \
   -H "X-Payment: eyJhbW91bnQiOi..." \
@@ -781,13 +781,13 @@ For AI assistants like Claude, use the MCP server with remote mode:
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["xactions-mcp"],
+      "args": ["medirus-mcp"],
       "env": {
-        "XACTIONS_MODE": "remote",
+        "MEDIRUS_MODE": "remote",
         "X402_PRIVATE_KEY": "0x...",
-        "XACTIONS_SESSION_COOKIE": "your_auth_token"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token"
       }
     }
   }
@@ -798,9 +798,9 @@ For AI assistants like Claude, use the MCP server with remote mode:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `XACTIONS_MODE` | Yes | Set to `remote` for paid API, `local` for free Puppeteer |
+| `MEDIRUS_MODE` | Yes | Set to `remote` for paid API, `local` for free Puppeteer |
 | `X402_PRIVATE_KEY` | For remote | Your Ethereum wallet private key |
-| `XACTIONS_SESSION_COOKIE` | Yes | Your X/Twitter auth_token cookie |
+| `MEDIRUS_SESSION_COOKIE` | Yes | Your X/Twitter auth_token cookie |
 
 ### Local vs Remote Mode
 
@@ -815,7 +815,7 @@ For AI assistants like Claude, use the MCP server with remote mode:
 
 ## 🆓 Free Alternatives
 
-If you don't need the remote API, use XActions for free:
+If you don't need the remote API, use Medirus for free:
 
 ### Browser Scripts
 Copy-paste scripts directly in your browser console.
@@ -823,13 +823,13 @@ Copy-paste scripts directly in your browser console.
 
 ### CLI Tool
 ```bash
-npm install -g xactions
-xactions unfollow --non-followers
+npm install -g medirus
+medirus unfollow --non-followers
 ```
 
 ### Node.js Library
 ```javascript
-import { unfollowNonFollowers } from 'xactions';
+import { unfollowNonFollowers } from 'medirus';
 await unfollowNonFollowers({ cookie: '...' });
 ```
 
@@ -837,12 +837,12 @@ await unfollowNonFollowers({ cookie: '...' });
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["xactions-mcp"],
+      "args": ["medirus-mcp"],
       "env": {
-        "XACTIONS_MODE": "local",
-        "XACTIONS_SESSION_COOKIE": "..."
+        "MEDIRUS_MODE": "local",
+        "MEDIRUS_SESSION_COOKIE": "..."
       }
     }
   }
@@ -855,7 +855,7 @@ await unfollowNonFollowers({ cookie: '...' });
 
 - **GitHub Issues:** [github.com/nirholas/XActions/issues](https://github.com/nirholas/XActions/issues)
 - **Twitter/X:** [@nichxbt](https://x.com/nichxbt)
-- **Documentation:** [xactions.app/docs](https://xactions.app/docs)
+- **Documentation:** [medirus.online/docs](https://medirus.online/docs)
 
 ---
 

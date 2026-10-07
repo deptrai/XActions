@@ -173,7 +173,7 @@
         summary: { total, verified, suspicious, topNiches: sortedNiches.slice(0, 5), topKeywords: topWords.slice(0, 10) },
         followers,
         analyzedAt: new Date().toISOString(),
-      }, `xactions-demographics-${new Date().toISOString().slice(0, 10)}.json`);
+      }, `medirus-demographics-${new Date().toISOString().slice(0, 10)}.json`);
       console.log('\n📥 Demographics exported as JSON.');
     }
   };

@@ -419,7 +419,7 @@ const browser = await puppeteer.launch({
 
 ---
 
-## 4. Implementation Priority for XActions
+## 4. Implementation Priority for Medirus
 
 ### Phase 1 — Critical (Immediate)
 

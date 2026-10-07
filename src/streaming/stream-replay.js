@@ -3,7 +3,7 @@
  * Stream Replay & Missed-Event Recovery (Story 29.3)
  * Reads events from Redis Stream (`stream:social:raw_posts`) by range or cursor,
  * supports ISO 8601 timestamps, pagination, per-stream filtering,
- * and optional delivery via outbound webhook dispatcher with `X-XActions-Replay: true`.
+ * and optional delivery via outbound webhook dispatcher with `X-Medirus-Replay: true`.
  *
  * @author nich (@nichxbt)
  * @license Apache-2.0

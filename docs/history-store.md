@@ -6,7 +6,7 @@
 
 ## Overview
 
-The History Store records periodic snapshots of any X/Twitter account's metrics into a local SQLite database (`~/.xactions/analytics.db`). It supports:
+The History Store records periodic snapshots of any X/Twitter account's metrics into a local SQLite database (`~/.medirus/analytics.db`). It supports:
 
 - **Account snapshots** — followers, following, tweet count, listed count
 - **Tweet snapshots** — likes, retweets, replies, quotes, views per tweet
@@ -58,8 +58,8 @@ import {
   getGrowthRate,
   compareAccounts,
   exportHistory
-} from 'xactions/src/analytics/historyStore.js';
-import { startAutoSnapshot } from 'xactions/src/analytics/autoSnapshot.js';
+} from 'medirus/src/analytics/historyStore.js';
+import { startAutoSnapshot } from 'medirus/src/analytics/autoSnapshot.js';
 
 // Save a manual snapshot
 await saveAccountSnapshot('elonmusk', {
@@ -121,7 +121,7 @@ dashboard/analytics-dashboard.html → Chart.js visualization
 
 ### Database Schema
 
-Stored in `~/.xactions/analytics.db` (SQLite via `better-sqlite3`).
+Stored in `~/.medirus/analytics.db` (SQLite via `better-sqlite3`).
 
 | Table | Purpose | Key Columns |
 |---|---|---|

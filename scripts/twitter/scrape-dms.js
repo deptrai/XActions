@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 💬 Scrape DMs - XActions
+ * 💬 Scrape DMs - Medirus
  * ============================================
  *
  * @name         scrape-dms
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to https://x.com/messages and open ONE conversation
@@ -148,9 +148,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  💬 SCRAPE DMS - XActions                                ║
+║  💬 SCRAPE DMS - Medirus                                ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

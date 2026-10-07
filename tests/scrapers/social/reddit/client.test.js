@@ -286,9 +286,9 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
   });
 
   it('builds correct User-Agent', () => {
-    expect(buildRedditUserAgent('nirholas')).toBe('xactions:reddit-scraper:v1.0.0 by u/nirholas');
-    expect(buildRedditUserAgent()).toBe('xactions/1.0');
-    expect(buildRedditUserAgent('invalid@name')).toBe('xactions/1.0');
+    expect(buildRedditUserAgent('nirholas')).toBe('medirus:reddit-scraper:v1.0.0 by u/nirholas');
+    expect(buildRedditUserAgent()).toBe('medirus/1.0');
+    expect(buildRedditUserAgent('invalid@name')).toBe('medirus/1.0');
   });
 
   it('authenticates via OAuth2 client_credentials', async () => {
@@ -315,7 +315,7 @@ describe('RedditClient (OAuth2 + Public .json)', () => {
     const client = new RedditClient({ baseUrl: serverUrl, username: 'testuser' });
     await client.apiRequest('/r/programming/new', { limit: 1 });
     const lastReq = receivedRequests[receivedRequests.length - 1];
-    expect(lastReq.headers['user-agent']).toContain('xactions:reddit-scraper');
+    expect(lastReq.headers['user-agent']).toContain('medirus:reddit-scraper');
     expect(lastReq.headers['user-agent']).toContain('u/testuser');
   });
 

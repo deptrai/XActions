@@ -70,7 +70,7 @@ window.stopLeaveCommunities = () => {
   const $backButton = '[data-testid="app-bar-back"]';
 
   // State management using sessionStorage (survives navigation)
-  const STORAGE_KEY = 'xactions_left_communities';
+  const STORAGE_KEY = 'medirus_left_communities';
   
   const getLeftCommunities = () => {
     try {

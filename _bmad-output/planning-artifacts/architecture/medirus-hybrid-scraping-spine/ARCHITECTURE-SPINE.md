@@ -1,17 +1,17 @@
 ---
-name: 'XActions Universal Hybrid Scraping & Multi-Platform Architecture'
+name: 'Medirus Universal Hybrid Scraping & Multi-Platform Architecture'
 type: architecture-spine
 purpose: build-substrate
 altitude: system-microservice
 paradigm: 'Hexagonal / Ports & Adapters + Tiered Hybrid Signer Pool + Dual-Channel High-Speed Microservice + Adaptive Infrastructure-Aware Rate Limiting'
-scope: 'XActions Universal Scraping Engine: Social Media (X, Facebook, Threads, TikTok, Bluesky, Mastodon), E-Commerce, Real Estate, Recruitment, Proxy Network, PostgreSQL Storage with JSONB GIN Indexes, MCP HTTP/SSE Daemon, Redis Streams, and Adaptive Account Protection'
+scope: 'Medirus Universal Scraping Engine: Social Media (X, Facebook, Threads, TikTok, Bluesky, Mastodon), E-Commerce, Real Estate, Recruitment, Proxy Network, PostgreSQL Storage with JSONB GIN Indexes, MCP HTTP/SSE Daemon, Redis Streams, and Adaptive Account Protection'
 status: final
 canonical: true
 created: '2026-08-18'
 updated: '2026-08-27T00:00:00Z'
 supersedes:
   - _bmad-output/planning-artifacts/archive/architecture-brownfield-2026-08-20.md
-  - _bmad-output/planning-artifacts/architecture/xactions-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/medirus-facebook-gateway-2026-08-23/ARCHITECTURE-SPINE.md
 ux_review:
   - ARCHITECTURE-UX-REVIEW-2026-08-18.md
   - ARCHITECTURE-UX-REMEDIATION-2026-08-21.md
@@ -25,21 +25,21 @@ binds:
   - 'src/mcp/**'
   - 'prisma/schema.prisma'
 sources:
-  - 'research/technical-mediacrawler-architecture-for-xactions-research-2026-08-18.md'
-  - '../nowing/_bmad-output/planning-artifacts/architecture/architecture-xactions-social-integration-2026-08-15/ARCHITECTURE-SPINE.md'
+  - 'research/technical-mediacrawler-architecture-for-medirus-research-2026-08-18.md'
+  - '../nowing/_bmad-output/planning-artifacts/architecture/architecture-medirus-social-integration-2026-08-15/ARCHITECTURE-SPINE.md'
 ---
 
-# Architecture Spine — XActions Universal Hybrid Scraping & Multi-Platform Architecture
+# Architecture Spine — Medirus Universal Hybrid Scraping & Multi-Platform Architecture
 
 ## 1. Design Paradigm & Strategic Role
 
-XActions là **Universal Scraping & Automation Microservice Platform** (Động cơ Cào Dữ liệu Toàn năng), hoạt động độc lập như một SaaS / CLI / AI MCP Server và đóng vai trò là **Scraping Engine chuyên trách cho hệ sinh thái Nowing (AI Lead & Research Hub)**.
+Medirus là **Universal Scraping & Automation Microservice Platform** (Động cơ Cào Dữ liệu Toàn năng), hoạt động độc lập như một SaaS / CLI / AI MCP Server và đóng vai trò là **Scraping Engine chuyên trách cho hệ sinh thái Nowing (AI Lead & Research Hub)**.
 
 Kiến trúc kết hợp 5 mô hình nền tảng:
 1. **Hexagonal Architecture (Ports and Adapters):** Lõi `src/core/` chứa platform-agnostic contracts (`AbstractCrawler`, `AbstractApiClient`, `AbstractStore`, `AbstractLogin`) và không chứa platform-specific selectors hoặc framework logic. Mọi platform-specific implementation sống trong `src/scrapers/{domain}/{platform}/`. `src/client/` là legacy Twitter client được giữ lại cho backward compatibility; abstraction mới nằm trong `src/core/base-client.js`.
 2. **Tiered Hybrid Signer Engine:** Kết hợp **Pre-Signed Token Ring Buffer** (cấp phát O(1) cho session tokens như `lsd`, `fb_dtsg`, `msToken`) và **Signer Worker Page Pool** (4–8 tabs ngầm cho chữ ký động `a_bogus`, `x-client-transaction-id` với `Promise.race` timeout 3s, adaptive lên 8s cho lần warmup đầu). Toàn bộ tác vụ fetch dữ liệu chạy bằng Async HTTP Client duy nhất được chốt runtime (xem AD-3).
 3. **Dual-Channel High-Speed Microservice Communication:**
-   * *Kênh Đồng Bộ (Realtime / On-Demand <2ms):* Chạy XActions dưới dạng **Daemon Microservice** với giao thức **MCP over HTTP/SSE Transport** (Port 3001) sử dụng Persistent Connection Pool (Keep-Alive), loại bỏ 100% độ trễ khởi động tiến trình.
+   * *Kênh Đồng Bộ (Realtime / On-Demand <2ms):* Chạy Medirus dưới dạng **Daemon Microservice** với giao thức **MCP over HTTP/SSE Transport** (Port 3001) sử dụng Persistent Connection Pool (Keep-Alive), loại bỏ 100% độ trễ khởi động tiến trình.
    * *Kênh Bất Đồng Bộ (Bulk Ingestion):* Phát sự kiện qua **Redis Streams (`stream:social:raw_posts`)** với Consumer Group `nowing_nlp_workers`.
 4. **Adaptive Infrastructure-Aware Dynamic Rate Limiting:** Tự động điều chỉnh tốc độ cào toàn hệ thống dựa trên tỷ lệ Proxy sống (`Healthy Proxy Ratio`), hạn mức tài khoản (Account Velocity) và độ dài hàng đợi Redis để giảm rủi ro die account hàng loạt (xem AD-13).
 5. **Unified PostgreSQL Storage & JSONB GIN Indexing:** 100% dữ liệu được lưu trữ nhất quán vào PostgreSQL qua Prisma ORM với quy tắc định danh Namespaced ID và cột `metadata Json?` có GIN Index (tạo qua raw migration) để query siêu tốc.
@@ -50,11 +50,11 @@ flowchart TB
         Nowing["Nowing AI Lead Hub<br/>(FastAPI / Redis Stream / HTTP Pool)"]
         CLI["CLI Tool (unfollowx)"]
         MCP["AI Agents<br/>(Claude / Antigravity / Cursor)"]
-        Web["XActions Internal Operator Dashboard<br/>(Express API)"]
+        Web["Medirus Internal Operator Dashboard<br/>(Express API)"]
         Alerts["Alerts & Notifications<br/>(Webhook / Email)"]
     end
 
-    subgraph XActionsMicroservice ["XActions Universal Scraping Microservice (Daemon Port 3001)"]
+    subgraph MedirusMicroservice ["Medirus Universal Scraping Microservice (Daemon Port 3001)"]
         subgraph CorePorts ["Core Domain & Ports (src/core/ - platform-agnostic)"]
             AC["AbstractCrawler"]
             AA["AbstractApiClient"]
@@ -170,7 +170,7 @@ flowchart TB
   3. Cột `metadata Json?` yêu cầu **GIN Index** (`CREATE INDEX USING gin (metadata)`) và Expression Index cho các trường lọc trọng điểm (`price`, `phone`, `salary`). Vì Prisma 5.x không hỗ trợ `USING gin` natively, index phải được tạo qua raw migration SQL và theo dõi trong `prisma/migrations/`.
   4. Mọi thao tác ghi hàng loạt chunk theo lô 500 records. Chiến lược mặc định là `createMany` + `skipDuplicates` kèm `updateMany` cho conflict; `prisma.$transaction()` 500 lệnh `upsert` chỉ dùng khi benchmark xác nhận đạt >5,000 records/s.
   5. `Post.mediaUrls` là `String[]` (PostgreSQL native array) hoặc `Json?` nếu cần object metadata; không dùng JSON-stringified `String`.
-  6. *Metadata Schema Contract:* Mỗi `platform`/`category` phải publish JSON Schema hoặc TypeScript type cho `metadata`. Consumer có thể lấy schema qua `GET /schemas/:platform/:category`, MCP `x_schema_get`, hoặc CLI `xactions schema get`. `PrismaStore` validate `metadata` against schema khi ghi; mismatch trả `invalid_args`.
+  6. *Metadata Schema Contract:* Mỗi `platform`/`category` phải publish JSON Schema hoặc TypeScript type cho `metadata`. Consumer có thể lấy schema qua `GET /schemas/:platform/:category`, MCP `x_schema_get`, hoặc CLI `medirus schema get`. `PrismaStore` validate `metadata` against schema khi ghi; mismatch trả `invalid_args`.
 
 ### AD-5 — Non-Invasive Authentication via Terminal QR & CDP Attach [ADOPTED]
 * **Binds:** `src/core/base-login.js`, `src/utils/qrcode.js`, `src/core/session-manager.js`
@@ -189,14 +189,14 @@ flowchart TB
   2. Chặn đệ quy vô hạn: Giới hạn `maxDepth: 3`, `maxComments: 500` và kiểm tra chống tham chiếu vòng (`parentCommentId !== id` và `parentCommentId` không nằm trong tổ tiên).
 
 ### AD-7 — Dual-Channel Microservice Protocol for Nowing [ADOPTED - ENHANCED]
-* **Binds:** `src/mcp/**`, `src/api/**`, `nowing_backend/app/proprietary/platforms/xactions/adapter.py`
+* **Binds:** `src/mcp/**`, `src/api/**`, `nowing_backend/app/proprietary/platforms/medirus/adapter.py`
 * **Prevents:** Tràn bộ nhớ RAM Redis (OOM) khi lưu raw JSON quá nặng, mất dữ liệu khi Nowing consumer chậm, độ trễ cao khi spawn stdio, và thiếu kênh realtime cho on-demand queries.
 * **Rule:**
-  1. *Daemon MCP over HTTP/SSE Transport:* XActions chạy thường trực trên cổng `http://xactions:3001/mcp` (configurable qua `PORT`). Nowing giao tiếp qua HTTP/1.1 hoặc HTTP/2 Keep-Alive Connection Pool. Mặc định `MCP_TRANSPORT=http` được set cho daemon; CLI/Claude Desktop có thể dùng `stdio`.
+  1. *Daemon MCP over HTTP/SSE Transport:* Medirus chạy thường trực trên cổng `http://medirus:3001/mcp` (configurable qua `PORT`). Nowing giao tiếp qua HTTP/1.1 hoặc HTTP/2 Keep-Alive Connection Pool. Mặc định `MCP_TRANSPORT=http` được set cho daemon; CLI/Claude Desktop có thể dùng `stdio`.
   2. *Integration Contract:* URL gốc là `/mcp`, session id do `StreamableHTTPServerTransport` sinh, health check tại `GET /health`, auth qua header `Authorization: Bearer <token>` hoặc mTLS. Nowing client giữ session id trong cache và reconnect SSE khi disconnect.
-  3. *Redis Stream Bulk Ingest:* XActions phát Thin Event Pointers (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào `stream:social:raw_posts`. Kích thước stream theo `MINID` hoặc `MAXLEN ~ 1000000` (configurable) thay vì 20,000; tốc độ bulk ingestion phụ thuộc vào consumer capacity và được kiểm soát bởi AD-13.
+  3. *Redis Stream Bulk Ingest:* Medirus phát Thin Event Pointers (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào `stream:social:raw_posts`. Kích thước stream theo `MINID` hoặc `MAXLEN ~ 1000000` (configurable) thay vì 20,000; tốc độ bulk ingestion phụ thuộc vào consumer capacity và được kiểm soát bởi AD-13.
   4. *Durability:* Mọi event phát đi phải được ghi vào `CrawlCheckpoint` trước. Nowing đọc qua Consumer Group (`nowing_nlp_workers`) và xác nhận qua `XACK`.
-  5. *Startup & Operational UX:* MCP Daemon phải cung cấp CLI commands `xactions daemon start/status/stop` và dashboard tile hiển thị daemon state (running/stopped/error). Startup script `mcp:daemon` phải in log rõ ràng với URL `http://localhost:3001/mcp` và `GET /health`.
+  5. *Startup & Operational UX:* MCP Daemon phải cung cấp CLI commands `medirus daemon start/status/stop` và dashboard tile hiển thị daemon state (running/stopped/error). Startup script `mcp:daemon` phải in log rõ ràng với URL `http://localhost:3001/mcp` và `GET /health`.
 
 ### AD-8 — Multi-Domain Expansion Blueprint [ADOPTED]
 * **Binds:** `src/scrapers/**`
@@ -228,7 +228,7 @@ flowchart TB
 * **Prevents:** Cào trùng lặp dữ liệu gây lãng phí proxy và phình to ổ cứng CSDL sau thời gian dài.
 * **Rule:**
   1. *Incremental Gap-Filling Protocol:* Mọi request cào theo keyword/target phải hỗ trợ tham số `since_id` / `since_time`. Trước khi phát Thin Event, cập nhật `CrawlCheckpoint` với `lastCursor` / `lastTimestamp` cho target. Hai instance crawler có thể resume từ checkpoint.
-  2. *Data Retention Lifecycle:* Dữ liệu thô trong bảng `Post` và `Comment` của XActions áp dụng chính sách lưu trữ 30 ngày. Retention được enforce bằng partition by range `crawledAt` hoặc background cleanup job chạy hàng ngày. Nowing chịu trách nhiệm lưu trữ vĩnh viễn các Enriched Leads, Verified Contacts và Vector Embeddings.
+  2. *Data Retention Lifecycle:* Dữ liệu thô trong bảng `Post` và `Comment` của Medirus áp dụng chính sách lưu trữ 30 ngày. Retention được enforce bằng partition by range `crawledAt` hoặc background cleanup job chạy hàng ngày. Nowing chịu trách nhiệm lưu trữ vĩnh viễn các Enriched Leads, Verified Contacts và Vector Embeddings.
 
 ### AD-11 — CrawlerCommand & ActionRegistry [ADOPTED]
 * **Binds:** `src/core/base-crawler.js`, `src/scrapers/**`
@@ -267,8 +267,8 @@ flowchart TB
   1. **Realtime Pool (30% proxy capacity):** Dành cho MCP on-demand queries từ Nowing và ChainLens. Ưu tiên cao, timeout 5s. Khi cạn, tạm yield proxy từ Bulk Pool.
   2. **Bulk Pool (70% proxy capacity):** Dành cho background crawl. Có thể bị throttle khi Realtime Pool áp lực.
   3. **Consumer Quota:** Mỗi consumer (Nowing, ChainLens) được cấp quota riêng biệt trong Rate Governor. ChainLens: 10 RPM dedicated. Nowing: theo workspace plan.
-  4. **Consumer Identification:** Service Bearer Token (`XACTIONS_MCP_API_KEY`) phân biệt consumer qua header `X-Consumer-Id: nowing | chainlens`.
-  5. **ChainLens-Research Consumer (Luồng A — Live Domain Grounding):** ChainLens-Research gọi XActions MCP tools (`x_facebook_group_posts`, `x_search_tweets`, `x_shopee_search`) qua HTTP Keep-Alive tới `http://xactions:3001/mcp` khi Deep/Wide Research cần dữ liệu thực địa từ MXH. Đây là best-effort enhancement — nếu XActions offline, ChainLens tiếp tục pipeline bình thường.
+  4. **Consumer Identification:** Service Bearer Token (`MEDIRUS_MCP_API_KEY`) phân biệt consumer qua header `X-Consumer-Id: nowing | chainlens`.
+  5. **ChainLens-Research Consumer (Luồng A — Live Domain Grounding):** ChainLens-Research gọi Medirus MCP tools (`x_facebook_group_posts`, `x_search_tweets`, `x_shopee_search`) qua HTTP Keep-Alive tới `http://medirus:3001/mcp` khi Deep/Wide Research cần dữ liệu thực địa từ MXH. Đây là best-effort enhancement — nếu Medirus offline, ChainLens tiếp tục pipeline bình thường.
 
 ### AD-22 — Vietnam Geo-Consistent Proxy & Locale Binding [ADOPTED - NEW]
 * **Binds:** `src/proxy/proxy-pool.js`, `src/core/adaptive-governor.js`, `src/agents/antiDetection.js`, `src/scrapers/**`
@@ -290,17 +290,17 @@ flowchart TB
      - `suggestedAction` là một trong: `retry_after_delay`, `rotate_proxy`, `rotate_account`, `hibernate_account`, `relogin`, `wait`, `reduce_rate`, `contact_support`.
      - Auth-required example: `{ code: 42901, type: 'bot_challenge', message: 'Facebook returned WAF challenge for acct fb:123', retryAfter: 1200, suggestedAction: 'hibernate_account', accountId: 'fb:123', platform: 'facebook' }`.
      - No-auth example: `{ code: 42902, type: 'rate_limit', message: 'Chotot returned 429 on IP 1.2.3.4', retryAfter: 300, suggestedAction: 'rotate_proxy', platform: 'chotot' }`.
-  2. **Action Discovery Contract:** Mỗi platform crawler phải implement `listActions(): ActionDescriptor[]` trả về `{ action, description, requiredArgs, optionalArgs, example, outputType, requiresAuth }` (requiresAuth đã phân giải theo AD-11 rule 3). MCP cung cấp tool `x_actions_list` và CLI cung cấp `xactions actions --platform <platform>`.
-  3. **Governor Status API:** `GET /governor/status` và CLI `xactions status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
-  4. **Legacy CLI Mapping:** Các lệnh cũ của `unfollowx` (`x_get_followers`, `x_unfollow_non_followers`, v.v.) được map vào `CrawlerCommand` với `{ action: '<mapped>', platform: 'twitter' }`. Nếu lệnh cũ không còn hỗ trợ, trả về error envelope với `suggestedAction: 'use_x_actions_list'`.
+  2. **Action Discovery Contract:** Mỗi platform crawler phải implement `listActions(): ActionDescriptor[]` trả về `{ action, description, requiredArgs, optionalArgs, example, outputType, requiresAuth }` (requiresAuth đã phân giải theo AD-11 rule 3). MCP cung cấp tool `medirus_list` và CLI cung cấp `medirus actions --platform <platform>`.
+  3. **Governor Status API:** `GET /governor/status` và CLI `medirus status` trả về `{ healthyProxyCount, totalProxyCount, healthyProxyRatio, currentReqPerSecond, redisConsumerLag, hibernatingAccounts[], throttleLevel }`.
+  4. **Legacy CLI Mapping:** Các lệnh cũ của `unfollowx` (`x_get_followers`, `x_unfollow_non_followers`, v.v.) được map vào `CrawlerCommand` với `{ action: '<mapped>', platform: 'twitter' }`. Nếu lệnh cũ không còn hỗ trợ, trả về error envelope với `suggestedAction: 'use_medirus_list'`.
 
 ### AD-15 — Terminal QR Login with Non-TTY Fallback & Clear Auth Feedback [ADOPTED - NEW]
 * **Binds:** `src/core/base-login.js`, `src/utils/qrcode.js`, `src/cli/login.js`
 * **Prevents:** User bị kẹt ở headless server, Docker, CI, hoặc terminal nhỏ; đăng nhập thất bại mà không có actionable message.
 * **Rule:**
   1. **TTY Detection:** Trước khi render QR ASCII, kiểm tra `process.stdout.isTTY`. Nếu không phải TTY, in URL dạng text kèm short code và hướng dẫn mở trên thiết bị khác.
-  2. **Non-TTY Fallbacks:** Hỗ trợ `xactions login --qr-url` (chỉ in URL), `xactions login --push` (gửi push qua webhook/notification nếu user đã cấu hình), và `xactions login --cdp` (bỏ qua QR).
-  3. **Error Messages:** Nếu timeout 120s, in `[QR EXPIRED] Run again with 'xactions login --qr' or use '--cdp' if you have a running Chrome.` Nếu checkpoint, in `[ACCOUNT CHECKPOINTED] Open browser at <url> or use CDP to solve manually.` (Use plain text with clear prefix, no emoji).
+  2. **Non-TTY Fallbacks:** Hỗ trợ `medirus login --qr-url` (chỉ in URL), `medirus login --push` (gửi push qua webhook/notification nếu user đã cấu hình), và `medirus login --cdp` (bỏ qua QR).
+  3. **Error Messages:** Nếu timeout 120s, in `[QR EXPIRED] Run again with 'medirus login --qr' or use '--cdp' if you have a running Chrome.` Nếu checkpoint, in `[ACCOUNT CHECKPOINTED] Open browser at <url> or use CDP to solve manually.` (Use plain text with clear prefix, no emoji).
   4. **Terminal Size Adaptation:** QR ASCII tự động nhỏ lại (`small: true`) khi terminal width < 80 cols.
 
 ### AD-16 — CrawlCheckpoint Operational API [ADOPTED - NEW]
@@ -308,7 +308,7 @@ flowchart TB
 * **Prevents:** Operator/AI không thấy tiến độ crawl, không resume/pause/retry target, và không debug gap-filling.
 * **Rule:**
   1. **Checkpoint API:** `GET /checkpoints` trả về list với filter `{ platform, targetType, targetKey, status }`; `GET /checkpoints/:id` chi tiết; `POST /checkpoints/:id/resume`; `POST /checkpoints/:id/pause`; `POST /checkpoints/:id/retry`.
-  2. **CLI Surface:** `xactions checkpoints list`, `xactions checkpoints show <id>`, `xactions checkpoints resume <id>`, `xactions checkpoints pause <id>`.
+  2. **CLI Surface:** `medirus checkpoints list`, `medirus checkpoints show <id>`, `medirus checkpoints resume <id>`, `medirus checkpoints pause <id>`.
   3. **Status Values:** `running`, `paused`, `failed`, `completed`, `stalled`. Mỗi checkpoint hiển thị `lastCrawledAt`, `lastCursor`, `lastTimestamp`, `nextScheduledAt`, `errorCount`.
 
 ### AD-17 — Redis Stream Metrics & Backpressure Observability [ADOPTED - NEW]
@@ -316,7 +316,7 @@ flowchart TB
 * **Prevents:** Operator không biết stream đang drop event hoặc Nowing consumer đang lag; hệ thống chạy blind khi bulk throughput thay đổi.
 * **Rule:**
   1. **Metrics Endpoint:** `GET /metrics/stream` trả về `{ eventsPerSecond, pendingMessages, consumerLag, droppedEvents, lastAckTime, maxLen, minId }`.
-  2. **CLI/Dashboard:** `xactions stream metrics` và dashboard tile "Redis Stream Health".
+  2. **CLI/Dashboard:** `medirus stream metrics` và dashboard tile "Redis Stream Health".
   3. **Alert Thresholds:** Cảnh báo khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`. Alert channel cấu hình qua `ALERT_WEBHOOK` hoặc `ALERT_EMAIL`.
   4. **Backpressure Visibility:** Khi governor kích hoạt backpressure, ghi log/metric `throttle_reason: redis_lag` với `reduced_to_percent`.
 
@@ -325,7 +325,7 @@ flowchart TB
 * **Prevents:** Nowing consumer không biết field nào có trong `Post.metadata` cho từng platform/category; hai platform tự định nghĩa field trùng tên khác kiểu.
 * **Rule:**
   1. **Schema Registry:** Mỗi platform/category phải publish JSON Schema cho `metadata` tại `schemas/<platform>/<category>.json` hoặc TypeScript type file.
-  2. **Discovery API:** `GET /schemas` liệt kê tất cả; `GET /schemas/:platform/:category` trả schema. MCP tool `x_schema_get` và CLI `xactions schema get <platform> <category>`.
+  2. **Discovery API:** `GET /schemas` liệt kê tất cả; `GET /schemas/:platform/:category` trả schema. MCP tool `x_schema_get` và CLI `medirus schema get <platform> <category>`.
   3. **Validation:** `PrismaStore` và exporter validate `metadata` against schema khi ghi; lỗi validation trả về `invalid_args` error envelope với `field` và `expectedType`.
   4. **Reserved Fields:** Các field `price`, `salary`, `phone`, `rating`, `soldCount`, `skills`, `location` phải dùng kiểu dữ liệu chuẩn hóa trong schema (ví dụ `price: number`, `phone: string`, `location: { region, district }`).
 
@@ -333,30 +333,30 @@ flowchart TB
 * **Binds:** `dashboard/**`, `src/api/**`, `src/core/**`, `src/cli/**`, `src/mcp/**`
 * **Prevents:** Operator thiếu single pane of glass để vận hành; CLI, dashboard, và MCP diverge về trạng thái hiển thị.
 * **Rule:**
-  1. **Scope:** Operator surface dùng **nội bộ** cho team vận hành XActions, không phải multi-tenant SaaS dashboard cho khách hàng. Auth bằng internal admin API key hoặc A2A token.
+  1. **Scope:** Operator surface dùng **nội bộ** cho team vận hành Medirus, không phải multi-tenant SaaS dashboard cho khách hàng. Auth bằng internal admin API key hoặc A2A token.
   2. **Required Views:** Dashboard MVP phải có 5 views: **Jobs**, **Proxies**, **Accounts**, **Checkpoints**, **Stream Metrics**.
   3. **Data Sources:** Mỗi view lấy dữ liệu từ API tương ứng (`/admin/proxies`, `/admin/accounts`, `/admin/checkpoints`, `/admin/stream/metrics`, `/governor/status`). Không truy cập DB trực tiếp từ dashboard.
   4. **Real-Time Updates:** Các view Jobs, Stream Metrics, Proxies cập nhật mỗi 5s qua SSE hoặc polling. Accounts và Checkpoints cập nhật mỗi 30s.
   5. **Actions:** Từ dashboard có thể `pause/resume/retry` checkpoints, `quarantine/release` proxies, `wake/hibernate` accounts (manual override).
-  6. **Admin CLI:** Cung cấp lệnh `xactions admin`, `xactions checkpoints`, `xactions stream` để xem status và thực hiện operational actions từ terminal. CLI gọi cùng `/admin/*` API.
+  6. **Admin CLI:** Cung cấp lệnh `medirus admin`, `medirus checkpoints`, `medirus stream` để xem status và thực hiện operational actions từ terminal. CLI gọi cùng `/admin/*` API.
   7. **Admin MCP:** Cung cấp tools `x_admin_*` cho AI agents nội bộ để query status và thực hiện manual override.
 
 ---
 
 ## 3. Inherited Invariants (from Nowing Parent Spine)
 
-Spine này kế thừa các AD-SOC từ <code>../nowing/_bmad-output/planning-artifacts/architecture/architecture-xactions-social-integration-2026-08-15/ARCHITECTURE-SPINE.md</code> và tuân thủ như ràng buộc read-only:
+Spine này kế thừa các AD-SOC từ <code>../nowing/_bmad-output/planning-artifacts/architecture/architecture-medirus-social-integration-2026-08-15/ARCHITECTURE-SPINE.md</code> và tuân thủ như ràng buộc read-only:
 
 * **AD-SOC-1:** Universal scraping delegation qua MCP/Redis — không reinvent scraper trong Nowing.
-* **AD-SOC-2:** Stealth anti-detection & fingerprint (TLS/JA4, signer bridge, cookie warmup) được ủy quyền cho XActions.
+* **AD-SOC-2:** Stealth anti-detection & fingerprint (TLS/JA4, signer bridge, cookie warmup) được ủy quyền cho Medirus.
 * **AD-SOC-3:** Proxy pool tập trung với auto-quarantine 5 phút.
 * **AD-SOC-4:** Decoupled Redis Stream event buffer — thin pointers.
-* **AD-SOC-5:** Intent classification & entity normalization — *mở câu hỏi: XActions có tính `intent_tag` hay để Nowing làm?* (xem Open Questions).
+* **AD-SOC-5:** Intent classification & entity normalization — *mở câu hỏi: Medirus có tính `intent_tag` hay để Nowing làm?* (xem Open Questions).
 * **AD-SOC-6:** Idempotent storage `(platform, external_post_id)`.
 * **AD-SOC-7:** Realtime alert & CRM lead creation thuộc Nowing.
-* **AD-SOC-8:** 3-Tier Gap-Filling (L1 Nowing DB, L2 XActions DB, L3 live scraping) — đáp ứng bởi AD-10 + AD-12.
+* **AD-SOC-8:** 3-Tier Gap-Filling (L1 Nowing DB, L2 Medirus DB, L3 live scraping) — đáp ứng bởi AD-10 + AD-12.
 * **AD-SOC-9:** Multi-domain scraping + legacy Nowing scraper decommission.
-* **AD-SOC-10:** Data partitioning & retention — XActions raw 30 ngày, Nowing leads vĩnh viễn.
+* **AD-SOC-10:** Data partitioning & retention — Medirus raw 30 ngày, Nowing leads vĩnh viễn.
 
 ---
 
@@ -463,15 +463,15 @@ CREATE INDEX IF NOT EXISTS idx_post_metadata_salary ON "Post" USING btree ((meta
 ## 5. Deferred & Out-of-Scope
 
 * **Instagram, Amazon, Muaban.net, ITviec, B2B (Mua Sắm Công, Mã Số Thuế):** Không thuộc Epics 10–18. Giữ lại trong roadmap nhưng không được tạo thư mục `src/scrapers/` cho tới khi có epic cụ thể.
-* **Context bóc tách SĐT từ comment:** Thuộc Nowing NLP/Lead pipeline; XActions lưu raw `metadata` và gửi Thin Event. Nếu XActions cần extract SĐT thì phải thêm AD mới, không ngầm định.
+* **Context bóc tách SĐT từ comment:** Thuộc Nowing NLP/Lead pipeline; Medirus lưu raw `metadata` và gửi Thin Event. Nếu Medirus cần extract SĐT thì phải thêm AD mới, không ngầm định.
 * **Adaptive timeout signer 8s:** Cấu hình được phép, nhưng 3s là mặc định. Đo benchmark sau 100 lần gọi đầu tiên.
 
 ---
 
 ## 6. Open Questions
 
-1. **Intent tagging (AD-SOC-5):** ~~Nowing hay XActions chịu trách nhiệm gán `intent_tag` (`sell`, `buy`, `hiring`, `seeking`)?~~ **Resolved: Nowing owns intent classification.** XActions gửi Thin Event raw; Nowing NLP/Lead pipeline gán `intent_tag` và lưu vĩnh viễn. Không thêm `Post.intentTag` vào schema XActions.
-2. **MCP over HTTP/SSE Auth:** ~~Xác thực giữa Nowing và XActions daemon dùng Bearer token, mTLS, hay network-isolation only?~~ **Resolved: MVP dùng `Authorization: Bearer <token>`** qua `src/a2a/auth.js`. mTLS là hardening item tương lai; network-isolation bổ sung ở infra.
+1. **Intent tagging (AD-SOC-5):** ~~Nowing hay Medirus chịu trách nhiệm gán `intent_tag` (`sell`, `buy`, `hiring`, `seeking`)?~~ **Resolved: Nowing owns intent classification.** Medirus gửi Thin Event raw; Nowing NLP/Lead pipeline gán `intent_tag` và lưu vĩnh viễn. Không thêm `Post.intentTag` vào schema Medirus.
+2. **MCP over HTTP/SSE Auth:** ~~Xác thực giữa Nowing và Medirus daemon dùng Bearer token, mTLS, hay network-isolation only?~~ **Resolved: MVP dùng `Authorization: Bearer <token>`** qua `src/a2a/auth.js`. mTLS là hardening item tương lai; network-isolation bổ sung ở infra.
 3. **Per-Platform Rate Limits:** Các giá trị `safeRequestsPerMinute` và `baseReqPerSecondPerProxy` cho Facebook, Shopee, LinkedIn, v.v. cần được đo thực tế; ban đầu có thể dùng giá trị bảo thủ và tune sau.
 
 ---
@@ -510,7 +510,7 @@ Spine r3 đã hấp thụ 10 UX findings từ `ARCHITECTURE-UX-REVIEW-2026-08-18
 
 | UX Finding | AD mới | Chủ đề | Trạng thái |
 |---|---|---|---|
-| F1 — Daemon startup UX | AD-7 | CLI `xactions daemon start/status/stop`, dashboard tile | Adopted |
+| F1 — Daemon startup UX | AD-7 | CLI `medirus daemon start/status/stop`, dashboard tile | Adopted |
 | F2 — QR non-TTY fallback | AD-15 | URL/short code/webhook, timeout message | Adopted |
 | F3 — Governor status | AD-13 + AD-14 | `GET /governor/status`, error envelope, `suggestedAction` | Adopted |
 | F4 — Checkpoint visibility | AD-16 | Checkpoint API, dashboard/CLI table | Adopted |
@@ -543,10 +543,10 @@ Tất cả AD UX đã được chuyển thành story acceptance criteria trong `
 
 * **AD-23 adopted:** Pluggable browser backend cho `launchStealthBrowser` — `chrome` (default) | `obscura` (CDP, opt-in). Quyết định từ spike `scripts/obscura-spike.mjs`: Obscura (Rust, ~30MB) render được guest-visible pages nhưng **không mount `data-testid` trên SPA sau-auth** và **treo `waitUntil:'networkidle2'`** trên v0.2.2.
   * **Rule 1 — Auth-aware backend scope:** `obscura` CHỈ phục vụ public/guest-visible scraping. Post-auth (`requiresAuth===true`, resolved per `base-crawler.js:177`) reject `obscura` bằng `PlatformError{ type: INVALID_ARGS }` — không silent fallback, không registry riêng.
-  * **Rule 2 — Fallback direction:** `XACTIONS_BROWSER_BACKEND` (primary) + `XACTIONS_BROWSER_BACKEND_FALLBACK` (default `chrome`). `obscura→chrome` luôn được phép; `chrome→obscura` chỉ trên public-scraping path.
+  * **Rule 2 — Fallback direction:** `MEDIRUS_BROWSER_BACKEND` (primary) + `MEDIRUS_BROWSER_BACKEND_FALLBACK` (default `chrome`). `obscura→chrome` luôn được phép; `chrome→obscura` chỉ trên public-scraping path.
   * **Rule 3 — networkidle0 only:** mọi navigation trên `obscura` dùng `waitUntil:'networkidle0'`/`load`/`domcontentloaded`; cấm `networkidle2`.
   * **Rule 4 — Backend ở adapter layer + teardown contract:** resolution đặt tại `PuppeteerAdapter.launch/connect` (điểm vào chung cho scraper bridges) và `launchStealthBrowser` (caller trực tiếp). Teardown per-backend: `obscura`→`disconnect()`, `chrome`→`close()` đọc từ `browser.__backend`.
-  * **Rule 5 — Per-backend telemetry:** `XACTIONS_BROWSER_BACKEND_METRICS=1` gắn `browserBackend` vào telemetry `emitRun` (Epic 34) khi browser launch thật xảy ra; per-backend comparison qua `obscura-spike.mjs BACKEND=both`. `CanaryRunner` không sửa (probe HTTP). Default OFF.
+  * **Rule 5 — Per-backend telemetry:** `MEDIRUS_BROWSER_BACKEND_METRICS=1` gắn `browserBackend` vào telemetry `emitRun` (Epic 34) khi browser launch thật xảy ra; per-backend comparison qua `obscura-spike.mjs BACKEND=both`. `CanaryRunner` không sửa (probe HTTP). Default OFF.
   * **Rule 6 — Watch → Verify → Promote gate:** không auto-update; `obscura-for-auth` chỉ mở opt-in sau khi spike xanh (`/home` mount `data-testid`) + change request + human approve.
 * **Spec:** `implementation-artifacts/spec-27-4-obscura-public-scraping-backend-watch.md`; **Docs:** `docs/obscura-backend.md`, `docs/obscura-watch.md`; **Proposal:** `sprint-change-proposal-2026-09-13-obscura-backend.md`.
 * **Trigger:** Obscura spike evaluation + pluggable backend decision, approved by Luisphan.
@@ -554,13 +554,13 @@ Tất cả AD UX đã được chuyển thành story acceptance criteria trong `
 ### Decision Changelog bổ sung (2026-10-02 — Browser Page Pool)
 
 * **AD-24 adopted:** Browser Page Pool & Backend-Aware Sharding. Scrape jobs acquire a page/context from a shared `BrowserPool` thay vì launch browser per job. Quyết định từ spike `scripts/browser-pool-spike.mjs` (`spike-browser-page-pool.md`): `newPage()`/context-acquire ~22x rẻ hơn `browser.launch()` (70ms vs 1558ms p50), pool giảm ΔRSS ~16x.
-  * **Rule 1 — Opt-in only:** `XACTIONS_BROWSER_POOL_SIZE` (default 0 = launch-per-job, byte-identical current behavior). Flag off → zero change to existing paths.
+  * **Rule 1 — Opt-in only:** `MEDIRUS_BROWSER_POOL_SIZE` (default 0 = launch-per-job, byte-identical current behavior). Flag off → zero change to existing paths.
   * **Rule 2 — Isolated context default:** mỗi job acquire một `browserContext` riêng (incognito-equivalent, cookie/storage isolated — spike `isoLeak=false`). Shared-context CHỈ cho anonymous public scraping qua opt-in tường minh.
   * **Rule 3 — Backend-aware ceiling (from spike):** chrome → sharded-pool (~4–6 isolated contexts/browser, spawn browser thứ hai khi vượt); obscura → pool-of-processes (nhiều `obscura serve`, ~2–4 page/CDP-connection — nav/render là bottleneck, KHÔNG phải context-create).
   * **Rule 4 — Teardown contract:** `release(page)` đóng context/page, không đụng shared browser. Browser lifecycle thuộc pool, không thuộc job. Vẫn respect AD-23 `__backend` (`obscura`→`disconnect()`, `chrome`→`close()`).
   * **Rule 5 — Post-auth guard unchanged:** `requiresAuth===true` vẫn reject `obscura` (AD-23); pooled post-auth dùng isolated chrome context per account.
   * **Rule 6 — Crash containment:** pool detect dead browser → respawn; chỉ in-flight jobs trên browser đó fail (Bull retry re-queue) — không silent.
-  * **Rule 7 — Telemetry:** `emitRun` thêm `pooled`/`poolBackend`/`poolWaitMs` khi `XACTIONS_BROWSER_BACKEND_METRICS=1`.
+  * **Rule 7 — Telemetry:** `emitRun` thêm `pooled`/`poolBackend`/`poolWaitMs` khi `MEDIRUS_BROWSER_BACKEND_METRICS=1`.
 * **Binds:** `src/scraping/browserPool.js` (new), `src/scraping/stealthBrowser.js`, `src/scrapers/adapters/puppeteer.js`, `api/services/jobQueue.js`, `api/services/scrapeDispatch.js`.
 * **Prevents:** per-job browser launch RAM blowup; Chromium IPC / context-create single-process bottleneck khi nhiều job scrape đồng thời.
 * **Spec:** `implementation-artifacts/spike-browser-page-pool.md`; **Proposal:** `sprint-change-proposal-2026-10-02-browser-page-pool.md`; **Epic:** Epic 53.

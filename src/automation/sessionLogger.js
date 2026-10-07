@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation - Session Logger & Analytics
+// Medirus Automation - Session Logger & Analytics
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -12,12 +12,12 @@
 // 3. All automation actions will be recorded
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, storage } = window.XActions.Core;
+  const { log, storage } = window.Medirus.Core;
 
   // ============================================
   // CONFIGURATION
@@ -39,8 +39,8 @@
   // ============================================
   // SESSION STATE
   // ============================================
-  const KEY_SESSIONS = 'xactions_sessions';
-  const KEY_CURRENT = 'xactions_current_session';
+  const KEY_SESSIONS = 'medirus_sessions';
+  const KEY_CURRENT = 'medirus_current_session';
   
   const currentSession = {
     id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
@@ -264,7 +264,7 @@
     
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  📊 XActions Analytics - ${periodLabel.padEnd(10)}                     ║
+║  📊 Medirus Analytics - ${periodLabel.padEnd(10)}                     ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Sessions: ${String(stats.sessions).padEnd(10)}                              ║
 ║  Total Duration: ${formatDuration(stats.totalDuration).padEnd(15)}                   ║
@@ -347,7 +347,7 @@
     
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions-logs-${period}-${Date.now()}.json`;
+    a.download = `medirus-logs-${period}-${Date.now()}.json`;
     a.click();
     
     URL.revokeObjectURL(url);
@@ -380,7 +380,7 @@
     
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions-logs-${Date.now()}.csv`;
+    a.download = `medirus-logs-${Date.now()}.csv`;
     a.click();
     
     URL.revokeObjectURL(url);
@@ -413,7 +413,7 @@
   // ============================================
   // EXPORT API
   // ============================================
-  window.XActions.Logger = {
+  window.Medirus.Logger = {
     logAction,
     logError,
     endSession,

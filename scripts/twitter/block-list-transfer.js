@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 🚫 Block List Transfer - XActions
+ * 🚫 Block List Transfer - Medirus
  * ============================================
  *
  * @name         block-list-transfer
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Pick a mode and the page it needs:
@@ -22,7 +22,7 @@
  *
  * Example:
  *   mode: 'export' -> scrapes every account on your blocked list and downloads
- *   xactions-block-list-YYYY-MM-DD.json. Later, mode: 'importBlock' with those
+ *   medirus-block-list-YYYY-MM-DD.json. Later, mode: 'importBlock' with those
  *   usernames re-applies the whole list on another account. mode: 'blockFollowersOf'
  *   with targetAccount: 'spamring' blocks that account's followers one by one.
  *
@@ -156,8 +156,8 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🚫 BLOCK LIST TRANSFER - XActions                          ║
-║  👤 Author: nichxbt   🌐 https://xactions.app               ║
+║  🚫 BLOCK LIST TRANSFER - Medirus                          ║
+║  👤 Author: nichxbt   🌐 https://medirus.online               ║
 ${CONFIG.mode === 'export' ? '║  📤 EXPORT MODE - read-only                                 ║' : (CONFIG.dryRun ? '║  ⚠️  DRY RUN - No accounts will be blocked                 ║' : '║  🔴 LIVE MODE - Accounts WILL be blocked                    ║')}
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -205,7 +205,7 @@ ${CONFIG.mode === 'export' ? '║  📤 EXPORT MODE - read-only                 
     log.success(`Scraped ${list.length} blocked accounts.`);
     download(
       { exportedAt: new Date().toISOString(), count: list.length, usernames: list.map(u => u.username), accounts: list },
-      `xactions-block-list-${new Date().toISOString().slice(0, 10)}.json`
+      `medirus-block-list-${new Date().toISOString().slice(0, 10)}.json`
     );
   };
 
@@ -432,7 +432,7 @@ ${CONFIG.mode === 'export' ? '║  📤 EXPORT MODE - read-only                 
   if ((CONFIG.mode === 'importBlock' || CONFIG.mode === 'blockFollowersOf') && blockedList.length > 0) {
     download(
       { mode: CONFIG.mode, dryRun: CONFIG.dryRun, stats, blocked: blockedList, exportedAt: new Date().toISOString() },
-      `xactions-block-transfer-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`
+      `medirus-block-transfer-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`
     );
   }
 

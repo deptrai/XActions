@@ -291,7 +291,7 @@
   // ── Main ──
   const run = async () => {
     console.log('═══════════════════════════════════════');
-    console.log('🔁 XActions — Repost / Unrepost Posts');
+    console.log('🔁 Medirus — Repost / Unrepost Posts');
     console.log('═══════════════════════════════════════');
 
     switch (CONFIG.mode) {
@@ -318,15 +318,15 @@
 
     // Save tracking data
     if (CONFIG.trackReposts && repostedPosts.length > 0) {
-      const history = JSON.parse(sessionStorage.getItem('xactions_reposts') || '[]');
+      const history = JSON.parse(sessionStorage.getItem('medirus_reposts') || '[]');
       history.push({
         timestamp: new Date().toISOString(),
         mode: CONFIG.mode,
         count: reposted,
         posts: repostedPosts,
       });
-      sessionStorage.setItem('xactions_reposts', JSON.stringify(history));
-      console.log('💾 Saved to sessionStorage (key: "xactions_reposts")');
+      sessionStorage.setItem('medirus_reposts', JSON.stringify(history));
+      console.log('💾 Saved to sessionStorage (key: "medirus_reposts")');
     }
 
     console.log('═══════════════════════════════════════');

@@ -4,7 +4,7 @@
 
 ## Goal
 
-Thay mô hình scrape **launch-per-job** (mỗi Bull job spawn một browser process riêng, ~300–500MB Chrome / ~30MB Obscura — lý do concurrency bị kẹt ở 2) bằng một **`BrowserPool` dùng chung**: N job đồng thời acquire page/context từ browser sẵn có. Đây là enabler thực sự duy nhất cho các mục tiêu RAM ≥85% và tốc độ 5–10x ở worker layer. Toàn bộ tính năng **opt-in qua `XACTIONS_BROWSER_POOL_SIZE` (default 0 = off)** — flag tắt thì hành vi byte-identical hiện tại, không đổi default, không rollback epic nào.
+Thay mô hình scrape **launch-per-job** (mỗi Bull job spawn một browser process riêng, ~300–500MB Chrome / ~30MB Obscura — lý do concurrency bị kẹt ở 2) bằng một **`BrowserPool` dùng chung**: N job đồng thời acquire page/context từ browser sẵn có. Đây là enabler thực sự duy nhất cho các mục tiêu RAM ≥85% và tốc độ 5–10x ở worker layer. Toàn bộ tính năng **opt-in qua `MEDIRUS_BROWSER_POOL_SIZE` (default 0 = off)** — flag tắt thì hành vi byte-identical hiện tại, không đổi default, không rollback epic nào.
 
 ## Stories
 
@@ -22,7 +22,7 @@ Thay mô hình scrape **launch-per-job** (mỗi Bull job spawn một browser pro
 - Pool phải có queue/backpressure khi hết slot, `drain()` cho shutdown, `stats()` cho observability.
 - Post-auth jobs vẫn reject `obscura` backend (guard `requiresAuth===true` từ AD-23); pooled post-auth dùng isolated chrome context per account.
 - Crash containment: pool detect browser chết → respawn; chỉ in-flight jobs trên browser đó fail, Bull `attempts`/`backoff` re-queue — không silent loss.
-- Telemetry: `emitRun` thêm `pooled`, `poolBackend`, `poolWaitMs` khi `XACTIONS_BROWSER_BACKEND_METRICS=1`.
+- Telemetry: `emitRun` thêm `pooled`, `poolBackend`, `poolWaitMs` khi `MEDIRUS_BROWSER_BACKEND_METRICS=1`.
 - Spike (`scripts/browser-pool-spike.mjs`) được promote thành verify gate pre-release.
 
 ## Technical Decisions
@@ -39,7 +39,7 @@ Thay mô hình scrape **launch-per-job** (mỗi Bull job spawn một browser pro
 
 **Teardown contract** (AD-23 vẫn binding): `browser.__backend === 'obscura'` → `disconnect()`; `chrome` → `close()`. Pool sở hữu browser lifecycle; adapter trả handle, không close browser.
 
-**Touchpoints** (đã ghi trong AD-24): `src/scraping/browserPool.js` (new), `src/scraping/stealthBrowser.js` (`pooled` opt), `src/scrapers/adapters/puppeteer.js` (`launch` pooled), `api/services/jobQueue.js` (thread `pooled` từ `job.data.pooled`/`XACTIONS_BROWSER_POOL_SIZE`), `api/services/scrapeDispatch.js` (clamp + propagate pool size hints).
+**Touchpoints** (đã ghi trong AD-24): `src/scraping/browserPool.js` (new), `src/scraping/stealthBrowser.js` (`pooled` opt), `src/scrapers/adapters/puppeteer.js` (`launch` pooled), `api/services/jobQueue.js` (thread `pooled` từ `job.data.pooled`/`MEDIRUS_BROWSER_POOL_SIZE`), `api/services/scrapeDispatch.js` (clamp + propagate pool size hints).
 
 ## Cross-Story Dependencies
 

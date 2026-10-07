@@ -1,7 +1,7 @@
 cff-version: 1.2.0
-message: "If you use XActions, please cite it as below."
+message: "If you use Medirus, please cite it as below."
 type: software
-title: "XActions"
+title: "Medirus"
 abstract: "⚡ The Complete X/Twitter Automation Toolkit — Scrapers, MCP server for AI agents (Claude/GPT), CLI, browser scripts. No API fees. Open source. Unfollow people who don't follow back. Monitor real-time analytics. Auto follow, like, comment, scrape, without API."
 authors:
   - alias: nirholas

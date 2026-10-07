@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Follower Tools — Free X/Twitter Script | XActions</title>
+  <title>Follower Tools — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="src/followerTools.js">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, follower, tools, follower monitoring">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, follower, tools, follower monitoring">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Follower Tools — XActions">
+  <meta property="og:title" content="Follower Tools — Medirus">
   <meta property="og:description" content="src/followerTools.js">
-  <meta property="og:url" content="https://xactions.app/scripts/follower-tools">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/follower-tools">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Follower Tools — XActions">
+  <meta name="twitter:title" content="Follower Tools — Medirus">
   <meta name="twitter:description" content="src/followerTools.js">
 
-  <link rel="canonical" href="https://xactions.app/scripts/follower-tools">
+  <link rel="canonical" href="https://medirus.online/scripts/follower-tools">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Follower Tools — Free X/Twitter Script | XActions",
+    "headline": "Follower Tools — Free X/Twitter Script | Medirus",
     "description": "src/followerTools.js",
-    "url": "https://xactions.app/scripts/follower-tools",
+    "url": "https://medirus.online/scripts/follower-tools",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Follower Monitoring",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, follower, tools, follower monitoring"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, follower, tools, follower monitoring"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Follower Monitoring", "item": "https://xactions.app/scripts#follower-monitoring" },
-      { "@type": "ListItem", "position": 4, "name": "Follower Tools", "item": "https://xactions.app/scripts/follower-tools" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Follower Monitoring", "item": "https://medirus.online/scripts#follower-monitoring" },
+      { "@type": "ListItem", "position": 4, "name": "Follower Tools", "item": "https://medirus.online/scripts/follower-tools" }
     ]
   }
   </script>
@@ -137,7 +137,7 @@
         <ol class="usage-steps"><li>Go to https://x.com (must be logged in)</li>
 <li>Open Developer Console (F12 or Ctrl+Shift+J / Cmd+Option+J)</li>
 <li>Paste this script and press Enter</li>
-<li>Call functions via window.XActions.followerTools.*</li></ol>
+<li>Call functions via window.Medirus.followerTools.*</li></ol>
         
 
         
@@ -159,7 +159,7 @@
 // 1. Go to https://x.com (must be logged in)
 // 2. Open Developer Console (F12 or Ctrl+Shift+J / Cmd+Option+J)
 // 3. Paste this script and press Enter
-// 4. Call functions via window.XActions.followerTools.*
+// 4. Call functions via window.Medirus.followerTools.*
 //
 // AVAILABLE TOOLS:
 //   togglePostNotifications('username') — Turn on/off bell icon for an account
@@ -267,7 +267,7 @@
 
   const togglePostNotifications = async (username) =&gt; {
     if (!username) {
-      console.error('❌ Usage: XActions.followerTools.togglePostNotifications(&quot;username&quot;)');
+      console.error('❌ Usage: Medirus.followerTools.togglePostNotifications(&quot;username&quot;)');
       return;
     }
 
@@ -343,7 +343,7 @@
 
   const scrapeVerifiedFollowers = async (username) =&gt; {
     if (!username) {
-      console.error('❌ Usage: XActions.followerTools.scrapeVerifiedFollowers(&quot;username&quot;)');
+      console.error('❌ Usage: Medirus.followerTools.scrapeVerifiedFollowers(&quot;username&quot;)');
       return [];
     }
 
@@ -367,8 +367,8 @@
       verified: u.verified ? '✓' : '',
     })));
 
-    sessionStorage.setItem(`xactions_verified_followers_${username}`, JSON.stringify(users));
-    console.log(`💾 Saved to sessionStorage key: xactions_verified_followers_${username}`);
+    sessionStorage.setItem(`medirus_verified_followers_${username}`, JSON.stringify(users));
+    console.log(`💾 Saved to sessionStorage key: medirus_verified_followers_${username}`);
 
     return users;
   };
@@ -377,7 +377,7 @@
 
   const scrapeSubscribers = async (username) =&gt; {
     if (!username) {
-      console.error('❌ Usage: XActions.followerTools.scrapeSubscribers(&quot;username&quot;)');
+      console.error('❌ Usage: Medirus.followerTools.scrapeSubscribers(&quot;username&quot;)');
       return [];
     }
 
@@ -400,8 +400,8 @@
       verified: u.verified ? '✓' : '',
     })));
 
-    sessionStorage.setItem(`xactions_subscribers_${username}`, JSON.stringify(users));
-    console.log(`💾 Saved to sessionStorage key: xactions_subscribers_${username}`);
+    sessionStorage.setItem(`medirus_subscribers_${username}`, JSON.stringify(users));
+    console.log(`💾 Saved to sessionStorage key: medirus_subscribers_${username}`);
 
     return users;
   };
@@ -410,7 +410,7 @@
 
   const scrapeMutualFollowers = async (username1, username2) =&gt; {
     if (!username1 || !username2) {
-      console.error('❌ Usage: XActions.followerTools.scrapeMutualFollowers(&quot;user1&quot;, &quot;user2&quot;)');
+      console.error('❌ Usage: Medirus.followerTools.scrapeMutualFollowers(&quot;user1&quot;, &quot;user2&quot;)');
       console.log('💡 This compares cached follower lists. Run in two steps:');
       console.log('   Step 1: Go to x.com/user1/followers, run scrapeFollowersYouKnow(&quot;user1&quot;) or manually scroll');
       console.log('   Step 2: Go to x.com/user2/followers, do the same');
@@ -428,14 +428,14 @@
       const pathUser = window.location.pathname.match(/^\/([^/]+)\/followers/);
       if (pathUser) {
         const key = pathUser[1].toLowerCase();
-        sessionStorage.setItem(`xactions_followers_${key}`, JSON.stringify(currentUsers));
+        sessionStorage.setItem(`medirus_followers_${key}`, JSON.stringify(currentUsers));
         console.log(`💾 Cached ${currentUsers.length} followers for @${pathUser[1]}`);
       }
     }
 
     // Try to load cached data
-    const raw1 = sessionStorage.getItem(`xactions_followers_${username1}`);
-    const raw2 = sessionStorage.getItem(`xactions_followers_${username2}`);
+    const raw1 = sessionStorage.getItem(`medirus_followers_${username1}`);
+    const raw2 = sessionStorage.getItem(`medirus_followers_${username2}`);
 
     if (!raw1) {
       console.error(`❌ No cached followers for @${username1}. Go to x.com/${username1}/followers and run the script there first.`);
@@ -461,8 +461,8 @@
       verified: u.verified ? '✓' : '',
     })));
 
-    sessionStorage.setItem(`xactions_mutuals_${username1}_${username2}`, JSON.stringify(mutuals));
-    console.log(`💾 Saved to sessionStorage key: xactions_mutuals_${username1}_${username2}`);
+    sessionStorage.setItem(`medirus_mutuals_${username1}_${username2}`, JSON.stringify(mutuals));
+    console.log(`💾 Saved to sessionStorage key: medirus_mutuals_${username1}_${username2}`);
 
     return mutuals;
   };
@@ -488,8 +488,8 @@
       verified: u.verified ? '✓' : '',
     })));
 
-    sessionStorage.setItem('xactions_who_to_follow', JSON.stringify(users));
-    console.log('💾 Saved to sessionStorage key: xactions_who_to_follow');
+    sessionStorage.setItem('medirus_who_to_follow', JSON.stringify(users));
+    console.log('💾 Saved to sessionStorage key: medirus_who_to_follow');
 
     return users;
   };
@@ -498,7 +498,7 @@
 
   const scrapeSimilarAccounts = async (username) =&gt; {
     if (!username) {
-      console.error('❌ Usage: XActions.followerTools.scrapeSimilarAccounts(&quot;username&quot;)');
+      console.error('❌ Usage: Medirus.followerTools.scrapeSimilarAccounts(&quot;username&quot;)');
       return [];
     }
 
@@ -534,8 +534,8 @@
       verified: u.verified ? '✓' : '',
     })));
 
-    sessionStorage.setItem(`xactions_similar_to_${username}`, JSON.stringify(users));
-    console.log(`💾 Saved to sessionStorage key: xactions_similar_to_${username}`);
+    sessionStorage.setItem(`medirus_similar_to_${username}`, JSON.stringify(users));
+    console.log(`💾 Saved to sessionStorage key: medirus_similar_to_${username}`);
 
     return users;
   };
@@ -544,7 +544,7 @@
 
   const restrictAccount = async (username) =&gt; {
     if (!username) {
-      console.error('❌ Usage: XActions.followerTools.restrictAccount(&quot;username&quot;)');
+      console.error('❌ Usage: Medirus.followerTools.restrictAccount(&quot;username&quot;)');
       return;
     }
 
@@ -608,7 +608,7 @@
 
   const scrapeFollowersYouKnow = async (username) =&gt; {
     if (!username) {
-      console.error('❌ Usage: XActions.followerTools.scrapeFollowersYouKnow(&quot;username&quot;)');
+      console.error('❌ Usage: Medirus.followerTools.scrapeFollowersYouKnow(&quot;username&quot;)');
       return [];
     }
 
@@ -636,16 +636,16 @@
       verified: u.verified ? '✓' : '',
     })));
 
-    sessionStorage.setItem(`xactions_followers_you_know_${username}`, JSON.stringify(users));
-    console.log(`💾 Saved to sessionStorage key: xactions_followers_you_know_${username}`);
+    sessionStorage.setItem(`medirus_followers_you_know_${username}`, JSON.stringify(users));
+    console.log(`💾 Saved to sessionStorage key: medirus_followers_you_know_${username}`);
 
     return users;
   };
 
-  // ─── Expose on window.XActions ─────────────────────────────
+  // ─── Expose on window.Medirus ─────────────────────────────
 
-  window.XActions = window.XActions || {};
-  window.XActions.followerTools = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.followerTools = {
     togglePostNotifications,
     scrapeVerifiedFollowers,
     scrapeSubscribers,
@@ -660,11 +660,11 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║          🛠️  XActions Follower Tools — Loaded           ║
+║          🛠️  Medirus Follower Tools — Loaded           ║
 ╠══════════════════════════════════════════════════════════╣
 ║                                                          ║
 ║  All functions available at:                             ║
-║    window.XActions.followerTools.&lt;function&gt;               ║
+║    window.Medirus.followerTools.&lt;function&gt;               ║
 ║                                                          ║
 ║  1. togglePostNotifications('username')                  ║
 ║     ↳ Turn on/off post notifications (bell icon)         ║
@@ -691,7 +691,7 @@
 ║     ↳ Scrape &quot;Followers you know&quot; section                ║
 ║                                                          ║
 ╠══════════════════════════════════════════════════════════╣
-║  💡 Example: XActions.followerTools.scrapeVerified       ║
+║  💡 Example: Medirus.followerTools.scrapeVerified       ║
 ║     Followers('elonmusk')                                ║
 ║  📖 Data saved to sessionStorage after each scrape       ║
 ╚══════════════════════════════════════════════════════════╝
@@ -702,7 +702,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

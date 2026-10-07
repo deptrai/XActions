@@ -4,7 +4,7 @@
 
 ## Goal
 
-Harden XActions' anti-detection and session-resilience layers so scraping is proactive, continuous, and self-healing rather than reactive. This epic builds on `AdaptiveRateGovernor`, `AccountPool`, `ProxyIpPool`, and `StealthBrowser`: fingerprints must be geo-consistent and stable per account, dying/challenged sessions must be pulled from rotation before they poison data, bot challenges must be detected by signature (not just status code), and public/guest scraping must be able to run on a lighter browser backend without weakening post-auth automation.
+Harden Medirus' anti-detection and session-resilience layers so scraping is proactive, continuous, and self-healing rather than reactive. This epic builds on `AdaptiveRateGovernor`, `AccountPool`, `ProxyIpPool`, and `StealthBrowser`: fingerprints must be geo-consistent and stable per account, dying/challenged sessions must be pulled from rotation before they poison data, bot challenges must be detected by signature (not just status code), and public/guest scraping must be able to run on a lighter browser backend without weakening post-auth automation.
 
 ## Stories
 
@@ -19,7 +19,7 @@ Harden XActions' anti-detection and session-resilience layers so scraping is pro
 - `launchStealthBrowser()` consumes `FingerprintManager.getForAccount(accountId)` so fingerprint + proxy + timezone stay consistent per account.
 - Session health is a continuous score with a circuit breaker and recovery probe; a challenged/dying account leaves rotation before poisoning downstream data.
 - Bot challenges are detected by page signature (ChallengeSignatureDetector), feeding `governor.recordBotChallenge()`.
-- **Pluggable browser backend (AD-23, FR-102):** `chrome` is the default and the only allowed backend for post-auth automation; `obscura` is opt-in for public/guest-visible scraping only. Backend resolution lives at the adapter layer (`PuppeteerAdapter.launch/connect`) and `launchStealthBrowser`, sharing the `options.backend`/`XACTIONS_BROWSER_BACKEND` contract. Post-auth (`requiresAuth===true`) must reject `obscura` with a typed `PlatformError` — no silent fallback.
+- **Pluggable browser backend (AD-23, FR-102):** `chrome` is the default and the only allowed backend for post-auth automation; `obscura` is opt-in for public/guest-visible scraping only. Backend resolution lives at the adapter layer (`PuppeteerAdapter.launch/connect`) and `launchStealthBrowser`, sharing the `options.backend`/`MEDIRUS_BROWSER_BACKEND` contract. Post-auth (`requiresAuth===true`) must reject `obscura` with a typed `PlatformError` — no silent fallback.
 
 ## Technical Decisions
 
@@ -27,8 +27,8 @@ Harden XActions' anti-detection and session-resilience layers so scraping is pro
 - **Obscura connect-only via CDP:** `puppeteer-core.connect({ browserWSEndpoint })` to `ws://127.0.0.1:9222` (`obscura serve --stealth` runs out-of-process). Never spawn/manage the binary in the library; `disconnect()` (not `close()`) on teardown — teardown reads `browser.__backend` (`obscura`→`disconnect()`, `chrome`→`close()`).
 - **`waitUntil:'networkidle0'` only on Obscura** (0.2.x hangs `networkidle2`); `domcontentloaded`/`load`/`networkidle0` are fine.
 - **Guard reuses resolved `requiresAuth`** (`base-crawler.js:177`, `base-client.js:711`) — no separate `AUTH_REQUIRED_ACTIONS` registry.
-- **Primary/fallback:** `XACTIONS_BROWSER_BACKEND` (primary) + `XACTIONS_BROWSER_BACKEND_FALLBACK` (default `chrome`). `obscura→chrome` always allowed; `chrome→obscura` only on public-scraping path (post-auth still throws).
-- **Per-backend telemetry:** `XACTIONS_BROWSER_BACKEND_METRICS=1` tags real browser launches with `browserBackend` in Epic-34 `emitRun`; per-backend comparison via `scripts/obscura-spike.mjs BACKEND=both`. `CanaryRunner` (HTTP probe) is unchanged.
+- **Primary/fallback:** `MEDIRUS_BROWSER_BACKEND` (primary) + `MEDIRUS_BROWSER_BACKEND_FALLBACK` (default `chrome`). `obscura→chrome` always allowed; `chrome→obscura` only on public-scraping path (post-auth still throws).
+- **Per-backend telemetry:** `MEDIRUS_BROWSER_BACKEND_METRICS=1` tags real browser launches with `browserBackend` in Epic-34 `emitRun`; per-backend comparison via `scripts/obscura-spike.mjs BACKEND=both`. `CanaryRunner` (HTTP probe) is unchanged.
 - **`userDataDir`→`--storage-dir`** mapping is documented, not silently dropped (different persistence semantics).
 - **Watch → Verify → Promote gate:** no auto-update; `obscura-for-auth` opens only after spike-verify (`/home` mounts `data-testid`) + change request + human approve. Tracked issues: #531 (SPA hydration), #886/#643/#683 (network-idle), #817/#866 (SPA).
 - Keep `puppeteer` + `puppeteer-extra` + stealth plugin as default; `puppeteer-core` promoted to a direct dependency; zero other new deps.

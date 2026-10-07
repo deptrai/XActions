@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 🔔 Notification Manager - XActions
+ * 🔔 Notification Manager - Medirus
  * ============================================
  *
  * @name         notification-manager
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to x.com/notifications
@@ -106,9 +106,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔔 NOTIFICATION MANAGER - XActions                      ║
+║  🔔 NOTIFICATION MANAGER - Medirus                      ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -233,9 +233,9 @@
       const date = new Date().toISOString().slice(0, 10);
       downloadJSON(
         { exportedAt: new Date().toISOString(), total: all.length, byType, notifications: all },
-        `xactions-notifications-${date}.json`
+        `medirus-notifications-${date}.json`
       );
-      downloadCSV(all, `xactions-notifications-${date}.csv`);
+      downloadCSV(all, `medirus-notifications-${date}.csv`);
     }
   };
 

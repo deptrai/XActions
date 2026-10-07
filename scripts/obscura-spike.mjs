@@ -2,7 +2,7 @@
 /**
  * Obscura Spike — pluggable browser-backend smoke test.
  *
- * Proves that XActions' stealth layer works when Puppeteer talks CDP to an
+ * Proves that Medirus' stealth layer works when Puppeteer talks CDP to an
  * Obscura engine (ws://127.0.0.1:9222) instead of launching Chrome. Exercises
  * a matrix of hard targets (bot walls + the real X SPA) and captures evidence
  * to scripts/obscura-spike-results/.

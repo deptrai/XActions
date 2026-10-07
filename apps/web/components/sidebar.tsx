@@ -189,7 +189,7 @@ export function Sidebar() {
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">X</div>
             <div>
-              <span className="font-bold text-slate-900 dark:text-white tracking-tight">XActions</span>
+              <span className="font-bold text-slate-900 dark:text-white tracking-tight">Medirus</span>
               <span className="ml-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 font-semibold">v3.5</span>
             </div>
           </div>

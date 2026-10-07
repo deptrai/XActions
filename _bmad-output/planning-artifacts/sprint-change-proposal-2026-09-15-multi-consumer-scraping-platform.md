@@ -1,7 +1,7 @@
 # Sprint Change Proposal — Multi-Consumer Scraping Platform Architecture
 
 **Ngày:** 2026-09-15
-**Trigger:** Nowing `XACTIONS-REQUIREMENTS-2026-09-13.md` — kiến trúc kết nối thay đổi từ custom adapter sang MCP `x_scrape` + Redis Stream (control plane + data plane)
+**Trigger:** Nowing `MEDIRUS-REQUIREMENTS-2026-09-13.md` — kiến trúc kết nối thay đổi từ custom adapter sang MCP `x_scrape` + Redis Stream (control plane + data plane)
 **Người tạo:** Claude (Correct Course workflow)
 **Reviewers:** Winston (Architecture), Dev Agent, QA Agent, UX/DX Agent, PM Agent
 **Trạng thái:** Approved — incorporates all review amendments
@@ -10,17 +10,17 @@
 
 ## 1. Issue Summary
 
-Epic 20 giả định Nowing sẽ gọi XActions MCP Daemon trực tiếp qua HTTP/SSE port 3001 thông qua custom `adapter.py`. Thực tế Nowing đã wire phía mình (`XActionsMcpClient` streamable-http + Celery beat + stream consumer) theo kiến trúc **service-to-service contract** mới:
+Epic 20 giả định Nowing sẽ gọi Medirus MCP Daemon trực tiếp qua HTTP/SSE port 3001 thông qua custom `adapter.py`. Thực tế Nowing đã wire phía mình (`MedirusMcpClient` streamable-http + Celery beat + stream consumer) theo kiến trúc **service-to-service contract** mới:
 
 - **Control plane:** MCP tool `x_scrape` (generic, gọi `scrape()` dispatcher)
 - **Data plane:** Redis Stream `stream:social:raw_posts` (thin events, fan-out)
-- **Discovery:** `x_actions_list` trả `ActionDescriptor` cho mọi platform
+- **Discovery:** `medirus_list` trả `ActionDescriptor` cho mọi platform
 
-Vấn đề: **XActions thiếu 4 thứ** (REQ-X1..X4) — Nowing bị block, không phải chờ Nowing code.
+Vấn đề: **Medirus thiếu 4 thứ** (REQ-X1..X4) — Nowing bị block, không phải chờ Nowing code.
 
 ### Evidence
 - `x_scrape` không tồn tại trong `TOOLS` của `src/mcp/server.js`
-- `x_actions_list` chỉ enumerate 18/24 platforms — thiếu fnb, healthcare, legal, vehicles/automotive, b2b-registry-extended, **tiktokShop**
+- `medirus_list` chỉ enumerate 18/24 platforms — thiếu fnb, healthcare, legal, vehicles/automotive, b2b-registry-extended, **tiktokShop**
 - `AbstractCrawler` **không có `storeBatch()`** — stream-publish hook phải đặt sau `entry.handler()` trong `start()`, không phải sau storeBatch
 - `formatPayload()` trong `redis-stream-publisher.js` **hardcode camelCase** — cần sửa sang snake_case
 - `extractRecords()` trong `envelope.js` chỉ nhận `comments/posts/items/data` — không nhận `listings`, `products`, `jobs` → VN crawlers sẽ trả envelope sai
@@ -34,7 +34,7 @@ Vấn đề: **XActions thiếu 4 thứ** (REQ-X1..X4) — Nowing bị block, kh
 
 | Epic | Impact | Chi tiết |
 |------|--------|----------|
-| **Epic 20** | **Restructure** | Story 20.1 outdated (giả định chỉ sửa Nowing adapter). Cần rewrite thành XActions-side implementation + Nowing shadow-run |
+| **Epic 20** | **Restructure** | Story 20.1 outdated (giả định chỉ sửa Nowing adapter). Cần rewrite thành Medirus-side implementation + Nowing shadow-run |
 | Epic 14 | Không đổi | Analytics engine đã done, stream events bổ sung data source cho nó |
 | Epic 25 | Không đổi | `scrape()` dispatcher đã done — REQ-X1 chỉ expose nó qua MCP |
 | Epic 29 | Liên quan | Webhook dispatcher (29.2) sẽ subscribe cùng Redis Stream — không conflict |
@@ -43,7 +43,7 @@ Vấn đề: **XActions thiếu 4 thứ** (REQ-X1..X4) — Nowing bị block, kh
 
 | Story | Change | Detail |
 |-------|--------|--------|
-| 20.1 | **Rewrite** | Từ "update Nowing adapter.py" → "implement service contract trong XActions" |
+| 20.1 | **Rewrite** | Từ "update Nowing adapter.py" → "implement service contract trong Medirus" |
 | 20.2 | **Rewrite** | Từ "xóa legacy code" → thêm stream-publish hook + giữ decommission ở story sau |
 | _(new)_ | **20.3 + 20.4** | External milestones — track ở Nowing repo, KHÔNG block Epic 20 |
 
@@ -86,7 +86,7 @@ Vấn đề: **XActions thiếu 4 thứ** (REQ-X1..X4) — Nowing bị block, kh
 
 ## 4. Detailed Change Proposals
 
-### Change 1: Rewrite Epic 20 — Stories (2 XActions stories + 2 external milestones)
+### Change 1: Rewrite Epic 20 — Stories (2 Medirus stories + 2 external milestones)
 
 **OLD Epic 20:**
 ```
@@ -94,7 +94,7 @@ Vấn đề: **XActions thiếu 4 thứ** (REQ-X1..X4) — Nowing bị block, kh
 20.2 — Legacy Scraper Code Decommissioning (xóa code cũ cả 2 repos)
 ```
 
-**NEW Epic 20 (XActions scope only — 20.3/20.4 là Nowing external milestones):**
+**NEW Epic 20 (Medirus scope only — 20.3/20.4 là Nowing external milestones):**
 
 ```
 20.1 — Multi-Consumer Service Contract (REQ-X1 + X3 + X4)
@@ -128,7 +128,7 @@ Vấn đề: **XActions thiếu 4 thứ** (REQ-X1..X4) — Nowing bị block, kh
            (dùng DEPRECATED_ACTIONS + availableActions trong XACT_4001)
          • Pre-validate requiredArgs → trả XACT_4002 + missing[] + example
 
-       x_actions_list mở rộng:
+       medirus_list mở rộng:
          • Enumerate toàn bộ 24 DESCRIPTORS registry
            (thêm fnb, healthcare, legal, automotive, b2b-registry-extended,
            tiktokShop)
@@ -141,7 +141,7 @@ Vấn đề: **XActions thiếu 4 thứ** (REQ-X1..X4) — Nowing bị block, kh
          • Filter theo category + detailLevel: 'summary'|'full'
 
        Canonical action/arg matrix doc:
-         • Auto-generated qua `npm run docs:matrix` từ x_actions_list
+         • Auto-generated qua `npm run docs:matrix` từ medirus_list
          • Output: docs/canonical-action-matrix.md (human) +
            docs/canonical-action-matrix.json (machine-readable cho
            Nowing CI validation)
@@ -221,7 +221,7 @@ Vấn đề: **XActions thiếu 4 thứ** (REQ-X1..X4) — Nowing bị block, kh
        ~2 days
 ```
 
-**External milestones (NOT tracked in XActions sprint-status):**
+**External milestones (NOT tracked in Medirus sprint-status):**
 
 ```
 20.3 — [EXTERNAL — Nowing repo] Nowing Shadow-Run Validation
@@ -235,16 +235,16 @@ Vấn đề: **XActions thiếu 4 thứ** (REQ-X1..X4) — Nowing bị block, kh
 20.4 — [EXTERNAL — Nowing repo] Legacy Scraper Decommissioning
        Xóa legacy modules sau khi 20.3 đạt parity.
        Nowing repo: xóa 20+ scraper dirs, gỡ Chromium/Selenium khỏi Dockerfile.
-       XActions repo: đã clean trong Epic 26.
+       Medirus repo: đã clean trong Epic 26.
 ```
 
 ### Change 2: Update PRD FR-84
 
 **OLD:**
-> FR-84: Nâng cấp adapter bên Nowing kết nối sang XActions MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
+> FR-84: Nâng cấp adapter bên Nowing kết nối sang Medirus MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
 
 **NEW:**
-> FR-84: Biến `scrape()` dispatcher thành service-to-service contract cho multi-consumer (Nowing, ChainLens, AI agents). Control plane qua MCP `x_scrape` tool, data plane qua Redis Stream `stream:social:raw_posts` (snake_case ThinEvent schema), discovery qua `x_actions_list`. Gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend sau khi shadow-run đạt ≥99% field parity.
+> FR-84: Biến `scrape()` dispatcher thành service-to-service contract cho multi-consumer (Nowing, ChainLens, AI agents). Control plane qua MCP `x_scrape` tool, data plane qua Redis Stream `stream:social:raw_posts` (snake_case ThinEvent schema), discovery qua `medirus_list`. Gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend sau khi shadow-run đạt ≥99% field parity.
 
 ### Change 3: Architecture Decision Record
 
@@ -255,7 +255,7 @@ AD-NEW: Multi-Consumer Service Contract
 - Event schema: snake_case ThinEvent — normalized in AbstractCrawler
   via mapToThinEvent(item, context), NOT per-crawler
 - Dual-emit camelCase + snake_case during transition period
-- x_actions_list enumerates all 24 platform descriptors for consumer
+- medirus_list enumerates all 24 platform descriptors for consumer
   auto-discovery; ActionDescriptor excludes internal function refs
   (checkpointResolver)
 - context envelope Record<string, unknown> forwarded to stream events
@@ -276,7 +276,7 @@ AD-NEW: Multi-Consumer Service Contract
 **Handoff to:** Developer agent
 
 **Implementation order:**
-1. **Story 20.1** (service contract) — x_scrape + x_actions_list + matrix doc + envelope fix
+1. **Story 20.1** (service contract) — x_scrape + medirus_list + matrix doc + envelope fix
 2. **Story 20.2** (stream hook) — **BẮT BUỘC release đồng thời với 20.1** (atomic release — nếu 20.1 release trước 20.2, `x_scrape` trả preview rỗng cho platforms chưa có stream hook)
 3. **Story 20.3** (Nowing validation) — external milestone, Nowing repo
 4. **Story 20.4** (decommission) — external milestone, Nowing repo
@@ -285,7 +285,7 @@ AD-NEW: Multi-Consumer Service Contract
 - `x_scrape('masothue','search',{taxCode:...})` trả envelope thành công (taxCode→q alias resolution hoạt động)
 - `x_scrape('chotot','search_listings',{...})` chạy được
 - `scrape('shopee','search_products',...)` với `REDIS_STREAM_ENABLED` emit thin event đủ schema (snake_case, content_snippet populated)
-- `x_actions_list` trả actions cho tất cả 24 platforms
+- `medirus_list` trả actions cho tất cả 24 platforms
 - `x_scrape` với `REDIS_STREAM_ENABLED=true` trả `mode:'stream'` + preview ≤10 + stream cursor
 - `x_scrape` với `dryRun=true` không emit stream events
 - `x_scrape` trả `XACT_4002` + `missing[]` + `example` khi thiếu requiredArgs
@@ -367,7 +367,7 @@ AD-NEW: Multi-Consumer Service Contract
 ### PM Agent
 | # | Finding | Áp dụng |
 |---|---------|---------|
-| 1 | Effort 2-3d → thực tế 4-5d (XActions only) + 7-14d (Nowing validation) | Section 3 |
+| 1 | Effort 2-3d → thực tế 4-5d (Medirus only) + 7-14d (Nowing validation) | Section 3 |
 | 2 | Story 20.3/20.4 là Nowing work → move ra external milestones | Section 4 |
 | 3 | 20.1+20.2 phải atomic release | Section 5 |
 | 4 | Ưu tiên P0 — Nowing bị block, vượt trước backlog epics | Confirmed |
@@ -377,4 +377,4 @@ AD-NEW: Multi-Consumer Service Contract
 
 ---
 
-*Generated by Correct Course workflow — XActions BMAD. Multi-agent review complete.*
+*Generated by Correct Course workflow — Medirus BMAD. Multi-agent review complete.*

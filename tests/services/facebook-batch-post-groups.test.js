@@ -44,7 +44,7 @@ function makePostFn({ throwOn = null } = {}) {
 const URL_A = 'https://www.facebook.com/groups/aaa';
 const URL_B = 'https://www.facebook.com/groups/bbb';
 const URL_C = 'https://www.facebook.com/groups/ccc';
-const CONTENT = 'Hello from XActions 🎉';
+const CONTENT = 'Hello from Medirus 🎉';
 
 const noDelay = makeDelaySpy();
 

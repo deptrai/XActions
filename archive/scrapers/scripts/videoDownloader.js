@@ -103,7 +103,7 @@
 
   // Method 3: Check network requests (if interceptor was set up)
   const findVideoInNetwork = () => {
-    return window.__XACTIONS_VIDEO_URLS || [];
+    return window.__MEDIRUS_VIDEO_URLS || [];
   };
 
   // Method 4: Look in window.__NEXT_DATA__ or similar
@@ -124,9 +124,9 @@
 
   // Set up network interceptor for future requests
   const setupInterceptor = () => {
-    if (window.__XACTIONS_INTERCEPTOR_ACTIVE) return;
+    if (window.__MEDIRUS_INTERCEPTOR_ACTIVE) return;
     
-    window.__XACTIONS_VIDEO_URLS = window.__XACTIONS_VIDEO_URLS || [];
+    window.__MEDIRUS_VIDEO_URLS = window.__MEDIRUS_VIDEO_URLS || [];
     
     // Intercept fetch
     const originalFetch = window.fetch;
@@ -134,7 +134,7 @@
       const url = args[0]?.toString?.() || args[0]?.url || args[0];
       
       if (url && (url.includes('.mp4') || url.includes('.m3u8') || url.includes('video.twimg'))) {
-        window.__XACTIONS_VIDEO_URLS.push({
+        window.__MEDIRUS_VIDEO_URLS.push({
           url,
           quality: 'intercepted',
           type: url.includes('.m3u8') ? 'm3u8' : 'mp4',
@@ -150,7 +150,7 @@
     const originalXHR = window.XMLHttpRequest.prototype.open;
     window.XMLHttpRequest.prototype.open = function(method, url, ...rest) {
       if (url && (url.includes('.mp4') || url.includes('.m3u8') || url.includes('video.twimg'))) {
-        window.__XACTIONS_VIDEO_URLS.push({
+        window.__MEDIRUS_VIDEO_URLS.push({
           url,
           quality: 'xhr',
           type: url.includes('.m3u8') ? 'm3u8' : 'mp4',
@@ -161,7 +161,7 @@
       return originalXHR.call(this, method, url, ...rest);
     };
 
-    window.__XACTIONS_INTERCEPTOR_ACTIVE = true;
+    window.__MEDIRUS_INTERCEPTOR_ACTIVE = true;
     console.log('🔍 Video interceptor activated');
   };
 

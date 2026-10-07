@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# XActions — Deploy API to Railway
+# Medirus — Deploy API to Railway
 # Triggers on push to main (auto-deploy)
 # by nichxbt
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -35,6 +35,6 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to Railway
-        run: railway up --service xactions-api
+        run: railway up --service medirus-api
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

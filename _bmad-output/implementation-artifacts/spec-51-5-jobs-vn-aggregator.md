@@ -70,7 +70,7 @@ deferred:
 **Never:**
 - Không sửa backend recruitment scrapers (`src/scrapers/recruitment/**`).
 - Không hardcode URL backend; không thêm dependency mới.
-- Không xây dựng chức năng đăng tin/ứng tuyển trên XActions (NG-1) — chỉ aggregator/reader.
+- Không xây dựng chức năng đăng tin/ứng tuyển trên Medirus (NG-1) — chỉ aggregator/reader.
 - Không đụng các suite khác.
 
 ## I/O & Edge-Case Matrix

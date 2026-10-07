@@ -1,7 +1,7 @@
 # X/Twitter Scraping Skill
 <!-- by nichxbt -->
 
-You can scrape X/Twitter data without API access using the XActions MCP tools. All scraping uses Puppeteer stealth browser automation.
+You can scrape X/Twitter data without API access using the Medirus MCP tools. All scraping uses Puppeteer stealth browser automation.
 
 ## Available Scraping Tools
 
@@ -33,22 +33,22 @@ You can scrape X/Twitter data without API access using the XActions MCP tools. A
 
 1. Authenticate with `x_login` (auth_token cookie)
 2. Use read tools to fetch data
-3. For large exports, use the CLI: `xactions profile <username> --output json`
+3. For large exports, use the CLI: `medirus profile <username> --output json`
 4. Always respect rate limits — add delays between requests
 
 ## CLI Scraping (Alternative)
 
-XActions also provides a CLI for terminal-based scraping:
+Medirus also provides a CLI for terminal-based scraping:
 
 ```bash
-xactions profile <username>          # Profile info
-xactions followers <username> -l 50  # First 50 followers
-xactions following <username>        # Following list
-xactions tweets <username> -l 20    # Recent 20 tweets
-xactions search "query" -l 30       # Search tweets
-xactions hashtag "#topic" -l 50     # Hashtag tweets
-xactions thread <tweet_url>         # Thread unroll
-xactions media <username>           # Media posts
+medirus profile <username>          # Profile info
+medirus followers <username> -l 50  # First 50 followers
+medirus following <username>        # Following list
+medirus tweets <username> -l 20    # Recent 20 tweets
+medirus search "query" -l 30       # Search tweets
+medirus hashtag "#topic" -l 50     # Hashtag tweets
+medirus thread <tweet_url>         # Thread unroll
+medirus media <username>           # Media posts
 ```
 
 All CLI commands support `--output json`, `--output csv`, and `--json` flags.
@@ -60,4 +60,4 @@ Data can be exported via CLI flags:
 - `--output csv` → CSV file
 - `--json` → stdout JSON
 
-For programmatic use: `import { exportToJSON, exportToCSV } from 'xactions'`
+For programmatic use: `import { exportToJSON, exportToCSV } from 'medirus'`

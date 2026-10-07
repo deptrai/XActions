@@ -68,7 +68,7 @@ This requires Premium+ ($16/mo).`,
   };
 
   const run = async () => {
-    console.log('📄 XActions Article Publisher');
+    console.log('📄 Medirus Article Publisher');
     console.log('============================');
 
     if (!window.location.href.includes('compose/article') && !window.location.href.includes('articles')) {

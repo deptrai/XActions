@@ -6,7 +6,7 @@
 // 1. Go to https://x.com (or https://x.com/i/grok)
 // 2. Open DevTools Console (F12)
 // 3. Paste and run this script
-// 4. Use window.XActions.advancedGrok.<function>() to call features
+// 4. Use window.Medirus.advancedGrok.<function>() to call features
 //
 // Features:
 //   deepSearch(query)                - Trigger Grok DeepSearch for comprehensive research
@@ -701,10 +701,10 @@
   };
 
   // ─────────────────────────────────────────────────────────
-  // Expose on window.XActions.advancedGrok
+  // Expose on window.Medirus.advancedGrok
   // ─────────────────────────────────────────────────────────
-  window.XActions = window.XActions || {};
-  window.XActions.advancedGrok = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.advancedGrok = {
     deepSearch,
     uploadImage,
     listConversations,
@@ -720,7 +720,7 @@
   // ─────────────────────────────────────────────────────────
   const W = 62;
   console.log('╔' + '═'.repeat(W) + '╗');
-  console.log('║  🤖 ADVANCED GROK AI — XActions' + ' '.repeat(W - 33) + '║');
+  console.log('║  🤖 ADVANCED GROK AI — Medirus' + ' '.repeat(W - 33) + '║');
   console.log('║  by nichxbt — v1.0' + ' '.repeat(W - 21) + '║');
   console.log('╠' + '═'.repeat(W) + '╣');
   console.log('║  🔍 DeepSearch' + ' '.repeat(W - 16) + '║');
@@ -742,6 +742,6 @@
   console.log('║    analyzePost()' + ' '.repeat(W - 18) + '║');
   console.log('╚' + '═'.repeat(W) + '╝');
   console.log('');
-  console.log('💡 Usage: window.XActions.advancedGrok.deepSearch("AI trends 2026")');
+  console.log('💡 Usage: window.Medirus.advancedGrok.deepSearch("AI trends 2026")');
   console.log('💡 Navigate to x.com/i/grok for most features, or a tweet page for analyzePost().');
 })();

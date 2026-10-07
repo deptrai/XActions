@@ -5,7 +5,7 @@ Date: 2026-09-08
 
 ## Summary
 
-Epic 19 xây dựng **operator tooling**: dashboard, admin CLI, REST API, MCP tools — giúp vận hành XActions.
+Epic 19 xây dựng **operator tooling**: dashboard, admin CLI, REST API, MCP tools — giúp vận hành Medirus.
 
 Epic complete across:
 
@@ -14,7 +14,7 @@ Epic complete across:
 | 19.1 Dashboard Jobs/Checkpoints View | done | Dashboard UI |
 | 19.2 Dashboard Proxies/Accounts View | done | Proxy + account management UI |
 | 19.3 Dashboard Stream Metrics/Alerts View | done | Metrics + alerts UI |
-| 19.4 Admin CLI Unified Command Group | done | `xactions admin` commands |
+| 19.4 Admin CLI Unified Command Group | done | `medirus admin` commands |
 | 19.4.1-19.4.5 Admin CLI sub-commands | done | status, proxy, account, checkpoint, stream |
 | 19.7 Admin REST API Proxy Management | done | `/api/admin/proxies` |
 | 19.8 Admin REST API Account/Checkpoint | done | `/api/admin/accounts`, `/api/admin/checkpoints` |
@@ -28,11 +28,11 @@ Epic complete across:
    - Consistent error handling.
 
 2. **Admin CLI commands**
-   - `xactions admin status`
-   - `xactions admin proxy quarantine/release`
-   - `xactions admin account wake/rotate`
-   - `xactions admin checkpoint resume/pause/retry`
-   - `xactions admin stream metrics/alerts`
+   - `medirus admin status`
+   - `medirus admin proxy quarantine/release`
+   - `medirus admin account wake/rotate`
+   - `medirus admin checkpoint resume/pause/retry`
+   - `medirus admin stream metrics/alerts`
 
 3. **MCP tools singleton dispatch**
    - 9 admin MCP tools không duplicate login logic.
@@ -53,7 +53,7 @@ Epic complete across:
 ## Key Decisions
 
 1. **Admin CLI qua `src/cli/index.js`**
-   - `xactions admin` sub-command group.
+   - `medirus admin` sub-command group.
    - Shared `src/cli/shared.js`.
 
 2. **Dashboard static HTML**

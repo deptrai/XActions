@@ -1,14 +1,14 @@
 ---
-name: 'XActions Unified Person OSINT (Investigate Person)'
+name: 'Medirus Unified Person OSINT (Investigate Person)'
 type: architecture-proposal
 status: draft
 created: '2026-09-16'
 author: 'Winston (System Architect)'
-audience: 'XActions dev team'
+audience: 'Medirus dev team'
 source_project: 'Mr.Holmes — Person OSINT (Epics 8-9, v2.1)'
-target_project: 'XActions — Universal Hybrid Scraping Microservice'
+target_project: 'Medirus — Universal Hybrid Scraping Microservice'
 related_docs:
-  - '_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
+  - '_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md'
   - '_bmad-output/planning-artifacts/prd.md'
   - 'docs/architecture.md'
   - 'docs/scrapers.md'
@@ -18,7 +18,7 @@ related_docs:
 
 ## 1. Executive Summary
 
-XActions đã có hạ tầng scraping đa nền tảng mạnh mẽ (Twitter, Facebook, Instagram, TikTok, LinkedIn, Zalo, Threads, Bluesky, Mastodon, Reddit, Chợ Tốt, Mã Số Thuế…) nhưng các crawler hiện hoạt động **siloed** — mỗi nền tảng trả về profile/post độc lập, chưa có cơ chế **"điều tra danh tính tổng hợp"** (nhận 1 định danh → quét đồng thời nhiều nền tảng → hợp nhất thành hồ sơ duy nhất).
+Medirus đã có hạ tầng scraping đa nền tảng mạnh mẽ (Twitter, Facebook, Instagram, TikTok, LinkedIn, Zalo, Threads, Bluesky, Mastodon, Reddit, Chợ Tốt, Mã Số Thuế…) nhưng các crawler hiện hoạt động **siloed** — mỗi nền tảng trả về profile/post độc lập, chưa có cơ chế **"điều tra danh tính tổng hợp"** (nhận 1 định danh → quét đồng thời nhiều nền tảng → hợp nhất thành hồ sơ duy nhất).
 
 Mr.Holmes (repo `Mr.Holmes`) đã giải quyết vấn đề này qua 3 module chính trong `Core/engine/`:
 
@@ -26,20 +26,20 @@ Mr.Holmes (repo `Mr.Holmes`) đã giải quyết vấn đề này qua 3 module c
 2. **`StagedProfiler` / `RecursiveProfiler`** — BFS 4-pha qua plugins (identity expansion → clue extraction → deep enrichment → breach recon)
 3. **`DorkGenerator`** — sinh Google/Yandex dorks cho person investigation
 
-**Proposal này đề xuất port có chọn lọc** các khả năng trên sang XActions bằng Node.js native, **không copy code Python**, tận dụng tối đa các crawler sẵn có của XActions. Kết quả: một **Unified Person Reconnaissance Service** expose qua MCP tool `x_investigate_person` + CLI `xactions investigate`, có khả năng:
+**Proposal này đề xuất port có chọn lọc** các khả năng trên sang Medirus bằng Node.js native, **không copy code Python**, tận dụng tối đa các crawler sẵn có của Medirus. Kết quả: một **Unified Person Reconnaissance Service** expose qua MCP tool `x_investigate_person` + CLI `medirus investigate`, có khả năng:
 
 - Nhận input: `username` / `email` / `phone` / `full_name` / `profile_url`
 - Fan-out song song tới các crawler phù hợp
 - Merge kết quả thành 1 entity với confidence score
 - Persist vào PostgreSQL với Prisma model mới `PersonEntity` / `IdentifiedProfile` / `InvestigationReport`
 - Emit Thin Event lên Redis Stream cho Nowing consumer
-- Trả về JSON envelope 3 lớp chuẩn XActions
+- Trả về JSON envelope 3 lớp chuẩn Medirus
 
 ---
 
 ## 2. Vấn đề & Bối cảnh
 
-### 2.1. Gap hiện tại trong XActions
+### 2.1. Gap hiện tại trong Medirus
 
 | Điểm | Hiện trạng | Hệ quả |
 |---|---|---|
@@ -52,8 +52,8 @@ Mr.Holmes (repo `Mr.Holmes`) đã giải quyết vấn đề này qua 3 module c
 
 - **Ngôn ngữ khác**: Python ↔ Node.js — port trực tiếp là rewrite, không phải copy
 - **Code legacy đã deprecated**: `Core/Searcher_person.py` có `DeprecationWarning`, dùng Nitter (đã chết 2024), Picuki, Urlebird — dễ vỡ
-- **Execution model khác**: Mr.Holmes dùng interactive `input()` + file-based reports; XActions cần async service + Prisma + MCP envelope
-- **Hạ tầng khác**: XActions có proxy pool, signer pool, adaptive governor, checkpoint system — không cần mang theo proxy/HTTP layer của Mr.Holmes
+- **Execution model khác**: Mr.Holmes dùng interactive `input()` + file-based reports; Medirus cần async service + Prisma + MCP envelope
+- **Hạ tầng khác**: Medirus có proxy pool, signer pool, adaptive governor, checkpoint system — không cần mang theo proxy/HTTP layer của Mr.Holmes
 
 → **Port ý tưởng kiến trúc + data model + algorithm**, không port code.
 
@@ -68,16 +68,16 @@ Mr.Holmes (repo `Mr.Holmes`) đã giải quyết vấn đề này qua 3 module c
 
 ## 3. So sánh 2 Approach
 
-| Tiêu chí | **A. Port native vào XActions** ✅ | **B. Mr.Holmes expose MCP, XActions gọi** |
+| Tiêu chí | **A. Port native vào Medirus** ✅ | **B. Mr.Holmes expose MCP, Medirus gọi** |
 |---|---|---|
-| Deployment | XActions độc lập | Phải chạy cả 2 service |
+| Deployment | Medirus độc lập | Phải chạy cả 2 service |
 | Latency | In-process call | +1 network hop + Python startup |
 | Data consistency | Cùng Prisma/PostgreSQL | Split DB — phải sync tay |
 | Maintenance | 1 codebase | 2 codebases, 2 runtimes |
-| Bug surface | Giới hạn ở module mới | Mọi bug ở Mr.Holmes engine ảnh hưởng XActions |
+| Bug surface | Giới hạn ở module mới | Mọi bug ở Mr.Holmes engine ảnh hưởng Medirus |
 | Cost | Rewrite 1 lần | Ongoing sync + versioning |
 
-**Khuyến nghị: A — port native.** XActions đã có đủ hạ tầng (scrapers, proxy, signer, Prisma, MCP) — chỉ thiếu orchestration + entity resolution layer. Porting vào giữ single source of truth, leverage sẵn infra.
+**Khuyến nghị: A — port native.** Medirus đã có đủ hạ tầng (scrapers, proxy, signer, Prisma, MCP) — chỉ thiếu orchestration + entity resolution layer. Porting vào giữ single source of truth, leverage sẵn infra.
 
 ---
 
@@ -89,7 +89,7 @@ Mr.Holmes (repo `Mr.Holmes`) đã giải quyết vấn đề này qua 3 module c
 flowchart TB
     subgraph Input["Input Surface"]
         MCP["MCP Tool<br/>x_investigate_person"]
-        CLI["CLI<br/>xactions investigate"]
+        CLI["CLI<br/>medirus investigate"]
         API["REST API<br/>POST /api/investigate"]
     end
 
@@ -1070,7 +1070,7 @@ router.get('/api/investigate/:id', auth, async (req, res) => {
 
 ### AD-PR-5 — Dork Generation Không Tự Hit Google/Yandex
 * **Binds:** `src/osint/DorkGenerator.js`
-* **Rule:** `generate()` trả về URL template string — không fetch tự động. Caller (AI agent qua MCP, hoặc operator) quyết định có execute dork hay không. Tránh vi phạm ToS Google/Yandex bằng cách giữ XActions ở vai trò "dork generator" chứ không phải "dork executor".
+* **Rule:** `generate()` trả về URL template string — không fetch tự động. Caller (AI agent qua MCP, hoặc operator) quyết định có execute dork hay không. Tránh vi phạm ToS Google/Yandex bằng cách giữ Medirus ở vai trò "dork generator" chứ không phải "dork executor".
 
 ### AD-PR-6 — SSRF Guard on Avatar Fetch
 * **Binds:** `src/osint/utils/urlSafety.js`, `src/osint/EntityResolver.js`
@@ -1078,7 +1078,7 @@ router.get('/api/investigate/:id', auth, async (req, res) => {
 
 ### AD-PR-7 — Emit Thin Event for Nowing Consumer
 * **Binds:** `src/osint/PersonReconService.js`, Redis Stream
-* **Rule:** Sau khi hoàn tất investigation, phát Thin Event `{id, platform:'osint', externalId:seed, category:'person_investigation', authorId, crawledAt, storageRef}` vào `stream:social:raw_posts` theo AD-7 rule 3. Nowing NLP pipeline chịu trách nhiệm enrich thêm — XActions chỉ làm collect + resolve.
+* **Rule:** Sau khi hoàn tất investigation, phát Thin Event `{id, platform:'osint', externalId:seed, category:'person_investigation', authorId, crawledAt, storageRef}` vào `stream:social:raw_posts` theo AD-7 rule 3. Nowing NLP pipeline chịu trách nhiệm enrich thêm — Medirus chỉ làm collect + resolve.
 
 ### AD-PR-8 — Confidence Flagging, Không Phải Rejection
 * **Binds:** `src/osint/EntityResolver.js`
@@ -1104,7 +1104,7 @@ router.get('/api/investigate/:id', auth, async (req, res) => {
 ### Phase 3 — Orchestrator + Surfaces (Week 3)
 - [ ] `src/osint/PersonReconService.js` — fan-out + persist + emit
 - [ ] MCP tool `x_investigate_person` + register in `TOOLS` array
-- [ ] CLI command `xactions investigate`
+- [ ] CLI command `medirus investigate`
 - [ ] REST endpoint `POST /api/investigate` + `GET /api/investigate/:id`
 - [ ] Integration test: end-to-end investigate on `username` seed
 
@@ -1116,7 +1116,7 @@ router.get('/api/investigate/:id', auth, async (req, res) => {
 - [ ] Docs: `docs/osint-investigation.md` + SKILL `skills/investigate-person/SKILL.md`
 
 ### Rollback Plan
-- Feature flag `XACTIONS_OSINT_ENABLED=false` disables `x_investigate_person` + `/api/investigate` — graceful degradation to existing tool set.
+- Feature flag `MEDIRUS_OSINT_ENABLED=false` disables `x_investigate_person` + `/api/investigate` — graceful degradation to existing tool set.
 - Schema migration is additive only — rollback = `DROP TABLE` 3 new tables.
 
 ---
@@ -1141,9 +1141,9 @@ router.get('/api/investigate/:id', auth, async (req, res) => {
 
 ## 11. Open Questions
 
-1. **Name-search coverage** — `NAME` seed type hiện chỉ route tới `linkedin`, `facebook`, `masothue`, `topcv`, `vietnamworks`. Có nên thêm Google/SearxNG-style dork executor vào XActions, hay giữ AD-PR-5 (generator only)?
-2. **Phone → Identity direction** — Chợ Tốt `get_phone` hiện extract phone từ listing. Để hỗ trợ `PHONE` seed đầy đủ cần reverse-lookup (phone → name). Có sẵn API nào trong XActions hiện tại không, hay cần thêm crawler mới (Truecaller-style)?
-3. **GitHub crawler** — Mr.Holmes dùng GitHub API để enrich person. XActions chưa có `src/scrapers/code/github/`. Có nên thêm vào Epic scope, hay dùng direct `fetch('https://api.github.com/users/{u}')` không cần full crawler?
+1. **Name-search coverage** — `NAME` seed type hiện chỉ route tới `linkedin`, `facebook`, `masothue`, `topcv`, `vietnamworks`. Có nên thêm Google/SearxNG-style dork executor vào Medirus, hay giữ AD-PR-5 (generator only)?
+2. **Phone → Identity direction** — Chợ Tốt `get_phone` hiện extract phone từ listing. Để hỗ trợ `PHONE` seed đầy đủ cần reverse-lookup (phone → name). Có sẵn API nào trong Medirus hiện tại không, hay cần thêm crawler mới (Truecaller-style)?
+3. **GitHub crawler** — Mr.Holmes dùng GitHub API để enrich person. Medirus chưa có `src/scrapers/code/github/`. Có nên thêm vào Epic scope, hay dùng direct `fetch('https://api.github.com/users/{u}')` không cần full crawler?
 4. ~~**LinkedIn `lead_profile` auth**~~ — **Resolved:** skip + log `platformsFailed: [{platform: 'linkedin', reason: 'requires_auth'}]` khi không có account. Xem `AUTH_REQUIRED_PLATFORMS` trong `SeedRouter.js` + phần Risks.
 
 ---
@@ -1180,8 +1180,8 @@ router.get('/api/investigate/:id', auth, async (req, res) => {
   - `Core/models/profile_entity.py:63-160` — ProfileEntity schema
   - `Core/engine/dork_generator.py` — dork templates
   - `.devin/skills/osint-investigate-person/SKILL.md` — 5-phase playbook
-- XActions architecture:
-  - `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — ADs 1-23
+- Medirus architecture:
+  - `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — ADs 1-23
   - `prisma/schema.prisma` — Post/Comment/CrawlCheckpoint models
   - `src/mcp/envelope.js` — 3-layer envelope
   - `src/scrapers/index.js` — `scrape()` dispatcher

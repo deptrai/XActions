@@ -6,7 +6,7 @@ Integrate X/Twitter automation directly with AI assistants like Claude using the
 
 ## 🧠 What It Is
 
-**Model Context Protocol (MCP)** is a cutting-edge standard that enables AI assistants to interact with external tools and services. XActions includes a fully-featured MCP server that exposes X/Twitter automation capabilities directly to AI agents.
+**Model Context Protocol (MCP)** is a cutting-edge standard that enables AI assistants to interact with external tools and services. Medirus includes a fully-featured MCP server that exposes X/Twitter automation capabilities directly to AI agents.
 
 **This means you can:**
 - Ask Claude to analyze your Twitter followers
@@ -19,7 +19,7 @@ Integrate X/Twitter automation directly with AI assistants like Claude using the
 > 🚀 **Cutting-Edge Technology**
 >
 > MCP is the protocol powering the next generation of AI agent integrations.
-> XActions is one of the first open-source tools to offer full MCP support for X/Twitter.
+> Medirus is one of the first open-source tools to offer full MCP support for X/Twitter.
 
 ---
 
@@ -28,7 +28,7 @@ Integrate X/Twitter automation directly with AI assistants like Claude using the
 Before using the MCP server:
 
 1. ✅ Node.js 18+ installed
-2. ✅ XActions package installed (`npm install xactions`)
+2. ✅ Medirus package installed (`npm install medirus`)
 3. ✅ Claude Desktop app (for Claude integration)
 4. ✅ Your X/Twitter `auth_token` cookie (for authenticated operations)
 
@@ -36,7 +36,7 @@ Before using the MCP server:
 
 ## 🔧 Setup for Claude Desktop
 
-To connect XActions with Claude Desktop, add the following to your `claude_desktop_config.json`:
+To connect Medirus with Claude Desktop, add the following to your `claude_desktop_config.json`:
 
 **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
@@ -47,9 +47,9 @@ To connect XActions with Claude Desktop, add the following to your `claude_deskt
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "node",
-      "args": ["/path/to/your/node_modules/xactions/src/mcp/server.js"],
+      "args": ["/path/to/your/node_modules/medirus/src/mcp/server.js"],
       "env": {}
     }
   }
@@ -61,9 +61,9 @@ To connect XActions with Claude Desktop, add the following to your `claude_deskt
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "node",
-      "args": ["/path/to/xactions/src/mcp/server.js"],
+      "args": ["/path/to/medirus/src/mcp/server.js"],
       "env": {}
     }
   }
@@ -75,9 +75,9 @@ To connect XActions with Claude Desktop, add the following to your `claude_deskt
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["xactions", "mcp"],
+      "args": ["medirus", "mcp"],
       "env": {}
     }
   }
@@ -90,7 +90,7 @@ After saving, restart Claude Desktop to load the MCP server.
 
 ## 🛠️ Available Tools
 
-The XActions MCP server exposes **12 powerful tools** for X/Twitter automation:
+The Medirus MCP server exposes **12 powerful tools** for X/Twitter automation:
 
 ### 🔐 Authentication
 
@@ -317,7 +317,7 @@ Once configured, you can interact with X/Twitter through natural conversation:
 ### Posting & Engagement
 
 ```
-"Post a tweet saying: Just discovered XActions - the best X automation toolkit! 🚀"
+"Post a tweet saying: Just discovered Medirus - the best X automation toolkit! 🚀"
 ```
 
 ```
@@ -361,7 +361,7 @@ node src/mcp/server.js
 ### Via npx
 
 ```bash
-npx xactions mcp
+npx medirus mcp
 ```
 
 The server runs on **stdio** (standard input/output) which is the transport Claude Desktop uses to communicate with MCP servers.
@@ -395,12 +395,12 @@ The MCP server uses session cookie authentication:
 
 ```
 ┌─────────────────┐         ┌──────────────────┐         ┌─────────────┐
-│  Claude Desktop │ ──MCP── │  XActions Server │ ──HTTP──│   X.com     │
+│  Claude Desktop │ ──MCP── │  Medirus Server │ ──HTTP──│   X.com     │
 │   (AI Agent)    │  stdio  │   (Puppeteer)    │         │  (Twitter)  │
 └─────────────────┘         └──────────────────┘         └─────────────┘
 ```
 
-The XActions MCP server uses:
+The Medirus MCP server uses:
 - **Puppeteer** with stealth plugins to avoid detection
 - **Human-like delays** between actions
 - **Session persistence** for authenticated operations
@@ -443,7 +443,7 @@ This mimics human behavior and helps avoid rate limits from X/Twitter.
 ### "Cannot find module" errors
 
 ```bash
-cd /path/to/xactions
+cd /path/to/medirus
 npm install
 ```
 
@@ -453,13 +453,13 @@ npm install
 
 - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/)
 - [Claude Desktop MCP Guide](https://docs.anthropic.com/claude/docs/mcp)
-- [XActions Documentation](https://xactions.app/docs)
+- [Medirus Documentation](https://medirus.online/docs)
 
 ---
 
 ## 👤 Author
 
-**nich** ([@nichxbt](https://x.com/nichxbt)) - Creator of XActions
+**nich** ([@nichxbt](https://x.com/nichxbt)) - Creator of Medirus
 
 ---
 

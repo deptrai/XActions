@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * TypeScript declarations for the XActions Browser Page Pool (Story 53.1, AD-24).
+ * TypeScript declarations for the Medirus Browser Page Pool (Story 53.1, AD-24).
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -10,7 +10,7 @@ import type { Fingerprint, FingerprintManager } from '../core/fingerprint-manage
 import type { StealthBrowserOptions } from './stealthBrowser.js';
 
 export interface BrowserPoolOptions {
-  /** Max concurrent slots (default env `XACTIONS_BROWSER_POOL_SIZE`, then 4). */
+  /** Max concurrent slots (default env `MEDIRUS_BROWSER_POOL_SIZE`, then 4). */
   size?: number;
   /** Isolated-context ceiling per browser before spawning another (chrome only — default 5, clamped to [4,6]; obscura uses pagesPerProcess). */
   contextsPerBrowser?: number;

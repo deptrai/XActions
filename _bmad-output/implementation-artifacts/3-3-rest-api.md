@@ -8,7 +8,7 @@ Status: done
 
 ## Story
 
-As a dashboard user of XActions,
+As a dashboard user of Medirus,
 I want to access Facebook scrape and automate via REST API and see it in the dashboard,
 so that I can operate Facebook from the web UI.
 

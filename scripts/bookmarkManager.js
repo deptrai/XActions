@@ -71,9 +71,9 @@
       const rows = bookmarks.map(b =>
         `"${b.url}","${b.username}","${b.text.replace(/"/g, '""')}","${b.likes}","${b.hasMedia}","${b.time}"`
       );
-      download([header, ...rows].join('\n'), `xactions-bookmarks-${date}.csv`);
+      download([header, ...rows].join('\n'), `medirus-bookmarks-${date}.csv`);
     } else {
-      download({ exportedAt: new Date().toISOString(), count: bookmarks.length, bookmarks }, `xactions-bookmarks-${date}.json`);
+      download({ exportedAt: new Date().toISOString(), count: bookmarks.length, bookmarks }, `medirus-bookmarks-${date}.json`);
     }
 
     console.log(`✅ Exported ${bookmarks.length} bookmarks as ${CONFIG.format.toUpperCase()}`);
@@ -98,7 +98,7 @@
   };
 
   const run = async () => {
-    console.log('🔖 BOOKMARK MANAGER — XActions by nichxbt\n');
+    console.log('🔖 BOOKMARK MANAGER — Medirus by nichxbt\n');
 
     if (!window.location.href.includes('/bookmarks')) {
       console.error('❌ Navigate to x.com/i/bookmarks first!');

@@ -1,9 +1,9 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Scraper Adapter — Base Class
+ * Medirus Scraper Adapter — Base Class
  *
  * Abstract interface that all scraper framework adapters must implement.
- * This enables XActions to work with Puppeteer, Playwright, HTTP/Cheerio,
+ * This enables Medirus to work with Puppeteer, Playwright, HTTP/Cheerio,
  * or any other scraping framework.
  *
  * @author nich (@nichxbt)

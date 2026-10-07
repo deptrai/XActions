@@ -29,7 +29,7 @@
 // top-level `const` paste - which would silently break that workflow.
 var CONFIG = {
   // Storage key prefix
-  storageKey: 'xactions_growth_tracker',
+  storageKey: 'medirus_growth_tracker',
   
   // Maximum history entries to keep
   maxHistory: 365,
@@ -47,7 +47,7 @@ var CONFIG = {
 (async function followersGrowthTracker() {
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  📈 XActions — Followers Growth Tracker                      ║
+║  📈 Medirus — Followers Growth Tracker                      ║
 ║  Track follower growth over time                             ║
 ╚══════════════════════════════════════════════════════════════╝
   `);

@@ -51,7 +51,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  #️⃣ XActions — Hashtag Analytics                             ║
+║  #️⃣ Medirus — Hashtag Analytics                             ║
 ║  Track which hashtags drive the most engagement              ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -299,7 +299,7 @@ var CONFIG = {
   }
 
   // Save analysis
-  const storageKey = `xactions_hashtags_${username}`;
+  const storageKey = `medirus_hashtags_${username}`;
   localStorage.setItem(storageKey, JSON.stringify({
     username,
     timestamp: new Date().toISOString(),

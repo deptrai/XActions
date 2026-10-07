@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions A2A — SSE Streaming
+ * Medirus A2A — SSE Streaming
  *
  * Real-time Server-Sent Events streaming for task progress, results,
  * and agent-to-agent communication.

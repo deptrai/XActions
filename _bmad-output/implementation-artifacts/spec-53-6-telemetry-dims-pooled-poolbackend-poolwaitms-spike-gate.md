@@ -17,16 +17,16 @@ context:
 
 **Problem:**
 1. Khi scrape job chạy qua `BrowserPool` (Story 53.1–53.5), telemetry hiện tại chỉ có `browserBackend`. Hệ thống thiếu các dimensions đo lường quan trọng: `pooled` (boolean), `poolBackend` (string: 'chrome'|'obscura'), và `poolWaitMs` (number: thời gian chờ slot trong queue của pool tính bằng milliseconds). Thiếu các dims này, đội ngũ vận hành không thể phân biệt giữa job dùng pool vs job launch-per-job, không đo lường được hiệu quả của pool hay độ nghẽn (`poolWaitMs`) trong production, và không kiểm soát được SLA theo AD-24 mục 7.
-2. `TelemetryEmitter` cần đảm bảo tính nhất quán: nếu cờ `XACTIONS_BROWSER_BACKEND_METRICS !== '1'`, các trường `pooled`, `poolBackend`, `poolWaitMs` phải bị loại bỏ hoàn toàn (cùng với `browserBackend`).
+2. `TelemetryEmitter` cần đảm bảo tính nhất quán: nếu cờ `MEDIRUS_BROWSER_BACKEND_METRICS !== '1'`, các trường `pooled`, `poolBackend`, `poolWaitMs` phải bị loại bỏ hoàn toàn (cùng với `browserBackend`).
 3. `scripts/browser-pool-spike.mjs` trước đây chỉ là một spike exploration script độc lập, cần được nâng cấp thành một pre-release / CI verification gate chuẩn (`--gate` hoặc `VERIFY_GATE=1`), xác thực tính cô lập ngữ cảnh (no state leak, `isolatedContextLeak === false`) và khả năng vận hành của BrowserPool, trả về exit code 0/1 để chặn release nếu pool bị lỗi.
 
 **Approach:**
 1. **TelemetryContext (`src/core/telemetry-context.js`)**:
    - Thêm các trường `pooled`, `poolBackend`, `poolWaitMs` vào state của context.
    - Bổ sung phương thức `setPoolTelemetry({ pooled, poolBackend, poolWaitMs })`.
-   - Cập nhật `toRunPayload(runDetails)`: khi `process.env.XACTIONS_BROWSER_BACKEND_METRICS === '1'`, bổ sung các trường `pooled`, `poolBackend`, `poolWaitMs` vào payload nếu có.
+   - Cập nhật `toRunPayload(runDetails)`: khi `process.env.MEDIRUS_BROWSER_BACKEND_METRICS === '1'`, bổ sung các trường `pooled`, `poolBackend`, `poolWaitMs` vào payload nếu có.
 2. **TelemetryEmitter (`src/core/telemetry-emitter.js`)**:
-   - Trong `emitRun(payload)`: khi `process.env.XACTIONS_BROWSER_BACKEND_METRICS !== '1'`, thực hiện xóa sạch cả `browserBackend`, `pooled`, `poolBackend`, `poolWaitMs`.
+   - Trong `emitRun(payload)`: khi `process.env.MEDIRUS_BROWSER_BACKEND_METRICS !== '1'`, thực hiện xóa sạch cả `browserBackend`, `pooled`, `poolBackend`, `poolWaitMs`.
 3. **Adapter & Launcher Wiring (`src/scraping/stealthBrowser.js`, `src/scrapers/adapters/puppeteer.js`)**:
    - Khi `options.pooled` được bật và `pool.acquire()` trả về lease (`{ page, context, backend, waitMs, pageMs, endpoint }`), gọi `telemetryContext.setPoolTelemetry({ pooled: true, poolBackend: lease.backend, poolWaitMs: lease.waitMs })`.
    - Giữ nguyên `setBrowserBackend(lease.backend)` để duy trì tương thích ngược.
@@ -41,7 +41,7 @@ context:
 ## Boundaries & Constraints
 
 **Always:**
-- Kiểm tra cờ `process.env.XACTIONS_BROWSER_BACKEND_METRICS === '1'` nghiêm ngặt. Khi cờ không bằng `'1'` (bao gồm undefined), không một trường telemetry pool nào (`pooled`, `poolBackend`, `poolWaitMs`, `browserBackend`) được phép xuất hiện trong emitted run payload.
+- Kiểm tra cờ `process.env.MEDIRUS_BROWSER_BACKEND_METRICS === '1'` nghiêm ngặt. Khi cờ không bằng `'1'` (bao gồm undefined), không một trường telemetry pool nào (`pooled`, `poolBackend`, `poolWaitMs`, `browserBackend`) được phép xuất hiện trong emitted run payload.
 - Mọi trường dữ liệu số (`poolWaitMs`) phải là kiểu number hợp lệ, không âm.
 - `stealthBrowser.js` và `puppeteer.js` kiểm tra an toàn sự tồn tại của `options.telemetryContext` và phương thức `setPoolTelemetry` trước khi gọi.
 - Không phá vỡ bất kỳ bài kiểm tra hiện tại nào của telemetry pipeline và browser pool.
@@ -58,7 +58,7 @@ context:
 **Patch (applied):**
 - [x] [Review][Patch] Gate có thể bị vô hiệu hoá ngầm — `MODE` env override cho phép `--gate` chạy `launch-per-job` thay vì `pool-isolated-context`; gate không khẳng định gì nếu `isolation.error` hoặc `isolatedContextLeak !== false`, và run thiếu `metrics` âm thầm pass. Đã ép `MODE='pool-isolated-context'` khi `IS_GATE`, fail khi `isolation.error` tồn tại hoặc `isolatedContextLeak !== false`, reject run thiếu `metrics`. [`scripts/browser-pool-spike.mjs:44,182,216-232`]
 - [x] [Review][Patch] `poolWaitMs` không validate `Number.isFinite` — `Math.max(0, NaN)` trả `NaN` rơi vào payload nếu `lease.waitMs` là chuỗi không parse được. Đã guard `Number.isFinite()` sau `Number()` ở constructor, `setPoolTelemetry`, `toRunPayload`. [`src/core/telemetry-context.js:69,131,241`]
-- [x] [Review][Patch] Thiếu test coverage biên — không có test cho `poolWaitMs: 0`, `poolWaitMs: NaN`, `pooled: false`, `XACTIONS_BROWSER_BACKEND_METRICS='0'`. Spec ràng buộc "number hợp lệ, không âm" không được xác minh. Đã bổ sung 4 test cases mới. [`tests/scraping/browser-pool-telemetry.test.js`]
+- [x] [Review][Patch] Thiếu test coverage biên — không có test cho `poolWaitMs: 0`, `poolWaitMs: NaN`, `pooled: false`, `MEDIRUS_BROWSER_BACKEND_METRICS='0'`. Spec ràng buộc "number hợp lệ, không âm" không được xác minh. Đã bổ sung 4 test cases mới. [`tests/scraping/browser-pool-telemetry.test.js`]
 - [x] [Review][Patch] Gate defaults `JOBS=4` = `POOL_SIZE=4` — không bao giờ exercise queue contention, `poolWaitMs` luôn ~0. Đã đặt `JOBS=8` > `POOL_SIZE=4` trong gate mode để backpressure được test thực tế. [`scripts/browser-pool-spike.mjs:45-46`]
 - [x] [Review][Patch] `isDirectExecution` dựa vào `argv[1].includes('browser-pool-spike')` — wrapper script hoặc symlink/đổi tên sẽ vô hiệu hoá hoặc kích hoạt nhầm `main()`. Đã dùng `import.meta.url` so với `pathToFileURL(process.argv[1])`. [`scripts/browser-pool-spike.mjs:277-280`]
 - [x] [Review][Patch] `process.exit(0/1)` ngay sau `console.log` cuối có thể cắt mất output khi piped trong CI — output không flush đồng bộ đến pipe. Đã dùng `process.exitCode` và return tự nhiên. [`scripts/browser-pool-spike.mjs:268-273`]

@@ -331,7 +331,7 @@
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-schedule-optimizer-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-schedule-optimizer-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Schedule optimization exported.');
     }

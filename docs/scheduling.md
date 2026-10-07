@@ -1,6 +1,6 @@
 # Task Scheduling
 
-Cron-based local task scheduler for automating XActions operations on a recurring basis. Replaces cloud scheduling services like Phantombuster or Apify schedules.
+Cron-based local task scheduler for automating Medirus operations on a recurring basis. Replaces cloud scheduling services like Phantombuster or Apify schedules.
 
 ## Architecture
 
@@ -10,14 +10,14 @@ src/scheduler/
 └── webhookTrigger.js  # Webhook-triggered job execution
 ```
 
-**Storage:** `~/.xactions/scheduler.json` (job definitions), `~/.xactions/scheduler-history/` (execution logs).
+**Storage:** `~/.medirus/scheduler.json` (job definitions), `~/.medirus/scheduler-history/` (execution logs).
 
 ## Quick Start
 
 ### Node.js
 
 ```javascript
-import { Scheduler } from 'xactions/src/scheduler/scheduler.js';
+import { Scheduler } from 'medirus/src/scheduler/scheduler.js';
 
 const scheduler = new Scheduler();
 await scheduler.load();  // Load saved jobs
@@ -49,11 +49,11 @@ const history = scheduler.getHistory('daily-unfollow-check');
 ### CLI
 
 ```bash
-xactions schedule add daily-check --cron "0 9 * * *" --command get_non_followers --args '{"username":"nichxbt"}'
-xactions schedule list
-xactions schedule run daily-check
-xactions schedule remove daily-check
-xactions schedule history daily-check
+medirus schedule add daily-check --cron "0 9 * * *" --command get_non_followers --args '{"username":"nichxbt"}'
+medirus schedule list
+medirus schedule run daily-check
+medirus schedule remove daily-check
+medirus schedule history daily-check
 ```
 
 ## REST API
@@ -86,7 +86,7 @@ curl -X POST http://localhost:3001/api/schedule \
 |-------|----------|-------------|
 | `name` | Yes | Unique job identifier |
 | `cron` | Yes | Cron expression (e.g., `0 9 * * *`) |
-| `command` | Yes | XActions command/action to execute |
+| `command` | Yes | Medirus command/action to execute |
 | `args` | No | Parameters passed to the command |
 | `enabled` | No | Whether the job is active (default: `true`) |
 | `maxRetries` | No | Retry count on failure (default: `0`) |
@@ -129,7 +129,7 @@ Each job execution is logged with:
 }
 ```
 
-History files stored in `~/.xactions/scheduler-history/<jobName>/`.
+History files stored in `~/.medirus/scheduler-history/<jobName>/`.
 
 ## Webhook Triggers
 

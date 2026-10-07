@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions profile/followers/following/non-followers/tweets/search/hashtag/thread/media`
+ * `medirus profile/followers/following/non-followers/tweets/search/hashtag/thread/media`
  * — public read and scraping commands.
  *
  * @author nich (@nichxbt)

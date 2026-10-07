@@ -45,7 +45,7 @@ export const SuggestedActions = Object.freeze({
   WAIT: 'wait',
   REDUCE_RATE: 'reduce_rate',
   CONTACT_SUPPORT: 'contact_support',
-  USE_ACTIONS_LIST: 'use_x_actions_list',
+  USE_ACTIONS_LIST: 'use_medirus_list',
   VERIFY_URL: 'verify_url',
   RETRY_WITH_DIFFERENT_ACCOUNT: 'retry_with_different_account',
 });

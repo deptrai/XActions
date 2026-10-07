@@ -181,7 +181,7 @@ Reddit and Medium scrapers are HTTP/RSS clients — no DOM selectors. Instagram 
 | Post + comments | `GET {base}/comments/{postId}.json` |
 | OAuth token | `POST https://www.reddit.com/api/v1/access_token` (client_credentials) |
 | RSS fallback | `GET {base}/r/{sub}/{sort}.rss` when `.json` hits a bot challenge |
-| User-Agent | REQUIRED — `xactions:reddit-scraper:v1.0.0 by u/{username}` (`buildRedditUserAgent`) |
+| User-Agent | REQUIRED — `medirus:reddit-scraper:v1.0.0 by u/{username}` (`buildRedditUserAgent`) |
 
 ### Medium (`src/scrapers/social/medium/`)
 
@@ -220,19 +220,19 @@ new RedditClient({ proxyProvider: dynamicTunnelProvider });
 
 When DOM drift occurs or existing selectors break, `AutoSelectorFallback` assists in re-discovering replacement selectors on a live page without manual DevTools inspection. It analyzes DOM elements against declared expected shapes, prioritizes stable attributes (`data-testid` > `role`/`aria-*` > semantic structure), and rejects brittle/hash-only classnames.
 
-### CLI Usage (`xactions tools suggest-selector`)
+### CLI Usage (`medirus tools suggest-selector`)
 
 Use the CLI command to query candidate selectors for a given platform, URL, and target field:
 
 ```bash
 # Suggest replacement selectors for Twitter tweet text
-xactions tools suggest-selector --platform twitter --url https://x.com/nasa --field tweet_text
+medirus tools suggest-selector --platform twitter --url https://x.com/nasa --field tweet_text
 
 # Output as JSON for automated pipelines
-xactions tools suggest-selector --platform twitter --url https://x.com/nasa --field tweet_text --json
+medirus tools suggest-selector --platform twitter --url https://x.com/nasa --field tweet_text --json
 
 # Specify a browser backend (obscura or chrome)
-xactions tools suggest-selector --platform twitter --url https://x.com/nasa --field tweet_text --backend chrome
+medirus tools suggest-selector --platform twitter --url https://x.com/nasa --field tweet_text --backend chrome
 ```
 
 ### Options
@@ -248,7 +248,7 @@ xactions tools suggest-selector --platform twitter --url https://x.com/nasa --fi
 ### Programmatic Usage
 
 ```javascript
-import { suggestSelectors, globalAutoSelectorFallback } from 'xactions/core';
+import { suggestSelectors, globalAutoSelectorFallback } from 'medirus/core';
 
 // Convenience helper using built-in FIELD_SHAPES
 const candidates = await suggestSelectors('twitter', 'https://x.com/nasa', 'tweet_text');

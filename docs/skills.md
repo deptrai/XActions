@@ -1,7 +1,7 @@
 # Skills Reference
 
 **Skills** are self-contained instruction files that teach an AI assistant how to
-do one job with XActions. Each is a markdown file with YAML frontmatter, written
+do one job with Medirus. Each is a markdown file with YAML frontmatter, written
 for a model to read rather than a human: it names the scripts to run, the page
 to run them on, the arguments that matter, and the mistakes to avoid.
 
@@ -96,7 +96,7 @@ _49 skills. Generated from [`skills/index.json`](../skills/index.json)._
 | [Algorithm Cultivation](../skills/algorithm-cultivation/SKILL.md) | Trains feed algorithm for niche content, runs 24/7 LLM-powered thought leader engagement. |
 | [Analytics & Insights](../skills/analytics-insights/SKILL.md) | Analyze engagement, hashtags, competitors, best posting times, follower demographics, tweet performance. |
 | [Articles & Longform](../skills/articles-longform/SKILL.md) | Compose, preview, publish, and manage long-form Articles on X/Twitter (Premium+ feature). |
-| [Billing Management](../skills/billing-management/SKILL.md) | Manage XActions subscriptions and billing via Stripe checkout. |
+| [Billing Management](../skills/billing-management/SKILL.md) | Manage Medirus subscriptions and billing via Stripe checkout. |
 | [Blocking & Muting](../skills/blocking-muting-management/SKILL.md) | Mass block, unblock, mute, unmute with bot detection. |
 | [Bookmarks Management](../skills/bookmarks-management/SKILL.md) | Organize, export, and bulk-clear bookmarks with auto-tagging. |
 | [Business & Ads](../skills/business-ads/SKILL.md) | Brand monitoring, audience insights, competitor analysis, and ad campaign management. |
@@ -136,9 +136,9 @@ _49 skills. Generated from [`skills/index.json`](../skills/index.json)._
 | [Viral Thread Generation](../skills/viral-thread-generation/SKILL.md) | Research trending topics and generate high-engagement thread content. |
 | [Webhooks](../skills/webhooks/SKILL.md) | Create, manage, and test webhooks for automation job notifications. |
 | [X Pro Management](../skills/x-pro-management/SKILL.md) | Navigate X Pro (TweetDeck), set up monitoring columns, manage multi-column view. |
-| [x402 Payments](../skills/x402-payments/SKILL.md) | Enable x402 crypto payment protocol for XActions API access — multi-chain, multi-currency. |
-| [XActions CLI](../skills/xactions-cli/SKILL.md) | Command-line interface for scraping, MCP server config, and automation — `npm install -g xactions`. |
-| [XActions MCP Server](../skills/xactions-mcp-server/SKILL.md) | 145 MCP tools for AI agents to automate X/Twitter (scrape, post, engage, analyze). |
+| [x402 Payments](../skills/x402-payments/SKILL.md) | Enable x402 crypto payment protocol for Medirus API access — multi-chain, multi-currency. |
+| [Medirus CLI](../skills/medirus-cli/SKILL.md) | Command-line interface for scraping, MCP server config, and automation — `npm install -g medirus`. |
+| [Medirus MCP Server](../skills/medirus-mcp-server/SKILL.md) | 145 MCP tools for AI agents to automate X/Twitter (scrape, post, engage, analyze). |
 
 ---
 

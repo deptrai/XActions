@@ -164,7 +164,7 @@ context:
 - [x] [Review][Patch] Default export still binds legacy `mastodon` and `bluesky` modules instead of hybrid [src/scrapers/index.js:1778-1779]
 - [x] [Review][Patch] Missing `createBlueskyClient` / `createBlueskyCrawler` factory helpers [src/scrapers/index.js]
 - [x] [Review][Patch] `types/index.d.ts` does not declare new Story 23.6 exports (`MastodonClient`, `MastodonCrawler`, etc.) [types/index.d.ts]
-- [x] [Review][Patch] JSDoc `@param {import('../types/xactions.js').XActionsOptions}` points to non-existent file [src/scrapers/index.js:187,391]
+- [x] [Review][Patch] JSDoc `@param {import('../types/medirus.js').MedirusOptions}` points to non-existent file [src/scrapers/index.js:187,391]
 - [x] [Review][Patch] Mastodon dispatcher test reaches external `mastodon.social` when `target` is a URL [tests/scrapers/social/mastodon/dispatcher.test.js:209]
 - [x] [Review][Patch] Several `scrape('mastodon', ...)` argument branches lack coverage (`since_id`, `type`, `cursor`, direct `exclude_replies`, `autoClose: false`, custom `options.client`) [tests/scrapers/social/mastodon/dispatcher.test.js]
 
@@ -182,7 +182,7 @@ context:
 - [ ] [Review][Patch] `createMastodonCrawler(client, options)` accepts a plain options object as first param but `createBlueskyCrawler` does not; signatures are inconsistent and the type declaration only allows `MastodonClient` [src/scrapers/index.js:1851-1855, types/index.d.ts:813]
 - [ ] [Review][Patch] `BlueskyClient.close()` and `MastodonClient.close()` declared in `types/index.d.ts` but do not exist at runtime [types/index.d.ts:787,800]
 - [ ] [Review][Patch] `BlueskyClient.login()` declared to return `Promise<Record<string, unknown>>` but actually returns `Promise<string>` (accessJwt) [types/index.d.ts:784]
-- [ ] [Review][Patch] JSDoc `@param {import('../types/index.d.ts').XActionsOptions}` references a file that does not export `XActionsOptions`; correct path is `../types/xactions.d.ts` [src/scrapers/index.js:191,400]
+- [ ] [Review][Patch] JSDoc `@param {import('../types/index.d.ts').MedirusOptions}` references a file that does not export `MedirusOptions`; correct path is `../types/medirus.d.ts` [src/scrapers/index.js:191,400]
 - [ ] [Review][Patch] Legacy imports `bluesky` and `mastodon` in `src/scrapers/index.js` are now unused after `platforms`/`default` replaced with throwers, creating dead code [src/scrapers/index.js:41-42]
 - [ ] [Review][Patch] `MastodonCrawler`/`MastodonClient` imported directly from `crawler.js`/`client.js` instead of the spec-required barrel `./social/mastodon/index.js` [src/scrapers/index.js:71-76]
 - [ ] [Review][Patch] Dispatcher mock server does not assert `limit`, `max_id`, or `Authorization` header in the `posts` test, so parameter normalization (`count`→`limit`, `token`→`accessToken`, `max_id`) is not actually verified [tests/scrapers/social/mastodon/dispatcher.test.js:267-278]

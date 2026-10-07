@@ -34,7 +34,7 @@
   };
 
   const run = async () => {
-    console.log('👤 PROFILE MANAGER — XActions by nichxbt');
+    console.log('👤 PROFILE MANAGER — Medirus by nichxbt');
     console.log('━'.repeat(45));
 
     const pathMatch = window.location.pathname.match(/^\/([A-Za-z0-9_]+)/);
@@ -115,7 +115,7 @@
     console.log('');
 
     // Store in window for easy access
-    window.__xactions_profile = profile;
+    window.__medirus_profile = profile;
     return profile;
   };
 

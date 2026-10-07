@@ -1,12 +1,12 @@
 {
-  "name": "xactions-mcp",
+  "name": "medirus-mcp",
   "version": "3.4.9",
-  "description": "XActions MCP Server — X/Twitter automation for AI agents (Claude, Cursor, Windsurf, GPT). No API fees.",
-  "homepage": "https://xactions.app",
+  "description": "Medirus MCP Server — X/Twitter automation for AI agents (Claude, Cursor, Windsurf, GPT). No API fees.",
+  "homepage": "https://medirus.online",
   "repository": {
     "type": "git",
     "url": "https://github.com/nirholas/xactions.git",
-    "directory": "packages/xactions-mcp"
+    "directory": "packages/medirus-mcp"
   },
   "bugs": {
     "url": "https://github.com/nirholas/xactions/issues"
@@ -15,13 +15,13 @@
   "author": "nichxbt",
   "type": "module",
   "bin": {
-    "xactions-mcp": "./bin.js"
+    "medirus-mcp": "./bin.js"
   },
   "dependencies": {
-    "xactions": "^3.4.8"
+    "medirus": "^3.4.8"
   },
   "keywords": [
-    "xactions",
+    "medirus",
     "mcp",
     "twitter",
     "x",

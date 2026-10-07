@@ -2,7 +2,7 @@
 
 ## 1. What problem does this system solve?
 
-Epic 7 mở rộng khả năng **đọc** Facebook của XActions để phục vụ lead generation và market research: search đa loại (posts/people/pages/groups), scrape comments của post, scrape posts/comments trong group, và chạy song song bằng nhiều account đã nuôi. Tất cả xuất JSON, không ghi dữ liệu trong XActions.
+Epic 7 mở rộng khả năng **đọc** Facebook của Medirus để phục vụ lead generation và market research: search đa loại (posts/people/pages/groups), scrape comments của post, scrape posts/comments trong group, và chạy song song bằng nhiều account đã nuôi. Tất cả xuất JSON, không ghi dữ liệu trong Medirus.
 
 ## 2. Who are the actors and what are the inputs/outputs?
 

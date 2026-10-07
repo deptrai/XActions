@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions A2A — Type Definitions and Constants
+ * Medirus A2A — Type Definitions and Constants
  *
  * Shared types, constants, factory functions, and validators for the
  * Agent-to-Agent (A2A) protocol implementation (Google A2A spec).
@@ -108,7 +108,7 @@ export function createAgentCard(config) {
     },
     defaultInputModes: config.defaultInputModes || ['text/plain', 'application/json'],
     defaultOutputModes: config.defaultOutputModes || ['text/plain', 'application/json'],
-    provider: config.provider || { organization: 'XActions', url: 'https://xactions.app' },
+    provider: config.provider || { organization: 'Medirus', url: 'https://medirus.online' },
   };
 }
 

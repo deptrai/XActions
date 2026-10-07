@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions — X Space Agent Integration
+ * Medirus — X Space Agent Integration
  * 
  * Wraps the xspace-agent SDK to let AI agents autonomously join,
  * listen, and speak in X/Twitter Spaces via voice.
@@ -45,11 +45,11 @@ async function loadSDK() {
  * Builds agent config from user args + environment variables.
  */
 function buildConfig(args = {}) {
-  const authToken = args.authToken || process.env.X_AUTH_TOKEN || process.env.XACTIONS_SESSION_COOKIE;
+  const authToken = args.authToken || process.env.X_AUTH_TOKEN || process.env.MEDIRUS_SESSION_COOKIE;
   const ct0 = args.ct0 || process.env.X_CT0;
 
   if (!authToken) {
-    throw new Error('❌ X_AUTH_TOKEN (or XACTIONS_SESSION_COOKIE) is required. Get it from your browser cookies on x.com.');
+    throw new Error('❌ X_AUTH_TOKEN (or MEDIRUS_SESSION_COOKIE) is required. Get it from your browser cookies on x.com.');
   }
 
   const aiProvider = args.provider || process.env.XSPACE_AI_PROVIDER || 'openai';

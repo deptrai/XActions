@@ -20,7 +20,7 @@ Status: done
 The following decisions are non-negotiable and override any earlier language in this story or external references:
 
 1. **Backends Already Exist** — `GET /api/admin/governor/status` (`api/routes/admin.js:363`) and `src/core/status-api.js` already expose the full `GovernorStatus` contract. This story only adds a **CLI renderer** inside `src/cli/commands/admin.js`.
-2. **No Code Duplication with `xactions status`** — `src/cli/commands/info.js` already has a top-level `xactions status` command with the same rendering. Move the rendering logic to a shared helper or add `admin status` as a thin wrapper, but do not copy/paste `console.log` blocks.
+2. **No Code Duplication with `medirus status`** — `src/cli/commands/info.js` already has a top-level `medirus status` command with the same rendering. Move the rendering logic to a shared helper or add `admin status` as a thin wrapper, but do not copy/paste `console.log` blocks.
 3. **Pure CLI / No Puppeteer or Browser** — This is a CLI-only story. Do not import puppeteer or touch browser code.
 4. **Real API First, In-Process Fallback** — Follow the pattern in `src/cli/commands/admin.js` (`stream metrics`, `stream alerts`): try calling the HTTP/REST endpoint, fall back to in-process `globalStatusApi` when running locally.
 5. **No Mocks in Tests** — CLI tests must call real code or a real local server fixture. No `vi.fn` stubs for `fetch` or `console.log`.
@@ -31,24 +31,24 @@ The following decisions are non-negotiable and override any earlier language in 
 ## Story
 
 As an **Internal Automation Operator**,  
-I want **a command `xactions admin status` that displays an overview of the governor, proxy pool, and hibernating accounts**,  
+I want **a command `medirus admin status` that displays an overview of the governor, proxy pool, and hibernating accounts**,  
 so that **I can quickly grasp system health and operational status directly from the terminal**.
 
 ## Acceptance Criteria
 
-### AC-1: `xactions admin status` command exists
+### AC-1: `medirus admin status` command exists
 
-- **Given** the `xactions admin` command group
-- **When** the operator runs `xactions admin status --help`
+- **Given** the `medirus admin` command group
+- **When** the operator runs `medirus admin status --help`
 - **Then** the help text explains the command, its `--json` flag, and optional `--url` / `--token` parameters
-- **And** the command is listed under `xactions admin --help`
+- **And** the command is listed under `medirus admin --help`
 
 [Source: `epics.md` Epic 19, Story 19.4, lines 1059-1063; `src/cli/commands/admin.js`]
 
 ### AC-2: Fetches governor status from REST or in-process source
 
 - **Given** a running API server at `http://localhost:3001`
-- **When** the operator runs `xactions admin status`
+- **When** the operator runs `medirus admin status`
 - **Then** it first attempts `GET /api/admin/governor/status` (or `/governor/status`) with an optional Bearer token
 - **And** on HTTP 200 it extracts the nested status from the success envelope: `const status = (await res.json()).status`
 - **And** if the HTTP call fails, it falls back to `globalStatusApi.getGovernorStatus()` after refreshing consumer lag via `refreshGovernorConsumerLag(globalAdaptiveRateGovernor, globalStreamMetricsReader)`
@@ -58,7 +58,7 @@ so that **I can quickly grasp system health and operational status directly from
 ### AC-3: Prints human-readable status summary
 
 - **Given** a successful status fetch
-- **When** the operator runs `xactions admin status` without `--json`
+- **When** the operator runs `medirus admin status` without `--json`
 - **Then** it prints:
   - `Throttle Level` with color-coded status (`normal` green, `reduced` yellow, `backpressure` magenta, `critical` red)
   - `Healthy Proxies` as `healthyProxyCount / totalProxyCount` with percentage
@@ -73,7 +73,7 @@ so that **I can quickly grasp system health and operational status directly from
 ### AC-4: Supports `--json` flag for machine-readable output
 
 - **Given** the operator needs scripted or machine-readable output
-- **When** they run `xactions admin status --json`
+- **When** they run `medirus admin status --json`
 - **Then** the command prints the raw `GovernorStatus` JSON with `JSON.stringify(status, null, 2)`
 - **And** it includes all fields from the status contract: `healthyProxyCount`, `totalProxyCount`, `healthyProxyRatio`, `currentReqPerSecond`, `redisConsumerLag`, `hibernatingAccounts`, `throttleLevel`, `dualPool`, `consumerQuotas`
 
@@ -91,7 +91,7 @@ so that **I can quickly grasp system health and operational status directly from
 ### AC-6: Handles offline and error states gracefully
 
 - **Given** no server is running and in-process singletons are not initialized
-- **When** the operator runs `xactions admin status`
+- **When** the operator runs `medirus admin status`
 - **Then** it displays a helpful error message using `printCliError()` and exits with non-zero status
 - **And** it does not crash or leak internal error details beyond a generic message
 
@@ -103,10 +103,10 @@ so that **I can quickly grasp system health and operational status directly from
   - [x] 1.1 Create or update `src/cli/shared.js` with `printGovernorStatus(status, options)`
   - [x] 1.2 Move the formatting logic from `src/cli/commands/info.js` status command into the shared helper
   - [x] 1.3 Ensure the helper supports both terminal and JSON output
-- [x] Task 2: Refactor `xactions status` to use the shared helper (AC: #1, #3)
+- [x] Task 2: Refactor `medirus status` to use the shared helper (AC: #1, #3)
   - [x] 2.1 Update `src/cli/commands/info.js` to import and call the shared formatter
-  - [x] 2.2 Verify `xactions status --json` and `xactions status` still produce identical output
-- [x] Task 3: Add `xactions admin status` command in `src/cli/commands/admin.js` (AC: #1, #2, #3, #4, #6)
+  - [x] 2.2 Verify `medirus status --json` and `medirus status` still produce identical output
+- [x] Task 3: Add `medirus admin status` command in `src/cli/commands/admin.js` (AC: #1, #2, #3, #4, #6)
   - [x] 3.1 Register `adminCmd.command('status')` with `--url`, `--token`, and `--json` options
   - [x] 3.2 Implement HTTP-first fetch to `/api/admin/governor/status` or `/governor/status`
   - [x] 3.3 Implement in-process fallback: `refreshGovernorConsumerLag(...)` then `globalStatusApi.getGovernorStatus()`
@@ -115,7 +115,7 @@ so that **I can quickly grasp system health and operational status directly from
   - [x] 4.1 Create `tests/cli/admin-status.test.js` that asserts the command is registered and `printGovernorStatus` output is correct
   - [x] 4.2 Verify in-process fallback works when API server is not reachable
   - [x] 4.3 Verify color/non-JSON output includes required fields
-  - [x] 4.4 Verify `xactions admin status` command is registered with `--url`, `--token`, and `--json` options
+  - [x] 4.4 Verify `medirus admin status` command is registered with `--url`, `--token`, and `--json` options
 - [x] Task 5: Run validations
   - [x] 5.1 Run `vitest run tests/cli/admin-status.test.js` — PASS
   - [x] 5.2 Run `vitest run tests/core/status-api.test.js` — PASS
@@ -135,7 +135,7 @@ so that **I can quickly grasp system health and operational status directly from
   - `consumerQuotas: Record<string, ConsumerStatus>`
 - **Backend Endpoint**: `GET /api/admin/governor/status` in `api/routes/admin.js:363` (also accessible at `/governor/status`), guarded by `authenticateToken, requireAdmin`.
 - **Lag Refresh**: `src/utils/stream-metrics.js` exports `refreshGovernorConsumerLag(governor, reader)` and `globalStreamMetricsReader`.
-- **Top-level `xactions status`**: `src/cli/commands/info.js:46-100` already implements the exact color formatting and `--json` output this story requires.
+- **Top-level `medirus status`**: `src/cli/commands/info.js:46-100` already implements the exact color formatting and `--json` output this story requires.
 - **CLI patterns**: `src/cli/commands/admin.js` (`stream metrics`, `stream alerts`) already demonstrate HTTP-first + in-process fallback, `--url`, `--token`, and `--json` options.
 
 [Source: `src/core/status-api.js`; `src/core/adaptive-governor.js:562-577`; `api/routes/admin.js:360-385`; `src/utils/stream-metrics.js`; `src/cli/commands/info.js`; `src/cli/commands/admin.js`]
@@ -144,7 +144,7 @@ so that **I can quickly grasp system health and operational status directly from
 
 1. **`src/cli/commands/admin.js`** — add `admin status` command and register it under the `admin` group.
 2. **`src/cli/shared.js`** — add a shared `formatGovernorStatus` / `printGovernorStatus` helper (recommended) or keep formatting inline if duplicating minimally.
-3. **`src/cli/commands/info.js`** — refactor `xactions status` to use the shared formatter (avoid duplication).
+3. **`src/cli/commands/info.js`** — refactor `medirus status` to use the shared formatter (avoid duplication).
 4. **`_bmad-output/implementation-artifacts/sprint-status.yaml`** — update `19-4-1-admin-cli-status` to `ready-for-dev`.
 
 ### Files to Read but Not Modify
@@ -165,7 +165,7 @@ so that **I can quickly grasp system health and operational status directly from
 
 ### UX Requirements
 
-- Output must match existing `xactions status` style for consistency.
+- Output must match existing `medirus status` style for consistency.
 - Color coding:
   - `normal` → green
   - `reduced` → yellow
@@ -196,8 +196,8 @@ claude-opus-5[1m]
 ### Completion Notes List
 
 - 2026-09-02: Added `printGovernorStatus(status, { json })` to `src/cli/shared.js` for shared terminal/JSON rendering.
-- 2026-09-02: Refactored `src/cli/commands/info.js` top-level `xactions status` to use `printGovernorStatus`.
-- 2026-09-02: Added `xactions admin status` command to `src/cli/commands/admin.js` with `--url`, `--token`, `--json` and HTTP/in-process fallback.
+- 2026-09-02: Refactored `src/cli/commands/info.js` top-level `medirus status` to use `printGovernorStatus`.
+- 2026-09-02: Added `medirus admin status` command to `src/cli/commands/admin.js` with `--url`, `--token`, `--json` and HTTP/in-process fallback.
 - 2026-09-02: Created `tests/cli/admin-status.test.js` covering command registration, options, JSON output, and human-readable output.
 - 2026-09-02: All targeted tests pass: `tests/cli/admin-status.test.js` (5/5), `tests/core/status-api.test.js` (3/3), `tests/cli/*` (158/158), manual smoke test with `node src/cli/index.js admin status --json`.
 
@@ -224,6 +224,6 @@ claude-opus-5[1m]
 ## Suggested Review Order
 
 1. `src/cli/shared.js` — shared `formatGovernorStatus` helper (if added)
-2. `src/cli/commands/info.js` — refactored `xactions status` to use shared helper
+2. `src/cli/commands/info.js` — refactored `medirus status` to use shared helper
 3. `src/cli/commands/admin.js` — new `admin status` command and HTTP/in-process fallback
 4. `tests/cli/admin-status.test.js` — real CLI or action-level tests

@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions — JevBioMatcher (Story 42.5)
+ * Medirus — JevBioMatcher (Story 42.5)
  *
  * Semantic second opinion for cross-platform bio pairs in `x_social_find_profiles`
  * identity resolution. The free signals (username_exact, name_similar,
  * avatar_match, crosslink_bio) stay first-line; this module only asks Jev about
- * the pairs they could not merge — e.g. "Building AI tools @ XActions" vs
+ * the pairs they could not merge — e.g. "Building AI tools @ Medirus" vs
  * "Founder, dev tools. Prev: Cognition".
  *
  * Seam (mirrors Story 41.3's prefetchAvatarHashes): `scorePair`/`resolveIdentities`

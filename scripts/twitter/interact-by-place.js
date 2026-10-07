@@ -28,7 +28,7 @@
  * 1. Configure locations below
  * 2. Open Chrome DevTools (F12)
  * 3. Paste this script and press Enter
- * 4. Use XActions.Place commands
+ * 4. Use Medirus.Place commands
  * 
  * ============================================================
  * ⚙️ CONFIGURATION
@@ -106,9 +106,9 @@ var CONFIG = {
     processedTweets: new Set(),
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Place = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Place = {
     config: CONFIG,
     state,
     
@@ -141,7 +141,7 @@ var CONFIG = {
 
       // Type into X's own search box and submit through it (a real in-app
       // search) instead of assigning location.href. Setting location.href
-      // forces a hard page reload, which wipes this injected script (window.XActions
+      // forces a hard page reload, which wipes this injected script (window.Medirus
       // included) before interact() could ever be called on the results.
       const input = document.querySelector(SELECTORS.searchInput);
       if (input) {
@@ -150,7 +150,7 @@ var CONFIG = {
         input.dispatchEvent(new Event('input', { bubbles: true }));
         await sleep(300);
         input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-        console.log('✅ Search submitted. Once results load, run XActions.Place.interact().');
+        console.log('✅ Search submitted. Once results load, run Medirus.Place.interact().');
       } else {
         console.warn('⚠️ Search box not found on this page. Falling back to a full navigation - this reloads the page and clears the script, so paste it again once results load.');
         const encodedQuery = encodeURIComponent(searchQuery);
@@ -243,7 +243,7 @@ var CONFIG = {
       console.log('╔════════════════════════════════════════════════════════════╗');
       console.log('║  🎉 LOCATION INTERACTION COMPLETE!                         ║');
       console.log('╚════════════════════════════════════════════════════════════╝');
-      window.XActions.Place.stats();
+      window.Medirus.Place.stats();
     },
     
     // Add location
@@ -284,19 +284,19 @@ var CONFIG = {
       console.log('');
       console.log('📋 PLACE INTERACTION COMMANDS:');
       console.log('');
-      console.log('   XActions.Place.search("New York")');
-      console.log('   XActions.Place.search("NYC", "coffee")');
-      console.log('   XActions.Place.interact()');
-      console.log('   XActions.Place.addLocation("Miami")');
-      console.log('   XActions.Place.listLocations()');
-      console.log('   XActions.Place.stop()');
-      console.log('   XActions.Place.stats()');
+      console.log('   Medirus.Place.search("New York")');
+      console.log('   Medirus.Place.search("NYC", "coffee")');
+      console.log('   Medirus.Place.interact()');
+      console.log('   Medirus.Place.addLocation("Miami")');
+      console.log('   Medirus.Place.listLocations()');
+      console.log('   Medirus.Place.stop()');
+      console.log('   Medirus.Place.stats()');
       console.log('');
     }
   };
   
   console.log('✅ Interact By Place loaded!');
   console.log(`📍 Configured locations: ${CONFIG.locations.length}`);
-  console.log('   Run XActions.Place.help() for commands.');
+  console.log('   Run Medirus.Place.help() for commands.');
   console.log('');
 })();

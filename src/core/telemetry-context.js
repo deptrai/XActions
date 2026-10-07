@@ -228,7 +228,7 @@ export class TelemetryContext {
       storeMetrics: this.storeMetrics,
     };
 
-    if (process.env.XACTIONS_BROWSER_BACKEND_METRICS === '1') {
+    if (process.env.MEDIRUS_BROWSER_BACKEND_METRICS === '1') {
       const backend = runDetails.browserBackend || this.browserBackend;
       if (backend) {
         payload.browserBackend = backend;

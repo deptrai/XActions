@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation — Algorithm Builder
+// Medirus Automation — Algorithm Builder
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -21,7 +21,7 @@
 // by nichxbt
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
@@ -31,7 +31,7 @@
     clickElement, waitForElement, waitForElements,
     SELECTORS, CONFIG, storage, rateLimit, parseCount,
     extractTweetInfo, extractUserFromCell,
-  } = window.XActions.Core;
+  } = window.Medirus.Core;
 
   // ════════════════════════════════════════════════════════════════════════
   // NICHE CONFIGURATION — Edit these to match your niche / topics
@@ -335,7 +335,7 @@ Rules:
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${LLM_CONFIG.API_KEY}`,
           'HTTP-Referer': 'https://github.com/nirholas/XActions',
-          'X-Title': 'XActions Algorithm Builder',
+          'X-Title': 'Medirus Algorithm Builder',
         },
         body: JSON.stringify({
           model: LLM_CONFIG.MODEL,
@@ -843,7 +843,7 @@ Rules:
     // ─── Startup banner ───
     console.log(`
 ╔═══════════════════════════════════════════════════╗
-║       ⚡ XActions Algorithm Builder ⚡            ║
+║       ⚡ Medirus Algorithm Builder ⚡            ║
 ╠═══════════════════════════════════════════════════╣
 ║  Building your algorithm around:                  ║
 ║  ${NICHE_CONFIG.KEYWORDS.slice(0, 3).join(', ').substring(0, 47).padEnd(47)}  ║
@@ -952,8 +952,8 @@ Rules:
     console.log('BEHAVIOR:', BEHAVIOR);
   };
 
-  // Expose on XActions namespace
-  window.XActions.AlgoBuilder = {
+  // Expose on Medirus namespace
+  window.Medirus.AlgoBuilder = {
     stop: window.stopAlgoBuilder,
     stats: window.algoStats,
     reset: window.algoReset,

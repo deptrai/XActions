@@ -7,7 +7,7 @@ metadata:
   version: "3.0"
 ---
 
-# Content Cleanup with XActions
+# Content Cleanup with Medirus
 
 Browser console scripts for mass-cleaning your X/Twitter account history.
 

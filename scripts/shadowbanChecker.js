@@ -43,7 +43,7 @@
   };
 
   const run = async () => {
-    console.log('🕵️ SHADOWBAN CHECKER — XActions by nichxbt');
+    console.log('🕵️ SHADOWBAN CHECKER — Medirus by nichxbt');
     console.log('━'.repeat(50));
 
     // Determine username
@@ -152,8 +152,8 @@
 
     // Save results
     try {
-      localStorage.setItem(`xactions_shadowban_${username}`, JSON.stringify(results));
-      console.log(`\n💾 Saved. Retrieve: JSON.parse(localStorage.getItem("xactions_shadowban_${username}"))`);
+      localStorage.setItem(`medirus_shadowban_${username}`, JSON.stringify(results));
+      console.log(`\n💾 Saved. Retrieve: JSON.parse(localStorage.getItem("medirus_shadowban_${username}"))`);
     } catch {}
 
     console.log('');

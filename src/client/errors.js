@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Error Classes
+ * Medirus Client — Error Classes
  * Comprehensive error hierarchy for all Twitter API and scraper errors.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
@@ -27,7 +27,7 @@
 // ============================================================================
 
 /**
- * Base error class for all XActions scraper errors.
+ * Base error class for all Medirus scraper errors.
  */
 export class ScraperError extends Error {
   /**

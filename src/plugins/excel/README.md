@@ -1,8 +1,8 @@
-# 📗 XActions Excel Plugin
+# 📗 Medirus Excel Plugin
 
 > Export scraped X/Twitter data to styled Excel (.xlsx) files with auto-filters, frozen headers, and multi-sheet workbooks.
 
-**Plugin:** `xactions-plugin-excel`
+**Plugin:** `medirus-plugin-excel`
 **Author:** nich ([@nichxbt](https://x.com/nichxbt))
 
 ---
@@ -18,7 +18,7 @@ npm install exceljs
 ### 2. Use it
 
 ```javascript
-import { exportToExcel } from 'xactions/plugins/excel';
+import { exportToExcel } from 'medirus/plugins/excel';
 
 // After scraping followers...
 const result = await exportToExcel(followers, {
@@ -44,13 +44,13 @@ All scrape commands now support `.xlsx` output:
 
 ```bash
 # Scrape followers to Excel
-xactions followers @nichxbt -o followers.xlsx
+medirus followers @nichxbt -o followers.xlsx
 
 # Scrape tweets to Excel with custom sheet name
-xactions tweets @nichxbt -l 200 -o tweets.xlsx --sheet-name "Tweets 2026"
+medirus tweets @nichxbt -l 200 -o tweets.xlsx --sheet-name "Tweets 2026"
 
 # Scrape following to Excel
-xactions following @nichxbt -o following.xlsx
+medirus following @nichxbt -o following.xlsx
 ```
 
 ---
@@ -60,7 +60,7 @@ xactions following @nichxbt -o following.xlsx
 Combine multiple datasets into a single Excel file:
 
 ```javascript
-import { exportMultiSheet } from 'xactions/plugins/excel';
+import { exportMultiSheet } from 'medirus/plugins/excel';
 
 const result = await exportMultiSheet({
   'Followers': followersData,
@@ -93,9 +93,9 @@ console.log(`✅ Created ${result.sheets.length}-sheet workbook with ${result.to
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/api/plugins/xactions-plugin-excel/export` | Export data to .xlsx |
-| `POST` | `/api/plugins/xactions-plugin-excel/export-multi` | Multi-sheet export |
-| `POST` | `/api/plugins/xactions-plugin-excel/read` | Read .xlsx into JSON |
+| `POST` | `/api/plugins/medirus-plugin-excel/export` | Export data to .xlsx |
+| `POST` | `/api/plugins/medirus-plugin-excel/export-multi` | Multi-sheet export |
+| `POST` | `/api/plugins/medirus-plugin-excel/read` | Read .xlsx into JSON |
 
 ---
 

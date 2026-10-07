@@ -2,13 +2,13 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import got from 'got';
 
-const rawCookies = JSON.parse(fs.readFileSync('/Users/luisphan/.xactions/facebook-cookies.json', 'utf8'));
+const rawCookies = JSON.parse(fs.readFileSync('/Users/luisphan/.medirus/facebook-cookies.json', 'utf8'));
 const cookieRecord = {};
 for (const c of rawCookies) {
   if (c.name) cookieRecord[c.name] = c.value;
 }
 
-const proxyConfig = JSON.parse(fs.readFileSync('/Users/luisphan/.xactions/proxy-config.json', 'utf8'));
+const proxyConfig = JSON.parse(fs.readFileSync('/Users/luisphan/.medirus/proxy-config.json', 'utf8'));
 const cookieHeader = Object.entries(cookieRecord)
   .map(([k, v]) => `${k}=${v}`)
   .join('; ');

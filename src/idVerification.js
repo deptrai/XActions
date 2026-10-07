@@ -13,7 +13,7 @@
 //   1. Go to x.com and log in
 //   2. Open Developer Console (F12)
 //   3. Paste this script and press Enter
-//   4. Call any function via window.XActions.idVerification.*
+//   4. Call any function via window.Medirus.idVerification.*
 //
 // Last Updated: 30 March 2026
 (() => {
@@ -88,7 +88,7 @@
   // State Persistence
   // ============================================================================
 
-  const STATE_KEY = 'xactions_id_verification';
+  const STATE_KEY = 'medirus_id_verification';
 
   const getState = () => {
     try {
@@ -458,11 +458,11 @@
   };
 
   // ============================================================================
-  // Expose on window.XActions.idVerification
+  // Expose on window.Medirus.idVerification
   // ============================================================================
 
-  window.XActions = window.XActions || {};
-  window.XActions.idVerification = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.idVerification = {
     initiateVerification,
     checkStatus,
     manageDocuments,
@@ -474,7 +474,7 @@
 
   console.log('');
   console.log('╔══════════════════════════════════════════════════════╗');
-  console.log('║       🆔 XActions ID Verification Manager           ║');
+  console.log('║       🆔 Medirus ID Verification Manager           ║');
   console.log('║                  by nichxbt                         ║');
   console.log('╠══════════════════════════════════════════════════════╣');
   console.log('║                                                      ║');
@@ -487,7 +487,7 @@
   console.log('║  3. manageDocuments()                               ║');
   console.log('║     → View submitted documents & their status       ║');
   console.log('║                                                      ║');
-  console.log('║  Access: window.XActions.idVerification.<function>  ║');
+  console.log('║  Access: window.Medirus.idVerification.<function>  ║');
   console.log('╚══════════════════════════════════════════════════════╝');
   console.log('');
 })();

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — CookieJar
+ * Medirus Client — CookieJar
  *
  * A lightweight cookie jar that stores, serializes, and deserializes Twitter
  * session cookies. Not a full HTTP cookie spec implementation — just enough

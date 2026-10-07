@@ -18,11 +18,11 @@ baseline_commit: 9c40ce3f
 ## Story
 
 As an **AI Agent (Claude / Antigravity / Cursor)**,  
-I want **XActions MCP Server chạy thường trực dạng Daemon HTTP/SSE (Port 3001) trả về 3-Layer JSON Envelope và tự động xuất File Artifact khi dữ liệu >100 records**,  
+I want **Medirus MCP Server chạy thường trực dạng Daemon HTTP/SSE (Port 3001) trả về 3-Layer JSON Envelope và tự động xuất File Artifact khi dữ liệu >100 records**,  
 so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà không phải spawn subprocess `node`**.
 
 [Source: `_bmad-output/planning-artifacts/epics.md` — Epic 14, Story 14.2]  
-[Architecture: `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-7, AD-11, AD-14]
+[Architecture: `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-7, AD-11, AD-14]
 
 ## Acceptance Criteria
 
@@ -72,15 +72,15 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 ### AC-3: Auto-Artifact khi payload >100 records
 - **Given** tool trả về danh sách records (array trực tiếp hoặc thuộc tính `comments`/`posts`/`items`/`data`)
 - **When** tổng số records > 100
-- **Then** tự động lưu toàn bộ dataset ra file `jsonl` (mặc định) vào thư mục `XACTIONS_ARTIFACT_DIR` hoặc `_bmad-output/datasets/`
+- **Then** tự động lưu toàn bộ dataset ra file `jsonl` (mặc định) vào thư mục `MEDIRUS_ARTIFACT_DIR` hoặc `_bmad-output/datasets/`
 - **And** đường dẫn file được trả về trong `meta.datasetArtifactPath`
 - **And** `data` trong envelope chỉ giữ tối đa 30 records đầu tiên (preview) để tránh payload quá lớn qua SSE
 - **And** dữ liệu JSONL tuân thủ AD-9 Rule 3: sanitize newline (`\r\n|\r|\n`) trong `content` trước khi ghi
 - **And** nếu caller truyền `format: 'csv'` và result là array đồng nhất, artifact có thể xuất CSV thay vì JSONL
 
-### AC-4: Action Discovery (`x_actions_list`)
+### AC-4: Action Discovery (`medirus_list`)
 - **Given** `AbstractCrawler.listActions()` đã tồn tại và trả về `ActionDescriptor[]`
-- **When** gọi MCP tool `x_actions_list` hoặc CLI `xactions actions list`
+- **When** gọi MCP tool `medirus_list` hoặc CLI `medirus actions list`
 - **Then** trả về danh sách descriptor, mỗi entry chứa đầy đủ trường `ActionDescriptor` theo AD-11 và bổ sung `platform` để phân biệt nguồn:
 
 ```ts
@@ -96,7 +96,7 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 }
 ```
 
-- **And** `x_actions_list` chấp nhận tham số `platform` tùy chọn để lọc (không truyền = all platforms)
+- **And** `medirus_list` chấp nhận tham số `platform` tùy chọn để lọc (không truyền = all platforms)
 - **And** kết quả bao gồm các action của `FacebookCrawler` hiện có (do đã triển khai ở các story 13.x)
 - **And** `requiresAuth` phải là giá trị boolean rõ ràng (`descriptor.requiresAuth ?? crawler.requiresAuth`)
 
@@ -105,17 +105,17 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 - **When** hệ thống trả response
 - **Then** error envelope chuẩn hóa: `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`
 - **And** `type` thuộc tập: `rate_limit`, `bot_challenge`, `auth_expired`, `proxy_exhausted`, `hibernation`, `invalid_args`, `internal`
-- **And** `suggestedAction` thuộc tập: `retry_after_delay`, `rotate_proxy`, `rotate_account`, `hibernate_account`, `relogin`, `wait`, `reduce_rate`, `contact_support`, `use_x_actions_list`
+- **And** `suggestedAction` thuộc tập: `retry_after_delay`, `rotate_proxy`, `rotate_account`, `hibernate_account`, `relogin`, `wait`, `reduce_rate`, `contact_support`, `use_medirus_list`
 - **And** nếu lỗi là `PlatformError` từ `src/core/error-envelope.js`, trích xuất các trường trực tiếp; nếu là `Error` thường, map thành `type: 'internal'` với `code: 'XACT_5000'`
 
 ### AC-6: CLI daemon commands
-- **Given** CLI `xactions` và legacy `unfollowx`
-- **When** gọi `xactions daemon status/start/stop`
+- **Given** CLI `medirus` và legacy `unfollowx`
+- **When** gọi `medirus daemon status/start/stop`
 - **Then** CLI quản lý vòng đời daemon MCP:
-  - `xactions daemon start` — chạy `MCP_TRANSPORT=http PORT=3001 node src/mcp/server.js` (spawn) hoặc `pm2`-style; trả về URL `http://localhost:3001/mcp` và `GET /health`
-  - `xactions daemon status` — kiểm tra daemon có đang chạy bằng cách gọi `GET /health`; trả về `{ running: boolean, url, tools, sessions }`
-  - `xactions daemon stop` — kill process daemon (nếu tự quản lý) hoặc trả về hướng dẫn
-- **And** legacy CLI commands `unfollowx` được map vào `CrawlerCommand` với `platform: 'twitter'` hoặc trả error `suggestedAction: 'use_x_actions_list'` nếu không hỗ trợ
+  - `medirus daemon start` — chạy `MCP_TRANSPORT=http PORT=3001 node src/mcp/server.js` (spawn) hoặc `pm2`-style; trả về URL `http://localhost:3001/mcp` và `GET /health`
+  - `medirus daemon status` — kiểm tra daemon có đang chạy bằng cách gọi `GET /health`; trả về `{ running: boolean, url, tools, sessions }`
+  - `medirus daemon stop` — kill process daemon (nếu tự quản lý) hoặc trả về hướng dẫn
+- **And** legacy CLI commands `unfollowx` được map vào `CrawlerCommand` với `platform: 'twitter'` hoặc trả error `suggestedAction: 'use_medirus_list'` nếu không hỗ trợ
 
 ### AC-7: Generic `x_crawl_post` và `x_crawl_comments_tree`
 - **Given** MCP daemon chạy ổn định
@@ -124,7 +124,7 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
   - `x_crawl_post` → thử `scrape(platform, 'post_detail', { url, limit })` nếu action `post_detail` có trong `listActions()` của crawler; nếu không thì fallback `scrape(platform, 'posts', { url, limit })` (với Facebook sẽ map thành `page_posts`/`group_posts` dựa trên URL)
   - `x_crawl_comments_tree` → `scrape(platform, 'get_comments', { postId, maxDepth, maxComments })` nếu crawler có action `get_comments` (hiện tại chỉ `FacebookCrawler`)
 - **And** kết quả được bọc trong 3-Layer JSON Envelope và auto-artifact nếu >100 records
-- **And** nếu platform chưa hỗ trợ action đó, trả error `XACT_4001` với `suggestedAction: 'use_x_actions_list'`
+- **And** nếu platform chưa hỗ trợ action đó, trả error `XACT_4001` với `suggestedAction: 'use_medirus_list'`
 
 ### AC-8: Kiểm thử thực (No Mocks)
 - **Given** test suite `tests/mcp/server-envelope.test.js`, `tests/mcp/server-action-discovery.test.js`, `tests/cli/daemon.test.js`
@@ -147,10 +147,10 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
   - [ ] T2.4: Trả về `meta.datasetArtifactPath` và preview `data` max 30 records
 - [ ] T3: Action Discovery (AC-4)
   - [ ] T3.1: Đảm bảo `AbstractCrawler.listActions()` trả về `requiresAuth` đã phân giải (đã làm; verify)
-  - [ ] T3.2: Thêm MCP tool `x_actions_list` vào `TOOLS` trong `src/mcp/server.js`
+  - [ ] T3.2: Thêm MCP tool `medirus_list` vào `TOOLS` trong `src/mcp/server.js`
   - [ ] T3.3: Thêm handler `executeActionListTool(args)` dùng `globalActionRegistry` / instantiate `FacebookCrawler` (và các crawler có sẵn) để lấy descriptors
   - [ ] T3.4: Đảm bảo `requiredArgs`, `optionalArgs`, `example`, `outputType`, `requiresAuth` đầy đủ
-  - [ ] T3.5: Tạo `src/cli/commands/actions.js` với `xactions actions list [--platform <platform>]`
+  - [ ] T3.5: Tạo `src/cli/commands/actions.js` với `medirus actions list [--platform <platform>]`
   - [ ] T3.6: Register `actions` command trong `src/cli/index.js`
 - [ ] T4: Generic `x_crawl_post` & `x_crawl_comments_tree` (AC-7)
   - [ ] T4.1: Thêm tool definitions vào `TOOLS`
@@ -160,13 +160,13 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
   - [ ] T5.1: Tạo `src/cli/commands/daemon.js` với `status`, `start`, `stop`
   - [ ] T5.2: Register command trong `src/cli/index.js`
   - [ ] T5.3: Lưu PID/process info vào `CONFIG_DIR/daemon.json` để `status`/`stop` quản lý
-  - [ ] T5.4: Legacy `unfollowx` mapping hoặc error `use_x_actions_list` trong `bin/unfollowx` hoặc `src/cli/commands/compat.js`
+  - [ ] T5.4: Legacy `unfollowx` mapping hoặc error `use_medirus_list` trong `bin/unfollowx` hoặc `src/cli/commands/compat.js`
 - [ ] T6: Tests (AC-8)
   - [ ] T6.1: `tests/mcp/server-envelope.test.js` — kiểm tra envelope shape, `success`, `meta.totalRecords`, `data` preview
   - [ ] T6.2: `tests/mcp/server-artifact.test.js` — >100 records trigger artifact path, file tồn tại, JSONL valid
-  - [ ] T6.3: `tests/mcp/server-action-discovery.test.js` — `x_actions_list` trả về `ActionDescriptor[]` với `requiresAuth`
-  - [ ] T6.4: `tests/cli/daemon.test.js` — `xactions daemon status/start/stop` (có thể skip nếu khó chạy thực)
-  - [ ] T6.5: `tests/cli/actions.test.js` — `xactions actions list` trả về descriptors
+  - [ ] T6.3: `tests/mcp/server-action-discovery.test.js` — `medirus_list` trả về `ActionDescriptor[]` với `requiresAuth`
+  - [ ] T6.4: `tests/cli/daemon.test.js` — `medirus daemon status/start/stop` (có thể skip nếu khó chạy thực)
+  - [ ] T6.5: `tests/cli/actions.test.js` — `medirus actions list` trả về descriptors
   - [ ] T6.6: Chạy `npm run typecheck` và `npm test -- tests/mcp/`
 
 ## Dev Notes
@@ -187,7 +187,7 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 - `globalActionRegistry` tại `src/core/action-registry.js` — đăng ký action khi `registerAction()` được gọi. Không phải lúc nào cũng có sẵn data nếu crawler chưa được khởi tạo.
 - `src/mcp/server.js:startHttpTransport()` tại `src/mcp/server.js:5097-5170` đã tạo Express app với `/health` và `/mcp` endpoint.
 - `src/mcp/server.js:createMcpServer()` tại `src/mcp/server.js:4893-4985` xử lý `CallToolRequestSchema` và `ListToolsRequestSchema`.
-- `executeTool()` tại `src/mcp/server.js:2694-2805` dispatch theo tool name. Khi thêm `x_actions_list`, `x_crawl_post`, `x_crawl_comments_tree`, cần thêm nhánh tại đây (hoặc dùng prefix routing).
+- `executeTool()` tại `src/mcp/server.js:2694-2805` dispatch theo tool name. Khi thêm `medirus_list`, `x_crawl_post`, `x_crawl_comments_tree`, cần thêm nhánh tại đây (hoặc dùng prefix routing).
 - `package.json` đã có script `mcp:daemon` tại dòng 46: `"mcp:daemon": "MCP_TRANSPORT=http PORT=3001 node src/mcp/server.js"`.
 - `src/utils/exporter.js` cung cấp streaming JSONL/CSV từ PostgreSQL, nhưng auto-artifact ở đây cần ghi từ in-memory array, do đó có thể tạo helper riêng hoặc mở rộng.
 
@@ -211,12 +211,12 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 
 - Cách 1 (khuyến nghị): instantiate `FacebookCrawler` với `createFacebookClient()` + `createFacebookCrawler()` từ `src/scrapers/index.js`, gọi `.listActions()`, sau đó `.cleanup()`.
 - Cách 2 (nếu global registry đã populate): dùng `globalActionRegistry.listByPlatform(platform)`.
-- Đối với `x_actions_list` không truyền `platform`, cần instantiate tất cả crawler khả dụng trong `src/scrapers/social/*/crawler.js` để collect actions. Hiện tại chỉ `FacebookCrawler` và `ThreadsCrawler` (nếu đã migrate) là sẵn sàng.
+- Đối với `medirus_list` không truyền `platform`, cần instantiate tất cả crawler khả dụng trong `src/scrapers/social/*/crawler.js` để collect actions. Hiện tại chỉ `FacebookCrawler` và `ThreadsCrawler` (nếu đã migrate) là sẵn sàng.
 - Trả về `ActionDescriptor[]` với thêm trường `platform` để AI agent phân biệt.
 
 ### Auto-Artifact File Convention
 
-- Directory: `process.env.XACTIONS_ARTIFACT_DIR` hoặc `_bmad-output/datasets/`
+- Directory: `process.env.MEDIRUS_ARTIFACT_DIR` hoặc `_bmad-output/datasets/`
 - Filename: `{tool}-{platform}-{timestamp}-{uuid}.jsonl` (hoặc `.csv`)
 - Nội dung: mỗi dòng là một JSON object, sanitize newlines trong `content` trước khi ghi
 - Xóa file artifact sau test? Tạo `cleanup()` trong test hoặc dùng `tmp` dir
@@ -243,9 +243,9 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 | AD | Rule | Implementation |
 |----|------|----------------|
 | AD-7 | Daemon MCP over HTTP/SSE trên port 3001 | Giữ `startHttpTransport()` hiện có, không tạo process riêng |
-| AD-11 | `ActionDescriptor` shape với `requiresAuth` | `listActions()`/`x_actions_list` trả về đủ trường, `requiresAuth` phân giải |
+| AD-11 | `ActionDescriptor` shape với `requiresAuth` | `listActions()`/`medirus_list` trả về đủ trường, `requiresAuth` phân giải |
 | AD-14 | Error envelope chuẩn | `src/mcp/envelope.js` map mọi lỗi sang `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }` |
-| AD-14 | Legacy CLI mapping | `bin/unfollowx` hoặc `src/cli/commands/compat.js` map lệnh cũ sang `CrawlerCommand` hoặc trả `use_x_actions_list` |
+| AD-14 | Legacy CLI mapping | `bin/unfollowx` hoặc `src/cli/commands/compat.js` map lệnh cũ sang `CrawlerCommand` hoặc trả `use_medirus_list` |
 | AD-9 Rule 3 | JSONL sanitize newline | `artifact-exporter` gọi `sanitizeContent()` trước khi ghi |
 
 ## Library & Framework Requirements
@@ -264,21 +264,21 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 |------|-------------|
 | `src/mcp/envelope.js` | 3-Layer JSON Envelope builder + error wrapper |
 | `src/mcp/artifact-exporter.js` | Ghi artifact JSONL/CSV khi >100 records |
-| `src/cli/commands/daemon.js` | CLI `xactions daemon status/start/stop` |
-| `src/cli/commands/actions.js` | CLI `xactions actions list [--platform <p>]` |
+| `src/cli/commands/daemon.js` | CLI `medirus daemon status/start/stop` |
+| `src/cli/commands/actions.js` | CLI `medirus actions list [--platform <p>]` |
 | `tests/mcp/server-envelope.test.js` | Test envelope shape, platform detection, error wrap |
 | `tests/mcp/server-artifact.test.js` | Test auto-artifact >100 records |
-| `tests/mcp/server-action-discovery.test.js` | Test `x_actions_list` trả về descriptors có `requiresAuth` |
+| `tests/mcp/server-action-discovery.test.js` | Test `medirus_list` trả về descriptors có `requiresAuth` |
 | `tests/cli/daemon.test.js` | Test daemon CLI lifecycle |
-| `tests/cli/actions.test.js` | Test `xactions actions list` |
+| `tests/cli/actions.test.js` | Test `medirus actions list` |
 
 ### UPDATE
 
 | File | Description |
 |------|-------------|
-| `src/mcp/server.js` | Bọc `CallToolRequestSchema` handler bằng envelope; thêm `x_actions_list`, `x_crawl_post`, `x_crawl_comments_tree` |
+| `src/mcp/server.js` | Bọc `CallToolRequestSchema` handler bằng envelope; thêm `medirus_list`, `x_crawl_post`, `x_crawl_comments_tree` |
 | `src/cli/index.js` | Register `daemon` command group |
-| `bin/unfollowx` | Map legacy commands hoặc trả error `use_x_actions_list` |
+| `bin/unfollowx` | Map legacy commands hoặc trả error `use_medirus_list` |
 | `_bmad-output/implementation-artifacts/sprint-status.yaml` | Cập nhật `14-2` status thành `ready-for-dev` |
 
 ### NO TOUCH
@@ -298,9 +298,9 @@ so that **Nowing và AI Agent có thể gọi tool với độ trễ <2ms mà kh
 - **Coverage tối thiểu:**
   - 3-Layer Envelope cho kết quả array, object, object chứa array `comments`/`posts`
   - Error envelope cho `PlatformError` và `Error` thường
-  - `x_actions_list` trả về `ActionDescriptor[]` với `requiresAuth` boolean
+  - `medirus_list` trả về `ActionDescriptor[]` với `requiresAuth` boolean
   - Auto-artifact kích hoạt khi >100 records, `data` preview ≤ 30 records
-  - `xactions daemon status` gọi `/health` và parse JSON
+  - `medirus daemon status` gọi `/health` và parse JSON
   - `npm run typecheck` pass
 
 ## Previous Story Intelligence
@@ -340,8 +340,8 @@ Patterns:
 ## Project Context Reference
 
 - Epic 14: `_bmad-output/planning-artifacts/epics.md#epic-14-deep-conversation-scraper-mcp-daemon-nowing-event-stream`
-- Architecture AD-7 / AD-11 / AD-14: `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`
-- Sprint change proposal 2026-08-27: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-27.md` (T6: verify MCP `x_actions_list` surface trường `requiresAuth`)
+- Architecture AD-7 / AD-11 / AD-14: `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`
+- Sprint change proposal 2026-08-27: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-27.md` (T6: verify MCP `medirus_list` surface trường `requiresAuth`)
 - `AbstractCrawler.listActions()`: `src/core/base-crawler.js:106-117`
 - `AbstractCrawler.start()`: `src/core/base-crawler.js:151-252`
 - `globalActionRegistry`: `src/core/action-registry.js`
@@ -361,7 +361,7 @@ Patterns:
 - **Artifact directory missing:** Tự động `mkdir` recursive với `fs.mkdirSync(dir, { recursive: true })`.
 - **Concurrent sessions:** Envelope stateless, không dùng session state. Artifact path unique theo `timestamp + uuid`.
 - **Error in artifact writer:** Nếu ghi artifact lỗi, trả `success: false` với `code: 'XACT_5002'` và vẫn giữ `data` preview.
-- **CLI daemon process reuse:** `xactions daemon start` không khởi động nhiều instance — check `CONFIG_DIR/daemon.json` trước spawn.
+- **CLI daemon process reuse:** `medirus daemon start` không khởi động nhiều instance — check `CONFIG_DIR/daemon.json` trước spawn.
 
 ### Review Findings
 
@@ -376,14 +376,14 @@ Patterns:
 - [x] [Review][Patch] PID reuse risk — `daemon stop` nên verify command trước khi kill [`src/cli/commands/daemon.js:106`]
 - [x] [Review][Patch] Crawl fallback string matching fragile — `err.message.includes('not available')` quá rộng [`src/mcp/server.js:3039-3041`]
 - [x] [Review][Defer] `extractRecords` heuristic ưu tiên `comments` over `posts` khi object có cả hai — deferred, pre-existing design choice
-- [x] [Review][Defer] `x_actions_list` chỉ cover Facebook + Threads — deferred, spec ghi rõ skip platform chưa migrate
+- [x] [Review][Defer] `medirus_list` chỉ cover Facebook + Threads — deferred, spec ghi rõ skip platform chưa migrate
 
 ## Outstanding Items (Dev Agent Owned)
 
-- Quyết định cách triển khai `xactions daemon start/stop` — dùng `child_process.spawn` + lưu PID, `pm2`, hay chỉ in command hướng dẫn.
+- Quyết định cách triển khai `medirus daemon start/stop` — dùng `child_process.spawn` + lưu PID, `pm2`, hay chỉ in command hướng dẫn.
 - Quyết định cắt `data` preview xuống 20 hay 30 records (AC ghi 20-30); khuyến nghị 30.
 - Xác định chính xác mapping `x_crawl_post` cho từng platform (ví dụ Facebook dùng `posts` hoặc `post_detail`; Twitter chưa có `post_detail` đến khi Story 13.2 hoàn thành).
-- Nếu `ThreadsCrawler` chưa hoàn thiện, `x_actions_list` chỉ liệt kê `FacebookCrawler` actions và skip các platform chưa migrate.
+- Nếu `ThreadsCrawler` chưa hoàn thiện, `medirus_list` chỉ liệt kê `FacebookCrawler` actions và skip các platform chưa migrate.
 - Nếu `x_crawl_comments_tree` gọi Facebook `get_comments` mà `doc_id` xoay, `scrape()` sẽ throw `PlatformError`; envelope phải giữ `suggestedAction`.
 
 ## File List

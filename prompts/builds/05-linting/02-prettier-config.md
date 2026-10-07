@@ -8,7 +8,7 @@
 
 ## Task
 
-Set up Prettier as the code formatter for the XActions project, integrate it with ESLint so rule conflicts are eliminated, and add npm scripts for formatting.
+Set up Prettier as the code formatter for the Medirus project, integrate it with ESLint so rule conflicts are eliminated, and add npm scripts for formatting.
 
 ---
 

@@ -6,7 +6,7 @@
  * Run without auth:
  *   node scripts/audit-twitter-actions.mjs
  * Run with auth:
- *   XACTIONS_SESSION_COOKIE='auth_token=...; ct0=...' node scripts/audit-twitter-actions.mjs
+ *   MEDIRUS_SESSION_COOKIE='auth_token=...; ct0=...' node scripts/audit-twitter-actions.mjs
  */
 import { TwitterCrawler } from '../src/scrapers/social/twitter/crawler.js';
 
@@ -15,7 +15,7 @@ const USERNAME = 'nasa';
 const LIST_ID = '1536016715899326464'; // public list (may not exist)
 const COMMUNITY_ID = '1492545558379008003';
 
-const AUTH = process.env.XACTIONS_SESSION_COOKIE || '';
+const AUTH = process.env.MEDIRUS_SESSION_COOKIE || '';
 const authSession = AUTH ? { cookies: AUTH } : {};
 
 // Build a crawler for the requested auth context.
@@ -54,7 +54,7 @@ const ACTIONS = [
   { action: 'bookmarks', args: { limit: 3 }, guest: false },
 
   // Write actions — run dry-run to avoid side effects.
-  { action: 'post', args: { text: 'XActions audit dry run', dryRun: true }, guest: false },
+  { action: 'post', args: { text: 'Medirus audit dry run', dryRun: true }, guest: false },
   { action: 'reply', args: { tweetId: TWEET_ID, text: 'Reply audit dry run', dryRun: true }, guest: false },
   { action: 'quote', args: { tweetId: TWEET_ID, text: 'Quote audit dry run', dryRun: true }, guest: false },
   { action: 'schedule', args: { text: 'Scheduled audit dry run', publishAt: '2030-01-01T00:00:00Z', dryRun: true }, guest: false },
@@ -70,7 +70,7 @@ const ACTIONS = [
   { action: 'unmute', args: { username: USERNAME, dryRun: true }, guest: false },
   { action: 'bookmark', args: { tweetId: TWEET_ID, dryRun: true }, guest: false },
   { action: 'unbookmark', args: { tweetId: TWEET_ID, dryRun: true }, guest: false },
-  { action: 'create_list', args: { name: 'XActions Audit', dryRun: true }, guest: false },
+  { action: 'create_list', args: { name: 'Medirus Audit', dryRun: true }, guest: false },
   { action: 'add_list_members', args: { listId: LIST_ID, usernames: [USERNAME], dryRun: true }, guest: false },
   { action: 'remove_list_members', args: { listId: LIST_ID, usernames: [USERNAME], dryRun: true }, guest: false },
   { action: 'send_dm', args: { username: USERNAME, text: 'DM audit dry run', dryRun: true }, guest: false },

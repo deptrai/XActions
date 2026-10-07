@@ -1,10 +1,10 @@
 # Tutorial: Growth Automation Suite — Grow Your X Account on Autopilot
 
-You are my X/Twitter growth strategist and automation expert. I want to grow my account strategically using XActions. Help me set up a complete growth automation system that finds my target audience, engages authentically, and cleans up non-followers automatically.
+You are my X/Twitter growth strategist and automation expert. I want to grow my account strategically using Medirus. Help me set up a complete growth automation system that finds my target audience, engages authentically, and cleans up non-followers automatically.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter automation toolkit. The Growth Suite (`src/automation/growthSuite.js`) combines keyword following, auto-liking, and smart unfollowing into one automated system. I also have access to individual scripts for each component.
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter automation toolkit. The Growth Suite (`src/automation/growthSuite.js`) combines keyword following, auto-liking, and smart unfollowing into one automated system. I also have access to individual scripts for each component.
 
 ## What I Need You To Do
 
@@ -37,7 +37,7 @@ Walk me through using the Growth Automation Suite:
 2. **Paste `core.js`** — the foundation module that provides:
    - Shared selectors for X's DOM elements
    - `sleep()`, `randomDelay()`, `scrollBy()` utilities
-   - Rate limiting (MAX_ACTIONS_PER_HOUR: 50, MAX_FOLLOWS_PER_DAY: 100)
+   - Rate limiting (MAMEDIRUS_PER_HOUR: 50, MAX_FOLLOWS_PER_DAY: 100)
    - Storage system for tracking state
    - Action queue for sequential execution
 

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — POST /api/ai/jev/lead-icp Route Test (Story 42.7)
+// Medirus — POST /api/ai/jev/lead-icp Route Test (Story 42.7)
 // by nichxbt
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';

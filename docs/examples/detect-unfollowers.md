@@ -34,7 +34,7 @@ This feature helps you monitor your follower changes by:
 
 ```javascript
 // ============================================
-// XActions - Detect Unfollowers (Browser Console)
+// Medirus - Detect Unfollowers (Browser Console)
 // Author: nich (@nichxbt)
 // Go to: x.com/YOUR_USERNAME/followers
 // Open console (F12), paste this
@@ -42,11 +42,11 @@ This feature helps you monitor your follower changes by:
 
 (async () => {
   // Configuration
-  const STORAGE_KEY = 'xactions_followers_snapshot';
+  const STORAGE_KEY = 'medirus_followers_snapshot';
   const SCROLL_DELAY = 1500;         // Time between scrolls (ms)
   const MAX_SCROLL_RETRIES = 10;     // Stop if no new users found
   
-  console.log('🔍 XActions - Detect Unfollowers');
+  console.log('🔍 Medirus - Detect Unfollowers');
   console.log('=================================');
   
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -260,7 +260,7 @@ This feature helps you monitor your follower changes by:
 
 **Output example:**
 ```
-🔍 XActions - Detect Unfollowers
+🔍 Medirus - Detect Unfollowers
 =================================
 📍 Monitoring: @nichxbt
 
@@ -337,7 +337,7 @@ npm install puppeteer
 
 ```javascript
 // ============================================
-// XActions - Detect Unfollowers (Node.js + Puppeteer)
+// Medirus - Detect Unfollowers (Node.js + Puppeteer)
 // Author: nich (@nichxbt)
 // 
 // Usage:
@@ -744,7 +744,7 @@ const args = process.argv.slice(2);
 const command = args[0];
 
 async function main() {
-  console.log('\n🔍 XActions - Unfollower Detector');
+  console.log('\n🔍 Medirus - Unfollower Detector');
   console.log('═'.repeat(50));
   
   switch (command) {
@@ -889,7 +889,7 @@ pm2 save
 
 ## 🌐 Website Alternative
 
-Don't want to run scripts? Use **[xactions.app](https://xactions.app)** instead!
+Don't want to run scripts? Use **[medirus.online](https://medirus.online)** instead!
 
 ### Features:
 - ✅ No coding required
@@ -900,7 +900,7 @@ Don't want to run scripts? Use **[xactions.app](https://xactions.app)** instead!
 - ✅ Secure OAuth login (no password needed)
 
 ### How It Works:
-1. Visit [xactions.app](https://xactions.app)
+1. Visit [medirus.online](https://medirus.online)
 2. Connect your X/Twitter account
 3. Enable "Unfollower Detection"
 4. Get notified whenever someone unfollows!

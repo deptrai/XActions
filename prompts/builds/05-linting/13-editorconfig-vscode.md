@@ -18,7 +18,7 @@ Create EditorConfig and VS Code workspace settings so that every contributor —
 
 ```ini
 # EditorConfig — https://editorconfig.org
-# XActions project — by nichxbt
+# Medirus project — by nichxbt
 root = true
 
 # ── Default: all files ──────────────────────────────────────────────

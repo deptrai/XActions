@@ -10,7 +10,7 @@ Status: done
 
 ## Story
 
-As a multi-account operator using XActions,
+As a multi-account operator using Medirus,
 I want to auto-like one or more Facebook posts with a dry-run preview,
 so that I can see exactly what will be affected before executing for real.
 
@@ -128,7 +128,7 @@ AC says "an Operation record is created scoped by userId". Prisma persistence li
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 2.2]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md#FR-6, FR-9, ADR-007, SM-2, NFR1/3]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-08/prd.md#FR-6, FR-9, ADR-007, SM-2, NFR1/3]
 - [Source: api/services/facebookAutomation.js#runGuardedBatch — chokepoint, do not duplicate]
 - [Source: src/automation/autoLiker.js — Twitter equivalent (different runtime: browser-paste, not server Puppeteer); reference for action-loop conventions]
 - [Source: docs/agents/selectors-facebook.md#Automate selectors — Like button locale strings, UNVERIFIED]

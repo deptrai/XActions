@@ -1,4 +1,4 @@
-# XActions
+# Medirus
 Unfollow everyone on X (Formerly Twitter) and or unfollow who doesn't follow you back
 
 ## Unfollow Following Who Doesn't Follow Back on X

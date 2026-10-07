@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 🔁 Scrape Reposters + Quoters - XActions
+ * 🔁 Scrape Reposters + Quoters - Medirus
  * ============================================
  *
  * @name         scrape-retweeters
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Open a post's Reposts page: x.com/<user>/status/<id>/retweets
@@ -215,8 +215,8 @@
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔁 SCRAPE REPOSTERS + QUOTERS - XActions                ║
-║  🌐 https://xactions.app                                 ║
+║  🔁 SCRAPE REPOSTERS + QUOTERS - Medirus                ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

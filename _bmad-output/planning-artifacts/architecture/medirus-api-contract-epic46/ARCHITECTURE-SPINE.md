@@ -1,5 +1,5 @@
 ---
-name: 'xactions-api-contract-epic46'
+name: 'medirus-api-contract-epic46'
 type: architecture-spine
 purpose: build-substrate
 altitude: epic
@@ -10,10 +10,10 @@ created: '2026-09-24'
 updated: '2026-09-24'
 binds: ['epic-46', 'story-46.1', 'story-46.2', 'story-46.3', 'api/**', 'packages/api-client']
 sources: ['_bmad-output/planning-artifacts/epics.md#epic-46', 'api/server.js', 'api/openapi.js', 'src/core/error-envelope.js']
-companions: ['xactions-hybrid-scraping-spine']
+companions: ['medirus-hybrid-scraping-spine']
 ---
 
-# Architecture Spine — XActions API Contract (Epic 46)
+# Architecture Spine — Medirus API Contract (Epic 46)
 
 ## Design Paradigm
 
@@ -26,7 +26,7 @@ flowchart LR
   G --> J[(api/openapi.json<br/>committed artifact)]
   J --> UI[Swagger UI<br/>/api-docs]
   J --> GEN[openapi-typescript<br/>generate:api-client]
-  GEN --> PKG["@xactions/api-client<br/>packages/api-client"]
+  GEN --> PKG["@medirus/api-client<br/>packages/api-client"]
   PKG --> WEB[Epic 47<br/>apps/web]
   V -.envelope.-> E["{success,data} / {success,error}"]
   G -.preserves.-> X[x402 extensions]
@@ -38,8 +38,8 @@ Dependency direction (đây là rule, không chỉ là hình): `routes → schem
 
 | Inherited | From parent | Binds here |
 | --- | --- | --- |
-| AD-14 — domain error envelope `{code,type,message,retryAfter,suggestedAction,accountId?,platform}` + `type`/`suggestedAction` vocab | xactions-hybrid-scraping-spine | Domain errors (`PlatformError`, `src/core/error-envelope.js`) giữ nguyên shape; HTTP layer map qua AD-3, không reshape. Vocab do domain sở hữu — repo hiện đã mở rộng (12 types), API layer copy nguyên không re-enum |
-| AD-14 rule 3 + AD-16/AD-19 — operator surfaces | xactions-hybrid-scraping-spine | Parent viết `src/api/**` nhưng thực tế các surface này sống trong `api/routes/` (`/api/governor`, `/api/checkpoints`, `/metrics/stream`) — **thuộc scope Epic 46**: được document trong spec nhưng phải giữ response fields parent đã công bố (governor status shape, checkpoint payloads) |
+| AD-14 — domain error envelope `{code,type,message,retryAfter,suggestedAction,accountId?,platform}` + `type`/`suggestedAction` vocab | medirus-hybrid-scraping-spine | Domain errors (`PlatformError`, `src/core/error-envelope.js`) giữ nguyên shape; HTTP layer map qua AD-3, không reshape. Vocab do domain sở hữu — repo hiện đã mở rộng (12 types), API layer copy nguyên không re-enum |
+| AD-14 rule 3 + AD-16/AD-19 — operator surfaces | medirus-hybrid-scraping-spine | Parent viết `src/api/**` nhưng thực tế các surface này sống trong `api/routes/` (`/api/governor`, `/api/checkpoints`, `/metrics/stream`) — **thuộc scope Epic 46**: được document trong spec nhưng phải giữ response fields parent đã công bố (governor status shape, checkpoint payloads) |
 
 ## Invariants & Rules
 
@@ -89,7 +89,7 @@ Dependency direction (đây là rule, không chỉ là hình): `routes → schem
 
 - **Binds:** `package.json` gốc (scripts + workspaces), `packages/api-client`, `apps/web` (Epic 47), CI
 - **Prevents:** generated client rơi chỗ không import được; codegen phụ thuộc live server; spec artifact không rõ owner/freshness
-- **Rule:** Artifact contract: `api/openapi.json` là committed file, sinh bởi `npm run build:openapi` (import builder, không qua HTTP); `GET /openapi.json` serve artifact đó; CI regenerate + diff — fail khi code/spec drift. `npm run generate:api-client` ở `package.json` gốc đọc artifact đó, output duy nhất `packages/api-client/` resolve thành `@xactions/api-client` qua root `workspaces` — **enabling workspaces trên repo này rewire node_modules resolution: bắt buộc install-audit step** (verify `packages/xactions-mcp` + phantom deps trước khi commit lockfile). Types qua `openapi-typescript`: một export per schema (e.g. `ViralStats`, `PostItem`, `CRMContact`, `OptimizeTweetRequest`) + `PaginatedResponse<T>`; generated types namespace/dedupe khỏi `Error`/`SuccessResponse`/`PaymentRequired` components. Fetch wrapper mỏng viết tay: inject auth (Bearer hoặc `x-session-cookie`), trả typed error union discriminated theo status — `ApiError` (envelope chuẩn) cho `400 | 401 | 429 | 500`; `402` typed là x402 `PaymentRequired` payload (protocol shape, không phải envelope).
+- **Rule:** Artifact contract: `api/openapi.json` là committed file, sinh bởi `npm run build:openapi` (import builder, không qua HTTP); `GET /openapi.json` serve artifact đó; CI regenerate + diff — fail khi code/spec drift. `npm run generate:api-client` ở `package.json` gốc đọc artifact đó, output duy nhất `packages/api-client/` resolve thành `@medirus/api-client` qua root `workspaces` — **enabling workspaces trên repo này rewire node_modules resolution: bắt buộc install-audit step** (verify `packages/medirus-mcp` + phantom deps trước khi commit lockfile). Types qua `openapi-typescript`: một export per schema (e.g. `ViralStats`, `PostItem`, `CRMContact`, `OptimizeTweetRequest`) + `PaginatedResponse<T>`; generated types namespace/dedupe khỏi `Error`/`SuccessResponse`/`PaymentRequired` components. Fetch wrapper mỏng viết tay: inject auth (Bearer hoặc `x-session-cookie`), trả typed error union discriminated theo status — `ApiError` (envelope chuẩn) cho `400 | 401 | 429 | 500`; `402` typed là x402 `PaymentRequired` payload (protocol shape, không phải envelope).
 
 ### AD-9 — Contract Honesty
 
@@ -130,7 +130,7 @@ api/
   openapi.js      # spec builder (refactored, giữ x402 extensions)
   openapi.json    # committed artifact — build:openapi regenerate
 packages/
-  api-client/     # @xactions/api-client — generated types + thin wrapper
+  api-client/     # @medirus/api-client — generated types + thin wrapper
 ```
 
 ## Capability → Architecture Map
@@ -148,7 +148,7 @@ packages/
 - **Spec versioning & deprecation policy** ngoài `info.version` bump khi breaking — cần khi có breaking change đầu tiên.
 - **Error-code taxonomy registry location** — codes sống trong schemas/Zod errors; một registry doc riêng chờ khi taxonomy > ~20 codes.
 - **Migration sequencing ~810 legacy error call-sites** — implementation detail của Story 46.2; spine chỉ fix target shape + ownership.
-- **Dashboard/legacy fetch migration** sang `@xactions/api-client` — Epic 47 scope.
+- **Dashboard/legacy fetch migration** sang `@medirus/api-client` — Epic 47 scope.
 - **express@4 + @types/express@5 skew** — pre-existing, không phải epic này giải.
 - **Dual lockfiles** (`package-lock.json` + `pnpm-lock.yaml` cùng tồn tại) — chọn một package manager canonical khi enable workspaces; install-audit step của AD-8 quyết luôn.
 

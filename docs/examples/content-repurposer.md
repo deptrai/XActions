@@ -64,34 +64,34 @@ This script provides the following capabilities:
  *
  * 1. Go to your profile page (x.com/youraccount) or any tweet
  * 2. Paste this script into DevTools console
- * 3. Use the XActions.* commands below
+ * 3. Use the Medirus.* commands below
  *
  * ── Commands ────────────────────────────────────────────────
- *  XActions.scan()
+ *  Medirus.scan()
  *    → Scrapes your recent tweets from the timeline
  *
- *  XActions.toThread(index)
+ *  Medirus.toThread(index)
  *    → Converts a single tweet into a thread outline (1→many)
  *
- *  XActions.toSummary(index)
+ *  Medirus.toSummary(index)
  *    → Condenses a thread or long tweet into one punchy tweet
  *
- *  XActions.toStorm(index)
+ *  Medirus.toStorm(index)
  *    → Breaks a long tweet into a numbered tweet storm
  *
- *  XActions.toBlog(index)
+ *  Medirus.toBlog(index)
  *    → Generates a blog-post outline from a tweet or thread
  *
- *  XActions.toQuoteTemplates(index)
+ *  Medirus.toQuoteTemplates(index)
  *    → Creates 3 quote-retweet variations for engagement
  *
- *  XActions.all(index)
+ *  Medirus.all(index)
  *    → Runs ALL repurposing strategies on one tweet
  *
- *  XActions.list()
+ *  Medirus.list()
  *    → Shows all scraped tweets with indices
  *
- *  XActions.export()
+ *  Medirus.export()
  *    → Downloads all repurposed content as JSON
  * ============================================================
  */
@@ -167,7 +167,7 @@ This script provides the following capabilities:
       await sleep(CONFIG.scrollDelay);
     }
 
-    console.log(`✅ Found ${tweets.length} tweets. Use XActions.list() to see them.\n`);
+    console.log(`✅ Found ${tweets.length} tweets. Use Medirus.list() to see them.\n`);
     return tweets;
   };
 
@@ -193,7 +193,7 @@ This script provides the following capabilities:
   // ── Repurpose: Tweet → Thread ─────────────────────────────
   const toThread = (idx) => {
     const tweet = tweets[idx];
-    if (!tweet) { console.log('❌ Invalid index. Use XActions.list()'); return; }
+    if (!tweet) { console.log('❌ Invalid index. Use Medirus.list()'); return; }
 
     console.log(`\n🧵 REPURPOSE → THREAD from tweet #${idx}\n`);
     console.log(`Original (${tweet.charCount} chars): "${tweet.text.slice(0, 120)}..."\n`);
@@ -419,7 +419,7 @@ This script provides the following capabilities:
   // ── List scraped tweets ───────────────────────────────────
   const listTweets = () => {
     if (tweets.length === 0) {
-      console.log('❌ No tweets scraped yet. Run XActions.scan() first.');
+      console.log('❌ No tweets scraped yet. Run Medirus.scan() first.');
       return;
     }
 
@@ -428,7 +428,7 @@ This script provides the following capabilities:
       const preview = t.text.slice(0, 80).replace(/\n/g, ' ');
       console.log(`  [${t.index}] "${preview}..." — ❤️ ${t.metrics.likes} 🔄 ${t.metrics.retweets} (${t.charCount} chars)`);
     }
-    console.log('\nUse XActions.toThread(i), .toSummary(i), .toStorm(i), .toBlog(i), .toQuoteTemplates(i), or .all(i)');
+    console.log('\nUse Medirus.toThread(i), .toSummary(i), .toStorm(i), .toBlog(i), .toQuoteTemplates(i), or .all(i)');
   };
 
   // ── Export ────────────────────────────────────────────────
@@ -447,22 +447,22 @@ This script provides the following capabilities:
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `xactions-repurposed-${Date.now()}.json`;
+    a.download = `medirus-repurposed-${Date.now()}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     console.log(`📥 Exported ${repurposed.length} repurposed content items.`);
   };
 
   // ── Controls ──────────────────────────────────────────────
-  window.XActions = window.XActions || {};
-  window.XActions.scan = scrapeTweets;
-  window.XActions.toThread = toThread;
-  window.XActions.toSummary = toSummary;
-  window.XActions.toStorm = toStorm;
-  window.XActions.toBlog = toBlog;
-  window.XActions.toQuoteTemplates = toQuoteTemplates;
-  window.XActions.all = runAll;
-  window.XActions.list = listTweets;
-  window.XActions.export = exportAll;
+  window.Medirus = window.Medirus || {};
+  window.Medirus.scan = scrapeTweets;
+  window.Medirus.toThread = toThread;
+  window.Medirus.toSummary = toSummary;
+  window.Medirus.toStorm = toStorm;
+  window.Medirus.toBlog = toBlog;
+  window.Medirus.toQuoteTemplates = toQuoteTemplates;
+  window.Medirus.all = runAll;
+  window.Medirus.list = listTweets;
+  window.Medirus.export = exportAll;
 
   // ── Init ──────────────────────────────────────────────────
   console.log('╔════════════════════════════════════════════════════╗');
@@ -470,16 +470,16 @@ This script provides the following capabilities:
   console.log('║  by nichxbt — v1.0                                ║');
   console.log('╚════════════════════════════════════════════════════╝');
   console.log('\n📋 Commands:');
-  console.log('  XActions.scan()            — Scrape tweets from page');
-  console.log('  XActions.list()            — List scraped tweets');
-  console.log('  XActions.toThread(i)       — Convert → thread');
-  console.log('  XActions.toSummary(i)      — Convert → short summary');
-  console.log('  XActions.toStorm(i)        — Convert → tweet storm');
-  console.log('  XActions.toBlog(i)         — Convert → blog outline');
-  console.log('  XActions.toQuoteTemplates(i) — Create quote-RT variations');
-  console.log('  XActions.all(i)            — Run ALL repurposing');
-  console.log('  XActions.export()          — Download all as JSON');
-  console.log('\nStart with: XActions.scan()');
+  console.log('  Medirus.scan()            — Scrape tweets from page');
+  console.log('  Medirus.list()            — List scraped tweets');
+  console.log('  Medirus.toThread(i)       — Convert → thread');
+  console.log('  Medirus.toSummary(i)      — Convert → short summary');
+  console.log('  Medirus.toStorm(i)        — Convert → tweet storm');
+  console.log('  Medirus.toBlog(i)         — Convert → blog outline');
+  console.log('  Medirus.toQuoteTemplates(i) — Create quote-RT variations');
+  console.log('  Medirus.all(i)            — Run ALL repurposing');
+  console.log('  Medirus.export()          — Download all as JSON');
+  console.log('\nStart with: Medirus.scan()');
 })();
 
 ```
@@ -540,14 +540,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -585,4 +585,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

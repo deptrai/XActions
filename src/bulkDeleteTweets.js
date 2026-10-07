@@ -25,9 +25,9 @@
  *    Use src/backupAccount.js to save your tweets before deleting.
  *
  * CONTROLS:
- *   XActionsUtils.pause()   — pause
- *   XActionsUtils.resume()  — resume
- *   XActionsUtils.abort()   — stop
+ *   MedirusUtils.pause()   — pause
+ *   MedirusUtils.resume()  — resume
+ *   MedirusUtils.abort()   — stop
  * ============================================================
  */
 (() => {
@@ -76,7 +76,7 @@
   // 🔧 Embedded Utilities
   // ══════════════════════════════════════════════════════════
 
-  const U = window.XActionsUtils || (() => {
+  const U = window.MedirusUtils || (() => {
     const sleep = ms => new Promise(r => setTimeout(r, ms + ms * 0.15 * (Math.random() - 0.5)));
     const rand = (lo, hi) => sleep(lo + Math.random() * (hi - lo));
 
@@ -126,8 +126,8 @@
         a.download = fn; document.body.appendChild(a); a.click(); a.remove();
         console.log(`📥 Downloaded: ${fn}`);
       },
-      saveState(k, d) { try { localStorage.setItem('xactions_' + k, JSON.stringify(d)); } catch {} },
-      loadState(k, d) { try { return JSON.parse(localStorage.getItem('xactions_' + k)) ?? d; } catch { return d; } },
+      saveState(k, d) { try { localStorage.setItem('medirus_' + k, JSON.stringify(d)); } catch {} },
+      loadState(k, d) { try { return JSON.parse(localStorage.getItem('medirus_' + k)) ?? d; } catch { return d; } },
     };
   })();
 
@@ -330,8 +330,8 @@
 
             // Periodic confirmation
             if (CONFIG.confirmEvery > 0 && deleted % CONFIG.confirmEvery === 0 && deleted > 0) {
-              console.log(`\n⏸️  Paused at ${deleted} deletions. Call XActionsUtils.resume() to continue.\n`);
-              if (window.XActionsUtils) window.XActionsUtils.pause();
+              console.log(`\n⏸️  Paused at ${deleted} deletions. Call MedirusUtils.resume() to continue.\n`);
+              if (window.MedirusUtils) window.MedirusUtils.pause();
               else { /* wait 10s then continue */ await U.sleep(10000); }
             }
 
@@ -382,7 +382,7 @@
     if (CONFIG.exportOnComplete && deletedLog.length > 0) {
       U.download(
         { deleted: deletedLog, stats: { count: deleted, skipped: skippedCount, errors, elapsed: elapsed + 's' } },
-        `xactions-deleted-tweets-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-deleted-tweets-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
 

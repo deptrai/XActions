@@ -68,11 +68,11 @@ This script provides the following capabilities:
  *   2. Paste and run
  *
  * MODE B — Use the API:
- *   XActions.monitor(['keyword1', 'keyword2'])
- *   XActions.autoRefresh(120000)  // Refresh every 2 min
- *   XActions.stop()
- *   XActions.stats()
- *   XActions.history()
+ *   Medirus.monitor(['keyword1', 'keyword2'])
+ *   Medirus.autoRefresh(120000)  // Refresh every 2 min
+ *   Medirus.stop()
+ *   Medirus.stats()
+ *   Medirus.history()
  * ============================================================
  */
 (() => {
@@ -87,7 +87,7 @@ This script provides the following capabilities:
     maxHistory: 500,           // Max mentions to keep in history
   };
 
-  const STORAGE_KEY = 'xactions_keyword_monitor';
+  const STORAGE_KEY = 'medirus_keyword_monitor';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   const parseNum = (text) => {
@@ -194,7 +194,7 @@ This script provides the following capabilities:
     if (keywords.length === 0) {
       console.log('\n❌ No keywords detected. Either:');
       console.log('   1. Navigate to x.com/search?q=keyword');
-      console.log('   2. Or use: XActions.monitor(["keyword1", "keyword2"])');
+      console.log('   2. Or use: Medirus.monitor(["keyword1", "keyword2"])');
       return;
     }
 
@@ -299,18 +299,18 @@ This script provides the following capabilities:
       };
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-keyword-monitor-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-keyword-monitor-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Keyword data exported.');
     }
   };
 
   // ── Controls ───────────────────────────────────────────────
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
-  window.XActions.monitor = (keywords) => {
+  window.Medirus.monitor = (keywords) => {
     if (!Array.isArray(keywords) || keywords.length === 0) {
-      console.log('❌ Usage: XActions.monitor(["keyword1", "keyword2"])');
+      console.log('❌ Usage: Medirus.monitor(["keyword1", "keyword2"])');
       return;
     }
     CONFIG.keywords = keywords;
@@ -322,7 +322,7 @@ This script provides the following capabilities:
     setTimeout(scan, 5000);
   };
 
-  window.XActions.autoRefresh = (intervalMs = 120000) => {
+  window.Medirus.autoRefresh = (intervalMs = 120000) => {
     if (autoRefreshTimer) clearInterval(autoRefreshTimer);
     console.log(`🔄 Auto-refreshing every ${(intervalMs / 60000).toFixed(1)} minutes.`);
     autoRefreshTimer = setInterval(() => {
@@ -332,12 +332,12 @@ This script provides the following capabilities:
     }, intervalMs);
   };
 
-  window.XActions.stop = () => {
+  window.Medirus.stop = () => {
     if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
     console.log('⏹️ Auto-refresh stopped.');
   };
 
-  window.XActions.stats = () => {
+  window.Medirus.stats = () => {
     const data = loadData();
     const kws = Object.keys(data.stats);
     if (kws.length === 0) { console.log('📭 No stats yet.'); return; }
@@ -349,7 +349,7 @@ This script provides the following capabilities:
     }
   };
 
-  window.XActions.history = () => {
+  window.Medirus.history = () => {
     const data = loadData();
     if (data.mentions.length === 0) { console.log('📭 No mention history.'); return; }
     console.log(`\n📋 MENTION HISTORY (${data.mentions.length} stored):\n`);
@@ -358,7 +358,7 @@ This script provides the following capabilities:
     }
   };
 
-  window.XActions.reset = () => {
+  window.Medirus.reset = () => {
     localStorage.removeItem(STORAGE_KEY);
     console.log('🗑️ Keyword history cleared.');
   };
@@ -371,11 +371,11 @@ This script provides the following capabilities:
     console.log('║  🔍 KEYWORD MONITOR — Ready                      ║');
     console.log('╚════════════════════════════════════════════════════╝');
     console.log('\n📋 Commands:');
-    console.log('  XActions.monitor(["keyword1", "keyword2"])');
-    console.log('  XActions.autoRefresh(120000)');
-    console.log('  XActions.stats()');
-    console.log('  XActions.history()');
-    console.log('  XActions.stop()');
+    console.log('  Medirus.monitor(["keyword1", "keyword2"])');
+    console.log('  Medirus.autoRefresh(120000)');
+    console.log('  Medirus.stats()');
+    console.log('  Medirus.history()');
+    console.log('  Medirus.stop()');
   }
 })();
 
@@ -438,14 +438,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -480,4 +480,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

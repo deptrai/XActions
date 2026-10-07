@@ -1,13 +1,13 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Analysis - Account Report
+ * Medirus Analysis - Account Report
  *
  * Turns a public profile plus a sample of its timeline into a quantified
  * report: engagement rates, posting cadence, content mix, the hours and
  * weekdays that actually perform, and the posts that carried the account.
  *
  * Everything here is pure. It takes data in and returns a plain object, so
- * the same numbers back the CLI (`xactions report`), the MCP tool
+ * the same numbers back the CLI (`medirus report`), the MCP tool
  * (`x_account_report`), and the web playground. One implementation means the
  * three surfaces can never disagree about what an engagement rate is.
  *

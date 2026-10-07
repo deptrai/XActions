@@ -130,11 +130,11 @@ test.describe('Story 26.2: E2E Live Browser Verification of Decommissioned Subsy
     await page.goto(baseUrl);
     await page.evaluate((token) => {
       localStorage.setItem('authToken', token);
-      localStorage.setItem('xactions_token', token);
+      localStorage.setItem('medirus_token', token);
     }, adminToken);
 
     await page.goto(`${baseUrl}/admin`);
-    await expect(page.locator('h1').first()).toContainText(/XActions Admin/i);
+    await expect(page.locator('h1').first()).toContainText(/Medirus Admin/i);
 
     // Check tabs exist
     await expect(page.getByRole('tab', { name: /Live Sessions/i })).toBeVisible();

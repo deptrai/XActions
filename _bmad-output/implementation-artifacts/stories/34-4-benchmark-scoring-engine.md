@@ -11,7 +11,7 @@ priority: 'high'
 context:
   - _bmad-output/specs/spec-scraper-benchmark/SPEC.md
   - _bmad-output/specs/spec-scraper-benchmark/metrics-catalog.md
-  - _bmad-output/planning-artifacts/architecture/xactions-benchmark-epic34/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/medirus-benchmark-epic34/ARCHITECTURE-SPINE.md
   - src/benchmark/scoring-engine.js
   - src/benchmark/state-manager.js
   - src/utils/safe-ratio.js

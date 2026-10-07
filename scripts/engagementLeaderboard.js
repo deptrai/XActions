@@ -166,7 +166,7 @@
         vipList: vips.map(v => ({ username: v.username, replies: v.replies })),
         topTweets: byEng.slice(0, 10).map(t => ({ text: t.text, likes: t.likes, rts: t.rts, replies: t.replies })),
         analyzedAt: new Date().toISOString(),
-      }, `xactions-leaderboard-${Date.now()}.json`);
+      }, `medirus-leaderboard-${Date.now()}.json`);
     }
   };
 

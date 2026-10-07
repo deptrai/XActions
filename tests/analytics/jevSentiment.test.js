@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Jev Semantic Sentiment & CRM Tests (Story 44.2)
+// Medirus — Jev Semantic Sentiment & CRM Tests (Story 44.2)
 // by nichxbt
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -143,7 +143,7 @@ describe('Jev Semantic Sentiment (Story 44.2)', () => {
         mockJevSentimentSuccess({ sentiment: 'enthusiastic', confidence: 0.95, reputationImpact: 3 })
       );
 
-      const res = await tagContactWithJev('tech_guru', 'Building AI agents and loving @XActions ecosystem!');
+      const res = await tagContactWithJev('tech_guru', 'Building AI agents and loving @Medirus ecosystem!');
       expect(res.username).toBe('tech_guru');
       expect(res.tagsAdded).toContain('advocate');
       expect(res.tagsAdded).toContain('high_impact');

@@ -18,12 +18,12 @@ baseline_commit: 1c0c9abe
 ## Story
 
 As a **Nowing Platform Orchestrator**,  
-I want **scraped data from XActions to be emitted in real time as Thin Event Pointers into the Redis Stream `stream:social:raw_posts`**,  
+I want **scraped data from Medirus to be emitted in real time as Thin Event Pointers into the Redis Stream `stream:social:raw_posts`**,  
 so that **Nowing backend can run the background NLP Intent Extractor in near real time without overflowing Redis memory**.
 
 [Source: `_bmad-output/planning-artifacts/epics.md` — Epic 14, Story 14.3]  
 [Context: `_bmad-output/implementation-artifacts/epic-14-context.md` — Epic 14 goal & constraints]  
-[Architecture: `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-7, AD-10, AD-12, AD-13, AD-17, AD-SOC-4]
+[Architecture: `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-7, AD-10, AD-12, AD-13, AD-17, AD-SOC-4]
 
 ## Acceptance Criteria
 
@@ -61,7 +61,7 @@ so that **Nowing backend can run the background NLP Intent Extractor in near rea
 - **Ref:** Architecture AD-7 rule 3; `isEnvTruthy` / `toIsoDate` helpers at `src/scrapers/social/facebook/crawler.js:42-59`
 
 ### AC-4: Stream metrics endpoint
-- **Given** the MCP daemon or the XActions API is running
+- **Given** the MCP daemon or the Medirus API is running
 - **When** a client calls `GET /metrics/stream`
 - **Then** it returns `200 OK` with a JSON body:
   ```ts
@@ -165,9 +165,9 @@ so that **Nowing backend can run the background NLP Intent Extractor in near rea
   - [ ] T11.4: `tests/scrapers/social/facebook/redis-stream.test.js` — `page_posts` / `group_posts` call checkpoint, payload contains `storageRef`
   - [ ] T11.5: `tests/mcp/metrics-stream.test.js` (or `tests/api/metrics-stream.test.js`) — `GET /metrics/stream` returns expected shape
   - [ ] T11.6: `npm run typecheck` passes
-- [ ] T12: Update `src/cli/commands/stream.js` or create `src/cli/commands/admin.js` for `xactions stream metrics` / `xactions stream alerts`
+- [ ] T12: Update `src/cli/commands/stream.js` or create `src/cli/commands/admin.js` for `medirus stream metrics` / `medirus stream alerts`
   - [ ] T12.1: Resolve command name collision with the existing Twitter Socket.IO `stream` group (see Outstanding Items)
-  - [ ] T12.2: Implement `xactions stream metrics` and `xactions stream alerts` (or `xactions admin stream metrics`/`alerts` if chosen)
+  - [ ] T12.2: Implement `medirus stream metrics` and `medirus stream alerts` (or `medirus admin stream metrics`/`alerts` if chosen)
   - [ ] T12.3: CLI calls `GET /metrics/stream` and `/admin/stream/alerts` with `fetch`
 
 ## Dev Notes
@@ -277,7 +277,7 @@ The singleton used by production callers (`FacebookScrapeService`, `src/scrapers
 | `src/utils/stream-alerts.js` | Alert engine: thresholds, webhook, email, cooldown |
 | `src/store/store-with-redis.js` | New singleton `defaultStore` combining `PrismaStore` + `RedisStreamPublisher` (or decorator) |
 | `api/routes/streams.js` | REST routes for `GET /admin/stream/metrics` and `GET /admin/stream/alerts` (or extend `governor.js` if it already owns admin routes) |
-| `src/cli/commands/admin.js` | `xactions admin stream metrics|alerts` command surface; can alias under existing `stream.js` later |
+| `src/cli/commands/admin.js` | `medirus admin stream metrics|alerts` command surface; can alias under existing `stream.js` later |
 | `tests/store/redis-stream-publisher.test.js` | Test publisher with real Redis or graceful skip |
 | `tests/utils/stream-metrics-collector.test.js` | Test metrics shape and fallbacks |
 | `tests/utils/stream-alerts.test.js` | Test threshold, webhook, email, cooldown |
@@ -300,7 +300,7 @@ The singleton used by production callers (`FacebookScrapeService`, `src/scrapers
 | `src/mcp/server.js` | Add `GET /metrics/stream`; pass `store` in Facebook / crawl tools |
 | `api/server.js` | Mount `GET /metrics/stream` and `/admin/stream/metrics` / `/admin/stream/alerts` |
 | `src/core/adaptive-governor.js` | Log `throttle_reason: redis_lag` with `reduced_to_percent` when backpressure active |
-| `src/cli/commands/admin.js` (new) or `src/cli/commands/stream.js` | Add `xactions admin stream metrics|alerts` (recommended); only overload `stream` if aliases are acceptable |
+| `src/cli/commands/admin.js` (new) or `src/cli/commands/stream.js` | Add `medirus admin stream metrics|alerts` (recommended); only overload `stream` if aliases are acceptable |
 | `_bmad-output/implementation-artifacts/sprint-status.yaml` | Set `14-3` to `ready-for-dev` and update `last_updated` |
 
 ### NO TOUCH
@@ -339,9 +339,9 @@ The singleton used by production callers (`FacebookScrapeService`, `src/scrapers
 
 - `src/mcp/server.js` runs an Express HTTP transport on port 3001 with `GET /health` at `src/mcp/server.js:5327-5329` and `POST/GET/DELETE /mcp`.
 - 3-Layer JSON Envelope is in `src/mcp/envelope.js`.
-- `x_actions_list`, `x_crawl_post`, and `x_crawl_comments_tree` are wired at `src/mcp/server.js:2858-2868`.
+- `medirus_list`, `x_crawl_post`, and `x_crawl_comments_tree` are wired at `src/mcp/server.js:2858-2868`.
 - Auto-artifact exporter is `src/mcp/artifact-exporter.js`.
-- `xactions daemon start/status/stop` is in `src/cli/commands/daemon.js`.
+- `medirus daemon start/status/stop` is in `src/cli/commands/daemon.js`.
 
 ### Story 13.10 — Facebook Hybrid Integration & Caller Migration (Done, baseline `9c40ce3f`)
 
@@ -376,7 +376,7 @@ Patterns:
 
 - Epic 14 context: `_bmad-output/implementation-artifacts/epic-14-context.md`
 - Epic 14 stories: `_bmad-output/planning-artifacts/epics.md#epic-14-deep-conversation-scraper-mcp-daemon-nowing-event-stream`
-- Architecture AD-7 / AD-10 / AD-12 / AD-13 / AD-17: `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`
+- Architecture AD-7 / AD-10 / AD-12 / AD-13 / AD-17: `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md`
 - `AbstractCrawler` store wiring: `src/core/base-crawler.js:50-63`
 - `FacebookCrawler.#saveCheckpoint`: `src/scrapers/social/facebook/crawler.js:2441-2498`
 - `FacebookCrawler.pagePosts` / `groupPosts`: `src/scrapers/social/facebook/crawler.js:1121-1225`
@@ -415,7 +415,7 @@ Patterns:
 1. Choose the store wiring pattern: extend `PrismaStore` with `redisClient` or create a `PersistentStoreWithStream` decorator.
 2. Decide whether `/metrics/stream` lives on the MCP daemon (`src/mcp/server.js`) only, the API only, or both. Recommendation: both, sharing the same collector.
 3. Decide the exact algorithm and fallback for `droppedEvents` and `lastAckTime` based on the Redis server version available in the target environment.
-4. Decide the CLI command surface for stream metrics/alerts. Existing `xactions stream` is used for Twitter Socket.IO streams, so a name collision exists. **Recommended:** Use `xactions admin stream metrics|alerts` (matches Story 19.4.5 and `src/cli/commands/admin.js`) and optionally add `xactions stream metrics|alerts` as deprecated aliases in Epic 20.
+4. Decide the CLI command surface for stream metrics/alerts. Existing `medirus stream` is used for Twitter Socket.IO streams, so a name collision exists. **Recommended:** Use `medirus admin stream metrics|alerts` (matches Story 19.4.5 and `src/cli/commands/admin.js`) and optionally add `medirus stream metrics|alerts` as deprecated aliases in Epic 20.
 5. Decide how to provide the store/redis to non-Facebook crawlers in `src/scrapers/index.js:439-494` generic `scrape()` without breaking backward compatibility for callers that pass `page`.
 6. Confirm Redis client strategy. `ioredis` is **not** a declared dependency; the `RedisStreamPublisher` should use the `redis` package and expose a `RedisClientLike` interface. `ThreadsCrawler` should be refactored to call `publisher.publish()` instead of raw `redisClient.xadd`; do NOT add `ioredis` to `package.json`.
 7. Confirm the alert email transport: use direct `nodemailer` SMTP or a preconfigured `ALERT_SMTP_*` env set.
@@ -428,7 +428,7 @@ Patterns:
 - `src/utils/stream-alerts.js` — threshold alert engine (webhook/email).
 - `src/store/store-with-redis.js` — singleton/default store with Redis (re-export from `src/store/index.js`).
 - `api/routes/streams.js` — `/admin/stream/metrics` and `/admin/stream/alerts` route handlers (or extend `governor.js`).
-- `src/cli/commands/admin.js` — `xactions admin stream metrics|alerts`.
+- `src/cli/commands/admin.js` — `medirus admin stream metrics|alerts`.
 - `tests/store/redis-stream-publisher.test.js`
 - `tests/utils/stream-metrics-collector.test.js`
 - `tests/utils/stream-alerts.test.js`
@@ -449,5 +449,5 @@ Patterns:
 - `src/mcp/server.js` — `GET /metrics/stream` + store injection.
 - `api/server.js` — mount metrics/admin stream routes.
 - `src/core/adaptive-governor.js` — `throttle_reason: redis_lag` log.
-- `src/cli/commands/admin.js` — `xactions admin stream metrics|alerts` (new; can alias under `stream.js` in Epic 20).
+- `src/cli/commands/admin.js` — `medirus admin stream metrics|alerts` (new; can alias under `stream.js` in Epic 20).
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — status update.

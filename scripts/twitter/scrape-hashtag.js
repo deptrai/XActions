@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * #️⃣ Scrape Hashtag - XActions
+ * #️⃣ Scrape Hashtag - Medirus
  * ============================================
  *
  * @name         scrape-hashtag
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to a hashtag results page, e.g. x.com/search?q=%23solana&f=live
@@ -221,9 +221,9 @@
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  #️⃣ SCRAPE HASHTAG - XActions                           ║
+║  #️⃣ SCRAPE HASHTAG - Medirus                           ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

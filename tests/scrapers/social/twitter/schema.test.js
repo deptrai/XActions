@@ -133,8 +133,8 @@ describe('Twitter hybrid schema', () => {
   });
 
   it('buildGraphQLVariables returns correct shape for SearchTimeline', () => {
-    const v = buildGraphQLVariables('SearchTimeline', { query: 'xactions', count: 20, product: 'Latest' });
-    expect(v.rawQuery).toBe('xactions');
+    const v = buildGraphQLVariables('SearchTimeline', { query: 'medirus', count: 20, product: 'Latest' });
+    expect(v.rawQuery).toBe('medirus');
     expect(v.count).toBe(20);
     expect(v.querySource).toBe('typed_query');
     expect(v.product).toBe('Latest');

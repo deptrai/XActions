@@ -2,7 +2,7 @@
 
 > **Authors:** nichxbt & contributors  
 > **Date:** February 2026  
-> **Repository:** [XActions](https://github.com/nirholas/XActions)  
+> **Repository:** [Medirus](https://github.com/nirholas/XActions)  
 > **License:** Apache 2.0  
 > **Status:** Research / Proof-of-Concept  
 
@@ -340,9 +340,9 @@ The simplest approach runs directly in the user's authenticated browser session:
 - No headless operation (screen must be visible for some actions)
 - Single-account only per browser
 
-### 5.2 Implementation: XActions algorithmTrainer.js
+### 5.2 Implementation: Medirus algorithmTrainer.js
 
-The XActions project includes a complete browser-based implementation: `src/automation/algorithmTrainer.js` (874 lines).
+The Medirus project includes a complete browser-based implementation: `src/automation/algorithmTrainer.js` (874 lines).
 
 **Key design decisions:**
 
@@ -597,7 +597,7 @@ The scheduler introduces randomized variance:
 | Database | SQLite (single-account) / PostgreSQL (multi) | Action logging, metrics, state |
 | Scheduler | node-cron + custom variance engine | Realistic timing patterns |
 | Process Manager | PM2 / Docker | 24/7 uptime, restart on crash |
-| Monitoring | Custom dashboard (XActions) | Real-time metrics + alerts |
+| Monitoring | Custom dashboard (Medirus) | Real-time metrics + alerts |
 | Queue | Bull/BullMQ (optional) | Action queuing for multi-account |
 
 ### 6.4 Deployment Options
@@ -620,10 +620,10 @@ Option C: Serverless (Advanced)
 ├── State in DynamoDB
 └── More complex but auto-scaling
 
-Option D: Railway/Fly.io (XActions native)
+Option D: Railway/Fly.io (Medirus native)
 ├── Single command deploy (fly deploy / railway up)
 ├── Built-in persistence, logging, scaling
-├── Integrated with XActions dashboard
+├── Integrated with Medirus dashboard
 └── Sub-$10/month for single account
 ```
 
@@ -935,7 +935,7 @@ target: Phase 1: 5-10/day, Phase 2: 20-50/day, Phase 3: 50-200/day
 
 ### 10.2 Dashboard Metrics
 
-The XActions dashboard should track:
+The Medirus dashboard should track:
 
 | Metric | Frequency | Visualization |
 |--------|-----------|---------------|
@@ -975,7 +975,7 @@ const experiments = {
 
 ## 11. Implementation Reference
 
-### 11.1 Existing XActions Components
+### 11.1 Existing Medirus Components
 
 | Component | File | Status |
 |-----------|------|--------|
@@ -1101,7 +1101,7 @@ The addition of LLM intelligence transforms this from a mechanical process into 
 - Adapting strategy based on performance metrics
 - Operating 24/7 with human-like behavioral patterns
 
-The XActions toolkit provides the foundation for both the browser-based (manual) and agent-based (autonomous) approaches. The browser script (`algorithmTrainer.js`) is production-ready for manual operation. The headless agent architecture described in this paper represents the next evolution — a fully autonomous thought leadership engine.
+The Medirus toolkit provides the foundation for both the browser-based (manual) and agent-based (autonomous) approaches. The browser script (`algorithmTrainer.js`) is production-ready for manual operation. The headless agent architecture described in this paper represents the next evolution — a fully autonomous thought leadership engine.
 
 ---
 
@@ -1111,10 +1111,10 @@ The XActions toolkit provides the foundation for both the browser-based (manual)
 2. SimClusters: Community-Based Representations for Heterogeneous Recommendations at Twitter — KDD 2020
 3. TwHIN: Embedding the Twitter Heterogeneous Information Network for Personalized Recommendation — KDD 2022
 4. Puppeteer Extra Stealth Plugin — https://github.com/berstend/puppeteer-extra/tree/master/packages/puppeteer-extra-plugin-stealth
-5. XActions Repository — https://github.com/nirholas/XActions
+5. Medirus Repository — https://github.com/nirholas/XActions
 6. OpenRouter API — https://openrouter.ai
 7. X/Twitter Developer Terms of Service — https://developer.x.com/en/developer-terms
 
 ---
 
-*This paper is part of the XActions project. For implementation details, see the build prompts in `prompts/09-algorithm-cultivation-system.md` and the browser script at `src/automation/algorithmTrainer.js`.*
+*This paper is part of the Medirus project. For implementation details, see the build prompts in `prompts/09-algorithm-cultivation-system.md` and the browser script at `src/automation/algorithmTrainer.js`.*

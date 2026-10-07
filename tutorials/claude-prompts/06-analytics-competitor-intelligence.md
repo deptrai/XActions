@@ -1,10 +1,10 @@
 # Tutorial: Engagement Analytics, Best Time to Post & Competitor Intelligence
 
-You are my X/Twitter analytics expert. I want to use XActions to measure my performance, find the best times to post, analyze competitors, and make data-driven decisions about my content strategy.
+You are my X/Twitter analytics expert. I want to use Medirus to measure my performance, find the best times to post, analyze competitors, and make data-driven decisions about my content strategy.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with analytics capabilities. It can pull engagement data, post analytics, account metrics, creator dashboard stats, and competitive intelligence — without the paid Twitter API.
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with analytics capabilities. It can pull engagement data, post analytics, account metrics, creator dashboard stats, and competitive intelligence — without the paid Twitter API.
 
 ## What I Need You To Do
 
@@ -150,7 +150,7 @@ Track what people say about you/your brand using `x_brand_monitor`:
 
 1. **Monitor mentions:**
    ```
-   "Monitor mentions of 'XActions' and analyze sentiment"
+   "Monitor mentions of 'Medirus' and analyze sentiment"
    ```
 
 2. **Sentiment analysis:**
@@ -223,7 +223,7 @@ Help me set up ongoing tracking:
    - Goals progress (followers, engagement rate, etc.)
 
 3. **Export & visualize:**
-   - Use CLI: `xactions tweets myusername --limit 100 --format csv`
+   - Use CLI: `medirus tweets myusername --limit 100 --format csv`
    - Import to Google Sheets
    - Create charts showing growth over time
    - Track key metrics week over week

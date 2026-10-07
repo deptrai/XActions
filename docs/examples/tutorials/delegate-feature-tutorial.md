@@ -1,8 +1,8 @@
 ---
 title: "Delegate Feature — Tutorial"
-description: "Add and remove delegates, configure permissions, and manage who can act on your behalf on X/Twitter using XActions."
-keywords: ["x delegate access", "twitter delegate feature", "manage delegates x", "delegate permissions twitter", "xactions delegate"]
-canonical: "https://xactions.app/examples/delegate-feature"
+description: "Add and remove delegates, configure permissions, and manage who can act on your behalf on X/Twitter using Medirus."
+keywords: ["x delegate access", "twitter delegate feature", "manage delegates x", "delegate permissions twitter", "medirus delegate"]
+canonical: "https://medirus.online/examples/delegate-feature"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
@@ -61,7 +61,7 @@ const CONFIG = {
 
 ```javascript
 (() => {
-  console.log('🔑 DELEGATE ACCESS - XActions by nichxbt\n');
+  console.log('🔑 DELEGATE ACCESS - Medirus by nichxbt\n');
 
   console.log('══════════════════════════════════════════════════');
   console.log('🔑 DELEGATE PERMISSIONS REFERENCE');
@@ -179,7 +179,7 @@ const CONFIG = {
 ### Expected Console Output
 
 ```
-🔑 DELEGATE ACCESS - XActions by nichxbt
+🔑 DELEGATE ACCESS - Medirus by nichxbt
 
 ══════════════════════════════════════════════════
 🔑 DELEGATE PERMISSIONS REFERENCE
@@ -266,5 +266,5 @@ const CONFIG = {
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

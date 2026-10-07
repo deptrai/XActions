@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Persona Manager
+// Medirus — Persona Manager
 // Manages persona consistency across all generated content
 // by nichxbt
 

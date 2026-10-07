@@ -1,6 +1,6 @@
 # Edit Posts -- Tutorial
 
-> Step-by-step guide to editing existing posts on X/Twitter using XActions browser scripts.
+> Step-by-step guide to editing existing posts on X/Twitter using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser

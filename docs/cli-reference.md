@@ -1,11 +1,11 @@
-# XActions CLI Reference
+# Medirus CLI Reference
 
 > **The Complete X/Twitter Automation Toolkit**  
-> Author: nich ([@nichxbt](https://x.com/nichxbt)). Run `xactions --version` for the version you have installed.
+> Author: nich ([@nichxbt](https://x.com/nichxbt)). Run `medirus --version` for the version you have installed.
 
-The XActions CLI provides command-line tools for X/Twitter automation, scraping, and data extraction. No Twitter API required, which saves $100-$5,000+/month in API costs.
+The Medirus CLI provides command-line tools for X/Twitter automation, scraping, and data extraction. No Twitter API required, which saves $100-$5,000+/month in API costs.
 
-**Most read commands need no account at all.** Profiles, timelines, threads, and media all work on the guest tier the moment you install. Logging in unlocks search, followers, following, likes, bookmarks, and DMs. `xactions doctor` tells you which tier you are on right now.
+**Most read commands need no account at all.** Profiles, timelines, threads, and media all work on the guest tier the moment you install. Logging in unlocks search, followers, following, likes, bookmarks, and DMs. `medirus doctor` tells you which tier you are on right now.
 
 ---
 
@@ -14,29 +14,29 @@ The XActions CLI provides command-line tools for X/Twitter automation, scraping,
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Finding your way around](#finding-your-way-around)
-  - [xactions quickstart](#xactions-quickstart)
-  - [xactions completion](#xactions-completion)
+  - [medirus quickstart](#medirus-quickstart)
+  - [medirus completion](#medirus-completion)
 - [Authentication](#authentication)
-  - [xactions login](#xactions-login)
-  - [xactions logout](#xactions-logout)
+  - [medirus login](#medirus-login)
+  - [medirus logout](#medirus-logout)
 - [Scraping Commands](#commands)
-  - [xactions profile](#xactions-profile)
-  - [xactions followers](#xactions-followers)
-  - [xactions following](#xactions-following)
-  - [xactions non-followers](#xactions-non-followers)
-  - [xactions tweets](#xactions-tweets)
-  - [xactions search](#xactions-search)
-  - [xactions hashtag](#xactions-hashtag)
-  - [xactions thread](#xactions-thread)
-  - [xactions media](#xactions-media)
-  - [xactions info](#xactions-info)
-- [Persona Commands](#xactions-persona-create)
-  - [xactions persona create](#xactions-persona-create)
-  - [xactions persona list](#xactions-persona-list)
-  - [xactions persona run](#xactions-persona-run)
-  - [xactions persona status](#xactions-persona-status)
-  - [xactions persona edit](#xactions-persona-edit)
-  - [xactions persona delete](#xactions-persona-delete)
+  - [medirus profile](#medirus-profile)
+  - [medirus followers](#medirus-followers)
+  - [medirus following](#medirus-following)
+  - [medirus non-followers](#medirus-non-followers)
+  - [medirus tweets](#medirus-tweets)
+  - [medirus search](#medirus-search)
+  - [medirus hashtag](#medirus-hashtag)
+  - [medirus thread](#medirus-thread)
+  - [medirus media](#medirus-media)
+  - [medirus info](#medirus-info)
+- [Persona Commands](#medirus-persona-create)
+  - [medirus persona create](#medirus-persona-create)
+  - [medirus persona list](#medirus-persona-list)
+  - [medirus persona run](#medirus-persona-run)
+  - [medirus persona status](#medirus-persona-status)
+  - [medirus persona edit](#medirus-persona-edit)
+  - [medirus persona delete](#medirus-persona-delete)
 - [Agent Commands](#agent-commands)
 - [Plugin Commands](#plugin-commands)
 - [Stream Commands](#stream-commands)
@@ -66,17 +66,17 @@ The XActions CLI provides command-line tools for X/Twitter automation, scraping,
 
 ## Installation
 
-Install XActions globally using npm:
+Install Medirus globally using npm:
 
 ```bash
-npm install -g xactions
+npm install -g medirus
 ```
 
 Verify the installation:
 
 ```bash
-xactions --version
-xactions doctor      # checks Node, the browser, the MCP server, and what works right now
+medirus --version
+medirus doctor      # checks Node, the browser, the MCP server, and what works right now
 ```
 
 ### Requirements
@@ -90,27 +90,27 @@ xactions doctor      # checks Node, the browser, the MCP server, and what works 
 ## Quick Start
 
 ```bash
-npm install -g xactions
+npm install -g medirus
 
-xactions quickstart          # guided first run, adapts to what you have set up
-xactions doctor              # verify the install and see which tier you are on
+medirus quickstart          # guided first run, adapts to what you have set up
+medirus doctor              # verify the install and see which tier you are on
 
-xactions profile NASA        # works with no account
-xactions tweets NASA --limit 20
-xactions analyze NASA        # engagement rate, cadence, content mix, best posting hour
+medirus profile NASA        # works with no account
+medirus tweets NASA --limit 20
+medirus analyze NASA        # engagement rate, cadence, content mix, best posting hour
 
-xactions connect             # log in once, in a real browser, to unlock the rest
-xactions search "your topic" --limit 50
-xactions followers yourhandle --limit 500 --output followers.json
+medirus connect             # log in once, in a real browser, to unlock the rest
+medirus search "your topic" --limit 50
+medirus followers yourhandle --limit 500 --output followers.json
 ```
 
-Prefer `xactions connect` over `xactions login`: it drives a real browser, you log in normally, and the session is captured for you. `login` is the manual fallback for pasting cookies out of DevTools yourself.
+Prefer `medirus connect` over `medirus login`: it drives a real browser, you log in normally, and the session is captured for you. `login` is the manual fallback for pasting cookies out of DevTools yourself.
 
 ---
 
 ## Finding your way around
 
-There are more than fifty commands. Running `xactions` with no arguments prints them grouped by task rather than alphabetically:
+There are more than fifty commands. Running `medirus` with no arguments prints them grouped by task rather than alphabetically:
 
 ```
 Start here              Set up and verify the install
@@ -123,62 +123,62 @@ Move data               Export, import, convert, migrate, diff
 Low level               The raw HTTP client
 ```
 
-`xactions help <command>` gives the full flag list for any one command.
+`medirus help <command>` gives the full flag list for any one command.
 
-### xactions quickstart
+### medirus quickstart
 
 A guided first run. Reads what you already have configured and prints the three commands that will produce a result on your machine, then the directions worth exploring next.
 
 ```bash
-xactions quickstart
-xactions quickstart --json    # just the detected setup state, for scripts
+medirus quickstart
+medirus quickstart --json    # just the detected setup state, for scripts
 ```
 
 The JSON form reports the config directory, whether a session is saved, and which tier (`guest` or `session`) you are on.
 
-### xactions completion
+### medirus completion
 
 Tab completion for bash, zsh, and fish. The script is generated from the live command tree, so it covers every command, sub-command, and flag, and stays correct as commands are added.
 
 ```bash
 # bash
-xactions completion bash > /etc/bash_completion.d/xactions
+medirus completion bash > /etc/bash_completion.d/medirus
 # or, without root:
-echo 'source <(xactions completion bash)' >> ~/.bashrc
+echo 'source <(medirus completion bash)' >> ~/.bashrc
 
 # zsh
-xactions completion zsh > "${fpath[1]}/_xactions" && compinit
+medirus completion zsh > "${fpath[1]}/_medirus" && compinit
 # or:
-echo 'source <(xactions completion zsh)' >> ~/.zshrc
+echo 'source <(medirus completion zsh)' >> ~/.zshrc
 
 # fish
-xactions completion fish > ~/.config/fish/completions/xactions.fish
+medirus completion fish > ~/.config/fish/completions/medirus.fish
 ```
 
-Regenerate it after upgrading XActions so newly added commands complete.
+Regenerate it after upgrading Medirus so newly added commands complete.
 
 ---
 
 ## Authentication
 
-XActions uses your X/Twitter session cookie for authentication. This approach bypasses API rate limits and doesn't require expensive API access.
+Medirus uses your X/Twitter session cookie for authentication. This approach bypasses API rate limits and doesn't require expensive API access.
 
-### xactions login
+### medirus login
 
 Set up authentication with your X/Twitter session cookie.
 
 **Syntax:**
 
 ```bash
-xactions login
+medirus login
 ```
 
 **Usage:**
 
 ```bash
-$ xactions login
+$ medirus login
 
-⚡ XActions Login Setup
+⚡ Medirus Login Setup
 
 To get your auth_token cookie:
 1. Go to x.com and log in
@@ -198,26 +198,26 @@ To get your auth_token cookie:
 4. Expand **Cookies** → click on `https://x.com`
 5. Find the cookie named `auth_token`
 6. Copy the **Value** (a long hexadecimal string)
-7. Paste it when prompted by `xactions login`
+7. Paste it when prompted by `medirus login`
 
-> ⚠️ **Security Note**: Your auth_token is stored locally in `~/.xactions/config.json`. Never share this token with anyone.
+> ⚠️ **Security Note**: Your auth_token is stored locally in `~/.medirus/config.json`. Never share this token with anyone.
 
 ---
 
-### xactions logout
+### medirus logout
 
 Remove saved authentication credentials.
 
 **Syntax:**
 
 ```bash
-xactions logout
+medirus logout
 ```
 
 **Example:**
 
 ```bash
-$ xactions logout
+$ medirus logout
 ✓ Logged out successfully
 ```
 
@@ -225,14 +225,14 @@ $ xactions logout
 
 ## Commands
 
-### xactions profile
+### medirus profile
 
 Fetch detailed profile information for any X/Twitter user.
 
 **Syntax:**
 
 ```bash
-xactions profile <username> [options]
+medirus profile <username> [options]
 ```
 
 **Arguments:**
@@ -251,7 +251,7 @@ xactions profile <username> [options]
 
 ```bash
 # Get profile with formatted output
-xactions profile elonmusk
+medirus profile elonmusk
 
 # Output:
 # ⚡ @elonmusk
@@ -265,7 +265,7 @@ xactions profile elonmusk
 #   ✓ Verified
 
 # Get profile as JSON
-xactions profile elonmusk --json
+medirus profile elonmusk --json
 
 # Output:
 # {
@@ -283,14 +283,14 @@ xactions profile elonmusk --json
 
 ---
 
-### xactions followers
+### medirus followers
 
 Scrape the followers list for any user.
 
 **Syntax:**
 
 ```bash
-xactions followers <username> [options]
+medirus followers <username> [options]
 ```
 
 **Arguments:**
@@ -310,16 +310,16 @@ xactions followers <username> [options]
 
 ```bash
 # Scrape 100 followers (default)
-xactions followers nichxbt
+medirus followers nichxbt
 
 # Scrape 500 followers and save to JSON
-xactions followers nichxbt --limit 500 --output followers.json
+medirus followers nichxbt --limit 500 --output followers.json
 
 # Scrape 1000 followers and save to CSV
-xactions followers nichxbt -l 1000 -o followers.csv
+medirus followers nichxbt -l 1000 -o followers.csv
 
 # Pipe output to jq for processing
-xactions followers nichxbt --limit 50 | jq '.[].username'
+medirus followers nichxbt --limit 50 | jq '.[].username'
 ```
 
 **Output Schema (JSON):**
@@ -340,14 +340,14 @@ xactions followers nichxbt --limit 50 | jq '.[].username'
 
 ---
 
-### xactions following
+### medirus following
 
 Scrape the accounts a user is following.
 
 **Syntax:**
 
 ```bash
-xactions following <username> [options]
+medirus following <username> [options]
 ```
 
 **Arguments:**
@@ -367,25 +367,25 @@ xactions following <username> [options]
 
 ```bash
 # Scrape following list
-xactions following nichxbt
+medirus following nichxbt
 
 # Scrape 200 accounts and save to JSON
-xactions following nichxbt --limit 200 --output following.json
+medirus following nichxbt --limit 200 --output following.json
 
 # Get following as CSV for spreadsheet analysis
-xactions following nichxbt -l 500 -o following.csv
+medirus following nichxbt -l 500 -o following.csv
 ```
 
 ---
 
-### xactions non-followers
+### medirus non-followers
 
 Analyze follow relationships to find accounts that don't follow you back.
 
 **Syntax:**
 
 ```bash
-xactions non-followers <username> [options]
+medirus non-followers <username> [options]
 ```
 
 **Arguments:**
@@ -405,7 +405,7 @@ xactions non-followers <username> [options]
 
 ```bash
 # Analyze your follow relationships
-xactions non-followers nichxbt
+medirus non-followers nichxbt
 
 # Output:
 # 📊 Follow Analysis
@@ -421,22 +421,22 @@ xactions non-followers nichxbt
 #   ... and 127 more
 
 # Save full list of non-followers to file
-xactions non-followers nichxbt --limit 1000 --output non-followers.json
+medirus non-followers nichxbt --limit 1000 --output non-followers.json
 
 # Analyze and export for batch unfollowing
-xactions non-followers myaccount -l 2000 -o cleanup-list.json
+medirus non-followers myaccount -l 2000 -o cleanup-list.json
 ```
 
 ---
 
-### xactions tweets
+### medirus tweets
 
 Scrape tweets from a user's timeline.
 
 **Syntax:**
 
 ```bash
-xactions tweets <username> [options]
+medirus tweets <username> [options]
 ```
 
 **Arguments:**
@@ -457,16 +457,16 @@ xactions tweets <username> [options]
 
 ```bash
 # Scrape recent tweets
-xactions tweets elonmusk
+medirus tweets elonmusk
 
 # Scrape 200 tweets including replies
-xactions tweets elonmusk --limit 200 --replies
+medirus tweets elonmusk --limit 200 --replies
 
 # Save tweets to JSON file
-xactions tweets elonmusk -l 100 -o elon-tweets.json
+medirus tweets elonmusk -l 100 -o elon-tweets.json
 
 # Export to CSV for spreadsheet analysis
-xactions tweets nichxbt --limit 500 --output tweets.csv
+medirus tweets nichxbt --limit 500 --output tweets.csv
 ```
 
 **Output Schema (JSON):**
@@ -489,14 +489,14 @@ xactions tweets nichxbt --limit 500 --output tweets.csv
 
 ---
 
-### xactions search
+### medirus search
 
 Search for tweets matching a query.
 
 **Syntax:**
 
 ```bash
-xactions search <query> [options]
+medirus search <query> [options]
 ```
 
 **Arguments:**
@@ -517,22 +517,22 @@ xactions search <query> [options]
 
 ```bash
 # Search for tweets about Bitcoin
-xactions search "bitcoin"
+medirus search "bitcoin"
 
 # Search with filter for top tweets
-xactions search "AI agents" --filter top --limit 100
+medirus search "AI agents" --filter top --limit 100
 
 # Search for photos only
-xactions search "sunset photography" -f photos -l 50 -o photos.json
+medirus search "sunset photography" -f photos -l 50 -o photos.json
 
 # Search for people/accounts
-xactions search "web3 developer" --filter people
+medirus search "web3 developer" --filter people
 
 # Complex query with quotes
-xactions search '"machine learning" from:openai' --limit 200
+medirus search '"machine learning" from:openai' --limit 200
 
 # Save search results
-xactions search "typescript tips" -o ts-tips.json
+medirus search "typescript tips" -o ts-tips.json
 ```
 
 **Search Operators:**
@@ -553,14 +553,14 @@ xactions search "typescript tips" -o ts-tips.json
 
 ---
 
-### xactions hashtag
+### medirus hashtag
 
 Scrape tweets containing a specific hashtag.
 
 **Syntax:**
 
 ```bash
-xactions hashtag <tag> [options]
+medirus hashtag <tag> [options]
 ```
 
 **Arguments:**
@@ -580,28 +580,28 @@ xactions hashtag <tag> [options]
 
 ```bash
 # Scrape tweets with #buildinpublic
-xactions hashtag buildinpublic
+medirus hashtag buildinpublic
 
 # With the # symbol (both work)
-xactions hashtag "#100DaysOfCode"
+medirus hashtag "#100DaysOfCode"
 
 # Scrape 200 tweets and save
-xactions hashtag AI --limit 200 --output ai-tweets.json
+medirus hashtag AI --limit 200 --output ai-tweets.json
 
 # Track trending hashtag
-xactions hashtag trending -l 500 -o trending.json
+medirus hashtag trending -l 500 -o trending.json
 ```
 
 ---
 
-### xactions thread
+### medirus thread
 
 Scrape an entire tweet thread/conversation.
 
 **Syntax:**
 
 ```bash
-xactions thread <url> [options]
+medirus thread <url> [options]
 ```
 
 **Arguments:**
@@ -620,7 +620,7 @@ xactions thread <url> [options]
 
 ```bash
 # Scrape a thread (formatted output)
-xactions thread https://x.com/nichxbt/status/1234567890123456789
+medirus thread https://x.com/nichxbt/status/1234567890123456789
 
 # Output:
 # 🧵 Thread:
@@ -635,19 +635,19 @@ xactions thread https://x.com/nichxbt/status/1234567890123456789
 #    Dec 15, 2025
 
 # Save thread to file
-xactions thread https://x.com/user/status/123456789 -o thread.json
+medirus thread https://x.com/user/status/123456789 -o thread.json
 ```
 
 ---
 
-### xactions media
+### medirus media
 
 Scrape media (images, videos, GIFs) from a user's timeline.
 
 **Syntax:**
 
 ```bash
-xactions media <username> [options]
+medirus media <username> [options]
 ```
 
 **Arguments:**
@@ -667,13 +667,13 @@ xactions media <username> [options]
 
 ```bash
 # Scrape media from a user
-xactions media nichxbt
+medirus media nichxbt
 
 # Scrape 100 media items
-xactions media photographer --limit 100 --output media.json
+medirus media photographer --limit 100 --output media.json
 
 # Short form
-xactions media artist -l 200 -o artist-media.json
+medirus media artist -l 200 -o artist-media.json
 ```
 
 **Output Schema (JSON):**
@@ -693,22 +693,22 @@ xactions media artist -l 200 -o artist-media.json
 
 ---
 
-### xactions info
+### medirus info
 
-Display XActions information, version, and links.
+Display Medirus information, version, and links.
 
 **Syntax:**
 
 ```bash
-xactions info
+medirus info
 ```
 
 **Example:**
 
 ```bash
-$ xactions info
+$ medirus info
 
-⚡ XActions v3.5.0
+⚡ Medirus v3.5.0
 
 The Complete X/Twitter Automation Toolkit
 
@@ -723,23 +723,23 @@ Author:
   nich (@nichxbt) - https://github.com/nirholas
 
 Links:
-  Website:  https://xactions.app
+  Website:  https://medirus.online
   GitHub:   https://github.com/nirholas/xactions
-  Docs:     https://xactions.app/docs
+  Docs:     https://medirus.online/docs
 
-Run "xactions --help" for all commands
+Run "medirus --help" for all commands
 ```
 
 ---
 
-### xactions persona create
+### medirus persona create
 
 Interactively create a new persona for the algorithm builder. Guides you through choosing a niche preset, engagement strategy, and activity pattern.
 
 **Syntax:**
 
 ```bash
-xactions persona create [options]
+medirus persona create [options]
 ```
 
 **Options:**
@@ -786,31 +786,31 @@ xactions persona create [options]
 
 ```bash
 # Interactive creation
-$ xactions persona create
+$ medirus persona create
 
 # One-liner
-$ xactions persona create --name "CryptoBot" --preset crypto-degen --strategy aggressive --activity night-owl
+$ medirus persona create --name "CryptoBot" --preset crypto-degen --strategy aggressive --activity night-owl
 
 # Custom niche (interactive prompts for topics, search terms, etc.)
-$ xactions persona create --preset custom
+$ medirus persona create --preset custom
 ```
 
 ---
 
-### xactions persona list
+### medirus persona list
 
 List all saved personas with their stats and last activity.
 
 **Syntax:**
 
 ```bash
-xactions persona list
+medirus persona list
 ```
 
 **Example:**
 
 ```bash
-$ xactions persona list
+$ medirus persona list
 
 🤖 Saved Personas
 
@@ -826,14 +826,14 @@ $ xactions persona list
 
 ---
 
-### xactions persona run
+### medirus persona run
 
 Start the 24/7 algorithm builder for a persona. Launches a Puppeteer browser, logs in, and runs automated sessions with sleep cycles.
 
 **Syntax:**
 
 ```bash
-xactions persona run <personaId> [options]
+medirus persona run <personaId> [options]
 ```
 
 **Arguments:**
@@ -856,44 +856,44 @@ xactions persona run <personaId> [options]
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `XACTIONS_SESSION_COOKIE` | Yes* | X auth token (alt: `--token` or `xactions login`) |
+| `MEDIRUS_SESSION_COOKIE` | Yes* | X auth token (alt: `--token` or `medirus login`) |
 | `OPENROUTER_API_KEY` | Yes | OpenRouter key for LLM-generated comments/posts |
 
 **Examples:**
 
 ```bash
 # Start with saved auth
-$ xactions persona run persona_1234567890
+$ medirus persona run persona_1234567890
 
 # With visible browser for debugging
-$ xactions persona run persona_1234567890 --no-headless
+$ medirus persona run persona_1234567890 --no-headless
 
 # Dry run — preview without executing
-$ xactions persona run persona_1234567890 --dry-run
+$ medirus persona run persona_1234567890 --dry-run
 
 # Run 5 sessions then stop
-$ xactions persona run persona_1234567890 --sessions 5
+$ medirus persona run persona_1234567890 --sessions 5
 
 # Explicit auth token
-$ xactions persona run persona_1234567890 --token "abc123hex..."
+$ medirus persona run persona_1234567890 --token "abc123hex..."
 ```
 
 ---
 
-### xactions persona status
+### medirus persona status
 
 Display detailed status, config, and lifetime stats for a persona.
 
 **Syntax:**
 
 ```bash
-xactions persona status <personaId>
+medirus persona status <personaId>
 ```
 
 **Example:**
 
 ```bash
-$ xactions persona status persona_1234567890
+$ medirus persona status persona_1234567890
 
 🤖 CryptoBot — Status Report
 
@@ -929,14 +929,14 @@ Follow Graph
 
 ---
 
-### xactions persona edit
+### medirus persona edit
 
 Modify an existing persona's config without recreating it.
 
 **Syntax:**
 
 ```bash
-xactions persona edit <personaId> [options]
+medirus persona edit <personaId> [options]
 ```
 
 **Options:**
@@ -953,31 +953,31 @@ xactions persona edit <personaId> [options]
 
 ```bash
 # Change topics
-$ xactions persona edit persona_123 --topics "ai,llm,agents,agi"
+$ medirus persona edit persona_123 --topics "ai,llm,agents,agi"
 
 # Switch to conservative strategy
-$ xactions persona edit persona_123 --strategy conservative
+$ medirus persona edit persona_123 --strategy conservative
 
 # Update target accounts
-$ xactions persona edit persona_123 --target-accounts "elonmusk,sama,karpathy"
+$ medirus persona edit persona_123 --target-accounts "elonmusk,sama,karpathy"
 ```
 
 ---
 
-### xactions persona delete
+### medirus persona delete
 
 Permanently delete a saved persona and all its data.
 
 **Syntax:**
 
 ```bash
-xactions persona delete <personaId>
+medirus persona delete <personaId>
 ```
 
 **Example:**
 
 ```bash
-$ xactions persona delete persona_1234567890
+$ medirus persona delete persona_1234567890
 ? Delete persona persona_1234567890? This cannot be undone. (y/N) y
 ✅ Persona persona_1234567890 deleted
 ```
@@ -986,22 +986,22 @@ $ xactions persona delete persona_1234567890
 
 ## Agent Commands
 
-### xactions agent setup
+### medirus agent setup
 
 Interactive 8-step setup wizard for first-time agent configuration.
 
 ```bash
-xactions agent setup
+medirus agent setup
 ```
 
 Walks through niche selection, persona creation, LLM provider setup, timezone, intensity level, browser login, test run, and saves config to `data/agent-config.json`.
 
-### xactions agent start
+### medirus agent start
 
 Start the autonomous thought leader agent.
 
 ```bash
-xactions agent start [options]
+medirus agent start [options]
 ```
 
 | Option | Description | Default |
@@ -1011,35 +1011,35 @@ xactions agent start [options]
 **Example:**
 
 ```bash
-xactions agent start --config data/agent-config.json
+medirus agent start --config data/agent-config.json
 ```
 
-### xactions agent test
+### medirus agent test
 
 Run the agent for 5 minutes in test mode.
 
 ```bash
-xactions agent test [options]
+medirus agent test [options]
 ```
 
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-c, --config <path>` | Path to agent config file | `data/agent-config.json` |
 
-### xactions agent login
+### medirus agent login
 
 Open a visible browser for manual X.com login. Saves session cookies for headless runs.
 
 ```bash
-xactions agent login
+medirus agent login
 ```
 
-### xactions agent status
+### medirus agent status
 
 Show current agent status and today's action counts.
 
 ```bash
-xactions agent status [options]
+medirus agent status [options]
 ```
 
 | Option | Description | Default |
@@ -1057,12 +1057,12 @@ xactions agent status [options]
   LLM cost:   $0.34
 ```
 
-### xactions agent report
+### medirus agent report
 
 Generate a growth report for the last N days.
 
 ```bash
-xactions agent report [options]
+medirus agent report [options]
 ```
 
 | Option | Description | Default |
@@ -1073,67 +1073,67 @@ xactions agent report [options]
 
 ## Plugin Commands
 
-### xactions plugin install
+### medirus plugin install
 
 Install a plugin from npm or a local path.
 
 ```bash
-xactions plugin install <name>
+medirus plugin install <name>
 ```
 
 **Example:**
 
 ```bash
-$ xactions plugin install xactions-plugin-sentiment
-✅ Installed xactions-plugin-sentiment@1.2.0
+$ medirus plugin install medirus-plugin-sentiment
+✅ Installed medirus-plugin-sentiment@1.2.0
    Tools: 3 | Scrapers: 1 | Routes: 2 | Actions: 1
 ```
 
-### xactions plugin remove
+### medirus plugin remove
 
 Remove an installed plugin.
 
 ```bash
-xactions plugin remove <name>
+medirus plugin remove <name>
 ```
 
-### xactions plugin list
+### medirus plugin list
 
 List all installed plugins with status.
 
 ```bash
-$ xactions plugin list
- ✅ xactions-plugin-sentiment  v1.2.0  Sentiment analysis tools
- ⏸  xactions-plugin-analytics  v0.9.1  Advanced analytics (disabled)
+$ medirus plugin list
+ ✅ medirus-plugin-sentiment  v1.2.0  Sentiment analysis tools
+ ⏸  medirus-plugin-analytics  v0.9.1  Advanced analytics (disabled)
 ```
 
-### xactions plugin enable / disable
+### medirus plugin enable / disable
 
 Enable or disable a plugin without removing it.
 
 ```bash
-xactions plugin enable <name>
-xactions plugin disable <name>
+medirus plugin enable <name>
+medirus plugin disable <name>
 ```
 
-### xactions plugin discover
+### medirus plugin discover
 
-Scan `node_modules` for `xactions-plugin-*` packages.
+Scan `node_modules` for `medirus-plugin-*` packages.
 
 ```bash
-xactions plugin discover
+medirus plugin discover
 ```
 
 ---
 
 ## Stream Commands
 
-### xactions stream start
+### medirus stream start
 
 Start a real-time stream for an account.
 
 ```bash
-xactions stream start <type> <username> [options]
+medirus stream start <type> <username> [options]
 ```
 
 | Option | Description | Default |
@@ -1145,25 +1145,25 @@ xactions stream start <type> <username> [options]
 **Example:**
 
 ```bash
-$ xactions stream start tweet nichxbt -i 30
+$ medirus stream start tweet nichxbt -i 30
 🔴 Stream started: stream_abc123
    Type: tweet | User: nichxbt | Interval: 30s
 ```
 
-### xactions stream stop
+### medirus stream stop
 
 Stop an active stream.
 
 ```bash
-xactions stream stop <streamId>
+medirus stream stop <streamId>
 ```
 
-### xactions stream list
+### medirus stream list
 
 List all active streams and browser pool status.
 
 ```bash
-$ xactions stream list
+$ medirus stream list
 Active Streams:
   stream_abc123  tweet     nichxbt   ✅ running  polls:142  errors:0
   stream_def456  follower  nichxbt   ⏸  paused   polls:89   errors:1
@@ -1171,12 +1171,12 @@ Active Streams:
 Browser Pool: 2/5 active
 ```
 
-### xactions stream history
+### medirus stream history
 
 Show recent events for a stream.
 
 ```bash
-xactions stream history <streamId> [options]
+medirus stream history <streamId> [options]
 ```
 
 | Option | Description | Default |
@@ -1184,41 +1184,41 @@ xactions stream history <streamId> [options]
 | `-l, --limit <n>` | Number of events | `20` |
 | `-t, --type <eventType>` | Filter by event type | all |
 
-### xactions stream pause / resume
+### medirus stream pause / resume
 
 Pause or resume a stream without losing state.
 
 ```bash
-xactions stream pause <streamId>
-xactions stream resume <streamId>
+medirus stream pause <streamId>
+medirus stream resume <streamId>
 ```
 
-### xactions stream status
+### medirus stream status
 
 Get detailed status of a specific stream.
 
 ```bash
-xactions stream status <streamId>
+medirus stream status <streamId>
 ```
 
-### xactions stream stop-all
+### medirus stream stop-all
 
 Stop all active streams.
 
 ```bash
-xactions stream stop-all
+medirus stream stop-all
 ```
 
 ---
 
 ## Workflow Commands
 
-### xactions workflow create
+### medirus workflow create
 
 Create a workflow from a JSON file or interactively.
 
 ```bash
-xactions workflow create [options]
+medirus workflow create [options]
 ```
 
 | Option | Description | Default |
@@ -1227,50 +1227,50 @@ xactions workflow create [options]
 
 **Interactive mode** prompts for: name, description, trigger type (manual/schedule/webhook), cron expression.
 
-### xactions workflow run
+### medirus workflow run
 
 Run a workflow by name or ID.
 
 ```bash
-xactions workflow run <name> [options]
+medirus workflow run <name> [options]
 ```
 
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--auth <token>` | Auth token for browser actions | from config |
 
-### xactions workflow list
+### medirus workflow list
 
 List all saved workflows.
 
 ```bash
-$ xactions workflow list
+$ medirus workflow list
  ✅ morning-engage  wf_001  schedule (0 9 * * *)  5 steps  Morning engagement routine
  ✅ weekly-report   wf_002  manual                 3 steps  Generate weekly analytics
 ```
 
-### xactions workflow delete
+### medirus workflow delete
 
 Delete a workflow.
 
 ```bash
-xactions workflow delete <id>
+medirus workflow delete <id>
 ```
 
-### xactions workflow actions
+### medirus workflow actions
 
 List all available workflow actions grouped by category.
 
 ```bash
-xactions workflow actions
+medirus workflow actions
 ```
 
-### xactions workflow runs
+### medirus workflow runs
 
 Show execution history for a workflow.
 
 ```bash
-xactions workflow runs <workflowId> [options]
+medirus workflow runs <workflowId> [options]
 ```
 
 | Option | Description | Default |
@@ -1281,12 +1281,12 @@ xactions workflow runs <workflowId> [options]
 
 ## Graph Commands
 
-### xactions graph build
+### medirus graph build
 
 Build a social graph by crawling an account's network.
 
 ```bash
-xactions graph build <username> [options]
+medirus graph build <username> [options]
 ```
 
 | Option | Description | Default |
@@ -1298,39 +1298,39 @@ xactions graph build <username> [options]
 **Example:**
 
 ```bash
-$ xactions graph build nichxbt -d 2 -n 200
+$ medirus graph build nichxbt -d 2 -n 200
 🕸️ Building graph for nichxbt...
    Depth: 2 | Max nodes: 200
    ████████████████████ 100%
 ✅ Graph saved: graph_abc123 (187 nodes, 2,341 edges)
 ```
 
-### xactions graph analyze
+### medirus graph analyze
 
 Run cluster, influence, and bridge analysis on a graph.
 
 ```bash
-xactions graph analyze <graphId>
+medirus graph analyze <graphId>
 ```
 
 **Output:** Clusters, top influencers, bridge accounts, orbit analysis.
 
-### xactions graph recommend
+### medirus graph recommend
 
 Get follow/engage/unfollow recommendations from a graph.
 
 ```bash
-xactions graph recommend <graphId>
+medirus graph recommend <graphId>
 ```
 
 **Output:** Suggested follows, engagement targets, watch list, safe-to-unfollow.
 
-### xactions graph export
+### medirus graph export
 
 Export a graph for visualization.
 
 ```bash
-xactions graph export <graphId> [options]
+medirus graph export <graphId> [options]
 ```
 
 | Option | Description | Default |
@@ -1338,32 +1338,32 @@ xactions graph export <graphId> [options]
 | `-f, --format <format>` | Output format: html, gexf, d3 | `html` |
 | `-o, --output <path>` | Output file path | auto |
 
-### xactions graph list
+### medirus graph list
 
 List all saved graphs.
 
 ```bash
-xactions graph list
+medirus graph list
 ```
 
-### xactions graph delete
+### medirus graph delete
 
 Delete a saved graph.
 
 ```bash
-xactions graph delete <graphId>
+medirus graph delete <graphId>
 ```
 
 ---
 
 ## Portability Commands
 
-### xactions export
+### medirus export
 
 Export a full Twitter account (profile, tweets, followers, following, bookmarks).
 
 ```bash
-xactions export <username> [options]
+medirus export <username> [options]
 ```
 
 | Option | Description | Default |
@@ -1376,15 +1376,15 @@ xactions export <username> [options]
 **Example:**
 
 ```bash
-xactions export nichxbt -f json,csv --only profile,tweets -l 1000
+medirus export nichxbt -f json,csv --only profile,tweets -l 1000
 ```
 
-### xactions migrate
+### medirus migrate
 
 Migrate Twitter data to Bluesky or Mastodon.
 
 ```bash
-xactions migrate <username> [options]
+medirus migrate <username> [options]
 ```
 
 | Option | Description | Default |
@@ -1395,12 +1395,12 @@ xactions migrate <username> [options]
 | `--export-dir <dir>` | Use existing export data | auto |
 | `-l, --limit <n>` | Items to migrate | `50` |
 
-### xactions diff
+### medirus diff
 
 Compare two account exports and show changes.
 
 ```bash
-xactions diff <dirA> <dirB> [options]
+medirus diff <dirA> <dirB> [options]
 ```
 
 | Option | Description | Default |
@@ -1413,12 +1413,12 @@ xactions diff <dirA> <dirB> [options]
 
 ## Cross-Platform Scraping
 
-### xactions scrape
+### medirus scrape
 
 Multi-platform scraping for Twitter, Bluesky, Mastodon, and Threads.
 
 ```bash
-xactions scrape <action> [target] [options]
+medirus scrape <action> [target] [options]
 ```
 
 **Actions:** `profile`, `followers`, `following`, `tweets`, `search`, `hashtag`, `trending`
@@ -1436,29 +1436,29 @@ xactions scrape <action> [target] [options]
 **Examples:**
 
 ```bash
-xactions scrape profile -p bluesky -u nichxbt.bsky.social
-xactions scrape followers -p mastodon -u user -i https://mastodon.social -l 500
-xactions scrape trending -p twitter
+medirus scrape profile -p bluesky -u nichxbt.bsky.social
+medirus scrape followers -p mastodon -u user -i https://mastodon.social -l 500
+medirus scrape trending -p twitter
 ```
 
-### xactions platforms
+### medirus platforms
 
 List supported social media platforms.
 
 ```bash
-xactions platforms
+medirus platforms
 ```
 
 ---
 
 ## AI Writer Commands
 
-### xactions ai analyze
+### medirus ai analyze
 
 Analyze a user's writing voice from their tweets.
 
 ```bash
-xactions ai analyze <username> [options]
+medirus ai analyze <username> [options]
 ```
 
 | Option | Description | Default |
@@ -1467,12 +1467,12 @@ xactions ai analyze <username> [options]
 | `-o, --output <file>` | Save voice profile | — |
 | `--json` | JSON output | `false` |
 
-### xactions ai generate
+### medirus ai generate
 
 Generate tweets or threads in a user's voice.
 
 ```bash
-xactions ai generate <topic> [options]
+medirus ai generate <topic> [options]
 ```
 
 | Option | Description | Default |
@@ -1484,12 +1484,12 @@ xactions ai generate <topic> [options]
 | `-m, --model <model>` | LLM model | auto |
 | `-k, --api-key <key>` | OpenRouter API key | from env |
 
-### xactions ai rewrite
+### medirus ai rewrite
 
 Rewrite a tweet in a user's voice with a goal.
 
 ```bash
-xactions ai rewrite <text> [options]
+medirus ai rewrite <text> [options]
 ```
 
 | Option | Description | Default |
@@ -1498,12 +1498,12 @@ xactions ai rewrite <text> [options]
 | `-g, --goal <goal>` | more_engaging, shorter, more_professional, funnier | `more_engaging` |
 | `-c, --count <n>` | Number of variations | `3` |
 
-### xactions ai calendar
+### medirus ai calendar
 
 Generate a weekly content calendar.
 
 ```bash
-xactions ai calendar <username> [options]
+medirus ai calendar <username> [options]
 ```
 
 | Option | Description | Default |
@@ -1517,44 +1517,44 @@ xactions ai calendar <username> [options]
 
 ## AI Content Optimizer
 
-### xactions optimize
+### medirus optimize
 
 AI-optimize a tweet for engagement.
 
 ```bash
-xactions optimize <text> [options]
+medirus optimize <text> [options]
 ```
 
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--goal <goal>` | engagement, clarity, growth, viral | `engagement` |
 
-### xactions hashtags
+### medirus hashtags
 
 Suggest hashtags for tweet text.
 
 ```bash
-xactions hashtags <text> [options]
+medirus hashtags <text> [options]
 ```
 
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-n, --count <n>` | Number of suggestions | `5` |
 
-### xactions predict
+### medirus predict
 
 Predict tweet performance (score, reach, strengths, weaknesses).
 
 ```bash
-xactions predict <text>
+medirus predict <text>
 ```
 
-### xactions variations
+### medirus variations
 
 Generate tweet variations.
 
 ```bash
-xactions variations <text> [options]
+medirus variations <text> [options]
 ```
 
 | Option | Description | Default |
@@ -1565,12 +1565,12 @@ xactions variations <text> [options]
 
 ## Analytics Commands
 
-### xactions sentiment
+### medirus sentiment
 
 Analyze sentiment of text or tweet content.
 
 ```bash
-xactions sentiment <text> [options]
+medirus sentiment <text> [options]
 ```
 
 | Option | Description | Default |
@@ -1578,12 +1578,12 @@ xactions sentiment <text> [options]
 | `-m, --mode <mode>` | rules or llm | `rules` |
 | `-o, --output <file>` | Save results | stdout |
 
-### xactions monitor
+### medirus monitor
 
 Start monitoring sentiment for a username or keyword.
 
 ```bash
-xactions monitor <target> [options]
+medirus monitor <target> [options]
 ```
 
 | Option | Description | Default |
@@ -1594,12 +1594,12 @@ xactions monitor <target> [options]
 | `--threshold <n>` | Alert threshold | `-0.3` |
 | `--webhook <url>` | Webhook for alerts | — |
 
-### xactions report
+### medirus report
 
 Generate a reputation report for a monitored username.
 
 ```bash
-xactions report <username> [options]
+medirus report <username> [options]
 ```
 
 | Option | Description | Default |
@@ -1608,12 +1608,12 @@ xactions report <username> [options]
 | `-f, --format <format>` | json or markdown | `markdown` |
 | `-o, --output <file>` | Save report | stdout |
 
-### xactions history
+### medirus history
 
 View account history over time.
 
 ```bash
-xactions history <username> [options]
+medirus history <username> [options]
 ```
 
 | Option | Description | Default |
@@ -1623,36 +1623,36 @@ xactions history <username> [options]
 | `-f, --format <format>` | json or csv | `json` |
 | `--export <path>` | Export to file | — |
 
-### xactions snapshot
+### medirus snapshot
 
 Start auto-snapshotting an account (long-running).
 
 ```bash
-xactions snapshot <username> [options]
+medirus snapshot <username> [options]
 ```
 
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-i, --interval <minutes>` | Snapshot interval | `60` |
 
-### xactions audience
+### medirus audience
 
 Analyze follower overlap between two accounts.
 
 ```bash
-xactions audience <username1> <username2> [options]
+medirus audience <username1> <username2> [options]
 ```
 
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--max <n>` | Max followers to compare | `5000` |
 
-### xactions evergreen
+### medirus evergreen
 
 Find and recycle top-performing evergreen content.
 
 ```bash
-xactions evergreen <username> [options]
+medirus evergreen <username> [options]
 ```
 
 | Option | Description | Default |
@@ -1665,56 +1665,56 @@ xactions evergreen <username> [options]
 
 ## CRM Commands
 
-### xactions crm sync
+### medirus crm sync
 
 Sync followers to the built-in CRM.
 
 ```bash
-xactions crm sync <username>
+medirus crm sync <username>
 ```
 
-### xactions crm tag
+### medirus crm tag
 
 Tag a contact.
 
 ```bash
-xactions crm tag <username> <tag>
+medirus crm tag <username> <tag>
 ```
 
-### xactions crm search
+### medirus crm search
 
 Search contacts by query.
 
 ```bash
-xactions crm search <query>
+medirus crm search <query>
 ```
 
-### xactions crm score
+### medirus crm score
 
 Auto-score all contacts based on engagement.
 
 ```bash
-xactions crm score
+medirus crm score
 ```
 
-### xactions crm segment
+### medirus crm segment
 
 Get members of a segment.
 
 ```bash
-xactions crm segment <name>
+medirus crm segment <name>
 ```
 
 ---
 
 ## Scheduling Commands
 
-### xactions schedule add
+### medirus schedule add
 
 Add a scheduled job.
 
 ```bash
-xactions schedule add <name> <cron> [options]
+medirus schedule add <name> <cron> [options]
 ```
 
 | Option | Description | Default |
@@ -1724,45 +1724,45 @@ xactions schedule add <name> <cron> [options]
 **Example:**
 
 ```bash
-xactions schedule add morning-scrape "0 9 * * *" -c "xactions followers nichxbt -l 100 -o daily.json"
+medirus schedule add morning-scrape "0 9 * * *" -c "medirus followers nichxbt -l 100 -o daily.json"
 ```
 
-### xactions schedule list
+### medirus schedule list
 
 List all scheduled jobs.
 
 ```bash
-$ xactions schedule list
+$ medirus schedule list
  ✅ morning-scrape  0 9 * * *   Next: 2025-01-20 09:00
  ⏸  weekly-export   0 0 * * 1   Next: 2025-01-27 00:00 (disabled)
 ```
 
-### xactions schedule remove
+### medirus schedule remove
 
 Remove a scheduled job.
 
 ```bash
-xactions schedule remove <name>
+medirus schedule remove <name>
 ```
 
-### xactions schedule run
+### medirus schedule run
 
 Run a job immediately (ignoring cron schedule).
 
 ```bash
-xactions schedule run <name>
+medirus schedule run <name>
 ```
 
 ---
 
 ## RSS Monitor
 
-### xactions rss add
+### medirus rss add
 
 Add an RSS feed for monitoring and auto-drafting.
 
 ```bash
-xactions rss add <name> <url> [options]
+medirus rss add <name> <url> [options]
 ```
 
 | Option | Description | Default |
@@ -1772,84 +1772,84 @@ xactions rss add <name> <url> [options]
 **Example:**
 
 ```bash
-xactions rss add techcrunch https://techcrunch.com/feed/ -t "🔗 {title}\n{description}\n\n{link}"
+medirus rss add techcrunch https://techcrunch.com/feed/ -t "🔗 {title}\n{description}\n\n{link}"
 ```
 
-### xactions rss list
+### medirus rss list
 
 List all monitored feeds.
 
 ```bash
-xactions rss list
+medirus rss list
 ```
 
-### xactions rss check
+### medirus rss check
 
 Check feeds for new items and create draft posts.
 
 ```bash
-xactions rss check [name]    # Check specific feed or all feeds
+medirus rss check [name]    # Check specific feed or all feeds
 ```
 
-### xactions rss drafts
+### medirus rss drafts
 
 View draft posts generated from RSS items.
 
 ```bash
-xactions rss drafts
+medirus rss drafts
 ```
 
 ---
 
 ## Notification Commands
 
-### xactions notify test
+### medirus notify test
 
 Send a test notification to a specific channel.
 
 ```bash
-xactions notify test <channel>    # slack, discord, telegram, email
+medirus notify test <channel>    # slack, discord, telegram, email
 ```
 
-### xactions notify send
+### medirus notify send
 
 Send a notification to all configured channels.
 
 ```bash
-xactions notify send <message> [options]
+medirus notify send <message> [options]
 ```
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `-t, --title <title>` | Notification title | `XActions Alert` |
+| `-t, --title <title>` | Notification title | `Medirus Alert` |
 | `-s, --severity <level>` | info, warning, critical | `info` |
 
-### xactions notify configure
+### medirus notify configure
 
 Interactive configuration for notification channels (Slack, Discord, Telegram, email).
 
 ```bash
-xactions notify configure
+medirus notify configure
 ```
 
 ---
 
 ## Dataset Management
 
-### xactions dataset list
+### medirus dataset list
 
 List all stored scraping datasets.
 
 ```bash
-xactions dataset list
+medirus dataset list
 ```
 
-### xactions dataset export
+### medirus dataset export
 
 Export a dataset to file.
 
 ```bash
-xactions dataset export <name> [options]
+medirus dataset export <name> [options]
 ```
 
 | Option | Description | Default |
@@ -1857,56 +1857,56 @@ xactions dataset export <name> [options]
 | `-f, --format <format>` | json, csv, jsonl | `json` |
 | `-o, --output <path>` | Output file | stdout |
 
-### xactions dataset delete
+### medirus dataset delete
 
 Delete a stored dataset.
 
 ```bash
-xactions dataset delete <name>
+medirus dataset delete <name>
 ```
 
 ---
 
 ## Team Management
 
-### xactions team create
+### medirus team create
 
 Create a new team.
 
 ```bash
-xactions team create <name> [options]
+medirus team create <name> [options]
 ```
 
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-u, --owner <username>` | Team owner | current user |
 
-### xactions team invite
+### medirus team invite
 
 Invite a user to a team.
 
 ```bash
-xactions team invite <teamId> <email> [options]
+medirus team invite <teamId> <email> [options]
 ```
 
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-r, --role <role>` | admin, member, viewer | `member` |
 
-### xactions team members
+### medirus team members
 
 List team members.
 
 ```bash
-xactions team members <teamId>
+medirus team members <teamId>
 ```
 
-### xactions team activity
+### medirus team activity
 
 View team activity log.
 
 ```bash
-xactions team activity <teamId> [options]
+medirus team activity <teamId> [options]
 ```
 
 | Option | Description | Default |
@@ -1920,7 +1920,7 @@ xactions team activity <teamId> [options]
 Run actions in bulk from a CSV, JSON, or TXT file.
 
 ```bash
-xactions bulk <action> <file> [options]
+medirus bulk <action> <file> [options]
 ```
 
 **Actions:** `follow`, `unfollow`, `block`, `mute`, `scrape`
@@ -1934,20 +1934,20 @@ xactions bulk <action> <file> [options]
 **Example:**
 
 ```bash
-xactions bulk follow targets.csv --delay 3000
-xactions bulk scrape usernames.txt -o results.json
+medirus bulk follow targets.csv --delay 3000
+medirus bulk scrape usernames.txt -o results.json
 ```
 
 ---
 
 ## Import/Export Compatibility
 
-### xactions import
+### medirus import
 
 Import data from Apify, Phantombuster, or CSV.
 
 ```bash
-xactions import <file> [options]
+medirus import <file> [options]
 ```
 
 | Option | Description | Default |
@@ -1955,12 +1955,12 @@ xactions import <file> [options]
 | `--from <source>` | apify, phantombuster, auto | `auto` |
 | `-o, --output <path>` | Output file | — |
 
-### xactions export-data
+### medirus export-data
 
 Export data in external tool format.
 
 ```bash
-xactions export-data <file> [options]
+medirus export-data <file> [options]
 ```
 
 | Option | Description | Default |
@@ -1969,12 +1969,12 @@ xactions export-data <file> [options]
 | `--type <type>` | profile, tweet, followers | `profile` |
 | `-o, --output <path>` | Output file | — |
 
-### xactions convert
+### medirus convert
 
 Convert between data formats.
 
 ```bash
-xactions convert <file> [options]
+medirus convert <file> [options]
 ```
 
 | Option | Description | Default |
@@ -1990,7 +1990,7 @@ xactions convert <file> [options]
 Generate MCP server configuration for AI tools.
 
 ```bash
-xactions mcp-config [options]
+medirus mcp-config [options]
 ```
 
 | Option | Description | Default |
@@ -2002,17 +2002,17 @@ xactions mcp-config [options]
 
 ```bash
 # Generate config for Claude Desktop
-xactions mcp-config -c claude
+medirus mcp-config -c claude
 
 # Write directly to Claude config file
-xactions mcp-config -c claude --write
+medirus mcp-config -c claude --write
 ```
 
 ---
 
 ## Output Formats
 
-XActions supports two output formats: **JSON** and **CSV**.
+Medirus supports two output formats: **JSON** and **CSV**.
 
 ### JSON Output
 
@@ -2020,7 +2020,7 @@ JSON is the default format when using `--output` with a `.json` extension.
 
 ```bash
 # Save as JSON
-xactions followers nichxbt -o followers.json
+medirus followers nichxbt -o followers.json
 ```
 
 **Features:**
@@ -2034,7 +2034,7 @@ Use `.csv` extension to export as comma-separated values.
 
 ```bash
 # Save as CSV
-xactions followers nichxbt -o followers.csv
+medirus followers nichxbt -o followers.csv
 ```
 
 **Features:**
@@ -2048,65 +2048,65 @@ Without `--output`, data is printed to stdout as JSON.
 
 ```bash
 # Print to terminal
-xactions followers nichxbt
+medirus followers nichxbt
 
 # Pipe to jq for processing
-xactions followers nichxbt | jq '.[].username'
+medirus followers nichxbt | jq '.[].username'
 
 # Pipe to file
-xactions followers nichxbt > followers.json
+medirus followers nichxbt > followers.json
 
 # Pipe to another command
-xactions followers nichxbt | wc -l
+medirus followers nichxbt | wc -l
 ```
 
 ---
 
 ## Environment Variables
 
-XActions supports the following environment variables:
+Medirus supports the following environment variables:
 
 | Variable              | Description                                      | Default              |
 |-----------------------|--------------------------------------------------|----------------------|
-| `XACTIONS_AUTH_TOKEN` | X/Twitter auth_token cookie (alternative to login) | —                  |
-| `XACTIONS_CONFIG_DIR` | Custom config directory path                     | `~/.xactions`        |
-| `XACTIONS_HEADLESS`   | Run browser in headless mode                     | `true`               |
-| `XACTIONS_TIMEOUT`    | Request timeout in milliseconds                  | `30000`              |
-| `XACTIONS_PROXY`      | HTTP/SOCKS proxy URL                             | —                    |
+| `MEDIRUS_AUTH_TOKEN` | X/Twitter auth_token cookie (alternative to login) | —                  |
+| `MEDIRUS_CONFIG_DIR` | Custom config directory path                     | `~/.medirus`        |
+| `MEDIRUS_HEADLESS`   | Run browser in headless mode                     | `true`               |
+| `MEDIRUS_TIMEOUT`    | Request timeout in milliseconds                  | `30000`              |
+| `MEDIRUS_PROXY`      | HTTP/SOCKS proxy URL                             | —                    |
 | `PROXY_DAILY_BUDGET_USD` | Daily proxy spend ceiling in USD (Epic 40); exhausted budget returns `BUDGET_CEILING_REACHED` soft degradation | `50` |
-| `DEBUG`               | Enable debug logging (`xactions:*`)              | —                    |
+| `DEBUG`               | Enable debug logging (`medirus:*`)              | —                    |
 
 ### Examples
 
 ```bash
 # Use auth token from environment
-export XACTIONS_AUTH_TOKEN="your_auth_token_here"
-xactions followers nichxbt
+export MEDIRUS_AUTH_TOKEN="your_auth_token_here"
+medirus followers nichxbt
 
 # Use a proxy
-export XACTIONS_PROXY="http://proxy.example.com:8080"
-xactions profile elonmusk
+export MEDIRUS_PROXY="http://proxy.example.com:8080"
+medirus profile elonmusk
 
 # Enable debug mode
-DEBUG=xactions:* xactions followers nichxbt
+DEBUG=medirus:* medirus followers nichxbt
 
 # Custom config directory
-XACTIONS_CONFIG_DIR=/custom/path xactions login
+MEDIRUS_CONFIG_DIR=/custom/path medirus login
 
 # Inline environment variables
-XACTIONS_HEADLESS=false xactions profile nichxbt
+MEDIRUS_HEADLESS=false medirus profile nichxbt
 ```
 
 ---
 
 ## Configuration
 
-XActions stores configuration in `~/.xactions/config.json`.
+Medirus stores configuration in `~/.medirus/config.json`.
 
 ### Config File Location
 
 ```
-~/.xactions/
+~/.medirus/
 ├── config.json      # Authentication and settings
 ├── personas/        # Saved persona configurations
 │   ├── persona_123.json
@@ -2131,10 +2131,10 @@ You can manually edit the config file:
 
 ```bash
 # View current config
-cat ~/.xactions/config.json
+cat ~/.medirus/config.json
 
 # Edit config
-nano ~/.xactions/config.json
+nano ~/.medirus/config.json
 ```
 
 ---
@@ -2147,19 +2147,19 @@ nano ~/.xactions/config.json
 
 ```bash
 # Solution: Run login command
-xactions login
+medirus login
 ```
 
 **2. "Timeout" errors**
 
 ```bash
 # Increase timeout
-XACTIONS_TIMEOUT=60000 xactions followers nichxbt
+MEDIRUS_TIMEOUT=60000 medirus followers nichxbt
 ```
 
 **3. "Browser not found" error**
 
-XActions requires Chromium/Chrome. Install it:
+Medirus requires Chromium/Chrome. Install it:
 
 ```bash
 # macOS
@@ -2183,7 +2183,7 @@ If you're being rate limited:
 
 ```bash
 # Run with visible browser for debugging
-XACTIONS_HEADLESS=false xactions profile nichxbt
+MEDIRUS_HEADLESS=false medirus profile nichxbt
 ```
 
 ### Debug Mode
@@ -2191,12 +2191,12 @@ XACTIONS_HEADLESS=false xactions profile nichxbt
 Enable verbose logging for troubleshooting:
 
 ```bash
-DEBUG=xactions:* xactions followers nichxbt
+DEBUG=medirus:* medirus followers nichxbt
 ```
 
 ### Getting Help
 
-- **Documentation**: https://xactions.app/docs
+- **Documentation**: https://medirus.online/docs
 - **GitHub Issues**: https://github.com/nirholas/xactions/issues
 - **Twitter/X**: [@nichxbt](https://x.com/nichxbt)
 
@@ -2206,107 +2206,107 @@ DEBUG=xactions:* xactions followers nichxbt
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `login` | Set up authentication | `xactions login` |
-| `logout` | Remove authentication | `xactions logout` |
-| `profile` | Get user profile | `xactions profile elonmusk --json` |
-| `followers` | Scrape followers | `xactions followers user -l 500 -o f.json` |
-| `following` | Scrape following | `xactions following user -l 500` |
-| `non-followers` | Find non-followers | `xactions non-followers myuser` |
-| `tweets` | Scrape tweets | `xactions tweets user -l 100 --replies` |
-| `search` | Search tweets | `xactions search "query" -f top` |
-| `hashtag` | Scrape hashtag | `xactions hashtag AI -l 200` |
-| `thread` | Scrape thread | `xactions thread <url>` |
-| `media` | Scrape media | `xactions media user -l 50` |
-| `info` | Show info | `xactions info` |
-| `persona create` | Create a persona | `xactions persona create` |
-| `persona list` | List personas | `xactions persona list` |
-| `persona run` | Start algorithm builder | `xactions persona run <id>` |
-| `persona status` | Show persona stats | `xactions persona status <id>` |
-| `persona edit` | Modify persona | `xactions persona edit <id> --strategy aggressive` |
-| `persona delete` | Delete a persona | `xactions persona delete <id>` |
-| `agent setup` | Agent setup wizard | `xactions agent setup` |
-| `agent start` | Start thought leader agent | `xactions agent start` |
-| `agent test` | 5-minute test run | `xactions agent test` |
-| `agent login` | Manual browser login | `xactions agent login` |
-| `agent status` | Today's agent metrics | `xactions agent status` |
-| `agent report` | Growth report | `xactions agent report -d 30` |
-| `plugin install` | Install plugin | `xactions plugin install xactions-plugin-*` |
-| `plugin remove` | Remove plugin | `xactions plugin remove <name>` |
-| `plugin list` | List plugins | `xactions plugin list` |
-| `plugin enable` | Enable plugin | `xactions plugin enable <name>` |
-| `plugin disable` | Disable plugin | `xactions plugin disable <name>` |
-| `plugin discover` | Discover plugins | `xactions plugin discover` |
-| `stream start` | Start real-time stream | `xactions stream start tweet nichxbt -i 30` |
-| `stream stop` | Stop stream | `xactions stream stop <id>` |
-| `stream list` | List streams | `xactions stream list` |
-| `stream history` | Stream event history | `xactions stream history <id> -l 50` |
-| `stream pause` | Pause stream | `xactions stream pause <id>` |
-| `stream resume` | Resume stream | `xactions stream resume <id>` |
-| `stream status` | Stream details | `xactions stream status <id>` |
-| `stream stop-all` | Stop all streams | `xactions stream stop-all` |
-| `workflow create` | Create workflow | `xactions workflow create -f flow.json` |
-| `workflow run` | Run workflow | `xactions workflow run morning-engage` |
-| `workflow list` | List workflows | `xactions workflow list` |
-| `workflow delete` | Delete workflow | `xactions workflow delete <id>` |
-| `workflow actions` | List actions | `xactions workflow actions` |
-| `workflow runs` | Execution history | `xactions workflow runs <id>` |
-| `graph build` | Build social graph | `xactions graph build nichxbt -d 2` |
-| `graph analyze` | Analyze graph | `xactions graph analyze <id>` |
-| `graph recommend` | Get recommendations | `xactions graph recommend <id>` |
-| `graph export` | Export graph | `xactions graph export <id> -f html` |
-| `graph list` | List graphs | `xactions graph list` |
-| `graph delete` | Delete graph | `xactions graph delete <id>` |
-| `export` | Export account | `xactions export nichxbt -f json,csv` |
-| `migrate` | Migrate to Bluesky/Mastodon | `xactions migrate user --to bluesky` |
-| `diff` | Compare exports | `xactions diff export1/ export2/` |
-| `scrape` | Cross-platform scrape | `xactions scrape profile -p bluesky -u user` |
-| `platforms` | List platforms | `xactions platforms` |
-| `ai analyze` | Analyze writing voice | `xactions ai analyze nichxbt` |
-| `ai generate` | Generate tweets | `xactions ai generate "AI" -v nichxbt` |
-| `ai rewrite` | Rewrite tweet | `xactions ai rewrite "text" -v nichxbt` |
-| `ai calendar` | Content calendar | `xactions ai calendar nichxbt -d 7` |
-| `optimize` | Optimize tweet | `xactions optimize "my tweet"` |
-| `hashtags` | Suggest hashtags | `xactions hashtags "my tweet" -n 5` |
-| `predict` | Predict performance | `xactions predict "my tweet"` |
-| `variations` | Generate variations | `xactions variations "my tweet" -n 5` |
-| `sentiment` | Analyze sentiment | `xactions sentiment "great news!"` |
-| `monitor` | Monitor reputation | `xactions monitor nichxbt -i 300` |
-| `report` | Reputation report | `xactions report nichxbt -p 7d` |
-| `history` | Account history | `xactions history nichxbt -d 30` |
-| `snapshot` | Auto-snapshot | `xactions snapshot nichxbt -i 60` |
-| `audience` | Follower overlap | `xactions audience user1 user2` |
-| `evergreen` | Recycle top content | `xactions evergreen nichxbt` |
-| `crm sync` | Sync followers to CRM | `xactions crm sync nichxbt` |
-| `crm tag` | Tag contact | `xactions crm tag user vip` |
-| `crm search` | Search contacts | `xactions crm search "ai"` |
-| `crm score` | Auto-score contacts | `xactions crm score` |
-| `crm segment` | Get segment | `xactions crm segment influencers` |
-| `schedule add` | Add scheduled job | `xactions schedule add job "0 9 * * *" -c "..."` |
-| `schedule list` | List jobs | `xactions schedule list` |
-| `schedule remove` | Remove job | `xactions schedule remove <name>` |
-| `schedule run` | Run job now | `xactions schedule run <name>` |
-| `rss add` | Add RSS feed | `xactions rss add tech https://...` |
-| `rss list` | List feeds | `xactions rss list` |
-| `rss check` | Check for new items | `xactions rss check` |
-| `rss drafts` | View draft posts | `xactions rss drafts` |
-| `notify test` | Test notification | `xactions notify test slack` |
-| `notify send` | Send notification | `xactions notify send "Alert!"` |
-| `notify configure` | Configure channels | `xactions notify configure` |
-| `dataset list` | List datasets | `xactions dataset list` |
-| `dataset export` | Export dataset | `xactions dataset export my-data -f csv` |
-| `dataset delete` | Delete dataset | `xactions dataset delete my-data` |
-| `team create` | Create team | `xactions team create "My Team"` |
-| `team invite` | Invite member | `xactions team invite <id> user@email.com` |
-| `team members` | List members | `xactions team members <id>` |
-| `team activity` | Activity log | `xactions team activity <id>` |
-| `bulk` | Bulk operations | `xactions bulk follow targets.csv` |
-| `import` | Import data | `xactions import data.json --from apify` |
-| `export-data` | Export to format | `xactions export-data data.json --to csv` |
-| `convert` | Convert formats | `xactions convert data.json --to csv` |
-| `mcp-config` | Generate MCP config | `xactions mcp-config -c claude --write` |
-| `canary status` | Selector drift status | `xactions canary status --json` |
-| `canary probe` | Run canary probe cycle | `xactions canary probe` |
-| `canary heal` | GitOps selector healing | `xactions canary heal --platform twitter --preview` |
+| `login` | Set up authentication | `medirus login` |
+| `logout` | Remove authentication | `medirus logout` |
+| `profile` | Get user profile | `medirus profile elonmusk --json` |
+| `followers` | Scrape followers | `medirus followers user -l 500 -o f.json` |
+| `following` | Scrape following | `medirus following user -l 500` |
+| `non-followers` | Find non-followers | `medirus non-followers myuser` |
+| `tweets` | Scrape tweets | `medirus tweets user -l 100 --replies` |
+| `search` | Search tweets | `medirus search "query" -f top` |
+| `hashtag` | Scrape hashtag | `medirus hashtag AI -l 200` |
+| `thread` | Scrape thread | `medirus thread <url>` |
+| `media` | Scrape media | `medirus media user -l 50` |
+| `info` | Show info | `medirus info` |
+| `persona create` | Create a persona | `medirus persona create` |
+| `persona list` | List personas | `medirus persona list` |
+| `persona run` | Start algorithm builder | `medirus persona run <id>` |
+| `persona status` | Show persona stats | `medirus persona status <id>` |
+| `persona edit` | Modify persona | `medirus persona edit <id> --strategy aggressive` |
+| `persona delete` | Delete a persona | `medirus persona delete <id>` |
+| `agent setup` | Agent setup wizard | `medirus agent setup` |
+| `agent start` | Start thought leader agent | `medirus agent start` |
+| `agent test` | 5-minute test run | `medirus agent test` |
+| `agent login` | Manual browser login | `medirus agent login` |
+| `agent status` | Today's agent metrics | `medirus agent status` |
+| `agent report` | Growth report | `medirus agent report -d 30` |
+| `plugin install` | Install plugin | `medirus plugin install medirus-plugin-*` |
+| `plugin remove` | Remove plugin | `medirus plugin remove <name>` |
+| `plugin list` | List plugins | `medirus plugin list` |
+| `plugin enable` | Enable plugin | `medirus plugin enable <name>` |
+| `plugin disable` | Disable plugin | `medirus plugin disable <name>` |
+| `plugin discover` | Discover plugins | `medirus plugin discover` |
+| `stream start` | Start real-time stream | `medirus stream start tweet nichxbt -i 30` |
+| `stream stop` | Stop stream | `medirus stream stop <id>` |
+| `stream list` | List streams | `medirus stream list` |
+| `stream history` | Stream event history | `medirus stream history <id> -l 50` |
+| `stream pause` | Pause stream | `medirus stream pause <id>` |
+| `stream resume` | Resume stream | `medirus stream resume <id>` |
+| `stream status` | Stream details | `medirus stream status <id>` |
+| `stream stop-all` | Stop all streams | `medirus stream stop-all` |
+| `workflow create` | Create workflow | `medirus workflow create -f flow.json` |
+| `workflow run` | Run workflow | `medirus workflow run morning-engage` |
+| `workflow list` | List workflows | `medirus workflow list` |
+| `workflow delete` | Delete workflow | `medirus workflow delete <id>` |
+| `workflow actions` | List actions | `medirus workflow actions` |
+| `workflow runs` | Execution history | `medirus workflow runs <id>` |
+| `graph build` | Build social graph | `medirus graph build nichxbt -d 2` |
+| `graph analyze` | Analyze graph | `medirus graph analyze <id>` |
+| `graph recommend` | Get recommendations | `medirus graph recommend <id>` |
+| `graph export` | Export graph | `medirus graph export <id> -f html` |
+| `graph list` | List graphs | `medirus graph list` |
+| `graph delete` | Delete graph | `medirus graph delete <id>` |
+| `export` | Export account | `medirus export nichxbt -f json,csv` |
+| `migrate` | Migrate to Bluesky/Mastodon | `medirus migrate user --to bluesky` |
+| `diff` | Compare exports | `medirus diff export1/ export2/` |
+| `scrape` | Cross-platform scrape | `medirus scrape profile -p bluesky -u user` |
+| `platforms` | List platforms | `medirus platforms` |
+| `ai analyze` | Analyze writing voice | `medirus ai analyze nichxbt` |
+| `ai generate` | Generate tweets | `medirus ai generate "AI" -v nichxbt` |
+| `ai rewrite` | Rewrite tweet | `medirus ai rewrite "text" -v nichxbt` |
+| `ai calendar` | Content calendar | `medirus ai calendar nichxbt -d 7` |
+| `optimize` | Optimize tweet | `medirus optimize "my tweet"` |
+| `hashtags` | Suggest hashtags | `medirus hashtags "my tweet" -n 5` |
+| `predict` | Predict performance | `medirus predict "my tweet"` |
+| `variations` | Generate variations | `medirus variations "my tweet" -n 5` |
+| `sentiment` | Analyze sentiment | `medirus sentiment "great news!"` |
+| `monitor` | Monitor reputation | `medirus monitor nichxbt -i 300` |
+| `report` | Reputation report | `medirus report nichxbt -p 7d` |
+| `history` | Account history | `medirus history nichxbt -d 30` |
+| `snapshot` | Auto-snapshot | `medirus snapshot nichxbt -i 60` |
+| `audience` | Follower overlap | `medirus audience user1 user2` |
+| `evergreen` | Recycle top content | `medirus evergreen nichxbt` |
+| `crm sync` | Sync followers to CRM | `medirus crm sync nichxbt` |
+| `crm tag` | Tag contact | `medirus crm tag user vip` |
+| `crm search` | Search contacts | `medirus crm search "ai"` |
+| `crm score` | Auto-score contacts | `medirus crm score` |
+| `crm segment` | Get segment | `medirus crm segment influencers` |
+| `schedule add` | Add scheduled job | `medirus schedule add job "0 9 * * *" -c "..."` |
+| `schedule list` | List jobs | `medirus schedule list` |
+| `schedule remove` | Remove job | `medirus schedule remove <name>` |
+| `schedule run` | Run job now | `medirus schedule run <name>` |
+| `rss add` | Add RSS feed | `medirus rss add tech https://...` |
+| `rss list` | List feeds | `medirus rss list` |
+| `rss check` | Check for new items | `medirus rss check` |
+| `rss drafts` | View draft posts | `medirus rss drafts` |
+| `notify test` | Test notification | `medirus notify test slack` |
+| `notify send` | Send notification | `medirus notify send "Alert!"` |
+| `notify configure` | Configure channels | `medirus notify configure` |
+| `dataset list` | List datasets | `medirus dataset list` |
+| `dataset export` | Export dataset | `medirus dataset export my-data -f csv` |
+| `dataset delete` | Delete dataset | `medirus dataset delete my-data` |
+| `team create` | Create team | `medirus team create "My Team"` |
+| `team invite` | Invite member | `medirus team invite <id> user@email.com` |
+| `team members` | List members | `medirus team members <id>` |
+| `team activity` | Activity log | `medirus team activity <id>` |
+| `bulk` | Bulk operations | `medirus bulk follow targets.csv` |
+| `import` | Import data | `medirus import data.json --from apify` |
+| `export-data` | Export to format | `medirus export-data data.json --to csv` |
+| `convert` | Convert formats | `medirus convert data.json --to csv` |
+| `mcp-config` | Generate MCP config | `medirus mcp-config -c claude --write` |
+| `canary status` | Selector drift status | `medirus canary status --json` |
+| `canary probe` | Run canary probe cycle | `medirus canary probe` |
+| `canary heal` | GitOps selector healing | `medirus canary heal --platform twitter --preview` |
 
 ---
 
@@ -2314,46 +2314,46 @@ DEBUG=xactions:* xactions followers nichxbt
 
 Selector drift detection and GitOps healing. Targets are configured in `config/canary-targets.json` (`{ platform: [{ name, url, selectorChain, expectedShape }] }`). Healing is manual-trigger only — auto-heal on detection is prohibited (AD-44).
 
-### xactions canary status
+### medirus canary status
 
 Display per-platform drift status from the rate governor (`platformDrift`): success rate, consecutive failures, last probe time, and last working selector.
 
 ```bash
-xactions canary status
-xactions canary status --json
+medirus canary status
+medirus canary status --json
 ```
 
-### xactions canary probe
+### medirus canary probe
 
 Run a single `SelectorCanary` probe cycle across all configured targets. Reports `successRate`, `drift`, and whether a fallback selector was used per platform.
 
 ```bash
-xactions canary probe
-xactions canary probe --json
+medirus canary probe
+medirus canary probe --json
 ```
 
-### xactions canary heal
+### medirus canary heal
 
 Heal drifted selectors via the GitOps pipeline (`SelectorCanary` → `AutoSelectorFallback` → `SelectorSandbox` → `CanaryHealer` → GitHub Draft PR). Never mutates selectors at runtime.
 
 ```bash
 # Preview the unified-diff without creating anything
-xactions canary heal --platform twitter --target twitter-profile --preview
+medirus canary heal --platform twitter --target twitter-profile --preview
 
 # Create a GitHub Draft PR (branch canary-heal/<platform>-<target>-<ts>)
-xactions canary heal --platform twitter
+medirus canary heal --platform twitter
 
 # Heal every target for a platform
-xactions canary heal --platform facebook
+medirus canary heal --platform facebook
 
 # Heal all configured targets
-xactions canary heal
+medirus canary heal
 
 # Write a patch file instead of a PR
-xactions canary heal --output fix.patch
+medirus canary heal --output fix.patch
 
 # Structured JSON output
-xactions canary heal --json
+medirus canary heal --json
 ```
 
 | Option | Description |
@@ -2375,7 +2375,7 @@ Apache 2.0 License - see [LICENSE](../LICENSE) for details.
 ---
 
 <p align="center">
-  <strong>⚡ XActions</strong><br>
+  <strong>⚡ Medirus</strong><br>
   Built by <a href="https://x.com/nichxbt">nich (@nichxbt)</a><br>
-  <a href="https://xactions.app">https://xactions.app</a>
+  <a href="https://medirus.online">https://medirus.online</a>
 </p>

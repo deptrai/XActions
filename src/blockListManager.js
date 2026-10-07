@@ -10,7 +10,7 @@
 // 1. Go to x.com
 // 2. Open Developer Console (F12)
 // 3. Paste and run
-// 4. Use window.XActions.blockListManager.<function>() to run features
+// 4. Use window.Medirus.blockListManager.<function>() to run features
 //
 // Last Updated: 30 March 2026
 (() => {
@@ -81,7 +81,7 @@
   // ─────────────────────────────────────────────────
   // State persistence via sessionStorage
   // ─────────────────────────────────────────────────
-  const STORAGE_KEY = 'xactions_blocklist';
+  const STORAGE_KEY = 'medirus_blocklist';
 
   const getCollected = () => {
     try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]'); }
@@ -154,16 +154,16 @@
       const csvHeader = 'username,displayName';
       const csvRows = blockedUsers.map(u => `${u.username},"${(u.displayName || '').replace(/"/g, '""')}"`);
       const csvContent = [csvHeader, ...csvRows].join('\n');
-      downloadFile(csvContent, `xactions-blocklist-${timestamp}.csv`, 'text/csv');
+      downloadFile(csvContent, `medirus-blocklist-${timestamp}.csv`, 'text/csv');
       console.log(`📥 Downloaded block list as CSV (${blockedUsers.length} accounts).`);
     } else {
       const jsonContent = JSON.stringify({
         exportedAt: new Date().toISOString(),
-        tool: 'XActions Block List Manager',
+        tool: 'Medirus Block List Manager',
         count: blockedUsers.length,
         accounts: blockedUsers,
       }, null, 2);
-      downloadFile(jsonContent, `xactions-blocklist-${timestamp}.json`);
+      downloadFile(jsonContent, `medirus-blocklist-${timestamp}.json`);
       console.log(`📥 Downloaded block list as JSON (${blockedUsers.length} accounts).`);
     }
 
@@ -298,9 +298,9 @@
     }
 
     const shareableData = {
-      format: 'xactions-blocklist-v1',
+      format: 'medirus-blocklist-v1',
       createdAt: new Date().toISOString(),
-      description: 'Shared block list from XActions',
+      description: 'Shared block list from Medirus',
       count: blockedUsers.length,
       usernames: blockedUsers.map(u => u.username),
     };
@@ -309,11 +309,11 @@
     const timestamp = new Date().toISOString().slice(0, 10);
 
     // Download the shareable file
-    downloadFile(shareString, `xactions-shared-blocklist-${timestamp}.json`);
+    downloadFile(shareString, `medirus-shared-blocklist-${timestamp}.json`);
     console.log(`✅ Shareable block list generated (${blockedUsers.length} accounts).`);
     console.log('📋 To import this list, the recipient can use:');
     console.log('   const list = <paste JSON>;');
-    console.log('   window.XActions.blockListManager.importBlockList(list.usernames);');
+    console.log('   window.Medirus.blockListManager.importBlockList(list.usernames);');
 
     // Also copy to clipboard if available
     try {
@@ -480,10 +480,10 @@
   };
 
   // ─────────────────────────────────────────────────
-  // Expose on window.XActions
+  // Expose on window.Medirus
   // ─────────────────────────────────────────────────
-  window.XActions = window.XActions || {};
-  window.XActions.blockListManager = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.blockListManager = {
     exportBlockList,
     importBlockList,
     shareBlockList,
@@ -491,13 +491,13 @@
     unmuteConversation,
   };
 
-  console.log('✅ XActions Block List Manager loaded!');
+  console.log('✅ Medirus Block List Manager loaded!');
   console.log('');
   console.log('📋 Available commands:');
-  console.log('  window.XActions.blockListManager.exportBlockList("json")   — Export blocked accounts as JSON');
-  console.log('  window.XActions.blockListManager.exportBlockList("csv")    — Export blocked accounts as CSV');
-  console.log('  window.XActions.blockListManager.importBlockList(["user1", "user2"])  — Block a list of users');
-  console.log('  window.XActions.blockListManager.shareBlockList()          — Generate shareable block list');
-  console.log('  window.XActions.blockListManager.viewMutedConversations()  — View muted conversations');
-  console.log('  window.XActions.blockListManager.unmuteConversation("word") — Unmute a specific keyword');
+  console.log('  window.Medirus.blockListManager.exportBlockList("json")   — Export blocked accounts as JSON');
+  console.log('  window.Medirus.blockListManager.exportBlockList("csv")    — Export blocked accounts as CSV');
+  console.log('  window.Medirus.blockListManager.importBlockList(["user1", "user2"])  — Block a list of users');
+  console.log('  window.Medirus.blockListManager.shareBlockList()          — Generate shareable block list');
+  console.log('  window.Medirus.blockListManager.viewMutedConversations()  — View muted conversations');
+  console.log('  window.Medirus.blockListManager.unmuteConversation("word") — Unmute a specific keyword');
 })();

@@ -297,8 +297,8 @@ export class RedisStreamPublisher {
 
     // CloudEvents v1.0 standard attributes
     const specversion = '1.0';
-    const source = String(item.source || (platform ? `org.xactions.crawler.${platform}` : 'org.xactions.crawler'));
-    const type = String(item.type || 'org.xactions.scrape.completed');
+    const source = String(item.source || (platform ? `org.medirus.crawler.${platform}` : 'org.medirus.crawler'));
+    const type = String(item.type || 'org.medirus.scrape.completed');
     const time = item.time ? toIsoDate(item.time) : crawledAt;
     const datacontenttype = String(item.datacontenttype || 'application/json');
 

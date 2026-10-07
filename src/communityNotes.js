@@ -102,7 +102,7 @@
     startTime: Date.now(),
   };
 
-  window.XActions = {
+  window.Medirus = {
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
     status() {
       const el = ((Date.now() - stats.startTime) / 1000).toFixed(0);
@@ -354,7 +354,7 @@
 
     console.log(`📋 Action: ${CONFIG.action}`);
 
-    const sessionKey = 'xactions_communityNotes';
+    const sessionKey = 'medirus_communityNotes';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     const actions = {

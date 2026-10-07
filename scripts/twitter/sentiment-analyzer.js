@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 🧠 Sentiment Analyzer - XActions
+ * 🧠 Sentiment Analyzer - Medirus
  * ============================================
  *
  * @name         sentiment-analyzer
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to any timeline, search results, or profile on x.com
@@ -147,9 +147,9 @@
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🧠 SENTIMENT ANALYZER - XActions                       ║
+║  🧠 SENTIMENT ANALYZER - Medirus                       ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -295,12 +295,12 @@
 
   if (CONFIG.exportResults) {
     console.log('');
-    download(report, `xactions-sentiment-${new Date().toISOString().slice(0, 10)}.json`);
+    download(report, `medirus-sentiment-${new Date().toISOString().slice(0, 10)}.json`);
   }
 
-  window.xactionsSentiment = report;
+  window.medirusSentiment = report;
   console.log('');
-  log.info('Full report object: window.xactionsSentiment');
+  log.info('Full report object: window.medirusSentiment');
   log.success('Done.');
 
   return report;

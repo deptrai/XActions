@@ -132,7 +132,7 @@ function generateMarkdown(analysis) {
   const { summary, errorsByRule, warningsByRule, fileStats } = analysis;
   const now = new Date().toISOString().split('T')[0];
 
-  let md = `# Lint Audit Report — XActions
+  let md = `# Lint Audit Report — Medirus
 
 **Generated:** ${now}
 **Tool:** ESLint v9+ with flat config

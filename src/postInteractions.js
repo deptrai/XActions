@@ -22,7 +22,7 @@
 // 1. Navigate to x.com (any tweet page or timeline)
 // 2. Open DevTools Console (F12)
 // 3. Paste this script and run
-// 4. Use: window.XActions.postInteractions.<function>(tweetUrl)
+// 4. Use: window.Medirus.postInteractions.<function>(tweetUrl)
 //
 // Last Updated: 30 March 2026
 (() => {
@@ -79,7 +79,7 @@
     if (tweetUrl) return tweetUrl;
     const current = currentTweetUrl();
     if (current) return current;
-    console.error(`❌ Usage: XActions.postInteractions.${funcName}("https://x.com/user/status/123")`);
+    console.error(`❌ Usage: Medirus.postInteractions.${funcName}("https://x.com/user/status/123")`);
     console.error('❌ Or navigate to a tweet page and call without arguments.');
     return null;
   };
@@ -271,8 +271,8 @@
     }
 
     if (CONFIG.saveToSession) {
-      sessionStorage.setItem('xactions_post_likes', JSON.stringify(users));
-      console.log('💾 Saved to sessionStorage key: xactions_post_likes');
+      sessionStorage.setItem('medirus_post_likes', JSON.stringify(users));
+      console.log('💾 Saved to sessionStorage key: medirus_post_likes');
     }
     if (CONFIG.autoExport) {
       exportJSON({ post: parsed, type: 'likes', scrapedAt: new Date().toISOString(), users }, `likes_${parsed.username}_${parsed.statusId}.json`);
@@ -302,8 +302,8 @@
     }
 
     if (CONFIG.saveToSession) {
-      sessionStorage.setItem('xactions_post_reposts', JSON.stringify(users));
-      console.log('💾 Saved to sessionStorage key: xactions_post_reposts');
+      sessionStorage.setItem('medirus_post_reposts', JSON.stringify(users));
+      console.log('💾 Saved to sessionStorage key: medirus_post_reposts');
     }
     if (CONFIG.autoExport) {
       exportJSON({ post: parsed, type: 'reposts', scrapedAt: new Date().toISOString(), users }, `reposts_${parsed.username}_${parsed.statusId}.json`);
@@ -395,8 +395,8 @@
     }
 
     if (CONFIG.saveToSession) {
-      sessionStorage.setItem('xactions_post_quotes', JSON.stringify(result));
-      console.log('💾 Saved to sessionStorage key: xactions_post_quotes');
+      sessionStorage.setItem('medirus_post_quotes', JSON.stringify(result));
+      console.log('💾 Saved to sessionStorage key: medirus_post_quotes');
     }
     if (CONFIG.autoExport) {
       exportJSON({ post: parsed, type: 'quotes', scrapedAt: new Date().toISOString(), quotes: result }, `quotes_${parsed.username}_${parsed.statusId}.json`);
@@ -444,8 +444,8 @@
     });
 
     if (CONFIG.saveToSession) {
-      sessionStorage.setItem('xactions_edit_history', JSON.stringify(edits));
-      console.log('\n💾 Saved to sessionStorage key: xactions_edit_history');
+      sessionStorage.setItem('medirus_edit_history', JSON.stringify(edits));
+      console.log('\n💾 Saved to sessionStorage key: medirus_edit_history');
     }
     return edits;
   };
@@ -489,8 +489,8 @@
       console.log(embedHtml);
 
       if (CONFIG.saveToSession) {
-        sessionStorage.setItem('xactions_embed_html', embedHtml);
-        console.log('\n💾 Saved to sessionStorage key: xactions_embed_html');
+        sessionStorage.setItem('medirus_embed_html', embedHtml);
+        console.log('\n💾 Saved to sessionStorage key: medirus_embed_html');
       }
       return embedHtml;
     } catch (err) {
@@ -701,7 +701,7 @@
     ];
 
     if (!tweetUrl) {
-      console.error('❌ Usage: XActions.postInteractions.reportPost("https://x.com/user/status/123", "spam")');
+      console.error('❌ Usage: Medirus.postInteractions.reportPost("https://x.com/user/status/123", "spam")');
       console.log(`📋 Valid categories: ${validCategories.join(', ')}`);
       return false;
     }
@@ -851,10 +851,10 @@
   };
 
   // ═══════════════════════════════════════════════
-  // Expose on window.XActions.postInteractions
+  // Expose on window.Medirus.postInteractions
   // ═══════════════════════════════════════════════
-  window.XActions = window.XActions || {};
-  window.XActions.postInteractions = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.postInteractions = {
     viewLikes,
     viewReposts,
     viewQuotes,
@@ -877,7 +877,7 @@
   const W = 66;
   const pad = (str, len) => str + ' '.repeat(Math.max(0, len - str.length));
   console.log('╔' + '═'.repeat(W) + '╗');
-  console.log('║' + pad('  📝 POST INTERACTIONS — XActions by nichxbt', W) + '║');
+  console.log('║' + pad('  📝 POST INTERACTIONS — Medirus by nichxbt', W) + '║');
   console.log('╠' + '═'.repeat(W) + '╣');
   console.log('║' + ' '.repeat(W) + '║');
 
@@ -911,7 +911,7 @@
   }
 
   console.log('║' + ' '.repeat(W) + '║');
-  console.log('║' + pad('  💡 Access via: window.XActions.postInteractions', W) + '║');
+  console.log('║' + pad('  💡 Access via: window.Medirus.postInteractions', W) + '║');
   console.log('║' + pad('  💡 url? = optional if already on a tweet page', W) + '║');
   console.log('╚' + '═'.repeat(W) + '╝');
 })();

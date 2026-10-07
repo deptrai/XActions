@@ -60,18 +60,18 @@
 
   // ── Abort handle ───────────────────────────────────────────
   let aborted = false;
-  window.XActions = window.XActions || {};
-  window.XActions.stop = () => { aborted = true; console.log('🛑 Stopping after current tweet...'); };
+  window.Medirus = window.Medirus || {};
+  window.Medirus.stop = () => { aborted = true; console.log('🛑 Stopping after current tweet...'); };
 
   const run = async () => {
     console.log('╔════════════════════════════════════════════╗');
     console.log('║  🔑 KEYWORD LIKER                         ║');
-    console.log('║  by nichxbt — XActions                     ║');
+    console.log('║  by nichxbt — Medirus                     ║');
     console.log('╚════════════════════════════════════════════╝');
     console.log(`   Keywords: ${keywords.join(', ')}`);
     console.log(`   Max likes: ${CONFIG.maxLikes}`);
     console.log(`   Dry run: ${CONFIG.dryRun}`);
-    console.log(`   ℹ️ Type XActions.stop() to abort early\n`);
+    console.log(`   ℹ️ Type Medirus.stop() to abort early\n`);
 
     for (let round = 0; round < CONFIG.scrollRounds && !aborted; round++) {
       const articles = document.querySelectorAll(SEL.tweet);

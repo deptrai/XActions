@@ -1,10 +1,10 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions A2A — Agent Card Generator
+ * Medirus A2A — Agent Card Generator
  *
  * Generates, serves, and manages the A2A Agent Card — the public identity
  * document hosted at /.well-known/agent.json that tells other agents what
- * XActions can do.
+ * Medirus can do.
  *
  * @author nich (@nichxbt)
  * @license MIT
@@ -18,8 +18,8 @@ import { createAgentCard, validateAgentCard } from './types.js';
 // Constants
 // ============================================================================
 
-const XACTIONS_VERSION = VERSION;
-const XACTIONS_HOMEPAGE = 'https://xactions.app';
+const MEDIRUS_VERSION = VERSION;
+const MEDIRUS_HOMEPAGE = 'https://medirus.online';
 const CARD_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const REMOTE_FETCH_TIMEOUT = 5000;
 
@@ -36,7 +36,7 @@ const _remoteCardCache = new Map(); // agentUrl → { card, fetchedAt }
 // ============================================================================
 
 /**
- * Generate the full XActions Agent Card.
+ * Generate the full Medirus Agent Card.
  *
  * @param {object} [options={}]
  * @param {string} [options.baseUrl='http://localhost:3100'] - Agent endpoint URL
@@ -79,10 +79,10 @@ export function generateAgentCard(options = {}) {
   };
 
   const card = createAgentCard({
-    name: customName || 'XActions Agent',
+    name: customName || 'Medirus Agent',
     description: customDescription || 'The Complete X/Twitter Automation Toolkit — scraping, posting, analytics, growth automation, multi-platform support. No API fees.',
     url: baseUrl,
-    version: XACTIONS_VERSION,
+    version: MEDIRUS_VERSION,
     capabilities: capabilityOverrides
       ? { ...defaultCapabilities, ...capabilityOverrides }
       : defaultCapabilities,
@@ -94,8 +94,8 @@ export function generateAgentCard(options = {}) {
     defaultInputModes: ['text/plain', 'application/json'],
     defaultOutputModes: ['text/plain', 'application/json', 'image/png'],
     provider: {
-      organization: 'XActions by @nichxbt',
-      url: XACTIONS_HOMEPAGE,
+      organization: 'Medirus by @nichxbt',
+      url: MEDIRUS_HOMEPAGE,
     },
   });
 

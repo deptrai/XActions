@@ -1,22 +1,22 @@
 ---
 stepsCompleted: [1]
 inputDocuments:
-  - /Users/luisphan/Documents/GitHub/XActions/AGENTS.md
-  - /Users/luisphan/Documents/GitHub/XActions/README.md
-  - /Users/luisphan/Documents/GitHub/XActions/package.json
-  - /Users/luisphan/Documents/GitHub/XActions/docs/architecture.md
-  - /Users/luisphan/Documents/GitHub/XActions/docs/agent-architecture.md
-  - /Users/luisphan/Documents/GitHub/XActions/api/server.js
-  - /Users/luisphan/Documents/GitHub/XActions/src/cli/index.js
-  - /Users/luisphan/Documents/GitHub/XActions/src/mcp/server.js
-  - /Users/luisphan/Documents/GitHub/XActions/prisma/schema.prisma
+  - /Users/luisphan/Documents/GitHub/Medirus/AGENTS.md
+  - /Users/luisphan/Documents/GitHub/Medirus/README.md
+  - /Users/luisphan/Documents/GitHub/Medirus/package.json
+  - /Users/luisphan/Documents/GitHub/Medirus/docs/architecture.md
+  - /Users/luisphan/Documents/GitHub/Medirus/docs/agent-architecture.md
+  - /Users/luisphan/Documents/GitHub/Medirus/api/server.js
+  - /Users/luisphan/Documents/GitHub/Medirus/src/cli/index.js
+  - /Users/luisphan/Documents/GitHub/Medirus/src/mcp/server.js
+  - /Users/luisphan/Documents/GitHub/Medirus/prisma/schema.prisma
 workflowType: 'architecture'
-project_name: 'XActions'
+project_name: 'Medirus'
 user_name: 'Luisphan'
 date: '2026-06-05'
 updated: 2026-08-21
 status: deprecated
-supersededBy: _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
+supersededBy: _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
 note: "Architecture brownfield as-built gốc. Kiến trúc hiện tại được tổng hợp, mở rộng, và duy trì tại ARCHITECTURE-SPINE.md (r3). Giữ lại để tham khảo legacy decisions."
 prd_status: 'not-found-in-bmad-output'
 lastUpdate: '2026-08-21'
@@ -24,17 +24,17 @@ addenda:
   - facebook-platform-extension
 ---
 
-# XActions Brownfield Architecture
+# Medirus Brownfield Architecture
 
-Tài liệu này ghi lại kiến trúc hiện trạng của XActions để các agent phát triển tiếp có cùng bản đồ hệ thống, ranh giới module, quyết định kỹ thuật và nguyên tắc thay đổi. Đây là brownfield architecture dựa trên repo hiện tại, không phải thiết kế greenfield.
+Tài liệu này ghi lại kiến trúc hiện trạng của Medirus để các agent phát triển tiếp có cùng bản đồ hệ thống, ranh giới module, quyết định kỹ thuật và nguyên tắc thay đổi. Đây là brownfield architecture dựa trên repo hiện tại, không phải thiết kế greenfield.
 
 ## 1. Tóm Tắt Hệ Thống
 
-XActions là toolkit tự động hóa X/Twitter không phụ thuộc Twitter API trả phí. Sản phẩm hiện gồm nhiều bề mặt sử dụng chung năng lực scraping, browser automation và workflow:
+Medirus là toolkit tự động hóa X/Twitter không phụ thuộc Twitter API trả phí. Sản phẩm hiện gồm nhiều bề mặt sử dụng chung năng lực scraping, browser automation và workflow:
 
 - Browser scripts chạy trực tiếp trong DevTools trên `x.com`.
-- CLI `xactions` cho terminal automation và export dữ liệu.
-- MCP server `xactions-mcp` để AI agents gọi tool X/Twitter.
+- CLI `medirus` cho terminal automation và export dữ liệu.
+- MCP server `medirus-mcp` để AI agents gọi tool X/Twitter.
 - Express API + dashboard static HTML cho web/self-hosted SaaS surface.
 - Browser extension Manifest V3 cho thao tác không cần paste console script.
 - Scraper adapters cho Twitter, Bluesky, Mastodon và Threads.
@@ -66,7 +66,7 @@ flowchart TB
   User["User / Operator"]
   Agent["AI Agent / MCP Client"]
   Browser["Browser on x.com"]
-  CLI["xactions CLI"]
+  CLI["medirus CLI"]
   Dashboard["Static Dashboard"]
   Extension["Browser Extension"]
   MCP["src/mcp/server.js"]
@@ -102,7 +102,7 @@ flowchart TB
 | Surface | Entrypoint | Primary responsibility | Notes |
 |---|---|---|---|
 | Browser scripts | `src/*.js`, `src/automation/*.js` | Direct DOM automation on `x.com` | Must use stable `data-testid` selectors and 1-3s delays. `src/automation/core.js` is prerequisite for modular automation scripts. |
-| CLI | `src/cli/index.js` | Terminal workflows, profile/follower scraping, exports | Stores local config in `~/.xactions/config.json`; uses scraper module directly. |
+| CLI | `src/cli/index.js` | Terminal workflows, profile/follower scraping, exports | Stores local config in `~/.medirus/config.json`; uses scraper module directly. |
 | MCP | `src/mcp/server.js` | AI-agent tool surface | Supports local Puppeteer mode and optional remote API mode. Plugin tools are appended during startup. |
 | API | `api/server.js` | Web API, dashboard backend, auth, jobs, billing, discovery | Composition root for middleware, routes, Socket.IO, plugin routes, licensing and scheduler. |
 | Dashboard | `dashboard/*.html` | Static web UI and docs pages | Served directly by Express. No SPA framework. |
@@ -146,7 +146,7 @@ Rules:
 
 ### `src/mcp/`
 
-AI-agent tool server. It exposes XActions operations through MCP transports and chooses local vs remote execution using environment variables.
+AI-agent tool server. It exposes Medirus operations through MCP transports and chooses local vs remote execution using environment variables.
 
 Rules:
 
@@ -160,7 +160,7 @@ Commander CLI. It orchestrates scraping, authentication config, output exporters
 
 Rules:
 
-- Persist user-local CLI config only under `~/.xactions`.
+- Persist user-local CLI config only under `~/.medirus`.
 - Keep output adapters extension-driven: JSON, CSV, XLSX and Google Sheets support should stay in `smartOutput`-style boundaries.
 - Avoid duplicating scraper logic in commands.
 
@@ -215,7 +215,7 @@ Security controls currently visible in `api/server.js`:
 
 - `helmet` with a custom CSP for static dashboard pages.
 - `compression` disabled for auth/session endpoints to reduce token response leakage risk.
-- CORS restricted in production to `xactions.app` and optional `FRONTEND_URL`.
+- CORS restricted in production to `medirus.online` and optional `FRONTEND_URL`.
 - Global API rate limit plus stricter limits for auth, agent control, graph, operations, CRM and analytics.
 - Request body size limit of `10kb` for JSON and URL-encoded payloads.
 - AI-agent detection middleware before route handling.
@@ -274,7 +274,7 @@ Runtime requirements:
 - PostgreSQL when persistence features are enabled.
 - Redis when Bull-backed background jobs are enabled.
 - Puppeteer-compatible Chromium environment for scraping/automation.
-- `X_SESSION_COOKIE` or `XACTIONS_SESSION_COOKIE` where authenticated X automation is required.
+- `X_SESSION_COOKIE` or `MEDIRUS_SESSION_COOKIE` where authenticated X automation is required.
 
 Operational constraints:
 
@@ -288,7 +288,7 @@ Operational constraints:
 
 Status: Accepted.
 
-Reasoning: XActions' product promise is no Twitter API fees and browser/API-key-free operation. Puppeteer and DevTools scripts provide access to UI-level behavior the official API may not expose.
+Reasoning: Medirus' product promise is no Twitter API fees and browser/API-key-free operation. Puppeteer and DevTools scripts provide access to UI-level behavior the official API may not expose.
 
 Consequences:
 
@@ -416,7 +416,7 @@ This file intentionally captures the current brownfield architecture instead of 
 
 ## A.1. Phạm Vi và Động Lực
 
-XActions hiện hỗ trợ Twitter, Bluesky, Mastodon, Threads qua adapter pattern (Section 8, ADR-002). Yêu cầu mới: thêm Facebook với hai năng lực:
+Medirus hiện hỗ trợ Twitter, Bluesky, Mastodon, Threads qua adapter pattern (Section 8, ADR-002). Yêu cầu mới: thêm Facebook với hai năng lực:
 
 - **Scrape (đọc)**: profile, posts, followers, search — rủi ro thấp hơn.
 - **Automate (ghi)**: post, like, comment — rủi ro account cao hơn đáng kể.

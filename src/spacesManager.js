@@ -32,7 +32,7 @@ const SELECTORS = {
 /**
  * Get live Spaces
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function getLiveSpaces(page, options = {}) {
@@ -134,7 +134,7 @@ export async function scrapeSpace(page, spaceUrl) {
 /**
  * Create an event
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').EventInput} event - { title, description, date, time, location? }
+ * @param {import('./types/medirus.js').EventInput} event - { title, description, date, time, location? }
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function createEvent(page, event) {

@@ -8,11 +8,11 @@ Status: done
 
 <!-- Code-review patches applied (7 fixed + 2 partial). Held at in-progress — NOT done — pending live-DOM verification of the share-to-Feed entry point/selectors (see Review Findings → Decision + Deferred). -->
 
-<!-- Epic 4 (Facebook Growth Automation, Cluster 3 — low risk). Source: epics.md#Story 4.2 + PRD prd-XActions-2026-06-10-epic4 FR-16. -->
+<!-- Epic 4 (Facebook Growth Automation, Cluster 3 — low risk). Source: epics.md#Story 4.2 + PRD prd-Medirus-2026-06-10-epic4 FR-16. -->
 
 ## Story
 
-As a growth marketer using XActions,
+As a growth marketer using Medirus,
 I want to auto-share one or more post URLs to my timeline,
 so that I can amplify content reach with batch control.
 
@@ -140,7 +140,7 @@ The one genuinely new piece is the **share DOM flow + its selectors**. Story 5.2
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 4.2: Auto-share Facebook post]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md#FR-16, §7 NFR-6/NFR-8, §8 SM-4]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-10-epic4/prd.md#FR-16, §7 NFR-6/NFR-8, §8 SM-4]
 - [Source: api/services/facebookAutomation.js#likeFacebookPosts, likeSinglePost, runGuardedBatch — the clone template]
 - [Source: src/scrapers/facebook/messengerShare.js#SELECTORS.shareButton — verified Share button selector]
 - [Source: docs/agents/selectors-facebook.md#Automate selectors (FR-6,7,8) — Epic 2 — selector doc pattern]

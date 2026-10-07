@@ -4,7 +4,7 @@
 
 ## Overview
 
-XActions Analytics provides a complete sentiment intelligence layer:
+Medirus Analytics provides a complete sentiment intelligence layer:
 
 - **Sentiment Analysis** — Rule-based (offline, instant) or LLM-powered (OpenRouter) analysis of any text
 - **Reputation Monitoring** — Continuous polling of mentions/keywords with rolling sentiment tracking
@@ -296,7 +296,7 @@ Get recent alerts.
 **Alert delivery channels:**
 
 1. **Console** — Always logged with emoji indicators
-2. **Webhook** — POST to configured URL with `{ event: "xactions.alert", alert: {...} }`
+2. **Webhook** — POST to configured URL with `{ event: "medirus.alert", alert: {...} }`
 3. **Socket.IO** — Emitted as `analytics:alert` event to monitor room
 
 ---
@@ -438,4 +438,4 @@ curl -X POST http://localhost:3000/api/analytics/sentiment \
 
 ---
 
-*Built by [@nichxbt](https://x.com/nichxbt) — [XActions](https://github.com/nirholas/XActions)*
+*Built by [@nichxbt](https://x.com/nichxbt) — [Medirus](https://github.com/nirholas/XActions)*

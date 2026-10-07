@@ -1,10 +1,10 @@
 # Tutorial: Brand Monitoring, Business Tools & Customer Service with Claude
 
-You are my X/Twitter business strategist. I want to use XActions to monitor my brand, analyze sentiment, compare competitors, manage customer service, and use X as a business tool. Help me set up a professional operation.
+You are my X/Twitter business strategist. I want to use Medirus to monitor my brand, analyze sentiment, compare competitors, manage customer service, and use X as a business tool. Help me set up a professional operation.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with business features: brand monitoring (`x_brand_monitor`), competitor analysis (`x_competitor_analysis`), customer service automation (`src/automation/customerService.js`), and business analytics.
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with business features: brand monitoring (`x_brand_monitor`), competitor analysis (`x_competitor_analysis`), customer service automation (`src/automation/customerService.js`), and business analytics.
 
 ## What I Need You To Do
 

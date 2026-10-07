@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# XActions — Production Dockerfile
+# Medirus — Production Dockerfile
 # Multi-stage build: Node.js + Chromium + Next.js App Router
 # by nichxbt
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -71,13 +71,13 @@ WORKDIR /app
 COPY --from=builder /app ./
 
 # Create non-root user
-RUN groupadd -r xactions && useradd -r -g xactions -G audio,video xactions \
-    && mkdir -p /home/xactions/Downloads \
-    && chown -R xactions:xactions /home/xactions \
-    && chown -R xactions:xactions /app \
+RUN groupadd -r medirus && useradd -r -g medirus -G audio,video medirus \
+    && mkdir -p /home/medirus/Downloads \
+    && chown -R medirus:medirus /home/medirus \
+    && chown -R medirus:medirus /app \
     && chmod +x /app/start.sh
 
-USER xactions
+USER medirus
 
 EXPOSE 3001 3000
 

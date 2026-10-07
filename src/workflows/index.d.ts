@@ -1,4 +1,4 @@
-import type { Workflow, WorkflowRun, WorkflowRunOptions, WorkflowValidation, WorkflowAction, WorkflowCondition, ConditionEvaluation } from '../types/xactions.js';
+import type { Workflow, WorkflowRun, WorkflowRunOptions, WorkflowValidation, WorkflowAction, WorkflowCondition, ConditionEvaluation } from '../types/medirus.js';
 
 export interface WorkflowsModule {
   create(definition: Workflow): Promise<Workflow>;

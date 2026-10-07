@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mention Users — Free X/Twitter Script | XActions</title>
+  <title>Mention Users — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Mention Users in Posts on X - by nichxbt">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, mention, users, engagement">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, mention, users, engagement">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Mention Users — XActions">
+  <meta property="og:title" content="Mention Users — Medirus">
   <meta property="og:description" content="Mention Users in Posts on X - by nichxbt">
-  <meta property="og:url" content="https://xactions.app/scripts/mention-users">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/mention-users">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Mention Users — XActions">
+  <meta name="twitter:title" content="Mention Users — Medirus">
   <meta name="twitter:description" content="Mention Users in Posts on X - by nichxbt">
 
-  <link rel="canonical" href="https://xactions.app/scripts/mention-users">
+  <link rel="canonical" href="https://medirus.online/scripts/mention-users">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Mention Users — Free X/Twitter Script | XActions",
+    "headline": "Mention Users — Free X/Twitter Script | Medirus",
     "description": "Mention Users in Posts on X - by nichxbt",
-    "url": "https://xactions.app/scripts/mention-users",
+    "url": "https://medirus.online/scripts/mention-users",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Engagement",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, mention, users, engagement"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, mention, users, engagement"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://xactions.app/scripts#engagement" },
-      { "@type": "ListItem", "position": 4, "name": "Mention Users", "item": "https://xactions.app/scripts/mention-users" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://medirus.online/scripts#engagement" },
+      { "@type": "ListItem", "position": 4, "name": "Mention Users", "item": "https://medirus.online/scripts/mention-users" }
     ]
   }
   </script>
@@ -352,7 +352,7 @@
   // ── Main ──
   const run = async () =&gt; {
     console.log('═══════════════════════════════════════');
-    console.log('📢 XActions — Mention Users');
+    console.log('📢 Medirus — Mention Users');
     console.log('═══════════════════════════════════════');
 
     if (CONFIG.usernames.length === 0) {
@@ -420,14 +420,14 @@
     }
 
     // Store mention history in sessionStorage
-    const history = JSON.parse(sessionStorage.getItem('xactions_mentions') || '[]');
+    const history = JSON.parse(sessionStorage.getItem('medirus_mentions') || '[]');
     history.push({
       timestamp: new Date().toISOString(),
       usernames: valid,
       batches: batches.length,
       posted: CONFIG.autoPost,
     });
-    sessionStorage.setItem('xactions_mentions', JSON.stringify(history));
+    sessionStorage.setItem('medirus_mentions', JSON.stringify(history));
 
     console.log('');
     console.log(`✅ ${successCount}/${batches.length} batches composed.`);
@@ -442,7 +442,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -455,7 +455,7 @@
         <a href="/scripts/auto-commenter">💬 Auto Commenter</a>
 <a href="/scripts/auto-engage">⚡ Auto Engage</a>
 <a href="/scripts/auto-liker">❤️ Auto Liker</a>
-<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - XActions</a>
+<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - Medirus</a>
 <a href="/scripts/auto-repost">🔁 Auto Repost</a>
 <a href="/scripts/auto-plug-replies">🔌 Auto-Plug Replies</a>
 <a href="/scripts/auto-reply">💬 Auto-Reply / Auto-Respond</a>

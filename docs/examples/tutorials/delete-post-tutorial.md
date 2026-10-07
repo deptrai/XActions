@@ -1,6 +1,6 @@
 # Delete Post -- Tutorial
 
-> Step-by-step guide to deleting tweets individually and in bulk on X using XActions browser scripts.
+> Step-by-step guide to deleting tweets individually and in bulk on X using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -183,9 +183,9 @@ Scroll 5: 10 deleted | 3 skipped | 42s elapsed
 **Step 4: Monitor and Control**
 
 ```js
-XActionsUtils.pause();   // Pause
-XActionsUtils.resume();  // Resume
-XActionsUtils.abort();   // Stop
+MedirusUtils.pause();   // Pause
+MedirusUtils.resume();  // Resume
+MedirusUtils.abort();   // Stop
 ```
 
 The script pauses for confirmation every 50 deletes (configurable with `confirmEvery`).

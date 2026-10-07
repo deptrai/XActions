@@ -1,8 +1,8 @@
 ---
 title: "Export Your Following List on X (Twitter) — Free 2026"
 description: "Export your complete following list on X/Twitter to JSON and CSV with bios, mutual status, and handles. Free script, no API key."
-keywords: ["export twitter following list", "download following list twitter", "twitter following to CSV", "scrape following list X", "export who I follow twitter 2026", "twitter following list scraper free", "download twitter following data", "xactions following scraping", "export X following to spreadsheet", "who am I following twitter export"]
-canonical: "https://xactions.app/examples/following-scraping"
+keywords: ["export twitter following list", "download following list twitter", "twitter following to CSV", "scrape following list X", "export who I follow twitter 2026", "twitter following list scraper free", "download twitter following data", "medirus following scraping", "export X following to spreadsheet", "who am I following twitter export"]
+canonical: "https://medirus.online/examples/following-scraping"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You follow 1,800 accounts on X. You want to audit your following list: Who are the mutuals? Who are the one-way follows that never engage? Are there any accounts you forgot you followed? X doesn't give you a way to export this data — and third-party tools require API access (which costs money or requires developer approval).
 
-XActions' Following Scraper navigates to your (or anyone's public) following list, scrolls through every account, and extracts the handle, display name, bio, and mutual status for each. At the end, it downloads the complete list as JSON and CSV. You can then import it into Google Sheets and answer questions like "How many of my 1,800 following actually follow me back?"
+Medirus' Following Scraper navigates to your (or anyone's public) following list, scrolls through every account, and extracts the handle, display name, bio, and mutual status for each. At the end, it downloads the complete list as JSON and CSV. You can then import it into Google Sheets and answer questions like "How many of my 1,800 following actually follow me back?"
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -45,11 +45,11 @@ XActions' Following Scraper navigates to your (or anyone's public) following lis
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**After XActions:**
+**After Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Auditing Your Following List (XActions)                     │
+│  Auditing Your Following List (Medirus)                     │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  Go to x.com/YOUR_USERNAME/following                         │
@@ -132,8 +132,8 @@ XActions' Following Scraper navigates to your (or anyone's public) following lis
 
 ```javascript
 // ============================================
-// XActions - Following List Scraper
-// by nichxbt — https://xactions.app
+// Medirus - Following List Scraper
+// by nichxbt — https://medirus.online
 // Go to: x.com/USERNAME/following
 // Open console (F12 → Console), paste, Enter
 // ============================================
@@ -289,18 +289,18 @@ XActions' Following Scraper navigates to your (or anyone's public) following lis
 ## 💻 Method 2: CLI
 
 ```bash
-# Install XActions
-npm install -g xactions
+# Install Medirus
+npm install -g medirus
 
 # Export your following list
-npx xactions following YOUR_USERNAME
+npx medirus following YOUR_USERNAME
 
 # Export to CSV
-npx xactions following YOUR_USERNAME --format csv --output my-following.csv
+npx medirus following YOUR_USERNAME --format csv --output my-following.csv
 
 # With login for full access
-npx xactions login
-npx xactions following YOUR_USERNAME --max 5000
+npx medirus login
+npx medirus following YOUR_USERNAME --max 5000
 ```
 
 ---
@@ -384,5 +384,5 @@ X doesn't always render bios in the compact user cell view. The script tries mul
 
 <p align="center">
   <b>Built with ❤️ by <a href="https://x.com/nichxbt">@nichxbt</a></b><br>
-  <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+  <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </p>

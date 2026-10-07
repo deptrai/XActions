@@ -2,7 +2,7 @@
 
 /** @typedef {import('./types.js').Raw} Raw */
 /**
- * XActions Twitter HTTP Scraper
+ * Medirus Twitter HTTP Scraper
  * Direct HTTP-based scraping via Twitter's internal GraphQL API
  * No browser required. 10x faster. Works in serverless/edge.
  * 
@@ -51,7 +51,7 @@ export { TwitterApiError, RateLimitError, AuthError, NotFoundError, NetworkError
  * @returns {Promise<import('./types.js').HttpScraper>} Scraper with all methods bound to the client
  * 
  * @example
- * import { createHttpScraper } from 'xactions/scrapers/social/twitter';
+ * import { createHttpScraper } from 'medirus/scrapers/social/twitter';
  * const scraper = await createHttpScraper({ cookies: 'auth_token=xxx; ct0=yyy' });
  * const profile = await scraper.scrapeProfile('elonmusk');
  * const tweets = await scraper.scrapeTweets('elonmusk', { limit: 50 });

@@ -15,7 +15,7 @@
   // Track communities we've already left
   const getLeftCommunities = () => {
     try {
-      return JSON.parse(sessionStorage.getItem('xactions_left_ids') || '[]');
+      return JSON.parse(sessionStorage.getItem('medirus_left_ids') || '[]');
     } catch { return []; }
   };
   
@@ -23,7 +23,7 @@
     const left = getLeftCommunities();
     if (!left.includes(id)) {
       left.push(id);
-      sessionStorage.setItem('xactions_left_ids', JSON.stringify(left));
+      sessionStorage.setItem('medirus_left_ids', JSON.stringify(left));
     }
   };
 
@@ -99,7 +99,7 @@
       console.log(`🎉 DONE! LEFT ${total} COMMUNITIES TOTAL`);
       console.log(`So long, and thanks for all the communities! 🐬`);
       console.log(`IDs: ${getLeftCommunities().join(', ')}`);
-      sessionStorage.removeItem('xactions_left_ids');
+      sessionStorage.removeItem('medirus_left_ids');
     }
   };
 

@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# XActions CI — Tests + Lint on every push/PR
+# Medirus CI — Tests + Lint on every push/PR
 # by nichxbt
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -25,9 +25,9 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: xactions
+          POSTGRES_USER: medirus
           POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: xactions_test
+          POSTGRES_DB: medirus_test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -48,7 +48,7 @@ jobs:
 
     env:
       NODE_ENV: test
-      DATABASE_URL: postgresql://xactions:test_password@localhost:5432/xactions_test?schema=public
+      DATABASE_URL: postgresql://medirus:test_password@localhost:5432/medirus_test?schema=public
       JWT_SECRET: ci-test-jwt-secret-not-for-production
       SESSION_SECRET: ci-test-session-secret
       REDIS_HOST: localhost
@@ -154,6 +154,6 @@ jobs:
         with:
           context: .
           push: false
-          tags: xactions:latest
+          tags: medirus:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max

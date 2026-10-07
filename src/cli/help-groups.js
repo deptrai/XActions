@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Grouped help for the root `xactions` command.
+ * Grouped help for the root `medirus` command.
  *
  * The CLI has grown past fifty top-level commands. Commander prints them as one
  * alphabet-soup list, which tells a new user nothing about where to start and
@@ -188,9 +188,9 @@ export function renderRootHelp(program, version) {
 
   return [
     '',
-    `${chalk.bold.cyan('⚡ xactions')} ${chalk.dim(`v${version}`)}  ${chalk.dim('the complete X/Twitter toolkit, no API key required')}`,
+    `${chalk.bold.cyan('⚡ medirus')} ${chalk.dim(`v${version}`)}  ${chalk.dim('the complete X/Twitter toolkit, no API key required')}`,
     '',
-    `  ${chalk.dim('Usage:')} xactions <command> [options]`,
+    `  ${chalk.dim('Usage:')} medirus <command> [options]`,
     '',
     renderGroupedCommands(program),
     '',
@@ -198,16 +198,16 @@ export function renderRootHelp(program, version) {
     options,
     '',
     `  ${chalk.bold('Examples')}`,
-    `    ${chalk.gray('xactions doctor')}                     ${chalk.dim('check what works right now')}`,
-    `    ${chalk.gray('xactions profile NASA')}               ${chalk.dim('read any public account, no login')}`,
-    `    ${chalk.gray('xactions analyze NASA SpaceX')}        ${chalk.dim('compare two accounts')}`,
-    `    ${chalk.gray('xactions tweets NASA --limit 50 --json | jq')}`,
-    `    ${chalk.gray('xactions connect')}                    ${chalk.dim('log in once to unlock search and followers')}`,
+    `    ${chalk.gray('medirus doctor')}                     ${chalk.dim('check what works right now')}`,
+    `    ${chalk.gray('medirus profile NASA')}               ${chalk.dim('read any public account, no login')}`,
+    `    ${chalk.gray('medirus analyze NASA SpaceX')}        ${chalk.dim('compare two accounts')}`,
+    `    ${chalk.gray('medirus tweets NASA --limit 50 --json | jq')}`,
+    `    ${chalk.gray('medirus connect')}                    ${chalk.dim('log in once to unlock search and followers')}`,
     '',
-    `  ${chalk.dim('New here?')} Run ${chalk.cyan('xactions quickstart')}.`,
-    `  ${chalk.dim('Detail on any command:')} ${chalk.cyan('xactions help <command>')}`,
-    `  ${chalk.dim('Tab completion:')} ${chalk.cyan('xactions completion --help')}`,
-    `  ${chalk.dim('Docs:')} https://xactions.app`,
+    `  ${chalk.dim('New here?')} Run ${chalk.cyan('medirus quickstart')}.`,
+    `  ${chalk.dim('Detail on any command:')} ${chalk.cyan('medirus help <command>')}`,
+    `  ${chalk.dim('Tab completion:')} ${chalk.cyan('medirus completion --help')}`,
+    `  ${chalk.dim('Docs:')} https://medirus.online`,
     '',
   ].join('\n');
 }

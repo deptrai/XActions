@@ -39,7 +39,7 @@ Tất cả output phải chuẩn hóa thành `PostItem` với ID Namespaced `twi
 ## Sources
 
 - `_bmad-output/planning-artifacts/epics.md` — Story 13.2.3 [dòng 466-476], Story 13.2 [dòng 429-439], Story 13.2.1 [dòng 442-452], Story 13.2.2 [dòng 454-464]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 [dòng 125-133], AD-2 [dòng 134-141], AD-3 [dòng 142-163], AD-4 [dòng 164-174], AD-8 [dòng 201-213], AD-9 [dòng 215-225], AD-10 [dòng 226-232], AD-11 [dòng 233-243], AD-12 [dòng 245-248], AD-13 [dòng 250-260]
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-1 [dòng 125-133], AD-2 [dòng 134-141], AD-3 [dòng 142-163], AD-4 [dòng 164-174], AD-8 [dòng 201-213], AD-9 [dòng 215-225], AD-10 [dòng 226-232], AD-11 [dòng 233-243], AD-12 [dòng 245-248], AD-13 [dòng 250-260]
 - `_bmad-output/implementation-artifacts/13-2-refactor-twitter-scraper-to-hybrid-architecture.md` — nền tảng Story 13.2 (AC-1..AC-4)
 - `_bmad-output/implementation-artifacts/13-2-1-twitter-hybrid-profile-relationships.md` — pattern action registration, `TwitterClient` GraphQL dispatch, normalizer, checkpoint, deprecation
 - `_bmad-output/implementation-artifacts/13-2-2-twitter-hybrid-thread-likes-bookmarks.md` — pattern `PostItem`/`ProfileItem` normalize, `metadata.tweetId`, `storeBatch`, relay variable handling

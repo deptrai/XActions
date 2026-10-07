@@ -74,7 +74,7 @@ describe('parseNaturalLanguage', () => {
 describe('execute (remote mode)', () => {
   it('refuses unknown skills gracefully', async () => {
     const bridge = createBridge({ mode: 'remote', apiUrl: 'http://localhost:99999' });
-    const result = await bridge.execute('xactions.nonexistent', [createTextPart('test')]);
+    const result = await bridge.execute('medirus.nonexistent', [createTextPart('test')]);
     // Should either fail gracefully or return an error artifact
     expect(result).toBeDefined();
     expect(result.success === false || result.error).toBeTruthy();

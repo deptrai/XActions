@@ -1,14 +1,14 @@
 ---
 title: "Search (Basic and Advanced) on X (Twitter) — Tutorial"
-description: "Search X/Twitter with operators, advanced filters, and save searches using XActions scripts."
-keywords: ["twitter search", "x advanced search", "twitter search operators", "xactions search", "save search twitter", "twitter search automation"]
+description: "Search X/Twitter with operators, advanced filters, and save searches using Medirus scripts."
+keywords: ["twitter search", "x advanced search", "twitter search operators", "medirus search", "save search twitter", "twitter search automation"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Search (Basic and Advanced) — Tutorial
 
-> Step-by-step guide to searching X/Twitter with operators, advanced filters, and saved searches using XActions scripts.
+> Step-by-step guide to searching X/Twitter with operators, advanced filters, and saved searches using Medirus scripts.
 
 **Works on:** Browser Console | Node.js (Puppeteer)
 **Difficulty:** Beginner to Intermediate
@@ -111,7 +111,7 @@ This finds original tweets (no reposts) by @nichxbt since January 2026 with at l
 ```js
 const CONFIG = {
   action: 'search',
-  query: 'xactions OR "twitter automation" -is:retweet',
+  query: 'medirus OR "twitter automation" -is:retweet',
   dryRun: false,
 };
 ```
@@ -142,7 +142,7 @@ Output:
 
 ```
 Listing saved searches...
-  xactions OR "twitter automation"
+  medirus OR "twitter automation"
   from:nichxbt min_faves:10
   #web3 #defi since:2026-01-01
 Found 3 saved searches
@@ -153,7 +153,7 @@ Found 3 saved searches
 ```js
 const CONFIG = {
   action: 'delete',
-  deleteQuery: 'xactions OR "twitter automation"',
+  deleteQuery: 'medirus OR "twitter automation"',
   dryRun: true,
 };
 ```
@@ -186,7 +186,7 @@ import { advancedSearch } from './src/discoveryExplore.js';
 const results = await advancedSearch(page, {
   allWords: 'AI automation',
   exactPhrase: 'browser script',
-  anyWords: 'XActions unfollowx',
+  anyWords: 'Medirus unfollowx',
   noneOfWords: 'spam scam',
   hashtags: '#buildinpublic',
   from: 'nichxbt',
@@ -230,7 +230,7 @@ The `advancedSearch` function builds a query string from the filter object:
 - **Combine `-is:retweet` with `from:`** to see only original tweets from an account.
 - **`min_faves:` finds quality content.** Use this to filter for popular tweets.
 - **The `latest` tab shows chronological results.** The default "Top" tab shows algorithmic ranking.
-- **State is saved.** Browser script progress is stored in `sessionStorage` under `xactions_saveSearch`.
+- **State is saved.** Browser script progress is stored in `sessionStorage` under `medirus_saveSearch`.
 
 ---
 

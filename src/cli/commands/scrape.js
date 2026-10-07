@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions scrape` — unified multi-platform dispatcher.
+ * `medirus scrape` — unified multi-platform dispatcher.
  *
  * @author nich (@nichxbt)
  * @license MIT

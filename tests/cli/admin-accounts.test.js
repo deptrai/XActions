@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Tests for xactions admin accounts & account command group (Story 19.4.3)
+ * Tests for medirus admin accounts & account command group (Story 19.4.3)
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -15,7 +15,7 @@ function stripAnsi(str) {
   return str.replace(/\x1B\[[0-9;]*m/g, '');
 }
 
-describe('Story 19.4.3: xactions admin accounts management', () => {
+describe('Story 19.4.3: medirus admin accounts management', () => {
   beforeEach(() => {
     // Add test accounts
     globalAccountPool.registerAccounts('twitter', ['test_acc_01', 'test_acc_02']);

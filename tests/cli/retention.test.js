@@ -1,8 +1,8 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // by nichxbt
 /**
- * E2E CLI Tests — Story 10.6: xactions retention CLI.
- * Spawns the real `xactions retention` binary and asserts stdout + DB state.
+ * E2E CLI Tests — Story 10.6: medirus retention CLI.
+ * Spawns the real `medirus retention` binary and asserts stdout + DB state.
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -20,13 +20,13 @@ function runCli(args) {
   return execFileAsync('node', [CLI, 'retention', ...args], {
     env: {
       ...process.env,
-      DATABASE_URL: process.env.DATABASE_URL || 'postgresql://luisphan@localhost:5432/xactions_test?schema=public',
+      DATABASE_URL: process.env.DATABASE_URL || 'postgresql://luisphan@localhost:5432/medirus_test?schema=public',
     },
     timeout: 30000,
   });
 }
 
-describe('E2E CLI: xactions retention (Story 10.6)', () => {
+describe('E2E CLI: medirus retention (Story 10.6)', () => {
   beforeAll(async () => {
     await cleanupTestDatabase();
   });

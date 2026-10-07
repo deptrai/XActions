@@ -27,11 +27,11 @@ Each layer requires different data and different analysis.
 ## Layer 1: Follower Quality Analysis
 
 ```js
-import { scrapeFollowers, scrapeProfile } from 'xactions';
+import { scrapeFollowers, scrapeProfile } from 'medirus';
 
 async function analyzeFollowerQuality(username) {
   const followers = await scrapeFollowers(username, {
-    sessionCookie: process.env.XACTIONS_SESSION_COOKIE,
+    sessionCookie: process.env.MEDIRUS_SESSION_COOKIE,
     limit: 500 // Sample of 500 for efficiency
   });
 
@@ -89,7 +89,7 @@ function scoreAccountQuality(account) {
 ```js
 async function analyzeEngagementAuthenticity(username) {
   const profile = await scrapeProfile(username, {
-    sessionCookie: process.env.XACTIONS_SESSION_COOKIE
+    sessionCookie: process.env.MEDIRUS_SESSION_COOKIE
   });
 
   const recentTweets = profile.tweets.slice(0, 20);
@@ -137,7 +137,7 @@ async function analyzeInfluencerEndorsements(projectUsername, endorserUsernames)
 
   for (const endorser of endorserUsernames) {
     const profile = await scrapeProfile(endorser, {
-      sessionCookie: process.env.XACTIONS_SESSION_COOKIE
+      sessionCookie: process.env.MEDIRUS_SESSION_COOKIE
     });
 
     // Check for disclosure keywords

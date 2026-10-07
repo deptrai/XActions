@@ -15,12 +15,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.join(__dirname, '..');
 const OUT_DIR = path.join(ROOT, 'dashboard', 'scripts');
-const SITE_URL = 'https://xactions.app';
+const SITE_URL = 'https://medirus.online';
 
 // ─── Category Mappings ─────────────────────────────────────────────
 const CATEGORIES = {
   // Featured: the one-script launcher for everything below.
-  'xactions-command-center': { cat: 'Command Center', icon: '⚡', priority: 1.0 },
+  'medirus-command-center': { cat: 'Command Center', icon: '⚡', priority: 1.0 },
   // Create & Post
   'post-tweet': { cat: 'Posting', icon: '✍️', priority: 0.8 },
   'post-thread': { cat: 'Posting', icon: '🧵', priority: 0.8 },
@@ -456,10 +456,10 @@ function parseScriptFile(filePath) {
 // ─── HTML Generator ─────────────────────────────────────────────────
 
 function generateScriptPage({ slug, title, description, category, icon, sourceDir, parsed, requiresCore, relatedPages }) {
-  const seoTitle = `${title} — Free X/Twitter Script | XActions`;
+  const seoTitle = `${title} — Free X/Twitter Script | Medirus`;
   const seoDesc = (description || `${title} — Free browser console script for X/Twitter automation. No API keys needed.`).slice(0, 160);
   const canonicalUrl = `${SITE_URL}/scripts/${slug}`;
-  const keywords = ['xactions', 'twitter automation', 'x automation', 'browser script', 'devtools console', 'free', 'open source',
+  const keywords = ['medirus', 'twitter automation', 'x automation', 'browser script', 'devtools console', 'free', 'open source',
     ...slug.split('-').filter(w => w.length > 2), category.toLowerCase()].join(', ');
 
   const usageHtml = parsed.usage.length > 0
@@ -525,15 +525,15 @@ function generateScriptPage({ slug, title, description, category, icon, sourceDi
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="${escapeHtml(title)} — XActions">
+  <meta property="og:title" content="${escapeHtml(title)} — Medirus">
   <meta property="og:description" content="${escapeHtml(seoDesc)}">
   <meta property="og:url" content="${canonicalUrl}">
-  <meta property="og:site_name" content="XActions">
+  <meta property="og:site_name" content="Medirus">
   <meta property="og:image" content="${SITE_URL}/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="${escapeHtml(title)} — XActions">
+  <meta name="twitter:title" content="${escapeHtml(title)} — Medirus">
   <meta name="twitter:description" content="${escapeHtml(seoDesc)}">
 
   <link rel="canonical" href="${canonicalUrl}">
@@ -547,7 +547,7 @@ function generateScriptPage({ slug, title, description, category, icon, sourceDi
     "description": ${JSON.stringify(seoDesc)},
     "url": "${canonicalUrl}",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "${SITE_URL}" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "${SITE_URL}" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": ${JSON.stringify(category)},
@@ -666,7 +666,7 @@ function generateScriptPage({ slug, title, description, category, icon, sourceDi
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -747,21 +747,21 @@ function generateIndexPage(allPages) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>All ${allPages.length} Scripts — Free X/Twitter Automation | XActions</title>
+  <title>All ${allPages.length} Scripts — Free X/Twitter Automation | Medirus</title>
   <meta name="description" content="Browse ${allPages.length}+ free browser console scripts for X/Twitter automation. Unfollow, scrape, engage, grow, and more. No API keys needed.">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser scripts, devtools console, free, open source, unfollow, scraper, engagement">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser scripts, devtools console, free, open source, unfollow, scraper, engagement">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="website">
-  <meta property="og:title" content="All ${allPages.length} Scripts — XActions">
+  <meta property="og:title" content="All ${allPages.length} Scripts — Medirus">
   <meta property="og:description" content="${allPages.length}+ free browser scripts for X/Twitter automation.">
   <meta property="og:url" content="${SITE_URL}/scripts">
-  <meta property="og:site_name" content="XActions">
+  <meta property="og:site_name" content="Medirus">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="All ${allPages.length} Scripts — XActions">
+  <meta name="twitter:title" content="All ${allPages.length} Scripts — Medirus">
 
   <link rel="canonical" href="${SITE_URL}/scripts">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
@@ -770,11 +770,11 @@ function generateIndexPage(allPages) {
   {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    "name": "XActions Scripts — ${allPages.length}+ Free X/Twitter Automation Scripts",
+    "name": "Medirus Scripts — ${allPages.length}+ Free X/Twitter Automation Scripts",
     "description": "Complete collection of free browser console scripts for X/Twitter automation.",
     "url": "${SITE_URL}/scripts",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "${SITE_URL}" }
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "${SITE_URL}" }
   }
   </script>
 

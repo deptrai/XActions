@@ -1,5 +1,5 @@
 ---
-name: 'xactions-web-foundation-epic48'
+name: 'medirus-web-foundation-epic48'
 type: architecture-spine
 purpose: build-substrate
 altitude: epic
@@ -10,10 +10,10 @@ created: '2026-09-24'
 updated: '2026-09-24'
 binds: ['epic-48', 'story-48.1', 'apps/web/**', 'tests/web/**', 'tests/playwright/web-*.e2e.spec.js']
 sources: ['_bmad-output/planning-artifacts/epics.md#epic-48', '_bmad-output/implementation-artifacts/spec-48-1-web-api-foundation-bff.md', 'apps/web/', 'api/realtime/socketHandler.js']
-companions: ['xactions-api-contract-epic46', 'xactions-hybrid-scraping-spine']
+companions: ['medirus-api-contract-epic46', 'medirus-hybrid-scraping-spine']
 ---
 
-# Architecture Spine — XActions Web Foundation & Frontend Consolidation (Epic 48)
+# Architecture Spine — Medirus Web Foundation & Frontend Consolidation (Epic 48)
 
 ## Design Paradigm
 
@@ -29,14 +29,14 @@ flowchart LR
   P -.socket.io-client<br/>direct.-> RT["socketHandler.js<br/>NEXT_PUBLIC_SOCKET_URL"]
 ```
 
-Dependency direction (rule, không chỉ là hình): `pages → lib/api.ts → route handlers → lib/proxy.ts → backend`. Không gì trong `apps/web` import backend `api/` trực tiếp; `@xactions/api-client` chỉ cung cấp **types** (`import type`) ở client side — `XActionsClient.request()` không dùng cho forwarding vì nó buffer + unbox envelope.
+Dependency direction (rule, không chỉ là hình): `pages → lib/api.ts → route handlers → lib/proxy.ts → backend`. Không gì trong `apps/web` import backend `api/` trực tiếp; `@medirus/api-client` chỉ cung cấp **types** (`import type`) ở client side — `MedirusClient.request()` không dùng cho forwarding vì nó buffer + unbox envelope.
 
 ## Inherited Invariants
 
 | Inherited | From parent | Binds here |
 | --- | --- | --- |
-| NFR-20 — zero mocks, fast tests | xactions-hybrid-scraping-spine / PRD | Web tests dùng ephemeral upstream `127.0.0.1:0` thật + real handler invocation; không mock network |
-| NFR-22/23 — contract honesty & non-breaking | xactions-api-contract-epic46 | BFF là transport layer — envelope `{success,data}`/`{success,error}` passthrough verbatim, không reshape; `x402`/`x-session-cookie` transports giữ nguyên semantics |
+| NFR-20 — zero mocks, fast tests | medirus-hybrid-scraping-spine / PRD | Web tests dùng ephemeral upstream `127.0.0.1:0` thật + real handler invocation; không mock network |
+| NFR-22/23 — contract honesty & non-breaking | medirus-api-contract-epic46 | BFF là transport layer — envelope `{success,data}`/`{success,error}` passthrough verbatim, không reshape; `x402`/`x-session-cookie` transports giữ nguyên semantics |
 | Option D — no PII persistence | PRD NFR-21 | Session cookies là credential transport tối thiểu; không lưu profile/PII nào trong `apps/web` |
 
 ## Invariants & Rules

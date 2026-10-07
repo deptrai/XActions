@@ -373,19 +373,19 @@
     {
       "priority": "P1",
       "action": "Add test for L262: should pass through /api/scripts as free endpoint in production mode when _initFailed=true (must return 200, not 503)",
-      "skill": "bmad-xactions-test-first-atdd",
+      "skill": "bmad-medirus-test-first-atdd",
       "reason": "Pattern 3 (Happy Path Only) on billing module — free endpoint conditional survived"
     },
     {
       "priority": "P1",
       "action": "Add test for L341: should return endpoint path '/api/ai/scrape/profile' (not character-split) for scrape:profile operation in health check response",
-      "skill": "bmad-xactions-test-first-atdd",
+      "skill": "bmad-medirus-test-first-atdd",
       "reason": "Pattern 5 (Error Msg Not Asserted) — op.split(':') separator not asserted"
     },
     {
       "priority": "P1",
       "action": "Add test for L282-285: should set _initFailed=true when initializeMiddleware throws (requires forcing real init failure)",
-      "skill": "bmad-xactions-integration-test",
+      "skill": "bmad-medirus-integration-test",
       "reason": "Pattern 2 (Under-Testing) — .catch block NoCoverage because init succeeds after route config fix"
     },
     {

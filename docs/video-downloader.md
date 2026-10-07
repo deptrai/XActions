@@ -1,6 +1,6 @@
 # Video Downloader
 
-> XActions v3.5.0 — Download videos from X/Twitter tweets.
+> Medirus v3.5.0 — Download videos from X/Twitter tweets.
 
 ## Overview
 
@@ -92,10 +92,10 @@ Redirects to the download proxy for the best quality video.
 
 ```bash
 # Download video from tweet URL
-xactions download-video https://x.com/user/status/123456789
+medirus download-video https://x.com/user/status/123456789
 
 # With the MCP tool
-xactions mcp x_download_video --url "https://x.com/user/status/123"
+medirus mcp x_download_video --url "https://x.com/user/status/123"
 ```
 
 ## MCP Tool
@@ -196,4 +196,4 @@ This is a harmless Codespaces tunnel message. It does not affect functionality.
 
 ---
 
-*XActions v3.5.0 — by nichxbt*
+*Medirus v3.5.0 — by nichxbt*

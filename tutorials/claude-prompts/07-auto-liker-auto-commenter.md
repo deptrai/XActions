@@ -1,10 +1,10 @@
 # Tutorial: Auto-Liker & Auto-Commenter — Engagement Automation with Claude
 
-You are my X/Twitter engagement automation specialist. I want to use XActions to automatically like and comment on relevant content to boost my visibility and build relationships in my niche. Help me set up smart, targeted engagement that doesn't look spammy.
+You are my X/Twitter engagement automation specialist. I want to use Medirus to automatically like and comment on relevant content to boost my visibility and build relationships in my niche. Help me set up smart, targeted engagement that doesn't look spammy.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter automation toolkit. The auto-liker (`src/automation/autoLiker.js`) and auto-commenter (`src/automation/autoCommenter.js`) are browser console scripts that automate engagement with configurable filters.
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter automation toolkit. The auto-liker (`src/automation/autoLiker.js`) and auto-commenter (`src/automation/autoCommenter.js`) are browser console scripts that automate engagement with configurable filters.
 
 ## What I Need You To Do
 
@@ -249,7 +249,7 @@ Track and optimize your engagement strategy:
 Keep it safe to avoid account restrictions:
 
 1. **Built-in protections in core.js:**
-   - `MAX_ACTIONS_PER_HOUR: 50`
+   - `MAMEDIRUS_PER_HOUR: 50`
    - `MAX_LIKES_PER_DAY: 200`
    - Random delays between 2-5 seconds
    

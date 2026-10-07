@@ -8,14 +8,14 @@ Status: done
 
 ## Story
 
-As a CLI user of XActions,
+As a CLI user of Medirus,
 I want to run scrape and automate commands against Facebook via `--platform facebook`,
 So that I can use Facebook from the terminal like any other platform.
 
 ## Acceptance Criteria
 
 **AC1 — Scrape command with platform flag**
-1. A new `xactions scrape` command accepts `--platform <platform>` and `--action <action>`.
+1. A new `medirus scrape` command accepts `--platform <platform>` and `--action <action>`.
 2. When `--platform facebook` (or `--platform fb`), routes through the unified `scrape()` dispatcher in `src/scrapers/index.js`.
 3. Supported actions: `profile`, `posts` (alias: `tweets`), `followers`, `search`.
 4. Output routes through existing exporters (JSON/CSV via `--output`); console table otherwise.
@@ -26,7 +26,7 @@ So that I can use Facebook from the terminal like any other platform.
 7. `--auth-cookie` content is never echoed in output or logs.
 
 **AC3 — Automate command with platform flag**
-8. A new `xactions automate` command accepts `--platform facebook`, `--action <action>`, and target args.
+8. A new `medirus automate` command accepts `--platform facebook`, `--action <action>`, and target args.
 9. Supported actions: `like`, `comment`, `post`.
 10. `--dry-run` flag defaults to enabled; `--no-dry-run` required for real writes.
 11. Routes to the appropriate function from `api/services/facebookAutomation.js`.
@@ -46,14 +46,14 @@ So that I can use Facebook from the terminal like any other platform.
 Two new top-level commands added to `src/cli/index.js`:
 
 ```
-xactions scrape --platform facebook --action profile --username <handle> [--auth-cookie '{}'] [-o output.json]
-xactions scrape --platform facebook --action posts --username <handle> --limit 20
-xactions scrape --platform facebook --action followers --username <handle>
-xactions scrape --platform facebook --action search --query "keyword" --limit 20
+medirus scrape --platform facebook --action profile --username <handle> [--auth-cookie '{}'] [-o output.json]
+medirus scrape --platform facebook --action posts --username <handle> --limit 20
+medirus scrape --platform facebook --action followers --username <handle>
+medirus scrape --platform facebook --action search --query "keyword" --limit 20
 
-xactions automate --platform facebook --action like --urls url1,url2 [--no-dry-run]
-xactions automate --platform facebook --action comment --urls url1,url2 --text "comment" [--no-dry-run]
-xactions automate --platform facebook --action post --text "content" [--no-dry-run]
+medirus automate --platform facebook --action like --urls url1,url2 [--no-dry-run]
+medirus automate --platform facebook --action comment --urls url1,url2 --text "comment" [--no-dry-run]
+medirus automate --platform facebook --action post --text "content" [--no-dry-run]
 ```
 
 ### Auth
@@ -75,8 +75,8 @@ xactions automate --platform facebook --action post --text "content" [--no-dry-r
 - `--google-sheets` export for Facebook (existing exporter handles this)
 
 ## Implementation Checklist
-- [ ] Add `xactions scrape` command to `src/cli/index.js`
-- [ ] Add `xactions automate` command to `src/cli/index.js`
+- [ ] Add `medirus scrape` command to `src/cli/index.js`
+- [ ] Add `medirus automate` command to `src/cli/index.js`
 - [ ] Handle `--auth-cookie` parsing and validation
 - [ ] Route scrape actions through unified `scrape()` dispatcher
 - [ ] Route automate actions through facebookAutomation exports

@@ -1,8 +1,8 @@
 import { chromium } from 'playwright';
 import { writeFileSync } from 'fs';
 
-// Test login state của ~/.xactions/chrome-profile (profile dùng capture docId lần 26/08)
-const ctx = await chromium.launchPersistentContext('/Users/luisphan/.xactions/chrome-profile', {
+// Test login state của ~/.medirus/chrome-profile (profile dùng capture docId lần 26/08)
+const ctx = await chromium.launchPersistentContext('/Users/luisphan/.medirus/chrome-profile', {
   headless: true,
   viewport: { width: 1440, height: 900 },
   locale: 'vi-VN',

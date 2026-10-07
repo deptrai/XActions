@@ -1,18 +1,18 @@
-# Tutorial: Setting Up XActions MCP Server with Claude
+# Tutorial: Setting Up Medirus MCP Server with Claude
 
-You are helping me set up the XActions MCP server so I can control my X/Twitter account directly from this Claude chat. Walk me through every step like I'm a beginner. Be thorough but friendly.
+You are helping me set up the Medirus MCP server so I can control my X/Twitter account directly from this Claude chat. Walk me through every step like I'm a beginner. Be thorough but friendly.
 
 ## Context
 
-XActions is an open-source X/Twitter automation toolkit (https://github.com/nirholas/XActions). It includes an MCP (Model Context Protocol) server that gives you, Claude, the ability to directly interact with X/Twitter — scrape profiles, manage followers, post tweets, search, and more — all through natural conversation with me.
+Medirus is an open-source X/Twitter automation toolkit (https://github.com/nirholas/XActions). It includes an MCP (Model Context Protocol) server that gives you, Claude, the ability to directly interact with X/Twitter — scrape profiles, manage followers, post tweets, search, and more — all through natural conversation with me.
 
-The MCP server is located at `src/mcp/server.js` in the XActions package.
+The MCP server is located at `src/mcp/server.js` in the Medirus package.
 
 ## What I Need You To Do
 
 ### Step 1: Installation
-Walk me through installing XActions. Cover both methods:
-- `npm install xactions` (for using as a package)
+Walk me through installing Medirus. Cover both methods:
+- `npm install medirus` (for using as a package)
 - Cloning the repo from GitHub
 
 Make sure I have Node.js 18+ installed. If I don't, help me install it.
@@ -28,9 +28,9 @@ The config should look like this:
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["xactions", "mcp"],
+      "args": ["medirus", "mcp"],
       "env": {}
     }
   }
@@ -42,9 +42,9 @@ Or if installed from source:
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "node",
-      "args": ["/full/path/to/xactions/src/mcp/server.js"],
+      "args": ["/full/path/to/medirus/src/mcp/server.js"],
       "env": {}
     }
   }
@@ -108,7 +108,7 @@ Cover common issues:
 - "Server not connecting" → Check config path, restart Claude Desktop, verify Node.js version
 - "Authentication failing" → Cookie may have expired, get a fresh one
 - "Empty results" → Account might be private, or rate limited
-- "Cannot find module" → Run `npm install` in the xactions directory
+- "Cannot find module" → Run `npm install` in the medirus directory
 
 ## Important Notes
 - The MCP server uses Puppeteer (headless Chrome) for browser automation

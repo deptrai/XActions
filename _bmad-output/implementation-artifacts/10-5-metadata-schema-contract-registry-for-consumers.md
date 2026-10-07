@@ -33,7 +33,7 @@ status: done
   1. Auto-discovers and registers JSON Schemas located under `schemas/<platform>/<category>.json`.
   2. Provides programmatic registration, lookup, and validation APIs.
   3. Validates `Post.metadata` in `PrismaStore` before writing (if a schema is registered for that `(platform, category)`).
-  4. Publishes discovery via REST API (`GET /api/schemas`), CLI (`xactions schema list/get`), and MCP tools (`x_schema_list`, `x_schema_get`).
+  4. Publishes discovery via REST API (`GET /api/schemas`), CLI (`medirus schema list/get`), and MCP tools (`x_schema_list`, `x_schema_get`).
   5. Includes two pilot schemas: `schemas/twitter/social.json` and `schemas/shopee/ecom.json`.
 
 ---
@@ -92,7 +92,7 @@ status: done
   - `GET /api/schemas`: returns `{ success: true, data: { schemas: [...] } }` listing all registered schemas.
   - `GET /api/schemas/:platform/:category`: returns `{ success: true, data: { platform, category, schema } }`.
   - If schema does not exist for `:platform/:category`, returns `404` with `PlatformError({ type: ErrorTypes.INTERNAL, code: 'XACT_4041', statusCode: 404, message: 'Schema not found', suggestedAction: SuggestedActions.USE_ACTIONS_LIST })`.
-- **And** route is mounted at `app.use('/api/schemas', schemasRoutes)` in `api/server.js` (the `/api` prefix is consistent with all other XActions REST routes; AD-18's `GET /schemas` is mapped to `/api/schemas` in this implementation).
+- **And** route is mounted at `app.use('/api/schemas', schemasRoutes)` in `api/server.js` (the `/api` prefix is consistent with all other Medirus REST routes; AD-18's `GET /schemas` is mapped to `/api/schemas` in this implementation).
 - **And** public discovery endpoints do not require authentication, but support rate-limiting.
 
 ### AC4 — MCP Tools (`src/mcp/server.js`)
@@ -104,10 +104,10 @@ status: done
 
 ### AC5 — CLI Integration (`src/cli/index.js`)
 
-- **Given** the CLI command `xactions schema ...`
+- **Given** the CLI command `medirus schema ...`
 - **When** running:
-  - `xactions schema list [--json]`: lists all available schemas with platform and category.
-  - `xactions schema get <platform> <category> [--json]`: outputs the JSON Schema definition.
+  - `medirus schema list [--json]`: lists all available schemas with platform and category.
+  - `medirus schema get <platform> <category> [--json]`: outputs the JSON Schema definition.
 - **And** returns `process.exitCode = 1` and error message if schema is not found.
 
 ### AC6 — PrismaStore Ingestion Validation Hook (`src/store/prisma-store.js`)
@@ -124,7 +124,7 @@ status: done
 
 ### AC7 — TypeScript Definitions & Contracts (`types/metadata-schema.d.ts` & `types/index.d.ts`)
 
-- **Given** TypeScript projects consuming XActions
+- **Given** TypeScript projects consuming Medirus
 - **When** importing types:
   - `export * as schemaRegistry from './metadata-schema'` in `types/index.d.ts`.
   - Type definitions for `JsonSchema`, `SchemaDescriptor`, `ValidationResult`, `MetadataSchemaRegistry`.
@@ -221,7 +221,7 @@ status: done
 - **AD-18 — Metadata Schema Contract for Consumers** (`ARCHITECTURE-SPINE.md`)
   - Schema files live at `schemas/<platform>/<category>.json` or TypeScript types.
   - Discovery endpoints: `GET /schemas` and `GET /schemas/:platform/:category`.
-  - MCP tool `x_schema_get` and CLI `xactions schema get <platform> <category>`.
+  - MCP tool `x_schema_get` and CLI `medirus schema get <platform> <category>`.
   - Reserved fields (`price`, `salary`, `phone`, `rating`, `soldCount`, `skills`, `location`) must use standardized types.
 - **AD-7 — Dual-Channel Microservice Protocol for Nowing** (`ARCHITECTURE-SPINE.md`)
   - MCP daemon port 3001 (`/mcp`) and REST API (`/api/*`) are the two primary consumer surfaces. Schemas must be discoverable on both.
@@ -291,7 +291,7 @@ status: done
 
 ## Project Context Reference
 
-- **Project:** XActions
+- **Project:** Medirus
 - **Project key:** XACT
 - **Repository:** https://github.com/deptrai/XActions
 - **Tech:** Node.js ESM, Prisma, PostgreSQL, Vitest, Express, Commander
@@ -309,7 +309,7 @@ status: done
 5. **Do not validate inside a Prisma transaction.** Validate all batch items before starting the transaction.
 6. **Do not create a new auth system.** Schema discovery is public; rate-limiting is optional.
 7. **Do not return Prisma internals in error messages.** Use `PlatformError` with `code`, `message`, and `statusCode`.
-8. **Do not mock Prisma in tests.** Use the real `xactions_test` database.
+8. **Do not mock Prisma in tests.** Use the real `medirus_test` database.
 9. **Do not allow unbounded `limit` in API/CLI.** Cap at `500` and default to `50` for list endpoints if any are added later.
 10. **Do not use relative `__dirname` without `import.meta.url` in ESM.** The registry must resolve `schemas/` correctly regardless of cwd.
 11. **Do not forget `package.json` `files`.** If the package is published, add `schemas/` to the `files` array (or copy schemas into `src/`) so the registry can find them in installed builds.
@@ -324,7 +324,7 @@ status: done
 - The schema registry is a `src/core` service with a singleton default export (`metadataSchemaRegistry`) so `PrismaStore`, API, CLI, and MCP can share the same in-memory cache.
 - Schema files live in a new top-level `schemas/` directory. The registry loads them synchronously at module initialization and caches them in memory.
 - Validation failures throw `PlatformError` (`XACT_4001`, `INVALID_ARGS`, `statusCode: 400`) with a `details` object containing the item index and validation errors.
-- REST discovery routes are mounted under `/api/schemas` to match the existing XActions route convention (`/api/*`), even though AD-18 uses the shorthand `/schemas`. The public path remains `/api/schemas`.
+- REST discovery routes are mounted under `/api/schemas` to match the existing Medirus route convention (`/api/*`), even though AD-18 uses the shorthand `/schemas`. The public path remains `/api/schemas`.
 - CLI and MCP only expose read/list operations. Schema registration is file-driven or programmatic, not operator-editable in this story.
 - Public read access for schema discovery is acceptable because the schemas are public contracts for consumers; rate limiting can be added later.
 - Reserved field types (`price`, `salary`, `phone`, etc.) should be documented in the pilot schemas and future schemas must follow the same conventions.
@@ -366,7 +366,7 @@ status: done
 - [x] [Review][Patch] Null/undefined `metadata` is not skipped when a schema is registered; `validateMetadata` and `PrismaStore` reject posts without metadata for any schema-registered `(platform, category)` pair. This violates the story's opt-in validation contract and will break crawlers that do not yet populate metadata. [src/core/metadata-schema-registry.js:219-230, src/store/prisma-store.js:198-212]
 - [x] [Review][Patch] `api/routes/schemas.js` and `src/cli/index.js` reference `ErrorTypes.NOT_FOUND`, which does not exist in `ErrorTypes`; the error type silently falls back to `internal`. Both should use `ErrorTypes.INTERNAL` with `statusCode: 404` per the story spec. [api/routes/schemas.js:37, src/cli/index.js:3416]
 - [x] [Review][Patch] `MetadataSchemaRegistry.listSchemas` populates `version` from `schema.$schema` (the JSON Schema draft URI) instead of a real `version` property, making the `version` descriptor misleading. [src/core/metadata-schema-registry.js:208]
-- [x] [Review][Patch] `GET /api/schemas` error response returns `error.message` instead of the standard `error.toEnvelope()` envelope used by the rest of the XActions API. [api/routes/schemas.js:20]
+- [x] [Review][Patch] `GET /api/schemas` error response returns `error.message` instead of the standard `error.toEnvelope()` envelope used by the rest of the Medirus API. [api/routes/schemas.js:20]
 - [x] [Review][Patch] `x_schema_get` in `src/mcp/server.js` returns a plain `{ error: string }` object for missing schemas; the MCP server treats it as a successful result. It should throw a `PlatformError` or return an MCP `isError` result. [src/mcp/server.js:4804-4811]
 - [x] [Review][Patch] `tests/store/prisma-store-schema-validation.test.js` uses a mocked/fake `prisma` object in the `validateSchema: false` test, violating the project's "no mocks" rule and the story's real-PostgreSQL test requirement. [tests/store/prisma-store-schema-validation.test.js:45-60]
 - [x] [Review][Patch] `types/metadata-schema.d.ts` has `ValidationResult.errors?: string[]` (optional) while the runtime always returns an `errors` array, and `validateMetadata` accepts `metadata: object` which is too narrow for null/undefined/unknown inputs. [types/metadata-schema.d.ts:24-27, types/metadata-schema.d.ts:62]

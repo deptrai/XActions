@@ -1,5 +1,5 @@
 ---
-title: 'Multi-Consumer Service Contract (x_scrape + x_actions_list + Action Matrix)'
+title: 'Multi-Consumer Service Contract (x_scrape + medirus_list + Action Matrix)'
 type: 'feature'
 created: '2026-09-15'
 status: 'ready-for-dev'
@@ -13,7 +13,7 @@ context:
 
 # Spec — Story 20.1: Multi-Consumer Service Contract
 
-> **Story:** `20-1-multi-consumer-service-contract-x-scrape-x-actions`
+> **Story:** `20-1-multi-consumer-service-contract-x-scrape-medirus-`
 > **Status:** `draft`
 > **Epic:** Epic 20 — Multi-Consumer Scraping Platform Service Contract
 > **Effort:** ~2 dev days
@@ -24,14 +24,14 @@ context:
 
 ## User Intent
 
-Expose `scrape()` dispatcher (Epic 25) thành service-to-service contract cho multi-consumer qua MCP `x_scrape` tool, mở rộng `x_actions_list` cho toàn bộ 24 platforms, fix `envelope.js` extractRecords cho VN crawlers, và generate canonical action matrix doc.
+Expose `scrape()` dispatcher (Epic 25) thành service-to-service contract cho multi-consumer qua MCP `x_scrape` tool, mở rộng `medirus_list` cho toàn bộ 24 platforms, fix `envelope.js` extractRecords cho VN crawlers, và generate canonical action matrix doc.
 
-Nowing đã wire phía mình (`XActionsMcpClient` + Celery beat + stream consumer) theo REQ-X1..X4 nhưng bị block vì `x_scrape` không tồn tại và `x_actions_list` thiếu 6 platforms.
+Nowing đã wire phía mình (`MedirusMcpClient` + Celery beat + stream consumer) theo REQ-X1..X4 nhưng bị block vì `x_scrape` không tồn tại và `medirus_list` thiếu 6 platforms.
 
 <frozen-after-approval>
 **Scope cốt lõi (REQ-X1 + X3 + X4):**
 1. `x_scrape` MCP tool — generic scrape(platform, action, args) với context envelope, unified response envelope
-2. `x_actions_list` mở rộng — enumerate toàn bộ 24 DESCRIPTORS registry
+2. `medirus_list` mở rộng — enumerate toàn bộ 24 DESCRIPTORS registry
 3. `envelope.js` `extractRecords()` — thêm `listings`, `products`, `jobs`
 4. Canonical action/arg matrix doc — auto-generated `.md` + `.json`
 </frozen-after-approval>
@@ -52,7 +52,7 @@ Nowing đã wire phía mình (`XActionsMcpClient` + Celery beat + stream consume
 
 | File | Purpose |
 |------|---------|
-| `scripts/generate-action-matrix.js` | Script generate `docs/canonical-action-matrix.md` + `.json` từ `x_actions_list` |
+| `scripts/generate-action-matrix.js` | Script generate `docs/canonical-action-matrix.md` + `.json` từ `medirus_list` |
 | `docs/canonical-action-matrix.md` | Human-readable action/arg matrix (auto-generated) |
 | `docs/canonical-action-matrix.json` | Machine-readable action/arg matrix (auto-generated, cho Nowing CI) |
 
@@ -87,22 +87,22 @@ Nowing đã wire phía mình (`XActionsMcpClient` + Celery beat + stream consume
 
 **File:** `src/mcp/server.js`
 
-1.1. Add `x_scrape` to `TOOLS` array (after `x_actions_list`, before `x_crawl_post`):
+1.1. Add `x_scrape` to `TOOLS` array (after `medirus_list`, before `x_crawl_post`):
 
 ```javascript
 {
   name: 'x_scrape',
-  description: 'Generic scrape dispatcher — calls scrape(platform, action, args). Use x_actions_list to discover available platforms/actions/args. Data flows through Redis Stream when REDIS_STREAM_ENABLED=true (returns preview only).',
+  description: 'Generic scrape dispatcher — calls scrape(platform, action, args). Use medirus_list to discover available platforms/actions/args. Data flows through Redis Stream when REDIS_STREAM_ENABLED=true (returns preview only).',
   inputSchema: {
     type: 'object',
     properties: {
       platform: {
         type: 'string',
-        description: 'Canonical platform key from DESCRIPTORS (e.g. masothue, chotot, shopee, facebook). Run x_actions_list to discover.',
+        description: 'Canonical platform key from DESCRIPTORS (e.g. masothue, chotot, shopee, facebook). Run medirus_list to discover.',
       },
       action: {
         type: 'string',
-        description: 'Canonical action name from ActionDescriptor. Run x_actions_list to discover.',
+        description: 'Canonical action name from ActionDescriptor. Run medirus_list to discover.',
       },
       args: {
         type: 'object',
@@ -205,7 +205,7 @@ async function executeScrapeTool(args) {
 }
 ```
 
-1.3. Add to `executeTool` dispatch (near `x_actions_list` handler):
+1.3. Add to `executeTool` dispatch (near `medirus_list` handler):
 
 ```javascript
 if (name === 'x_scrape') {
@@ -215,7 +215,7 @@ if (name === 'x_scrape') {
 
 1.4. Export `executeScrapeTool` in module exports (line ~6437).
 
-### Task 2: Extend `x_actions_list` for all 24 platforms
+### Task 2: Extend `medirus_list` for all 24 platforms
 
 **File:** `src/scrapers/social/actions-list.js`
 
@@ -271,7 +271,7 @@ if (opts.detailLevel === 'summary') {
 }
 ```
 
-2.3. Update `x_actions_list` tool inputSchema in `server.js`:
+2.3. Update `medirus_list` tool inputSchema in `server.js`:
 
 ```javascript
 // Add to properties:
@@ -304,7 +304,7 @@ for (const key of ['comments', 'posts', 'items', 'data', 'listings', 'products',
 ```javascript
 #!/usr/bin/env node
 /**
- * Generate canonical action/arg matrix from x_actions_list.
+ * Generate canonical action/arg matrix from medirus_list.
  * Usage: npm run docs:matrix
  * Output: docs/canonical-action-matrix.md + docs/canonical-action-matrix.json
  */
@@ -412,9 +412,9 @@ if (name === 'x_scrape') {
 - **When** crawl completes
 - **Then** `REDIS_STREAM_ENABLED` check in base hook (Story 20.2) prevents stream emission — `x_scrape` response has `mode: 'direct'` regardless of env var
 
-### AC-4: `x_actions_list` covers all 24 platforms
+### AC-4: `medirus_list` covers all 24 platforms
 
-- **Given** `x_actions_list` called
+- **Given** `medirus_list` called
 - **Then** response includes actions for all 24 platforms: twitter, bluesky, mastodon, threads, facebook, tiktok, tiktokshop, reddit, medium, instagram, youtube, zalo, shopee, topcv, vietnamworks, linkedin, chotot, batdongsan, masothue, b2b_registry_extended, automotive, fnb, healthcare, ipvietnam/legal
 - **And** platforms without crawler → `no_crawler: true` flag
 - **And** `checkpointResolver` filtered out from all ActionDescriptors
@@ -449,7 +449,7 @@ if (name === 'x_scrape') {
 ### AC-10: `b2b-registry-extended` loader works
 
 - **Given** `b2b-registry-extended` uses `index.js` not `crawler.js`
-- **When** `x_actions_list` runs
+- **When** `medirus_list` runs
 - **Then** `B2BRegistryExtendedCrawler` instantiated successfully (via `index.js` import)
 
 ---
@@ -491,7 +491,7 @@ if (name === 'x_scrape') {
 | `x_scrape` requiredArgs validation | `tests/mcp/x-scrape-tool.test.js` | `XACT_4002` + `missing[]` + `example` |
 | `x_scrape` envelope shape | `tests/mcp/x-scrape-tool.test.js` | Unified envelope: `mode`, `stream`, `preview`, `data` |
 | `x_scrape` context forwarding | `tests/mcp/x-scrape-tool.test.js` | `context` → `scrapeOptions.context` |
-| `x_actions_list` 24 platforms | `tests/mcp/actions-list-complete.test.js` | All 24 platforms enumerated, `no_crawler` flag, `checkpointResolver` filtered |
+| `medirus_list` 24 platforms | `tests/mcp/actions-list-complete.test.js` | All 24 platforms enumerated, `no_crawler` flag, `checkpointResolver` filtered |
 | `extractRecords` VN keys | `tests/mcp/envelope.test.js` | `listings`, `products`, `jobs` extracted correctly |
 | Action matrix generation | `tests/docs/matrix-generation.test.js` | `npm run docs:matrix` generates `.md` + `.json` |
 | `b2b-registry-extended` loader | `tests/scrapers/crawler-instantiation.test.js` | `B2BRegistryExtendedCrawler` instantiated via `index.js` |

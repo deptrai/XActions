@@ -1,10 +1,10 @@
-# Plan: Rename XActions → medirus
+# Plan: Rename Medirus → medirus
 
 Quyết định đã chốt:
-- Casing map: `XActions`→`Medirus`, `xActions`→`medirus`, `xactions`→`medirus`, `X_ACTIONS`→`MEDIRUS`, `x_actions`→`medirus_`, `x-actions`→`medirus-`
-- Domain: `xactions.app`→`medirus.online`, `api.xactions.app`→`api.medirus.online`, `xactions.io`→`medirus.online`
-- Breaking OK: storage keys, `window.XActions`, env vars `XACTIONS_*` đổi hết.
-- GIỮ NGUYÊN: author `nichxbt`, `github.com/*/XActions` URLs (repo chưa rename trên GitHub), `bin/unfollowx`, thư mục `xspace-agents/`.
+- Casing map: `Medirus`→`Medirus`, `medirus`→`medirus`, `medirus`→`medirus`, `MEDIRUS`→`MEDIRUS`, `medirus`→`medirus_`, `medirus-`→`medirus-`
+- Domain: `medirus.online`→`medirus.online`, `api.medirus.online`→`api.medirus.online`, `medirus.online`→`medirus.online`
+- Breaking OK: storage keys, `window.Medirus`, env vars `MEDIRUS_*` đổi hết.
+- GIỮ NGUYÊN: author `nichxbt`, `github.com/*/Medirus` URLs (repo chưa rename trên GitHub), `bin/unfollowx`, thư mục `xspace-agents/`.
 
 ## Phase 0 — Dọn dẹp trước (bắt buộc)
 
@@ -30,65 +30,65 @@ Script `scripts/rename-medirus.mjs`: đọc từng file text (skip `.git`, `node
 ```js
 // Thứ tự quan trọng — match dài nhất trước
 const RULES = [
-  [/api\.xactions\.app/g,            'api.medirus.online'],
-  [/api\.xactions\.io/g,             'api.medirus.online'],
-  [/xactions\.app/g,                 'medirus.online'],
-  [/xactions\.io/g,                  'medirus.online'],
-  [/X_ACTIONS(?=[_A-Z0-9]|\b)/g,     'MEDIRUS'],       // env vars
-  [/xactions_/g,                     'medirus_'],       // storage keys
-  [/x-actions/g,                     'medirus-'],
-  [/XActions(?=[A-Z]|\b)/g,          'Medirus'],        // XActionsClient → MedirusClient
-  [/(?<![A-Za-z])xActions/g,         'medirus'],        // (?<!...) bảo vệ maxActions!
-  [/(?<![A-Za-z0-9_.\/-])xactions\b/g, 'medirus'],      // standalone; skip github URL path
+  [/api\.medirus\.app/g,            'api.medirus.online'],
+  [/api\.medirus\.io/g,             'api.medirus.online'],
+  [/medirus\.app/g,                 'medirus.online'],
+  [/medirus\.io/g,                  'medirus.online'],
+  [/MEDIRUS(?=[_A-Z0-9]|\b)/g,     'MEDIRUS'],       // env vars
+  [/medirus_/g,                     'medirus_'],       // storage keys
+  [/medirus-/g,                     'medirus-'],
+  [/Medirus(?=[A-Z]|\b)/g,          'Medirus'],        // MedirusClient → MedirusClient
+  [/(?<![A-Za-z])medirus/g,         'medirus'],        // (?<!...) bảo vệ maxActions!
+  [/(?<![A-Za-z0-9_.\/-])medirus\b/g, 'medirus'],      // standalone; skip github URL path
 ];
 ```
 
-Guard riêng cho URL: **không** replace `xactions` khi nằm trong `github.com/<user>/xactions` hoặc `github.com/<user>/XActions` — dùng negative lookbehind/lookahead hoặc whitelist-skip dòng chứa `github.com/nirholas/` và `github.com/deptrai/`… rồi review tay phần còn lại (docs nói về repo URL có thể muốn đổi text hiển thị nhưng giữ href).
+Guard riêng cho URL: **không** replace `medirus` khi nằm trong `github.com/<user>/medirus` hoặc `github.com/<user>/Medirus` — dùng negative lookbehind/lookahead hoặc whitelist-skip dòng chứa `github.com/nirholas/` và `github.com/deptrai/`… rồi review tay phần còn lại (docs nói về repo URL có thể muốn đổi text hiển thị nhưng giữ href).
 
 Edge cases đã thống kê:
 - `maxActions` / `CONFIG.maxActions` (~80 chỗ) — KHÔNG đụng (lookbehind).
-- `xactionssettings`, `xactionsuser` (key nối liền) — rule riêng: `\bxactions(?=settings|user)` → `medirus`.
-- `window.XActions*` — rule `XActions` cover được (`window.Medirus`, `window.MedirusToolbox`…).
-- `org.xactions.scrape.completed` event names → `org.medirus.*` (rule `xactions.` boundary xử lý).
-- `xActions` (n8n node name), `XActionsApi` credentials, `XActionsTrigger` → `medirus`, `MedirusApi`, `MedirusTrigger`.
+- `medirussettings`, `medirususer` (key nối liền) — rule riêng: `\bxactions(?=settings|user)` → `medirus`.
+- `window.Medirus*` — rule `Medirus` cover được (`window.Medirus`, `window.MedirusToolbox`…).
+- `org.medirus.scrape.completed` event names → `org.medirus.*` (rule `medirus.` boundary xử lý).
+- `medirus` (n8n node name), `MedirusApi` credentials, `MedirusTrigger` → `medirus`, `MedirusApi`, `MedirusTrigger`.
 - Lock files: sau replace, `package-lock.json`/`pnpm-lock.yaml` có field `name` cũ — chạy `npm install --package-lock-only` hoặc sed name field.
 
-## Phase 2 — Rename file/dir có `xactions`/`XActions` trong tên
+## Phase 2 — Rename file/dir có `medirus`/`Medirus` trong tên
 
 `git mv` (giữ history), case-sensitive 2 bước trên macOS (filesystem case-insensitive):
-`git mv XActions x_tmp && git mv x_tmp medirus`.
+`git mv Medirus x_tmp && git mv x_tmp medirus`.
 
-Danh sách chính (~40 mục, generate bằng `find . -iname '*xactions*' -not -path './node_modules/*'`):
-- `packages/xactions-mcp` → `packages/medirus-mcp` (+ sửa package.json name, bin, refs)
-- `integrations/n8n/nodes/XActions/` → `Medirus/` (class `XActions.node.js` → `Medirus.node.js`, `XActionsApi.credentials.js` → `MedirusApi.credentials.js`)
-- `skills/xactions-cli`, `skills/xactions-mcp-server`, `skills/xactions-test-engineer`
-- `docs/xactions-reference.md`, `dashboard/docs/guides/xactions-reference.html`, `dashboard/docs/skills/xactions-*.html`
-- `scripts/twitter/xactions-command-center.js`, `dashboard/scripts/xactions-command-center.html`, `dashboard/xactions-ascii.svg`, `.github/xactions-ascii.svg`
-- `xactions-demo-*.png`, `.playwright-mcp/xactions-*.csv`, `_bmad-output/**/xactions-*` (~20 artifact dirs/files)
-- File served `xactions.js` (CDN script ref `xactions.app/scripts/xactions.js`) → `medirus.js`
+Danh sách chính (~40 mục, generate bằng `find . -iname '*medirus*' -not -path './node_modules/*'`):
+- `packages/medirus-mcp` → `packages/medirus-mcp` (+ sửa package.json name, bin, refs)
+- `integrations/n8n/nodes/Medirus/` → `Medirus/` (class `Medirus.node.js` → `Medirus.node.js`, `MedirusApi.credentials.js` → `MedirusApi.credentials.js`)
+- `skills/medirus-cli`, `skills/medirus-mcp-server`, `skills/medirus-test-engineer`
+- `docs/medirus-reference.md`, `dashboard/docs/guides/medirus-reference.html`, `dashboard/docs/skills/medirus-*.html`
+- `scripts/twitter/medirus-command-center.js`, `dashboard/scripts/medirus-command-center.html`, `dashboard/medirus-ascii.svg`, `.github/medirus-ascii.svg`
+- `medirus-demo-*.png`, `.playwright-mcp/medirus-*.csv`, `_bmad-output/**/medirus-*` (~20 artifact dirs/files)
+- File served `medirus.js` (CDN script ref `medirus.online/scripts/medirus.js`) → `medirus.js`
 
 ## Phase 3 — Config & package metadata (sửa tay, review kỹ)
 
-- `package.json`: `name: "medirus"`, bins `medirus`, `medirus-mcp`, `medirus-agent`; homepage `medirus.online`; keywords thay `xactions`; giữ `unfollowx` bin.
-- `packages/xactions-mcp/package.json` → `medirus-mcp` v3.x (major bump vì breaking).
+- `package.json`: `name: "medirus"`, bins `medirus`, `medirus-mcp`, `medirus-agent`; homepage `medirus.online`; keywords thay `medirus`; giữ `unfollowx` bin.
+- `packages/medirus-mcp/package.json` → `medirus-mcp` v3.x (major bump vì breaking).
 - `wrangler.toml`: worker `name = "medirus"`.
 - `railway.toml`, `fly.toml`, `vercel.json`, `deploy/gcp/cloudbuild-api.yaml`, `docker-compose*.yml`, `Dockerfile` labels, `.github/workflows/*` (image name, deploy target, sitemap URL).
 - `public/sitemap.xml`, `dashboard/sitemap.xml`, `dashboard/docs/_sitemap-*.xml` — regenerate hoặc sed domain.
 - `.github/repository-metadata.json`, `CODEOWNERS`, `copilot-instructions.md`.
-- `bin/unfollowx` giữ nguyên tên file + shebang, chỉ đổi text `XActions` trong comments/logic.
+- `bin/unfollowx` giữ nguyên tên file + shebang, chỉ đổi text `Medirus` trong comments/logic.
 
 ## Phase 4 — Bề mặt breaking (đã duyệt)
 
-- Env `XACTIONS_*` → `MEDIRUS_*` (~30 vars: SERVICE_KEYS, MCP_API_KEY, SESSION_COOKIE, API_TOKEN, MODE, BROWSER_POOL_SIZE, BROWSER_BACKEND, SCRAPER_ADAPTER, STOP, NO_TELEMETRY, VIDEO_URLS, VD_CAPTURED, DEFAULT_USERNAME, ARTIFACT_DIR, TEST_FAST_DELAYS…)
-- Storage keys `xactions_*` → `medirus_*` (~50 keys)
-- `window.XActions*` → `window.Medirus*`
-- Class/function exports: `XActionsClient`, `XActionsUtils`, `XActionsOptions`, `xactionsClient`, `stopXActionsMonitor`…
-- `.env.example`, docs env tables, CI secrets (`.github/workflows` dùng `secrets.XACTIONS_*` → cần đổi tên secret trên GitHub UI sau).
+- Env `MEDIRUS_*` → `MEDIRUS_*` (~30 vars: SERVICE_KEYS, MCP_API_KEY, SESSION_COOKIE, API_TOKEN, MODE, BROWSER_POOL_SIZE, BROWSER_BACKEND, SCRAPER_ADAPTER, STOP, NO_TELEMETRY, VIDEO_URLS, VD_CAPTURED, DEFAULT_USERNAME, ARTIFACT_DIR, TEST_FAST_DELAYS…)
+- Storage keys `medirus_*` → `medirus_*` (~50 keys)
+- `window.Medirus*` → `window.Medirus*`
+- Class/function exports: `MedirusClient`, `MedirusUtils`, `MedirusOptions`, `medirusClient`, `stopMedirusMonitor`…
+- `.env.example`, docs env tables, CI secrets (`.github/workflows` dùng `secrets.MEDIRUS_*` → cần đổi tên secret trên GitHub UI sau).
 
 ## Phase 5 — Verify
 
 ```bash
-rg -i 'xactions|x.actions' --hidden --glob '!.git' --glob '!node_modules' \
+rg -i 'medirus|x.actions' --hidden --glob '!.git' --glob '!node_modules' \
   | grep -v 'github.com/nirholas\|github.com/deptrai\|nichxbt'   # kỳ vọng ~0
 npm test          # suite hiện tại
 npm run build / deploy dry-run nếu có
@@ -103,4 +103,4 @@ Checklist tay: CLI `npx medirus --help` (link global sau `npm i -g .`), MCP serv
 3. Phase 1 (bulk content replace) → 1 commit
 4. Phase 3+4 (config tay) → 1 commit
 5. Phase 5 verify → fix lẻ
-6. (Ngoài repo, sau): rename GitHub repo → update `github.com/*/XActions` URLs; đổi npm package (deprecate `xactions`, publish `medirus`); trỏ domain medirus.online; đổi secrets CI.
+6. (Ngoài repo, sau): rename GitHub repo → update `github.com/*/Medirus` URLs; đổi npm package (deprecate `medirus`, publish `medirus`); trỏ domain medirus.online; đổi secrets CI.

@@ -1,13 +1,13 @@
-# xactions-mcp
+# medirus-mcp
 
-> XActions MCP Server — X/Twitter automation for AI agents. No API fees.
+> Medirus MCP Server — X/Twitter automation for AI agents. No API fees.
 
-This is the standalone MCP server package for [XActions](https://github.com/nirholas/XActions). It enables AI assistants like Claude, Cursor, Windsurf, and GPT to automate X/Twitter tasks.
+This is the standalone MCP server package for [Medirus](https://github.com/nirholas/XActions). It enables AI assistants like Claude, Cursor, Windsurf, and GPT to automate X/Twitter tasks.
 
 ## Quick Start
 
 ```bash
-npx xactions-mcp
+npx medirus-mcp
 ```
 
 ## Claude Desktop Config
@@ -15,11 +15,11 @@ npx xactions-mcp
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions-mcp"],
+      "args": ["-y", "medirus-mcp"],
       "env": {
-        "XACTIONS_SESSION_COOKIE": "your_auth_token_here"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token_here"
       }
     }
   }
@@ -28,7 +28,7 @@ npx xactions-mcp
 
 ## Documentation
 
-See the full setup guide: [xactions.app](https://xactions.app) | [GitHub](https://github.com/nirholas/XActions)
+See the full setup guide: [medirus.online](https://medirus.online) | [GitHub](https://github.com/nirholas/XActions)
 
 ## License
 

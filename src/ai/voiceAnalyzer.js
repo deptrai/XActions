@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Voice Analyzer
+ * Medirus Voice Analyzer
  * 
  * Analyzes a user's writing style from their tweets to build a VoiceProfile.
  * The killer feature: scrape tweets → analyze voice → generate in their style.

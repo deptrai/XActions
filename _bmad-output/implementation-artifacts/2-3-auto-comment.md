@@ -8,7 +8,7 @@ Status: done
 
 ## Story
 
-As a multi-account operator using XActions,
+As a multi-account operator using Medirus,
 I want to auto-comment user-provided content on posts with a dry-run preview,
 So that I can review target posts and comment text before posting.
 

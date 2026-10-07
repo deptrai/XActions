@@ -97,14 +97,14 @@ let scrapeSpy;
 
 beforeEach(() => {
   process.env = { ...ORIGINAL_ENV };
-  delete process.env.XACTIONS_SERVICE_KEYS;
-  delete process.env.XACTIONS_MCP_API_KEY;
-  delete process.env.XACTIONS_API_TOKEN;
+  delete process.env.MEDIRUS_SERVICE_KEYS;
+  delete process.env.MEDIRUS_MCP_API_KEY;
+  delete process.env.MEDIRUS_API_TOKEN;
   delete process.env.REDIS_STREAM_ENABLED;
   // Story 50.4 — anonymous free tier is metered per IP+platform+action; these
   // tests exercise the envelope contract, not quota. Raise the ceiling so
   // the shared in-process bucket never gates contract assertions.
-  process.env.XACTIONS_CONSUMER_QUOTAS = JSON.stringify({ default: '100000/min' });
+  process.env.MEDIRUS_CONSUMER_QUOTAS = JSON.stringify({ default: '100000/min' });
   process.env.NODE_ENV = 'development';
   _resetServiceKeyMap();
   _resetDispatch();
@@ -384,7 +384,7 @@ describe('POST /api/platform/:platform/scrape — unified envelope', () => {
   });
 
   it('ERR_AUTH: unknown Bearer → 401 via errorMiddleware, kind:auth + request_id (mw before auth)', async () => {
-    process.env.XACTIONS_SERVICE_KEYS = SERVICE_MAP;
+    process.env.MEDIRUS_SERVICE_KEYS = SERVICE_MAP;
     _resetServiceKeyMap();
     const res = await request(app)
       .post('/api/platform/reddit/scrape')

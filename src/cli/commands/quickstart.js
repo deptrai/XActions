@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions quickstart` — the first thing a new user should run.
+ * `medirus quickstart` — the first thing a new user should run.
  *
  * With fifty-plus commands, the honest answer to "what do I do now?" is not a
  * command list. It is: here are three commands that work without an account,
@@ -16,7 +16,7 @@ import os from 'os';
 import path from 'path';
 import chalk from 'chalk';
 
-const CONFIG_DIR = path.join(os.homedir(), '.xactions');
+const CONFIG_DIR = path.join(os.homedir(), '.medirus');
 
 /**
  * Detect what the user has set up, so the guidance matches their machine.
@@ -79,17 +79,17 @@ export function registerQuickstartCommand(program, deps = {}) {
       const out = [];
       out.push('');
       out.push(
-        `${chalk.bold.cyan('⚡ xactions quickstart')}  ${chalk.dim('three commands to a real result')}`
+        `${chalk.bold.cyan('⚡ medirus quickstart')}  ${chalk.dim('three commands to a real result')}`
       );
       out.push('');
       out.push(
-        `  ${chalk.dim('XActions reads X/Twitter with no API key. Most reads need no account at all.')}`
+        `  ${chalk.dim('Medirus reads X/Twitter with no API key. Most reads need no account at all.')}`
       );
       out.push('');
 
       out.push(
         step(1, 'Check the install', [
-          chalk.cyan('xactions doctor'),
+          chalk.cyan('medirus doctor'),
           chalk.dim('Verifies Node, the browser, the MCP server, and whether reads work'),
           chalk.dim('right now. Every failure it reports comes with the fix.'),
         ])
@@ -97,9 +97,9 @@ export function registerQuickstartCommand(program, deps = {}) {
 
       out.push(
         step(2, 'Read a public account (no login)', [
-          chalk.cyan('xactions profile NASA'),
-          chalk.cyan('xactions tweets NASA --limit 20'),
-          chalk.cyan('xactions analyze NASA'),
+          chalk.cyan('medirus profile NASA'),
+          chalk.cyan('medirus tweets NASA --limit 20'),
+          chalk.cyan('medirus analyze NASA'),
           chalk.dim('analyze gives engagement rate, posting cadence, content mix, and the'),
           chalk.dim('hour of day that actually performs for that account.'),
         ])
@@ -108,17 +108,17 @@ export function registerQuickstartCommand(program, deps = {}) {
       if (setup.hasSession) {
         out.push(
           step(3, 'You are logged in, so these work too', [
-            chalk.cyan('xactions search "your topic" --limit 50'),
-            chalk.cyan('xactions followers yourhandle --limit 200'),
-            chalk.cyan('xactions non-followers yourhandle'),
+            chalk.cyan('medirus search "your topic" --limit 50'),
+            chalk.cyan('medirus followers yourhandle --limit 200'),
+            chalk.cyan('medirus non-followers yourhandle'),
             chalk.dim(`Session found in ${CONFIG_DIR}. If reads start failing, re-run`),
-            `${chalk.dim('     ')}${chalk.cyan('xactions connect')}${chalk.dim(' to refresh it.')}`,
+            `${chalk.dim('     ')}${chalk.cyan('medirus connect')}${chalk.dim(' to refresh it.')}`,
           ])
         );
       } else {
         out.push(
           step(3, 'Log in once to unlock the rest', [
-            chalk.cyan('xactions connect'),
+            chalk.cyan('medirus connect'),
             chalk.dim('Opens a real browser, you log in normally, and the session is saved.'),
             chalk.dim('No DevTools, no copying cookies by hand. This unlocks search,'),
             chalk.dim('followers, following, likes, bookmarks, and DMs.'),
@@ -129,11 +129,11 @@ export function registerQuickstartCommand(program, deps = {}) {
       // Pad on the raw string, before colouring: chalk adds invisible escape
       // bytes, so padding a coloured string aligns to the wrong width.
       const directions = [
-        ['xactions export NASA', 'everything about an account, to disk'],
-        ['xactions monitor "your brand"', 'watch mentions and sentiment over time'],
-        ['xactions ai analyze yourhandle', 'learn your voice, then draft in it'],
-        ['xactions workflow create', 'chain actions into a repeatable job'],
-        ['xactions mcp-config', 'wire 145 tools into Claude, Cursor, or Windsurf'],
+        ['medirus export NASA', 'everything about an account, to disk'],
+        ['medirus monitor "your brand"', 'watch mentions and sentiment over time'],
+        ['medirus ai analyze yourhandle', 'learn your voice, then draft in it'],
+        ['medirus workflow create', 'chain actions into a repeatable job'],
+        ['medirus mcp-config', 'wire 145 tools into Claude, Cursor, or Windsurf'],
       ];
       const directionWidth = directions.reduce((max, [cmd]) => Math.max(max, cmd.length), 0);
 
@@ -150,14 +150,14 @@ export function registerQuickstartCommand(program, deps = {}) {
         `    ${chalk.dim('Every read command takes')} ${chalk.cyan('--json')}${chalk.dim(', and pipes cleanly:')}`
       );
       out.push(
-        `      ${chalk.gray('xactions tweets NASA --limit 100 --json | jq -r \'.[].text\'')}`
+        `      ${chalk.gray('medirus tweets NASA --limit 100 --json | jq -r \'.[].text\'')}`
       );
       out.push('');
       out.push(
-        `    ${chalk.dim('Run')} ${chalk.cyan('xactions')} ${chalk.dim('with no arguments for the full command list, grouped by task.')}`
+        `    ${chalk.dim('Run')} ${chalk.cyan('medirus')} ${chalk.dim('with no arguments for the full command list, grouped by task.')}`
       );
       out.push('');
-      out.push(`  ${chalk.dim('Docs: https://xactions.app   Issues: github.com/nirholas/xactions')}`);
+      out.push(`  ${chalk.dim('Docs: https://medirus.online   Issues: github.com/nirholas/xactions')}`);
       out.push('');
 
       console.log(out.join('\n'));

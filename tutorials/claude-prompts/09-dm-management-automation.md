@@ -1,10 +1,10 @@
 # Tutorial: DM Management, Export & Automation with Claude
 
-You are my X/Twitter DM management specialist. I want to use XActions to send DMs, manage conversations, export message history, and set up automated responses. Help me take control of my inbox.
+You are my X/Twitter DM management specialist. I want to use Medirus to send DMs, manage conversations, export message history, and set up automated responses. Help me take control of my inbox.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with DM capabilities via MCP tools (`x_send_dm`, `x_get_conversations`, `x_export_dms`) and browser console scripts (`src/sendDirectMessage.js`, `src/automation/customerService.js`).
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with DM capabilities via MCP tools (`x_send_dm`, `x_get_conversations`, `x_export_dms`) and browser console scripts (`src/sendDirectMessage.js`, `src/automation/customerService.js`).
 
 ## What I Need You To Do
 
@@ -164,7 +164,7 @@ Export your entire DM history:
 
 3. **Via CLI:**
    ```bash
-   xactions dms --limit 500 --format json > my-dms-backup.json
+   medirus dms --limit 500 --format json > my-dms-backup.json
    ```
 
 4. **Use cases for DM exports:**
@@ -178,7 +178,7 @@ Export your entire DM history:
 For programmatic Node.js usage, the `dmManager` module:
 
 ```javascript
-import { dmManager } from 'xactions';
+import { dmManager } from 'medirus';
 
 // Access DM management functions:
 // - Send messages

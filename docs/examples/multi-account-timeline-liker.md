@@ -85,8 +85,8 @@ This script provides the following capabilities:
 
   // ── Abort handle ───────────────────────────────────────────
   let aborted = false;
-  window.XActions = window.XActions || {};
-  window.XActions.stop = () => { aborted = true; console.log('🛑 Stopping after current tweet...'); };
+  window.Medirus = window.Medirus || {};
+  window.Medirus.stop = () => { aborted = true; console.log('🛑 Stopping after current tweet...'); };
 
   const isRateLimited = () => {
     for (const el of document.querySelectorAll(`${SEL.toast}, [role="alert"]`)) {
@@ -205,11 +205,11 @@ This script provides the following capabilities:
   const run = async () => {
     console.log('╔════════════════════════════════════════════════╗');
     console.log('║  🔄 MULTI-ACCOUNT TIMELINE LIKER              ║');
-    console.log('║  by nichxbt — XActions                         ║');
+    console.log('║  by nichxbt — Medirus                         ║');
     console.log('╚════════════════════════════════════════════════╝');
     console.log(`   Accounts: ${TARGETS.map(t => `@${t.username} (${t.maxLikes})`).join(', ')}`);
     console.log(`   Dry run: ${CONFIG.dryRun}`);
-    console.log(`   ℹ️ Type XActions.stop() to abort at any time\n`);
+    console.log(`   ℹ️ Type Medirus.stop() to abort at any time\n`);
 
     const results = [];
 
@@ -253,7 +253,7 @@ This script provides the following capabilities:
   // After navigation, the script context is lost.
   // For multi-account, we use sessionStorage to track progress.
 
-  const STATE_KEY = 'xactions_multi_liker';
+  const STATE_KEY = 'medirus_multi_liker';
 
   const getState = () => {
     try { return JSON.parse(sessionStorage.getItem(STATE_KEY)); }
@@ -287,12 +287,12 @@ This script provides the following capabilities:
 
     console.log('╔════════════════════════════════════════════════╗');
     console.log('║  🔄 MULTI-ACCOUNT TIMELINE LIKER              ║');
-    console.log('║  by nichxbt — XActions                         ║');
+    console.log('║  by nichxbt — Medirus                         ║');
     console.log('╚════════════════════════════════════════════════╝');
     console.log(`   Accounts: ${TARGETS.map(t => `@${t.username} (${t.maxLikes})`).join(', ')}`);
     console.log(`   Dry run: ${CONFIG.dryRun}`);
     console.log(`   Progress: ${state.currentIndex}/${TARGETS.length} accounts done`);
-    console.log(`   ℹ️ Type XActions.stop() to abort\n`);
+    console.log(`   ℹ️ Type Medirus.stop() to abort\n`);
 
     if (state.currentIndex >= TARGETS.length) {
       console.log('🎉 All accounts already processed! Call clearState() or clear sessionStorage to restart.');
@@ -407,14 +407,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -452,4 +452,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

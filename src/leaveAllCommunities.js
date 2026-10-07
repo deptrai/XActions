@@ -26,7 +26,7 @@
  * skip already-left communities.
  *
  * 🎮 CONTROLS:
- *   window.XActions.pause()  / .resume() / .abort() / .status()
+ *   window.Medirus.pause()  / .resume() / .abort() / .status()
  * ============================================================
  */
 (() => {
@@ -64,7 +64,7 @@
   const leftLog = [];
 
   // Persistent storage (survives page reloads)
-  const STORAGE_KEY = 'xactions_leave_communities';
+  const STORAGE_KEY = 'medirus_leave_communities';
   const getLeftIds = () => {
     try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); } catch { return new Set(); }
   };
@@ -76,7 +76,7 @@
   const leftIds = getLeftIds();
   const whitelistSet = new Set(CONFIG.whitelist.map(String));
 
-  window.XActions = {
+  window.Medirus = {
     pause()  { paused = true;  console.log('⏸️ Paused.'); },
     resume() { paused = false; console.log('▶️ Resumed.'); },
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
@@ -153,7 +153,7 @@
 
     console.log(`📋 Previously left: ${leftIds.size} | Whitelist: ${whitelistSet.size} | Dry run: ${CONFIG.dryRun}`);
     if (leftIds.size > 0) console.log('   ℹ️ Resuming — will skip already-left communities');
-    console.log('   💡 Call XActions.reset() to clear progress.\n');
+    console.log('   💡 Call Medirus.reset() to clear progress.\n');
 
     // Are we inside a community? Leave it first
     const insideCommunity = /\/i\/communities\/\d+/.test(window.location.href);
@@ -259,7 +259,7 @@
     if (CONFIG.exportOnComplete && leftLog.length > 0) {
       const blob = new Blob([JSON.stringify({ summary: { leftThisRun: left, totalLeft: leftIds.size, errors }, communities: leftLog }, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-communities-left-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-communities-left-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Results exported.');
     }

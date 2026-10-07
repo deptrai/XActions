@@ -1,12 +1,12 @@
-# A2A Protocol — XActions
+# A2A Protocol — Medirus
 
-> Google's Agent-to-Agent (A2A) protocol implementation for XActions, enabling inter-agent communication, task delegation, and multi-agent orchestration.
+> Google's Agent-to-Agent (A2A) protocol implementation for Medirus, enabling inter-agent communication, task delegation, and multi-agent orchestration.
 
 ## Overview
 
-XActions implements the [A2A protocol](https://github.com/google/A2A) to allow AI agents (Claude, GPT, Gemini, custom agents) to communicate with the XActions X/Twitter automation toolkit using a standardized protocol.
+Medirus implements the [A2A protocol](https://github.com/google/A2A) to allow AI agents (Claude, GPT, Gemini, custom agents) to communicate with the Medirus X/Twitter automation toolkit using a standardized protocol.
 
-The A2A server exposes all 140+ XActions tools as A2A skills, supports real-time streaming via SSE, push notifications via webhooks, inter-agent authentication, multi-agent discovery, and complex task orchestration.
+The A2A server exposes all 140+ Medirus tools as A2A skills, supports real-time streaming via SSE, push notifications via webhooks, inter-agent authentication, multi-agent discovery, and complex task orchestration.
 
 ## Quick Start
 
@@ -27,13 +27,13 @@ Every A2A-compatible agent publishes a card at `/.well-known/agent.json`:
 
 ```json
 {
-  "name": "XActions Agent",
-  "description": "X/Twitter automation agent powered by XActions",
+  "name": "Medirus Agent",
+  "description": "X/Twitter automation agent powered by Medirus",
   "url": "http://localhost:3100",
   "version": "1.0.0",
   "provider": {
-    "organization": "XActions by @nichxbt",
-    "url": "https://xactions.app"
+    "organization": "Medirus by @nichxbt",
+    "url": "https://medirus.online"
   },
   "capabilities": {
     "streaming": true,
@@ -45,7 +45,7 @@ Every A2A-compatible agent publishes a card at `/.well-known/agent.json`:
   },
   "skills": [
     {
-      "id": "xactions.x_get_profile",
+      "id": "medirus.x_get_profile",
       "name": "x_get_profile",
       "description": "Get a Twitter profile by username",
       "tags": ["scraping"],

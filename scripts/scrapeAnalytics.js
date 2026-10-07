@@ -94,7 +94,7 @@
   };
 
   const run = async () => {
-    console.log('📊 XActions Analytics Scraper');
+    console.log('📊 Medirus Analytics Scraper');
     console.log('============================');
 
     let result = {};

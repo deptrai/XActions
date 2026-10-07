@@ -1,8 +1,8 @@
 ---
 title: "Scrape X (Twitter) Profile Data — Free No-API Tool 2026"
 description: "Scrape any X/Twitter profile's bio, followers, following, and more to JSON. Free browser script, no API needed."
-keywords: ["scrape twitter profile", "twitter profile scraper free", "get twitter user data 2026", "how to scrape X profile without API", "twitter profile export JSON", "scrape twitter bio followers", "twitter user info scraper", "extract twitter profile data free", "xactions profile scraping", "twitter profile to JSON no API"]
-canonical: "https://xactions.app/examples/profile-scraping"
+keywords: ["scrape twitter profile", "twitter profile scraper free", "get twitter user data 2026", "how to scrape X profile without API", "twitter profile export JSON", "scrape twitter bio followers", "twitter user info scraper", "extract twitter profile data free", "medirus profile scraping", "twitter profile to JSON no API"]
+canonical: "https://medirus.online/examples/profile-scraping"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You're preparing a pitch deck for investors and need competitive intelligence on 5 rival accounts. For each one, you need: follower count, bio, website, join date, tweet volume, and verified status. Normally you'd browse each profile and manually copy-paste into a spreadsheet — tedious and error-prone. Or you'd sign up for Twitter's API ($100/month Basic tier) just to pull profile data.
 
-XActions' profile scraper reads everything visible on a profile page and exports it to a structured JSON file in under 10 seconds. Run it on 5 profiles and your competitive analysis spreadsheet is done in under a minute.
+Medirus' profile scraper reads everything visible on a profile page and exports it to a structured JSON file in under 10 seconds. Run it on 5 profiles and your competitive analysis spreadsheet is done in under a minute.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -50,11 +50,11 @@ XActions' profile scraper reads everything visible on a profile page and exports
 └──────────────────────────────────────────────────────┘
 ```
 
-**After XActions:**
+**After Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  Competitive Research (XActions)                     │
+│  Competitive Research (Medirus)                     │
 ├──────────────────────────────────────────────────────┤
 │                                                      │
 │  For each competitor (5 accounts):                   │
@@ -137,10 +137,10 @@ XActions' profile scraper reads everything visible on a profile page and exports
 │  🖼️  [Banner Image]                                  │
 │                                                      │
 │  👤 nich @nichxbt                            ✅      │
-│  Building XActions — free X/Twitter automation       │
+│  Building Medirus — free X/Twitter automation       │
 │  toolkit. Open source. No API fees.                  │
 │                                                      │
-│  📍 Internet  🔗 xactions.app  📅 Joined Jan 2023  │
+│  📍 Internet  🔗 medirus.online  📅 Joined Jan 2023  │
 │                                                      │
 │  👥 12,847 Followers    👥 892 Following              │
 │                                                      │
@@ -162,8 +162,8 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 
 ```javascript
 // ============================================
-// XActions - Scrape X/Twitter Profile Data
-// by nichxbt — https://xactions.app
+// Medirus - Scrape X/Twitter Profile Data
+// by nichxbt — https://medirus.online
 // Go to: x.com/ANY_USERNAME
 // Open console (F12 → Console), paste, Enter
 // ============================================
@@ -180,7 +180,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
   }
 
   console.log('');
-  console.log('👤 XActions - PROFILE SCRAPER');
+  console.log('👤 Medirus - PROFILE SCRAPER');
   console.log('════════════════════════════════════════');
   console.log(`🎯 Scraping @${username}...`);
   console.log('');
@@ -305,7 +305,7 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 ### ✅ Expected Output
 
 ```
-👤 XActions - PROFILE SCRAPER
+👤 Medirus - PROFILE SCRAPER
 ════════════════════════════════════════
 🎯 Scraping @nichxbt...
 
@@ -313,9 +313,9 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 👤 PROFILE: @nichxbt
 ════════════════════════════════════════
 📛 Name:       nich
-📝 Bio:        Building XActions — free X/Twitter automation toolkit. Open source. No AP...
+📝 Bio:        Building Medirus — free X/Twitter automation toolkit. Open source. No AP...
 📍 Location:   Internet
-🔗 Website:    https://xactions.app
+🔗 Website:    https://medirus.online
 📅 Joined:     Joined January 2023
 👥 Followers:  12,847
 👥 Following:  892
@@ -333,32 +333,32 @@ Copy the entire script below, paste it into the console, and press **Enter**:
 ## 💻 Method 2: CLI (Command Line)
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Scrape a profile
-npx xactions profile nichxbt
+npx medirus profile nichxbt
 
 # With JSON output
-npx xactions profile nichxbt --json
+npx medirus profile nichxbt --json
 
 # Scrape multiple profiles (run sequentially)
 for user in nichxbt karpathy levelsio; do
-  npx xactions profile $user --output "profile_${user}.json"
+  npx medirus profile $user --output "profile_${user}.json"
 done
 ```
 
 ### ✅ CLI Output Preview
 
 ```
-⚡ XActions v3.x.x
+⚡ Medirus v3.x.x
 
 ⚡ @nichxbt
 
   Name:      nich
-  Bio:       Building XActions — free X/Twitter automation toolkit
+  Bio:       Building Medirus — free X/Twitter automation toolkit
   Location:  Internet
-  Website:   https://xactions.app
+  Website:   https://medirus.online
   Joined:    January 2023
   Followers: 12,847
   Following: 892
@@ -384,9 +384,9 @@ done
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions", "mcp"]
+      "args": ["-y", "medirus", "mcp"]
     }
   }
 }
@@ -413,9 +413,9 @@ done
 {
   "handle": "nichxbt",
   "displayName": "nich",
-  "bio": "Building XActions — free X/Twitter automation toolkit. Open source. No API fees.",
+  "bio": "Building Medirus — free X/Twitter automation toolkit. Open source. No API fees.",
   "location": "Internet",
-  "website": "https://xactions.app",
+  "website": "https://medirus.online",
   "joinDate": "Joined January 2023",
   "followersCount": 12847,
   "followingCount": 892,
@@ -446,9 +446,9 @@ done
 |-------|------|---------|-------------|
 | `handle` | string | `"nichxbt"` | Username without @ |
 | `displayName` | string | `"nich"` | Display name |
-| `bio` | string | `"Building XActions..."` | Profile bio text |
+| `bio` | string | `"Building Medirus..."` | Profile bio text |
 | `location` | string | `"Internet"` | Location field |
-| `website` | string | `"https://xactions.app"` | Website URL |
+| `website` | string | `"https://medirus.online"` | Website URL |
 | `joinDate` | string | `"Joined January 2023"` | Join date text |
 | `followersCount` | number | `12847` | Number of followers |
 | `followingCount` | number | `892` | Number following |
@@ -468,9 +468,9 @@ done
 {
   "handle": "nichxbt",
   "displayName": "nich",
-  "bio": "Building XActions — free X/Twitter automation toolkit. Open source. No API fees.",
+  "bio": "Building Medirus — free X/Twitter automation toolkit. Open source. No API fees.",
   "location": "Internet",
-  "website": "https://xactions.app",
+  "website": "https://medirus.online",
   "joinDate": "Joined January 2023",
   "followersCount": 12847,
   "followingCount": 892,
@@ -510,7 +510,7 @@ done
 3. **Batch scrape with the CLI** — Use a shell loop to scrape multiple profiles:
    ```bash
    for user in karpathy sama naval levelsio; do
-     npx xactions profile $user --output "profiles/${user}.json"
+     npx medirus profile $user --output "profiles/${user}.json"
      sleep 2
    done
    ```
@@ -527,7 +527,7 @@ done
 
 - **Public profiles only** — The script reads what's visible on the page. Protected/private accounts will show limited data (no bio, no follower counts if not following).
 - **Rate limits** — Profile scraping is read-only (no API calls, no clicks). X doesn't rate-limit page viewing, but don't scrape hundreds of profiles in rapid succession. Add 2–3 second delays between profiles.
-- **DOM changes** — X uses `data-testid` attributes that are relatively stable but may change with UI updates. Check [xactions.app](https://xactions.app) for the latest selectors.
+- **DOM changes** — X uses `data-testid` attributes that are relatively stable but may change with UI updates. Check [medirus.online](https://medirus.online) for the latest selectors.
 - **Accuracy** — Follower/following counts with K/M abbreviations are approximations (e.g., "5.8M" becomes 5,800,000). For exact counts, you'd need the API.
 
 ---
@@ -547,13 +547,13 @@ done
 ## ❓ FAQ
 
 ### Q: How do I scrape a Twitter / X profile without the API in 2026?
-**A:** Go to `x.com/USERNAME`, open your browser console (F12 → Console), paste the XActions profile scraper script, and press Enter. The script reads the profile page's DOM and extracts all visible data — display name, bio, follower/following counts, website, join date, verified status, and profile image — then auto-downloads a JSON file. No API key, no rate limit fees.
+**A:** Go to `x.com/USERNAME`, open your browser console (F12 → Console), paste the Medirus profile scraper script, and press Enter. The script reads the profile page's DOM and extracts all visible data — display name, bio, follower/following counts, website, join date, verified status, and profile image — then auto-downloads a JSON file. No API key, no rate limit fees.
 
 ### Q: What data can I get from a Twitter profile?
-**A:** The XActions profile scraper exports: username, display name, bio, location, website URL, join date, follower count, following count, tweet count, verified badge status, profile image URL (full resolution), and banner image URL. All extracted directly from the page DOM.
+**A:** The Medirus profile scraper exports: username, display name, bio, location, website URL, join date, follower count, following count, tweet count, verified badge status, profile image URL (full resolution), and banner image URL. All extracted directly from the page DOM.
 
 ### Q: Can I scrape multiple profiles at once?
-**A:** The browser script scrapes one profile per run. For batch scraping, use the XActions CLI with a shell loop (`for user in user1 user2; do npx xactions profile $user; done`) or the MCP server with sequential tool calls.
+**A:** The browser script scrapes one profile per run. For batch scraping, use the Medirus CLI with a shell loop (`for user in user1 user2; do npx medirus profile $user; done`) or the MCP server with sequential tool calls.
 
 ### Q: Is scraping X profiles legal?
 **A:** Scraping publicly visible profile data is generally acceptable for personal use and research. The data is public by design — anyone visiting the profile sees this information. Respect privacy, don't scrape protected accounts, and don't use data for harassment or unauthorized commercial purposes.
@@ -561,5 +561,5 @@ done
 ---
 
 <footer>
-Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

@@ -1,10 +1,10 @@
 # Tutorial: Bookmark Management, Export & Organization with Claude
 
-You are my X/Twitter bookmark specialist. I want to use XActions to manage my bookmarks — export them, organize them, clear old ones, and build a personal knowledge base from saved tweets. Help me turn my bookmarks into a system.
+You are my X/Twitter bookmark specialist. I want to use Medirus to manage my bookmarks — export them, organize them, clear old ones, and build a personal knowledge base from saved tweets. Help me turn my bookmarks into a system.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with bookmark management via MCP tools (`x_bookmark`, `x_get_bookmarks`, `x_clear_bookmarks`) and browser scripts (`src/bookmarkOrganizer.js`, `src/bookmarkManager.js`, `src/clearAllBookmarks.js`).
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with bookmark management via MCP tools (`x_bookmark`, `x_get_bookmarks`, `x_clear_bookmarks`) and browser scripts (`src/bookmarkOrganizer.js`, `src/bookmarkManager.js`, `src/clearAllBookmarks.js`).
 
 ## What I Need You To Do
 

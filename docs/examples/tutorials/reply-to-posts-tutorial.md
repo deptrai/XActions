@@ -1,6 +1,6 @@
 # Reply to Posts -- Tutorial
 
-> Step-by-step guide to replying to posts on X using XActions browser scripts.
+> Step-by-step guide to replying to posts on X using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -22,12 +22,12 @@ The `CONFIG` object at the top of `src/autoReply.js` controls all behavior:
 ```js
 triggers: [
   {
-    keywords: ['xactions', 'twitter automation'],
-    reply: 'Check out XActions -- the complete X automation toolkit!',
+    keywords: ['medirus', 'twitter automation'],
+    reply: 'Check out Medirus -- the complete X automation toolkit!',
   },
   {
     keywords: ['open source tools'],
-    reply: 'Have you tried XActions? Great open source project.',
+    reply: 'Have you tried Medirus? Great open source project.',
   },
 ],
 ```
@@ -147,7 +147,7 @@ maxLikes: 1000,
 - **Keep delays high** (30-60 seconds minimum). Rapid replies trigger spam detection.
 - **Vary your reply text** by adding multiple trigger/reply pairs. Identical replies get flagged.
 - **The `addRandomEmoji` option** appends a random emoji to each reply for natural variation.
-- **Reply tracking** is stored in `localStorage` under `xactions_autoreplied`, so the script skips tweets it already replied to across sessions.
+- **Reply tracking** is stored in `localStorage` under `medirus_autoreplied`, so the script skips tweets it already replied to across sessions.
 - **Navigate to a search page** like `x.com/search?q=AI+agents` to target specific topics instead of your home timeline.
 
 ## Troubleshooting

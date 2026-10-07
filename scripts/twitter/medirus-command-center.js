@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). All rights reserved.
 /**
  * ============================================================
- * ⚡ XActions Command Center  (v1.0.0)
+ * ⚡ Medirus Command Center  (v1.0.0)
  * ============================================================
  * The one script to run them all. Paste this into your browser's DevTools
  * console on x.com and a searchable command palette appears with every
- * XActions tool (108 of them): scrape, analyze, grow, engage,
+ * Medirus tool (108 of them): scrape, analyze, grow, engage,
  * clean up, moderate, and more. Pick a tool, set its options, press Run.
  *
  *   1. Open x.com and press F12 (or Cmd+Option+I) → Console tab.
@@ -13,8 +13,8 @@
  *   3. Search, choose a tool, and click Run. Reopen anytime with the
  *      ⚡ button (bottom-right) or Cmd/Ctrl+K.
  *
- * @name        XActions Command Center
- * @description One console script that opens a searchable menu of every XActions tool (scrape, analyze, grow, engage, clean up, and moderate) with per-tool options and one-click run.
+ * @name        Medirus Command Center
+ * @description One console script that opens a searchable menu of every Medirus tool (scrape, analyze, grow, engage, clean up, and moderate) with per-tool options and one-click run.
  * @version     1.0.0
  * @author      nichxbt (https://x.com/nichxbt)
  *
@@ -24,12 +24,12 @@
  */
 /*
  * ============================================================
- * SOURCE SHELL for xactions-command-center.js  (do not paste this file)
+ * SOURCE SHELL for medirus-command-center.js  (do not paste this file)
  * ============================================================
- * This is the UI shell for the XActions Command Center. It is NOT the
+ * This is the UI shell for the Medirus Command Center. It is NOT the
  * script users run. `scripts/build-toolkit.mjs` injects the tool catalog
  * and every bundled tool at the __XA_INJECT_DATA__ marker below and writes
- * the runnable result to scripts/twitter/xactions-command-center.js.
+ * the runnable result to scripts/twitter/medirus-command-center.js.
  *
  * To change the launcher UI, edit THIS file, then run:
  *   node scripts/build-toolkit.mjs
@@ -41,16 +41,16 @@
  *   TOOLS       - object mapping tool id -> function that runs the tool
  */
 
-(function xactionsCommandCenter() {
+(function medirusCommandCenter() {
   // Intentionally NOT in strict mode: bundled tools are pasted verbatim and
   // some rely on sloppy-mode semantics exactly as they do when run standalone.
 
   // Re-pasting the script replaces any live instance cleanly.
-  if (window.XActionsCommandCenter && typeof window.XActionsCommandCenter.destroy === 'function') {
-    try { window.XActionsCommandCenter.destroy(); } catch (e) { /* ignore */ }
+  if (window.MedirusCommandCenter && typeof window.MedirusCommandCenter.destroy === 'function') {
+    try { window.MedirusCommandCenter.destroy(); } catch (e) { /* ignore */ }
   }
 
-  const CATALOG = [{"id":"create-poll","title":"Create a Poll","emoji":"📊","category":"create","danger":"caution","desc":"Publish a poll with your choices and duration.","where":{"label":"The post composer","url":"https://x.com/compose/post","match":["^/compose"]},"defaults":{"text":"What should we build next?","choices":["Solana tools","Base tools","More avatars"],"durationDays":1,"durationHours":0,"durationMinutes":0,"dryRun":true},"stopGlobal":null},{"id":"pin-tweet","title":"Pin / Unpin Tweet","emoji":"📌","category":"create","danger":"caution","desc":"Pin or unpin one of your own tweets.","where":{"label":"Your own profile page"},"defaults":{"action":"pin","tweetUrl":"","dryRun":true},"stopGlobal":null},{"id":"post-thread","title":"Post a Thread","emoji":"🧵","category":"create","danger":"caution","desc":"Publish a multi-tweet thread from a list of texts.","where":{"label":"The post composer","url":"https://x.com/compose/post","match":["^/compose"]},"defaults":{"tweets":["Thread part 1 🧵","Thread part 2: the details.","Thread part 3: wrap up. Follow for more."],"autoNumber":false,"maxChars":280,"delayBetween":2000,"dryRun":true},"stopGlobal":null},{"id":"post-tweet","title":"Post a Tweet","emoji":"✍️","category":"create","danger":"caution","desc":"Compose and publish a single tweet from the console.","where":{"label":"The post composer","url":"https://x.com/compose/post","match":["^/compose"]},"defaults":{"text":"gm from XActions 🚀","replyToUrl":"","mediaNote":"","mediaWaitSeconds":15,"dryRun":true},"stopGlobal":null},{"id":"quote-tweet","title":"Quote Tweet","emoji":"💬","category":"create","danger":"caution","desc":"Quote-tweet the post you are viewing with your own text.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"text":"This is the take of the day 💯","dryRun":true},"stopGlobal":null},{"id":"schedule-post","title":"Schedule a Post","emoji":"🗓️","category":"create","danger":"caution","desc":"Schedule a tweet using X's native scheduler.","where":{"label":"The post composer","url":"https://x.com/compose/post","match":["^/compose"]},"defaults":{"text":"Scheduled with XActions 📅","scheduleISO":"2026-08-01T09:00","dryRun":true},"stopGlobal":null},{"id":"backup-account","title":"Account Backup","emoji":"💾","category":"scrape","danger":"safe","desc":"Make a comprehensive backup of your account data.","where":{"label":"Your own profile page"},"defaults":{"maxTweets":100,"maxLikes":100,"maxBookmarks":100,"maxFollowing":500,"maxFollowers":500,"scrollDelay":2000,"autoDownload":true},"stopGlobal":null},{"id":"bookmark-exporter","title":"Bookmark Exporter","emoji":"🔖","category":"scrape","danger":"safe","desc":"Export all of your bookmarks to JSON and CSV.","where":{"label":"Your Bookmarks","url":"https://x.com/i/bookmarks","match":["^/i/bookmarks"]},"defaults":{"maxBookmarks":1000,"scrollDelay":1500,"maxScrolls":200,"maxRetries":5,"exportJSON":true,"exportCSV":true,"copyToClipboard":true},"stopGlobal":null},{"id":"link-scraper","title":"Link Scraper","emoji":"🔗","category":"scrape","danger":"safe","desc":"Extract every external link a user has shared.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"maxScrolls":100,"maxTweets":500,"scrollDelay":1500,"includeTwitterLinks":false,"includeMedia":false,"excludeDomains":["t.co"],"autoDownload":true,"maxRetries":5},"stopGlobal":null},{"id":"scrape-hashtag","title":"Scrape a Hashtag","emoji":"#️⃣","category":"scrape","danger":"safe","desc":"Export posts for a hashtag.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"hashtag":"","maxPosts":300,"includeReplies":true,"scrollDelay":1800,"noNewPostsThreshold":6,"maxScrollAttempts":400,"downloadCsv":true},"stopGlobal":"stopScrapeHashtag"},{"id":"scrape-list","title":"Scrape a List","emoji":"📋","category":"scrape","danger":"safe","desc":"Export a List’s timeline or members.","where":{"label":"A List page (x.com/i/lists/<id>)","match":["/lists/"]},"defaults":{"mode":"auto","maxItems":500,"includeReplies":true,"scrollDelay":1800,"noNewItemsThreshold":6,"maxScrollAttempts":500,"downloadCsv":true},"stopGlobal":"stopScrapeList"},{"id":"scrape-user-likes","title":"Scrape a User's Likes","emoji":"💗","category":"scrape","danger":"safe","desc":"Export the posts a user has liked.","where":{"label":"Your Likes page (x.com/<you>/likes)","match":["/likes"]},"defaults":{"maxPosts":1000,"scrollStep":1600,"scrollDelay":1600,"stallLimit":6,"maxScrollAttempts":400,"autoDownloadCsv":false},"stopGlobal":"stopScrapeUserLikes"},{"id":"scrape-dms","title":"Scrape DMs","emoji":"✉️","category":"scrape","danger":"safe","desc":"Export the open DM conversation.","where":{"label":"Your Messages","url":"https://x.com/messages","match":["^/messages"]},"defaults":{"maxMessages":2000,"maxScrollAttempts":120,"noNewThreshold":6,"scrollDelay":1200,"downloadJSON":true,"downloadCSV":true},"stopGlobal":"stopScrapeDMs"},{"id":"scrape-followers","title":"Scrape Followers","emoji":"👥","category":"scrape","danger":"safe","desc":"Export a profile’s followers to JSON/CSV.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"maxUsers":5000,"scrollStep":1400,"scrollDelay":1500,"stallLimit":6,"maxScrollAttempts":400,"autoDownloadCsv":false},"stopGlobal":"stopScrapeFollowers"},{"id":"scrape-following","title":"Scrape Following","emoji":"👣","category":"scrape","danger":"safe","desc":"Export who a profile follows to JSON/CSV.","where":{"label":"Your Following page (x.com/<you>/following)","match":["/following"]},"defaults":{"maxUsers":5000,"scrollStep":1400,"scrollDelay":1500,"stallLimit":6,"maxScrollAttempts":400,"autoDownloadCsv":false},"stopGlobal":"stopScrapeFollowing"},{"id":"scrape-notifications","title":"Scrape Notifications","emoji":"🔔","category":"scrape","danger":"safe","desc":"Export your notifications feed.","where":{"label":"Your Notifications","url":"https://x.com/notifications","match":["^/notifications"]},"defaults":{"maxNotifications":500,"maxScrollAttempts":200,"noNewThreshold":5,"scrollDelay":1500,"downloadJSON":true,"downloadCSV":true},"stopGlobal":"stopScrapeNotifications"},{"id":"scrape-likers","title":"Scrape Post Likers","emoji":"❤️","category":"scrape","danger":"safe","desc":"Export the users who liked a post.","where":{"label":"A tweet's Likes page (.../likes)","match":["/status/.*likes","/likes"]},"defaults":{"maxUsers":5000,"scrollStep":1400,"scrollDelay":1500,"stallLimit":6,"maxScrollAttempts":400,"autoDownloadCsv":false},"stopGlobal":"stopScrapeLikers"},{"id":"scrape-profile-with-replies","title":"Scrape Posts + Replies","emoji":"🧵","category":"scrape","danger":"safe","desc":"Scrape a profile including its replies, from the With replies tab.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"targetPostCount":50,"maxRepliesPerPost":50,"maxFeedScrollAttempts":200,"maxThreadScrollAttempts":30,"scrollDelay":2000,"navigationDelay":3000,"range":{"startPostId":null,"endPostId":null},"filters":{"whitelist":[],"blacklist":[],"daysBack":0,"minLikes":0,"minRetweets":0,"excludeRetweets":false},"export":{"json":true,"csv":true,"markdown":false,"text":false,"html":false},"panel":{"enabled":true,"top":20,"right":20},"copyToClipboard":true,"verbose":true,"scrapeRepliesOnUserReplies":true},"stopGlobal":null},{"id":"scrape-media","title":"Scrape Profile Media","emoji":"🖼️","category":"scrape","danger":"safe","desc":"Export image and video URLs from a profile.","where":{"label":"A profile's Media tab","match":["/media"]},"defaults":{"maxItems":500,"highestRes":true,"includeImages":true,"includeVideos":true,"includeGifs":true,"scrollDelay":1800,"noNewItemsThreshold":6,"maxScrollAttempts":400,"downloadCsv":true,"downloadUrlList":true},"stopGlobal":"stopScrapeMedia"},{"id":"scrape-profile-posts","title":"Scrape Profile Posts","emoji":"📜","category":"scrape","danger":"safe","desc":"Scrape every post from any profile with filters, analytics, and JSON/CSV/MD exports.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"targetCount":300,"maxScrollAttempts":300,"scrollDelay":2000,"filters":{"whitelist":[],"blacklist":[],"daysBack":0,"minLikes":0,"minRetweets":0,"excludeRetweets":false,"excludeReplies":false,"mediaFilter":"all"},"export":{"json":true,"csv":true,"markdown":false,"text":false,"html":false},"display":{"showStats":true,"showTopPosts":5,"showHashtags":true,"showMentions":true,"showLinks":false,"prettyPrint":true,"prettyPrintLimit":10},"copyToClipboard":true,"verbose":true},"stopGlobal":null},{"id":"scrape-retweeters","title":"Scrape Reposters","emoji":"🔁","category":"scrape","danger":"safe","desc":"Export reposters and quote-tweeters of a post.","where":{"label":"A tweet's Reposts page (.../retweets)","match":["/status/.*(retweets|quotes)"]},"defaults":{"collectReposts":true,"collectQuotes":true,"maxEntries":5000,"scrollStep":1400,"scrollDelay":1500,"stallLimit":6,"maxScrollAttempts":300,"autoDownloadCsv":false},"stopGlobal":"stopScrapeReposters"},{"id":"scrape-search","title":"Scrape Search Results","emoji":"🔎","category":"scrape","danger":"safe","desc":"Export posts from a search query.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"maxPosts":300,"includeReplies":true,"scrollDelay":1800,"noNewPostsThreshold":6,"maxScrollAttempts":400,"downloadCsv":true},"stopGlobal":"stopScrapeSearch"},{"id":"scrape-spaces","title":"Scrape Spaces","emoji":"🎙️","category":"scrape","danger":"safe","desc":"Capture Spaces info from a profile or Space.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"maxSpaces":50,"maxScrollAttempts":60,"noNewThreshold":4,"scrollDelay":1500,"downloadJSON":true,"downloadCSV":true},"stopGlobal":"stopScrapeSpaces"},{"id":"scrape-replies","title":"Scrape Tweet Replies","emoji":"💬","category":"scrape","danger":"safe","desc":"Export the replies under a post.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"maxReplies":500,"scrollDelay":1800,"noNewRepliesThreshold":6,"maxScrollAttempts":400,"downloadCsv":true},"stopGlobal":"stopScrapeReplies"},{"id":"scraper-toolbox","title":"Scraper Toolbox","emoji":"🧰","category":"scrape","danger":"safe","desc":"Full on-page scraping control panel: start/pause/stop, live filters, one-click exports.","where":{"label":"Any X page"},"defaults":{},"stopGlobal":null},{"id":"thread-unroller","title":"Thread Unroller","emoji":"🪡","category":"scrape","danger":"safe","desc":"Save any thread as clean text, markdown, or JSON.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"format":"markdown","includeMedia":true,"includeStats":true,"maxTweets":50,"scrollDelay":1500,"autoDownload":true,"copyToClipboard":true},"stopGlobal":null},{"id":"video-downloader","title":"Video Downloader","emoji":"🎬","category":"scrape","danger":"safe","desc":"Download the video from any post, at your chosen quality.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"quality":"highest","autoDownload":true,"showAllQualities":true},"stopGlobal":null},{"id":"viral-tweets-scraper","title":"Viral Tweets Finder","emoji":"🔥","category":"scrape","danger":"safe","desc":"Find the top-performing viral posts from a search or any account.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"minLikes":50,"minRetweets":5,"minReplies":0,"maxTweets":100,"maxScrolls":50,"sortBy":"likes","scrollDelay":1500,"maxRetries":5,"exportJSON":true,"exportCSV":true},"stopGlobal":null},{"id":"monitor-account","title":"Account Monitor","emoji":"👀","category":"analyze","danger":"safe","desc":"Track follower/following changes on any public account.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"scrollDelay":2000,"maxScrolls":100,"maxRetries":5,"autoDownload":true},"stopGlobal":null},{"id":"audience-overlap","title":"Audience Overlap","emoji":"🔀","category":"analyze","danger":"safe","desc":"Compare two follower sets for overlap and unique handles.","where":{"label":"Any X page"},"defaults":{"listA":[],"listB":[],"labelA":"A","labelB":"B","storageKeyA":"","storageKeyB":"","printLimit":20,"exportResults":true},"stopGlobal":null},{"id":"best-time-to-post","title":"Best Time to Post","emoji":"⏰","category":"analyze","danger":"safe","desc":"Find when your audience is most active.","where":{"label":"Your own profile page"},"defaults":{"maxPosts":100,"scrollDelay":1500,"maxScrolls":50,"maxRetries":3},"stopGlobal":null},{"id":"competitor-analysis","title":"Competitor Analysis","emoji":"🕵️","category":"analyze","danger":"safe","desc":"Analyze a competitor account for content and engagement insights.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"maxPosts":50,"scrollDelay":1500,"maxScrolls":30,"maxRetries":3},"stopGlobal":null},{"id":"continuous-monitor","title":"Continuous Monitor","emoji":"🔄","category":"analyze","danger":"safe","desc":"Auto-refresh watch with browser notifications on follower changes.","where":{"label":"Your own profile page"},"defaults":{"checkIntervalMinutes":5,"enableNotifications":true,"enableSound":true,"scrollDelay":1500,"maxScrolls":50,"maxRetries":3},"stopGlobal":"stopMonitor"},{"id":"engagement-analytics","title":"Engagement Analytics","emoji":"📈","category":"analyze","danger":"safe","desc":"Break down likes, replies, and reposts across your posts.","where":{"label":"Your own profile page"},"defaults":{"maxPosts":50,"scrollDelay":1500,"maxScrolls":30,"maxRetries":3},"stopGlobal":null},{"id":"find-fake-followers","title":"Fake Follower Finder","emoji":"🤖","category":"analyze","danger":"safe","desc":"Identify likely bot/fake accounts in your audience.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"scrollDelay":1500,"maxScrolls":50,"maxRetries":3,"scoring":{"highFollowingRatio":25,"veryHighFollowingRatio":40,"defaultAvatar":20,"noBio":15,"suspiciousBio":25,"randomUsername":15,"massFollowing":15,"extremeFollowing":25,"noFollowers":20,"veryFewFollowers":10},"thresholds":{"highRatio":50,"veryHighRatio":100,"massFollowing":3000,"extremeFollowing":5000},"suspiciousKeywords":["crypto","nft","bitcoin","btc","eth","forex","trading signals","giveaway","airdrop","free money","passive income","onlyfans","fansly","dm for","link in bio","check bio","follow back","f4f","follow4follow","followback","18+","adult","nsfw","sexy","hot girl","make money","work from home","get rich","financial freedom","investment opportunity","guaranteed returns"],"minFakeScore":40,"likelyFakeScore":60},"stopGlobal":null},{"id":"audit-followers","title":"Follower Audit","emoji":"🔍","category":"analyze","danger":"safe","desc":"Score follower quality and surface likely fakes and inactives.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"scrollDelay":1500,"maxScrolls":100,"maxRetries":5,"thresholds":{"influencer":10,"balanced":0.5,"aggressive":0.1,"massFollower":2000,"selectiveFollower":100}},"stopGlobal":null},{"id":"followers-growth-tracker","title":"Growth Tracker","emoji":"📉","category":"analyze","danger":"safe","desc":"Track follower growth over time with saved history.","where":{"label":"Your own profile page"},"defaults":{"storageKey":"xactions_growth_tracker","maxHistory":365,"showChart":true},"stopGlobal":null},{"id":"hashtag-analytics","title":"Hashtag Analytics","emoji":"#️⃣","category":"analyze","danger":"safe","desc":"Measure how your hashtags perform.","where":{"label":"Your own profile page"},"defaults":{"maxPosts":100,"scrollDelay":1500,"maxScrolls":50,"maxRetries":3},"stopGlobal":null},{"id":"new-followers-alert","title":"New Follower Alerts","emoji":"🔔","category":"analyze","danger":"safe","desc":"Track new followers with optional welcome-message templates.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"scrollDelay":2000,"maxScrolls":100,"maxRetries":5,"welcomeMessages":["Hey {name}! Thanks for the follow! 🙏 Glad to connect!","Welcome {name}! 👋 Thanks for following! What brings you here?","Hey {name}! Appreciate the follow! Looking forward to connecting! 🚀","Thanks for following {name}! Always great to meet new people! ✨"],"autoDownload":true},"stopGlobal":null},{"id":"profile-stats","title":"Profile Stats","emoji":"📊","category":"analyze","danger":"safe","desc":"Get a quick, comprehensive stats card for any profile.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{},"stopGlobal":null},{"id":"sentiment-analyzer","title":"Sentiment Analyzer","emoji":"🧠","category":"analyze","danger":"safe","desc":"Score sentiment across posts on the current view.","where":{"label":"Any X page"},"defaults":{"maxPosts":40,"maxScrollAttempts":25,"scrollDelay":1600,"examples":3,"exportResults":true},"stopGlobal":"stopSentimentAnalyzer"},{"id":"shadowban-checker","title":"Shadowban Checker","emoji":"🚦","category":"analyze","danger":"safe","desc":"Heuristic search-suggestion / search-ban / reply-deboost check.","where":{"label":"Your own profile page"},"defaults":{"username":"auto","testDelay":2500,"exportResults":true},"stopGlobal":null},{"id":"trending-monitor","title":"Trending Monitor","emoji":"📈","category":"analyze","danger":"safe","desc":"Capture current trends and watch for your keywords.","where":{"label":"Explore / Trends","url":"https://x.com/explore","match":["^/explore"]},"defaults":{"watchKeywords":[],"repeatIntervalMs":0,"scrollRounds":4,"scrollDelay":1400,"exportResults":true},"stopGlobal":"stopTrendingMonitor"},{"id":"tweet-performance","title":"Tweet Performance","emoji":"📊","category":"analyze","danger":"safe","desc":"Rank your recent posts by engagement.","where":{"label":"Your own profile page"},"defaults":{"maxPosts":30,"sortBy":"likes","topN":10,"excludeRetweets":true,"maxScrollAttempts":40,"scrollDelay":1800,"exportResults":true},"stopGlobal":"stopTweetPerformance"},{"id":"detect-unfollowers","title":"Unfollower Detector","emoji":"💔","category":"analyze","danger":"safe","desc":"Compare against a saved snapshot to see who unfollowed you.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"scrollDelay":2000,"maxScrolls":100,"maxRetries":5,"autoDownload":true,"storageKey":"xactions_my_followers"},"stopGlobal":null},{"id":"follow-back","title":"Follow Back Everyone","emoji":"🔗","category":"grow","danger":"caution","desc":"Follow accounts that follow you but you don’t follow back.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"maxFollows":50,"skipVerified":false,"skipProtected":false,"minDelay":2000,"maxDelay":5000,"maxScrollRounds":40,"scrollDelay":2000,"maxEmptyScrolls":6},"stopGlobal":"stopFollowBack"},{"id":"follow-engagers","title":"Follow Engagers","emoji":"🧲","category":"grow","danger":"caution","desc":"Follow the people who liked or reposted a specific tweet.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"mode":"likers","maxFollows":20,"filters":{"minFollowers":100,"maxFollowers":50000,"skipProtected":true,"skipVerified":false},"minDelay":2000,"maxDelay":4000,"scrollDelay":1500},"stopGlobal":null},{"id":"follow-target-users","title":"Follow Target Audience","emoji":"🎯","category":"grow","danger":"caution","desc":"Follow the followers/following of accounts you specify.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"maxFollows":30,"maxScrolls":50,"filters":{"skipProtected":true,"skipVerified":false,"bioKeywords":[],"bioBlacklist":["bot","spam","promo"]},"minDelay":2000,"maxDelay":4000,"scrollDelay":1500},"stopGlobal":null},{"id":"growth-suite","title":"Growth Suite","emoji":"🚀","category":"grow","danger":"caution","desc":"All-in-one growth: auto-like, auto-follow, and smart-unfollow together.","where":{"label":"Any X page"},"defaults":{"keywords":["web3 developer","crypto trader","NFT artist"],"targetAccounts":[],"actions":{"follow":true,"like":true,"unfollow":true},"limits":{"follows":20,"likes":30,"unfollows":15},"timing":{"unfollowAfterDays":3,"delayBetweenActions":3000,"sessionDuration":30},"filters":{"minFollowers":50,"maxFollowers":50000,"mustHaveBio":true,"skipPrivate":true,"language":null}},"stopGlobal":null},{"id":"keyword-follow","title":"Keyword Follow","emoji":"🔑","category":"grow","danger":"caution","desc":"Follow users matching a keyword search, with bio filters.","where":{"label":"Search → People tab (x.com/search?...&f=user)","match":["^/search.*f=user","^/search"]},"defaults":{"maxFollows":20,"maxScrolls":30,"filters":{"skipProtected":true,"skipMutuals":false,"skipVerified":false,"bioMustContain":[],"bioBlacklist":["bot","automated","promo","giveaway"]},"trackFollows":true,"minDelay":2000,"maxDelay":5000,"scrollDelay":2000},"stopGlobal":null},{"id":"auto-commenter","title":"Auto Commenter","emoji":"💬","category":"engage","danger":"caution","desc":"Comment on a target user's posts with your templates.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"comments":["🔥","Great point!","This is so true 👏","Interesting perspective!","Thanks for sharing this 🙏","💯","Well said!","Couldn't agree more","👀 interesting","This is gold ✨"],"maxComments":5,"maxPostAgeMinutes":60,"minPostAgeSeconds":30,"onlyOriginalTweets":true,"onlyWithMedia":false,"minDelay":30000,"maxDelay":60000,"scrollDelay":2000},"stopGlobal":null},{"id":"auto-liker","title":"Auto Liker","emoji":"❤️","category":"engage","danger":"caution","desc":"Like posts in a timeline or on a profile, at a human pace.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"likeAll":false,"keywords":["web3","crypto","AI","startup"],"fromUsers":[],"maxLikes":20,"maxScrolls":50,"alsoRetweet":false,"skipReplies":true,"skipAds":true,"minDelay":2000,"maxDelay":5000,"scrollDelay":2000},"stopGlobal":null},{"id":"auto-repost","title":"Auto Repost","emoji":"🔁","category":"engage","danger":"caution","desc":"Repost posts matching your criteria as you scroll.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"maxReposts":10,"skipAds":true,"skipReplies":true,"onlyWithMedia":false,"mustContainKeywords":[],"minDelay":1500,"maxDelay":4000,"maxScrollAttempts":25,"noNewPostsThreshold":5},"stopGlobal":"stopAutoRepost"},{"id":"auto-reply-mentions","title":"Auto-Reply Mentions","emoji":"📨","category":"engage","danger":"caution","desc":"Reply to your recent mentions with rotating templates.","where":{"label":"Your Mentions tab","url":"https://x.com/notifications/mentions","match":["^/notifications/mentions"]},"defaults":{"replyTemplates":["Thanks for the mention! 🙏","Appreciate you tagging me 🚀","Thanks for reaching out!","Glad you brought this up 💡"],"maxReplies":8,"skipIfAlreadyReplied":true,"addRandomEmoji":false,"minDelay":3000,"maxDelay":6000,"maxScrollAttempts":20,"noNewMentionsThreshold":4},"stopGlobal":"stopAutoReplyMentions"},{"id":"comment-by-hashtag","title":"Comment by Hashtag","emoji":"🗨️","category":"engage","danger":"caution","desc":"Find hashtag posts and comment with your templates.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"hashtags":["web3","crypto","NFT"],"comments":["Great point! 🔥","This is so true! 💯","Interesting perspective!","Thanks for sharing this! 🙌","Couldn't agree more!"],"maxComments":10,"minDelay":3000,"maxDelay":6000,"skipUsernames":[],"minLikes":0,"minRetweets":0},"stopGlobal":null},{"id":"comment-by-location","title":"Comment by Location","emoji":"📍","category":"engage","danger":"caution","desc":"Find posts from a location and comment on them.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"location":"New York","geocode":null,"searchQuery":"","comments":["Love seeing posts from this area! 🌍","Great content from a great place! 🔥","Thanks for sharing! 💯","Awesome post! 🙌","This is amazing! ✨"],"maxComments":10,"minDelay":3000,"maxDelay":7000,"skipUsernames":[],"maxTweetAge":24,"skipRetweets":true},"stopGlobal":null},{"id":"interact-by-hashtag","title":"Interact by Hashtag","emoji":"#️⃣","category":"engage","danger":"caution","desc":"Like/follow/reply on posts matching a hashtag.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"hashtags":["crypto","web3","bitcoin"],"actions":{"like":true,"retweet":false,"follow":true},"limits":{"likes":20,"retweets":5,"follows":10,"tweetsPerHashtag":10},"filters":{"minLikes":5,"minRetweets":0,"skipReplies":true,"skipRetweets":true,"requireMedia":false},"delayBetweenActions":2000,"scrollDelay":2000},"stopGlobal":null},{"id":"interact-by-place","title":"Interact by Place","emoji":"📍","category":"engage","danger":"caution","desc":"Like/follow/reply on posts from a location.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"locations":[{"name":"New York","query":"near:\"New York\""},{"name":"San Francisco","query":"near:\"San Francisco\""}],"keywords":[],"actions":{"like":true,"follow":true,"retweet":false},"limits":{"likes":15,"follows":10,"retweets":3},"delayBetweenActions":2000,"scrollDelay":2000},"stopGlobal":null},{"id":"interact-with-likers","title":"Interact with Likers","emoji":"🧲","category":"engage","danger":"caution","desc":"Engage the users who liked a specific post.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"actions":{"follow":true},"limits":{"follows":20},"filters":{"skipPrivate":true,"skipVerified":false,"skipNoPhoto":false},"delayBetweenActions":2000,"scrollDelay":2000},"stopGlobal":null},{"id":"interact-by-users","title":"Interact with Users","emoji":"🎯","category":"engage","danger":"caution","desc":"Full like/follow/reply suite aimed at specific users.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"targetUsers":[],"actions":{"like":true,"retweet":false,"reply":false,"follow":true},"limits":{"likesPerUser":3,"retweetsPerUser":1,"repliesPerUser":1},"delayBetweenActions":2000,"delayBetweenUsers":5000,"replyTemplates":["Great point! 🔥","Couldn't agree more 👏","This is gold 💯","Thanks for sharing!"]},"stopGlobal":null},{"id":"like-by-user","title":"Like a User","emoji":"👤","category":"engage","danger":"caution","desc":"Auto-like posts from a specific user's profile.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"maxLikes":50,"skipReplies":false,"skipRetweets":true,"skipQuoteTweets":false,"onlyWithMedia":false,"minLikes":0,"minRetweets":0,"minDelay":1500,"maxDelay":3500,"maxScrollAttempts":25,"stopAfterAlreadyLiked":10},"stopGlobal":"stopLikeByUser"},{"id":"like-by-hashtag","title":"Like by Hashtag","emoji":"#️⃣","category":"engage","danger":"caution","desc":"Auto-like posts containing specific hashtags.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"hashtags":["javascript","webdev","coding"],"maxLikesPerHashtag":10,"maxTotalLikes":30,"minDelay":2000,"maxDelay":4000,"skipRetweets":true,"skipMediaOnly":false,"maxScrollAttempts":5},"stopGlobal":"stopLikeByHashtag"},{"id":"like-by-location","title":"Like by Location","emoji":"📍","category":"engage","danger":"caution","desc":"Auto-like posts from a geographic area.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"location":"San Francisco","radiusMiles":25,"keyword":"","maxLikes":30,"minDelay":2000,"maxDelay":4000,"skipRetweets":true,"skipReplies":false,"maxScrollAttempts":15,"searchType":"live"},"stopGlobal":"stopLikeByLocation"},{"id":"like-by-feed","title":"Like Home Feed","emoji":"🏠","category":"engage","danger":"caution","desc":"Auto-like posts as you scroll your home timeline.","where":{"label":"Your Home timeline","url":"https://x.com/home","match":["^/home"]},"defaults":{"maxLikes":50,"skipReplies":true,"skipAds":true,"skipRetweets":true,"onlyWithMedia":false,"minDelay":1500,"maxDelay":3500,"maxScrollAttempts":20,"noNewTweetsThreshold":5},"stopGlobal":"stopLikeByFeed"},{"id":"like-user-replies","title":"Like Replies","emoji":"↩️","category":"engage","danger":"caution","desc":"Auto-like the replies under a specific post.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"maxLikes":30,"skipNestedReplies":false,"onlyVerified":false,"onlyWithMedia":false,"skipContaining":[],"onlyContaining":[],"minDelay":1500,"maxDelay":3500,"maxScrollAttempts":20,"skipOriginalTweet":true},"stopGlobal":"stopLikeUserReplies"},{"id":"vote-in-polls","title":"Vote in Polls","emoji":"🗳️","category":"engage","danger":"caution","desc":"Auto-vote a chosen option on polls in the timeline.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"strategy":"random","optionIndex":0,"maxVotes":15,"minDelay":1500,"maxDelay":4000,"maxScrollAttempts":30,"noNewPollsThreshold":6},"stopGlobal":"stopVoteInPolls"},{"id":"delete-tweets","title":"Bulk Delete Your Posts","emoji":"🗑️","category":"cleanup","danger":"destructive","desc":"Delete your own tweets by age, keyword, or engagement (dry-run by default).","where":{"label":"Your own profile page"},"defaults":{"dryRun":true,"olderThanDays":0,"containingKeywords":[],"minLikesToKeep":0,"maxDeletes":25,"minDelay":1500,"maxDelay":4000,"maxScrollAttempts":60,"noNewPostsThreshold":5},"stopGlobal":"stopDeleteTweets"},{"id":"clear-all-bookmarks","title":"Clear All Bookmarks","emoji":"🔖","category":"cleanup","danger":"destructive","desc":"Remove all of your bookmarks.","where":{"label":"Your Bookmarks","url":"https://x.com/i/bookmarks","match":["^/i/bookmarks"]},"defaults":{"maxRemove":0,"removeDelay":1500,"scrollDelay":2000,"maxRetries":5,"confirmStart":true},"stopGlobal":null},{"id":"clear-all-likes","title":"Clear All Likes","emoji":"🗑️","category":"cleanup","danger":"destructive","desc":"Remove all likes from your account.","where":{"label":"Your Likes page (x.com/<you>/likes)","match":["/likes"]},"defaults":{"maxUnlikes":0,"unlikeDelay":1500,"scrollDelay":2000,"maxRetries":5,"confirmStart":true},"stopGlobal":null},{"id":"clear-all-retweets","title":"Clear All Reposts","emoji":"🔁","category":"cleanup","danger":"destructive","desc":"Undo all of your reposts.","where":{"label":"Your own profile page"},"defaults":{"maxUndo":0,"unretweetDelay":2000,"scrollDelay":2500,"maxRetries":5,"confirmStart":true},"stopGlobal":null},{"id":"smart-unfollow","title":"Smart Unfollow","emoji":"🧠","category":"cleanup","danger":"destructive","desc":"Unfollow accounts that didn't follow back within N days (respects your whitelist).","where":{"label":"Your Following page (x.com/<you>/following)","match":["/following"]},"defaults":{"daysToWait":3,"maxUnfollows":30,"whitelist":[],"onlyTracked":true,"dryRun":false,"unfollowDelay":1500,"confirmDelay":1000,"scrollDelay":2000,"maxScrolls":100,"maxRetries":5},"stopGlobal":null},{"id":"unfollow-with-log","title":"Unfollow + Log","emoji":"📝","category":"cleanup","danger":"destructive","desc":"Unfollow non-followers and download a log of who was removed.","where":{"label":"Your Following page (x.com/<you>/following)","match":["/following"]},"defaults":{"maxRetries":5,"unfollowDelay":1500,"confirmDelay":1000,"scrollDelay":2000,"maxUnfollows":0,"autoDownload":true,"includeTimestamp":true},"stopGlobal":"stopUnfollow"},{"id":"unfollow-everyone","title":"Unfollow Everyone","emoji":"🧹","category":"cleanup","danger":"destructive","desc":"Mass-unfollow every account you follow.","where":{"label":"Your Following page (x.com/<you>/following)","match":["/following"]},"defaults":{"maxRetries":5,"unfollowDelay":1500,"confirmDelay":1000,"scrollDelay":2000,"maxUnfollows":0,"confirmStart":true},"stopGlobal":"stopUnfollow"},{"id":"unfollow-non-followers","title":"Unfollow Non-Followers","emoji":"✂️","category":"cleanup","danger":"destructive","desc":"Unfollow accounts that don't follow you back.","where":{"label":"Your Following page (x.com/<you>/following)","match":["/following"]},"defaults":{"maxRetries":5,"unfollowDelay":1500,"confirmDelay":1000,"scrollDelay":2000,"maxUnfollows":0,"confirmStart":true,"logKept":true},"stopGlobal":"stopUnfollow"},{"id":"unlike-all","title":"Unlike Everything","emoji":"💔","category":"cleanup","danger":"destructive","desc":"Remove every like from your Likes page.","where":{"label":"Your Likes page (x.com/<you>/likes)","match":["/likes"]},"defaults":{"maxUnlikes":1000,"minDelay":1000,"maxDelay":2500,"scrollDelay":1500,"confirmBeforeStart":true,"maxScrollAttempts":5,"logProgress":true},"stopGlobal":"stopUnlike"},{"id":"unlike-old","title":"Unlike Old Likes","emoji":"🕰️","category":"cleanup","danger":"destructive","desc":"Remove likes older than a number of days you set.","where":{"label":"Your Likes page (x.com/<you>/likes)","match":["/likes"]},"defaults":{"daysOld":30,"maxUnlikes":500,"minDelay":1000,"maxDelay":2500,"scrollDelay":1500,"maxScrollAttempts":10,"logProgress":true},"stopGlobal":"stopUnlike"},{"id":"block-bots","title":"Block Bots","emoji":"🤖","category":"moderate","danger":"destructive","desc":"Detect and block likely bots by ratio, age, and bio.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"scrollDelay":1500,"maxScrolls":50,"maxRetries":3,"blockDelay":2000,"detection":{"maxFollowingRatio":50,"minAccountAgeDays":30,"maxFollowing":5000,"minFollowers":5,"suspiciousBioKeywords":["crypto","nft","giveaway","airdrop","free money","onlyfans","dm for","follow back","f4f","follow4follow","bitcoin","eth","$btc","$eth","forex","trading signals","make money","passive income","work from home","link in bio","check bio","clickhere","sexo","sex","camgirl","hot girl","sugar","seeking arrangement"],"flagDefaultAvatar":true,"flagNoBio":true,"flagRandomUsername":true},"dryRun":true,"maxBlocks":50},"stopGlobal":null},{"id":"block-by-keywords","title":"Block by Keywords","emoji":"🚫","category":"moderate","danger":"destructive","desc":"Block users whose bio contains keywords you set.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"blockKeywords":["crypto","nft","giveaway","airdrop","onlyfans","dm for promo","follow back","f4f"],"scrollDelay":1500,"maxScrolls":30,"maxRetries":3,"blockDelay":2000,"dryRun":true,"maxBlocks":50},"stopGlobal":null},{"id":"block-by-ratio","title":"Block by Ratio","emoji":"📛","category":"moderate","danger":"destructive","desc":"Block accounts by follower/following ratio.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"maxRatio":50,"minFollowing":100,"minFollowers":5,"scrollDelay":2000,"maxScrolls":30,"maxRetries":3,"blockDelay":2000,"dryRun":true,"maxBlocks":30},"stopGlobal":null},{"id":"block-list-transfer","title":"Block List Import/Export","emoji":"🧱","category":"moderate","danger":"destructive","desc":"Export your block list, import-and-block a list, or block an account’s followers.","where":{"label":"Blocked accounts","url":"https://x.com/settings/blocked_all","match":["^/settings/blocked"]},"defaults":{"mode":"export","usernames":[],"targetAccount":"","whitelist":[],"maxBlocks":25,"dryRun":true,"minDelay":3000,"maxDelay":6000,"maxScrollRounds":40,"scrollDelay":2000,"maxEmptyScrolls":6},"stopGlobal":"stopBlockListTransfer"},{"id":"mass-block","title":"Mass Block","emoji":"⛔","category":"moderate","danger":"destructive","desc":"Block every user in a list you provide.","where":{"label":"Any X page"},"defaults":{"usersToBlock":[],"blockDelay":3000,"dryRun":true},"stopGlobal":"stopMassBlock"},{"id":"mass-unblock","title":"Mass Unblock","emoji":"✅","category":"moderate","danger":"destructive","desc":"Unblock accounts in bulk from your blocked list.","where":{"label":"Blocked accounts","url":"https://x.com/settings/blocked_all","match":["^/settings/blocked"]},"defaults":{"unblockAll":true,"usersToUnblock":[],"unblockDelay":1500,"maxUnblocks":100,"scrollDelay":1500,"maxScrolls":20,"dryRun":true},"stopGlobal":"stopMassUnblock"},{"id":"mass-unmute","title":"Mass Unmute","emoji":"🔊","category":"moderate","danger":"destructive","desc":"Unmute accounts in bulk from your muted list.","where":{"label":"Muted accounts","url":"https://x.com/settings/muted_all","match":["^/settings/muted"]},"defaults":{"unmuteAll":true,"usersToUnmute":[],"unmuteDelay":1000,"maxUnmutes":200,"scrollDelay":1500,"maxScrolls":30,"dryRun":true},"stopGlobal":"stopMassUnmute"},{"id":"mute-by-keywords","title":"Mute by Keywords","emoji":"🔇","category":"moderate","danger":"destructive","desc":"Mute users whose bio contains keywords you set.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"muteKeywords":["crypto","nft","giveaway","trading signals","dm for promo"],"scrollDelay":1500,"maxScrolls":30,"maxRetries":3,"muteDelay":2000,"dryRun":true,"maxMutes":50},"stopGlobal":"stopMuteByKeywords"},{"id":"manage-muted-words","title":"Muted Words","emoji":"🔇","category":"moderate","danger":"caution","desc":"Add, remove, or list your muted words and phrases.","where":{"label":"Muted words settings","url":"https://x.com/settings/muted_keywords","match":["muted_keywords"]},"defaults":{"action":"list","words":["giveaway","airdrop scam"],"muteOptions":{"from":"anyone","home":true,"notifications":true,"duration":"forever"},"minDelay":1500,"maxDelay":4000},"stopGlobal":"stopManageMutedWords"},{"id":"remove-follower","title":"Remove a Follower","emoji":"🚪","category":"moderate","danger":"caution","desc":"Remove followers without blocking (dry-run by default).","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"usernames":[],"whitelist":[],"maxRemove":25,"dryRun":true,"confirm":true,"minDelay":2500,"maxDelay":5000,"maxScrollRounds":40,"scrollDelay":2000,"maxEmptyScrolls":6},"stopGlobal":"stopRemoveFollower"},{"id":"report-spam","title":"Report Spam","emoji":"🚩","category":"moderate","danger":"destructive","desc":"Report spam accounts from your followers or mentions.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"spamKeywords":["free giveaway","click my link","dm for cashapp","send nudes","sexchat","hot girls in","make $1000 daily","guaranteed profits"],"detection":{"flagDefaultAvatar":true,"maxFollowingRatio":100,"flagNewAccounts":true,"flagExternalLinks":false},"scrollDelay":1500,"maxScrolls":20,"dryRun":true,"maxReports":10,"reportDelay":5000},"stopGlobal":null},{"id":"add-to-list","title":"Add Users to List","emoji":"➕","category":"lists","danger":"caution","desc":"Add specified users to one of your Lists.","where":{"label":"Your Lists","url":"https://x.com/i/lists","match":["/lists"]},"defaults":{"listName":"My List","usernames":[],"dryRun":true,"minDelay":2000,"maxDelay":4000,"searchWait":2200,"stepDelay":1500},"stopGlobal":"stopAddToList"},{"id":"follow-list-members","title":"Follow List Members","emoji":"👣","category":"lists","danger":"caution","desc":"Follow every member of a List.","where":{"label":"A List's members page","match":["/lists/.*members","/members"]},"defaults":{"maxFollows":50,"maxScrollAttempts":100,"noNewThreshold":5,"skipVerified":false,"skipProtected":false,"minDelay":2000,"maxDelay":5000,"scrollDelay":2000},"stopGlobal":"stopFollowListMembers"},{"id":"list-manager","title":"List Manager","emoji":"🗂️","category":"lists","danger":"caution","desc":"Create, rename, or delete a List.","where":{"label":"Your Lists","url":"https://x.com/i/lists","match":["/lists"]},"defaults":{"action":"create","name":"My New List","newName":"","description":"Created with XActions","isPrivate":false,"dryRun":true,"stepDelay":1500},"stopGlobal":"stopListManager"},{"id":"join-communities","title":"Join Communities","emoji":"➕","category":"community","danger":"caution","desc":"Join multiple Communities from a list of IDs.","where":{"label":"Any X page"},"defaults":{"communities":[],"joinDelay":3000,"navigationDelay":3000,"maxJoin":0,"skipAlreadyJoined":true},"stopGlobal":null},{"id":"leave-community","title":"Leave a Community","emoji":"➖","category":"community","danger":"caution","desc":"Leave one Community by name or ID.","where":{"label":"Your Communities","url":"https://x.com/i/communities","match":["communities"]},"defaults":{"communityId":null,"confirmDelay":1500,"navigationDelay":2500},"stopGlobal":null},{"id":"leave-all-communities","title":"Leave All Communities","emoji":"🚪","category":"community","danger":"destructive","desc":"Leave every Community you have joined.","where":{"label":"Your Communities","url":"https://x.com/i/communities","match":["communities"]},"defaults":{"leaveDelay":1500,"confirmDelay":2000,"navDelay":2500,"maxToLeave":0},"stopGlobal":"stopLeaveCommunities"},{"id":"auto-reply-dms","title":"Auto-Reply DMs","emoji":"💌","category":"profile","danger":"caution","desc":"Auto-reply to unread DM conversations with a template.","where":{"label":"Your Messages","url":"https://x.com/messages","match":["^/messages"]},"defaults":{"message":"Thanks for reaching out! I'll get back to you soon. 🙏","maxReplies":15,"onlyUnread":true,"minDelay":4000,"maxDelay":9000,"maxScrollRounds":12,"scrollDelay":1500},"stopGlobal":"stopAutoReplyDMs"},{"id":"bulk-dm","title":"Bulk / Welcome DM","emoji":"📤","category":"profile","danger":"caution","desc":"DM a list of users with a personalized template.","where":{"label":"Your Messages","url":"https://x.com/messages","match":["^/messages"]},"defaults":{"usernames":[],"message":"Hey {name}! 👋 Thanks for connecting.","maxDMs":10,"skipExisting":true,"minDelay":25000,"maxDelay":45000},"stopGlobal":"stopBulkDM"},{"id":"edit-profile","title":"Edit Profile","emoji":"🪪","category":"profile","danger":"caution","desc":"Update your name, bio, location, website, or birthday.","where":{"label":"Edit profile","url":"https://x.com/settings/profile","match":["^/settings/profile"]},"defaults":{"name":null,"bio":null,"location":null,"website":null,"birthdate":null,"autoSave":true,"actionDelay":700},"stopGlobal":null},{"id":"multi-account","title":"Multi-Account Manager","emoji":"🔀","category":"profile","danger":"safe","desc":"Manage and switch between multiple accounts.","where":{"label":"Any X page"},"defaults":{"storagePrefix":"xactions_multi_","autoDetect":true},"stopGlobal":null},{"id":"account-settings","title":"Privacy & Settings","emoji":"⚙️","category":"profile","danger":"caution","desc":"Toggle common privacy and safety settings.","where":{"label":"Settings","url":"https://x.com/settings","match":["^/settings"]},"defaults":{"settings":{},"actionDelay":900},"stopGlobal":null},{"id":"send-direct-message","title":"Send DMs","emoji":"✉️","category":"profile","danger":"caution","desc":"Send direct messages, with per-recipient personalization.","where":{"label":"Your Messages","url":"https://x.com/messages","match":["^/messages"]},"defaults":{"targetUsers":[],"messageTemplate":"Hey {username}! 👋\n\nJust wanted to reach out and connect.\n\nBest,\n[Your Name]","limits":{"messagesPerSession":10,"delayBetweenMessages":30000},"options":{"skipIfConversationExists":true,"randomizeDelay":true}},"stopGlobal":null},{"id":"update-profile-picture","title":"Update Avatar","emoji":"🖼️","category":"profile","danger":"caution","desc":"Guided helper for changing your profile picture.","where":{"label":"Edit profile","url":"https://x.com/settings/profile","match":["^/settings/profile"]},"defaults":{"actionDelay":1500,"autoOpenPicker":true},"stopGlobal":null},{"id":"update-banner","title":"Update Banner","emoji":"🖼️","category":"profile","danger":"caution","desc":"Guided helper for changing your profile banner.","where":{"label":"Edit profile","url":"https://x.com/settings/profile","match":["^/settings/profile"]},"defaults":{"actionDelay":1500,"autoOpenEditor":true},"stopGlobal":null},{"id":"update-bio","title":"Update Bio","emoji":"✍️","category":"profile","danger":"caution","desc":"Update your profile bio.","where":{"label":"Edit profile","url":"https://x.com/settings/profile","match":["^/settings/profile"]},"defaults":{"newBio":"🚀 Building cool stuff with code\n🐦 Automating X with @XActions\n💡 Open source enthusiast\n🔗 github.com/nirholas/XActions","actionDelay":1000,"autoSave":true},"stopGlobal":null},{"id":"blacklist","title":"Blacklist Manager","emoji":"📕","category":"utility","danger":"safe","desc":"Maintain a list of users other tools should skip.","where":{"label":"Any X page"},"defaults":{"storageKey":"xactions_blacklist","defaultBlacklist":[]},"stopGlobal":null},{"id":"filter-manager","title":"Filter Manager","emoji":"🎚️","category":"utility","danger":"safe","desc":"Configure shared filters used across the automation tools.","where":{"label":"Any X page"},"defaults":{},"stopGlobal":null},{"id":"notification-manager","title":"Notification Cleaner","emoji":"🔕","category":"utility","danger":"safe","desc":"Mark notifications read and summarize them.","where":{"label":"Your Notifications","url":"https://x.com/notifications","match":["^/notifications"]},"defaults":{"action":"summary","maxNotifications":100,"exportResults":true,"maxScrollRounds":30,"scrollDelay":1400},"stopGlobal":null},{"id":"protect-active-users","title":"Protect Active Users","emoji":"🛡️","category":"utility","danger":"safe","desc":"Scan your posts for engaged users and protect them from unfollow.","where":{"label":"Your own profile page"},"defaults":{"postsToScan":10,"engagementTypes":{"likers":true,"repliers":true,"retweeters":true,"quoters":false},"lookbackDays":30,"minEngagements":1,"scrollDelay":1500,"maxScrollsPerList":10},"stopGlobal":null},{"id":"rate-limiter","title":"Rate Limiter","emoji":"⏱️","category":"utility","danger":"safe","desc":"Tune the pacing/quota helper shared by the action tools.","where":{"label":"Any X page"},"defaults":{},"stopGlobal":null},{"id":"whitelist","title":"Whitelist Manager","emoji":"📗","category":"utility","danger":"safe","desc":"Maintain a list of users to protect from actions.","where":{"label":"Any X page"},"defaults":{"storageKey":"xactions_whitelist","defaultWhitelist":[]},"stopGlobal":null}];
+  const CATALOG = [{"id":"create-poll","title":"Create a Poll","emoji":"📊","category":"create","danger":"caution","desc":"Publish a poll with your choices and duration.","where":{"label":"The post composer","url":"https://x.com/compose/post","match":["^/compose"]},"defaults":{"text":"What should we build next?","choices":["Solana tools","Base tools","More avatars"],"durationDays":1,"durationHours":0,"durationMinutes":0,"dryRun":true},"stopGlobal":null},{"id":"pin-tweet","title":"Pin / Unpin Tweet","emoji":"📌","category":"create","danger":"caution","desc":"Pin or unpin one of your own tweets.","where":{"label":"Your own profile page"},"defaults":{"action":"pin","tweetUrl":"","dryRun":true},"stopGlobal":null},{"id":"post-thread","title":"Post a Thread","emoji":"🧵","category":"create","danger":"caution","desc":"Publish a multi-tweet thread from a list of texts.","where":{"label":"The post composer","url":"https://x.com/compose/post","match":["^/compose"]},"defaults":{"tweets":["Thread part 1 🧵","Thread part 2: the details.","Thread part 3: wrap up. Follow for more."],"autoNumber":false,"maxChars":280,"delayBetween":2000,"dryRun":true},"stopGlobal":null},{"id":"post-tweet","title":"Post a Tweet","emoji":"✍️","category":"create","danger":"caution","desc":"Compose and publish a single tweet from the console.","where":{"label":"The post composer","url":"https://x.com/compose/post","match":["^/compose"]},"defaults":{"text":"gm from Medirus 🚀","replyToUrl":"","mediaNote":"","mediaWaitSeconds":15,"dryRun":true},"stopGlobal":null},{"id":"quote-tweet","title":"Quote Tweet","emoji":"💬","category":"create","danger":"caution","desc":"Quote-tweet the post you are viewing with your own text.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"text":"This is the take of the day 💯","dryRun":true},"stopGlobal":null},{"id":"schedule-post","title":"Schedule a Post","emoji":"🗓️","category":"create","danger":"caution","desc":"Schedule a tweet using X's native scheduler.","where":{"label":"The post composer","url":"https://x.com/compose/post","match":["^/compose"]},"defaults":{"text":"Scheduled with Medirus 📅","scheduleISO":"2026-08-01T09:00","dryRun":true},"stopGlobal":null},{"id":"backup-account","title":"Account Backup","emoji":"💾","category":"scrape","danger":"safe","desc":"Make a comprehensive backup of your account data.","where":{"label":"Your own profile page"},"defaults":{"maxTweets":100,"maxLikes":100,"maxBookmarks":100,"maxFollowing":500,"maxFollowers":500,"scrollDelay":2000,"autoDownload":true},"stopGlobal":null},{"id":"bookmark-exporter","title":"Bookmark Exporter","emoji":"🔖","category":"scrape","danger":"safe","desc":"Export all of your bookmarks to JSON and CSV.","where":{"label":"Your Bookmarks","url":"https://x.com/i/bookmarks","match":["^/i/bookmarks"]},"defaults":{"maxBookmarks":1000,"scrollDelay":1500,"maxScrolls":200,"maxRetries":5,"exportJSON":true,"exportCSV":true,"copyToClipboard":true},"stopGlobal":null},{"id":"link-scraper","title":"Link Scraper","emoji":"🔗","category":"scrape","danger":"safe","desc":"Extract every external link a user has shared.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"maxScrolls":100,"maxTweets":500,"scrollDelay":1500,"includeTwitterLinks":false,"includeMedia":false,"excludeDomains":["t.co"],"autoDownload":true,"maxRetries":5},"stopGlobal":null},{"id":"scrape-hashtag","title":"Scrape a Hashtag","emoji":"#️⃣","category":"scrape","danger":"safe","desc":"Export posts for a hashtag.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"hashtag":"","maxPosts":300,"includeReplies":true,"scrollDelay":1800,"noNewPostsThreshold":6,"maxScrollAttempts":400,"downloadCsv":true},"stopGlobal":"stopScrapeHashtag"},{"id":"scrape-list","title":"Scrape a List","emoji":"📋","category":"scrape","danger":"safe","desc":"Export a List’s timeline or members.","where":{"label":"A List page (x.com/i/lists/<id>)","match":["/lists/"]},"defaults":{"mode":"auto","maxItems":500,"includeReplies":true,"scrollDelay":1800,"noNewItemsThreshold":6,"maxScrollAttempts":500,"downloadCsv":true},"stopGlobal":"stopScrapeList"},{"id":"scrape-user-likes","title":"Scrape a User's Likes","emoji":"💗","category":"scrape","danger":"safe","desc":"Export the posts a user has liked.","where":{"label":"Your Likes page (x.com/<you>/likes)","match":["/likes"]},"defaults":{"maxPosts":1000,"scrollStep":1600,"scrollDelay":1600,"stallLimit":6,"maxScrollAttempts":400,"autoDownloadCsv":false},"stopGlobal":"stopScrapeUserLikes"},{"id":"scrape-dms","title":"Scrape DMs","emoji":"✉️","category":"scrape","danger":"safe","desc":"Export the open DM conversation.","where":{"label":"Your Messages","url":"https://x.com/messages","match":["^/messages"]},"defaults":{"maxMessages":2000,"maxScrollAttempts":120,"noNewThreshold":6,"scrollDelay":1200,"downloadJSON":true,"downloadCSV":true},"stopGlobal":"stopScrapeDMs"},{"id":"scrape-followers","title":"Scrape Followers","emoji":"👥","category":"scrape","danger":"safe","desc":"Export a profile’s followers to JSON/CSV.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"maxUsers":5000,"scrollStep":1400,"scrollDelay":1500,"stallLimit":6,"maxScrollAttempts":400,"autoDownloadCsv":false},"stopGlobal":"stopScrapeFollowers"},{"id":"scrape-following","title":"Scrape Following","emoji":"👣","category":"scrape","danger":"safe","desc":"Export who a profile follows to JSON/CSV.","where":{"label":"Your Following page (x.com/<you>/following)","match":["/following"]},"defaults":{"maxUsers":5000,"scrollStep":1400,"scrollDelay":1500,"stallLimit":6,"maxScrollAttempts":400,"autoDownloadCsv":false},"stopGlobal":"stopScrapeFollowing"},{"id":"scrape-notifications","title":"Scrape Notifications","emoji":"🔔","category":"scrape","danger":"safe","desc":"Export your notifications feed.","where":{"label":"Your Notifications","url":"https://x.com/notifications","match":["^/notifications"]},"defaults":{"maxNotifications":500,"maxScrollAttempts":200,"noNewThreshold":5,"scrollDelay":1500,"downloadJSON":true,"downloadCSV":true},"stopGlobal":"stopScrapeNotifications"},{"id":"scrape-likers","title":"Scrape Post Likers","emoji":"❤️","category":"scrape","danger":"safe","desc":"Export the users who liked a post.","where":{"label":"A tweet's Likes page (.../likes)","match":["/status/.*likes","/likes"]},"defaults":{"maxUsers":5000,"scrollStep":1400,"scrollDelay":1500,"stallLimit":6,"maxScrollAttempts":400,"autoDownloadCsv":false},"stopGlobal":"stopScrapeLikers"},{"id":"scrape-profile-with-replies","title":"Scrape Posts + Replies","emoji":"🧵","category":"scrape","danger":"safe","desc":"Scrape a profile including its replies, from the With replies tab.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"targetPostCount":50,"maxRepliesPerPost":50,"maxFeedScrollAttempts":200,"maxThreadScrollAttempts":30,"scrollDelay":2000,"navigationDelay":3000,"range":{"startPostId":null,"endPostId":null},"filters":{"whitelist":[],"blacklist":[],"daysBack":0,"minLikes":0,"minRetweets":0,"excludeRetweets":false},"export":{"json":true,"csv":true,"markdown":false,"text":false,"html":false},"panel":{"enabled":true,"top":20,"right":20},"copyToClipboard":true,"verbose":true,"scrapeRepliesOnUserReplies":true},"stopGlobal":null},{"id":"scrape-media","title":"Scrape Profile Media","emoji":"🖼️","category":"scrape","danger":"safe","desc":"Export image and video URLs from a profile.","where":{"label":"A profile's Media tab","match":["/media"]},"defaults":{"maxItems":500,"highestRes":true,"includeImages":true,"includeVideos":true,"includeGifs":true,"scrollDelay":1800,"noNewItemsThreshold":6,"maxScrollAttempts":400,"downloadCsv":true,"downloadUrlList":true},"stopGlobal":"stopScrapeMedia"},{"id":"scrape-profile-posts","title":"Scrape Profile Posts","emoji":"📜","category":"scrape","danger":"safe","desc":"Scrape every post from any profile with filters, analytics, and JSON/CSV/MD exports.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"targetCount":300,"maxScrollAttempts":300,"scrollDelay":2000,"filters":{"whitelist":[],"blacklist":[],"daysBack":0,"minLikes":0,"minRetweets":0,"excludeRetweets":false,"excludeReplies":false,"mediaFilter":"all"},"export":{"json":true,"csv":true,"markdown":false,"text":false,"html":false},"display":{"showStats":true,"showTopPosts":5,"showHashtags":true,"showMentions":true,"showLinks":false,"prettyPrint":true,"prettyPrintLimit":10},"copyToClipboard":true,"verbose":true},"stopGlobal":null},{"id":"scrape-retweeters","title":"Scrape Reposters","emoji":"🔁","category":"scrape","danger":"safe","desc":"Export reposters and quote-tweeters of a post.","where":{"label":"A tweet's Reposts page (.../retweets)","match":["/status/.*(retweets|quotes)"]},"defaults":{"collectReposts":true,"collectQuotes":true,"maxEntries":5000,"scrollStep":1400,"scrollDelay":1500,"stallLimit":6,"maxScrollAttempts":300,"autoDownloadCsv":false},"stopGlobal":"stopScrapeReposters"},{"id":"scrape-search","title":"Scrape Search Results","emoji":"🔎","category":"scrape","danger":"safe","desc":"Export posts from a search query.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"maxPosts":300,"includeReplies":true,"scrollDelay":1800,"noNewPostsThreshold":6,"maxScrollAttempts":400,"downloadCsv":true},"stopGlobal":"stopScrapeSearch"},{"id":"scrape-spaces","title":"Scrape Spaces","emoji":"🎙️","category":"scrape","danger":"safe","desc":"Capture Spaces info from a profile or Space.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"maxSpaces":50,"maxScrollAttempts":60,"noNewThreshold":4,"scrollDelay":1500,"downloadJSON":true,"downloadCSV":true},"stopGlobal":"stopScrapeSpaces"},{"id":"scrape-replies","title":"Scrape Tweet Replies","emoji":"💬","category":"scrape","danger":"safe","desc":"Export the replies under a post.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"maxReplies":500,"scrollDelay":1800,"noNewRepliesThreshold":6,"maxScrollAttempts":400,"downloadCsv":true},"stopGlobal":"stopScrapeReplies"},{"id":"scraper-toolbox","title":"Scraper Toolbox","emoji":"🧰","category":"scrape","danger":"safe","desc":"Full on-page scraping control panel: start/pause/stop, live filters, one-click exports.","where":{"label":"Any X page"},"defaults":{},"stopGlobal":null},{"id":"thread-unroller","title":"Thread Unroller","emoji":"🪡","category":"scrape","danger":"safe","desc":"Save any thread as clean text, markdown, or JSON.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"format":"markdown","includeMedia":true,"includeStats":true,"maxTweets":50,"scrollDelay":1500,"autoDownload":true,"copyToClipboard":true},"stopGlobal":null},{"id":"video-downloader","title":"Video Downloader","emoji":"🎬","category":"scrape","danger":"safe","desc":"Download the video from any post, at your chosen quality.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"quality":"highest","autoDownload":true,"showAllQualities":true},"stopGlobal":null},{"id":"viral-tweets-scraper","title":"Viral Tweets Finder","emoji":"🔥","category":"scrape","danger":"safe","desc":"Find the top-performing viral posts from a search or any account.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"minLikes":50,"minRetweets":5,"minReplies":0,"maxTweets":100,"maxScrolls":50,"sortBy":"likes","scrollDelay":1500,"maxRetries":5,"exportJSON":true,"exportCSV":true},"stopGlobal":null},{"id":"monitor-account","title":"Account Monitor","emoji":"👀","category":"analyze","danger":"safe","desc":"Track follower/following changes on any public account.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"scrollDelay":2000,"maxScrolls":100,"maxRetries":5,"autoDownload":true},"stopGlobal":null},{"id":"audience-overlap","title":"Audience Overlap","emoji":"🔀","category":"analyze","danger":"safe","desc":"Compare two follower sets for overlap and unique handles.","where":{"label":"Any X page"},"defaults":{"listA":[],"listB":[],"labelA":"A","labelB":"B","storageKeyA":"","storageKeyB":"","printLimit":20,"exportResults":true},"stopGlobal":null},{"id":"best-time-to-post","title":"Best Time to Post","emoji":"⏰","category":"analyze","danger":"safe","desc":"Find when your audience is most active.","where":{"label":"Your own profile page"},"defaults":{"maxPosts":100,"scrollDelay":1500,"maxScrolls":50,"maxRetries":3},"stopGlobal":null},{"id":"competitor-analysis","title":"Competitor Analysis","emoji":"🕵️","category":"analyze","danger":"safe","desc":"Analyze a competitor account for content and engagement insights.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"maxPosts":50,"scrollDelay":1500,"maxScrolls":30,"maxRetries":3},"stopGlobal":null},{"id":"continuous-monitor","title":"Continuous Monitor","emoji":"🔄","category":"analyze","danger":"safe","desc":"Auto-refresh watch with browser notifications on follower changes.","where":{"label":"Your own profile page"},"defaults":{"checkIntervalMinutes":5,"enableNotifications":true,"enableSound":true,"scrollDelay":1500,"maxScrolls":50,"maxRetries":3},"stopGlobal":"stopMonitor"},{"id":"engagement-analytics","title":"Engagement Analytics","emoji":"📈","category":"analyze","danger":"safe","desc":"Break down likes, replies, and reposts across your posts.","where":{"label":"Your own profile page"},"defaults":{"maxPosts":50,"scrollDelay":1500,"maxScrolls":30,"maxRetries":3},"stopGlobal":null},{"id":"find-fake-followers","title":"Fake Follower Finder","emoji":"🤖","category":"analyze","danger":"safe","desc":"Identify likely bot/fake accounts in your audience.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"scrollDelay":1500,"maxScrolls":50,"maxRetries":3,"scoring":{"highFollowingRatio":25,"veryHighFollowingRatio":40,"defaultAvatar":20,"noBio":15,"suspiciousBio":25,"randomUsername":15,"massFollowing":15,"extremeFollowing":25,"noFollowers":20,"veryFewFollowers":10},"thresholds":{"highRatio":50,"veryHighRatio":100,"massFollowing":3000,"extremeFollowing":5000},"suspiciousKeywords":["crypto","nft","bitcoin","btc","eth","forex","trading signals","giveaway","airdrop","free money","passive income","onlyfans","fansly","dm for","link in bio","check bio","follow back","f4f","follow4follow","followback","18+","adult","nsfw","sexy","hot girl","make money","work from home","get rich","financial freedom","investment opportunity","guaranteed returns"],"minFakeScore":40,"likelyFakeScore":60},"stopGlobal":null},{"id":"audit-followers","title":"Follower Audit","emoji":"🔍","category":"analyze","danger":"safe","desc":"Score follower quality and surface likely fakes and inactives.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"scrollDelay":1500,"maxScrolls":100,"maxRetries":5,"thresholds":{"influencer":10,"balanced":0.5,"aggressive":0.1,"massFollower":2000,"selectiveFollower":100}},"stopGlobal":null},{"id":"followers-growth-tracker","title":"Growth Tracker","emoji":"📉","category":"analyze","danger":"safe","desc":"Track follower growth over time with saved history.","where":{"label":"Your own profile page"},"defaults":{"storageKey":"medirus_growth_tracker","maxHistory":365,"showChart":true},"stopGlobal":null},{"id":"hashtag-analytics","title":"Hashtag Analytics","emoji":"#️⃣","category":"analyze","danger":"safe","desc":"Measure how your hashtags perform.","where":{"label":"Your own profile page"},"defaults":{"maxPosts":100,"scrollDelay":1500,"maxScrolls":50,"maxRetries":3},"stopGlobal":null},{"id":"new-followers-alert","title":"New Follower Alerts","emoji":"🔔","category":"analyze","danger":"safe","desc":"Track new followers with optional welcome-message templates.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"scrollDelay":2000,"maxScrolls":100,"maxRetries":5,"welcomeMessages":["Hey {name}! Thanks for the follow! 🙏 Glad to connect!","Welcome {name}! 👋 Thanks for following! What brings you here?","Hey {name}! Appreciate the follow! Looking forward to connecting! 🚀","Thanks for following {name}! Always great to meet new people! ✨"],"autoDownload":true},"stopGlobal":null},{"id":"profile-stats","title":"Profile Stats","emoji":"📊","category":"analyze","danger":"safe","desc":"Get a quick, comprehensive stats card for any profile.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{},"stopGlobal":null},{"id":"sentiment-analyzer","title":"Sentiment Analyzer","emoji":"🧠","category":"analyze","danger":"safe","desc":"Score sentiment across posts on the current view.","where":{"label":"Any X page"},"defaults":{"maxPosts":40,"maxScrollAttempts":25,"scrollDelay":1600,"examples":3,"exportResults":true},"stopGlobal":"stopSentimentAnalyzer"},{"id":"shadowban-checker","title":"Shadowban Checker","emoji":"🚦","category":"analyze","danger":"safe","desc":"Heuristic search-suggestion / search-ban / reply-deboost check.","where":{"label":"Your own profile page"},"defaults":{"username":"auto","testDelay":2500,"exportResults":true},"stopGlobal":null},{"id":"trending-monitor","title":"Trending Monitor","emoji":"📈","category":"analyze","danger":"safe","desc":"Capture current trends and watch for your keywords.","where":{"label":"Explore / Trends","url":"https://x.com/explore","match":["^/explore"]},"defaults":{"watchKeywords":[],"repeatIntervalMs":0,"scrollRounds":4,"scrollDelay":1400,"exportResults":true},"stopGlobal":"stopTrendingMonitor"},{"id":"tweet-performance","title":"Tweet Performance","emoji":"📊","category":"analyze","danger":"safe","desc":"Rank your recent posts by engagement.","where":{"label":"Your own profile page"},"defaults":{"maxPosts":30,"sortBy":"likes","topN":10,"excludeRetweets":true,"maxScrollAttempts":40,"scrollDelay":1800,"exportResults":true},"stopGlobal":"stopTweetPerformance"},{"id":"detect-unfollowers","title":"Unfollower Detector","emoji":"💔","category":"analyze","danger":"safe","desc":"Compare against a saved snapshot to see who unfollowed you.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"scrollDelay":2000,"maxScrolls":100,"maxRetries":5,"autoDownload":true,"storageKey":"medirus_my_followers"},"stopGlobal":null},{"id":"follow-back","title":"Follow Back Everyone","emoji":"🔗","category":"grow","danger":"caution","desc":"Follow accounts that follow you but you don’t follow back.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"maxFollows":50,"skipVerified":false,"skipProtected":false,"minDelay":2000,"maxDelay":5000,"maxScrollRounds":40,"scrollDelay":2000,"maxEmptyScrolls":6},"stopGlobal":"stopFollowBack"},{"id":"follow-engagers","title":"Follow Engagers","emoji":"🧲","category":"grow","danger":"caution","desc":"Follow the people who liked or reposted a specific tweet.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"mode":"likers","maxFollows":20,"filters":{"minFollowers":100,"maxFollowers":50000,"skipProtected":true,"skipVerified":false},"minDelay":2000,"maxDelay":4000,"scrollDelay":1500},"stopGlobal":null},{"id":"follow-target-users","title":"Follow Target Audience","emoji":"🎯","category":"grow","danger":"caution","desc":"Follow the followers/following of accounts you specify.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"maxFollows":30,"maxScrolls":50,"filters":{"skipProtected":true,"skipVerified":false,"bioKeywords":[],"bioBlacklist":["bot","spam","promo"]},"minDelay":2000,"maxDelay":4000,"scrollDelay":1500},"stopGlobal":null},{"id":"growth-suite","title":"Growth Suite","emoji":"🚀","category":"grow","danger":"caution","desc":"All-in-one growth: auto-like, auto-follow, and smart-unfollow together.","where":{"label":"Any X page"},"defaults":{"keywords":["web3 developer","crypto trader","NFT artist"],"targetAccounts":[],"actions":{"follow":true,"like":true,"unfollow":true},"limits":{"follows":20,"likes":30,"unfollows":15},"timing":{"unfollowAfterDays":3,"delayBetweenActions":3000,"sessionDuration":30},"filters":{"minFollowers":50,"maxFollowers":50000,"mustHaveBio":true,"skipPrivate":true,"language":null}},"stopGlobal":null},{"id":"keyword-follow","title":"Keyword Follow","emoji":"🔑","category":"grow","danger":"caution","desc":"Follow users matching a keyword search, with bio filters.","where":{"label":"Search → People tab (x.com/search?...&f=user)","match":["^/search.*f=user","^/search"]},"defaults":{"maxFollows":20,"maxScrolls":30,"filters":{"skipProtected":true,"skipMutuals":false,"skipVerified":false,"bioMustContain":[],"bioBlacklist":["bot","automated","promo","giveaway"]},"trackFollows":true,"minDelay":2000,"maxDelay":5000,"scrollDelay":2000},"stopGlobal":null},{"id":"auto-commenter","title":"Auto Commenter","emoji":"💬","category":"engage","danger":"caution","desc":"Comment on a target user's posts with your templates.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"comments":["🔥","Great point!","This is so true 👏","Interesting perspective!","Thanks for sharing this 🙏","💯","Well said!","Couldn't agree more","👀 interesting","This is gold ✨"],"maxComments":5,"maxPostAgeMinutes":60,"minPostAgeSeconds":30,"onlyOriginalTweets":true,"onlyWithMedia":false,"minDelay":30000,"maxDelay":60000,"scrollDelay":2000},"stopGlobal":null},{"id":"auto-liker","title":"Auto Liker","emoji":"❤️","category":"engage","danger":"caution","desc":"Like posts in a timeline or on a profile, at a human pace.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"likeAll":false,"keywords":["web3","crypto","AI","startup"],"fromUsers":[],"maxLikes":20,"maxScrolls":50,"alsoRetweet":false,"skipReplies":true,"skipAds":true,"minDelay":2000,"maxDelay":5000,"scrollDelay":2000},"stopGlobal":null},{"id":"auto-repost","title":"Auto Repost","emoji":"🔁","category":"engage","danger":"caution","desc":"Repost posts matching your criteria as you scroll.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"maxReposts":10,"skipAds":true,"skipReplies":true,"onlyWithMedia":false,"mustContainKeywords":[],"minDelay":1500,"maxDelay":4000,"maxScrollAttempts":25,"noNewPostsThreshold":5},"stopGlobal":"stopAutoRepost"},{"id":"auto-reply-mentions","title":"Auto-Reply Mentions","emoji":"📨","category":"engage","danger":"caution","desc":"Reply to your recent mentions with rotating templates.","where":{"label":"Your Mentions tab","url":"https://x.com/notifications/mentions","match":["^/notifications/mentions"]},"defaults":{"replyTemplates":["Thanks for the mention! 🙏","Appreciate you tagging me 🚀","Thanks for reaching out!","Glad you brought this up 💡"],"maxReplies":8,"skipIfAlreadyReplied":true,"addRandomEmoji":false,"minDelay":3000,"maxDelay":6000,"maxScrollAttempts":20,"noNewMentionsThreshold":4},"stopGlobal":"stopAutoReplyMentions"},{"id":"comment-by-hashtag","title":"Comment by Hashtag","emoji":"🗨️","category":"engage","danger":"caution","desc":"Find hashtag posts and comment with your templates.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"hashtags":["web3","crypto","NFT"],"comments":["Great point! 🔥","This is so true! 💯","Interesting perspective!","Thanks for sharing this! 🙌","Couldn't agree more!"],"maxComments":10,"minDelay":3000,"maxDelay":6000,"skipUsernames":[],"minLikes":0,"minRetweets":0},"stopGlobal":null},{"id":"comment-by-location","title":"Comment by Location","emoji":"📍","category":"engage","danger":"caution","desc":"Find posts from a location and comment on them.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"location":"New York","geocode":null,"searchQuery":"","comments":["Love seeing posts from this area! 🌍","Great content from a great place! 🔥","Thanks for sharing! 💯","Awesome post! 🙌","This is amazing! ✨"],"maxComments":10,"minDelay":3000,"maxDelay":7000,"skipUsernames":[],"maxTweetAge":24,"skipRetweets":true},"stopGlobal":null},{"id":"interact-by-hashtag","title":"Interact by Hashtag","emoji":"#️⃣","category":"engage","danger":"caution","desc":"Like/follow/reply on posts matching a hashtag.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"hashtags":["crypto","web3","bitcoin"],"actions":{"like":true,"retweet":false,"follow":true},"limits":{"likes":20,"retweets":5,"follows":10,"tweetsPerHashtag":10},"filters":{"minLikes":5,"minRetweets":0,"skipReplies":true,"skipRetweets":true,"requireMedia":false},"delayBetweenActions":2000,"scrollDelay":2000},"stopGlobal":null},{"id":"interact-by-place","title":"Interact by Place","emoji":"📍","category":"engage","danger":"caution","desc":"Like/follow/reply on posts from a location.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"locations":[{"name":"New York","query":"near:\"New York\""},{"name":"San Francisco","query":"near:\"San Francisco\""}],"keywords":[],"actions":{"like":true,"follow":true,"retweet":false},"limits":{"likes":15,"follows":10,"retweets":3},"delayBetweenActions":2000,"scrollDelay":2000},"stopGlobal":null},{"id":"interact-with-likers","title":"Interact with Likers","emoji":"🧲","category":"engage","danger":"caution","desc":"Engage the users who liked a specific post.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"actions":{"follow":true},"limits":{"follows":20},"filters":{"skipPrivate":true,"skipVerified":false,"skipNoPhoto":false},"delayBetweenActions":2000,"scrollDelay":2000},"stopGlobal":null},{"id":"interact-by-users","title":"Interact with Users","emoji":"🎯","category":"engage","danger":"caution","desc":"Full like/follow/reply suite aimed at specific users.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"targetUsers":[],"actions":{"like":true,"retweet":false,"reply":false,"follow":true},"limits":{"likesPerUser":3,"retweetsPerUser":1,"repliesPerUser":1},"delayBetweenActions":2000,"delayBetweenUsers":5000,"replyTemplates":["Great point! 🔥","Couldn't agree more 👏","This is gold 💯","Thanks for sharing!"]},"stopGlobal":null},{"id":"like-by-user","title":"Like a User","emoji":"👤","category":"engage","danger":"caution","desc":"Auto-like posts from a specific user's profile.","where":{"label":"The profile you want to target (x.com/username)"},"defaults":{"maxLikes":50,"skipReplies":false,"skipRetweets":true,"skipQuoteTweets":false,"onlyWithMedia":false,"minLikes":0,"minRetweets":0,"minDelay":1500,"maxDelay":3500,"maxScrollAttempts":25,"stopAfterAlreadyLiked":10},"stopGlobal":"stopLikeByUser"},{"id":"like-by-hashtag","title":"Like by Hashtag","emoji":"#️⃣","category":"engage","danger":"caution","desc":"Auto-like posts containing specific hashtags.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"hashtags":["javascript","webdev","coding"],"maxLikesPerHashtag":10,"maxTotalLikes":30,"minDelay":2000,"maxDelay":4000,"skipRetweets":true,"skipMediaOnly":false,"maxScrollAttempts":5},"stopGlobal":"stopLikeByHashtag"},{"id":"like-by-location","title":"Like by Location","emoji":"📍","category":"engage","danger":"caution","desc":"Auto-like posts from a geographic area.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"location":"San Francisco","radiusMiles":25,"keyword":"","maxLikes":30,"minDelay":2000,"maxDelay":4000,"skipRetweets":true,"skipReplies":false,"maxScrollAttempts":15,"searchType":"live"},"stopGlobal":"stopLikeByLocation"},{"id":"like-by-feed","title":"Like Home Feed","emoji":"🏠","category":"engage","danger":"caution","desc":"Auto-like posts as you scroll your home timeline.","where":{"label":"Your Home timeline","url":"https://x.com/home","match":["^/home"]},"defaults":{"maxLikes":50,"skipReplies":true,"skipAds":true,"skipRetweets":true,"onlyWithMedia":false,"minDelay":1500,"maxDelay":3500,"maxScrollAttempts":20,"noNewTweetsThreshold":5},"stopGlobal":"stopLikeByFeed"},{"id":"like-user-replies","title":"Like Replies","emoji":"↩️","category":"engage","danger":"caution","desc":"Auto-like the replies under a specific post.","where":{"label":"The open tweet/thread (its status page)","match":["/status/"]},"defaults":{"maxLikes":30,"skipNestedReplies":false,"onlyVerified":false,"onlyWithMedia":false,"skipContaining":[],"onlyContaining":[],"minDelay":1500,"maxDelay":3500,"maxScrollAttempts":20,"skipOriginalTweet":true},"stopGlobal":"stopLikeUserReplies"},{"id":"vote-in-polls","title":"Vote in Polls","emoji":"🗳️","category":"engage","danger":"caution","desc":"Auto-vote a chosen option on polls in the timeline.","where":{"label":"Search → Latest tab (x.com/search?...&f=live)","match":["^/search"]},"defaults":{"strategy":"random","optionIndex":0,"maxVotes":15,"minDelay":1500,"maxDelay":4000,"maxScrollAttempts":30,"noNewPollsThreshold":6},"stopGlobal":"stopVoteInPolls"},{"id":"delete-tweets","title":"Bulk Delete Your Posts","emoji":"🗑️","category":"cleanup","danger":"destructive","desc":"Delete your own tweets by age, keyword, or engagement (dry-run by default).","where":{"label":"Your own profile page"},"defaults":{"dryRun":true,"olderThanDays":0,"containingKeywords":[],"minLikesToKeep":0,"maxDeletes":25,"minDelay":1500,"maxDelay":4000,"maxScrollAttempts":60,"noNewPostsThreshold":5},"stopGlobal":"stopDeleteTweets"},{"id":"clear-all-bookmarks","title":"Clear All Bookmarks","emoji":"🔖","category":"cleanup","danger":"destructive","desc":"Remove all of your bookmarks.","where":{"label":"Your Bookmarks","url":"https://x.com/i/bookmarks","match":["^/i/bookmarks"]},"defaults":{"maxRemove":0,"removeDelay":1500,"scrollDelay":2000,"maxRetries":5,"confirmStart":true},"stopGlobal":null},{"id":"clear-all-likes","title":"Clear All Likes","emoji":"🗑️","category":"cleanup","danger":"destructive","desc":"Remove all likes from your account.","where":{"label":"Your Likes page (x.com/<you>/likes)","match":["/likes"]},"defaults":{"maxUnlikes":0,"unlikeDelay":1500,"scrollDelay":2000,"maxRetries":5,"confirmStart":true},"stopGlobal":null},{"id":"clear-all-retweets","title":"Clear All Reposts","emoji":"🔁","category":"cleanup","danger":"destructive","desc":"Undo all of your reposts.","where":{"label":"Your own profile page"},"defaults":{"maxUndo":0,"unretweetDelay":2000,"scrollDelay":2500,"maxRetries":5,"confirmStart":true},"stopGlobal":null},{"id":"smart-unfollow","title":"Smart Unfollow","emoji":"🧠","category":"cleanup","danger":"destructive","desc":"Unfollow accounts that didn't follow back within N days (respects your whitelist).","where":{"label":"Your Following page (x.com/<you>/following)","match":["/following"]},"defaults":{"daysToWait":3,"maxUnfollows":30,"whitelist":[],"onlyTracked":true,"dryRun":false,"unfollowDelay":1500,"confirmDelay":1000,"scrollDelay":2000,"maxScrolls":100,"maxRetries":5},"stopGlobal":null},{"id":"unfollow-with-log","title":"Unfollow + Log","emoji":"📝","category":"cleanup","danger":"destructive","desc":"Unfollow non-followers and download a log of who was removed.","where":{"label":"Your Following page (x.com/<you>/following)","match":["/following"]},"defaults":{"maxRetries":5,"unfollowDelay":1500,"confirmDelay":1000,"scrollDelay":2000,"maxUnfollows":0,"autoDownload":true,"includeTimestamp":true},"stopGlobal":"stopUnfollow"},{"id":"unfollow-everyone","title":"Unfollow Everyone","emoji":"🧹","category":"cleanup","danger":"destructive","desc":"Mass-unfollow every account you follow.","where":{"label":"Your Following page (x.com/<you>/following)","match":["/following"]},"defaults":{"maxRetries":5,"unfollowDelay":1500,"confirmDelay":1000,"scrollDelay":2000,"maxUnfollows":0,"confirmStart":true},"stopGlobal":"stopUnfollow"},{"id":"unfollow-non-followers","title":"Unfollow Non-Followers","emoji":"✂️","category":"cleanup","danger":"destructive","desc":"Unfollow accounts that don't follow you back.","where":{"label":"Your Following page (x.com/<you>/following)","match":["/following"]},"defaults":{"maxRetries":5,"unfollowDelay":1500,"confirmDelay":1000,"scrollDelay":2000,"maxUnfollows":0,"confirmStart":true,"logKept":true},"stopGlobal":"stopUnfollow"},{"id":"unlike-all","title":"Unlike Everything","emoji":"💔","category":"cleanup","danger":"destructive","desc":"Remove every like from your Likes page.","where":{"label":"Your Likes page (x.com/<you>/likes)","match":["/likes"]},"defaults":{"maxUnlikes":1000,"minDelay":1000,"maxDelay":2500,"scrollDelay":1500,"confirmBeforeStart":true,"maxScrollAttempts":5,"logProgress":true},"stopGlobal":"stopUnlike"},{"id":"unlike-old","title":"Unlike Old Likes","emoji":"🕰️","category":"cleanup","danger":"destructive","desc":"Remove likes older than a number of days you set.","where":{"label":"Your Likes page (x.com/<you>/likes)","match":["/likes"]},"defaults":{"daysOld":30,"maxUnlikes":500,"minDelay":1000,"maxDelay":2500,"scrollDelay":1500,"maxScrollAttempts":10,"logProgress":true},"stopGlobal":"stopUnlike"},{"id":"block-bots","title":"Block Bots","emoji":"🤖","category":"moderate","danger":"destructive","desc":"Detect and block likely bots by ratio, age, and bio.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"scrollDelay":1500,"maxScrolls":50,"maxRetries":3,"blockDelay":2000,"detection":{"maxFollowingRatio":50,"minAccountAgeDays":30,"maxFollowing":5000,"minFollowers":5,"suspiciousBioKeywords":["crypto","nft","giveaway","airdrop","free money","onlyfans","dm for","follow back","f4f","follow4follow","bitcoin","eth","$btc","$eth","forex","trading signals","make money","passive income","work from home","link in bio","check bio","clickhere","sexo","sex","camgirl","hot girl","sugar","seeking arrangement"],"flagDefaultAvatar":true,"flagNoBio":true,"flagRandomUsername":true},"dryRun":true,"maxBlocks":50},"stopGlobal":null},{"id":"block-by-keywords","title":"Block by Keywords","emoji":"🚫","category":"moderate","danger":"destructive","desc":"Block users whose bio contains keywords you set.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"blockKeywords":["crypto","nft","giveaway","airdrop","onlyfans","dm for promo","follow back","f4f"],"scrollDelay":1500,"maxScrolls":30,"maxRetries":3,"blockDelay":2000,"dryRun":true,"maxBlocks":50},"stopGlobal":null},{"id":"block-by-ratio","title":"Block by Ratio","emoji":"📛","category":"moderate","danger":"destructive","desc":"Block accounts by follower/following ratio.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"maxRatio":50,"minFollowing":100,"minFollowers":5,"scrollDelay":2000,"maxScrolls":30,"maxRetries":3,"blockDelay":2000,"dryRun":true,"maxBlocks":30},"stopGlobal":null},{"id":"block-list-transfer","title":"Block List Import/Export","emoji":"🧱","category":"moderate","danger":"destructive","desc":"Export your block list, import-and-block a list, or block an account’s followers.","where":{"label":"Blocked accounts","url":"https://x.com/settings/blocked_all","match":["^/settings/blocked"]},"defaults":{"mode":"export","usernames":[],"targetAccount":"","whitelist":[],"maxBlocks":25,"dryRun":true,"minDelay":3000,"maxDelay":6000,"maxScrollRounds":40,"scrollDelay":2000,"maxEmptyScrolls":6},"stopGlobal":"stopBlockListTransfer"},{"id":"mass-block","title":"Mass Block","emoji":"⛔","category":"moderate","danger":"destructive","desc":"Block every user in a list you provide.","where":{"label":"Any X page"},"defaults":{"usersToBlock":[],"blockDelay":3000,"dryRun":true},"stopGlobal":"stopMassBlock"},{"id":"mass-unblock","title":"Mass Unblock","emoji":"✅","category":"moderate","danger":"destructive","desc":"Unblock accounts in bulk from your blocked list.","where":{"label":"Blocked accounts","url":"https://x.com/settings/blocked_all","match":["^/settings/blocked"]},"defaults":{"unblockAll":true,"usersToUnblock":[],"unblockDelay":1500,"maxUnblocks":100,"scrollDelay":1500,"maxScrolls":20,"dryRun":true},"stopGlobal":"stopMassUnblock"},{"id":"mass-unmute","title":"Mass Unmute","emoji":"🔊","category":"moderate","danger":"destructive","desc":"Unmute accounts in bulk from your muted list.","where":{"label":"Muted accounts","url":"https://x.com/settings/muted_all","match":["^/settings/muted"]},"defaults":{"unmuteAll":true,"usersToUnmute":[],"unmuteDelay":1000,"maxUnmutes":200,"scrollDelay":1500,"maxScrolls":30,"dryRun":true},"stopGlobal":"stopMassUnmute"},{"id":"mute-by-keywords","title":"Mute by Keywords","emoji":"🔇","category":"moderate","danger":"destructive","desc":"Mute users whose bio contains keywords you set.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"muteKeywords":["crypto","nft","giveaway","trading signals","dm for promo"],"scrollDelay":1500,"maxScrolls":30,"maxRetries":3,"muteDelay":2000,"dryRun":true,"maxMutes":50},"stopGlobal":"stopMuteByKeywords"},{"id":"manage-muted-words","title":"Muted Words","emoji":"🔇","category":"moderate","danger":"caution","desc":"Add, remove, or list your muted words and phrases.","where":{"label":"Muted words settings","url":"https://x.com/settings/muted_keywords","match":["muted_keywords"]},"defaults":{"action":"list","words":["giveaway","airdrop scam"],"muteOptions":{"from":"anyone","home":true,"notifications":true,"duration":"forever"},"minDelay":1500,"maxDelay":4000},"stopGlobal":"stopManageMutedWords"},{"id":"remove-follower","title":"Remove a Follower","emoji":"🚪","category":"moderate","danger":"caution","desc":"Remove followers without blocking (dry-run by default).","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"usernames":[],"whitelist":[],"maxRemove":25,"dryRun":true,"confirm":true,"minDelay":2500,"maxDelay":5000,"maxScrollRounds":40,"scrollDelay":2000,"maxEmptyScrolls":6},"stopGlobal":"stopRemoveFollower"},{"id":"report-spam","title":"Report Spam","emoji":"🚩","category":"moderate","danger":"destructive","desc":"Report spam accounts from your followers or mentions.","where":{"label":"Your Followers page (x.com/<you>/followers)","match":["/followers"]},"defaults":{"spamKeywords":["free giveaway","click my link","dm for cashapp","send nudes","sexchat","hot girls in","make $1000 daily","guaranteed profits"],"detection":{"flagDefaultAvatar":true,"maxFollowingRatio":100,"flagNewAccounts":true,"flagExternalLinks":false},"scrollDelay":1500,"maxScrolls":20,"dryRun":true,"maxReports":10,"reportDelay":5000},"stopGlobal":null},{"id":"add-to-list","title":"Add Users to List","emoji":"➕","category":"lists","danger":"caution","desc":"Add specified users to one of your Lists.","where":{"label":"Your Lists","url":"https://x.com/i/lists","match":["/lists"]},"defaults":{"listName":"My List","usernames":[],"dryRun":true,"minDelay":2000,"maxDelay":4000,"searchWait":2200,"stepDelay":1500},"stopGlobal":"stopAddToList"},{"id":"follow-list-members","title":"Follow List Members","emoji":"👣","category":"lists","danger":"caution","desc":"Follow every member of a List.","where":{"label":"A List's members page","match":["/lists/.*members","/members"]},"defaults":{"maxFollows":50,"maxScrollAttempts":100,"noNewThreshold":5,"skipVerified":false,"skipProtected":false,"minDelay":2000,"maxDelay":5000,"scrollDelay":2000},"stopGlobal":"stopFollowListMembers"},{"id":"list-manager","title":"List Manager","emoji":"🗂️","category":"lists","danger":"caution","desc":"Create, rename, or delete a List.","where":{"label":"Your Lists","url":"https://x.com/i/lists","match":["/lists"]},"defaults":{"action":"create","name":"My New List","newName":"","description":"Created with Medirus","isPrivate":false,"dryRun":true,"stepDelay":1500},"stopGlobal":"stopListManager"},{"id":"join-communities","title":"Join Communities","emoji":"➕","category":"community","danger":"caution","desc":"Join multiple Communities from a list of IDs.","where":{"label":"Any X page"},"defaults":{"communities":[],"joinDelay":3000,"navigationDelay":3000,"maxJoin":0,"skipAlreadyJoined":true},"stopGlobal":null},{"id":"leave-community","title":"Leave a Community","emoji":"➖","category":"community","danger":"caution","desc":"Leave one Community by name or ID.","where":{"label":"Your Communities","url":"https://x.com/i/communities","match":["communities"]},"defaults":{"communityId":null,"confirmDelay":1500,"navigationDelay":2500},"stopGlobal":null},{"id":"leave-all-communities","title":"Leave All Communities","emoji":"🚪","category":"community","danger":"destructive","desc":"Leave every Community you have joined.","where":{"label":"Your Communities","url":"https://x.com/i/communities","match":["communities"]},"defaults":{"leaveDelay":1500,"confirmDelay":2000,"navDelay":2500,"maxToLeave":0},"stopGlobal":"stopLeaveCommunities"},{"id":"auto-reply-dms","title":"Auto-Reply DMs","emoji":"💌","category":"profile","danger":"caution","desc":"Auto-reply to unread DM conversations with a template.","where":{"label":"Your Messages","url":"https://x.com/messages","match":["^/messages"]},"defaults":{"message":"Thanks for reaching out! I'll get back to you soon. 🙏","maxReplies":15,"onlyUnread":true,"minDelay":4000,"maxDelay":9000,"maxScrollRounds":12,"scrollDelay":1500},"stopGlobal":"stopAutoReplyDMs"},{"id":"bulk-dm","title":"Bulk / Welcome DM","emoji":"📤","category":"profile","danger":"caution","desc":"DM a list of users with a personalized template.","where":{"label":"Your Messages","url":"https://x.com/messages","match":["^/messages"]},"defaults":{"usernames":[],"message":"Hey {name}! 👋 Thanks for connecting.","maxDMs":10,"skipExisting":true,"minDelay":25000,"maxDelay":45000},"stopGlobal":"stopBulkDM"},{"id":"edit-profile","title":"Edit Profile","emoji":"🪪","category":"profile","danger":"caution","desc":"Update your name, bio, location, website, or birthday.","where":{"label":"Edit profile","url":"https://x.com/settings/profile","match":["^/settings/profile"]},"defaults":{"name":null,"bio":null,"location":null,"website":null,"birthdate":null,"autoSave":true,"actionDelay":700},"stopGlobal":null},{"id":"multi-account","title":"Multi-Account Manager","emoji":"🔀","category":"profile","danger":"safe","desc":"Manage and switch between multiple accounts.","where":{"label":"Any X page"},"defaults":{"storagePrefix":"medirus_multi_","autoDetect":true},"stopGlobal":null},{"id":"account-settings","title":"Privacy & Settings","emoji":"⚙️","category":"profile","danger":"caution","desc":"Toggle common privacy and safety settings.","where":{"label":"Settings","url":"https://x.com/settings","match":["^/settings"]},"defaults":{"settings":{},"actionDelay":900},"stopGlobal":null},{"id":"send-direct-message","title":"Send DMs","emoji":"✉️","category":"profile","danger":"caution","desc":"Send direct messages, with per-recipient personalization.","where":{"label":"Your Messages","url":"https://x.com/messages","match":["^/messages"]},"defaults":{"targetUsers":[],"messageTemplate":"Hey {username}! 👋\n\nJust wanted to reach out and connect.\n\nBest,\n[Your Name]","limits":{"messagesPerSession":10,"delayBetweenMessages":30000},"options":{"skipIfConversationExists":true,"randomizeDelay":true}},"stopGlobal":null},{"id":"update-profile-picture","title":"Update Avatar","emoji":"🖼️","category":"profile","danger":"caution","desc":"Guided helper for changing your profile picture.","where":{"label":"Edit profile","url":"https://x.com/settings/profile","match":["^/settings/profile"]},"defaults":{"actionDelay":1500,"autoOpenPicker":true},"stopGlobal":null},{"id":"update-banner","title":"Update Banner","emoji":"🖼️","category":"profile","danger":"caution","desc":"Guided helper for changing your profile banner.","where":{"label":"Edit profile","url":"https://x.com/settings/profile","match":["^/settings/profile"]},"defaults":{"actionDelay":1500,"autoOpenEditor":true},"stopGlobal":null},{"id":"update-bio","title":"Update Bio","emoji":"✍️","category":"profile","danger":"caution","desc":"Update your profile bio.","where":{"label":"Edit profile","url":"https://x.com/settings/profile","match":["^/settings/profile"]},"defaults":{"newBio":"🚀 Building cool stuff with code\n🐦 Automating X with @Medirus\n💡 Open source enthusiast\n🔗 github.com/nirholas/XActions","actionDelay":1000,"autoSave":true},"stopGlobal":null},{"id":"blacklist","title":"Blacklist Manager","emoji":"📕","category":"utility","danger":"safe","desc":"Maintain a list of users other tools should skip.","where":{"label":"Any X page"},"defaults":{"storageKey":"medirus_blacklist","defaultBlacklist":[]},"stopGlobal":null},{"id":"filter-manager","title":"Filter Manager","emoji":"🎚️","category":"utility","danger":"safe","desc":"Configure shared filters used across the automation tools.","where":{"label":"Any X page"},"defaults":{},"stopGlobal":null},{"id":"notification-manager","title":"Notification Cleaner","emoji":"🔕","category":"utility","danger":"safe","desc":"Mark notifications read and summarize them.","where":{"label":"Your Notifications","url":"https://x.com/notifications","match":["^/notifications"]},"defaults":{"action":"summary","maxNotifications":100,"exportResults":true,"maxScrollRounds":30,"scrollDelay":1400},"stopGlobal":null},{"id":"protect-active-users","title":"Protect Active Users","emoji":"🛡️","category":"utility","danger":"safe","desc":"Scan your posts for engaged users and protect them from unfollow.","where":{"label":"Your own profile page"},"defaults":{"postsToScan":10,"engagementTypes":{"likers":true,"repliers":true,"retweeters":true,"quoters":false},"lookbackDays":30,"minEngagements":1,"scrollDelay":1500,"maxScrollsPerList":10},"stopGlobal":null},{"id":"rate-limiter","title":"Rate Limiter","emoji":"⏱️","category":"utility","danger":"safe","desc":"Tune the pacing/quota helper shared by the action tools.","where":{"label":"Any X page"},"defaults":{},"stopGlobal":null},{"id":"whitelist","title":"Whitelist Manager","emoji":"📗","category":"utility","danger":"safe","desc":"Maintain a list of users to protect from actions.","where":{"label":"Any X page"},"defaults":{"storageKey":"medirus_whitelist","defaultWhitelist":[]},"stopGlobal":null}];
 const CATEGORIES = [{"id":"create","label":"Create & Post","emoji":"✍️"},{"id":"scrape","label":"Scrape & Export","emoji":"📥"},{"id":"analyze","label":"Analytics","emoji":"📊"},{"id":"grow","label":"Grow","emoji":"🌱"},{"id":"engage","label":"Engage","emoji":"💬"},{"id":"cleanup","label":"Clean Up","emoji":"🧹"},{"id":"moderate","label":"Moderate","emoji":"🛡️"},{"id":"lists","label":"Lists","emoji":"🗂️"},{"id":"community","label":"Communities","emoji":"👥"},{"id":"profile","label":"Profile","emoji":"🪪"},{"id":"utility","label":"Utilities","emoji":"🧰"}];
 const TOOLS = {};
 function register(id, fn){ TOOLS[id] = fn; }
@@ -192,9 +192,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  ⚙️ ACCOUNT SETTINGS - XActions                          ║
+║  ⚙️ ACCOUNT SETTINGS - Medirus                          ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -429,9 +429,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  ➕ ADD TO LIST - XActions                               ║
+║  ➕ ADD TO LIST - Medirus                               ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -667,9 +667,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔀 AUDIENCE OVERLAP - XActions                         ║
+║  🔀 AUDIENCE OVERLAP - Medirus                         ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -775,12 +775,12 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   if (CONFIG.exportResults) {
     console.log('');
     const safe = (s) => String(s).replace(/[^A-Za-z0-9_-]/g, '');
-    download(report, `xactions-overlap-${safe(CONFIG.labelA)}-vs-${safe(CONFIG.labelB)}.json`);
+    download(report, `medirus-overlap-${safe(CONFIG.labelA)}-vs-${safe(CONFIG.labelB)}.json`);
   }
 
-  window.xactionsOverlap = report;
+  window.medirusOverlap = report;
   console.log('');
-  log.info('Full report object: window.xactionsOverlap');
+  log.info('Full report object: window.medirusOverlap');
   log.success('Done.');
 
   return report;
@@ -820,7 +820,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🔍 XActions — Audit Followers                               ║
+║  🔍 Medirus — Audit Followers                               ║
 ║  Comprehensive follower quality analysis                     ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -1058,7 +1058,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   }
 
   // Save audit results
-  const storageKey = `xactions_audit_${username}`;
+  const storageKey = `medirus_audit_${username}`;
   const data = {
     username,
     timestamp: new Date().toISOString(),
@@ -1200,7 +1200,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   const commentedTweets = new Set();
   
   // Load previously commented from storage
-  const STORAGE_KEY = `xactions_commented_${targetUser}`;
+  const STORAGE_KEY = `medirus_commented_${targetUser}`;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -1680,9 +1680,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🤖 AUTO REPLY DMs - XActions                            ║
+║  🤖 AUTO REPLY DMs - Medirus                            ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
   log.info('To stop early: window.stopAutoReplyDMs()');
@@ -1878,7 +1878,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     userName: '[data-testid="User-Name"] a[href^="/"]'
   };
 
-  const STORAGE_KEY = 'xactions_replied_mentions';
+  const STORAGE_KEY = 'medirus_replied_mentions';
 
   // ============================================
   // 🛠️ HELPERS
@@ -1975,9 +1975,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  💬 AUTO REPLY MENTIONS - XActions                       ║
+║  💬 AUTO REPLY MENTIONS - Medirus                       ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -2252,9 +2252,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔄 AUTO REPOST - XActions                               ║
+║  🔄 AUTO REPOST - Medirus                               ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -2438,7 +2438,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   const backupData = {
     meta: {
       createdAt: new Date().toISOString(),
-      source: 'XActions Backup Tool',
+      source: 'Medirus Backup Tool',
       version: '1.0.0'
     },
     profile: null,
@@ -2529,7 +2529,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `medirus-backup-${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -2537,9 +2537,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     console.log('📁 Backup file downloaded!');
   };
   
-  // Create XActions backup interface
-  window.XActions = window.XActions || {};
-  window.XActions.Backup = {
+  // Create Medirus backup interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Backup = {
     data: backupData,
     
     // Backup tweets from current page
@@ -2640,17 +2640,17 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       
       // Profile
-      window.XActions.Backup.profile();
+      window.Medirus.Backup.profile();
       
       console.log('');
       console.log('📋 NEXT STEPS (run each command after navigating):');
       console.log('');
-      console.log('1. Stay on profile → XActions.Backup.tweets()');
-      console.log('2. Go to Likes tab → XActions.Backup.likes()');
-      console.log('3. Go to Bookmarks → XActions.Backup.bookmarks()');
-      console.log('4. Go to Following → XActions.Backup.following()');
-      console.log('5. Go to Followers → XActions.Backup.followers()');
-      console.log('6. When done → XActions.Backup.download()');
+      console.log('1. Stay on profile → Medirus.Backup.tweets()');
+      console.log('2. Go to Likes tab → Medirus.Backup.likes()');
+      console.log('3. Go to Bookmarks → Medirus.Backup.bookmarks()');
+      console.log('4. Go to Following → Medirus.Backup.following()');
+      console.log('5. Go to Followers → Medirus.Backup.followers()');
+      console.log('6. When done → Medirus.Backup.download()');
       console.log('');
     },
     
@@ -2659,15 +2659,15 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 BACKUP COMMANDS:');
       console.log('');
-      console.log('   XActions.Backup.full()      - Start guided backup');
-      console.log('   XActions.Backup.tweets()    - Backup tweets');
-      console.log('   XActions.Backup.likes()     - Backup likes');
-      console.log('   XActions.Backup.bookmarks() - Backup bookmarks');
-      console.log('   XActions.Backup.following() - Backup following');
-      console.log('   XActions.Backup.followers() - Backup followers');
-      console.log('   XActions.Backup.profile()   - Capture profile info');
-      console.log('   XActions.Backup.summary()   - Show backup summary');
-      console.log('   XActions.Backup.download()  - Download backup file');
+      console.log('   Medirus.Backup.full()      - Start guided backup');
+      console.log('   Medirus.Backup.tweets()    - Backup tweets');
+      console.log('   Medirus.Backup.likes()     - Backup likes');
+      console.log('   Medirus.Backup.bookmarks() - Backup bookmarks');
+      console.log('   Medirus.Backup.following() - Backup following');
+      console.log('   Medirus.Backup.followers() - Backup followers');
+      console.log('   Medirus.Backup.profile()   - Capture profile info');
+      console.log('   Medirus.Backup.summary()   - Show backup summary');
+      console.log('   Medirus.Backup.download()  - Download backup file');
       console.log('');
     }
   };
@@ -2675,8 +2675,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.log('✅ Account Backup Tool loaded!');
   console.log('');
   console.log('📋 QUICK START:');
-  console.log('   Run XActions.Backup.full() for guided backup');
-  console.log('   Run XActions.Backup.help() for all commands');
+  console.log('   Run Medirus.Backup.full() for guided backup');
+  console.log('   Run Medirus.Backup.help() for all commands');
   console.log('');
 })();
 
@@ -2709,7 +2709,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  ⏰ XActions — Best Time To Post                             ║
+║  ⏰ Medirus — Best Time To Post                             ║
 ║  Analyze when your audience is most active                   ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -2937,7 +2937,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   });
 
   // Save analysis
-  const storageKey = `xactions_best_time_${username}`;
+  const storageKey = `medirus_best_time_${username}`;
   localStorage.setItem(storageKey, JSON.stringify({
     username,
     timestamp: new Date().toISOString(),
@@ -2956,7 +2956,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   register("blacklist", function(){
 var CONFIG = {
   // Storage key
-  storageKey: 'xactions_blacklist',
+  storageKey: 'medirus_blacklist',
   
   // Pre-populate with accounts to avoid
   defaultBlacklist: [
@@ -3009,9 +3009,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   
   init();
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Blacklist = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Blacklist = {
     
     // Add user to blacklist
     add: (username, reason = '') => {
@@ -3075,7 +3075,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     },
     
     // Alias for includes
-    has: (username) => window.XActions.Blacklist.includes(username),
+    has: (username) => window.Medirus.Blacklist.includes(username),
     
     // Get all blacklisted users
     getAll: () => {
@@ -3158,7 +3158,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
         }
       }
       
-      window.XActions.Blacklist.addBulk(usernamesArray, 'import');
+      window.Medirus.Blacklist.addBulk(usernamesArray, 'import');
     },
     
     // Block current user (from profile page)
@@ -3167,7 +3167,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       if (urlMatch && urlMatch[1]) {
         const username = urlMatch[1];
         if (!['home', 'explore', 'notifications', 'messages', 'i', 'settings'].includes(username)) {
-          window.XActions.Blacklist.add(username, 'from profile');
+          window.Medirus.Blacklist.add(username, 'from profile');
           return true;
         }
       }
@@ -3195,24 +3195,24 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 BLACKLIST COMMANDS:');
       console.log('');
-      console.log('   XActions.Blacklist.add("username")');
-      console.log('   XActions.Blacklist.add("user", "spam")');
-      console.log('   XActions.Blacklist.addBulk(["u1", "u2"])');
-      console.log('   XActions.Blacklist.remove("username")');
-      console.log('   XActions.Blacklist.has("username")');
-      console.log('   XActions.Blacklist.list()');
-      console.log('   XActions.Blacklist.search("pattern")');
-      console.log('   XActions.Blacklist.count()');
-      console.log('   XActions.Blacklist.export()');
-      console.log('   XActions.Blacklist.import([...])');
-      console.log('   XActions.Blacklist.blockCurrentUser()');
-      console.log('   XActions.Blacklist.clear()');
+      console.log('   Medirus.Blacklist.add("username")');
+      console.log('   Medirus.Blacklist.add("user", "spam")');
+      console.log('   Medirus.Blacklist.addBulk(["u1", "u2"])');
+      console.log('   Medirus.Blacklist.remove("username")');
+      console.log('   Medirus.Blacklist.has("username")');
+      console.log('   Medirus.Blacklist.list()');
+      console.log('   Medirus.Blacklist.search("pattern")');
+      console.log('   Medirus.Blacklist.count()');
+      console.log('   Medirus.Blacklist.export()');
+      console.log('   Medirus.Blacklist.import([...])');
+      console.log('   Medirus.Blacklist.blockCurrentUser()');
+      console.log('   Medirus.Blacklist.clear()');
       console.log('');
     }
   };
   
   console.log(`🚫 Blacklist Manager loaded! (${getBlacklist().length} users)`);
-  console.log('   Run XActions.Blacklist.help() for commands.');
+  console.log('   Run Medirus.Blacklist.help() for commands.');
   console.log('');
 })();
 
@@ -3281,7 +3281,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🤖 XActions — Block Bots                                    ║
+║  🤖 Medirus — Block Bots                                    ║
 ║  Detect and block bot accounts                               ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked             ║' : '║  🔴 LIVE MODE - Accounts WILL be blocked                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -3512,7 +3512,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
   }
 
   // Save results
-  const storageKey = 'xactions_blocked_bots';
+  const storageKey = 'medirus_blocked_bots';
   const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
   const newEntries = suspectedBots.map(b => ({
     username: b.username,
@@ -3571,7 +3571,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🚫 XActions — Block By Keywords                             ║
+║  🚫 Medirus — Block By Keywords                             ║
 ║  Block users with specific bio keywords                      ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked             ║' : '║  🔴 LIVE MODE - Accounts WILL be blocked                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -3698,7 +3698,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
   }
 
   // Save log
-  const storageKey = 'xactions_keyword_blocks';
+  const storageKey = 'medirus_keyword_blocks';
   const log = matches.map(m => ({
     username: m.username,
     keywords: m.keywords,
@@ -3751,7 +3751,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  📊 XActions — Block By Ratio                                ║
+║  📊 Medirus — Block By Ratio                                ║
 ║  Block accounts with suspicious following/follower ratios    ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked             ║' : '║  🔴 LIVE MODE - Accounts WILL be blocked                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -3910,7 +3910,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
   }
 
   // Save log
-  const storageKey = 'xactions_ratio_blocks';
+  const storageKey = 'medirus_ratio_blocks';
   const log = flagged.map(u => ({
     username: u.username,
     ratio: u.ratio,
@@ -4051,8 +4051,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🚫 BLOCK LIST TRANSFER - XActions                          ║
-║  👤 Author: nichxbt   🌐 https://xactions.app               ║
+║  🚫 BLOCK LIST TRANSFER - Medirus                          ║
+║  👤 Author: nichxbt   🌐 https://medirus.online               ║
 ${CONFIG.mode === 'export' ? '║  📤 EXPORT MODE - read-only                                 ║' : (CONFIG.dryRun ? '║  ⚠️  DRY RUN - No accounts will be blocked                 ║' : '║  🔴 LIVE MODE - Accounts WILL be blocked                    ║')}
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -4100,7 +4100,7 @@ ${CONFIG.mode === 'export' ? '║  📤 EXPORT MODE - read-only                 
     log.success(`Scraped ${list.length} blocked accounts.`);
     download(
       { exportedAt: new Date().toISOString(), count: list.length, usernames: list.map(u => u.username), accounts: list },
-      `xactions-block-list-${new Date().toISOString().slice(0, 10)}.json`
+      `medirus-block-list-${new Date().toISOString().slice(0, 10)}.json`
     );
   };
 
@@ -4327,7 +4327,7 @@ ${CONFIG.mode === 'export' ? '║  📤 EXPORT MODE - read-only                 
   if ((CONFIG.mode === 'importBlock' || CONFIG.mode === 'blockFollowersOf') && blockedList.length > 0) {
     download(
       { mode: CONFIG.mode, dryRun: CONFIG.dryRun, stats, blocked: blockedList, exportedAt: new Date().toISOString() },
-      `xactions-block-transfer-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`
+      `medirus-block-transfer-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`
     );
   }
 
@@ -4677,9 +4677,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  💬 BULK DM - XActions                                   ║
+║  💬 BULK DM - Medirus                                   ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
   log.warning('Use responsibly. Mass DMing can get your account restricted.');
@@ -5350,12 +5350,12 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       error: 'color: #E0245E; font-weight: bold;',
       warn: 'color: #FFAD1F; font-weight: bold;'
     };
-    console.log(`%c[XActions] ${msg}`, styles[type] || styles.info);
+    console.log(`%c[Medirus] ${msg}`, styles[type] || styles.info);
   };
 
   const getProcessedTweets = () => {
     try {
-      return JSON.parse(sessionStorage.getItem('xactions_commented_tweets') || '[]');
+      return JSON.parse(sessionStorage.getItem('medirus_commented_tweets') || '[]');
     } catch {
       return [];
     }
@@ -5365,7 +5365,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     const tweets = getProcessedTweets();
     if (!tweets.includes(tweetId)) {
       tweets.push(tweetId);
-      sessionStorage.setItem('xactions_commented_tweets', JSON.stringify(tweets));
+      sessionStorage.setItem('medirus_commented_tweets', JSON.stringify(tweets));
     }
   };
 
@@ -5524,7 +5524,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║   🏷️  XACTIONS - COMMENT BY HASHTAG                          ║
+║   🏷️  MEDIRUS - COMMENT BY HASHTAG                          ║
 ║                                                               ║
 ║   Automatically comment on tweets with specific hashtags      ║
 ║                                                               ║
@@ -5652,12 +5652,12 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       error: 'color: #E0245E; font-weight: bold;',
       warn: 'color: #FFAD1F; font-weight: bold;'
     };
-    console.log(`%c[XActions] ${msg}`, styles[type] || styles.info);
+    console.log(`%c[Medirus] ${msg}`, styles[type] || styles.info);
   };
 
   const getProcessedTweets = () => {
     try {
-      return JSON.parse(sessionStorage.getItem('xactions_location_commented') || '[]');
+      return JSON.parse(sessionStorage.getItem('medirus_location_commented') || '[]');
     } catch {
       return [];
     }
@@ -5667,7 +5667,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     const tweets = getProcessedTweets();
     if (!tweets.includes(tweetId)) {
       tweets.push(tweetId);
-      sessionStorage.setItem('xactions_location_commented', JSON.stringify(tweets));
+      sessionStorage.setItem('medirus_location_commented', JSON.stringify(tweets));
     }
   };
 
@@ -5879,7 +5879,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║   📍 XACTIONS - COMMENT BY LOCATION                          ║
+║   📍 MEDIRUS - COMMENT BY LOCATION                          ║
 ║                                                               ║
 ║   Automatically comment on tweets from specific locations     ║
 ║                                                               ║
@@ -5959,7 +5959,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🔎 XActions — Competitor Analysis                           ║
+║  🔎 Medirus — Competitor Analysis                           ║
 ║  Analyze competitor accounts for insights                    ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -6213,7 +6213,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   });
 
   // Save analysis
-  const storageKey = `xactions_competitor_${username}`;
+  const storageKey = `medirus_competitor_${username}`;
   const data = {
     username,
     timestamp: new Date().toISOString(),
@@ -6307,7 +6307,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   
   const username = pathMatch[1];
   const pageType = pathMatch[2];
-  const storageKey = `xactions_continuous_${username}_${pageType}`;
+  const storageKey = `medirus_continuous_${username}_${pageType}`;
   
   console.log(`👤 Monitoring: @${username}/${pageType}`);
   console.log(`⏱️ Check interval: ${CONFIG.checkIntervalMinutes} minutes`);
@@ -6633,9 +6633,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📊 CREATE POLL - XActions                               ║
+║  📊 CREATE POLL - Medirus                               ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -6942,9 +6942,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🗑️  DELETE TWEETS - XActions                            ║
+║  🗑️  DELETE TWEETS - Medirus                            ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -7134,7 +7134,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   if (deleteLog.length > 0) {
     download(
       { profile: profileUser, stats, dryRun: CONFIG.dryRun, tweets: deleteLog },
-      `xactions-delete-tweets-${new Date().toISOString().slice(0, 10)}.json`
+      `medirus-delete-tweets-${new Date().toISOString().slice(0, 10)}.json`
     );
   }
 
@@ -7164,7 +7164,7 @@ var CONFIG = {
   autoDownload: true,
   
   // Storage key for snapshot
-  storageKey: 'xactions_my_followers'
+  storageKey: 'medirus_my_followers'
 };
 try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG,window.__XA_LAUNCH_CFG);}}catch(_xa){}
 
@@ -7589,9 +7589,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📝 EDIT PROFILE - XActions                              ║
+║  📝 EDIT PROFILE - Medirus                              ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -7724,7 +7724,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  📊 XActions — Engagement Analytics                          ║
+║  📊 Medirus — Engagement Analytics                          ║
 ║  Analyze likes, comments, retweets on your posts             ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -7935,7 +7935,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   });
 
   // Save to localStorage
-  const storageKey = `xactions_engagement_${username}`;
+  const storageKey = `medirus_engagement_${username}`;
   const data = {
     username,
     timestamp: new Date().toISOString(),
@@ -7962,7 +7962,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.log('╚════════════════════════════════════════════════════════════╝');
   console.log('');
   
-  const STORAGE_KEY = 'xactions_filters';
+  const STORAGE_KEY = 'medirus_filters';
   
   // Default filter configuration
   const defaultFilters = {
@@ -8068,9 +8068,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Filters = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Filters = {
     
     // Get current filters
     get: () => getFilters(),
@@ -8330,23 +8330,23 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 FILTER MANAGER COMMANDS:');
       console.log('');
-      console.log('   XActions.Filters.show()           - Show current config');
-      console.log('   XActions.Filters.get()            - Get filters object');
-      console.log('   XActions.Filters.set(cat,key,val) - Set specific filter');
-      console.log('   XActions.Filters.enable("bio")    - Enable filter');
-      console.log('   XActions.Filters.disable("bio")   - Disable filter');
+      console.log('   Medirus.Filters.show()           - Show current config');
+      console.log('   Medirus.Filters.get()            - Get filters object');
+      console.log('   Medirus.Filters.set(cat,key,val) - Set specific filter');
+      console.log('   Medirus.Filters.enable("bio")    - Enable filter');
+      console.log('   Medirus.Filters.disable("bio")   - Disable filter');
       console.log('');
       console.log('📦 PRESETS:');
-      console.log('   XActions.Filters.presets.quality()');
-      console.log('   XActions.Filters.presets.influencers()');
-      console.log('   XActions.Filters.presets.small()');
-      console.log('   XActions.Filters.presets.antiSpam()');
-      console.log('   XActions.Filters.presets.none()');
+      console.log('   Medirus.Filters.presets.quality()');
+      console.log('   Medirus.Filters.presets.influencers()');
+      console.log('   Medirus.Filters.presets.small()');
+      console.log('   Medirus.Filters.presets.antiSpam()');
+      console.log('   Medirus.Filters.presets.none()');
       console.log('');
       console.log('📤 EXPORT/IMPORT:');
-      console.log('   XActions.Filters.export()');
-      console.log('   XActions.Filters.import(json)');
-      console.log('   XActions.Filters.reset()');
+      console.log('   Medirus.Filters.export()');
+      console.log('   Medirus.Filters.import(json)');
+      console.log('   Medirus.Filters.reset()');
       console.log('');
     }
   };
@@ -8355,8 +8355,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   const enabledCount = Object.values(filters).filter(f => f.enabled).length;
   
   console.log(`⚙️ Filter Manager loaded! (${enabledCount} filters enabled)`);
-  console.log('   Run XActions.Filters.help() for commands.');
-  console.log('   Run XActions.Filters.show() to see current config.');
+  console.log('   Run Medirus.Filters.help() for commands.');
+  console.log('   Run Medirus.Filters.show() to see current config.');
   console.log('');
 })();
 
@@ -8428,7 +8428,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🕵️ XActions — Find Fake Followers                          ║
+║  🕵️ Medirus — Find Fake Followers                          ║
 ║  Identify likely fake/bot accounts in your audience         ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -8682,7 +8682,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     });
 
   // Save results
-  const storageKey = 'xactions_fake_followers';
+  const storageKey = 'medirus_fake_followers';
   const data = {
     timestamp: new Date().toISOString(),
     totalScanned: allFollowers.length,
@@ -8790,9 +8790,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔁 FOLLOW BACK - XActions                               ║
+║  🔁 FOLLOW BACK - Medirus                               ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
   log.info('To stop early: window.stopFollowBack()');
@@ -8975,7 +8975,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.log(`📊 Max follows: ${CONFIG.maxFollows}`);
   console.log('');
   
-  const STORAGE_KEY = 'xactions_followed_engagers';
+  const STORAGE_KEY = 'medirus_followed_engagers';
   const followedUsers = new Set();
   
   // Load previously followed
@@ -9198,9 +9198,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  👥 FOLLOW LIST MEMBERS - XActions                       ║
+║  👥 FOLLOW LIST MEMBERS - Medirus                       ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -9379,7 +9379,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.log(`📊 Max follows: ${CONFIG.maxFollows}`);
   console.log('');
   
-  const STORAGE_KEY = 'xactions_followed_targets';
+  const STORAGE_KEY = 'medirus_followed_targets';
   const followedUsers = new Set();
   
   try {
@@ -9493,7 +9493,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   register("followers-growth-tracker", function(){
 var CONFIG = {
   // Storage key prefix
-  storageKey: 'xactions_growth_tracker',
+  storageKey: 'medirus_growth_tracker',
   
   // Maximum history entries to keep
   maxHistory: 365,
@@ -9513,7 +9513,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 (async function followersGrowthTracker() {
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  📈 XActions — Followers Growth Tracker                      ║
+║  📈 Medirus — Followers Growth Tracker                      ║
 ║  Track follower growth over time                             ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -9845,11 +9845,11 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   const storage = {
     get: (key) => {
       try {
-        return JSON.parse(localStorage.getItem(`xactions_growth_${key}`) || 'null');
+        return JSON.parse(localStorage.getItem(`medirus_growth_${key}`) || 'null');
       } catch { return null; }
     },
     set: (key, value) => {
-      localStorage.setItem(`xactions_growth_${key}`, JSON.stringify(value));
+      localStorage.setItem(`medirus_growth_${key}`, JSON.stringify(value));
     }
   };
   
@@ -9968,9 +9968,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     return true;
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Growth = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Growth = {
     state,
     config: CONFIG,
     
@@ -10068,16 +10068,16 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 GROWTH SUITE COMMANDS:');
       console.log('');
-      console.log('   XActions.Growth.autoLike()      - Auto-like feed posts');
-      console.log('   XActions.Growth.autoFollow()    - Auto-follow users');
-      console.log('   XActions.Growth.smartUnfollow() - Unfollow non-followers');
-      console.log('   XActions.Growth.stop()          - Stop automation');
-      console.log('   XActions.Growth.stats()         - Show statistics');
+      console.log('   Medirus.Growth.autoLike()      - Auto-like feed posts');
+      console.log('   Medirus.Growth.autoFollow()    - Auto-follow users');
+      console.log('   Medirus.Growth.smartUnfollow() - Unfollow non-followers');
+      console.log('   Medirus.Growth.stop()          - Stop automation');
+      console.log('   Medirus.Growth.stats()         - Show statistics');
       console.log('');
     },
   };
   
-  log('Growth Suite loaded! Use XActions.Growth.help() for commands.');
+  log('Growth Suite loaded! Use Medirus.Growth.help() for commands.');
   console.log('');
 })();
 
@@ -10110,7 +10110,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  #️⃣ XActions — Hashtag Analytics                             ║
+║  #️⃣ Medirus — Hashtag Analytics                             ║
 ║  Track which hashtags drive the most engagement              ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -10358,7 +10358,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   }
 
   // Save analysis
-  const storageKey = `xactions_hashtags_${username}`;
+  const storageKey = `medirus_hashtags_${username}`;
   localStorage.setItem(storageKey, JSON.stringify({
     username,
     timestamp: new Date().toISOString(),
@@ -10513,9 +10513,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     return link?.href?.match(/status\/(\d+)/)?.[1];
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Hashtag = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Hashtag = {
     config: CONFIG,
     state,
     
@@ -10531,7 +10531,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
       // Type into X's own search box and submit through it (a real in-app
       // search) instead of assigning location.href. Setting location.href
-      // forces a hard page reload, which wipes this injected script (window.XActions
+      // forces a hard page reload, which wipes this injected script (window.Medirus
       // included) - so the "run search(), then run interact()" flow documented
       // above would break as soon as search() ran.
       const input = document.querySelector(SELECTORS.searchInput);
@@ -10541,7 +10541,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
         input.dispatchEvent(new Event('input', { bubbles: true }));
         await sleep(300);
         input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-        console.log('✅ Search submitted. Once results load, run XActions.Hashtag.interact().');
+        console.log('✅ Search submitted. Once results load, run Medirus.Hashtag.interact().');
       } else {
         console.warn('⚠️ Search box not found on this page. Falling back to a full navigation - this reloads the page and clears the script, so paste it again once results load.');
         window.location.href = `https://x.com/search?q=%23${tag}&src=typed_query&f=live`;
@@ -10638,7 +10638,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('╔════════════════════════════════════════════════════════════╗');
       console.log('║  🎉 HASHTAG INTERACTION COMPLETE!                          ║');
       console.log('╚════════════════════════════════════════════════════════════╝');
-      window.XActions.Hashtag.stats();
+      window.Medirus.Hashtag.stats();
     },
     
     // Search and interact with all configured hashtags
@@ -10653,8 +10653,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('📋 Run these commands in sequence:');
       
       CONFIG.hashtags.forEach((tag, i) => {
-        console.log(`   ${i + 1}. XActions.Hashtag.search("${tag}")`);
-        console.log(`      Then: XActions.Hashtag.interact()`);
+        console.log(`   ${i + 1}. Medirus.Hashtag.search("${tag}")`);
+        console.log(`      Then: Medirus.Hashtag.interact()`);
       });
       console.log('');
     },
@@ -10700,20 +10700,20 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 HASHTAG INTERACTION COMMANDS:');
       console.log('');
-      console.log('   XActions.Hashtag.search("crypto")   - Search hashtag');
-      console.log('   XActions.Hashtag.interact()         - Interact with results');
-      console.log('   XActions.Hashtag.addHashtag("tag")  - Add hashtag');
-      console.log('   XActions.Hashtag.removeHashtag("t") - Remove hashtag');
-      console.log('   XActions.Hashtag.interactAll()      - Show guide for all');
-      console.log('   XActions.Hashtag.stop()             - Stop interaction');
-      console.log('   XActions.Hashtag.stats()            - Show statistics');
+      console.log('   Medirus.Hashtag.search("crypto")   - Search hashtag');
+      console.log('   Medirus.Hashtag.interact()         - Interact with results');
+      console.log('   Medirus.Hashtag.addHashtag("tag")  - Add hashtag');
+      console.log('   Medirus.Hashtag.removeHashtag("t") - Remove hashtag');
+      console.log('   Medirus.Hashtag.interactAll()      - Show guide for all');
+      console.log('   Medirus.Hashtag.stop()             - Stop interaction');
+      console.log('   Medirus.Hashtag.stats()            - Show statistics');
       console.log('');
     }
   };
   
   console.log('✅ Interact By Hashtag loaded!');
   console.log(`📋 Configured hashtags: ${CONFIG.hashtags.map(t => '#' + t).join(', ')}`);
-  console.log('   Run XActions.Hashtag.help() for commands.');
+  console.log('   Run Medirus.Hashtag.help() for commands.');
   console.log('');
 })();
 
@@ -10790,9 +10790,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     processedTweets: new Set(),
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Place = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Place = {
     config: CONFIG,
     state,
     
@@ -10825,7 +10825,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
       // Type into X's own search box and submit through it (a real in-app
       // search) instead of assigning location.href. Setting location.href
-      // forces a hard page reload, which wipes this injected script (window.XActions
+      // forces a hard page reload, which wipes this injected script (window.Medirus
       // included) before interact() could ever be called on the results.
       const input = document.querySelector(SELECTORS.searchInput);
       if (input) {
@@ -10834,7 +10834,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
         input.dispatchEvent(new Event('input', { bubbles: true }));
         await sleep(300);
         input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-        console.log('✅ Search submitted. Once results load, run XActions.Place.interact().');
+        console.log('✅ Search submitted. Once results load, run Medirus.Place.interact().');
       } else {
         console.warn('⚠️ Search box not found on this page. Falling back to a full navigation - this reloads the page and clears the script, so paste it again once results load.');
         const encodedQuery = encodeURIComponent(searchQuery);
@@ -10927,7 +10927,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('╔════════════════════════════════════════════════════════════╗');
       console.log('║  🎉 LOCATION INTERACTION COMPLETE!                         ║');
       console.log('╚════════════════════════════════════════════════════════════╝');
-      window.XActions.Place.stats();
+      window.Medirus.Place.stats();
     },
     
     // Add location
@@ -10968,20 +10968,20 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 PLACE INTERACTION COMMANDS:');
       console.log('');
-      console.log('   XActions.Place.search("New York")');
-      console.log('   XActions.Place.search("NYC", "coffee")');
-      console.log('   XActions.Place.interact()');
-      console.log('   XActions.Place.addLocation("Miami")');
-      console.log('   XActions.Place.listLocations()');
-      console.log('   XActions.Place.stop()');
-      console.log('   XActions.Place.stats()');
+      console.log('   Medirus.Place.search("New York")');
+      console.log('   Medirus.Place.search("NYC", "coffee")');
+      console.log('   Medirus.Place.interact()');
+      console.log('   Medirus.Place.addLocation("Miami")');
+      console.log('   Medirus.Place.listLocations()');
+      console.log('   Medirus.Place.stop()');
+      console.log('   Medirus.Place.stats()');
       console.log('');
     }
   };
   
   console.log('✅ Interact By Place loaded!');
   console.log(`📍 Configured locations: ${CONFIG.locations.length}`);
-  console.log('   Run XActions.Place.help() for commands.');
+  console.log('   Run Medirus.Place.help() for commands.');
   console.log('');
 })();
 
@@ -11059,11 +11059,11 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // Storage
   const storage = {
     get: (key) => {
-      try { return JSON.parse(localStorage.getItem(`xactions_interact_${key}`) || 'null'); }
+      try { return JSON.parse(localStorage.getItem(`medirus_interact_${key}`) || 'null'); }
       catch { return null; }
     },
     set: (key, value) => {
-      localStorage.setItem(`xactions_interact_${key}`, JSON.stringify(value));
+      localStorage.setItem(`medirus_interact_${key}`, JSON.stringify(value));
     }
   };
   
@@ -11094,9 +11094,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     stats: { likes: 0, retweets: 0, replies: 0, follows: 0 },
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.InteractUsers = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.InteractUsers = {
     config: CONFIG,
     state,
     history,
@@ -11224,7 +11224,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('📋 For each user, open their profile and run:');
       CONFIG.targetUsers.forEach((username, i) => {
         console.log(`   ${i + 1}. https://x.com/${username}`);
-        console.log(`      Then: XActions.InteractUsers.interactWith("${username}")`);
+        console.log(`      Then: Medirus.InteractUsers.interactWith("${username}")`);
       });
       console.log('');
       console.log('💡 Re-paste this script after each page navigation.');
@@ -11283,20 +11283,20 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 INTERACT BY USERS COMMANDS:');
       console.log('');
-      console.log('   XActions.InteractUsers.addUser("username")');
-      console.log('   XActions.InteractUsers.removeUser("username")');
-      console.log('   XActions.InteractUsers.interactWith("username")');
-      console.log('   XActions.InteractUsers.interactAll()');
-      console.log('   XActions.InteractUsers.stop()');
-      console.log('   XActions.InteractUsers.stats()');
-      console.log('   XActions.InteractUsers.showHistory()');
+      console.log('   Medirus.InteractUsers.addUser("username")');
+      console.log('   Medirus.InteractUsers.removeUser("username")');
+      console.log('   Medirus.InteractUsers.interactWith("username")');
+      console.log('   Medirus.InteractUsers.interactAll()');
+      console.log('   Medirus.InteractUsers.stop()');
+      console.log('   Medirus.InteractUsers.stats()');
+      console.log('   Medirus.InteractUsers.showHistory()');
       console.log('');
     }
   };
   
   console.log('✅ Interact By Users loaded!');
   console.log(`📋 Target users: ${CONFIG.targetUsers.length}`);
-  console.log('   Run XActions.InteractUsers.help() for commands.');
+  console.log('   Run Medirus.InteractUsers.help() for commands.');
   console.log('');
 })();
 
@@ -11402,9 +11402,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     return link?.getAttribute('href')?.replace('/', '');
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Likers = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Likers = {
     config: CONFIG,
     state,
     
@@ -11478,7 +11478,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('╔════════════════════════════════════════════════════════════╗');
       console.log('║  🎉 FINISHED FOLLOWING LIKERS!                             ║');
       console.log('╚════════════════════════════════════════════════════════════╝');
-      window.XActions.Likers.stats();
+      window.Medirus.Likers.stats();
     },
     
     // Collect likers (just get usernames)
@@ -11534,10 +11534,10 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 LIKERS INTERACTION COMMANDS:');
       console.log('');
-      console.log('   XActions.Likers.follow()   - Follow likers');
-      console.log('   XActions.Likers.collect()  - Just collect usernames');
-      console.log('   XActions.Likers.stop()     - Stop following');
-      console.log('   XActions.Likers.stats()    - Show statistics');
+      console.log('   Medirus.Likers.follow()   - Follow likers');
+      console.log('   Medirus.Likers.collect()  - Just collect usernames');
+      console.log('   Medirus.Likers.stop()     - Stop following');
+      console.log('   Medirus.Likers.stats()    - Show statistics');
       console.log('');
       console.log('📍 Make sure you\'re on a likes page first!');
       console.log('   URL: x.com/USER/status/ID/likes');
@@ -11546,8 +11546,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   };
   
   console.log('✅ Interact With Likers loaded!');
-  console.log('   Run XActions.Likers.follow() to start following.');
-  console.log('   Run XActions.Likers.help() for all commands.');
+  console.log('   Run Medirus.Likers.follow() to start following.');
+  console.log('   Run Medirus.Likers.help() for all commands.');
   console.log('');
 })();
 
@@ -11612,7 +11612,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // State tracking (persists across page navigations)
   const getJoinedCommunities = () => {
     try {
-      return JSON.parse(sessionStorage.getItem('xactions_joined_communities') || '[]');
+      return JSON.parse(sessionStorage.getItem('medirus_joined_communities') || '[]');
     } catch { return []; }
   };
   
@@ -11620,16 +11620,16 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     const joined = getJoinedCommunities();
     if (!joined.find(c => c.id === id)) {
       joined.push({ id, status, timestamp: Date.now() });
-      sessionStorage.setItem('xactions_joined_communities', JSON.stringify(joined));
+      sessionStorage.setItem('medirus_joined_communities', JSON.stringify(joined));
     }
   };
   
   const getCurrentIndex = () => {
-    return parseInt(sessionStorage.getItem('xactions_join_index') || '0', 10);
+    return parseInt(sessionStorage.getItem('medirus_join_index') || '0', 10);
   };
   
   const setCurrentIndex = (idx) => {
-    sessionStorage.setItem('xactions_join_index', idx.toString());
+    sessionStorage.setItem('medirus_join_index', idx.toString());
   };
   
   console.log(`📋 Communities to join: ${CONFIG.communities.length}`);
@@ -11659,8 +11659,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log(`   ❌ Failed: ${failed}`);
       
       // Cleanup
-      sessionStorage.removeItem('xactions_joined_communities');
-      sessionStorage.removeItem('xactions_join_index');
+      sessionStorage.removeItem('medirus_joined_communities');
+      sessionStorage.removeItem('medirus_join_index');
       return;
     }
     
@@ -11825,8 +11825,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.log(`📊 Max follows: ${CONFIG.maxFollows}`);
   console.log('');
   
-  const STORAGE_KEY = 'xactions_keyword_followed';
-  const TRACKING_KEY = 'xactions_follow_tracking';
+  const STORAGE_KEY = 'medirus_keyword_followed';
+  const TRACKING_KEY = 'medirus_follow_tracking';
   
   const followedUsers = new Set();
   let trackingData = {};
@@ -11982,7 +11982,7 @@ window.stopLeaveCommunities = () => {
   const $backButton = '[data-testid="app-bar-back"]';
 
   // State management using sessionStorage (survives navigation)
-  const STORAGE_KEY = 'xactions_left_communities';
+  const STORAGE_KEY = 'medirus_left_communities';
   
   const getLeftCommunities = () => {
     try {
@@ -12331,9 +12331,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🏠 LIKE BY FEED - XActions                              ║
+║  🏠 LIKE BY FEED - Medirus                              ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -12620,9 +12620,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🏷️  LIKE BY HASHTAG - XActions                          ║
+║  🏷️  LIKE BY HASHTAG - Medirus                          ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -12905,9 +12905,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📍 LIKE BY LOCATION - XActions                          ║
+║  📍 LIKE BY LOCATION - Medirus                          ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -13224,9 +13224,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  👤 LIKE BY USER - XActions                              ║
+║  👤 LIKE BY USER - Medirus                              ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -13544,9 +13544,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  💬 LIKE USER REPLIES - XActions                         ║
+║  💬 LIKE USER REPLIES - Medirus                         ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -14090,7 +14090,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     newName: '',
 
     // For 'create' only: optional description and privacy
-    description: 'Created with XActions',
+    description: 'Created with Medirus',
     isPrivate: false,
 
     // Safety: preview the steps without changing anything. Set to false to execute.
@@ -14308,9 +14308,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🗂️ LIST MANAGER - XActions                              ║
+║  🗂️ LIST MANAGER - Medirus                              ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -14499,9 +14499,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔇 MANAGE MUTED WORDS - XActions                        ║
+║  🔇 MANAGE MUTED WORDS - Medirus                        ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -14524,7 +14524,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       words.forEach((w, i) => console.log(`   ${i + 1}. "${w}"`));
       download(
         { scrapedAt: new Date().toISOString(), count: words.length, mutedWords: words },
-        `xactions-muted-words-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-muted-words-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
     console.log(`\n✅ Listed ${stats.listed} muted word(s). by nichxbt`);
@@ -14696,7 +14696,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🚫 XActions — Mass Block                                    ║
+║  🚫 Medirus — Mass Block                                    ║
 ║  Block multiple users from a list                            ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked             ║' : '║  🔴 LIVE MODE - Accounts WILL be blocked                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -14811,7 +14811,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
   }
 
   // Save log
-  const storageKey = 'xactions_mass_block_log';
+  const storageKey = 'medirus_mass_block_log';
   const log = {
     timestamp: new Date().toISOString(),
     ...results
@@ -14871,7 +14871,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  ✅ XActions — Mass Unblock                                  ║
+║  ✅ Medirus — Mass Unblock                                  ║
 ║  Unblock multiple users                                      ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unblocked           ║' : '║  🔴 LIVE MODE - Accounts WILL be unblocked                  ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -15029,7 +15029,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unblocked    
   console.log('═'.repeat(60));
 
   // Save log
-  const storageKey = 'xactions_unblock_log';
+  const storageKey = 'medirus_unblock_log';
   const log = {
     timestamp: new Date().toISOString(),
     // Record the accounts actually unblocked; slicing the candidate list
@@ -15091,7 +15091,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🔊 XActions — Mass Unmute                                   ║
+║  🔊 Medirus — Mass Unmute                                   ║
 ║  Unmute multiple users                                       ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unmuted             ║' : '║  🔴 LIVE MODE - Accounts WILL be unmuted                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -15250,7 +15250,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unmuted      
   console.log('═'.repeat(60));
 
   // Save log
-  const storageKey = 'xactions_unmute_log';
+  const storageKey = 'medirus_unmute_log';
   const log = {
     timestamp: new Date().toISOString(),
     // Record the accounts actually unmuted; slicing the candidate list
@@ -15312,7 +15312,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   
   const username = pathMatch[1];
   const pageType = pathMatch[2]; // 'followers' or 'following'
-  const storageKey = `xactions_monitor_${username}_${pageType}`;
+  const storageKey = `medirus_monitor_${username}_${pageType}`;
   
   console.log(`👤 Monitoring: @${username}`);
   console.log(`📋 Page type: ${pageType}`);
@@ -15506,7 +15506,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   register("multi-account", function(){
 var CONFIG = {
   // Storage key prefix
-  storagePrefix: 'xactions_multi_',
+  storagePrefix: 'medirus_multi_',
   
   // Auto-detect current logged-in account
   autoDetect: true
@@ -15565,16 +15565,16 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     return null;
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Accounts = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Accounts = {
     
     // Get all accounts
     getAll: () => storage.get(KEYS.accounts) || [],
     
     // Add account (just stores the username for tracking)
     add: (username, notes = '') => {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       const cleanUsername = username.replace('@', '').toLowerCase();
       
       if (accounts.find(a => a.username === cleanUsername)) {
@@ -15603,7 +15603,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     
     // Remove account
     remove: (username) => {
-      let accounts = window.XActions.Accounts.getAll();
+      let accounts = window.Medirus.Accounts.getAll();
       const cleanUsername = username.replace('@', '').toLowerCase();
       const before = accounts.length;
       
@@ -15621,7 +15621,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     
     // Update account status
     setStatus: (username, status) => {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       const cleanUsername = username.replace('@', '').toLowerCase();
       const account = accounts.find(a => a.username === cleanUsername);
       
@@ -15638,7 +15638,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     
     // Mark account as used
     markUsed: (username) => {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       const cleanUsername = username?.replace('@', '').toLowerCase();
       const account = accounts.find(a => a.username === cleanUsername);
       
@@ -15653,14 +15653,14 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     current: () => {
       const detected = getCurrentUsername();
       if (detected) {
-        window.XActions.Accounts.markUsed(detected);
+        window.Medirus.Accounts.markUsed(detected);
       }
       return detected || storage.get(KEYS.current);
     },
     
     // Get next account to use (for rotation)
     next: () => {
-      const accounts = window.XActions.Accounts.getAll().filter(a => a.status === 'active');
+      const accounts = window.Medirus.Accounts.getAll().filter(a => a.status === 'active');
       
       if (accounts.length === 0) {
         console.warn('⚠️ No active accounts available.');
@@ -15679,7 +15679,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     
     // Update stats for current account
     updateStats: (statType, increment = 1) => {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       const current = getCurrentUsername();
       const account = accounts.find(a => a.username === current);
       
@@ -15691,7 +15691,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     
     // List all accounts
     list: () => {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       const current = getCurrentUsername();
       
       console.log('');
@@ -15701,7 +15701,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       
       if (accounts.length === 0) {
         console.log('No accounts added yet.');
-        console.log('Use: XActions.Accounts.add("username")');
+        console.log('Use: Medirus.Accounts.add("username")');
       } else {
         accounts.forEach((a, i) => {
           const lastUsed = a.lastUsed ? new Date(a.lastUsed).toLocaleString() : 'Never';
@@ -15725,7 +15725,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     
     // Show stats for all accounts
     stats: () => {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       
       console.log('');
       console.log('📊 ACCOUNT STATISTICS:');
@@ -15771,7 +15771,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     
     // Export accounts (without sensitive data)
     export: () => {
-      const accounts = window.XActions.Accounts.getAll().map(a => ({
+      const accounts = window.Medirus.Accounts.getAll().map(a => ({
         username: a.username,
         notes: a.notes,
         status: a.status,
@@ -15794,7 +15794,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     import: (jsonString) => {
       try {
         const imported = JSON.parse(jsonString);
-        const accounts = window.XActions.Accounts.getAll();
+        const accounts = window.Medirus.Accounts.getAll();
         
         imported.forEach(a => {
           if (!accounts.find(existing => existing.username === a.username)) {
@@ -15818,17 +15818,17 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 MULTI-ACCOUNT COMMANDS:');
       console.log('');
-      console.log('   XActions.Accounts.add("username")  - Add account');
-      console.log('   XActions.Accounts.remove("user")   - Remove account');
-      console.log('   XActions.Accounts.list()           - List all accounts');
-      console.log('   XActions.Accounts.current()        - Get current account');
-      console.log('   XActions.Accounts.next()           - Get next in rotation');
-      console.log('   XActions.Accounts.switch()         - Open account switcher');
-      console.log('   XActions.Accounts.stats()          - Show all stats');
-      console.log('   XActions.Accounts.setStatus("u","s") - Set status');
-      console.log('   XActions.Accounts.export()         - Export account list');
-      console.log('   XActions.Accounts.import(json)     - Import accounts');
-      console.log('   XActions.Accounts.clear()          - Clear all data');
+      console.log('   Medirus.Accounts.add("username")  - Add account');
+      console.log('   Medirus.Accounts.remove("user")   - Remove account');
+      console.log('   Medirus.Accounts.list()           - List all accounts');
+      console.log('   Medirus.Accounts.current()        - Get current account');
+      console.log('   Medirus.Accounts.next()           - Get next in rotation');
+      console.log('   Medirus.Accounts.switch()         - Open account switcher');
+      console.log('   Medirus.Accounts.stats()          - Show all stats');
+      console.log('   Medirus.Accounts.setStatus("u","s") - Set status');
+      console.log('   Medirus.Accounts.export()         - Export account list');
+      console.log('   Medirus.Accounts.import(json)     - Import accounts');
+      console.log('   Medirus.Accounts.clear()          - Clear all data');
       console.log('');
       console.log('📊 STATUS VALUES: active, paused, limited, suspended');
       console.log('');
@@ -15839,19 +15839,19 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   if (CONFIG.autoDetect) {
     const current = getCurrentUsername();
     if (current) {
-      const accounts = window.XActions.Accounts.getAll();
+      const accounts = window.Medirus.Accounts.getAll();
       if (!accounts.find(a => a.username === current)) {
         console.log(`🔍 Detected current account: @${current}`);
-        console.log('   Run XActions.Accounts.add("' + current + '") to track it.');
+        console.log('   Run Medirus.Accounts.add("' + current + '") to track it.');
       } else {
-        window.XActions.Accounts.markUsed(current);
+        window.Medirus.Accounts.markUsed(current);
         console.log(`👤 Current account: @${current}`);
       }
     }
   }
   
   console.log('✅ Multi-Account Manager loaded!');
-  console.log('   Run XActions.Accounts.help() for commands.');
+  console.log('   Run Medirus.Accounts.help() for commands.');
   console.log('');
 })();
 
@@ -15903,7 +15903,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🔇 XActions — Mute By Keywords                              ║
+║  🔇 Medirus — Mute By Keywords                              ║
 ║  Mute users with specific bio keywords                       ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be muted               ║' : '║  🔴 LIVE MODE - Accounts WILL be muted                      ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -16033,7 +16033,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be muted        
   }
 
   // Save log
-  const storageKey = 'xactions_keyword_mutes';
+  const storageKey = 'medirus_keyword_mutes';
   const log = matches.map(m => ({
     username: m.username,
     keywords: m.keywords,
@@ -16077,7 +16077,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   
   const $userCell = '[data-testid="UserCell"]';
-  const STORAGE_KEY = 'xactions_followers_snapshot';
+  const STORAGE_KEY = 'medirus_followers_snapshot';
   
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║  🆕 NEW FOLLOWERS ALERT                                    ║');
@@ -16365,9 +16365,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔔 NOTIFICATION MANAGER - XActions                      ║
+║  🔔 NOTIFICATION MANAGER - Medirus                      ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -16492,9 +16492,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       const date = new Date().toISOString().slice(0, 10);
       downloadJSON(
         { exportedAt: new Date().toISOString(), total: all.length, byType, notifications: all },
-        `xactions-notifications-${date}.json`
+        `medirus-notifications-${date}.json`
       );
-      downloadCSV(all, `xactions-notifications-${date}.csv`);
+      downloadCSV(all, `medirus-notifications-${date}.csv`);
     }
   };
 
@@ -16607,9 +16607,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📌 PIN TWEET - XActions                                 ║
+║  📌 PIN TWEET - Medirus                                 ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -16806,9 +16806,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🧵 POST THREAD - XActions                               ║
+║  🧵 POST THREAD - Medirus                               ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -16947,7 +16947,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   const CONFIG = {
     // The text to post (max 280 for non-Premium, longer allowed on Premium).
-    text: 'gm from XActions 🚀',
+    text: 'gm from Medirus 🚀',
 
     // Optional: URL of a tweet to reply to. Leave '' to post a standalone tweet.
     // Example: 'https://x.com/nichxbt/status/1234567890123456789'
@@ -17025,9 +17025,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📝 POST TWEET - XActions                                ║
+║  📝 POST TWEET - Medirus                                ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -17150,7 +17150,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  📊 XActions — Profile Stats                                 ║
+║  📊 Medirus — Profile Stats                                 ║
 ║  Get comprehensive profile statistics                        ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -17398,7 +17398,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   }
 
   // Save to localStorage
-  const storageKey = `xactions_profile_${username}`;
+  const storageKey = `medirus_profile_${username}`;
   const history = JSON.parse(localStorage.getItem(storageKey) || '[]');
   history.push(stats);
   // Keep last 30 snapshots
@@ -17485,7 +17485,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   const $tweet = 'article[data-testid="tweet"]';
   const $userCell = '[data-testid="UserCell"]';
   
-  const STORAGE_KEY = 'xactions_protected_users';
+  const STORAGE_KEY = 'medirus_protected_users';
   
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║  🛡️ PROTECT ACTIVE USERS                                   ║');
@@ -17797,9 +17797,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔁 QUOTE TWEET - XActions                               ║
+║  🔁 QUOTE TWEET - Medirus                               ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -17924,7 +17924,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.log('╚════════════════════════════════════════════════════════════╝');
   console.log('');
   
-  const STORAGE_KEY = 'xactions_ratelimit';
+  const STORAGE_KEY = 'medirus_ratelimit';
   
   // Default rate limits (conservative/safe)
   const defaultLimits = {
@@ -18072,9 +18072,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     return true;
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.RateLimit = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.RateLimit = {
     
     // Check if action is allowed
     check: canPerformAction,
@@ -18235,24 +18235,24 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 RATE LIMITER COMMANDS:');
       console.log('');
-      console.log('   XActions.RateLimit.check("follow")');
-      console.log('   XActions.RateLimit.record("follow")');
-      console.log('   XActions.RateLimit.wait("follow")');
-      console.log('   XActions.RateLimit.perform("follow", fn)');
-      console.log('   XActions.RateLimit.quotas()');
-      console.log('   XActions.RateLimit.remaining("follow")');
-      console.log('   XActions.RateLimit.nextAllowed("follow")');
-      console.log('   XActions.RateLimit.setLimits("follow", {perHour: 30})');
-      console.log('   XActions.RateLimit.getLimits("follow")');
+      console.log('   Medirus.RateLimit.check("follow")');
+      console.log('   Medirus.RateLimit.record("follow")');
+      console.log('   Medirus.RateLimit.wait("follow")');
+      console.log('   Medirus.RateLimit.perform("follow", fn)');
+      console.log('   Medirus.RateLimit.quotas()');
+      console.log('   Medirus.RateLimit.remaining("follow")');
+      console.log('   Medirus.RateLimit.nextAllowed("follow")');
+      console.log('   Medirus.RateLimit.setLimits("follow", {perHour: 30})');
+      console.log('   Medirus.RateLimit.getLimits("follow")');
       console.log('');
       console.log('📦 PRESETS:');
-      console.log('   XActions.RateLimit.presets.safe()');
-      console.log('   XActions.RateLimit.presets.moderate()');
-      console.log('   XActions.RateLimit.presets.aggressive()');
+      console.log('   Medirus.RateLimit.presets.safe()');
+      console.log('   Medirus.RateLimit.presets.moderate()');
+      console.log('   Medirus.RateLimit.presets.aggressive()');
       console.log('');
       console.log('🔄 RESET:');
-      console.log('   XActions.RateLimit.reset()');
-      console.log('   XActions.RateLimit.resetLimits()');
+      console.log('   Medirus.RateLimit.reset()');
+      console.log('   Medirus.RateLimit.resetLimits()');
       console.log('');
       console.log('📊 ACTION TYPES:');
       console.log('   follow, unfollow, like, retweet, tweet, reply, dm, search');
@@ -18261,8 +18261,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   };
   
   console.log('⏱️ Rate Limiter loaded!');
-  console.log('   Run XActions.RateLimit.quotas() to see usage.');
-  console.log('   Run XActions.RateLimit.help() for commands.');
+  console.log('   Run Medirus.RateLimit.quotas() to see usage.');
+  console.log('   Run Medirus.RateLimit.help() for commands.');
   console.log('');
 })();
 
@@ -18371,7 +18371,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  👋 REMOVE FOLLOWER - XActions                               ║
+║  👋 REMOVE FOLLOWER - Medirus                               ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN - No followers will be removed                 ║' : '║  🔴 LIVE MODE - Followers WILL be removed                   ║'}
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -18538,7 +18538,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN - No followers will be removed          
   if (removedList.length > 0) {
     download(
       { stats, dryRun: CONFIG.dryRun, removed: removedList, exportedAt: new Date().toISOString() },
-      `xactions-removed-followers-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`
+      `medirus-removed-followers-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`
     );
   }
 
@@ -18604,7 +18604,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🚨 XActions — Report Spam                                   ║
+║  🚨 Medirus — Report Spam                                   ║
 ║  Identify and report spam accounts                           ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - Accounts will NOT be reported           ║' : '║  🔴 LIVE MODE - Accounts WILL be reported                   ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -18799,7 +18799,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - Accounts will NOT be reported    
   }
 
   // Save log
-  const storageKey = 'xactions_spam_reports';
+  const storageKey = 'medirus_spam_reports';
   const log = spamAccounts.map(s => ({
     username: s.username,
     spamScore: s.spamScore,
@@ -18822,7 +18822,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - Accounts will NOT be reported    
   // ============================================
   const CONFIG = {
     // The text to schedule.
-    text: 'Scheduled with XActions 📅',
+    text: 'Scheduled with Medirus 📅',
 
     // When to post, as a local date/time. Format: "YYYY-MM-DDTHH:MM" (24-hour).
     // Must be in the future. Example: "2026-08-01T09:00".
@@ -18918,9 +18918,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📅 SCHEDULE POST - XActions                             ║
+║  📅 SCHEDULE POST - Medirus                             ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -19185,9 +19185,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  💬 SCRAPE DMS - XActions                                ║
+║  💬 SCRAPE DMS - Medirus                                ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -19455,8 +19455,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  👥 SCRAPE FOLLOWERS - XActions                          ║
-║  🌐 https://xactions.app                                 ║
+║  👥 SCRAPE FOLLOWERS - Medirus                          ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -19709,8 +19709,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  👣 SCRAPE FOLLOWING - XActions                          ║
-║  🌐 https://xactions.app                                 ║
+║  👣 SCRAPE FOLLOWING - Medirus                          ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -20033,9 +20033,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  #️⃣ SCRAPE HASHTAG - XActions                           ║
+║  #️⃣ SCRAPE HASHTAG - Medirus                           ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -20294,8 +20294,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  ❤️ SCRAPE LIKERS - XActions                             ║
-║  🌐 https://xactions.app                                 ║
+║  ❤️ SCRAPE LIKERS - Medirus                             ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -20639,9 +20639,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📋 SCRAPE LIST - XActions                              ║
+║  📋 SCRAPE LIST - Medirus                              ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -20930,9 +20930,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🖼️ SCRAPE MEDIA - XActions                             ║
+║  🖼️ SCRAPE MEDIA - Medirus                             ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -21186,9 +21186,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔔 SCRAPE NOTIFICATIONS - XActions                      ║
+║  🔔 SCRAPE NOTIFICATIONS - Medirus                      ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -22092,7 +22092,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   </table>
   
   <p style="margin-top: 40px; color: #888; font-size: 12px;">
-    Generated by <a href="https://github.com/nirholas/XActions">XActions</a> by @nichxbt
+    Generated by <a href="https://github.com/nirholas/XActions">Medirus</a> by @nichxbt
   </p>
 </body>
 </html>`;
@@ -23641,9 +23641,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  💬 SCRAPE REPLIES - XActions                           ║
+║  💬 SCRAPE REPLIES - Medirus                           ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -23947,8 +23947,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔁 SCRAPE REPOSTERS + QUOTERS - XActions                ║
-║  🌐 https://xactions.app                                 ║
+║  🔁 SCRAPE REPOSTERS + QUOTERS - Medirus                ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -24341,9 +24341,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔍 SCRAPE SEARCH - XActions                            ║
+║  🔍 SCRAPE SEARCH - Medirus                            ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -24541,9 +24541,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🎙️ SCRAPE SPACES - XActions                             ║
+║  🎙️ SCRAPE SPACES - Medirus                             ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -24885,8 +24885,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  💛 SCRAPE USER LIKES - XActions                         ║
-║  🌐 https://xactions.app                                 ║
+║  💛 SCRAPE USER LIKES - Medirus                         ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -25029,17 +25029,17 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
 });
   register("scraper-toolbox", function(){
-(function xactionsScraperToolbox() {
+(function medirusScraperToolbox() {
   'use strict';
 
   // Re-pasting the script replaces any live instance cleanly
-  if (window.XActionsToolbox && typeof window.XActionsToolbox.destroy === 'function') {
-    try { window.XActionsToolbox.destroy(); } catch (e) { /* ignore */ }
+  if (window.MedirusToolbox && typeof window.MedirusToolbox.destroy === 'function') {
+    try { window.MedirusToolbox.destroy(); } catch (e) { /* ignore */ }
   }
 
   const VERSION = '1.0.0';
-  const LS_KEY = 'xactions_toolbox_config_v1';
-  const TAG = '[XActions Toolbox]';
+  const LS_KEY = 'medirus_toolbox_config_v1';
+  const TAG = '[Medirus Toolbox]';
 
   // ==========================================
   // CONFIG (edited live from the panel; persisted in localStorage)
@@ -25652,7 +25652,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     </tbody>
   </table>
   <p style="margin-top: 40px; color: #888; font-size: 12px;">
-    Generated by <a href="https://github.com/nirholas/XActions">XActions Scraper Toolbox</a> v${VERSION} by @nichxbt
+    Generated by <a href="https://github.com/nirholas/XActions">Medirus Scraper Toolbox</a> v${VERSION} by @nichxbt
   </p>
 </body>
 </html>`;
@@ -25690,7 +25690,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // PANEL UI
   // ==========================================
 
-  const PANEL_ID = 'xactions-toolbox';
+  const PANEL_ID = 'medirus-toolbox';
   let panel, els = {};
 
   const PANEL_HTML = `
@@ -25946,7 +25946,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     <div class="xat-log" id="xat-log"></div>
   </div>
   <div class="xat-footer">
-    <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">XActions</a> Scraper Toolbox v${VERSION}
+    <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">Medirus</a> Scraper Toolbox v${VERSION}
   </div>`;
 
   function buildPanel() {
@@ -26252,7 +26252,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       panel.remove();
       panel = null;
     }
-    delete window.XActionsToolbox;
+    delete window.MedirusToolbox;
     console.log(`${TAG} Closed. fetch/XHR restored. Paste the script again to reopen.`);
   }
 
@@ -26271,7 +26271,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   updateStats();
   log(`Toolbox v${VERSION} ready on /${pageLabel()}. Capture is live even before you press Start.`);
 
-  window.XActionsToolbox = {
+  window.MedirusToolbox = {
     version: VERSION,
     tweets: allTweets,
     matched: matchedTweets,
@@ -26370,11 +26370,11 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // Storage for tracking sent messages
   const storage = {
     get: (key) => {
-      try { return JSON.parse(localStorage.getItem(`xactions_dm_${key}`) || 'null'); }
+      try { return JSON.parse(localStorage.getItem(`medirus_dm_${key}`) || 'null'); }
       catch { return null; }
     },
     set: (key, value) => {
-      localStorage.setItem(`xactions_dm_${key}`, JSON.stringify(value));
+      localStorage.setItem(`medirus_dm_${key}`, JSON.stringify(value));
     }
   };
   
@@ -26388,9 +26388,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     }
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.DM = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.DM = {
     config: CONFIG,
     state,
     
@@ -26523,7 +26523,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
           break;
         }
 
-        await window.XActions.DM.sendTo(CONFIG.targetUsers[i]);
+        await window.Medirus.DM.sendTo(CONFIG.targetUsers[i]);
 
         // Use the loop index, not indexOf(), so a duplicate username in
         // targetUsers can't make this resolve to the wrong (earlier) entry
@@ -26538,7 +26538,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('╔════════════════════════════════════════════════════════════╗');
       console.log('║  🎉 DM SESSION COMPLETE!                                   ║');
       console.log('╚════════════════════════════════════════════════════════════╝');
-      window.XActions.DM.stats();
+      window.Medirus.DM.stats();
     },
     
     // Add user to target list
@@ -26597,14 +26597,14 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 DM COMMANDS:');
       console.log('');
-      console.log('   XActions.DM.addUser("username")');
-      console.log('   XActions.DM.setMessage("Your message {username}")');
-      console.log('   XActions.DM.sendTo("username")');
-      console.log('   XActions.DM.sendToAll()');
-      console.log('   XActions.DM.stop()');
-      console.log('   XActions.DM.stats()');
-      console.log('   XActions.DM.log()');
-      console.log('   XActions.DM.clearHistory()');
+      console.log('   Medirus.DM.addUser("username")');
+      console.log('   Medirus.DM.setMessage("Your message {username}")');
+      console.log('   Medirus.DM.sendTo("username")');
+      console.log('   Medirus.DM.sendToAll()');
+      console.log('   Medirus.DM.stop()');
+      console.log('   Medirus.DM.stats()');
+      console.log('   Medirus.DM.log()');
+      console.log('   Medirus.DM.clearHistory()');
       console.log('');
       console.log('💡 Use {username} in message template as placeholder.');
       console.log('⚠️ Always be respectful and don\'t spam!');
@@ -26613,7 +26613,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   };
   
   console.log('✅ Direct Message Helper loaded!');
-  console.log('   Run XActions.DM.help() for commands.');
+  console.log('   Run Medirus.DM.help() for commands.');
   console.log('');
 })();
 
@@ -26741,9 +26741,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🧠 SENTIMENT ANALYZER - XActions                       ║
+║  🧠 SENTIMENT ANALYZER - Medirus                       ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -26889,12 +26889,12 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   if (CONFIG.exportResults) {
     console.log('');
-    download(report, `xactions-sentiment-${new Date().toISOString().slice(0, 10)}.json`);
+    download(report, `medirus-sentiment-${new Date().toISOString().slice(0, 10)}.json`);
   }
 
-  window.xactionsSentiment = report;
+  window.medirusSentiment = report;
   console.log('');
-  log.info('Full report object: window.xactionsSentiment');
+  log.info('Full report object: window.medirusSentiment');
   log.success('Done.');
 
   return report;
@@ -26988,9 +26988,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🕵️ SHADOWBAN CHECKER - XActions                        ║
+║  🕵️ SHADOWBAN CHECKER - Medirus                        ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -27027,7 +27027,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     results.tests.exists = { status: 'FAIL', detail: 'Account not found or suspended' };
     results.overallStatus = 'SUSPENDED / NOT FOUND';
     log.error('Account not found or suspended. Stopping.');
-    if (CONFIG.exportResults) download(results, `xactions-shadowban-${username}-${new Date().toISOString().slice(0, 10)}.json`);
+    if (CONFIG.exportResults) download(results, `medirus-shadowban-${username}-${new Date().toISOString().slice(0, 10)}.json`);
     return;
   }
   results.tests.exists = { status: 'PASS', detail: 'Account exists and is active' };
@@ -27147,7 +27147,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   // Save a rolling history in localStorage for later comparison.
   try {
-    const key = `xactions_shadowban_${username}`;
+    const key = `medirus_shadowban_${username}`;
     const history = JSON.parse(localStorage.getItem(key) || '[]');
     history.push(results);
     localStorage.setItem(key, JSON.stringify(history.slice(-30)));
@@ -27159,12 +27159,12 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   if (CONFIG.exportResults) {
     console.log('');
-    download(results, `xactions-shadowban-${username}-${new Date().toISOString().slice(0, 10)}.json`);
+    download(results, `medirus-shadowban-${username}-${new Date().toISOString().slice(0, 10)}.json`);
   }
 
-  window.xactionsShadowban = results;
+  window.medirusShadowban = results;
   console.log('');
-  log.info('Full result object: window.xactionsShadowban');
+  log.info('Full result object: window.medirusShadowban');
 
   return results;
 })();
@@ -27224,12 +27224,12 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   const $confirmBtn = '[data-testid="confirmationSheetConfirm"]';
   const $followsYou = '[data-testid="userFollowIndicator"]';
   
-  const TRACKING_KEY = 'xactions_follow_tracking';
-  const FOLLOWERS_KEY = 'xactions_my_current_followers';
+  const TRACKING_KEY = 'medirus_follow_tracking';
+  const FOLLOWERS_KEY = 'medirus_my_current_followers';
   // Shared with protect-active-users.js and whitelist.js so a user marked
   // protected/whitelisted by either script is never touched here.
-  const PROTECTED_KEY = 'xactions_protected_users';
-  const WHITELIST_KEY = 'xactions_whitelist';
+  const PROTECTED_KEY = 'medirus_protected_users';
+  const WHITELIST_KEY = 'medirus_whitelist';
   
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║  🧠 SMART UNFOLLOW                                         ║');
@@ -27825,7 +27825,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   // 🛠️ HELPERS
   // ============================================
-  const STORAGE_KEY = 'xactions_trends_history';
+  const STORAGE_KEY = 'medirus_trends_history';
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const log = {
@@ -28015,18 +28015,18 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     if (CONFIG.exportResults) {
       console.log('');
       const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      download(snapshot, `xactions-trends-${stamp}.json`);
+      download(snapshot, `medirus-trends-${stamp}.json`);
     }
 
-    window.xactionsTrends = snapshot;
+    window.medirusTrends = snapshot;
     return snapshot;
   };
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📡 TRENDING MONITOR - XActions                         ║
+║  📡 TRENDING MONITOR - Medirus                         ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -28067,7 +28067,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     log.info('Single scan complete. Set CONFIG.repeatIntervalMs > 0 for continuous monitoring.');
   }
 
-  return window.xactionsTrends;
+  return window.medirusTrends;
 })();
 
 });
@@ -28213,9 +28213,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🎯 TWEET PERFORMANCE - XActions                        ║
+║  🎯 TWEET PERFORMANCE - Medirus                        ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -28387,12 +28387,12 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   if (CONFIG.exportResults) {
     console.log('');
-    download(report, `xactions-performance-${pathHandle}-${new Date().toISOString().slice(0, 10)}.json`);
+    download(report, `medirus-performance-${pathHandle}-${new Date().toISOString().slice(0, 10)}.json`);
   }
 
-  window.xactionsPerformance = report;
+  window.medirusPerformance = report;
   console.log('');
-  log.info('Full report object: window.xactionsPerformance');
+  log.info('Full report object: window.medirusPerformance');
   log.success('Done.');
 
   return report;
@@ -29064,7 +29064,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.clear();
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  💔 UNLIKE ALL TWEETS - XActions                             ║
+║  💔 UNLIKE ALL TWEETS - Medirus                             ║
 ║  by nichxbt                                                  ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -29196,7 +29196,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 ╚══════════════════════════════════════════════════════════════╝
   `);
 
-  console.log('👋 Thanks for using XActions! Follow @nichxbt for updates.');
+  console.log('👋 Thanks for using Medirus! Follow @nichxbt for updates.');
   
   return stats;
 })();
@@ -29298,7 +29298,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.clear();
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  📅 UNLIKE OLD TWEETS - XActions                             ║
+║  📅 UNLIKE OLD TWEETS - Medirus                             ║
 ║  by nichxbt                                                  ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -29452,7 +29452,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 ╚══════════════════════════════════════════════════════════════╝
   `);
 
-  console.log('👋 Thanks for using XActions! Follow @nichxbt for updates.');
+  console.log('👋 Thanks for using Medirus! Follow @nichxbt for updates.');
   
   return stats;
 })();
@@ -29515,8 +29515,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.log('');
   
   // Create helper functions
-  window.XActions = window.XActions || {};
-  window.XActions.Banner = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Banner = {
     
     // Click the banner area to trigger file selection
     selectFile: () => {
@@ -29557,13 +29557,13 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 AVAILABLE COMMANDS:');
       console.log('');
-      console.log('   XActions.Banner.selectFile()');
+      console.log('   Medirus.Banner.selectFile()');
       console.log('   → Opens file picker to select new banner');
       console.log('');
-      console.log('   XActions.Banner.save()');
+      console.log('   Medirus.Banner.save()');
       console.log('   → Saves the profile changes');
       console.log('');
-      console.log('   XActions.Banner.cancel()');
+      console.log('   Medirus.Banner.cancel()');
       console.log('   → Cancels changes and closes editor');
       console.log('');
       console.log('📐 BANNER DIMENSIONS:');
@@ -29578,13 +29578,13 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.log('');
   console.log('📋 INSTRUCTIONS:');
   console.log('');
-  console.log('   Step 1: Run XActions.Banner.selectFile()');
+  console.log('   Step 1: Run Medirus.Banner.selectFile()');
   console.log('           Or click on the banner area directly');
   console.log('   Step 2: Choose your image file (1500x500 recommended)');
   console.log('   Step 3: Adjust the crop if needed');
-  console.log('   Step 4: Click Apply, then run XActions.Banner.save()');
+  console.log('   Step 4: Click Apply, then run Medirus.Banner.save()');
   console.log('');
-  console.log('💡 Type XActions.Banner.help() for more info');
+  console.log('💡 Type Medirus.Banner.help() for more info');
   console.log('');
   
   // Auto-click banner area if enabled
@@ -29598,7 +29598,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 var CONFIG = {
   // Your new bio text (max 160 characters)
   newBio: `🚀 Building cool stuff with code
-🐦 Automating X with @XActions
+🐦 Automating X with @Medirus
 💡 Open source enthusiast
 🔗 github.com/nirholas/XActions`,
   
@@ -29796,8 +29796,8 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.log('');
   
   // Create helper functions
-  window.XActions = window.XActions || {};
-  window.XActions.ProfilePicture = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.ProfilePicture = {
     
     // Trigger file picker
     selectFile: () => {
@@ -29834,10 +29834,10 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 AVAILABLE COMMANDS:');
       console.log('');
-      console.log('   XActions.ProfilePicture.selectFile()');
+      console.log('   Medirus.ProfilePicture.selectFile()');
       console.log('   → Opens file picker to select new profile picture');
       console.log('');
-      console.log('   XActions.ProfilePicture.save()');
+      console.log('   Medirus.ProfilePicture.save()');
       console.log('   → Saves the profile changes');
       console.log('');
     }
@@ -29847,12 +29847,12 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   console.log('');
   console.log('📋 INSTRUCTIONS:');
   console.log('');
-  console.log('   Step 1: Run XActions.ProfilePicture.selectFile()');
+  console.log('   Step 1: Run Medirus.ProfilePicture.selectFile()');
   console.log('   Step 2: Choose your image file');
   console.log('   Step 3: Crop/adjust the image');
-  console.log('   Step 4: Run XActions.ProfilePicture.save()');
+  console.log('   Step 4: Run Medirus.ProfilePicture.save()');
   console.log('');
-  console.log('💡 Type XActions.ProfilePicture.help() for more info');
+  console.log('💡 Type Medirus.ProfilePicture.help() for more info');
   console.log('');
   
   // Auto-open file picker if enabled
@@ -30533,9 +30533,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🗳️  VOTE IN POLLS - XActions                            ║
+║  🗳️  VOTE IN POLLS - Medirus                            ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -30659,7 +30659,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   register("whitelist", function(){
 var CONFIG = {
   // Storage key
-  storageKey: 'xactions_whitelist',
+  storageKey: 'medirus_whitelist',
   
   // Pre-populate with important accounts
   defaultWhitelist: [
@@ -30712,9 +30712,9 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
   
   init();
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Whitelist = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Whitelist = {
     
     // Add user to whitelist
     add: (username, reason = '') => {
@@ -30741,7 +30741,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     addBulk: (usernames) => {
       let added = 0;
       usernames.forEach(u => {
-        if (window.XActions.Whitelist.add(u, 'bulk')) added++;
+        if (window.Medirus.Whitelist.add(u, 'bulk')) added++;
       });
       console.log(`✅ Added ${added} users to whitelist.`);
     },
@@ -30772,7 +30772,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     },
     
     // Alias for includes
-    has: (username) => window.XActions.Whitelist.includes(username),
+    has: (username) => window.Medirus.Whitelist.includes(username),
     
     // Get all whitelisted users
     getAll: () => {
@@ -30847,7 +30847,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
         }
       }
       
-      window.XActions.Whitelist.addBulk(usernamesArray);
+      window.Medirus.Whitelist.addBulk(usernamesArray);
     },
     
     // Collect from current page (following list, etc.)
@@ -30868,7 +30868,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       if (users.length > 0) {
         const add = confirm(`Add ${users.length} users to whitelist?`);
         if (add) {
-          window.XActions.Whitelist.addBulk(users);
+          window.Medirus.Whitelist.addBulk(users);
         }
       }
       
@@ -30880,33 +30880,33 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
       console.log('');
       console.log('📋 WHITELIST COMMANDS:');
       console.log('');
-      console.log('   XActions.Whitelist.add("username")');
-      console.log('   XActions.Whitelist.add("user", "reason")');
-      console.log('   XActions.Whitelist.addBulk(["u1", "u2"])');
-      console.log('   XActions.Whitelist.remove("username")');
-      console.log('   XActions.Whitelist.has("username")');
-      console.log('   XActions.Whitelist.list()');
-      console.log('   XActions.Whitelist.count()');
-      console.log('   XActions.Whitelist.export()');
-      console.log('   XActions.Whitelist.import([...])');
-      console.log('   XActions.Whitelist.collectFromPage()');
-      console.log('   XActions.Whitelist.clear()');
+      console.log('   Medirus.Whitelist.add("username")');
+      console.log('   Medirus.Whitelist.add("user", "reason")');
+      console.log('   Medirus.Whitelist.addBulk(["u1", "u2"])');
+      console.log('   Medirus.Whitelist.remove("username")');
+      console.log('   Medirus.Whitelist.has("username")');
+      console.log('   Medirus.Whitelist.list()');
+      console.log('   Medirus.Whitelist.count()');
+      console.log('   Medirus.Whitelist.export()');
+      console.log('   Medirus.Whitelist.import([...])');
+      console.log('   Medirus.Whitelist.collectFromPage()');
+      console.log('   Medirus.Whitelist.clear()');
       console.log('');
     }
   };
   
   console.log(`✅ Whitelist Manager loaded! (${getWhitelist().length} users)`);
-  console.log('   Run XActions.Whitelist.help() for commands.');
+  console.log('   Run Medirus.Whitelist.help() for commands.');
   console.log('');
 })();
 
 });
 
   const VERSION = '1.0.0';
-  const PANEL_ID = 'xactions-command-center';
-  const FAB_ID = 'xactions-command-center-fab';
-  const LS_KEY = 'xactions_command_center_v1';
-  const TAG = '[XActions Command Center]';
+  const PANEL_ID = 'medirus-command-center';
+  const FAB_ID = 'medirus-command-center-fab';
+  const LS_KEY = 'medirus_command_center_v1';
+  const TAG = '[Medirus Command Center]';
 
   const DANGER = {
     safe: { label: 'Safe', color: '#00ba7c', note: 'Read-only or export. Does not change your account.' },
@@ -31110,7 +31110,7 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     else panel.style.right = '22px';
 
     const header = el('div', { class: 'xcc-header' }, [
-      el('span', { html: '&#9889; XActions Command Center' }),
+      el('span', { html: '&#9889; Medirus Command Center' }),
       el('div', { class: 'xcc-hbtns' }, [
         el('button', { title: 'Minimize', text: '–', onclick: () => panel.classList.toggle('xcc-min') }),
         el('button', { title: 'Close', text: '✕', onclick: close })
@@ -31121,12 +31121,12 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     els.cats = el('div', { class: 'xcc-cats' });
     els.body = el('div', { class: 'xcc-body' });
     els.dock = el('div', { class: 'xcc-dock', style: 'display:none' });
-    els.footer = el('div', { class: 'xcc-footer', html: 'XActions v' + VERSION + ' · <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">github.com/nirholas/XActions</a> · <a href="https://xactions.app" target="_blank" rel="noopener">xactions.app</a>' });
+    els.footer = el('div', { class: 'xcc-footer', html: 'Medirus v' + VERSION + ' · <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">github.com/nirholas/XActions</a> · <a href="https://medirus.online" target="_blank" rel="noopener">medirus.online</a>' });
 
     panel.append(header, els.searchWrap, els.cats, els.body, els.dock, els.footer);
     document.body.appendChild(panel);
 
-    fab = el('button', { id: FAB_ID, title: 'XActions Command Center', html: '&#9889;', onclick: open, style: 'display:none' });
+    fab = el('button', { id: FAB_ID, title: 'Medirus Command Center', html: '&#9889;', onclick: open, style: 'display:none' });
     document.body.appendChild(fab);
 
     renderCats();
@@ -31541,15 +31541,15 @@ try{if(typeof window!=='undefined'&&window.__XA_LAUNCH_CFG){Object.assign(CONFIG
     if (fab) fab.remove();
     const s = document.getElementById(PANEL_ID + '-style');
     if (s) s.remove();
-    delete window.XActionsCommandCenter;
+    delete window.MedirusCommandCenter;
   }
 
   build();
 
-  console.log('%c⚡ XActions Command Center v' + VERSION, 'color:#1d9bf0;font-weight:bold;font-size:14px');
+  console.log('%c⚡ Medirus Command Center v' + VERSION, 'color:#1d9bf0;font-weight:bold;font-size:14px');
   console.log('%c' + CATALOG.length + ' tools loaded. Search, pick one, and press Run. Reopen anytime with the ⚡ button or Cmd/Ctrl+K.', 'color:#8899a6');
 
-  window.XActionsCommandCenter = {
+  window.MedirusCommandCenter = {
     open, close, destroy,
     tools: () => CATALOG.map((t) => ({ id: t.id, title: t.title, category: t.category, danger: t.danger })),
     run: (id, cfg) => runTool(id, cfg || null),

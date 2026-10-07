@@ -21,7 +21,7 @@
  *   node scripts/build-browser-scripts-doc.mjs --check   # fail if out of date
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license Apache-2.0
  */
 

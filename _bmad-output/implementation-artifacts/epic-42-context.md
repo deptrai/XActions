@@ -6,7 +6,7 @@
 
 ## 1. Business Context (từ `epics.md`)
 
-Mọi quyết định "có nên like/reply/follow không" trong XActions hiện đi qua generative LLM (`LLMBrain`, `callLLM`) hoặc heuristic thô (`Math.random()`, ngưỡng cứng `score>60/>80`). Điều này gây 3 vấn đề:
+Mọi quyết định "có nên like/reply/follow không" trong Medirus hiện đi qua generative LLM (`LLMBrain`, `callLLM`) hoặc heuristic thô (`Math.random()`, ngưỡng cứng `score>60/>80`). Điều này gây 3 vấn đề:
 
 1. **Tốn chi phí** — trả tiền token sinh text chỉ để `parseInt` vứt đi.
 2. **Không tin cậy** — `JSON.parse`/`regex` parse rác, `catch → return default`.
@@ -328,7 +328,7 @@ Tiered LLM client cho scoring, replying, content creation, strategy analysis.
 - **`_call(tier, messages, options)`** — core method, pattern để jevBrain mirror:
   1. `_checkRateLimit(model)`.
   2. Build body `{model, messages, temperature ?? 0.7, max_tokens ?? 1024}`.
-  3. Loop **3 attempts**: headers `Content-Type` + `Authorization: Bearer` (+ openrouter extras `HTTP-Referer: https://xactions.app`, `X-Title: XActions Agent`); `fetch(baseUrl, POST)`.
+  3. Loop **3 attempts**: headers `Content-Type` + `Authorization: Bearer` (+ openrouter extras `HTTP-Referer: https://medirus.online`, `X-Title: Medirus Agent`); `fetch(baseUrl, POST)`.
   4. Retry khi `res.status === 429 || res.status >= 500` — backoff `Math.pow(2, attempt) * 1000 + Math.random() * 1000` ms.
   5. Non-ok khác → throw `LLM API error ${res.status}`.
   6. Parse `data.choices[0].message.content`, tokens từ `data.usage.prompt_tokens/completion_tokens`.

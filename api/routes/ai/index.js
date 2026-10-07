@@ -6,10 +6,10 @@
  * All routes are protected by x402 payment middleware.
  *
  * Humans should use:
- * - Browser scripts at https://xactions.app/features
- * - Dashboard at https://xactions.app/dashboard
+ * - Browser scripts at https://medirus.online/features
+ * - Dashboard at https://medirus.online/dashboard
  *
- * @see https://xactions.app/docs/ai-api
+ * @see https://medirus.online/docs/ai-api
  */
 
 import express from 'express';
@@ -89,11 +89,11 @@ const router = express.Router();
 // API documentation endpoint (free - no payment required)
 router.get('/', (req, res) => {
   res.json({
-    service: 'XActions AI API',
+    service: 'Medirus AI API',
     version: '2.0.0',
     description: 'X/Twitter automation API for AI agents. Pay-per-request via x402.',
     authentication: 'X-PAYMENT header with signed USDC payment',
-    documentation: 'https://xactions.app/docs/ai-api',
+    documentation: 'https://medirus.online/docs/ai-api',
 
     endpoints: {
       scraping: {
@@ -499,13 +499,13 @@ router.get('/', (req, res) => {
     },
 
     freeAlternatives: {
-      browser: 'https://xactions.app/features - Free browser scripts',
-      cli: 'npm install -g xactions - Free CLI tool',
-      library: 'npm install xactions - Free Node.js library',
+      browser: 'https://medirus.online/features - Free browser scripts',
+      cli: 'npm install -g medirus - Free CLI tool',
+      library: 'npm install medirus - Free Node.js library',
     },
 
     support: {
-      docs: 'https://xactions.app/docs',
+      docs: 'https://medirus.online/docs',
       github: 'https://github.com/nirholas/XActions',
       twitter: '@nichxbt',
     },
@@ -706,7 +706,7 @@ router.all('*', (req, res) => {
     error: 'ENDPOINT_NOT_FOUND',
     message: `Endpoint ${req.method} ${req.path} not found`,
     availableEndpoints: 'GET /api/ai/ for full documentation',
-    docs: 'https://xactions.app/docs/ai-api',
+    docs: 'https://medirus.online/docs/ai-api',
   });
 });
 

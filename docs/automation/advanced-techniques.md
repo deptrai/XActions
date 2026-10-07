@@ -19,24 +19,24 @@
 
 ## Chaining Scripts Together
 
-Scripts coexist in the same browser tab because they all share `window.XActions`. The order you paste them determines what's available.
+Scripts coexist in the same browser tab because they all share `window.Medirus`. The order you paste them determines what's available.
 
 ### Pattern 1: Growth + Protection + Tracking
 
 ```
-1. Paste core.js                    → window.XActions.Core ready
+1. Paste core.js                    → window.Medirus.Core ready
 2. Paste sessionLogger.js           → Starts logging all actions
 3. Paste protectActiveUsers.js      → Scans your posts, builds whitelist
 4. Paste growthSuite.js             → Growth automation runs
 ```
 
-**What happens:** sessionLogger records everything. protectActiveUsers writes to `xactions_protected_users`. smartUnfollow (inside growthSuite) skips protected users. The session log captures the full audit trail.
+**What happens:** sessionLogger records everything. protectActiveUsers writes to `medirus_protected_users`. smartUnfollow (inside growthSuite) skips protected users. The session log captures the full audit trail.
 
 ### Pattern 2: Research → Follow → Engage
 
 ```
 1. Paste core.js
-2. Paste actions.js                 → Full XActions.* API
+2. Paste actions.js                 → Full Medirus.* API
 3. Navigate to a viral tweet in your niche
 4. Paste followEngagers.js          → Follow the likers
 5. Paste autoLiker.js               → Like related content
@@ -66,21 +66,21 @@ Scripts coexist in the same browser tab because they all share `window.XActions`
 
 ```javascript
 // Interactive exploration
-await XActions.search.advanced({
+await Medirus.search.advanced({
   from: 'elonmusk',
   minFaves: 1000,
   since: '2025-01-01',
 });
 
 // Get results and like them
-const tweets = XActions.search.getResults();
+const tweets = Medirus.search.getResults();
 for (const tweet of tweets.slice(0, 5)) {
-  await XActions.engage.like(tweet);
-  await XActions.Core?.sleep(2000); // Access Core through closure
+  await Medirus.engage.like(tweet);
+  await Medirus.Core?.sleep(2000); // Access Core through closure
 }
 
 // Export your bookmarks
-const bookmarks = await XActions.utils.exportBookmarks(100);
+const bookmarks = await Medirus.utils.exportBookmarks(100);
 console.table(bookmarks);
 ```
 
@@ -112,7 +112,7 @@ const OPTIONS = {
 };
 ```
 
-Every follow is recorded with a timestamp in `xactions_followed_users`.
+Every follow is recorded with a timestamp in `medirus_followed_users`.
 
 **Saturday:**
 ```javascript
@@ -158,28 +158,28 @@ If you follow 20 users/day and ~40% follow back:
 ### Viewing All Stored Data
 
 ```javascript
-// List all XActions keys
-window.XActions.Core.storage.list();
+// List all Medirus keys
+window.Medirus.Core.storage.list();
 
 // View specific data
-window.XActions.Core.storage.get('followed_users');
-window.XActions.Core.storage.get('liked_tweets');
-window.XActions.Core.storage.get('my_followers');
-window.XActions.Core.storage.get('protected_users');
-window.XActions.Core.storage.get('session_log');
+window.Medirus.Core.storage.get('followed_users');
+window.Medirus.Core.storage.get('liked_tweets');
+window.Medirus.Core.storage.get('my_followers');
+window.Medirus.Core.storage.get('protected_users');
+window.Medirus.Core.storage.get('session_log');
 
 // View rate limit status
-window.XActions.Core.rateLimit.getRemaining('follow', 100, 'day');
-window.XActions.Core.rateLimit.getRemaining('like', 200, 'day');
+window.Medirus.Core.rateLimit.getRemaining('follow', 100, 'day');
+window.Medirus.Core.rateLimit.getRemaining('like', 200, 'day');
 ```
 
 ### Exporting Data
 
 ```javascript
-// Export all XActions data as JSON
+// Export all Medirus data as JSON
 const allData = {};
-window.XActions.Core.storage.list().forEach(key => {
-  allData[key] = window.XActions.Core.storage.get(key);
+window.Medirus.Core.storage.list().forEach(key => {
+  allData[key] = window.Medirus.Core.storage.get(key);
 });
 console.log(JSON.stringify(allData, null, 2));
 
@@ -192,7 +192,7 @@ copy(JSON.stringify(allData, null, 2));
 ```javascript
 const backup = { /* your exported data */ };
 Object.entries(backup).forEach(([key, value]) => {
-  window.XActions.Core.storage.set(key, value);
+  window.Medirus.Core.storage.set(key, value);
 });
 ```
 
@@ -200,13 +200,13 @@ Object.entries(backup).forEach(([key, value]) => {
 
 ```javascript
 // Clear specific key
-window.XActions.Core.storage.remove('followed_users');
+window.Medirus.Core.storage.remove('followed_users');
 
-// Clear all XActions data
-window.XActions.Core.storage.clear();
+// Clear all Medirus data
+window.Medirus.Core.storage.clear();
 
 // Nuclear option — clear ALL X data from localStorage
-XActions.utils.clearXData(); // Requires actions.js loaded
+Medirus.utils.clearXData(); // Requires actions.js loaded
 ```
 
 ---
@@ -216,7 +216,7 @@ XActions.utils.clearXData(); // Requires actions.js loaded
 ### Enable Verbose Logging
 
 ```javascript
-window.XActions.Core.CONFIG.DEBUG = true;
+window.Medirus.Core.CONFIG.DEBUG = true;
 ```
 
 ### Check Extraction Quality
@@ -224,7 +224,7 @@ window.XActions.Core.CONFIG.DEBUG = true;
 After running any script that extracts user data:
 
 ```javascript
-window.XActions.Core.extractionStats.report();
+window.Medirus.Core.extractionStats.report();
 ```
 
 This shows which extraction strategies are working:
@@ -241,7 +241,7 @@ If `testid` drops below 50%, X has changed their DOM. Check [dom-selectors.md](.
 
 ```javascript
 // After loading actions.js:
-XActions.utils.devMode();
+Medirus.utils.devMode();
 ```
 
 This outlines every `data-testid` element in red with tooltip labels. Hover over elements to see their selector names.
@@ -249,7 +249,7 @@ This outlines every `data-testid` element in red with tooltip labels. Hover over
 ### Find All Selectors on Current Page
 
 ```javascript
-XActions.utils.getAllSelectors();
+Medirus.utils.getAllSelectors();
 // Returns sorted array of all data-testid values
 ```
 
@@ -257,8 +257,8 @@ XActions.utils.getAllSelectors();
 
 ```javascript
 ['follow', 'like', 'unfollow', 'comment'].forEach(action => {
-  const hourly = window.XActions.Core.rateLimit.getRemaining(action, 50, 'hour');
-  const daily = window.XActions.Core.rateLimit.getRemaining(action, 200, 'day');
+  const hourly = window.Medirus.Core.rateLimit.getRemaining(action, 50, 'hour');
+  const daily = window.Medirus.Core.rateLimit.getRemaining(action, 200, 'day');
   console.log(`${action}: ${hourly} left this hour, ${daily} left today`);
 });
 ```
@@ -266,7 +266,7 @@ XActions.utils.getAllSelectors();
 ### Test DOM Selection Without Acting
 
 ```javascript
-const { SELECTORS } = window.XActions.Core;
+const { SELECTORS } = window.Medirus.Core;
 
 // Count tweets on page
 document.querySelectorAll(SELECTORS.tweet).length;
@@ -276,7 +276,7 @@ document.querySelectorAll(SELECTORS.followButton).length;
 
 // Test user extraction on first cell
 const cell = document.querySelector(SELECTORS.userCell);
-if (cell) console.log(window.XActions.Core.extractUserFromCell(cell));
+if (cell) console.log(window.Medirus.Core.extractUserFromCell(cell));
 ```
 
 ---
@@ -288,7 +288,7 @@ X/Twitter changes their DOM frequently. Here's how to find new selectors:
 ### Method 1: `devMode()`
 
 ```javascript
-XActions.utils.devMode();
+Medirus.utils.devMode();
 // Now hover over elements — each data-testid is shown as a tooltip
 ```
 
@@ -337,19 +337,19 @@ observer.observe(document.body, { childList: true, subtree: true });
 
 ```javascript
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
   const { log, sleep, randomDelay, scrollBy, clickElement,
-          waitForElement, storage, rateLimit, SELECTORS } = window.XActions.Core;
+          waitForElement, storage, rateLimit, SELECTORS } = window.Medirus.Core;
 
   // ============================================
   // CONFIGURATION
   // ============================================
   const OPTIONS = {
-    MAX_ACTIONS: 10,
+    MAMEDIRUS: 10,
     MIN_DELAY: 2000,
     MAX_DELAY: 5000,
   };
@@ -374,7 +374,7 @@ observer.observe(document.body, { childList: true, subtree: true });
   const run = async () => {
     log('🚀 Starting custom automation...', 'info');
 
-    while (isRunning && actionCount < OPTIONS.MAX_ACTIONS) {
+    while (isRunning && actionCount < OPTIONS.MAMEDIRUS) {
       // Check rate limits
       if (!rateLimit.check('my_action', 50, 'hour')) {
         log('Rate limit reached', 'warning');
@@ -384,7 +384,7 @@ observer.observe(document.body, { childList: true, subtree: true });
       // Find elements to process
       const elements = document.querySelectorAll(SELECTORS.tweet);
       for (const el of elements) {
-        if (!isRunning || actionCount >= OPTIONS.MAX_ACTIONS) break;
+        if (!isRunning || actionCount >= OPTIONS.MAMEDIRUS) break;
         await processItem(el);
         await randomDelay(OPTIONS.MIN_DELAY, OPTIONS.MAX_DELAY);
       }
@@ -427,7 +427,7 @@ const collectData = async () => {
     });
 
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-    await window.XActions.Core.sleep(2000);
+    await window.Medirus.Core.sleep(2000);
 
     if (document.body.scrollHeight === lastHeight) break;
     lastHeight = document.body.scrollHeight;
@@ -460,7 +460,7 @@ Long-running scripts (algorithmTrainer, autoCommenter with monitoring) can accum
 
 ```javascript
 // Check memory of tracked sets
-const followed = window.XActions.Core.storage.get('followed_users');
+const followed = window.Medirus.Core.storage.get('followed_users');
 console.log(`Tracking ${Object.keys(followed || {}).length} users`);
 
 // Prune old entries (older than 30 days)
@@ -468,7 +468,7 @@ const cutoff = Date.now() - (30 * 24 * 60 * 60 * 1000);
 for (const [user, data] of Object.entries(followed)) {
   if (data.followedAt < cutoff) delete followed[user];
 }
-window.XActions.Core.storage.set('followed_users', followed);
+window.Medirus.Core.storage.set('followed_users', followed);
 ```
 
 ---

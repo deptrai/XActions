@@ -157,11 +157,11 @@ export function createMockRequirements(options = {}) {
           networkName: 'Base Sepolia',
           gasCost: 'low',
           testnet: true,
-          service: 'XActions AI API',
+          service: 'Medirus AI API',
         }
       }
     ],
-    resource: options.resource || 'https://api.xactions.app/api/ai/test'
+    resource: options.resource || 'https://api.medirus.online/api/ai/test'
   };
 }
 

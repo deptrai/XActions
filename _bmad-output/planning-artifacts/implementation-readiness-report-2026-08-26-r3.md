@@ -15,10 +15,10 @@ selectedDocuments:
       - _bmad-output/planning-artifacts/prd-canonicalization-addendum-2026-08-21.md
       - _bmad-output/planning-artifacts/FUTURE-WORK.md
   architecture:
-    primary: _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
+    primary: _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md
     supplemental:
-      - _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md
-      - _bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-UPDATE-GATE-2026-08-18-R3.md
+      - _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UX-REMEDIATION-2026-08-21.md
+      - _bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-UPDATE-GATE-2026-08-18-R3.md
   epics:
     primary: _bmad-output/planning-artifacts/epics.md
     supplemental:
@@ -35,7 +35,7 @@ selectedDocuments:
 # Implementation Readiness Assessment Report
 
 **Date:** 2026-08-26 (r3 re-run)
-**Project:** XActions
+**Project:** Medirus
 **Assessor:** BMM `bmad-check-implementation-readiness` skill
 **Scope:** Phase 4 (Epics 10–20) + Phase 4 extension (Epics 23–26), bao gồm Bluesky/Mastodon, utility/adapters consolidation, dispatcher unification và legacy decommission.
 
@@ -50,7 +50,7 @@ selectedDocuments:
 | Loại | File canonical | Kích thước | Cập nhật | Ghi chú |
 |------|----------------|-----------|----------|---------|
 | PRD | `_bmad-output/planning-artifacts/prd.md` | 21,787 bytes | 2026-08-26 19:44 | Bao gồm Epics 10–20 và 23–26 |
-| Architecture | `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` | 45,048 bytes | 2026-08-26 19:33 | R3 final; bao gồm Bluesky/Mastodon và AD-21 |
+| Architecture | `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` | 45,048 bytes | 2026-08-26 19:33 | R3 final; bao gồm Bluesky/Mastodon và AD-21 |
 | Epics | `_bmad-output/planning-artifacts/epics.md` | 109,115 bytes | 2026-08-26 19:44 | Epic 10–20 + Phase 4 extension 23–26 |
 | UX index | `_bmad-output/planning-artifacts/ux/README.md` | 1,577 bytes | 2026-08-26 17:55 | Canonical pointer cho UX |
 | UX design | `_bmad-output/planning-artifacts/ux/DESIGN.md` | 16,441 bytes | 2026-08-26 19:33 | Design system tokens & mockups |
@@ -111,7 +111,7 @@ PRD `prd.md` liệt kê đầy đủ 31 FR (kể cả `FR-66B`):
 | FR-90 | Mastodon REST API scraper | Epic 23 | Traced |
 | FR-91 | Utility scripts & adapters consolidation | Epic 24 | Traced |
 | FR-92 | Unified dispatcher & backward compatibility | Epic 25 | Traced |
-| FR-93 | Legacy decommission (XActions) | Epic 26 | Traced |
+| FR-93 | Legacy decommission (Medirus) | Epic 26 | Traced |
 
 ### 2.2. Non-Functional Requirements (NFR-11 ➔ NFR-18)
 
@@ -253,7 +253,7 @@ Không phát hiện gap coverage nào trong `epics.md` đối với scope Phase 
 
 ### 4.3. UX issues
 
-1. **CLI admin wireframes chưa chi tiết:** `ux/README.md:24` vẫn ghi "CLI wireframes are not yet detailed here and should be added under Epic 19 as stories are implemented." Mặc dù `DESIGN.md` đã có `CLI Output Blocks` (component) và `EXPERIENCE-UNIVERSAL` có flows C3/C4, nhưng wireframes cụ thể cho 5 subcommands `xactions admin` (19.4.1–19.4.5) chưa được bổ sung.
+1. **CLI admin wireframes chưa chi tiết:** `ux/README.md:24` vẫn ghi "CLI wireframes are not yet detailed here and should be added under Epic 19 as stories are implemented." Mặc dù `DESIGN.md` đã có `CLI Output Blocks` (component) và `EXPERIENCE-UNIVERSAL` có flows C3/C4, nhưng wireframes cụ thể cho 5 subcommands `medirus admin` (19.4.1–19.4.5) chưa được bổ sung.
 2. **Naming inconsistency nhỏ:** `DESIGN.md` CLI Output Block mẫu dùng `governorThrottle` (`DESIGN.md:395`) trong khi `EXPERIENCE-UNIVERSAL` Flow O1 và Flow C3 dùng `throttleLevel`. Nên đồng bộ về `throttleLevel` để khớp PRD/Architecture/AC.
 
 ---

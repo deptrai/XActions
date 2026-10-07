@@ -47,7 +47,7 @@ Legacy functions `postTweet`, `postThread`, `postReply`, `sendTweet`, `sendQuote
 ## Sources
 
 - `_bmad-output/planning-artifacts/epics.md` — Story 13.2.6 [dòng 501-512]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-3 (proxy/auth mode), AD-11/AD-13 (governor), AD-14 (error envelope)
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-3 (proxy/auth mode), AD-11/AD-13 (governor), AD-14 (error envelope)
 - `_bmad-output/implementation-artifacts/13-2-refactor-twitter-scraper-to-hybrid-architecture.md` — nền tảng Story 13.2
 - `_bmad-output/implementation-artifacts/13-2-1-twitter-hybrid-profile-relationships.md` — `ProfileItem`, `PostItem`, `PlatformError`
 - `_bmad-output/implementation-artifacts/13-2-4-twitter-hybrid-media-scraper.md` — `TwitterClient` convenience wrapper pattern
@@ -89,7 +89,7 @@ Legacy functions `postTweet`, `postThread`, `postReply`, `sendTweet`, `sendQuote
 
 | action | requiredArgs | optionalArgs | example | outputType | requiresAuth |
 |---|---|---|---|---|---|
-| `post` | `['text']` | `['mediaIds', 'premium', 'sensitive', 'dryRun']` | `{ text: 'Hello XActions', mediaIds: ['123'], dryRun: false }` | `{ tweet: PostItem }` | `true` |
+| `post` | `['text']` | `['mediaIds', 'premium', 'sensitive', 'dryRun']` | `{ text: 'Hello Medirus', mediaIds: ['123'], dryRun: false }` | `{ tweet: PostItem }` | `true` |
 | `reply` | `['tweetId', 'text']` | `['mediaIds', 'premium', 'sensitive', 'dryRun']` | `{ tweetId: '1900000000000000000', text: 'Nice', dryRun: false }` | `{ tweet: PostItem }` | `true` |
 | `quote` | `['tweetId', 'text']` | `['mediaIds', 'premium', 'sensitive', 'dryRun']` | `{ tweetId: '1900000000000000000', text: 'Agree', dryRun: false }` | `{ tweet: PostItem }` | `true` |
 
@@ -101,7 +101,7 @@ Legacy functions `postTweet`, `postThread`, `postReply`, `sendTweet`, `sendQuote
 ### AC-2: `post` handler — tạo tweet mới
 
 * **Given** action `post` đã đăng ký
-* **When** gọi `crawler.start({ action: 'post', args: { text: 'Hello XActions', mediaIds: ['123'], dryRun: false } })`
+* **When** gọi `crawler.start({ action: 'post', args: { text: 'Hello Medirus', mediaIds: ['123'], dryRun: false } })`
 * **Then** handler validate `text` non-empty và độ dài `≤ 280` (hoặc `≤ 25000` nếu `premium: true`)
 * **And** gọi GraphQL `CreateTweet` [queryId: `SiM_cAu83R0wnrpmKQQSEw`][src/scrapers/twitter/http/endpoints.js dòng 107] với variables:
   ```js

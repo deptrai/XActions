@@ -3,10 +3,10 @@
  * Rate Governor observability and emergency control commands (Story 32.1).
  *
  * Exposes:
- * - `xactions governor-status`
- * - `xactions panic-stop`
- * - `xactions panic-resume`
- * - `xactions priorities`
+ * - `medirus governor-status`
+ * - `medirus panic-stop`
+ * - `medirus panic-resume`
+ * - `medirus priorities`
  *
  * @author nich (@nichxbt)
  * @license Apache-2.0

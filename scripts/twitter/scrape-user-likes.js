@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 💛 Scrape User Likes - XActions
+ * 💛 Scrape User Likes - Medirus
  * ============================================
  *
  * @name         scrape-user-likes
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to the Likes tab of a profile: x.com/<user>/likes
@@ -166,8 +166,8 @@
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  💛 SCRAPE USER LIKES - XActions                         ║
-║  🌐 https://xactions.app                                 ║
+║  💛 SCRAPE USER LIKES - Medirus                         ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

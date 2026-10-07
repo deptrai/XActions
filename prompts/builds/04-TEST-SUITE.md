@@ -1,6 +1,6 @@
 # Track 04 — Comprehensive Test Suite
 
-> XActions has only ~4 test files. This track builds full coverage for the new Scraper client, auth, HTTP, and existing modules. Every test uses real Twitter response structures as fixtures.
+> Medirus has only ~4 test files. This track builds full coverage for the new Scraper client, auth, HTTP, and existing modules. Every test uses real Twitter response structures as fixtures.
 
 ---
 
@@ -263,7 +263,7 @@ Test CLI commands programmatically using Commander test patterns.
 ```
 Create tests/client/integration.test.js.
 
-Real integration tests gated behind XACTIONS_TEST_INTEGRATION=true env var.
+Real integration tests gated behind MEDIRUS_TEST_INTEGRATION=true env var.
 
 15 tests (all describe.skip unless env var is set):
 1. Fetch real profile for @x (public, guest mode)
@@ -334,13 +334,13 @@ Update vitest.config.js to add:
 5. Environment: 'node'
 
 Create tests/helpers/setup.js:
-- Global test setup (suppress console.warn in tests unless XACTIONS_DEBUG)
+- Global test setup (suppress console.warn in tests unless MEDIRUS_DEBUG)
 
 Update package.json scripts:
   "test": "vitest run",
   "test:watch": "vitest",
   "test:coverage": "vitest run --coverage",
-  "test:integration": "XACTIONS_TEST_INTEGRATION=true vitest run tests/client/integration.test.js",
+  "test:integration": "MEDIRUS_TEST_INTEGRATION=true vitest run tests/client/integration.test.js",
   "test:client": "vitest run tests/client/",
   "test:mcp": "vitest run tests/mcp/",
   "test:cli": "vitest run tests/cli/"
@@ -393,8 +393,8 @@ jobs:
       - run: npm ci
       - run: npm run test:integration
         env:
-          XACTIONS_TEST_INTEGRATION: 'true'
-          XACTIONS_COOKIE_PATH: ${{ secrets.XACTIONS_COOKIE_PATH }}
+          MEDIRUS_TEST_INTEGRATION: 'true'
+          MEDIRUS_COOKIE_PATH: ${{ secrets.MEDIRUS_COOKIE_PATH }}
         continue-on-error: true
 ```
 

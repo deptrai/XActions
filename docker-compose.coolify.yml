@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# XActions — Docker Compose for Coolify / Self-Hosting
+# Medirus — Docker Compose for Coolify / Self-Hosting
 # Production-ready with Traefik labels for reverse proxy
 # Deploy: paste docker-compose.coolify.yml into Coolify dashboard
 # by nichxbt
@@ -13,14 +13,14 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.xactions.rule=Host(`${DOMAIN:-xactions.localhost}`)"
-      - "traefik.http.routers.xactions.entrypoints=websecure"
-      - "traefik.http.routers.xactions.tls.certresolver=letsencrypt"
-      - "traefik.http.services.xactions.loadbalancer.server.port=3001"
+      - "traefik.http.routers.medirus.rule=Host(`${DOMAIN:-medirus.localhost}`)"
+      - "traefik.http.routers.medirus.entrypoints=websecure"
+      - "traefik.http.routers.medirus.tls.certresolver=letsencrypt"
+      - "traefik.http.services.medirus.loadbalancer.server.port=3001"
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://xactions:${POSTGRES_PASSWORD:-changeme}@postgres:5432/xactions?schema=public
+      DATABASE_URL: postgresql://medirus:${POSTGRES_PASSWORD:-changeme}@postgres:5432/medirus?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
@@ -49,7 +49,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://xactions:${POSTGRES_PASSWORD:-changeme}@postgres:5432/xactions?schema=public
+      DATABASE_URL: postgresql://medirus:${POSTGRES_PASSWORD:-changeme}@postgres:5432/medirus?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
@@ -67,13 +67,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: xactions
+      POSTGRES_USER: medirus
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      POSTGRES_DB: xactions
+      POSTGRES_DB: medirus
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U xactions"]
+      test: ["CMD-SHELL", "pg_isready -U medirus"]
       interval: 10s
       timeout: 5s
       retries: 5

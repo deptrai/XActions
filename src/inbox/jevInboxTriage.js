@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Jev Inbox Triage (Story 43.3)
+// Medirus — Jev Inbox Triage (Story 43.3)
 // Semantic DM intent classification + toxicity + priority scoring.
 // by nichxbt
 

@@ -1,6 +1,6 @@
 # Architecture Review: Brownfield Reality-Check & Codebase Verification
 
-**Review Target:** `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (Amended on 2026-08-27: AD-3 rule 3b, AD-11 rule 3)  
+**Review Target:** `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (Amended on 2026-08-27: AD-3 rule 3b, AD-11 rule 3)  
 **Reference Proposal:** `_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-27.md`  
 **Reviewer Lens:** BROWNFIELD REALITY-CHECK — Rigorous factual verification of codebase claims, contracts, execution paths, and dev task sufficiency  
 **Date:** 2026-08-27  
@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary
 
-This review independently verifies all factual claims made in the **Sprint Change Proposal (2026-08-27)** and the amended **Architecture Spine (AD-3 rule 3b, AD-11 rule 3)** regarding the existing XActions brownfield codebase (`src/core/`, `src/scrapers/social/facebook/`, `src/proxy/`).
+This review independently verifies all factual claims made in the **Sprint Change Proposal (2026-08-27)** and the amended **Architecture Spine (AD-3 rule 3b, AD-11 rule 3)** regarding the existing Medirus brownfield codebase (`src/core/`, `src/scrapers/social/facebook/`, `src/proxy/`).
 
 ### Key Reality-Check Takeaways:
 1. **Core Diagnosis is 100% Valid:** The existing codebase hardcodes `requiresAuth = true` at both `AbstractCrawler` (`src/core/base-crawler.js:174, 181`) and `FacebookCrawler` (`src/scrapers/social/facebook/crawler.js:262, 288`), causing all Facebook public actions (`marketplace`, `search`, `page_posts`, `profile`) to needlessly drain accounts from `AccountPool` and crash with `XACT_4010` when the pool is empty.
@@ -36,7 +36,7 @@ This review independently verifies all factual claims made in the **Sprint Chang
 | **C7** | 4 Facebook public actions (`page_posts`, `profile`, `search`, `marketplace`) currently pull accounts from pool | **CONFIRMED** | `src/scrapers/social/facebook/crawler.js:262, 288, 306-420` |
 | **C8** | Spine AD-5 rule 4 text vs actual implementation (`ProxyIpPool` vs `DynamicTunnelProvider`) | **PARTIAL (DRIFT NOTED)** | `src/core/base-client.js:185-210`, `src/core/session-manager.js:1-51`, `src/proxy/proxy-pool.js:174-200` |
 | **C9** | `listActions()` in `base-crawler.js` currently omits `requiresAuth` (T3 needed) | **CONFIRMED** | `src/core/base-crawler.js:106-114` |
-| **C10** | `ActionRegistry` (`action-registry.js`) descriptors & MCP `x_actions_list` resolution | **CONFIRMED & REFINED** | `src/core/base-crawler.js:100-103`, `src/core/action-registry.js:25-50`, `src/mcp/server.js` |
+| **C10** | `ActionRegistry` (`action-registry.js`) descriptors & MCP `medirus_list` resolution | **CONFIRMED & REFINED** | `src/core/base-crawler.js:100-103`, `src/core/action-registry.js:25-50`, `src/mcp/server.js` |
 
 ---
 
@@ -215,7 +215,7 @@ This review independently verifies all factual claims made in the **Sprint Chang
 
 ---
 
-### Claim C10: Global Action Registry & MCP `x_actions_list`
+### Claim C10: Global Action Registry & MCP `medirus_list`
 - **Status:** **CONFIRMED & REFINED**
 - **Evidence:**
   1. `src/core/base-crawler.js:100-103`:
@@ -226,7 +226,7 @@ This review independently verifies all factual claims made in the **Sprint Chang
      ```
   2. If `actionDesc` relies on default fallback (`undefined`), `fullDescriptor.requiresAuth` is `undefined`.
   3. `registerAction()` must explicitly resolve `requiresAuth: actionDesc.requiresAuth ?? this.requiresAuth` before storing and registering into `globalActionRegistry`.
-  4. In `src/mcp/server.js`, `x_actions_list` is scheduled for Epic 14 (Story 14.2). Ensuring `globalActionRegistry` holds resolved descriptors prepares the system seamlessly for MCP tools and CLI discovery (`xactions actions --platform <p>`).
+  4. In `src/mcp/server.js`, `medirus_list` is scheduled for Epic 14 (Story 14.2). Ensuring `globalActionRegistry` holds resolved descriptors prepares the system seamlessly for MCP tools and CLI discovery (`medirus actions --platform <p>`).
 
 ---
 

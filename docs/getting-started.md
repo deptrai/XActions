@@ -1,6 +1,6 @@
-# Getting Started with XActions
+# Getting Started with Medirus
 
-XActions is the complete X/Twitter automation toolkit. Browser scripts, CLI, Node.js library, MCP server for AI agents, and a web dashboard — all without Twitter API fees.
+Medirus is the complete X/Twitter automation toolkit. Browser scripts, CLI, Node.js library, MCP server for AI agents, and a web dashboard — all without Twitter API fees.
 
 ## Choose Your Interface
 
@@ -49,11 +49,11 @@ Go to the [src/ folder](https://github.com/nirholas/XActions/tree/main/src) on G
 ## Quick Start: CLI
 
 ```bash
-npm install -g xactions
-xactions login          # Saves your auth_token cookie
-xactions profile elonmusk --json
-xactions followers elonmusk --count 500 --output followers.csv
-xactions non-followers myhandle
+npm install -g medirus
+medirus login          # Saves your auth_token cookie
+medirus profile elonmusk --json
+medirus followers elonmusk --count 500 --output followers.csv
+medirus non-followers myhandle
 ```
 
 See the full [CLI Reference](cli-reference.md) for all 111 commands.
@@ -63,11 +63,11 @@ See the full [CLI Reference](cli-reference.md) for all 111 commands.
 ## Quick Start: Node.js Library
 
 ```bash
-npm install xactions
+npm install medirus
 ```
 
 ```js
-import { scrapeProfile, scrapeFollowers, searchTweets } from 'xactions';
+import { scrapeProfile, scrapeFollowers, searchTweets } from 'medirus';
 
 const profile = await scrapeProfile('elonmusk', { cookie: process.env.X_COOKIE });
 const followers = await scrapeFollowers('elonmusk', { count: 100, cookie: process.env.X_COOKIE });
@@ -77,28 +77,28 @@ const tweets = await searchTweets('javascript', { count: 50, cookie: process.env
 Multi-platform scraping:
 
 ```js
-import { scrape } from 'xactions/scrapers';
+import { scrape } from 'medirus/scrapers';
 
 const profile = await scrape('bluesky', 'profile', 'user.bsky.social');
 const tweets = await scrape('mastodon', 'tweets', 'user@mastodon.social');
 ```
 
-See the full [API Reference](api-reference.md) and [XActions Reference](xactions-reference.md).
+See the full [API Reference](api-reference.md) and [Medirus Reference](medirus-reference.md).
 
 ---
 
 ## Quick Start: MCP Server (AI Agents)
 
-Add XActions to Claude Desktop, Cursor, or any MCP-compatible client:
+Add Medirus to Claude Desktop, Cursor, or any MCP-compatible client:
 
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions", "mcp"],
+      "args": ["-y", "medirus", "mcp"],
       "env": {
-        "XACTIONS_SESSION_COOKIE": "your_auth_token_here"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token_here"
       }
     }
   }
@@ -108,7 +108,7 @@ Add XActions to Claude Desktop, Cursor, or any MCP-compatible client:
 Generate this config automatically:
 
 ```bash
-xactions mcp-config
+medirus mcp-config
 ```
 
 145 MCP tools available — scraping, posting, engagement, analytics, streaming, and more. See [MCP Setup](mcp-setup.md).
@@ -145,9 +145,9 @@ All interfaces need an X/Twitter session cookie (`auth_token`):
 
 | Interface | How to Set |
 |-----------|------------|
-| CLI | `xactions login` (interactive prompt) |
+| CLI | `medirus login` (interactive prompt) |
 | Node.js | Pass `{ cookie: 'your_token' }` to functions |
-| MCP | Set `XACTIONS_SESSION_COOKIE` env var |
+| MCP | Set `MEDIRUS_SESSION_COOKIE` env var |
 | Dashboard | Pasted via bridge script |
 | Extension | Reads automatically from x.com tab |
 
@@ -155,7 +155,7 @@ All interfaces need an X/Twitter session cookie (`auth_token`):
 
 ## Rate Limits & Safety
 
-X/Twitter enforces aggressive rate limits. All XActions tools include built-in delays, but follow these guidelines:
+X/Twitter enforces aggressive rate limits. All Medirus tools include built-in delays, but follow these guidelines:
 
 - **Start small** — test with 10-20 actions before scaling up
 - **1-3 second minimum delays** between actions (built into all scripts)
@@ -178,7 +178,7 @@ X/Twitter enforces aggressive rate limits. All XActions tools include built-in d
 | [Workflows](workflows.md) | Automated multi-step workflows |
 | [Streaming](streaming.md) | Real-time tweet/follower/mention streams |
 | [Social Graph](social-graph.md) | Network analysis and visualization |
-| [Plugins](plugins.md) | Extend XActions with plugins |
+| [Plugins](plugins.md) | Extend Medirus with plugins |
 | [Deployment](deployment.md) | Deploy to Railway, Fly.io, Docker |
 | [Troubleshooting](troubleshooting.md) | Common issues and fixes |
 

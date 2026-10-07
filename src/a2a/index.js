@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions A2A — Public API (barrel export)
+ * Medirus A2A — Public API (barrel export)
  *
  * Re-exports every A2A module, provides the one-liner factory
  * `createA2AAgent(options)`, and handles standalone startup when
@@ -61,7 +61,7 @@ if (isMain) {
       process.exit(0);
     }
 
-    console.log('⚡ XActions A2A Agent — starting...');
+    console.log('⚡ Medirus A2A Agent — starting...');
 
     const agent = createA2AServer({
       port: args.port,
@@ -99,7 +99,7 @@ function parseArgs(argv) {
 
 function printUsage() {
   console.log(`
-  XActions A2A Agent
+  Medirus A2A Agent
 
   Usage:
     node src/a2a/index.js [options]

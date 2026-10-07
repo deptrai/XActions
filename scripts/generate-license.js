@@ -24,7 +24,7 @@ args.forEach(arg => {
 // Help
 if (options.help || args.length === 0) {
   console.log(`
-⚡ XActions License Generator
+⚡ Medirus License Generator
 
 Usage:
   node scripts/generate-license.js [options]
@@ -135,13 +135,13 @@ async function main() {
     console.log(`
 Hi${license.customerName ? ` ${license.customerName.split(' ')[0]}` : ''},
 
-Your XActions license key is:
+Your Medirus license key is:
 
 ${license.key}
 
 To activate:
-1. Add to your .env file: XACTIONS_LICENSE_KEY=${license.key}
-2. Restart your XActions server
+1. Add to your .env file: MEDIRUS_LICENSE_KEY=${license.key}
+2. Restart your Medirus server
 
 This key unlocks:
 - ${license.tier.charAt(0).toUpperCase() + license.tier.slice(1)} tier features
@@ -152,7 +152,7 @@ ${license.apiAccess ? '- API access' : ''}
 
 Questions? Reply to this email or DM @nichxbt on X.
 
-Thanks for using XActions!
+Thanks for using Medirus!
 `);
 
   } catch (error) {

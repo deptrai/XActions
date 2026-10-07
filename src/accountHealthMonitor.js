@@ -360,8 +360,8 @@
 
     // Save
     const report = { username, timestamp: new Date().toISOString(), totalScore, grade, metrics, profileData };
-    localStorage.setItem(`xactions_health_${username}`, JSON.stringify(report));
+    localStorage.setItem(`medirus_health_${username}`, JSON.stringify(report));
     console.log(`\n💾 Report saved. Track changes over time.`);
-    console.log(`   JSON.parse(localStorage.getItem("xactions_health_${username}"))\n`);
+    console.log(`   JSON.parse(localStorage.getItem("medirus_health_${username}"))\n`);
   })();
 })();

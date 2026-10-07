@@ -346,7 +346,7 @@ describe('Story 13.9 — Facebook Hybrid Social Actions (Write & Messenger)', ()
     const res = await crawler.start({
       action: 'post',
       args: {
-        text: 'Hello Facebook from XActions Hybrid Crawler!',
+        text: 'Hello Facebook from Medirus Hybrid Crawler!',
         groupUrls: ['https://www.facebook.com/groups/123456'],
       },
       session: { accountId: 'acc_fb_write_1' },

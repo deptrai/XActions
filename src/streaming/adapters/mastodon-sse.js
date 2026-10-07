@@ -73,7 +73,7 @@ export class MastodonSSEAdapter extends BasePushAdapter {
     /** @type {Record<string, string>} */
     const headers = {
       Accept: 'text/event-stream',
-      'User-Agent': 'XActions-Streaming/3.5.0',
+      'User-Agent': 'Medirus-Streaming/3.5.0',
     };
     if (this.options.accessToken) {
       headers.Authorization = `Bearer ${this.options.accessToken}`;

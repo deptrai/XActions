@@ -10,7 +10,7 @@ Status: done
 
 ## Story
 
-As a multi-account operator using XActions,
+As a multi-account operator using Medirus,
 I want a Facebook automation service with built-in safety guardrails,
 so that every write action is protected by dry-run, delay, and batch limits by default.
 
@@ -118,7 +118,7 @@ Keep it JSON-serializable (Epic 3 persists it via Prisma Operation).
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 2.1]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-08/prd.md#FR-9, FR-6..FR-8, SM-2, NFR1/3]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-08/prd.md#FR-9, FR-6..FR-8, SM-2, NFR1/3]
 - [Source: _bmad-output/planning-artifacts/architecture.md#ADR-007 (automate separated, dry-run default), A.6 risks]
 - [Source: api/services/browserAutomation.js — service module shape to mirror]
 - [Source: src/automation/autoLiker.js, autoCommenter.js — action-loop reference (different runtime)]

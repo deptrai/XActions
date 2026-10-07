@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Workflows — Main Entry Point
+ * Medirus Workflows — Main Entry Point
  *
  * Usage:
  *   import workflows from './workflows/index.js';
@@ -24,10 +24,10 @@ import { listActions, registerAction, executeAction, closeBrowser } from './acti
 import { evaluateCondition, getAvailableOperators } from './conditions.js';
 
 /**
- * @typedef {import('../types/xactions.js').Workflow} Workflow
- * @typedef {import('../types/xactions.js').WorkflowRun} WorkflowRun
- * @typedef {import('../types/xactions.js').WorkflowRunOptions} WorkflowRunOptions
- * @typedef {import('../types/xactions.js').WorkflowStore} WorkflowStore
+ * @typedef {import('../types/medirus.js').Workflow} Workflow
+ * @typedef {import('../types/medirus.js').WorkflowRun} WorkflowRun
+ * @typedef {import('../types/medirus.js').WorkflowRunOptions} WorkflowRunOptions
+ * @typedef {import('../types/medirus.js').WorkflowStore} WorkflowStore
  */
 
 // ============================================================================
@@ -190,7 +190,7 @@ function initTriggers(options = {}) {
       const result = await run(workflowId, {
         trigger: type,
         initialContext: payload,
-        authToken: options.authToken || process.env.XACTIONS_SESSION_COOKIE,
+        authToken: options.authToken || process.env.MEDIRUS_SESSION_COOKIE,
       });
       console.log(`✅ Workflow ${workflowId} completed: ${result.status}`);
     } catch (error) {

@@ -1,6 +1,6 @@
 # Track 07 — Twitter API v2 Hybrid Mode
 
-> romeoscript/agent-twitter-client uses Twitter API v2 for features unavailable in GraphQL — polls, Spaces, conversations endpoint, analytics. XActions should support an optional v2 layer for users who have API keys, while defaulting to free GraphQL scraping.
+> romeoscript/agent-twitter-client uses Twitter API v2 for features unavailable in GraphQL — polls, Spaces, conversations endpoint, analytics. Medirus should support an optional v2 layer for users who have API keys, while defaulting to free GraphQL scraping.
 
 ---
 
@@ -867,7 +867,7 @@ export class V2ApiError extends Error {
   get isForbidden() { return this.status === 403; }
 }
 
-// Map v2 errors to standard XActions error types
+// Map v2 errors to standard Medirus error types
 export function normalizeV2Error(error) {
   if (error.isRateLimit) return new RateLimitError(error.message, { source: 'v2' });
   if (error.isAuth) return new AuthenticationError(error.message, { source: 'v2' });
@@ -903,16 +903,16 @@ x_v2_create_filtered_stream:
 
 Add CLI commands:
 
-xactions v2 auth
+medirus v2 auth
   → Interactive OAuth 2.0 PKCE flow (opens browser, starts callback server)
 
-xactions v2 poll "Question?" --options "Yes" "No" "Maybe" --duration 1440
+medirus v2 poll "Question?" --options "Yes" "No" "Maybe" --duration 1440
   → Create poll
 
-xactions v2 spaces search "ai"
+medirus v2 spaces search "ai"
   → Search active Spaces
 
-xactions v2 analytics <tweetId>
+medirus v2 analytics <tweetId>
   → Show tweet metrics
 ```
 

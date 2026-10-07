@@ -84,11 +84,11 @@ let scrapeSpy;
 
 beforeEach(() => {
   process.env = { ...ORIGINAL_ENV };
-  delete process.env.XACTIONS_SERVICE_KEYS;
-  delete process.env.XACTIONS_MCP_API_KEY;
-  delete process.env.XACTIONS_API_TOKEN;
+  delete process.env.MEDIRUS_SERVICE_KEYS;
+  delete process.env.MEDIRUS_MCP_API_KEY;
+  delete process.env.MEDIRUS_API_TOKEN;
   delete process.env.REDIS_STREAM_ENABLED;
-  process.env.XACTIONS_CONSUMER_QUOTAS = JSON.stringify({ default: '100000/min' });
+  process.env.MEDIRUS_CONSUMER_QUOTAS = JSON.stringify({ default: '100000/min' });
   process.env.NODE_ENV = 'development';
   _resetServiceKeyMap();
   _resetDispatch();

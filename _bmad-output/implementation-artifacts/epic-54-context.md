@@ -4,7 +4,7 @@
 
 ## Goal
 
-Build **coverage-gap metrics** cho crypto social sentiment: những tín hiệu mà provider trả phí (DexCheck Free + Cookie Pro $19.99/th là baseline buy) **không phủ** — KOL watchlist riêng của jev, VN crypto Twitter, token quá nhỏ chưa được index. KHÔNG replicate provider-grade bot filtering (Kaito Bittensor NLP, TheTie 7yr clean data là moat nhiều năm). Origin: jev-trading research Recommendation #3 — "giữ XActions MCP làm lớp ingestion dự phòng cho các tín hiệu provider không phủ".
+Build **coverage-gap metrics** cho crypto social sentiment: những tín hiệu mà provider trả phí (DexCheck Free + Cookie Pro $19.99/th là baseline buy) **không phủ** — KOL watchlist riêng của jev, VN crypto Twitter, token quá nhỏ chưa được index. KHÔNG replicate provider-grade bot filtering (Kaito Bittensor NLP, TheTie 7yr clean data là moat nhiều năm). Origin: jev-trading research Recommendation #3 — "giữ Medirus MCP làm lớp ingestion dự phòng cho các tín hiệu provider không phủ".
 
 ## Stories
 
@@ -18,14 +18,14 @@ Build **coverage-gap metrics** cho crypto social sentiment: những tín hiệu 
 
 ## Requirements & Constraints
 
-- **Degraded contract là mandatory, không optional**: nếu X search trả `[]` liên tục (session cookie chết — precedent jev `searchTwitter()` trả rỗng khi thiếu `XACTIONS_SESSION_COOKIE`), mọi metric phải flag `degraded: true` + `degradedSince` + `consecutiveEmptyBatches`; baselines loại degraded windows khỏi tính toán; trả `insufficientHistory` thay vì số ảo.
+- **Degraded contract là mandatory, không optional**: nếu X search trả `[]` liên tục (session cookie chết — precedent jev `searchTwitter()` trả rỗng khi thiếu `MEDIRUS_SESSION_COOKIE`), mọi metric phải flag `degraded: true` + `degradedSince` + `consecutiveEmptyBatches`; baselines loại degraded windows khỏi tính toán; trả `insufficientHistory` thay vì số ảo.
 - **54.0 là MVP-blocking**: verdict GO/REDESIGN per story. Fork quyết định đã spec: contract-address search mù → 54.2 đổi sang "KOL-timeline monitor + token extraction"; cashtag coverage <30% → mindshare scope về "watched-token share".
 - **Ship gate**: pipeline chạy liên tục 7 ngày trên watchlist ≥10 token; `degraded` time <10%; mindshare ranking phản ánh đúng 1 sự kiện viral đã biết.
-- Response schema của 54.4 phải **provider-compatible** `{token, mindsharePct, delta24h, delta7d, topVoices[], degraded}` để jev hot-swap XActions↔Cookie.
+- Response schema của 54.4 phải **provider-compatible** `{token, mindsharePct, delta24h, delta7d, topVoices[], degraded}` để jev hot-swap Medirus↔Cookie.
 
 ## Technical Decisions
 
-Spine `xactions-token-sentiment-epic54/ARCHITECTURE-SPINE.md` (status: final) — paradigm **Hexagonal Analytics Layer**:
+Spine `medirus-token-sentiment-epic54/ARCHITECTURE-SPINE.md` (status: final) — paradigm **Hexagonal Analytics Layer**:
 
 - **AD-1 canonicalId grammar**: `token:{chain}:{contract}` (định danh duy nhất) | `token:sym:{SYMBOL}` (ambiguous, never-merge). TokenRegistry owns resolution.
 - **AD-2 storage**: Prisma `Token`/`TokenMention`/`TokenMetricRollup` mới (historyStore hiện tại username-keyed, không reuse được). Rollup = incremental single-writer (pipeline), `rebuildRollups()` repair script.

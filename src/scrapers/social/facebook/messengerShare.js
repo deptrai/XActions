@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 // LEGACY — see docs/deprecation-plan.md (Replaced by facebook:messenger_share in Story 13.9)
 /**
- * XActions Facebook Messenger Share Automation (Story 5.2)
+ * Medirus Facebook Messenger Share Automation (Story 5.2)
  *
  * Ports SST_TOOL_FB Main.cs:Post() lines 582–799 — share a post to Facebook
  * Pages via Messenger, compose & send message with random segment splitting.
@@ -14,7 +14,7 @@
  *
  * @deprecated Use FacebookCrawler with action 'messenger_share' (Story 13.9) instead.
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license BSL 1.1
  */
 

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Workflow Engine
+ * Medirus Workflow Engine
  * The core execution engine that runs workflow pipelines
  *
  * Processes workflow steps sequentially, managing context (variables),
@@ -16,14 +16,14 @@ import { evaluateCondition, evaluateConditionAsync } from './conditions.js';
 import { getStore } from './store.js';
 
 /**
- * @typedef {import('../types/xactions.js').Workflow} Workflow
- * @typedef {import('../types/xactions.js').WorkflowStep} WorkflowStep
- * @typedef {import('../types/xactions.js').WorkflowRun} WorkflowRun
- * @typedef {import('../types/xactions.js').WorkflowStepResult} WorkflowStepResult
- * @typedef {import('../types/xactions.js').WorkflowContext} WorkflowContext
- * @typedef {import('../types/xactions.js').WorkflowRunOptions} WorkflowRunOptions
- * @typedef {import('../types/xactions.js').ConditionEvaluation} ConditionEvaluation
- * @typedef {import('../types/xactions.js').WorkflowValidation} WorkflowValidation
+ * @typedef {import('../types/medirus.js').Workflow} Workflow
+ * @typedef {import('../types/medirus.js').WorkflowStep} WorkflowStep
+ * @typedef {import('../types/medirus.js').WorkflowRun} WorkflowRun
+ * @typedef {import('../types/medirus.js').WorkflowStepResult} WorkflowStepResult
+ * @typedef {import('../types/medirus.js').WorkflowContext} WorkflowContext
+ * @typedef {import('../types/medirus.js').WorkflowRunOptions} WorkflowRunOptions
+ * @typedef {import('../types/medirus.js').ConditionEvaluation} ConditionEvaluation
+ * @typedef {import('../types/medirus.js').WorkflowValidation} WorkflowValidation
  */
 
 // ============================================================================
@@ -38,7 +38,7 @@ import { getStore } from './store.js';
  * @returns {Promise<WorkflowRun>} - Execution result with full log
  */
 export async function runWorkflow(workflow, options = {}) {
-  const store = /** @type {import('../types/xactions.js').WorkflowStore} */ (await getStore());
+  const store = /** @type {import('../types/medirus.js').WorkflowStore} */ (await getStore());
   const runId = crypto.randomUUID();
 
   // Initialize execution record
@@ -68,7 +68,7 @@ export async function runWorkflow(workflow, options = {}) {
     _workflow: { id: workflow.id, name: workflow.name },
     _run: { id: runId, trigger: run.trigger },
     _timestamp: new Date().toISOString(),
-    authToken: options.authToken || process.env.XACTIONS_SESSION_COOKIE,
+    authToken: options.authToken || process.env.MEDIRUS_SESSION_COOKIE,
   });
 
   const notify = options.onProgress || (() => {});

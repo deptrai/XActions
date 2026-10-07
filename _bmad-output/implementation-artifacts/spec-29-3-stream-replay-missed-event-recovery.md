@@ -24,7 +24,7 @@ context: []
 - Support `since` (ISO 8601 timestamp → converted to stream ID) and `cursor` (exact stream entry ID) params
 - Return events in chronological order (oldest first)
 - Cap replay at configurable `limit` (default 100, max 1000)
-- `X-XActions-Replay: true` header when replaying via webhook (so consumers can distinguish live vs replay)
+- `X-Medirus-Replay: true` header when replaying via webhook (so consumers can distinguish live vs replay)
 - Redis Stream `MAXLEN` / `MINID` trimming already configured in `RedisStreamPublisher`
 
 **Never:**
@@ -72,14 +72,14 @@ context: []
 - Given events in `stream:social:raw_posts`, when `GET /api/streams/:id/replay?since=<ISO>`, then return matching events in order
 - Given `cursor` param, when replaying, then resume from exact entry ID
 - Given `hasMore: true` + `nextCursor`, when paginating, then client can fetch next page
-- Given replay via webhook, when `deliver=webhook`, then events POSTed through outbound dispatcher with `X-XActions-Replay: true` header
+- Given replay via webhook, when `deliver=webhook`, then events POSTed through outbound dispatcher with `X-Medirus-Replay: true` header
 - Given `x_stream_replay` MCP tool, when called, then return events matching criteria
 
 ## Implementation Notes
 
 - Implemented `getStreamReplay({ streamKey, streamId, since, cursor, limit, deliver, subscriptionId, streamMeta, redisClient, dispatcher, subscriptionStore })` in `src/streaming/stream-replay.js`.
 - Implemented XRANGE range querying without advancing consumer group offset, dual-client parsing (ioredis RESP arrays & node-redis object formats), exclusive cursor resuming, and stream trimming detection (`warning: 'Requested range partially trimmed'`).
-- Integrated webhook replay delivery via `OutboundWebhookDispatcher` injecting `X-XActions-Replay: true` header alongside HMAC signature verification.
+- Integrated webhook replay delivery via `OutboundWebhookDispatcher` injecting `X-Medirus-Replay: true` header alongside HMAC signature verification.
 - Added REST endpoint `GET /api/streams/:id/replay` in `api/routes/streams.js` with full validation and error status code mapping (400, 404, 200).
 - Registered MCP tool `x_stream_replay` in `src/mcp/server.js`.
 - Exported functions and types in `src/streaming/index.js` and `src/streaming/index.d.ts`.

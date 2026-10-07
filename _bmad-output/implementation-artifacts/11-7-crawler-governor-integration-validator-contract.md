@@ -807,7 +807,7 @@ npx vitest run tests/core
 ### Planning artifacts
 
 - `_bmad-output/planning-artifacts/epics.md:278-289` — Story 11.7 source acceptance criteria.
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:131-237` — AD-2, AD-3, AD-8, AD-9, AD-13, AD-14.
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md:131-237` — AD-2, AD-3, AD-8, AD-9, AD-13, AD-14.
 - `_bmad-output/planning-artifacts/prds/prd.md` — FR-66A/B, NFR-13 (Anti-Leak, Self-Healing).
 - `_bmad-output/implementation-artifacts/11-3-429-403-auto-quarantine-exponential-backoff-replay-interceptor.md` — request pipeline contract.
 - `_bmad-output/implementation-artifacts/11-4-adaptive-infrastructure-aware-rate-limiter-account-protection-governor.md` — governor contract.

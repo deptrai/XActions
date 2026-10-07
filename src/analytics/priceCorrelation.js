@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Tweet-Price Correlation Engine
+ * Medirus Tweet-Price Correlation Engine
  *
  * Analyzes the relationship between a user's tweet activity and
  * a crypto token's price movements. Fetches prices from CoinGecko

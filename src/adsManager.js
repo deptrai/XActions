@@ -25,7 +25,7 @@
   };
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  const STORAGE_KEY = 'xactions_ads';
+  const STORAGE_KEY = 'medirus_ads';
 
   const SELECTORS = {
     adsDashboard: '[data-testid="adsDashboard"]',
@@ -232,7 +232,7 @@
 
   const run = async () => {
     console.log('═══════════════════════════════════════════');
-    console.log('📢 XActions — Ads Manager');
+    console.log('📢 Medirus — Ads Manager');
     console.log('═══════════════════════════════════════════\n');
 
     if (CONFIG.showCampaignGuide) {

@@ -39,8 +39,8 @@ Epic này là epic "glue" của Phase 4 extension (Epics 23–26): biến `scrap
 
 ## UX & Interaction Patterns
 
-- **Action Discovery Contract:** mỗi crawler implement `listActions(): ActionDescriptor[]` với shape cố định `{ action, description, requiredArgs, optionalArgs, example, outputType, requiresAuth }` — consumer (CLI/MCP/AI agent) parse theo `requiredArgs` + `example`; không cho phép tên trường `args`/`params`/`inputs`. Surface: MCP tool `x_actions_list`, CLI `xactions actions --platform <platform>`.
-- **Legacy CLI mapping:** lệnh `unfollowx` cũ (`x_get_followers`, `x_unfollow_non_followers`, …) map vào `CrawlerCommand { platform: 'twitter', action: '<mapped>' }`; lệnh không còn hỗ trợ trả error envelope với `suggestedAction: 'use_x_actions_list'`.
+- **Action Discovery Contract:** mỗi crawler implement `listActions(): ActionDescriptor[]` với shape cố định `{ action, description, requiredArgs, optionalArgs, example, outputType, requiresAuth }` — consumer (CLI/MCP/AI agent) parse theo `requiredArgs` + `example`; không cho phép tên trường `args`/`params`/`inputs`. Surface: MCP tool `medirus_list`, CLI `medirus actions --platform <platform>`.
+- **Legacy CLI mapping:** lệnh `unfollowx` cũ (`x_get_followers`, `x_unfollow_non_followers`, …) map vào `CrawlerCommand { platform: 'twitter', action: '<mapped>' }`; lệnh không còn hỗ trợ trả error envelope với `suggestedAction: 'use_medirus_list'`.
 
 ## Cross-Story Dependencies
 

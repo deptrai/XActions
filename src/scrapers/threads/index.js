@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 // LEGACY — see docs/deprecation-plan.md
 /**
- * XActions Threads Scrapers
+ * Medirus Threads Scrapers
  * Puppeteer-based scrapers for Meta Threads (threads.net)
  *
  * @deprecated Legacy Puppeteer Threads scraper. Marked for decommissioning in Epic 20.2.
@@ -12,7 +12,7 @@
  *
  * @deprecated Marked for deprecation in Phase 1 (Epic 15.1); replaced by hybrid GraphQL ThreadsCrawler (`src/scrapers/social/threads/`). Decommission scheduled in Epic 20.2.
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  */
 

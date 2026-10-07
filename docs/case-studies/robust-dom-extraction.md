@@ -7,7 +7,7 @@
 
 ## Abstract
 
-XActions automates X/Twitter through browser-level DOM interaction — no paid API required. But browser automation is inherently fragile: one DOM change can silently break every script in the toolkit. An audit of the XActions codebase revealed **5 inconsistent bio extraction strategies** spread across 20+ files, including a latent case-sensitivity bug that had gone undetected. This case study documents how we consolidated those ad-hoc approaches into a single **cascading multi-strategy extraction engine** in `src/automation/core.js`, reducing future maintenance surface from 20 files to 1, while improving extraction reliability from a single selector to a 4-level fallback chain with observability metadata.
+Medirus automates X/Twitter through browser-level DOM interaction — no paid API required. But browser automation is inherently fragile: one DOM change can silently break every script in the toolkit. An audit of the Medirus codebase revealed **5 inconsistent bio extraction strategies** spread across 20+ files, including a latent case-sensitivity bug that had gone undetected. This case study documents how we consolidated those ad-hoc approaches into a single **cascading multi-strategy extraction engine** in `src/automation/core.js`, reducing future maintenance surface from 20 files to 1, while improving extraction reliability from a single selector to a 4-level fallback chain with observability metadata.
 
 ---
 
@@ -15,7 +15,7 @@ XActions automates X/Twitter through browser-level DOM interaction — no paid A
 
 Browser automation scripts are fragile by nature. X/Twitter uses React with server-side rendering and frequent A/B testing — `data-testid` attributes can appear, disappear, or change casing between deployments. When this happens, every script that hardcodes a selector breaks silently: the extraction returns an empty string instead of throwing an error, and users don't realize they're getting incomplete data.
 
-The XActions codebase had grown organically. Each major feature — follower scraping, bot detection, audience auditing, keyword following, list management — was authored independently, and each reimplemented its own user extraction logic. The result: **15+ files with divergent extraction code**, no shared contract, and no way to know when a selector stopped working.
+The Medirus codebase had grown organically. Each major feature — follower scraping, bot detection, audience auditing, keyword following, list management — was authored independently, and each reimplemented its own user extraction logic. The result: **15+ files with divergent extraction code**, no shared contract, and no way to know when a selector stopped working.
 
 ---
 

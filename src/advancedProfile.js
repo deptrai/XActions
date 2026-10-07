@@ -20,7 +20,7 @@
 //   1. Go to x.com and log in
 //   2. Open Developer Console (F12)
 //   3. Paste this script and press Enter
-//   4. Call any function via window.XActions.advancedProfile.*
+//   4. Call any function via window.Medirus.advancedProfile.*
 //
 // Last Updated: 30 March 2026
 (() => {
@@ -875,11 +875,11 @@
   };
 
   // ============================================================================
-  // Expose on window.XActions.advancedProfile
+  // Expose on window.Medirus.advancedProfile
   // ============================================================================
 
-  window.XActions = window.XActions || {};
-  window.XActions.advancedProfile = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.advancedProfile = {
     editBirthday,
     setPronouns,
     setupProfessionalAccount,
@@ -898,7 +898,7 @@
 
   console.log('');
   console.log('╔══════════════════════════════════════════════════════╗');
-  console.log('║       🛠️ XActions Advanced Profile Manager          ║');
+  console.log('║       🛠️ Medirus Advanced Profile Manager          ║');
   console.log('║                  by nichxbt                         ║');
   console.log('╠══════════════════════════════════════════════════════╣');
   console.log('║                                                      ║');
@@ -913,7 +913,7 @@
   console.log('║  9. switchAccount("handle")                         ║');
   console.log('║ 10. translateBio("username")                        ║');
   console.log('║                                                      ║');
-  console.log('║  Access: window.XActions.advancedProfile.<function> ║');
+  console.log('║  Access: window.Medirus.advancedProfile.<function> ║');
   console.log('╚══════════════════════════════════════════════════════╝');
   console.log('');
 })();

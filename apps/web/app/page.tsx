@@ -52,7 +52,7 @@ export default function DashboardOverview() {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 text-xs font-semibold rounded bg-white/20 uppercase tracking-wider">
-              XActions v3.5
+              Medirus v3.5
             </span>
             <span className="text-xs text-blue-100 flex items-center gap-1">
               <Zap className="w-3.5 h-3.5" /> High Performance

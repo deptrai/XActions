@@ -37,7 +37,7 @@ Scrape complete member data from any public X/Twitter list:
 
 ```javascript
 // ============================================
-// XActions - List Members Scraper (Browser Console)
+// Medirus - List Members Scraper (Browser Console)
 // Author: nich (@nichxbt)
 // Go to: x.com/i/lists/LIST_ID (then click Members)
 // Open console (F12), paste this
@@ -50,7 +50,7 @@ Scrape complete member data from any public X/Twitter list:
   const MAX_RETRIES = 15;           // Stop if no new members found
   
   console.log('');
-  console.log('📋 XActions - List Members Scraper');
+  console.log('📋 Medirus - List Members Scraper');
   console.log('====================================');
   console.log(`🎯 Target: ${TARGET_COUNT} members`);
   console.log('');
@@ -253,7 +253,7 @@ Scrape complete member data from any public X/Twitter list:
 
 ```javascript
 // ============================================
-// XActions - List Members Scraper (Node.js)
+// Medirus - List Members Scraper (Node.js)
 // Author: nich (@nichxbt)
 // Save as: scrape-list.js
 // Run: node scrape-list.js "https://x.com/i/lists/123456789"
@@ -310,7 +310,7 @@ async function scrapeListMembers(listUrl, options = {}) {
     timeout = 30000,
   } = options;
 
-  console.log('📋 XActions - List Members Scraper');
+  console.log('📋 Medirus - List Members Scraper');
   console.log('====================================');
   console.log(`🔗 URL: ${listUrl}`);
   console.log(`📊 Limit: ${limit}`);
@@ -537,7 +537,7 @@ const limit = parseInt(args[1]) || 1000;
 
 if (!listUrl) {
   console.log(`
-📋 XActions - List Members Scraper
+📋 Medirus - List Members Scraper
 ====================================
 
 Usage: node scrape-list.js <list-url> [limit]
@@ -653,7 +653,7 @@ node scrape-list.js "https://x.com/i/lists/9876543210" 5000
 
 **Output:**
 ```
-📋 XActions - List Members Scraper
+📋 Medirus - List Members Scraper
 ====================================
 🔗 URL: https://x.com/i/lists/1234567890
 📊 Limit: 1000
@@ -851,7 +851,7 @@ const data = await scrapeListMembers(listUrl, {
 
 ## 🌐 Website Alternative
 
-Don't want to code? Use [xactions.app](https://xactions.app):
+Don't want to code? Use [medirus.online](https://medirus.online):
 
 1. 🔐 Login with your X account
 2. 📋 Paste any list URL

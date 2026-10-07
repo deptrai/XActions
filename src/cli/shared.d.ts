@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-/** Type declarations for the XActions CLI shared helpers. */
+/** Type declarations for the Medirus CLI shared helpers. */
 
 export const CONFIG_DIR: string;
 export const CONFIG_FILE: string;

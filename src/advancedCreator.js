@@ -10,7 +10,7 @@
 // 1. Go to x.com
 // 2. Open Developer Console (F12)
 // 3. Paste this into the Developer Console and run it
-// 4. Use window.XActions.advancedCreator.<function>() to run features
+// 4. Use window.Medirus.advancedCreator.<function>() to run features
 //
 // Last Updated: 30 March 2026
 (() => {
@@ -39,7 +39,7 @@
     backButton: '[data-testid="app-bar-back"]',
   };
 
-  const STORAGE_KEY = 'xactions_advanced_creator';
+  const STORAGE_KEY = 'medirus_advanced_creator';
 
   const waitForSelector = async (selector, timeout = 10000) => {
     const start = Date.now();
@@ -874,10 +874,10 @@
   };
 
   // ─────────────────────────────────────────────────
-  // Expose on window.XActions.advancedCreator
+  // Expose on window.Medirus.advancedCreator
   // ─────────────────────────────────────────────────
-  window.XActions = window.XActions || {};
-  window.XActions.advancedCreator = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.advancedCreator = {
     setupSubscriptions,
     manageSubscriptionContent,
     setupTicketedSpace,
@@ -891,7 +891,7 @@
   // ─────────────────────────────────────────────────
   const W = 74;
   console.log('╔' + '═'.repeat(W) + '╗');
-  console.log('║  💰 ADVANCED CREATOR MONETIZATION — XActions' + ' '.repeat(W - 47) + '║');
+  console.log('║  💰 ADVANCED CREATOR MONETIZATION — Medirus' + ' '.repeat(W - 47) + '║');
   console.log('║  by nichxbt' + ' '.repeat(W - 14) + '║');
   console.log('╠' + '═'.repeat(W) + '╣');
   console.log('║  Available commands:' + ' '.repeat(W - 22) + '║');
@@ -914,6 +914,6 @@
   console.log('║  6.  manageAffiliate({ action: "status"|"enroll"|"links"|"earnings" })' + ' '.repeat(W - 73) + '║');
   console.log('║      Enroll in affiliate program, view referral links and earnings' + ' '.repeat(W - 67) + '║');
   console.log('║' + ' '.repeat(W) + '║');
-  console.log('║  Usage: XActions.advancedCreator.setupSubscriptions()' + ' '.repeat(W - 55) + '║');
+  console.log('║  Usage: Medirus.advancedCreator.setupSubscriptions()' + ' '.repeat(W - 55) + '║');
   console.log('╚' + '═'.repeat(W) + '╝');
 })();

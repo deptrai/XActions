@@ -12,7 +12,7 @@
 // Data is stored in your browser's localStorage, so it persists between sessions.
 
 (() => {
-  const STORAGE_KEY = 'xactions_my_followers';
+  const STORAGE_KEY = 'medirus_my_followers';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   // Check we're on the right page
@@ -106,7 +106,7 @@
 
   const run = async () => {
     const username = getCurrentUsername();
-    console.log(`\n🐦 XActions Detector — Monitoring @${username}\n`);
+    console.log(`\n🐦 Medirus Detector — Monitoring @${username}\n`);
 
     // Scrape current followers
     const currentFollowers = await scrapeFollowers();

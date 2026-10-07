@@ -1,18 +1,18 @@
 ---
 review: rubric-walker
-spine: ARCHITECTURE-SPINE.md (xactions-api-contract-epic46)
+spine: ARCHITECTURE-SPINE.md (medirus-api-contract-epic46)
 lens: "Good-spine checklist: real divergence points fixed for the level below, enforceable AD rules, safe Deferreds, verified tech, brownfield ratification, driving-spec coverage, parent-spine inheritance, no silent dimensions."
 verdict: FIX — revisions required before story freeze
 date: 2026-09-24
 ---
 
-# Rubric Walker Review — XActions API Contract Spine (Epic 46)
+# Rubric Walker Review — Medirus API Contract Spine (Epic 46)
 
 **Reviewer role:** Rubric Walker (BMad architecture spine gate)
-**Target:** `_bmad-output/planning-artifacts/architecture/xactions-api-contract-epic46/ARCHITECTURE-SPINE.md`
+**Target:** `_bmad-output/planning-artifacts/architecture/medirus-api-contract-epic46/ARCHITECTURE-SPINE.md`
 **Verified against:**
 - Driving spec: `_bmad-output/planning-artifacts/epics.md` Epic 46 (lines 2838–2963, incl. Phụ lục A Route Inventory)
-- Parent spine: `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (AD-14, AD-16, AD-17, AD-19, AD-20)
+- Parent spine: `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (AD-14, AD-16, AD-17, AD-19, AD-20)
 - Brownfield: `api/server.js`, `api/openapi.js`, `api/serverless.js`, `api/routes/checkpoints.js`, `api/routes/governor.js`, `api/routes/session-auth.js`, `api/middleware/auth.js`, `src/core/error-envelope.js`, `package.json`
 - Sibling review: `reviews/review-reality-check.md` (corroborated where noted)
 
@@ -53,7 +53,7 @@ But it has **one false premise in the inherited-invariants table**, **one AD tha
 - The surfaces those ADs define are implemented in `api/routes/`: AD-16's checkpoint API is `api/routes/checkpoints.js` mounted at `/api/checkpoints` (`api/server.js:367`); AD-19's data sources are `/api/admin`, `/api/governor`, `/api/proxies`, `/metrics/stream` — **every one of them is a ✅/⚠️ row in Phụ lục A**, i.e. inside Epic 46 scope.
 - `checkpoints.js` already imports `PlatformError, ErrorTypes, SuggestedActions` from `src/core/error-envelope.js` (line 25) and emits AD-14-flavored errors to HTTP clients today.
 
-**Impact:** The "two surfaces must not mix" framing is vacuous — there is only one surface. Worse, it hides a real constraint: `/api/checkpoints`, `/api/governor`, `/api/admin`, `/api/proxies` are operator/consumer contracts (dashboard, Nowing, `xactions checkpoints` CLI per parent AD-16/AD-19 rules 1-3). Story 46.2's envelope migration will reshape their wire format; the spine gives no rule that AD-16's checkpoint response contract (filters, status enum, resume/pause/retry endpoints) or AD-19's admin data-source contract must be preserved. An implementer reading the table concludes "not my problem — different namespace" and breaks consumers the parent spine explicitly created.
+**Impact:** The "two surfaces must not mix" framing is vacuous — there is only one surface. Worse, it hides a real constraint: `/api/checkpoints`, `/api/governor`, `/api/admin`, `/api/proxies` are operator/consumer contracts (dashboard, Nowing, `medirus checkpoints` CLI per parent AD-16/AD-19 rules 1-3). Story 46.2's envelope migration will reshape their wire format; the spine gives no rule that AD-16's checkpoint response contract (filters, status enum, resume/pause/retry endpoints) or AD-19's admin data-source contract must be preserved. An implementer reading the table concludes "not my problem — different namespace" and breaks consumers the parent spine explicitly created.
 
 **Fix:** Rewrite the row: "AD-16/AD-19 surfaces are implemented at `api/routes/{checkpoints,governor,admin,proxies}.js` and `GET /metrics/stream` — they are **in scope** and their endpoint contracts (paths, filters, status values, response payloads under `data`) are preserved verbatim; only the envelope wrapper changes per AD-2."
 
@@ -115,7 +115,7 @@ Stack table presents it as neutral ("repo-standard + 7.3.0") but `package.json:1
 
 ### LOW-2 — Silent operational dimensions
 
-- Spec `servers` values: Story 46.1 AC requires "localhost + production"; existing spec has only `{url: 'https://xactions.app'}` (`api/openapi.js:1003`). Which localhost (PORT 3001)? Undecided.
+- Spec `servers` values: Story 46.1 AC requires "localhost + production"; existing spec has only `{url: 'https://medirus.online'}` (`api/openapi.js:1003`). Which localhost (PORT 3001)? Undecided.
 - Which CI workflow hosts the redocly lint + contract tests (`ci.yml` exists; AD-9 says "CI chạy" without naming it).
 - API-layer error-code taxonomy location — "taxonomy của API layer" (AD-3) is referenced but its owning file is never named (`envelope.js`? a constants module?).
 - Pagination convention: AD-2 mandates `page:{cursor?,limit,total?}` while existing in-scope routes paginate `limit`/`offset` (`checkpoints.js:166-178`) — reconcile or explicitly grandfather offset params inside `page`.
@@ -126,7 +126,7 @@ Stack table presents it as neutral ("repo-standard + 7.3.0") but `package.json:1
 
 ### LOW-4 — `workspaces` enablement is a topology change, understated
 
-Corroborating `review-reality-check.md` Finding 2: root `package.json` has no `workspaces`; `packages/xactions-mcp` (own package-lock) and `apps/{api,web}` already exist as an unwired pseudo-monorepo. Turning on `workspaces: ["packages/*"]` re-resolves node_modules and sweeps `xactions-mcp` into hoisting. AD-8 treats it as one line; it deserves an explicit "install/lockfile audit" note. Related phantom-dep hazard: `src/analytics/viralStatsStore.js:13` imports `zod` with no declared dep — adding `zod@4` flips it from transitive v3. Spine never mentions it (sibling Finding 1).
+Corroborating `review-reality-check.md` Finding 2: root `package.json` has no `workspaces`; `packages/medirus-mcp` (own package-lock) and `apps/{api,web}` already exist as an unwired pseudo-monorepo. Turning on `workspaces: ["packages/*"]` re-resolves node_modules and sweeps `medirus-mcp` into hoisting. AD-8 treats it as one line; it deserves an explicit "install/lockfile audit" note. Related phantom-dep hazard: `src/analytics/viralStatsStore.js:13` imports `zod` with no declared dep — adding `zod@4` flips it from transitive v3. Spine never mentions it (sibling Finding 1).
 
 ---
 

@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions - Jev Write-Path Gate (Story 43.2)
+// Medirus - Jev Write-Path Gate (Story 43.2)
 // Semantic quality + safety gate before any public write.
 // by nichxbt
 

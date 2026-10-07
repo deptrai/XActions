@@ -27,8 +27,8 @@
 
   const CONFIG = {
     // ── Community Details ────────────────────────────────────
-    name: 'My XActions Community',
-    description: 'A community for X automation enthusiasts. Built with XActions.',
+    name: 'My Medirus Community',
+    description: 'A community for X automation enthusiasts. Built with Medirus.',
     rules: [
       'Be respectful to all members',
       'No spam or self-promotion without value',
@@ -102,7 +102,7 @@
     console.log(`📋 Rules: ${CONFIG.rules.length}`);
     console.log(`📋 Private: ${CONFIG.isPrivate}`);
 
-    const sessionKey = 'xactions_createCommunity';
+    const sessionKey = 'medirus_createCommunity';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     // Step 1: Navigate to communities if needed

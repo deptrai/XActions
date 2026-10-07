@@ -16,9 +16,9 @@ Eliminate split-brain stream publishing technical debt across all crawlers by es
 - **Single Point of Emission**: Subclasses of `AbstractCrawler` must not import or invoke `RedisStreamPublisher` or call `publisher.publish()` directly. All stream publishing is orchestrated exclusively by the `AbstractCrawler.execute()` template method.
 - **Zero Domain Payload Pollution**: The `__streamEmitted` property and any internal telemetry flags must be completely removed from crawler return values and domain items (`PostItem`, `ProfileItem`, `CommentItem`).
 - **Stream Deduplication Invariant**: The base execution lifecycle must maintain a session-scoped `Set<string> emittedItemIds` based on item ID and storage reference to guarantee that no duplicate stream events are emitted within a run.
-- **CloudEvents v1.0 Compliance**: Stream payloads must strictly adhere to the CloudEvents v1.0 JSON format (`specversion: "1.0"`, `type: "org.xactions.scrape.completed"`, `source`, `id`, `time`, `datacontenttype: "application/json"`, and `data`).
+- **CloudEvents v1.0 Compliance**: Stream payloads must strictly adhere to the CloudEvents v1.0 JSON format (`specversion: "1.0"`, `type: "org.medirus.scrape.completed"`, `source`, `id`, `time`, `datacontenttype: "application/json"`, and `data`).
 - **Deterministic Idempotency Key**: Every emitted event must include an `idempotencyKey` computed from `sha256(platform + entityId + timestamp_bucket)` to allow safe idempotent ingestion by Redis Stream consumers.
-- **Testing Standard**: Integration tests for stream publishing must verify the single-emission invariant across platform crawlers without mocks, utilizing real local Redis or loopback test harnesses, and honoring `XACTIONS_TEST_FAST_DELAYS=1`.
+- **Testing Standard**: Integration tests for stream publishing must verify the single-emission invariant across platform crawlers without mocks, utilizing real local Redis or loopback test harnesses, and honoring `MEDIRUS_TEST_FAST_DELAYS=1`.
 
 ## Technical Decisions
 

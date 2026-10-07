@@ -22,10 +22,10 @@ The analytics system provides:
 ### Quick Start
 
 ```javascript
-import { analyzeSentiment, analyzeBatch, aggregateResults } from 'xactions/analytics';
+import { analyzeSentiment, analyzeBatch, aggregateResults } from 'medirus/analytics';
 
 // Single text
-const result = await analyzeSentiment('XActions is absolutely incredible! Love it 🚀');
+const result = await analyzeSentiment('Medirus is absolutely incredible! Love it 🚀');
 console.log(result);
 // { score: 0.85, label: 'positive', confidence: 0.92, keywords: ['incredible', 'love'] }
 
@@ -73,7 +73,7 @@ const result = await analyzeSentiment('This is a nuanced political statement.', 
 ### Start Monitoring
 
 ```javascript
-import { createMonitor, getMonitor, getMonitorHistory, stopMonitor } from 'xactions/analytics';
+import { createMonitor, getMonitor, getMonitorHistory, stopMonitor } from 'medirus/analytics';
 
 const monitor = createMonitor({
   target: 'elonmusk',            // Username or keyword
@@ -117,7 +117,7 @@ stopMonitor(monitor.id);
 ## Alerts
 
 ```javascript
-import { checkAlerts, getAlerts, clearAlerts } from 'xactions/analytics';
+import { checkAlerts, getAlerts, clearAlerts } from 'medirus/analytics';
 
 // Check for new alerts (called automatically by monitors)
 const newAlerts = checkAlerts(monitorId);
@@ -135,7 +135,7 @@ clearAlerts();
 ## Reports
 
 ```javascript
-import { generateReport } from 'xactions/analytics';
+import { generateReport } from 'medirus/analytics';
 
 const report = await generateReport({
   username: 'nichxbt',
@@ -151,7 +151,7 @@ const report = await generateReport({
 Correlate tweet activity with cryptocurrency prices:
 
 ```javascript
-import { analyzeTweetPriceCorrelation } from 'xactions/analytics';
+import { analyzeTweetPriceCorrelation } from 'medirus/analytics';
 
 const analysis = await analyzeTweetPriceCorrelation({
   username: 'elonmusk',
@@ -184,7 +184,7 @@ import {
   saveAccountSnapshot, getAccountHistory, getGrowthRate,
   compareAccounts, exportHistory,
   startAutoSnapshot, stopAutoSnapshot
-} from 'xactions/analytics';
+} from 'medirus/analytics';
 
 // Manual snapshot
 await saveAccountSnapshot('nichxbt', { followers: 5000, following: 200, tweets: 1200 });
@@ -208,7 +208,7 @@ await exportHistory('nichxbt', { format: 'csv', outputPath: 'history.csv' });
 ## Audience Overlap
 
 ```javascript
-import { analyzeOverlap, multiOverlap, getAudienceInsights } from 'xactions/analytics';
+import { analyzeOverlap, multiOverlap, getAudienceInsights } from 'medirus/analytics';
 
 // Compare two accounts
 const overlap = await analyzeOverlap('account1', 'account2', { page, limit: 500 });
@@ -231,7 +231,7 @@ Manage follower relationships with tagging, scoring, and segmentation:
 import {
   syncFollowers, tagContact, addNote, autoScore,
   searchContacts, createSegment, exportSegment
-} from 'xactions/analytics';
+} from 'medirus/analytics';
 
 // Sync followers from X
 await syncFollowers('nichxbt', { page });
@@ -293,5 +293,5 @@ await exportSegment('high-value-devs', { format: 'csv' });
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `OPENROUTER_API_KEY` | Only for LLM mode | OpenRouter API key for advanced sentiment |
-| `XACTIONS_SESSION_COOKIE` | For scrapers | X/Twitter auth token |
+| `MEDIRUS_SESSION_COOKIE` | For scrapers | X/Twitter auth token |
 | `REDIS_HOST` | For monitoring | Redis server for state persistence |

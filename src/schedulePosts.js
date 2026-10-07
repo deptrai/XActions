@@ -119,7 +119,7 @@
   };
 
   const run = async () => {
-    console.log('📅 SCHEDULE POSTS - XActions by nichxbt');
+    console.log('📅 SCHEDULE POSTS - Medirus by nichxbt');
 
     if (CONFIG.posts.length === 0) {
       console.log('❌ No posts to schedule! Edit CONFIG.posts array.');

@@ -19,7 +19,7 @@ related_ads:
 **Related ADs:** AD-15 (Terminal QR Login with Non-TTY Fallback & Clear Auth Feedback), AD-5 (Frictionless Multi-Platform Authentication Contracts)  
 **Source Canonical Docs:**
 - `_bmad-output/planning-artifacts/epics.md` (Epic 12, Story 12.1, AD-15)
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (AD-5, AD-15)
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` (AD-5, AD-15)
 - `_bmad-output/planning-artifacts/prd.md` (FR-68)
 
 ---
@@ -63,13 +63,13 @@ Tôi muốn **hệ thống đăng nhập bằng mã QR trên Terminal được h
 * **And** `generateShortCode()` phải sinh mã 6 ký tự ngẫu nhiên bằng `crypto.randomInt()` từ tập ký tự không gây nhầm lẫn (`23456789ABCDEFGHJKLMNPQRSTUVWXYZ`, loại bỏ `0, 1, I, O, L`).
 
 ### AC-4: CLI Flags Expansion (`--qr`, `--qr-url`, `--push`, `--cdp`, `--timeout`, `--platform`)
-* **Given** CLI command `xactions login` trong `src/cli/commands/login.js` (và `src/cli/index.js`)
+* **Given** CLI command `medirus login` trong `src/cli/commands/login.js` (và `src/cli/index.js`)
 * **When** người dùng truyền các cờ tùy chọn dòng lệnh
 * **Then** CLI hỗ trợ đầy đủ các options:
   - `--qr`: Kích hoạt chế độ xác thực QR terminal
   - `--qr-url <url>`: Truyền URL QR có sẵn để render trực tiếp
   - `--push`: Thông báo yêu cầu gửi push notification chứa link & short code
-  - `--cdp`: Chuyển đổi sang chế độ Chrome DevTools Protocol Remote Attach (:9222) và in hướng dẫn `xactions auth --launch-chrome`
+  - `--cdp`: Chuyển đổi sang chế độ Chrome DevTools Protocol Remote Attach (:9222) và in hướng dẫn `medirus auth --launch-chrome`
   - `--platform <platform>`: Chọn nền tảng mục tiêu (mặc định: `twitter`, hỗ trợ `facebook`, `threads`, v.v.)
   - `--timeout <seconds>`: Cấu hình thời gian timeout tính bằng giây (mặc định: `120`)
 * **And** khi không truyền cờ `--qr`, `--qr-url`, `--push`, `--cdp`, giữ nguyên flow nhập cookie thủ công (`auth_token`, `ct0` cho Twitter; `c_user`, `xs` cho Facebook) để đảm bảo 100% backward compatibility.
@@ -94,9 +94,9 @@ Tôi muốn **hệ thống đăng nhập bằng mã QR trên Terminal được h
 * **Given** quá trình quét QR thành công và nhận đủ cookie bắt buộc của nền tảng (`auth_token` + `ct0` cho Twitter; `c_user` + `xs` cho Facebook)
 * **When** `TerminalQrLogin` hoàn tất xác thực
 * **Then** lưu cookie vào file tương ứng tại thư mục người dùng:
-  - Twitter: `~/.xactions/cookies.json`
-  - Facebook: `~/.xactions/cookies-facebook.json`
-  - Nền tảng khác: `~/.xactions/cookies-<platform>.json`
+  - Twitter: `~/.medirus/cookies.json`
+  - Facebook: `~/.medirus/cookies-facebook.json`
+  - Nền tảng khác: `~/.medirus/cookies-<platform>.json`
 * **And** file cookie được ghi với chế độ phân quyền bảo mật POSIX `mode: 0o600` (chỉ chủ sở hữu có quyền đọc/ghi)
 * **And** tự động đăng ký phiên vào `globalSessionManager.set(accountId, loginResult)`.
 
@@ -112,7 +112,7 @@ Tôi muốn **hệ thống đăng nhập bằng mã QR trên Terminal được h
 * **And** không làm lộ raw stack trace ra terminal, gán `process.exitCode = 1` khi thất bại trong CLI context.
 
 ### AC-8: Test Suite Coverage & Zero-Mock Verification
-* **Given** bộ kiểm thử Vitest của dự án XActions
+* **Given** bộ kiểm thử Vitest của dự án Medirus
 * **When** chạy lệnh `npx vitest run tests/utils/qrcode.test.js tests/core/login/terminal-qr.test.js tests/cli/login.test.js`
 * **Then** 100% test cases pass (tối thiểu 18 tests) bao gồm:
   - Tự động nhận diện TTY vs non-TTY
@@ -150,7 +150,7 @@ Tôi muốn **hệ thống đăng nhập bằng mã QR trên Terminal được h
   - [x] 3.3 Xử lý nhánh `--push`: in thông báo push notification dispatch.
   - [x] 3.4 Khởi tạo `TerminalQrLogin` và gọi `login()` khi có cờ `--qr`, `--qr-url` hoặc `--push`.
   - [x] 3.5 Bắt lỗi và hiển thị thông điệp lỗi chuẩn hóa, thiết lập `process.exitCode = 1` khi thất bại.
-  - [x] 3.6 Giữ nguyên luồng hỏi prompt cookie qua `inquirer` khi chạy `xactions login` không cờ.
+  - [x] 3.6 Giữ nguyên luồng hỏi prompt cookie qua `inquirer` khi chạy `medirus login` không cờ.
 
 - [x] **Task 4: Xác thực & Bổ sung Kiểm thử Toàn diện** (AC-8)
   - [x] 4.1 Chạy và kiểm tra `tests/utils/qrcode.test.js`.
@@ -176,8 +176,8 @@ Tôi muốn **hệ thống đăng nhập bằng mã QR trên Terminal được h
 - `src/core/base-login.js`: Chứa abstract class `AbstractLogin` mà `TerminalQrLogin` kế thừa.
 - `src/core/login/terminal-qr.js`: Chứa toàn bộ logic state machine, countdown 60s, timeout 120s, short code, polling disk/callback, và lưu cookie.
 - `src/core/cdp-launcher.js`: Cung cấp các helper kết nối CDP khi người dùng chọn flow `--cdp`.
-- `src/cli/commands/login.js`: Đăng ký command `xactions login` với Commander.js.
-- `src/cli/index.js`: Điểm vào CLI chính của XActions.
+- `src/cli/commands/login.js`: Đăng ký command `medirus login` với Commander.js.
+- `src/cli/index.js`: Điểm vào CLI chính của Medirus.
 
 ### 4.3. Technical Implementation Details
 

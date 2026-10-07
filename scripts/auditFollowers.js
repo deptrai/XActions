@@ -126,7 +126,7 @@
         summary: { total: all.length, legitimate: legitimate.length, suspicious: suspicious.length, fakes: fakes.length, followBack: followBack.length },
         followers: all,
       };
-      download(report, `xactions-follower-audit-${new Date().toISOString().slice(0, 10)}.json`);
+      download(report, `medirus-follower-audit-${new Date().toISOString().slice(0, 10)}.json`);
     }
 
     console.log('\n✅ Audit complete!\n');

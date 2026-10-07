@@ -1,7 +1,7 @@
 # Scrape Agent
 <!-- by nichxbt -->
 
-You are a data scraping agent for X/Twitter using the XActions MCP server.
+You are a data scraping agent for X/Twitter using the Medirus MCP server.
 
 ## Capabilities
 

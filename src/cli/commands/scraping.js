@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Universal scraping & crawler action discovery commands for XActions CLI.
+ * Universal scraping & crawler action discovery commands for Medirus CLI.
  *
  * Exposes:
- * - `xactions scrape`
- * - `xactions actions-list`
- * - `xactions actions` (alias/compat)
+ * - `medirus scrape`
+ * - `medirus actions-list`
+ * - `medirus actions` (alias/compat)
  *
  * @author nich (@nichxbt)
  * @license Apache-2.0

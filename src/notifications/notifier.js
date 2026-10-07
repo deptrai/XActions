@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Notification Hub
+ * Medirus Notification Hub
  * Send alerts to Email, Slack, Discord, and Telegram.
  *
  * Kills: Phantombuster (email alerts), Circleboom (Slack)
@@ -14,7 +14,7 @@ import fsp from 'fs/promises';
 import path from 'path';
 import os from 'os';
 
-const CONFIG_DIR = path.join(os.homedir(), '.xactions');
+const CONFIG_DIR = path.join(os.homedir(), '.medirus');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 // ============================================================================
@@ -52,7 +52,7 @@ export class Notifier {
    * Send notification to all enabled channels
    */
   async send(event) {
-    const { type = 'info', title = 'XActions Notification', message, data, severity = 'info' } = event;
+    const { type = 'info', title = 'Medirus Notification', message, data, severity = 'info' } = event;
     const results = {};
 
     for (const [channel, config] of Object.entries(this.config)) {
@@ -97,8 +97,8 @@ export class Notifier {
   async test(channel) {
     return this.sendTo(channel, {
       type: 'test',
-      title: '🧪 XActions Test Notification',
-      message: `This is a test notification from XActions. If you see this, ${channel} is configured correctly!`,
+      title: '🧪 Medirus Test Notification',
+      message: `This is a test notification from Medirus. If you see this, ${channel} is configured correctly!`,
       severity: 'info',
     });
   }
@@ -122,7 +122,7 @@ export class Notifier {
       const html = `
         <div style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: #000; color: #fff; padding: 16px 20px; border-radius: 12px 12px 0 0;">
-            <h2 style="margin: 0;">⚡ XActions</h2>
+            <h2 style="margin: 0;">⚡ Medirus</h2>
           </div>
           <div style="background: #1a1a1a; color: #e0e0e0; padding: 20px; border-radius: 0 0 12px 12px;">
             <p style="font-size: 14px; color: #888;">${severityEmoji[event.severity] || ''} ${event.severity.toUpperCase()}</p>
@@ -154,7 +154,7 @@ export class Notifier {
       blocks: [
         { type: 'header', text: { type: 'plain_text', text: `⚡ ${event.title}` } },
         { type: 'section', text: { type: 'mrkdwn', text: event.message } },
-        { type: 'context', elements: [{ type: 'mrkdwn', text: `_${event.severity}_ | XActions | ${new Date().toISOString()}` }] },
+        { type: 'context', elements: [{ type: 'mrkdwn', text: `_${event.severity}_ | Medirus | ${new Date().toISOString()}` }] },
       ],
     };
 
@@ -178,7 +178,7 @@ export class Notifier {
         title: `⚡ ${event.title}`,
         description: event.message,
         color: severityColor[event.severity] || 0x1d9bf0,
-        footer: { text: `XActions | ${event.severity}` },
+        footer: { text: `Medirus | ${event.severity}` },
         timestamp: new Date().toISOString(),
       }],
     };
@@ -198,7 +198,7 @@ export class Notifier {
     if (!botToken || !chatId) return { error: 'Telegram bot token and chat ID required' };
 
     const severityEmoji = { info: 'ℹ️', warning: '⚠️', critical: '🚨' };
-    const text = `${severityEmoji[event.severity] || ''} *${event.title}*\n\n${event.message}\n\n_XActions • ${event.severity}_`;
+    const text = `${severityEmoji[event.severity] || ''} *${event.title}*\n\n${event.message}\n\n_Medirus • ${event.severity}_`;
 
     const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',

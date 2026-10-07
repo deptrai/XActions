@@ -1,6 +1,6 @@
-# XActions Claude Tutorial Prompts
+# Medirus Claude Tutorial Prompts
 
-> **23 ready-to-paste prompt files** that turn Claude into your personal X/Twitter automation expert. Each file is a complete, self-contained tutorial covering one feature area of [XActions](https://github.com/nirholas/XActions).
+> **23 ready-to-paste prompt files** that turn Claude into your personal X/Twitter automation expert. Each file is a complete, self-contained tutorial covering one feature area of [Medirus](https://github.com/nirholas/XActions).
 
 ## How to Use
 
@@ -11,7 +11,7 @@
 5. **Follow Claude's step-by-step guidance**
 
 Each prompt is designed to:
-- Give Claude full context about XActions features
+- Give Claude full context about Medirus features
 - Walk you through setup, configuration, and usage
 - Include real code examples and configurations
 - Let you customize everything to your needs
@@ -23,8 +23,8 @@ Each prompt is designed to:
 ### Getting Started
 | # | Tutorial | Description |
 |---|----------|-------------|
-| 01 | [MCP Setup & First Commands](01-mcp-setup-and-first-commands.md) | Install XActions MCP server, connect to Claude Desktop, run your first commands |
-| 15 | [CLI Mastery Guide](15-cli-mastery-guide.md) | Master the `xactions` command-line tool — all 12 commands with examples |
+| 01 | [MCP Setup & First Commands](01-mcp-setup-and-first-commands.md) | Install Medirus MCP server, connect to Claude Desktop, run your first commands |
+| 15 | [CLI Mastery Guide](15-cli-mastery-guide.md) | Master the `medirus` command-line tool — all 12 commands with examples |
 | 16 | [Browser Automation Framework](16-browser-automation-framework.md) | Learn the core.js + actions.js browser automation system |
 
 ### Follower Management
@@ -89,7 +89,7 @@ Each prompt is designed to:
 **"I want to grow my following"**
 → Start with [Tutorial 03](03-growth-automation-suite.md) (Growth Suite), then [Tutorial 22](22-advanced-power-user-playbook.md) (Power User Playbook)
 
-**"I want to use XActions with Claude Desktop (MCP)"**
+**"I want to use Medirus with Claude Desktop (MCP)"**
 → Start with [Tutorial 01](01-mcp-setup-and-first-commands.md) (MCP Setup)
 
 **"I want to analyze my competitors"**
@@ -111,7 +111,7 @@ Each prompt is designed to:
 
 ## Coverage Map
 
-These 23 tutorials cover **every XActions feature**:
+These 23 tutorials cover **every Medirus feature**:
 
 - ✅ **145 MCP tools** — Covered across tutorials 01-23
 - ✅ **15 browser automation scripts** — Tutorials 03, 07, 16, 19, 20
@@ -128,8 +128,8 @@ These 23 tutorials cover **every XActions feature**:
 
 ---
 
-## About XActions
+## About Medirus
 
-[XActions](https://github.com/nirholas/XActions) is the complete X/Twitter automation toolkit — scrapers, MCP server for AI agents, CLI, browser scripts. No API fees. Open source. By [nichxbt](https://x.com/nichxbt).
+[Medirus](https://github.com/nirholas/XActions) is the complete X/Twitter automation toolkit — scrapers, MCP server for AI agents, CLI, browser scripts. No API fees. Open source. By [nichxbt](https://x.com/nichxbt).
 
 **Star us on GitHub:** https://github.com/nirholas/XActions ⭐

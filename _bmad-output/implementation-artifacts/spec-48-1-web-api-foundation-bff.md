@@ -7,14 +7,14 @@ status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
 context:
-  - '{project-root}/_bmad-output/planning-artifacts/architecture/xactions-api-contract-epic46/ARCHITECTURE-SPINE.md'
+  - '{project-root}/_bmad-output/planning-artifacts/architecture/medirus-api-contract-epic46/ARCHITECTURE-SPINE.md'
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
 
 ## Intent
 
-**Problem:** `apps/web` gọi backend bằng raw `fetch('http://localhost:3001/...')` — vi phạm FR-126 (phải qua `@xactions/api-client` typed contract), không deploy được (hardcode origin), không có auth transport (dựa vào dev-fallback che mất 401).
+**Problem:** `apps/web` gọi backend bằng raw `fetch('http://localhost:3001/...')` — vi phạm FR-126 (phải qua `@medirus/api-client` typed contract), không deploy được (hardcode origin), không có auth transport (dựa vào dev-fallback che mất 401).
 
 **Approach:** BFF catch-all route `app/api/[...path]/route.ts` proxy same-origin → backend bằng raw `fetch` (undici) với header injection; `app/api-docs/[[...path]]/route.ts` proxy Swagger UI; session route `app/session/route.ts` quản httpOnly cookies (`xa_bearer`, `xa_session`); `lib/api.ts` typed helper cho client components; migrate 4 màn có backend calls + `backend-status.tsx`; gỡ `pages/` shim.
 
@@ -22,14 +22,14 @@ context:
 
 **Always:**
 - Mọi call backend từ browser đi qua same-origin `/api/*` (và `/api-docs/*`) → BFF → `API_INTERNAL_URL`. Không còn raw `fetch` tới absolute URL, không còn literal `localhost:3001` trong `apps/web/app|components|lib`.
-- `lib/proxy.ts` forward method, query, body (JSON + raw stream), và **stream response verbatim** (SSE, video download). Envelope đi qua nguyên trạng — không reshape. Dùng **raw `fetch`** cho forwarding — KHÔNG qua `XActionsClient.request()` (nó buffer `res.text()` + unbox envelope, phá streaming/verbatim).
+- `lib/proxy.ts` forward method, query, body (JSON + raw stream), và **stream response verbatim** (SSE, video download). Envelope đi qua nguyên trạng — không reshape. Dùng **raw `fetch`** cho forwarding — KHÔNG qua `MedirusClient.request()` (nó buffer `res.text()` + unbox envelope, phá streaming/verbatim).
 - Request forward: strip hop-by-hop headers (`connection`, `transfer-encoding`, `keep-alive`, `host`, `content-length`). Body stream cần `(init as any).duplex = 'half'` (undici contract).
 - Response forward: strip `content-encoding`, `content-length` (undici auto-decompress — forward verbatim gây double-decode), `transfer-encoding`, `connection`; giữ `content-type`, `set-cookie`, status code.
 - Auth injection ở BFF: cookie `xa_bearer` → `Authorization: Bearer`, `xa_session` → `x-session-cookie`. Cookie thắng khi cả cookie + explicit header cùng có. Transitional: explicit `authorization`/`x-session-cookie`/`x-payment`/`x-agent-api-key`/`x-api-key` request headers forward khi cookie vắng.
 - `/session` route NGOÀI proxy namespace (`app/session/route.ts`): `POST` nhận `{bearerToken?, sessionCookie?}` **hoặc** `{email, password}` (BFF tự gọi `POST {API_INTERNAL_URL}/api/auth/login` rồi set `xa_bearer` từ token trả về) → set httpOnly cookies (SameSite=Lax, Secure khi prod). `GET` trả `{hasBearer, hasSession}` booleans. `DELETE` xóa cả hai.
 - `lib/session.ts` + `lib/proxy.ts` **framework-free**: parse raw `cookie` header từ `Request` — route handlers chỉ là thin adapter (Next `cookies()` API không dùng ở lib layer để giữ unit-test runtime-free).
 - `API_INTERNAL_URL` server-only env (default `http://localhost:3001`).
-- `lib/api.ts` dùng `import type` cho `ApiResult<T>` từ `@xactions/api-client` — cấm value-import (tránh bundle 9.7k-line client xuống browser).
+- `lib/api.ts` dùng `import type` cho `ApiResult<T>` từ `@medirus/api-client` — cấm value-import (tránh bundle 9.7k-line client xuống browser).
 - NFR-20: zero mocks — tests chạy ephemeral upstream server `127.0.0.1:0` thật và invoke handler trực tiếp.
 
 **Never:**
@@ -63,7 +63,7 @@ context:
 - `apps/web/lib/proxy.ts` — NEW: `proxyToBackend(req: Request, opts)` — build upstream URL, header allowlist/denylist, cookie→header auth, stream forwarding. Framework-free, raw `fetch`.
 - `apps/web/app/session/route.ts` — NEW: POST/GET/DELETE; thin adapter.
 - `apps/web/lib/session.ts` — NEW: cookie names `xa_bearer`/`xa_session`, `parseCookies(req)`, `sessionHeaders(cookies)` (cookie→upstream header map), `buildSetCookie()` helpers. Framework-free.
-- `apps/web/lib/api.ts` — NEW: browser-side `api<T>(method, path, opts?)` → `ApiResult<T>` (`import type` only từ `@xactions/api-client`).
+- `apps/web/lib/api.ts` — NEW: browser-side `api<T>(method, path, opts?)` → `ApiResult<T>` (`import type` only từ `@medirus/api-client`).
 - `apps/web/lib/config.ts` — NEW: `API_INTERNAL_URL` resolution.
 - `apps/web/app/{viral-miner,optimizer,crm,admin}/page.tsx` + `components/backend-status.tsx` — EDIT: thay raw fetch bằng `lib/api.ts`. Endpoint coverage: `/api/viral/platforms`, `/api/optimizer/{predict,optimize,hashtags}`, `/api/crm/tag`, `/api/checkpoints` (+`/:id/{pause,resume,retry}`), `/api/health`. `app/page.tsx` + `app/explorer/page.tsx` = static mock, không backend call.
 - `apps/web/app/page.tsx:68` + `components/sidebar.tsx:27` — EDIT: link `http://localhost:3001/api-docs/` → same-origin `/api-docs/`.
@@ -107,7 +107,7 @@ context:
 ## Design Notes
 
 - **BFF namespace `/api/[...path]` + `/api-docs/[[...path]]`**: browser path == backend path, zero mapping. `/session` tách riêng — nếu trong `/api/*` sẽ bị proxy xuống backend (backend có `/api/session/*` riêng, by design).
-- **Raw fetch, không XActionsClient**: client `request()` unbox envelope + buffer text — phá verbatim streaming. Types vẫn reuse (`import type`).
+- **Raw fetch, không MedirusClient**: client `request()` unbox envelope + buffer text — phá verbatim streaming. Types vẫn reuse (`import type`).
 - **Cookie httpOnly + `{email,password}` bootstrap**: legacy giữ JWT localStorage (XSS-exposed). Cookie model nâng posture; login-exchange trong `POST /session` đóng bootstrap gap mà không cần F2 UI.
 - **Realtime deferred → S1**: `io.use` chỉ đọc `handshake.auth.token` — httpOnly cookie không reachable từ socket auth payload, sửa backend vi phạm boundary. Chưa màn nào dùng socket → defer đến story màn realtime đầu tiên (quyết: extend `io.use` đọc cookie, hoặc token endpoint).
 

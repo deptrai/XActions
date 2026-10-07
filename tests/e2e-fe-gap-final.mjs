@@ -21,7 +21,7 @@ async function analyzeFEGaps() {
     frontend: 'NONE',
     gap: 'NO_EXPOSURE',
     impact: 'HIGH — OSINT is a major feature but completely invisible to FE users',
-    fix: 'Add /api/osint REST endpoint + xactions osint CLI + dashboard/osint.html page',
+    fix: 'Add /api/osint REST endpoint + medirus osint CLI + dashboard/osint.html page',
     priority: 'P0'
   });
 
@@ -34,7 +34,7 @@ async function analyzeFEGaps() {
     frontend: 'NONE',
     gap: 'NO_EXPOSURE',
     impact: 'HIGH — Budget ceiling is invisible; users cannot monitor spend or tier usage',
-    fix: 'Add /api/proxy/budget endpoint + xactions proxy budget CLI + admin.html budget widget',
+    fix: 'Add /api/proxy/budget endpoint + medirus proxy budget CLI + admin.html budget widget',
     priority: 'P0'
   });
 
@@ -56,7 +56,7 @@ async function analyzeFEGaps() {
     feature: 'Account Pool & Health Guard',
     backend: 'src/core/account-pool.js',
     api: '/api/admin/accounts',
-    cli: 'xactions admin account',
+    cli: 'medirus admin account',
     frontend: 'dashboard/admin.html (exists)',
     gap: 'PARTIAL_EXPOSURE',
     impact: 'MEDIUM — FE shows account status but missing health score, hibernation reason, velocity metrics',
@@ -69,7 +69,7 @@ async function analyzeFEGaps() {
     feature: 'Selector Canary & GitOps Healing',
     backend: 'src/services/canary-healer.js',
     api: '/api/benchmark/probe-all',
-    cli: 'xactions canary',
+    cli: 'medirus canary',
     frontend: 'dashboard/benchmark.html (exists)',
     gap: 'PARTIAL_EXPOSURE',
     impact: 'MEDIUM — FE shows canary status but missing heal preview, diff viewer, PR link',

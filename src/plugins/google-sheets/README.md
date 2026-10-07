@@ -1,8 +1,8 @@
-# 📊 XActions Google Sheets Plugin
+# 📊 Medirus Google Sheets Plugin
 
 > Export scraped X/Twitter data directly to Google Sheets — no copy-paste, no CSV import.
 
-**Plugin:** `xactions-plugin-google-sheets`
+**Plugin:** `medirus-plugin-google-sheets`
 **Author:** nich ([@nichxbt](https://x.com/nichxbt))
 
 ---
@@ -41,7 +41,7 @@ export GOOGLE_SERVICE_ACCOUNT_KEY_FILE="./service-account-key.json"
 ### 3. Use it
 
 ```javascript
-import { exportToGoogleSheets } from 'xactions/plugins/google-sheets';
+import { exportToGoogleSheets } from 'medirus/plugins/google-sheets';
 
 // After scraping followers...
 const result = await exportToGoogleSheets(followers, {
@@ -61,13 +61,13 @@ All scrape commands now support `--google-sheets`:
 
 ```bash
 # Scrape followers and push directly to Google Sheets
-xactions followers @nichxbt --google-sheets YOUR_SPREADSHEET_ID --sheet-name Followers
+medirus followers @nichxbt --google-sheets YOUR_SPREADSHEET_ID --sheet-name Followers
 
 # Scrape tweets and append to a sheet
-xactions tweets @nichxbt -l 200 --google-sheets YOUR_SPREADSHEET_ID --sheet-name Tweets
+medirus tweets @nichxbt -l 200 --google-sheets YOUR_SPREADSHEET_ID --sheet-name Tweets
 
 # Replace instead of append
-xactions following @nichxbt --google-sheets YOUR_SPREADSHEET_ID --sheet-mode replace
+medirus following @nichxbt --google-sheets YOUR_SPREADSHEET_ID --sheet-mode replace
 ```
 
 ---
@@ -93,14 +93,14 @@ When loaded as a plugin, these routes are available:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/api/plugins/xactions-plugin-google-sheets/export` | Export data to a sheet |
-| `GET` | `/api/plugins/xactions-plugin-google-sheets/read` | Read data from a sheet |
-| `POST` | `/api/plugins/xactions-plugin-google-sheets/create` | Create a new spreadsheet |
+| `POST` | `/api/plugins/medirus-plugin-google-sheets/export` | Export data to a sheet |
+| `GET` | `/api/plugins/medirus-plugin-google-sheets/read` | Read data from a sheet |
+| `POST` | `/api/plugins/medirus-plugin-google-sheets/create` | Create a new spreadsheet |
 
 **Example:**
 
 ```bash
-curl -X POST http://localhost:3000/api/plugins/xactions-plugin-google-sheets/export \
+curl -X POST http://localhost:3000/api/plugins/medirus-plugin-google-sheets/export \
   -H "Content-Type: application/json" \
   -d '{
     "data": [{"username": "nichxbt", "followers": 12500}],
@@ -140,7 +140,7 @@ curl -X POST http://localhost:3000/api/plugins/xactions-plugin-google-sheets/exp
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `title` | `string` | `'XActions Export'` | Spreadsheet title |
+| `title` | `string` | `'Medirus Export'` | Spreadsheet title |
 | `sheetNames` | `string[]` | `['Sheet1']` | Tabs to create |
 
 **Returns:** `{ spreadsheetId, url, title, sheetNames }`

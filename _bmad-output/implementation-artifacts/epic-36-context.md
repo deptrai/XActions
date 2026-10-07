@@ -4,7 +4,7 @@
 
 ## Goal
 
-Provide a unified, single-endpoint data harvesting capability for personal reconnaissance across 10+ social, professional, and regional platforms without persisting PII or building stateful person entities. Following Architectural Decision AD-40 (Option D: Clean Separation of Concerns), XActions functions strictly as an ephemeral harvester returning raw normalized profiles (`ProfileItem[]`) to downstream consumers like Nowing AI Lead Hub and ChainLens Research.
+Provide a unified, single-endpoint data harvesting capability for personal reconnaissance across 10+ social, professional, and regional platforms without persisting PII or building stateful person entities. Following Architectural Decision AD-40 (Option D: Clean Separation of Concerns), Medirus functions strictly as an ephemeral harvester returning raw normalized profiles (`ProfileItem[]`) to downstream consumers like Nowing AI Lead Hub and ChainLens Research.
 
 ## Stories
 
@@ -13,12 +13,12 @@ Provide a unified, single-endpoint data harvesting capability for personal recon
 
 ## Requirements & Constraints
 
-- **Pure Harvesting Model (AD-40 / Option D)**: XActions must not store person entities, resolve cross-platform identities, compute similarity scores (Jaro-Winkler, Levenshtein, pHash), or modify Prisma schema to persist PII.
+- **Pure Harvesting Model (AD-40 / Option D)**: Medirus must not store person entities, resolve cross-platform identities, compute similarity scores (Jaro-Winkler, Levenshtein, pHash), or modify Prisma schema to persist PII.
 - **Unified Query Surface**: Provide the MCP tool `x_social_find_profiles` accepting structured inputs: `query` (name, username, phone, email), `queryType` (`auto`, `name`, `username`, `phone`, `email`), `platforms` (array of target platforms), `locale` (e.g. `vi_VN`, `en_US`), and `timeoutMs`.
 - **Automatic Vietnam Phone Sanitization**: Automatically normalize Vietnamese phone numbers (`0xxxxxxxxx` / `+84xxxxxxxxx` -> standardized 10-digit format) before dispatching to Vietnam-specific platforms (Chợ Tốt, Zalo, Masothue).
 - **Concurrency & Fault Isolation**: Dispatch queries in parallel via `Promise.allSettled()` with strict per-platform deadline enforcement (`timeoutMs`), ensuring slow or failing platforms do not degrade overall response times.
 - **Circuit Breaker Integration**: Isolate failing platforms that experience consecutive network or challenge errors, returning partial results and clear diagnostic statuses per platform.
-- **No External Mocking**: Tests must execute against real implementations, utilizing local loopback handlers and adhering to `XACTIONS_TEST_FAST_DELAYS=1`.
+- **No External Mocking**: Tests must execute against real implementations, utilizing local loopback handlers and adhering to `MEDIRUS_TEST_FAST_DELAYS=1`.
 
 ## Technical Decisions
 

@@ -10,8 +10,8 @@ puppeteer.use(StealthPlugin());
 async function testFacebookWithProxy() {
   console.log('🚀 [FB PROXY TEST] Bắt đầu kiểm tra Facebook với Residential Proxy thật...');
 
-  const rawCookies = JSON.parse(fs.readFileSync('/Users/luisphan/.xactions/facebook-cookies.json', 'utf8'));
-  const proxyConfig = JSON.parse(fs.readFileSync('/Users/luisphan/.xactions/proxy-config.json', 'utf8'));
+  const rawCookies = JSON.parse(fs.readFileSync('/Users/luisphan/.medirus/facebook-cookies.json', 'utf8'));
+  const proxyConfig = JSON.parse(fs.readFileSync('/Users/luisphan/.medirus/proxy-config.json', 'utf8'));
 
   console.log(`🌐 Proxy Host: ${proxyConfig.host}:${proxyConfig.port}`);
   console.log(`📍 Nhà mạng / Vị trí: ${proxyConfig.isp} - ${proxyConfig.city}, ${proxyConfig.country}`);

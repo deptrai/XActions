@@ -1,5 +1,5 @@
 ---
-title: "PRD: Epics 10–18 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform"
+title: "PRD: Epics 10–18 — Medirus Universal Hybrid Scraping & Intelligence Microservice Platform"
 created: 2026-08-18
 updated: 2026-08-21
 status: deprecated
@@ -8,26 +8,26 @@ note: "Bản nháp trước khi `prd.md` được bổ sung appendix FR-85..88 /
 author: "John (BMad Product Manager) & Winston (BMad System Architect)"
 epics: [10, 11, 12, 13, 14, 15, 16, 17, 18]
 prd_ref:
-  - prd-XActions-2026-06-08
-  - prd-XActions-2026-06-10-epic4
-  - prd-XActions-2026-08-14-epic7
+  - prd-Medirus-2026-06-08
+  - prd-Medirus-2026-06-10-epic4
+  - prd-Medirus-2026-08-14-epic7
 note: Là bản nháp trước khi prd.md được bổ sung appendix FR-85..88 / NFR-17. Giữ lại để tham khảo lịch sử.
 ---
 
-# PRD: Epics 10–18 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform
+# PRD: Epics 10–18 — Medirus Universal Hybrid Scraping & Intelligence Microservice Platform
 
-*Chuyển đổi toàn diện XActions thành Nền tảng Động cơ Cào Dữ liệu Toàn Năng (Universal Scraping Microservice) đa ngành: Mạng Xã Hội (X, Facebook, Threads, TikTok, Instagram), Thương Mại Điện Tử (Shopee, TikTok Shop), Bất Động Sản (Chợ Tốt bóc tách SĐT, Batdongsan.com.vn), và Tuyển Dụng (TopCV, VietnamWorks, LinkedIn).*
+*Chuyển đổi toàn diện Medirus thành Nền tảng Động cơ Cào Dữ liệu Toàn Năng (Universal Scraping Microservice) đa ngành: Mạng Xã Hội (X, Facebook, Threads, TikTok, Instagram), Thương Mại Điện Tử (Shopee, TikTok Shop), Bất Động Sản (Chợ Tốt bóc tách SĐT, Batdongsan.com.vn), và Tuyển Dụng (TopCV, VietnamWorks, LinkedIn).*
 
 ---
 
 ## 0. Mục Đích & Bối Cảnh Tài Liệu
 
-Tài liệu PRD này là bước nhảy vọt chiến lược tiếp nối từ `prd-XActions-2026-08-14-epic7` (Epics 1–9). PRD này chính thức định nghĩa kiến trúc và yêu cầu sản phẩm cho **Epics 10 đến 18**:
-1. **Chuyển dịch sang mô hình Microservice Engine:** XActions trở thành Động cơ Cào dữ liệu chuyên trách (Dedicated Scraping Microservice) cho hệ sinh thái **Nowing (AI Lead & Research Hub)** và nền tảng SaaS / CLI / AI MCP độc lập.
+Tài liệu PRD này là bước nhảy vọt chiến lược tiếp nối từ `prd-Medirus-2026-08-14-epic7` (Epics 1–9). PRD này chính thức định nghĩa kiến trúc và yêu cầu sản phẩm cho **Epics 10 đến 18**:
+1. **Chuyển dịch sang mô hình Microservice Engine:** Medirus trở thành Động cơ Cào dữ liệu chuyên trách (Dedicated Scraping Microservice) cho hệ sinh thái **Nowing (AI Lead & Research Hub)** và nền tảng SaaS / CLI / AI MCP độc lập.
 2. **Áp dụng Đột Phá Kỹ Thuật "Tiered Hybrid Browser-Signer Engine":** Kết hợp Pre-Signed Token Ring Buffer O(1) và Signer Worker Page Pool giải mã chữ ký JS (`a_bogus`, `x-client-transaction-id`), chuyển 100% việc fetch dữ liệu sang Async HTTP Client (`got-scraping`/`undici`), giúp giảm **85% RAM**, tăng tốc độ **5–10x**, và tiết kiệm 90% tài nguyên server.
 3. **Hợp Nhất Cơ Sở Dữ Liệu trên PostgreSQL (Prisma ORM):** Loại bỏ hoàn toàn sự phân mảnh của SQLite, quy chuẩn hóa dữ liệu đa ngành vào PostgreSQL với quy ước Namespaced ID `${platform}:${externalId}` và cột `metadata Json?` có GIN Index.
 4. **Cơ Chế Khai Thác Dữ Liệu 3 Tầng (3-Tier Incremental Gap-Filling):** Chỉ cào bù khoảng trống dữ liệu mới (Delta Gap), triệt tiêu 100% việc cào trùng lặp và tiết kiệm 90% chi phí proxy.
-5. **Kế Hoạch Bàn Giao & Dọn Dẹp (Nowing Cutover & Decommissioning):** Thay thế toàn bộ 20+ scraper cũ bên Nowing bằng XActions MCP Client, giảm dung lượng Docker image của Nowing từ 4GB xuống còn <500MB.
+5. **Kế Hoạch Bàn Giao & Dọn Dẹp (Nowing Cutover & Decommissioning):** Thay thế toàn bộ 20+ scraper cũ bên Nowing bằng Medirus MCP Client, giảm dung lượng Docker image của Nowing từ 4GB xuống còn <500MB.
 
 ---
 
@@ -77,7 +77,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-70 (Topological Comment Tree Extraction):** Trích xuất toàn bộ cây bình luận đa tầng (`maxDepth: 3`, `maxComments: 500`), chống tham chiếu vòng, và lưu vào DB theo thứ tự Topological Sort (Root trước, SubComments sau).
 * **FR-73B (Standardized MCP Tool Envelope & CLI Crawl):** Cung cấp 80+ MCP tools trả về 3-Layer JSON Envelope có cơ chế Auto-Artifact khi payload >100 records.
 * **FR-83 (Realtime Thin Event Redis Stream Ingest):** Phát luồng sự kiện tinh gọn (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 20000`).
-* **FR-84 (Nowing Adapter Cutover & Legacy Scraper Decommissioning):** Nâng cấp adapter bên Nowing kết nối sang XActions MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
+* **FR-84 (Nowing Adapter Cutover & Legacy Scraper Decommissioning):** Nâng cấp adapter bên Nowing kết nối sang Medirus MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
 
 ### Nhóm 5: Mạng Xã Hội Trending (Epic 15)
 * **FR-74 (Threads Meta GraphQL Scraper):** Cào bài viết, timeline và replies trên Threads qua internal Meta GraphQL (LSD token + DocID).
@@ -113,7 +113,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 
 ```
 ┌────────────────────────────────────────────────────────┬────────────────────────────────────────────────────────┐
-│ XACTIONS (Tầng Dữ Liệu Thô - Raw Data Lake)           │ NOWING (Tầng Dữ Liệu Tinh Chế - AI Knowledge Hub)      │
+│ MEDIRUS (Tầng Dữ Liệu Thô - Raw Data Lake)           │ NOWING (Tầng Dữ Liệu Tinh Chế - AI Knowledge Hub)      │
 ├────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
 │ • Lưu bài viết thô, raw JSON, headers, likes/shares gốc│ • Lưu Leads CRM, Số điện thoại/Email đã bóc tách       │
 │ • Lưu trữ tạm thời với Hot Cache TTL: **30 ngày**      │ • Lưu Vector Embeddings (1536d) và Intent Tags         │

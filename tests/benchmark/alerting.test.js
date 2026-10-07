@@ -222,7 +222,7 @@ describe('Story 34.8: Active Alerting & Re-qualification Workflow', () => {
     });
   });
 
-  describe('CLI xactions benchmark alerts Subcommand', () => {
+  describe('CLI medirus benchmark alerts Subcommand', () => {
     it('formats an ASCII table of recent alerts', () => {
       const alerts = [
         {

@@ -1,11 +1,11 @@
 /*
  * ============================================================
- * SOURCE SHELL for xactions-command-center.js  (do not paste this file)
+ * SOURCE SHELL for medirus-command-center.js  (do not paste this file)
  * ============================================================
- * This is the UI shell for the XActions Command Center. It is NOT the
+ * This is the UI shell for the Medirus Command Center. It is NOT the
  * script users run. `scripts/build-toolkit.mjs` injects the tool catalog
  * and every bundled tool at the __XA_INJECT_DATA__ marker below and writes
- * the runnable result to scripts/twitter/xactions-command-center.js.
+ * the runnable result to scripts/twitter/medirus-command-center.js.
  *
  * To change the launcher UI, edit THIS file, then run:
  *   node scripts/build-toolkit.mjs
@@ -17,22 +17,22 @@
  *   TOOLS       - object mapping tool id -> function that runs the tool
  */
 
-(function xactionsCommandCenter() {
+(function medirusCommandCenter() {
   // Intentionally NOT in strict mode: bundled tools are pasted verbatim and
   // some rely on sloppy-mode semantics exactly as they do when run standalone.
 
   // Re-pasting the script replaces any live instance cleanly.
-  if (window.XActionsCommandCenter && typeof window.XActionsCommandCenter.destroy === 'function') {
-    try { window.XActionsCommandCenter.destroy(); } catch (e) { /* ignore */ }
+  if (window.MedirusCommandCenter && typeof window.MedirusCommandCenter.destroy === 'function') {
+    try { window.MedirusCommandCenter.destroy(); } catch (e) { /* ignore */ }
   }
 
   /* __XA_INJECT_DATA__ */
 
   const VERSION = '__XA_VERSION__';
-  const PANEL_ID = 'xactions-command-center';
-  const FAB_ID = 'xactions-command-center-fab';
-  const LS_KEY = 'xactions_command_center_v1';
-  const TAG = '[XActions Command Center]';
+  const PANEL_ID = 'medirus-command-center';
+  const FAB_ID = 'medirus-command-center-fab';
+  const LS_KEY = 'medirus_command_center_v1';
+  const TAG = '[Medirus Command Center]';
 
   const DANGER = {
     safe: { label: 'Safe', color: '#00ba7c', note: 'Read-only or export. Does not change your account.' },
@@ -236,7 +236,7 @@
     else panel.style.right = '22px';
 
     const header = el('div', { class: 'xcc-header' }, [
-      el('span', { html: '&#9889; XActions Command Center' }),
+      el('span', { html: '&#9889; Medirus Command Center' }),
       el('div', { class: 'xcc-hbtns' }, [
         el('button', { title: 'Minimize', text: '–', onclick: () => panel.classList.toggle('xcc-min') }),
         el('button', { title: 'Close', text: '✕', onclick: close })
@@ -247,12 +247,12 @@
     els.cats = el('div', { class: 'xcc-cats' });
     els.body = el('div', { class: 'xcc-body' });
     els.dock = el('div', { class: 'xcc-dock', style: 'display:none' });
-    els.footer = el('div', { class: 'xcc-footer', html: 'XActions v' + VERSION + ' · <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">github.com/nirholas/XActions</a> · <a href="https://xactions.app" target="_blank" rel="noopener">xactions.app</a>' });
+    els.footer = el('div', { class: 'xcc-footer', html: 'Medirus v' + VERSION + ' · <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener">github.com/nirholas/XActions</a> · <a href="https://medirus.online" target="_blank" rel="noopener">medirus.online</a>' });
 
     panel.append(header, els.searchWrap, els.cats, els.body, els.dock, els.footer);
     document.body.appendChild(panel);
 
-    fab = el('button', { id: FAB_ID, title: 'XActions Command Center', html: '&#9889;', onclick: open, style: 'display:none' });
+    fab = el('button', { id: FAB_ID, title: 'Medirus Command Center', html: '&#9889;', onclick: open, style: 'display:none' });
     document.body.appendChild(fab);
 
     renderCats();
@@ -667,15 +667,15 @@
     if (fab) fab.remove();
     const s = document.getElementById(PANEL_ID + '-style');
     if (s) s.remove();
-    delete window.XActionsCommandCenter;
+    delete window.MedirusCommandCenter;
   }
 
   build();
 
-  console.log('%c⚡ XActions Command Center v' + VERSION, 'color:#1d9bf0;font-weight:bold;font-size:14px');
+  console.log('%c⚡ Medirus Command Center v' + VERSION, 'color:#1d9bf0;font-weight:bold;font-size:14px');
   console.log('%c' + CATALOG.length + ' tools loaded. Search, pick one, and press Run. Reopen anytime with the ⚡ button or Cmd/Ctrl+K.', 'color:#8899a6');
 
-  window.XActionsCommandCenter = {
+  window.MedirusCommandCenter = {
     open, close, destroy,
     tools: () => CATALOG.map((t) => ({ id: t.id, title: t.title, category: t.category, danger: t.danger })),
     run: (id, cfg) => runTool(id, cfg || null),

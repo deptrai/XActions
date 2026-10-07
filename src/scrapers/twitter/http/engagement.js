@@ -456,7 +456,7 @@ async function bulkOperation({ client, ids, action, type, options = {} }) {
 }
 
 /**
- * Bulk unfollow users - XActions' core use case.
+ * Bulk unfollow users - Medirus' core use case.
  *
  * @param {import('./client.js').TwitterHttpClient} client
  * @param {string[]} userIds

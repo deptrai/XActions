@@ -76,7 +76,7 @@ router.get('/tiers', (req, res) => {
       business: { price: 199, period: 'month' },
       enterprise: { price: 'custom', period: 'year' },
     },
-    contact: 'https://xactions.app/enterprise',
+    contact: 'https://medirus.online/enterprise',
   });
 });
 

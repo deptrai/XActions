@@ -171,7 +171,7 @@
         engagement: { avgLikes: parseFloat(avgLikes), topTweet: topTweet?.text?.slice(0, 200) },
         tweetsAnalyzed: tweets.length,
         analyzedAt: new Date().toISOString(),
-      }, `xactions-persona-${Date.now()}.json`);
+      }, `medirus-persona-${Date.now()}.json`);
     }
   };
 

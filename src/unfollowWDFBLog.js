@@ -23,11 +23,11 @@
  * 3. Paste and run. Results auto-download as JSON+CSV.
  *
  * 🎮 CONTROLS:
- *   window.XActions.pause()   — Pause
- *   window.XActions.resume()  — Resume
- *   window.XActions.abort()   — Stop
- *   window.XActions.status()  — Progress
- *   window.XActions.export()  — Force export now
+ *   window.Medirus.pause()   — Pause
+ *   window.Medirus.resume()  — Resume
+ *   window.Medirus.abort()   — Stop
+ *   window.Medirus.status()  — Progress
+ *   window.Medirus.export()  — Force export now
  * ============================================================
  */
 (() => {
@@ -91,7 +91,7 @@
   const whitelistSet = new Set(CONFIG.whitelist.map(u => u.toLowerCase().replace(/^@/, '')));
 
   // Restore from localStorage
-  const STORAGE_KEY = 'xactions_unfollowWDFBLog';
+  const STORAGE_KEY = 'medirus_unfollowWDFBLog';
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     if (saved.processed) saved.processed.forEach(u => processedUsers.add(u));
@@ -124,7 +124,7 @@
       const data = { summary: { scanned, unfollowed, errors, dryRun: CONFIG.dryRun, exportedAt: new Date().toISOString() }, accounts: log };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-unfollowlog-${tag}-${ts}.json`;
+      a.download = `medirus-unfollowlog-${tag}-${ts}.json`;
       document.body.appendChild(a); a.click(); a.remove();
     }
 
@@ -135,14 +135,14 @@
       ).join('\n');
       const blob = new Blob([header + rows], { type: 'text/csv' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-unfollowlog-${tag}-${ts}.csv`;
+      a.download = `medirus-unfollowlog-${tag}-${ts}.csv`;
       document.body.appendChild(a); a.click(); a.remove();
     }
 
     console.log('📥 Exported.');
   };
 
-  window.XActions = {
+  window.Medirus = {
     pause()  { paused = true;  console.log('⏸️ Paused.'); },
     resume() { paused = false; console.log('▶️ Resumed.'); },
     abort()  { aborted = true; console.log('🛑 Aborting...'); },

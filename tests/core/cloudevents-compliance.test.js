@@ -101,8 +101,8 @@ describe('Story 38.2: CloudEvents v1.0 Compliance & Outbound Schema Standardizat
       // CloudEvents v1.0 mandatory attributes
       expect(record.specversion).toBe('1.0');
       expect(record.id).toBe('facebook:12345');
-      expect(record.source).toBe('org.xactions.crawler.facebook');
-      expect(record.type).toBe('org.xactions.scrape.completed');
+      expect(record.source).toBe('org.medirus.crawler.facebook');
+      expect(record.type).toBe('org.medirus.scrape.completed');
       expect(record.time).toBe('2026-09-17T12:00:00.000Z');
       expect(record.datacontenttype).toBe('application/json');
       expect(typeof record.data).toBe('string');
@@ -219,8 +219,8 @@ describe('Story 38.2: CloudEvents v1.0 Compliance & Outbound Schema Standardizat
       const valid = {
         specversion: '1.0',
         id: 'threads:post-123',
-        source: 'org.xactions.crawler.threads',
-        type: 'org.xactions.scrape.completed',
+        source: 'org.medirus.crawler.threads',
+        type: 'org.medirus.scrape.completed',
         time: '2026-09-17T15:30:00.000Z',
         datacontenttype: 'application/json',
         data: '{"content":"Threads post"}',
@@ -346,8 +346,8 @@ describe('Story 38.2: CloudEvents v1.0 Compliance & Outbound Schema Standardizat
 
       // CloudEvents v1.0 attributes coexist seamlessly
       expect(formatted.specversion).toBe('1.0');
-      expect(formatted.source).toBe('org.xactions.crawler.bluesky');
-      expect(formatted.type).toBe('org.xactions.scrape.completed');
+      expect(formatted.source).toBe('org.medirus.crawler.bluesky');
+      expect(formatted.type).toBe('org.medirus.scrape.completed');
       expect(formatted.idempotencyKey).toBeDefined();
     });
   });
@@ -375,8 +375,8 @@ describe('Story 38.2: CloudEvents v1.0 Compliance & Outbound Schema Standardizat
           // Validate CloudEvents standard
           expect(validateCloudEvent(emittedRecord)).toBe(true);
           expect(emittedRecord.specversion).toBe('1.0');
-          expect(emittedRecord.source).toBe(`org.xactions.crawler.${platform}`);
-          expect(emittedRecord.type).toBe('org.xactions.scrape.completed');
+          expect(emittedRecord.source).toBe(`org.medirus.crawler.${platform}`);
+          expect(emittedRecord.type).toBe('org.medirus.scrape.completed');
           expect(emittedRecord.datacontenttype).toBe('application/json');
           expect(emittedRecord.idempotencyKey).toMatch(/^[a-f0-9]{64}$/);
           expect(emittedRecord.workspace_id).toBe(`ws-${platform}`);

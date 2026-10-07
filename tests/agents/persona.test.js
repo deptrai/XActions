@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — Persona Tests
+// Medirus — Persona Tests
 // by nichxbt
 
 import { describe, it, expect, beforeEach } from 'vitest';

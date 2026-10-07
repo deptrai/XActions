@@ -86,8 +86,8 @@ var CONFIG = {
   console.log('');
   
   // Create helper functions
-  window.XActions = window.XActions || {};
-  window.XActions.ProfilePicture = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.ProfilePicture = {
     
     // Trigger file picker
     selectFile: () => {
@@ -124,10 +124,10 @@ var CONFIG = {
       console.log('');
       console.log('📋 AVAILABLE COMMANDS:');
       console.log('');
-      console.log('   XActions.ProfilePicture.selectFile()');
+      console.log('   Medirus.ProfilePicture.selectFile()');
       console.log('   → Opens file picker to select new profile picture');
       console.log('');
-      console.log('   XActions.ProfilePicture.save()');
+      console.log('   Medirus.ProfilePicture.save()');
       console.log('   → Saves the profile changes');
       console.log('');
     }
@@ -137,12 +137,12 @@ var CONFIG = {
   console.log('');
   console.log('📋 INSTRUCTIONS:');
   console.log('');
-  console.log('   Step 1: Run XActions.ProfilePicture.selectFile()');
+  console.log('   Step 1: Run Medirus.ProfilePicture.selectFile()');
   console.log('   Step 2: Choose your image file');
   console.log('   Step 3: Crop/adjust the image');
-  console.log('   Step 4: Run XActions.ProfilePicture.save()');
+  console.log('   Step 4: Run Medirus.ProfilePicture.save()');
   console.log('');
-  console.log('💡 Type XActions.ProfilePicture.help() for more info');
+  console.log('💡 Type Medirus.ProfilePicture.help() for more info');
   console.log('');
   
   // Auto-open file picker if enabled

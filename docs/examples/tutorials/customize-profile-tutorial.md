@@ -1,15 +1,15 @@
 ---
 title: "Customize Your X Profile — Tutorial"
 description: "Update your bio, display name, location, website, avatar, and header image on X/Twitter programmatically. Free browser script, no API needed."
-keywords: ["customize x profile", "update twitter bio script", "change twitter display name", "x profile manager", "twitter profile automation", "xactions profile update"]
-canonical: "https://xactions.app/examples/customize-profile"
+keywords: ["customize x profile", "update twitter bio script", "change twitter display name", "x profile manager", "twitter profile automation", "medirus profile update"]
+canonical: "https://medirus.online/examples/customize-profile"
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Customize Profile — Tutorial
 
-> Step-by-step guide to updating your bio, display name, location, website, avatar, and header image using XActions browser scripts.
+> Step-by-step guide to updating your bio, display name, location, website, avatar, and header image using Medirus browser scripts.
 
 **Works on:** Browser Console | Node.js (Puppeteer)
 **Difficulty:** Beginner
@@ -80,9 +80,9 @@ Set only the fields you want to change. Leave others as `null`:
 ```javascript
 const CONFIG = {
   displayName: 'nichxbt',
-  bio: 'Building XActions - X/Twitter automation toolkit. No API fees.',
+  bio: 'Building Medirus - X/Twitter automation toolkit. No API fees.',
   location: 'San Francisco, CA',
-  website: 'https://xactions.app',
+  website: 'https://medirus.online',
   autoSave: true,
 };
 ```
@@ -93,9 +93,9 @@ const CONFIG = {
 (() => {
   const CONFIG = {
     displayName: 'nichxbt',
-    bio: 'Building XActions - free X/Twitter automation toolkit.',
+    bio: 'Building Medirus - free X/Twitter automation toolkit.',
     location: 'San Francisco, CA',
-    website: 'https://xactions.app',
+    website: 'https://medirus.online',
     autoSave: true,
   };
 
@@ -128,7 +128,7 @@ const CONFIG = {
   };
 
   const run = async () => {
-    console.log('✏️ UPDATE PROFILE - XActions by nichxbt');
+    console.log('✏️ UPDATE PROFILE - Medirus by nichxbt');
 
     if (CONFIG.bio && CONFIG.bio.length > 160) {
       console.error(`❌ Bio too long: ${CONFIG.bio.length}/160 chars`);
@@ -187,12 +187,12 @@ const CONFIG = {
 ### Expected Console Output
 
 ```
-✏️ UPDATE PROFILE - XActions by nichxbt
+✏️ UPDATE PROFILE - Medirus by nichxbt
 📋 Updates to apply:
    • Name: "nichxbt"
-   • Bio: "Building XActions - free X/Twitter automation to..."
+   • Bio: "Building Medirus - free X/Twitter automation to..."
    • Location: "San Francisco, CA"
-   • Website: "https://xactions.app"
+   • Website: "https://medirus.online"
 
 📍 Opening profile editor...
 ✅ Display name updated
@@ -229,9 +229,9 @@ await page.setCookie({
 // Update text fields
 await updateProfile(page, {
   name: 'nichxbt',
-  bio: 'Building XActions',
+  bio: 'Building Medirus',
   location: 'SF',
-  website: 'https://xactions.app',
+  website: 'https://medirus.online',
 });
 
 // Upload avatar
@@ -283,5 +283,5 @@ await browser.close();
 ---
 
 <footer>
-Built with XActions by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with Medirus by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

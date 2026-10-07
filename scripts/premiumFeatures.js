@@ -27,7 +27,7 @@
   };
 
   const run = async () => {
-    console.log('💎 XActions Premium Checker');
+    console.log('💎 Medirus Premium Checker');
     console.log('===========================');
 
     // Check current user's verification status

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Workflow Actions
+ * Medirus Workflow Actions
  * Wraps existing scrapers and automation functions as workflow steps
  *
  * Each action follows a standard interface:
@@ -13,9 +13,9 @@
 import _scrapers from '../scrapers/index.js';
 
 /**
- * @typedef {import('../types/xactions.js').WorkflowAction} WorkflowAction
- * @typedef {import('../types/xactions.js').WorkflowContext} WorkflowContext
- * @typedef {import('../types/xactions.js').WorkflowStep} WorkflowStep
+ * @typedef {import('../types/medirus.js').WorkflowAction} WorkflowAction
+ * @typedef {import('../types/medirus.js').WorkflowContext} WorkflowContext
+ * @typedef {import('../types/medirus.js').WorkflowStep} WorkflowStep
  * @typedef {import('puppeteer').Browser} Browser
  * @typedef {import('puppeteer').Page} Page
  * @typedef {Object} Scrapers
@@ -772,8 +772,8 @@ registerAction('summarize', {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://xactions.app',
-        'X-Title': 'XActions Workflow',
+        'HTTP-Referer': 'https://medirus.online',
+        'X-Title': 'Medirus Workflow',
       },
       body: JSON.stringify({
         model,
@@ -819,8 +819,8 @@ registerAction('generateText', {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://xactions.app',
-        'X-Title': 'XActions Workflow',
+        'HTTP-Referer': 'https://medirus.online',
+        'X-Title': 'Medirus Workflow',
       },
       body: JSON.stringify({
         model,

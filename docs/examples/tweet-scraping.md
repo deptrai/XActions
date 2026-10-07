@@ -20,7 +20,7 @@ Scrape tweets from any public X/Twitter profile with full metadata extraction.
 
 ```javascript
 // ============================================
-// XActions - Tweet Scraper (Browser Console)
+// Medirus - Tweet Scraper (Browser Console)
 // Go to: x.com/USERNAME (any profile page)
 // Open console (F12), paste this
 // Author: nich (@nichxbt)
@@ -268,7 +268,7 @@ Scrape tweets from any public X/Twitter profile with full metadata extraction.
 
 ```javascript
 // ============================================
-// XActions - Tweet Scraper (Node.js)
+// Medirus - Tweet Scraper (Node.js)
 // Save as: scrape-tweets.js
 // Run: node scrape-tweets.js elonmusk 200
 // Author: nich (@nichxbt)
@@ -621,7 +621,7 @@ const limit = parseInt(args[1]) || 100;
 if (!username) {
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║          XActions - Tweet Scraper (Node.js)                 ║
+║          Medirus - Tweet Scraper (Node.js)                 ║
 ║          Author: nich (@nichxbt)                            ║
 ╚══════════════════════════════════════════════════════════════╝
 
@@ -833,7 +833,7 @@ const viral = tweets.filter(t => t.likes > 10000 || t.retweets > 1000);
 
 ## Website Alternative
 
-Don't want to code? Use [xactions.app](https://xactions.app):
+Don't want to code? Use [medirus.online](https://medirus.online):
 
 1. Login with your X account
 2. Enter any username

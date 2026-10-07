@@ -55,7 +55,7 @@ This script provides the following capabilities:
   // CONFIGURE BRAND MONITORING
   // =============================================
   const CONFIG = {
-    brand: '',          // e.g., 'XActions' or '@nichxbt' — empty scrapes current page
+    brand: '',          // e.g., 'Medirus' or '@nichxbt' — empty scrapes current page
     maxMentions: 50,
     includeSentiment: true,
   };
@@ -75,7 +75,7 @@ This script provides the following capabilities:
   };
 
   const run = async () => {
-    console.log('💼 XActions Business Analytics');
+    console.log('💼 Medirus Business Analytics');
     console.log('==============================');
 
     // If brand is specified, search for it
@@ -172,7 +172,7 @@ This script provides the following capabilities:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `brand` | `'',` | e.g., 'XActions' or '@nichxbt' — empty scrapes current page |
+| `brand` | `'',` | e.g., 'Medirus' or '@nichxbt' — empty scrapes current page |
 | `maxMentions` | `50` | Max mentions |
 | `includeSentiment` | `true` | Include sentiment |
 
@@ -222,14 +222,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -264,4 +264,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

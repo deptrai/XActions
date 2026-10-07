@@ -6,11 +6,11 @@ baseline_commit: b08e6038dfe769c8adfe994f86750819c38747e8
 
 Status: done
 
-<!-- Epic 4 (Facebook Growth Automation, Cluster 3 — low risk). Source: epics.md#Story 4.3 + PRD prd-XActions-2026-06-10-epic4 FR-17. -->
+<!-- Epic 4 (Facebook Growth Automation, Cluster 3 — low risk). Source: epics.md#Story 4.3 + PRD prd-Medirus-2026-06-10-epic4 FR-17. -->
 
 ## Story
 
-As a growth marketer using XActions,
+As a growth marketer using Medirus,
 I want to simulate natural scrolling on a page/post,
 so that I can increase organic engagement signals without explicit actions.
 
@@ -99,7 +99,7 @@ The lowest-risk feature in Epic 4: no DOM writes at all, only scrolling.
 
 ### REUSE-FIRST + anti-reinvent (read before coding)
 
-- **DO NOT use `runGuardedBatch`.** FR-17 is not a batch write (no item list, no social action) and is explicitly excluded from NFR-7/NFR-8 in the PRD. A scroll-only dwell loop is a different shape. Routing it through `runGuardedBatch` (which is built around `items[]` + `actionFn` + account-risk warning) would be the wrong abstraction. [Source: prd-XActions-2026-06-10-epic4.md §7 NFR-7/NFR-8 — FR-17 absent from both]
+- **DO NOT use `runGuardedBatch`.** FR-17 is not a batch write (no item list, no social action) and is explicitly excluded from NFR-7/NFR-8 in the PRD. A scroll-only dwell loop is a different shape. Routing it through `runGuardedBatch` (which is built around `items[]` + `actionFn` + account-risk warning) would be the wrong abstraction. [Source: prd-Medirus-2026-06-10-epic4.md §7 NFR-7/NFR-8 — FR-17 absent from both]
 - **Reuse the scroll pattern** already proven in the codebase: random `scrollBy` + sleep + loop, e.g. `src/scrapers/viralTweets.js:107-119` (scrollBy 800 → sleep → check height) and `src/scrapers/twitter/index.js` (`window.scrollTo`/`scrollBy` via `page.evaluate`). Don't invent a new scroll mechanism. [Source: src/scrapers/viralTweets.js, src/scrapers/twitter/index.js]
 - **Reuse the URL guard from Story 4.2.** `shareFacebookPosts` validates `new URL()` + `http(s)` + `facebook.com` host before navigating. 4.3 needs the identical check → extract a shared `assertFacebookUrl(url)` helper in `facebookAutomation.js` and call it from both (refactor 4.2's inline block to use it). [Source: api/services/facebookAutomation.js#shareFacebookPosts — URL validation block added in Story 4.2]
 - **Reuse `randomDelay` + `sleep`** already in `facebookAutomation.js` (`randomDelay(min,max)` at line 18). Use `randomDelay` as the default `delay` seam. [Source: api/services/facebookAutomation.js:18]
@@ -131,7 +131,7 @@ The lowest-risk feature in Epic 4: no DOM writes at all, only scrolling.
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 4.3: View boost via scroll simulation]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md#FR-17, §7 NFR-7/NFR-8 (FR-17 absent → no batch/no mandatory warning)]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-10-epic4/prd.md#FR-17, §7 NFR-7/NFR-8 (FR-17 absent → no batch/no mandatory warning)]
 - [Source: api/services/facebookAutomation.js#runGuardedBatch (do NOT use), #randomDelay, #scheduleFacebookPost (seam/null-page pattern), #shareFacebookPosts (URL guard to extract)]
 - [Source: src/scrapers/viralTweets.js:107-119, src/scrapers/twitter/index.js — scroll-loop pattern to reuse]
 - [Source: _bmad-output/implementation-artifacts/4-1-schedule-post.md, 4-2-auto-share-post.md — seam/validation/Operation precedents]

@@ -17,7 +17,7 @@
   };
   // =============================================
 
-  const STORAGE_KEY = 'xactions_new_followers';
+  const STORAGE_KEY = 'medirus_new_followers';
 
   const run = async () => {
     console.log('🎉 NEW FOLLOWERS ALERT — by nichxbt');

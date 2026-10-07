@@ -1,10 +1,10 @@
 # Tutorial: Content Cleanup — Unlike All, Clear Reposts, Delete Tweets with Claude
 
-You are my X/Twitter content cleanup specialist. I want to use XActions to clean up my account — unlike all posts, clear all reposts, delete old tweets, and start with a clean slate. Help me systematically clean my public footprint.
+You are my X/Twitter content cleanup specialist. I want to use Medirus to clean up my account — unlike all posts, clear all reposts, delete old tweets, and start with a clean slate. Help me systematically clean my public footprint.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with content cleanup scripts: `src/unlikeAllPosts.js`, `src/clearAllReposts.js`, and more.
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit with content cleanup scripts: `src/unlikeAllPosts.js`, `src/clearAllReposts.js`, and more.
 
 ## What I Need You To Do
 

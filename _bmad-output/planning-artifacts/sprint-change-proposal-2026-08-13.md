@@ -1,14 +1,14 @@
 ---
 created: 2026-08-13
-trigger: sync upstream `nirholas/XActions` into fork `deptrai/XActions`
+trigger: sync upstream `nirholas/Medirus` into fork `deptrai/Medirus`
 mode: batch
 ---
 
-# Sprint Change Proposal — Sync Upstream `nirholas/XActions`
+# Sprint Change Proposal — Sync Upstream `nirholas/Medirus`
 
 ## 1. Issue Summary
 
-Fork `deptrai/XActions` đã tách khỏi upstream `nirholas/XActions` khá lâu. Sau `git fetch upstream`:
+Fork `deptrai/Medirus` đã tách khỏi upstream `nirholas/Medirus` khá lâu. Sau `git fetch upstream`:
 
 - Local `develop`: **256 commits ahead** upstream `main`.
 - Upstream `main`: **74 commits ahead** local `develop`.
@@ -112,7 +112,7 @@ Dựa trên `git log --right-only HEAD...upstream/main`, các tính năng/fix đ
 
 4. **Browser automation UX**
    - `feat: add Scraper Toolbox` (interactive on-page control panel)
-   - `Add XActions Command Center` (108 browser tools across 11 categories)
+   - `Add Medirus Command Center` (108 browser tools across 11 categories)
 
 5. **Docs & Site**
    - Documentation site redesign, Cloudflare/GCP deployment, tutorials.

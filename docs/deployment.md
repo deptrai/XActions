@@ -1,17 +1,17 @@
 # Deployment Guide
 
-> Deploy XActions anywhere — Cloudflare, Railway, Fly.io, Render, Docker, or self-host. All free tiers supported.
+> Deploy Medirus anywhere — Cloudflare, Railway, Fly.io, Render, Docker, or self-host. All free tiers supported.
 
 ## Architecture
 
-XActions has two deployable components:
+Medirus has two deployable components:
 
 | Component | What | Needs |
 |---|---|---|
 | **Static Frontend** | `dashboard/` — HTML/CSS/JS pages | Any static host (CDN) |
 | **API Backend** | `api/server.js` — Express + Puppeteer + WebSocket | Node.js 20+, Chromium, Postgres, Redis |
 
-You can deploy them together (Docker, Fly.io, Railway) or split them across services (Cloudflare Workers for the site and edge API + Railway for the optional reads/analytics backend). X account actions run in the [browser extension](https://xactions.app/extension), not on any backend.
+You can deploy them together (Docker, Fly.io, Railway) or split them across services (Cloudflare Workers for the site and edge API + Railway for the optional reads/analytics backend). X account actions run in the [browser extension](https://medirus.online/extension), not on any backend.
 
 ---
 
@@ -43,13 +43,13 @@ You can deploy them together (Docker, Fly.io, Railway) or split them across serv
 | **Docker** | ✅ | ✅ | Free (self-host) | `docker-compose.yml` |
 | **Coolify** | ✅ | ✅ | Free (self-host) | `docker-compose.coolify.yml` |
 
-**Recommended combo (what xactions.app runs today):** Cloudflare Pages (static site + dashboard) + Google Cloud Run (`xactions-api`, backed by Cloud SQL Postgres and a shared Memorystore Redis instance). Railway, Fly, and Render remain fully supported for self-hosters who prefer them.
+**Recommended combo (what medirus.online runs today):** Cloudflare Pages (static site + dashboard) + Google Cloud Run (`medirus-api`, backed by Cloud SQL Postgres and a shared Memorystore Redis instance). Railway, Fly, and Render remain fully supported for self-hosters who prefer them.
 
 ---
 
 ## Cloudflare Workers (Full Site + Edge API)
 
-xactions.app runs on a single Cloudflare Worker. It serves the entire public
+medirus.online runs on a single Cloudflare Worker. It serves the entire public
 surface (landing page, dashboard, docs, blog, static assets) from Workers
 static assets, and handles the dynamic surface natively.
 
@@ -61,7 +61,7 @@ static assets, and handles the dynamic surface natively.
 | `/api/health`, `/api/ai/health`, `/api/ai/pricing` | Worker, at the edge |
 | `/openapi.json`, `/.well-known/x402` | Worker, at the edge |
 | `/api/ai/*` x402 payment gate (paid **reads**: scrape, analytics) | Worker, at the edge → `API_ORIGIN` |
-| **X account actions** (follow, unfollow, like, reply, post) | **The [browser extension](https://xactions.app/extension)** |
+| **X account actions** (follow, unfollow, like, reply, post) | **The [browser extension](https://medirus.online/extension)** |
 | Other `/api/*` (auth, user, analytics) | Proxied to `API_ORIGIN` when set |
 
 **Account actions are never executed server-side by the hosted service.**
@@ -100,8 +100,8 @@ everything else keeps working.
 
 ### Custom Domain
 
-Cloudflare dashboard → Workers & Pages → `xactions` → Settings → Domains &
-Routes → Add → `xactions.app`. If the DNS zone is already on Cloudflare this is
+Cloudflare dashboard → Workers & Pages → `medirus` → Settings → Domains &
+Routes → Add → `medirus.online`. If the DNS zone is already on Cloudflare this is
 one step; TLS is automatic. (Delete any leftover apex A/CNAME record pointing
 at a previous host first, or the attach is refused.)
 
@@ -109,10 +109,10 @@ at a previous host first, or the attach is refused.)
 
 ## Google Cloud Run (Backend, current production)
 
-xactions.app's `/api/*` traffic is proxied to a Cloud Run service named
-`xactions-api`, backed by a dedicated Cloud SQL Postgres instance and a
+medirus.online's `/api/*` traffic is proxied to a Cloud Run service named
+`medirus-api`, backed by a dedicated Cloud SQL Postgres instance and a
 Memorystore Redis instance shared with other services on the same GCP
-project (Bull queue keys are namespaced with a `xactions` prefix so they
+project (Bull queue keys are namespaced with a `medirus` prefix so they
 never collide — see `api/services/jobQueue.js`).
 
 ### One-time setup
@@ -123,10 +123,10 @@ bash deploy/gcp/provision-api.sh
 ```
 
 This creates the Cloud SQL instance, Secret Manager entries
-(`xactions-database-url`, `xactions-jwt-secret`, `xactions-session-secret`,
-`xactions-admin-api-key`), the required IAM bindings, then builds and deploys
+(`medirus-database-url`, `medirus-jwt-secret`, `medirus-session-secret`,
+`medirus-admin-api-key`), the required IAM bindings, then builds and deploys
 the image via Cloud Build. It prints the Cloud Run URL and the command to map
-`api.xactions.app` to it.
+`api.medirus.online` to it.
 
 ### Redeploy after a code change
 
@@ -138,7 +138,7 @@ gcloud builds submit --config deploy/gcp/cloudbuild-api.yaml \
 ### Health check
 
 ```bash
-curl https://api.xactions.app/api/health
+curl https://api.medirus.online/api/health
 ```
 
 ---
@@ -150,7 +150,7 @@ Free: $5 credit/month (no credit card needed), auto-sleep on inactivity.
 ### Deploy
 
 1. Go to [Railway](https://railway.app) → New Project → Deploy from GitHub
-2. Select `nirholas/XActions`
+2. Select `nirholas/Medirus`
 3. Railway auto-detects `railway.json` + `nixpacks.toml`
 4. Add services:
    - **PostgreSQL** — Click "Add" → Database → PostgreSQL
@@ -161,7 +161,7 @@ Free: $5 credit/month (no credit card needed), auto-sleep on inactivity.
    JWT_SECRET=<generate with: openssl rand -hex 32>
    SESSION_SECRET=<generate with: openssl rand -hex 32>
    NODE_ENV=production
-   FRONTEND_URL=https://xactions.pages.dev
+   FRONTEND_URL=https://medirus.pages.dev
    ```
 
 ### CLI Deploy
@@ -197,9 +197,9 @@ fly auth login
 
 # First deploy
 fly launch --no-deploy
-fly postgres create --name xactions-db
-fly postgres attach xactions-db
-fly redis create --name xactions-redis
+fly postgres create --name medirus-db
+fly postgres attach medirus-db
+fly redis create --name medirus-redis
 
 # Set secrets
 fly secrets set JWT_SECRET=$(openssl rand -hex 32)
@@ -217,7 +217,7 @@ fly logs
 
 ```bash
 fly certs create yourdomain.com
-# Add CNAME record: yourdomain.com → xactions.fly.dev
+# Add CNAME record: yourdomain.com → medirus.fly.dev
 ```
 
 ---
@@ -230,12 +230,12 @@ Free: 750 hours/month web services, free PostgreSQL (90 days), static sites.
 
 1. Go to [Render Dashboard](https://dashboard.render.com)
 2. Click **New** → **Blueprint**
-3. Connect GitHub repo → Select `nirholas/XActions`
+3. Connect GitHub repo → Select `nirholas/Medirus`
 4. Render reads `render.yaml` and creates:
-   - `xactions-api` — Docker web service
-   - `xactions-worker` — Background worker
-   - `xactions-dashboard` — Static site
-   - `xactions-db` — PostgreSQL
+   - `medirus-api` — Docker web service
+   - `medirus-worker` — Background worker
+   - `medirus-dashboard` — Static site
+   - `medirus-db` — PostgreSQL
 5. Click **Apply**
 
 All environment variables are auto-configured via the blueprint.
@@ -253,7 +253,7 @@ Free on any VPS (Oracle Cloud free tier, Hetzner, DigitalOcean, etc.)
 ```bash
 # Clone the repo
 git clone https://github.com/nirholas/XActions.git
-cd XActions
+cd Medirus
 
 # Copy and edit environment variables
 cp .env.example .env
@@ -293,7 +293,7 @@ git pull
 docker compose up -d --build
 
 # Database shell
-docker compose exec postgres psql -U xactions
+docker compose exec postgres psql -U medirus
 
 # Stop everything
 docker compose down
@@ -326,7 +326,7 @@ Pre-built images are published automatically on every push to `main`:
 
 ```bash
 # Pull latest
-docker pull ghcr.io/nirholas/xactions:main
+docker pull ghcr.io/nirholas/medirus:main
 
 # Run with external Postgres + Redis
 docker run -d \
@@ -335,7 +335,7 @@ docker run -d \
   -e DATABASE_URL="postgresql://..." \
   -e JWT_SECRET="your-secret" \
   -e REDIS_HOST="your-redis-host" \
-  ghcr.io/nirholas/xactions:main
+  ghcr.io/nirholas/medirus:main
 ```
 
 ---
@@ -394,7 +394,7 @@ After deployment, verify everything works:
 curl https://your-api-url/api/health
 
 # Expected response:
-# {"status":"ok","service":"xactions-api","timestamp":"..."}
+# {"status":"ok","service":"medirus-api","timestamp":"..."}
 ```
 
 Dashboard should be accessible at your frontend URL with all routes working (clean URLs like `/docs`, `/features`, `/mcp`).

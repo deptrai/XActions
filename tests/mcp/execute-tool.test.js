@@ -25,7 +25,7 @@ describe('executeTool — graceful error handling (Story 8.2)', () => {
   it('returns an MCP error result for an unknown tool after init (AC2)', async () => {
     vi.resetModules();
     const mod = await import('../../src/mcp/server.js');
-    process.env.XACTIONS_MODE = 'local';
+    process.env.MEDIRUS_MODE = 'local';
     await mod.initializeBackend();
 
     const unknownName = 'x_tool_that_does_not_exist_99999';
@@ -42,7 +42,7 @@ describe('executeTool — graceful error handling (Story 8.2)', () => {
   it('still executes a known tool successfully after init (AC3)', async () => {
     vi.resetModules();
     const mod = await import('../../src/mcp/server.js');
-    process.env.XACTIONS_MODE = 'local';
+    process.env.MEDIRUS_MODE = 'local';
     await mod.initializeBackend();
 
     const result = await mod.executeTool('x_list_platforms', {});

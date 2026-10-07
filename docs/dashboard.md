@@ -1,6 +1,6 @@
 # Dashboard
 
-XActions includes a web dashboard with 30+ pages for managing automations, analytics, and tools — all with a dark theme matching X/Twitter's UI.
+Medirus includes a web dashboard with 30+ pages for managing automations, analytics, and tools — all with a dark theme matching X/Twitter's UI.
 
 ---
 
@@ -20,7 +20,7 @@ Open [http://localhost:3001](http://localhost:3001) in your browser.
 
 ### Production
 
-Visit [xactions.app](https://xactions.app) or deploy your own instance (see [deployment.md](deployment.md)).
+Visit [medirus.online](https://medirus.online) or deploy your own instance (see [deployment.md](deployment.md)).
 
 ---
 
@@ -78,7 +78,7 @@ Visit [xactions.app](https://xactions.app) or deploy your own instance (see [dep
 |------|-----|-------------|
 | Team | `/team` | Multi-user team management |
 | Status | `/status` | System health and uptime |
-| Compare | `/compare` | Feature comparison (XActions vs alternatives) |
+| Compare | `/compare` | Feature comparison (Medirus vs alternatives) |
 
 ### Info Pages
 

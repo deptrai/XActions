@@ -8,7 +8,7 @@
 // 1. Go to https://x.com (must be logged in)
 // 2. Open Developer Console (F12 or Ctrl+Shift+J / Cmd+Option+J)
 // 3. Paste this script and press Enter
-// 4. Call functions via window.XActions.followerTools.*
+// 4. Call functions via window.Medirus.followerTools.*
 //
 // AVAILABLE TOOLS:
 //   togglePostNotifications('username') — Turn on/off bell icon for an account
@@ -116,7 +116,7 @@
 
   const togglePostNotifications = async (username) => {
     if (!username) {
-      console.error('❌ Usage: XActions.followerTools.togglePostNotifications("username")');
+      console.error('❌ Usage: Medirus.followerTools.togglePostNotifications("username")');
       return;
     }
 
@@ -192,7 +192,7 @@
 
   const scrapeVerifiedFollowers = async (username) => {
     if (!username) {
-      console.error('❌ Usage: XActions.followerTools.scrapeVerifiedFollowers("username")');
+      console.error('❌ Usage: Medirus.followerTools.scrapeVerifiedFollowers("username")');
       return [];
     }
 
@@ -216,8 +216,8 @@
       verified: u.verified ? '✓' : '',
     })));
 
-    sessionStorage.setItem(`xactions_verified_followers_${username}`, JSON.stringify(users));
-    console.log(`💾 Saved to sessionStorage key: xactions_verified_followers_${username}`);
+    sessionStorage.setItem(`medirus_verified_followers_${username}`, JSON.stringify(users));
+    console.log(`💾 Saved to sessionStorage key: medirus_verified_followers_${username}`);
 
     return users;
   };
@@ -226,7 +226,7 @@
 
   const scrapeSubscribers = async (username) => {
     if (!username) {
-      console.error('❌ Usage: XActions.followerTools.scrapeSubscribers("username")');
+      console.error('❌ Usage: Medirus.followerTools.scrapeSubscribers("username")');
       return [];
     }
 
@@ -249,8 +249,8 @@
       verified: u.verified ? '✓' : '',
     })));
 
-    sessionStorage.setItem(`xactions_subscribers_${username}`, JSON.stringify(users));
-    console.log(`💾 Saved to sessionStorage key: xactions_subscribers_${username}`);
+    sessionStorage.setItem(`medirus_subscribers_${username}`, JSON.stringify(users));
+    console.log(`💾 Saved to sessionStorage key: medirus_subscribers_${username}`);
 
     return users;
   };
@@ -259,7 +259,7 @@
 
   const scrapeMutualFollowers = async (username1, username2) => {
     if (!username1 || !username2) {
-      console.error('❌ Usage: XActions.followerTools.scrapeMutualFollowers("user1", "user2")');
+      console.error('❌ Usage: Medirus.followerTools.scrapeMutualFollowers("user1", "user2")');
       console.log('💡 This compares cached follower lists. Run in two steps:');
       console.log('   Step 1: Go to x.com/user1/followers, run scrapeFollowersYouKnow("user1") or manually scroll');
       console.log('   Step 2: Go to x.com/user2/followers, do the same');
@@ -277,14 +277,14 @@
       const pathUser = window.location.pathname.match(/^\/([^/]+)\/followers/);
       if (pathUser) {
         const key = pathUser[1].toLowerCase();
-        sessionStorage.setItem(`xactions_followers_${key}`, JSON.stringify(currentUsers));
+        sessionStorage.setItem(`medirus_followers_${key}`, JSON.stringify(currentUsers));
         console.log(`💾 Cached ${currentUsers.length} followers for @${pathUser[1]}`);
       }
     }
 
     // Try to load cached data
-    const raw1 = sessionStorage.getItem(`xactions_followers_${username1}`);
-    const raw2 = sessionStorage.getItem(`xactions_followers_${username2}`);
+    const raw1 = sessionStorage.getItem(`medirus_followers_${username1}`);
+    const raw2 = sessionStorage.getItem(`medirus_followers_${username2}`);
 
     if (!raw1) {
       console.error(`❌ No cached followers for @${username1}. Go to x.com/${username1}/followers and run the script there first.`);
@@ -310,8 +310,8 @@
       verified: u.verified ? '✓' : '',
     })));
 
-    sessionStorage.setItem(`xactions_mutuals_${username1}_${username2}`, JSON.stringify(mutuals));
-    console.log(`💾 Saved to sessionStorage key: xactions_mutuals_${username1}_${username2}`);
+    sessionStorage.setItem(`medirus_mutuals_${username1}_${username2}`, JSON.stringify(mutuals));
+    console.log(`💾 Saved to sessionStorage key: medirus_mutuals_${username1}_${username2}`);
 
     return mutuals;
   };
@@ -337,8 +337,8 @@
       verified: u.verified ? '✓' : '',
     })));
 
-    sessionStorage.setItem('xactions_who_to_follow', JSON.stringify(users));
-    console.log('💾 Saved to sessionStorage key: xactions_who_to_follow');
+    sessionStorage.setItem('medirus_who_to_follow', JSON.stringify(users));
+    console.log('💾 Saved to sessionStorage key: medirus_who_to_follow');
 
     return users;
   };
@@ -347,7 +347,7 @@
 
   const scrapeSimilarAccounts = async (username) => {
     if (!username) {
-      console.error('❌ Usage: XActions.followerTools.scrapeSimilarAccounts("username")');
+      console.error('❌ Usage: Medirus.followerTools.scrapeSimilarAccounts("username")');
       return [];
     }
 
@@ -383,8 +383,8 @@
       verified: u.verified ? '✓' : '',
     })));
 
-    sessionStorage.setItem(`xactions_similar_to_${username}`, JSON.stringify(users));
-    console.log(`💾 Saved to sessionStorage key: xactions_similar_to_${username}`);
+    sessionStorage.setItem(`medirus_similar_to_${username}`, JSON.stringify(users));
+    console.log(`💾 Saved to sessionStorage key: medirus_similar_to_${username}`);
 
     return users;
   };
@@ -393,7 +393,7 @@
 
   const restrictAccount = async (username) => {
     if (!username) {
-      console.error('❌ Usage: XActions.followerTools.restrictAccount("username")');
+      console.error('❌ Usage: Medirus.followerTools.restrictAccount("username")');
       return;
     }
 
@@ -457,7 +457,7 @@
 
   const scrapeFollowersYouKnow = async (username) => {
     if (!username) {
-      console.error('❌ Usage: XActions.followerTools.scrapeFollowersYouKnow("username")');
+      console.error('❌ Usage: Medirus.followerTools.scrapeFollowersYouKnow("username")');
       return [];
     }
 
@@ -485,16 +485,16 @@
       verified: u.verified ? '✓' : '',
     })));
 
-    sessionStorage.setItem(`xactions_followers_you_know_${username}`, JSON.stringify(users));
-    console.log(`💾 Saved to sessionStorage key: xactions_followers_you_know_${username}`);
+    sessionStorage.setItem(`medirus_followers_you_know_${username}`, JSON.stringify(users));
+    console.log(`💾 Saved to sessionStorage key: medirus_followers_you_know_${username}`);
 
     return users;
   };
 
-  // ─── Expose on window.XActions ─────────────────────────────
+  // ─── Expose on window.Medirus ─────────────────────────────
 
-  window.XActions = window.XActions || {};
-  window.XActions.followerTools = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.followerTools = {
     togglePostNotifications,
     scrapeVerifiedFollowers,
     scrapeSubscribers,
@@ -509,11 +509,11 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║          🛠️  XActions Follower Tools — Loaded           ║
+║          🛠️  Medirus Follower Tools — Loaded           ║
 ╠══════════════════════════════════════════════════════════╣
 ║                                                          ║
 ║  All functions available at:                             ║
-║    window.XActions.followerTools.<function>               ║
+║    window.Medirus.followerTools.<function>               ║
 ║                                                          ║
 ║  1. togglePostNotifications('username')                  ║
 ║     ↳ Turn on/off post notifications (bell icon)         ║
@@ -540,7 +540,7 @@
 ║     ↳ Scrape "Followers you know" section                ║
 ║                                                          ║
 ╠══════════════════════════════════════════════════════════╣
-║  💡 Example: XActions.followerTools.scrapeVerified       ║
+║  💡 Example: Medirus.followerTools.scrapeVerified       ║
 ║     Followers('elonmusk')                                ║
 ║  📖 Data saved to sessionStorage after each scrape       ║
 ╚══════════════════════════════════════════════════════════╝

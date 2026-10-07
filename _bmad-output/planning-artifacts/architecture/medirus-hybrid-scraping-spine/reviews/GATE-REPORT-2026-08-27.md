@@ -35,7 +35,7 @@
 | # | Finding | Nguồn | Fix |
 |---|---|---|---|
 | **F11** | AD-5 rule 4 vẫn liệt kê Facebook trong "Auth-required platforms" blanket | cross-artifact | Thêm "(mặc định platform; action-level override xem AD-3 3b)" |
-| **F12** | `registerAction` truyền descriptor **chưa resolve** vào `globalActionRegistry` — action dựa fallback sẽ có `requiresAuth: undefined` ở registry; cần xác minh MCP `x_actions_list` đọc nguồn nào | reality-check | Ghi rõ trong T3: resolve trước khi register hoặc resolve tại list-time |
+| **F12** | `registerAction` truyền descriptor **chưa resolve** vào `globalActionRegistry` — action dựa fallback sẽ có `requiresAuth: undefined` ở registry; cần xác minh MCP `medirus_list` đọc nguồn nào | reality-check | Ghi rõ trong T3: resolve trước khi register hoặc resolve tại list-time |
 
 ### ⚪ Pre-existing (không do thay đổi hôm nay)
 - Lint: 6× AD non-monotonic (AD-14..19 đứng sau AD-20 — thừa kế từ r3), 6× false-positive placeholder tokens.

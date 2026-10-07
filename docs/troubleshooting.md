@@ -38,7 +38,7 @@ which is why the error mentions 404 even though the resource exists.
 **Fix:** supply a session.
 
 ```bash
-npx xactions login          # prompts for auth_token and ct0
+npx medirus login          # prompts for auth_token and ct0
 ```
 
 or, for the library and the examples:
@@ -72,7 +72,7 @@ now, which reads public data with a guest token and does not need a browser at
 all. Make sure you are on a current version:
 
 ```bash
-npx xactions@latest profile nasa
+npx medirus@latest profile nasa
 ```
 
 If that prints real numbers and your own code does not, you are on an older
@@ -95,7 +95,7 @@ The endpoint exists. X rejects requests that do not look like they came from a
 browser, and answers with a 404 rather than a 401, which makes it read like a
 removed endpoint.
 
-XActions sends a browser `User-Agent` on every request for exactly this reason.
+Medirus sends a browser `User-Agent` on every request for exactly this reason.
 If you see this error:
 
 - **Check your version.** Releases before this fix landed will always hit it.
@@ -146,7 +146,7 @@ HTTP 404: {"message":"Query not found"}
 X rotates the query IDs of its internal GraphQL endpoints. When one changes,
 requests to the old ID return this.
 
-XActions keeps every query ID in one place,
+Medirus keeps every query ID in one place,
 [`src/scrapers/twitter/http/endpoints.js`](../src/scrapers/twitter/http/endpoints.js),
 and a test fails if a second copy ever appears. To update one:
 
@@ -189,9 +189,9 @@ not take effect until a full restart, not just a new chat.
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "/usr/local/bin/node",
-      "args": ["/absolute/path/to/XActions/src/mcp/server.js"]
+      "args": ["/absolute/path/to/Medirus/src/mcp/server.js"]
     }
   }
 }
@@ -285,7 +285,7 @@ list. Reload, raise `delay`, and continue.
 ## Still stuck
 
 - [Open an issue](https://github.com/nirholas/XActions/issues) with your Node
-  version (`node -v`), XActions version (`npx xactions --version`), the exact
+  version (`node -v`), Medirus version (`npx medirus --version`), the exact
   command, and the full output.
 - [Discussions](https://github.com/nirholas/XActions/discussions) for questions
   that are not bugs.

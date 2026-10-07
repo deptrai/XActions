@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// XActions Client — Auth Module TypeScript Declarations
+// Medirus Client — Auth Module TypeScript Declarations
 // by nichxbt
 // ═══════════════════════════════════════════════════════════════════════════════
 

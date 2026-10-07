@@ -3,7 +3,7 @@ import express from 'express';
 import request from 'supertest';
 import { setupMcpRoutes } from '../../api/routes/mcp-bridge.js';
 
-describe('XActions MCP Bridge (api/routes/mcp-bridge.js)', () => {
+describe('Medirus MCP Bridge (api/routes/mcp-bridge.js)', () => {
   const app = express();
   app.use(express.json());
   setupMcpRoutes(app);
@@ -44,11 +44,11 @@ describe('XActions MCP Bridge (api/routes/mcp-bridge.js)', () => {
 
     // Streamable-HTTP emits SSE event
     expect(res.text).toContain('event: message');
-    expect(res.text).toContain('xactions-mcp');
+    expect(res.text).toContain('medirus-mcp');
   });
 
   it('rejects unauthenticated requests when API key is required but invalid', async () => {
-    process.env.XACTIONS_MCP_API_KEY = 'secret-key';
+    process.env.MEDIRUS_MCP_API_KEY = 'secret-key';
     const res = await request(app)
       .post('/mcp')
       .set('Accept', 'application/json')
@@ -57,6 +57,6 @@ describe('XActions MCP Bridge (api/routes/mcp-bridge.js)', () => {
 
     expect(res.status).toBe(401);
     expect(res.body.code).toBe('XACT_4010');
-    delete process.env.XACTIONS_MCP_API_KEY;
+    delete process.env.MEDIRUS_MCP_API_KEY;
   });
 });

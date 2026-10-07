@@ -1,6 +1,6 @@
 ---
 name: api-test
-description: Generate and run real HTTP API acceptance tests for XActions Express routes using supertest and a live test database.
+description: Generate and run real HTTP API acceptance tests for Medirus Express routes using supertest and a live test database.
 code: AT
 added: 2026-08-28
 type: prompt
@@ -8,7 +8,7 @@ type: prompt
 
 # API Test — Generate or Verify an Express Route
 
-The outcome is a passing, no-mock Vitest test file at `{project-root}/tests/api/{route}-test.test.js` that exercises an XActions Express route against the real app and a real test database, and that a future developer can trust to catch regressions.
+The outcome is a passing, no-mock Vitest test file at `{project-root}/tests/api/{route}-test.test.js` that exercises an Medirus Express route against the real app and a real test database, and that a future developer can trust to catch regressions.
 
 The consumer is a human or AI developer who will run `vitest run tests/api/{route}-test.test.js` and expect it to fail if the route breaks. The bar: every assertion maps to an acceptance criterion, uses real `supertest` calls, seeds real rows through `prisma` or helpers, and asserts standard error envelopes (`success`, `error.code`).
 

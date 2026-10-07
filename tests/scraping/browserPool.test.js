@@ -560,7 +560,7 @@ describe('Story 53.4 — Obscura pool-of-processes shard strategy', () => {
     await pool.drain();
   });
 
-  it('CONFIG_VALIDATION — pagesPerProcess fallback on invalid numbers; XACTIONS_BROWSER_PAGES_PER_PROCESS env; XACTIONS_BROWSER_CONTEXTS_PER_BROWSER clamped to [4,6]', () => {
+  it('CONFIG_VALIDATION — pagesPerProcess fallback on invalid numbers; MEDIRUS_BROWSER_PAGES_PER_PROCESS env; MEDIRUS_BROWSER_CONTEXTS_PER_BROWSER clamped to [4,6]', () => {
     // Obscura pagesPerProcess validation
     const poolNeg = new BrowserPool({ backend: 'obscura', pagesPerProcess: -5 });
     expect(/** @type {any} */ (poolNeg)._pagesPerProcess).toBe(3);
@@ -574,35 +574,35 @@ describe('Story 53.4 — Obscura pool-of-processes shard strategy', () => {
     const poolValid = new BrowserPool({ backend: 'obscura', pagesPerProcess: 4 });
     expect(/** @type {any} */ (poolValid)._pagesPerProcess).toBe(4);
 
-    // XACTIONS_BROWSER_PAGES_PER_PROCESS env path
-    vi.stubEnv('XACTIONS_BROWSER_PAGES_PER_PROCESS', '5');
+    // MEDIRUS_BROWSER_PAGES_PER_PROCESS env path
+    vi.stubEnv('MEDIRUS_BROWSER_PAGES_PER_PROCESS', '5');
     const poolEnv = new BrowserPool({ backend: 'obscura' });
     expect(/** @type {any} */ (poolEnv)._pagesPerProcess).toBe(5);
 
-    vi.stubEnv('XACTIONS_BROWSER_PAGES_PER_PROCESS', 'invalid');
+    vi.stubEnv('MEDIRUS_BROWSER_PAGES_PER_PROCESS', 'invalid');
     const poolEnvBad = new BrowserPool({ backend: 'obscura' });
     expect(/** @type {any} */ (poolEnvBad)._pagesPerProcess).toBe(3);
 
-    vi.stubEnv('XACTIONS_BROWSER_PAGES_PER_PROCESS', '-1');
+    vi.stubEnv('MEDIRUS_BROWSER_PAGES_PER_PROCESS', '-1');
     const poolEnvNeg = new BrowserPool({ backend: 'obscura' });
     expect(/** @type {any} */ (poolEnvNeg)._pagesPerProcess).toBe(3);
 
     // options.pagesPerProcess wins over env
-    vi.stubEnv('XACTIONS_BROWSER_PAGES_PER_PROCESS', '9');
+    vi.stubEnv('MEDIRUS_BROWSER_PAGES_PER_PROCESS', '9');
     const poolOptWins = new BrowserPool({ backend: 'obscura', pagesPerProcess: 2 });
     expect(/** @type {any} */ (poolOptWins)._pagesPerProcess).toBe(2);
     vi.unstubAllEnvs();
 
-    // Chrome XACTIONS_BROWSER_CONTEXTS_PER_BROWSER clamping
-    vi.stubEnv('XACTIONS_BROWSER_CONTEXTS_PER_BROWSER', '10');
+    // Chrome MEDIRUS_BROWSER_CONTEXTS_PER_BROWSER clamping
+    vi.stubEnv('MEDIRUS_BROWSER_CONTEXTS_PER_BROWSER', '10');
     const poolClampHigh = new BrowserPool({ backend: 'chrome' });
     expect(/** @type {any} */ (poolClampHigh)._contextsPerBrowser).toBe(6);
 
-    vi.stubEnv('XACTIONS_BROWSER_CONTEXTS_PER_BROWSER', '2');
+    vi.stubEnv('MEDIRUS_BROWSER_CONTEXTS_PER_BROWSER', '2');
     const poolClampLow = new BrowserPool({ backend: 'chrome' });
     expect(/** @type {any} */ (poolClampLow)._contextsPerBrowser).toBe(4);
 
-    vi.stubEnv('XACTIONS_BROWSER_CONTEXTS_PER_BROWSER', '5');
+    vi.stubEnv('MEDIRUS_BROWSER_CONTEXTS_PER_BROWSER', '5');
     const poolInBand = new BrowserPool({ backend: 'chrome' });
     expect(/** @type {any} */ (poolInBand)._contextsPerBrowser).toBe(5);
   });

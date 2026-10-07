@@ -20,9 +20,9 @@
  * 4. Paste this script and press Enter
  *
  * CONTROLS (while running):
- *   XActionsUtils.pause()   — pause the script
- *   XActionsUtils.resume()  — resume the script
- *   XActionsUtils.abort()   — stop entirely
+ *   MedirusUtils.pause()   — pause the script
+ *   MedirusUtils.resume()  — resume the script
+ *   MedirusUtils.abort()   — stop entirely
  *
  * ============================================================
  */
@@ -58,7 +58,7 @@
   // 🔧 Inline Utilities (standalone — no dependencies needed)
   // ══════════════════════════════════════════════════════════
 
-  const U = window.XActionsUtils || (() => {
+  const U = window.MedirusUtils || (() => {
     const sleep = ms => new Promise(r => setTimeout(r, ms + ms * 0.15 * (Math.random() - 0.5)));
     const randomDelay = (lo, hi) => sleep(lo + Math.random() * (hi - lo));
 
@@ -78,7 +78,7 @@
     let _p = false, _a = false;
     return {
       sleep, randomDelay, $, $$,
-      pause()  { _p = true; console.log('⏸️  PAUSED — call XActionsUtils.resume()'); },
+      pause()  { _p = true; console.log('⏸️  PAUSED — call MedirusUtils.resume()'); },
       resume() { _p = false; console.log('▶️  RESUMED'); },
       abort()  { _a = true; _p = false; console.log('🛑 ABORTED'); },
       async shouldContinue() { if (_a) return false; while (_p) { await sleep(500); if (_a) return false; } return true; },
@@ -89,8 +89,8 @@
         }
         return false;
       },
-      saveState(k, d) { try { localStorage.setItem('xactions_' + k, JSON.stringify({ _ts: Date.now(), data: d })); } catch {} },
-      loadState(k, d) { try { const r = JSON.parse(localStorage.getItem('xactions_' + k)); return r?.data ?? d; } catch { return d; } },
+      saveState(k, d) { try { localStorage.setItem('medirus_' + k, JSON.stringify({ _ts: Date.now(), data: d })); } catch {} },
+      loadState(k, d) { try { const r = JSON.parse(localStorage.getItem('medirus_' + k)); return r?.data ?? d; } catch { return d; } },
       download(data, fn) {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
@@ -242,7 +242,7 @@
     if (CONFIG.exportOnComplete && log.length > 0 && !CONFIG.dryRun) {
       U.download(
         { unfollowed: log, stats: { total: unfollowed, skipped, errors, elapsed: elapsed + 's' } },
-        `xactions-unfollow-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-unfollow-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
 

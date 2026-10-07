@@ -118,12 +118,12 @@
     }
 
     const data = { exportedAt: new Date().toISOString(), count: conversations.length, conversations };
-    download(data, `xactions-conversations-${new Date().toISOString().slice(0, 10)}.json`);
+    download(data, `medirus-conversations-${new Date().toISOString().slice(0, 10)}.json`);
     console.log(`✅ Exported ${conversations.length} conversations`);
   };
 
   const run = async () => {
-    console.log('💬 DM MANAGER — XActions by nichxbt\n');
+    console.log('💬 DM MANAGER — Medirus by nichxbt\n');
 
     if (!window.location.href.includes('/messages')) {
       console.error('❌ Navigate to x.com/messages first!');

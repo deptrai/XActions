@@ -28,7 +28,7 @@
  *    URL format: https://x.com/USER/status/ID/likes
  * 2. Open Chrome DevTools (F12)
  * 3. Paste this script and press Enter
- * 4. Run XActions.Likers.follow()
+ * 4. Run Medirus.Likers.follow()
  * 
  * ============================================================
  * ⚙️ CONFIGURATION
@@ -135,9 +135,9 @@ var CONFIG = {
     return link?.getAttribute('href')?.replace('/', '');
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.Likers = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.Likers = {
     config: CONFIG,
     state,
     
@@ -211,7 +211,7 @@ var CONFIG = {
       console.log('╔════════════════════════════════════════════════════════════╗');
       console.log('║  🎉 FINISHED FOLLOWING LIKERS!                             ║');
       console.log('╚════════════════════════════════════════════════════════════╝');
-      window.XActions.Likers.stats();
+      window.Medirus.Likers.stats();
     },
     
     // Collect likers (just get usernames)
@@ -267,10 +267,10 @@ var CONFIG = {
       console.log('');
       console.log('📋 LIKERS INTERACTION COMMANDS:');
       console.log('');
-      console.log('   XActions.Likers.follow()   - Follow likers');
-      console.log('   XActions.Likers.collect()  - Just collect usernames');
-      console.log('   XActions.Likers.stop()     - Stop following');
-      console.log('   XActions.Likers.stats()    - Show statistics');
+      console.log('   Medirus.Likers.follow()   - Follow likers');
+      console.log('   Medirus.Likers.collect()  - Just collect usernames');
+      console.log('   Medirus.Likers.stop()     - Stop following');
+      console.log('   Medirus.Likers.stats()    - Show statistics');
       console.log('');
       console.log('📍 Make sure you\'re on a likes page first!');
       console.log('   URL: x.com/USER/status/ID/likes');
@@ -279,7 +279,7 @@ var CONFIG = {
   };
   
   console.log('✅ Interact With Likers loaded!');
-  console.log('   Run XActions.Likers.follow() to start following.');
-  console.log('   Run XActions.Likers.help() for all commands.');
+  console.log('   Run Medirus.Likers.follow() to start following.');
+  console.log('   Run Medirus.Likers.help() for all commands.');
   console.log('');
 })();

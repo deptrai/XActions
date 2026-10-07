@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions A2A — Multi-Agent Orchestrator
+ * Medirus A2A — Multi-Agent Orchestrator
  *
  * Decomposes complex tasks into sub-tasks, delegates to the best agents
  * (including self), and aggregates results with dependency resolution.
@@ -22,43 +22,43 @@ const DECOMPOSITION_PATTERNS = [
   {
     pattern: /(?:analyze|study|research)\s+@?(\w+)(?:'?s?)?(?:\s+.+?)?\s+(?:and|then)\s+(?:post|tweet|publish)\s+(.+)/i,
     decompose: (m) => [
-      { skill: 'xactions.x_get_profile', params: { username: m[1] }, label: `Get profile: @${m[1]}` },
-      { skill: 'xactions.x_get_tweets', params: { username: m[1], count: 100 }, label: `Get tweets: @${m[1]}` },
-      { skill: 'xactions.x_engagement_report', params: {}, label: 'Analyze engagement', deps: ['$step1', '$step2'] },
-      { skill: 'xactions.x_post_tweet', params: { text: '$step3.summary' }, label: 'Post findings', deps: ['$step3'] },
+      { skill: 'medirus.x_get_profile', params: { username: m[1] }, label: `Get profile: @${m[1]}` },
+      { skill: 'medirus.x_get_tweets', params: { username: m[1], count: 100 }, label: `Get tweets: @${m[1]}` },
+      { skill: 'medirus.x_engagement_report', params: {}, label: 'Analyze engagement', deps: ['$step1', '$step2'] },
+      { skill: 'medirus.x_post_tweet', params: { text: '$step3.summary' }, label: 'Post findings', deps: ['$step3'] },
     ],
   },
   // "compare X and Y"
   {
     pattern: /compare\s+@?(\w+)\s+(?:and|vs|with)\s+@?(\w+)/i,
     decompose: (m) => [
-      { skill: 'xactions.x_get_profile', params: { username: m[1] }, label: `Profile: @${m[1]}` },
-      { skill: 'xactions.x_get_profile', params: { username: m[2] }, label: `Profile: @${m[2]}` },
-      { skill: 'xactions.x_compare_accounts', params: { usernameA: m[1], usernameB: m[2] }, label: 'Compare accounts', deps: ['$step1', '$step2'] },
+      { skill: 'medirus.x_get_profile', params: { username: m[1] }, label: `Profile: @${m[1]}` },
+      { skill: 'medirus.x_get_profile', params: { username: m[2] }, label: `Profile: @${m[2]}` },
+      { skill: 'medirus.x_compare_accounts', params: { usernameA: m[1], usernameB: m[2] }, label: 'Compare accounts', deps: ['$step1', '$step2'] },
     ],
   },
   // "find influencers in X and follow"
   {
     pattern: /find\s+influencers?\s+(?:in|for)\s+(.+?)\s+(?:and|then)\s+follow/i,
     decompose: (m) => [
-      { skill: 'xactions.x_find_influencers', params: { niche: m[1], count: 10 }, label: `Find influencers: ${m[1]}` },
-      { skill: 'xactions.x_auto_follow', params: { query: m[1], count: 10 }, label: 'Follow influencers', deps: ['$step1'] },
+      { skill: 'medirus.x_find_influencers', params: { niche: m[1], count: 10 }, label: `Find influencers: ${m[1]}` },
+      { skill: 'medirus.x_auto_follow', params: { query: m[1], count: 10 }, label: 'Follow influencers', deps: ['$step1'] },
     ],
   },
   // "scrape tweets from X and analyze sentiment"
   {
     pattern: /scrape\s+tweets?\s+(?:from|by)\s+@?(\w+)\s+(?:and|then)\s+(?:analyze|check)\s+sentiment/i,
     decompose: (m) => [
-      { skill: 'xactions.x_get_tweets', params: { username: m[1], count: 50 }, label: `Scrape tweets: @${m[1]}` },
-      { skill: 'xactions.x_analyze_sentiment', params: { query: `from:${m[1]}` }, label: 'Analyze sentiment', deps: ['$step1'] },
+      { skill: 'medirus.x_get_tweets', params: { username: m[1], count: 50 }, label: `Scrape tweets: @${m[1]}` },
+      { skill: 'medirus.x_analyze_sentiment', params: { query: `from:${m[1]}` }, label: 'Analyze sentiment', deps: ['$step1'] },
     ],
   },
   // "monitor @X and alert on unfollowers"
   {
     pattern: /monitor\s+@?(\w+)\s+(?:and|then)?\s*(?:alert|notify)\s+(?:on\s+)?unfollowers/i,
     decompose: (m) => [
-      { skill: 'xactions.x_monitor_account', params: { username: m[1] }, label: `Monitor: @${m[1]}` },
-      { skill: 'xactions.x_follower_alerts', params: { username: m[1] }, label: 'Set up alerts' },
+      { skill: 'medirus.x_monitor_account', params: { username: m[1] }, label: `Monitor: @${m[1]}` },
+      { skill: 'medirus.x_follower_alerts', params: { username: m[1] }, label: 'Set up alerts' },
     ],
   },
 ];
@@ -152,9 +152,9 @@ export class Delegator {
    * @returns {Promise<{ agentUrl: string, agentName: string }|null>}
    */
   async selectAgent(skillId, availableAgents = []) {
-    // Prefer self (XActions) if skill is local
+    // Prefer self (Medirus) if skill is local
     const localSkill = getSkillById(skillId);
-    if (localSkill) return { agentUrl: 'self', agentName: 'XActions Agent' };
+    if (localSkill) return { agentUrl: 'self', agentName: 'Medirus Agent' };
 
     // Rank remote agents by trust score
     const candidates = [];
@@ -193,7 +193,7 @@ export class Delegator {
             message: task.message,
             metadata: { skillId: task.skillId },
           },
-          id: `xactions-${Date.now()}`,
+          id: `medirus-${Date.now()}`,
         }),
       });
 
@@ -334,7 +334,7 @@ export class Orchestrator {
       params: step.params,
       deps: step.deps || [],
       // Determine likely agent
-      agent: step.agent === 'self' && getSkillById(step.skill) ? 'XActions (self)' : 'Pending agent selection',
+      agent: step.agent === 'self' && getSkillById(step.skill) ? 'Medirus (self)' : 'Pending agent selection',
     }));
 
     return { steps: plan, parallel, sequential, totalSteps: steps.length };

@@ -6,7 +6,7 @@ status: deprecated
 supersededBy: _bmad-output/planning-artifacts/epics-full.md
 note: "Nội dung FR-15..FR-23 đã được hợp nhất vào epics-full.md. Giữ lại để tham khảo lịch sử."
 epic: 4
-prd_ref: prd-XActions-2026-06-08
+prd_ref: prd-Medirus-2026-06-08
 note: Nội dung FR15–23 đã được hợp nhất vào epics-full.md và prd.md (canonical). Giữ lại để tham khảo lịch sử.
 ---
 
@@ -15,13 +15,13 @@ note: Nội dung FR15–23 đã được hợp nhất vào epics-full.md và prd
 
 ## 0. Mục Đích Tài Liệu
 
-PRD này là phần tiếp theo của `prd-XActions-2026-06-08` (Epics 1–3: scrape, automation like/comment/post, CLI/MCP/REST/Persistence). Epic 4 bổ sung các tính năng **tăng trưởng** tự động cho Facebook — nhóm tính năng xác định từ phân tích cạnh tranh AutoNuoi. FR đánh số tiếp từ FR-14 (→ FR-15..FR-23). NFR tiếp từ NFR-5 của Epic 3 (→ NFR-6..NFR-10). ADR-007 (dry-run mặc định cho mọi thao tác ghi) và pattern `runGuardedBatch` từ Epic 2 bắt buộc áp dụng cho mọi FR ghi mới.
+PRD này là phần tiếp theo của `prd-Medirus-2026-06-08` (Epics 1–3: scrape, automation like/comment/post, CLI/MCP/REST/Persistence). Epic 4 bổ sung các tính năng **tăng trưởng** tự động cho Facebook — nhóm tính năng xác định từ phân tích cạnh tranh AutoNuoi. FR đánh số tiếp từ FR-14 (→ FR-15..FR-23). NFR tiếp từ NFR-5 của Epic 3 (→ NFR-6..NFR-10). ADR-007 (dry-run mặc định cho mọi thao tác ghi) và pattern `runGuardedBatch` từ Epic 2 bắt buộc áp dụng cho mọi FR ghi mới.
 
 **Hai cluster bị defer sang v3:** Cluster 4 (Messaging — gửi/quản lý tin nhắn tự động) và Cluster 5 (Multi-account — proxy rotation, session pool đồng thời). Lý do defer: account risk cực cao, cần kiến trúc proxy/session phức tạp ngoài scope hiện tại.
 
 ## 1. Vision
 
-Epic 4 đưa XActions từ "Facebook toolkit" lên "Facebook growth engine" — bộ công cụ tăng trưởng tài khoản ngang tầm AutoNuoi và các tool thương mại, nhưng tích hợp trong cùng một toolkit, một interface, cùng hệ guardrail an toàn đã được kiểm chứng.
+Epic 4 đưa Medirus từ "Facebook toolkit" lên "Facebook growth engine" — bộ công cụ tăng trưởng tài khoản ngang tầm AutoNuoi và các tool thương mại, nhưng tích hợp trong cùng một toolkit, một interface, cùng hệ guardrail an toàn đã được kiểm chứng.
 
 Ba cluster tính năng sắp xếp theo rủi ro tăng dần — và đây cũng là thứ tự triển khai đề xuất:
 

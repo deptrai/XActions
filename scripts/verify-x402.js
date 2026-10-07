@@ -47,7 +47,7 @@ const NETWORK_NAMES = {
 };
 
 console.log('╔════════════════════════════════════════════════════════════════╗');
-console.log('║           XActions x402 Configuration Verification             ║');
+console.log('║           Medirus x402 Configuration Verification             ║');
 console.log('╚════════════════════════════════════════════════════════════════╝\n');
 
 let hasErrors = false;
@@ -115,7 +115,7 @@ try {
     method: 'GET',
     headers: {
       'Accept': 'application/json',
-      'User-Agent': 'XActions-Verify/1.0',
+      'User-Agent': 'Medirus-Verify/1.0',
     },
     signal: controller.signal,
   });

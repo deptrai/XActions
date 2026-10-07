@@ -87,7 +87,7 @@ var CONFIG = {
   
   const username = pathMatch[1];
   const pageType = pathMatch[2];
-  const storageKey = `xactions_continuous_${username}_${pageType}`;
+  const storageKey = `medirus_continuous_${username}_${pageType}`;
   
   console.log(`👤 Monitoring: @${username}/${pageType}`);
   console.log(`⏱️ Check interval: ${CONFIG.checkIntervalMinutes} minutes`);

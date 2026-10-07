@@ -11,7 +11,7 @@
   // CONFIGURATION
   // =============================================
   const CONFIG = {
-    brandName: 'XActions',
+    brandName: 'Medirus',
     maxTweets: 30,
     scrollDelay: 1500,
     exportResults: true,
@@ -179,7 +179,7 @@
         mentions,
         scannedAt: new Date().toISOString(),
       };
-      download(report, `xactions-brand-monitor-${CONFIG.brandName}-${new Date().toISOString().slice(0, 10)}.json`);
+      download(report, `medirus-brand-monitor-${CONFIG.brandName}-${new Date().toISOString().slice(0, 10)}.json`);
     }
 
     console.log('\n✅ Brand monitoring complete.');

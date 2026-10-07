@@ -1,8 +1,8 @@
 ---
 title: "Scrape Twitter Followers to CSV — Free No-API Tool 2026"
 description: "Export any X/Twitter account's followers list to CSV or JSON. Free browser script — no API key, no app. Includes username, bio, verified status."
-keywords: ["scrape twitter followers", "export twitter followers to csv", "twitter followers list download", "scrape X followers 2026", "twitter follower export free no API", "download twitter followers list", "twitter followers to spreadsheet", "scrape followers no API twitter", "twitter followers json export", "xactions followers scraping"]
-canonical: "https://xactions.app/examples/followers-scraping"
+keywords: ["scrape twitter followers", "export twitter followers to csv", "twitter followers list download", "scrape X followers 2026", "twitter follower export free no API", "download twitter followers list", "twitter followers to spreadsheet", "scrape followers no API twitter", "twitter followers json export", "medirus followers scraping"]
+canonical: "https://medirus.online/examples/followers-scraping"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You run a SaaS startup and your competitor `@rival_app` has **12,000 followers**. Your marketing team wants a spreadsheet of those followers — usernames, bios, and verified status — so they can identify influencers to reach out to, find common audience segments, and build targeted ad lookalike audiences. Twitter's API costs $100/month and has strict rate limits. Third-party scraping services charge per 1,000 followers.
 
-XActions scrapes the followers page directly from the browser DOM, collecting everything visible in each `UserCell` — then exports it all as a clean CSV you can open in Google Sheets, Excel, or import into your CRM. Zero cost, zero API credentials.
+Medirus scrapes the followers page directly from the browser DOM, collecting everything visible in each `UserCell` — then exports it all as a clean CSV you can open in Google Sheets, Excel, or import into your CRM. Zero cost, zero API credentials.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -51,7 +51,7 @@ XActions scrapes the followers page directly from the browser DOM, collecting ev
 └─────────────────────────────────────────────────────┘
 ```
 
-**After XActions:**
+**After Medirus:**
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -166,8 +166,8 @@ XActions scrapes the followers page directly from the browser DOM, collecting ev
 
 ```javascript
 // ============================================
-// XActions - Followers Scraper for X/Twitter
-// by nichxbt — https://xactions.app
+// Medirus - Followers Scraper for X/Twitter
+// by nichxbt — https://medirus.online
 // Go to: x.com/TARGET_USERNAME/followers
 // Open console (F12 → Console), paste, Enter
 // ============================================
@@ -180,7 +180,7 @@ XActions scrapes the followers page directly from the browser DOM, collecting ev
   };
 
   console.log('');
-  console.log('👥 XActions - FOLLOWERS SCRAPER');
+  console.log('👥 Medirus - FOLLOWERS SCRAPER');
   console.log('════════════════════════════════════════');
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -322,7 +322,7 @@ XActions scrapes the followers page directly from the browser DOM, collecting ev
 ### ✅ Expected Console Output
 
 ```
-👥 XActions - FOLLOWERS SCRAPER
+👥 Medirus - FOLLOWERS SCRAPER
 ════════════════════════════════════════
 📍 Target: @rival_app/followers
 ⚙️  Max: 5000 | Format: both
@@ -371,14 +371,14 @@ Two files land in your downloads folder, ready for Google Sheets or Excel.
 **Best for:** Scraping large accounts (5,000+), batch jobs, automation pipelines.
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Scrape followers (basic)
-npx xactions scrape followers rival_app
+npx medirus scrape followers rival_app
 
 # Scrape with options
-npx xactions scrape followers rival_app \
+npx medirus scrape followers rival_app \
   --limit 10000 \
   --format csv \
   --output ./data/rival-followers.csv
@@ -387,7 +387,7 @@ npx xactions scrape followers rival_app \
 ### Example with all options:
 
 ```bash
-npx xactions scrape followers rival_app \
+npx medirus scrape followers rival_app \
   --limit 10000 \
   --format both \
   --output ./exports/ \
@@ -399,7 +399,7 @@ npx xactions scrape followers rival_app \
 ### ✅ CLI Output Preview
 
 ```
-⚡ XActions v3.5.0
+⚡ Medirus v3.5.0
 
 👥 FOLLOWERS SCRAPER
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -445,9 +445,9 @@ npx xactions scrape followers rival_app \
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions", "mcp"]
+      "args": ["-y", "medirus", "mcp"]
     }
   }
 }
@@ -619,7 +619,7 @@ Handle,DisplayName,Bio,Verified,FollowsYou,ProfileURL
 ## ❓ FAQ
 
 ### Q: How do I scrape Twitter followers without the API?
-**A:** Go to `x.com/USERNAME/followers` in your browser, open the console (F12 → Console), and paste the XActions followers scraper script. It scrolls through the followers list, extracts data from each user card, and downloads a CSV + JSON file — all without any API credentials, app registration, or paid tools.
+**A:** Go to `x.com/USERNAME/followers` in your browser, open the console (F12 → Console), and paste the Medirus followers scraper script. It scrolls through the followers list, extracts data from each user card, and downloads a CSV + JSON file — all without any API credentials, app registration, or paid tools.
 
 ### Q: Can I export someone else's followers, not just my own?
 **A:** Yes — navigate to any **public** account's followers page (`x.com/THEIR_USERNAME/followers`) and run the script. It works on any public profile. For private/protected accounts, you need to be an approved follower.
@@ -636,5 +636,5 @@ Handle,DisplayName,Bio,Verified,FollowsYou,ProfileURL
 ---
 
 <footer>
-Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

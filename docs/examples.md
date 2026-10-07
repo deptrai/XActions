@@ -1,6 +1,6 @@
 # Examples
 
-Copy-paste snippets for the four ways to use XActions. For complete programs you
+Copy-paste snippets for the four ways to use Medirus. For complete programs you
 can run and edit, see [`examples/`](../examples/) — eight of them, each verified
 against the live API.
 
@@ -11,7 +11,7 @@ against the live API.
 No install, no API key, no account:
 
 ```bash
-npx xactions profile nasa
+npx medirus profile nasa
 ```
 
 ```
@@ -30,10 +30,10 @@ npx xactions profile nasa
 More:
 
 ```bash
-npx xactions tweets nasa --limit 100 --output nasa.csv   # timeline to a spreadsheet
-npx xactions login                                        # unlock search, followers, DMs
-npx xactions search "your brand" --limit 50               # what people are saying
-npx xactions non-followers YOUR_USERNAME                  # who does not follow back
+npx medirus tweets nasa --limit 100 --output nasa.csv   # timeline to a spreadsheet
+npx medirus login                                        # unlock search, followers, DMs
+npx medirus search "your brand" --limit 50               # what people are saying
+npx medirus non-followers YOUR_USERNAME                  # who does not follow back
 ```
 
 Every command is documented in the [CLI reference](cli-reference.md).
@@ -43,11 +43,11 @@ Every command is documented in the [CLI reference](cli-reference.md).
 ## Node.js library
 
 ```bash
-npm install xactions
+npm install medirus
 ```
 
 ```js
-import { Scraper } from 'xactions/client';
+import { Scraper } from 'medirus/client';
 
 const scraper = new Scraper();
 
@@ -113,14 +113,14 @@ All 93 scripts are catalogued in [browser-scripts.md](browser-scripts.md).
 ## Docker
 
 ```bash
-docker build -t xactions .
-docker run -it xactions xactions profile nasa
+docker build -t medirus .
+docker run -it medirus medirus profile nasa
 
 # Run the MCP server
-docker run -p 3000:3000 xactions npm run mcp
+docker run -p 3000:3000 medirus npm run mcp
 
 # With a session
-docker run -e XACTIONS_SESSION_COOKIE=your_auth_token xactions xactions followers nasa
+docker run -e MEDIRUS_SESSION_COOKIE=your_auth_token medirus medirus followers nasa
 ```
 
 ---
@@ -133,12 +133,12 @@ tools:
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions-mcp"],
+      "args": ["-y", "medirus-mcp"],
       "env": {
-        "XACTIONS_SESSION_COOKIE": "your_auth_token",
-        "XACTIONS_CSRF_TOKEN": "your_ct0"
+        "MEDIRUS_SESSION_COOKIE": "your_auth_token",
+        "MEDIRUS_CSRF_TOKEN": "your_ct0"
       }
     }
   }
@@ -165,7 +165,7 @@ The one distinction that explains most questions about this tool:
 
 X answers a logged-out request to a session-tier endpoint with a bare `404`, so
 those failures look like missing resources until you know to look for it.
-XActions turns them into an `AUTH_REQUIRED` error that says what to do about it.
+Medirus turns them into an `AUTH_REQUIRED` error that says what to do about it.
 
 Getting cookies: DevTools, then **Application** then **Cookies** then
 `https://x.com`, and copy `auth_token` **and** `ct0`. Both are required. See

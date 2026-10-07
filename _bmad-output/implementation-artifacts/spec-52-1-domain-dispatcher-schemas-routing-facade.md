@@ -32,7 +32,7 @@ deferred: []
 
 **Never:**
 - Không xóa bỏ mã nguồn xử lý của 224 tools cũ trong `executeTool`.
-- Không thay đổi signature hoặc behavior của `x_scrape` và `x_actions_list` (đã là meta-tools chuẩn).
+- Không thay đổi signature hoặc behavior của `x_scrape` và `medirus_list` (đã là meta-tools chuẩn).
 - Không sửa đổi database Prisma schema hay các service core ngoài phạm vi MCP server.
 
 ## I/O & Edge-Case Matrix
@@ -138,7 +138,7 @@ _None._
 ## Auto Run Result
 
 ### Summary of Implemented Change
-Story 52.1 implements the **Domain Dispatcher Schemas & Routing Facade** layer in XActions MCP server (`src/mcp/server.js`), condensing 224 static tools into 10 cohesive domain dispatchers (`x_post`, `x_user`, `x_read`, `x_dm`, `x_facebook`, `x_crypto`, `x_scrape`, `x_persona`, `x_analytics`, `x_system`). Calls are validated for required `action` (`XACT_4001`) and required arguments (`XACT_4002`) before forwarding to the existing underlying legacy handlers. All outputs are normalized into `ToolEnvelope` (`{ success: true, mode: 'direct', platform, meta, data, summary }`). 100% backward compatibility for direct legacy tool execution is preserved.
+Story 52.1 implements the **Domain Dispatcher Schemas & Routing Facade** layer in Medirus MCP server (`src/mcp/server.js`), condensing 224 static tools into 10 cohesive domain dispatchers (`x_post`, `x_user`, `x_read`, `x_dm`, `x_facebook`, `x_crypto`, `x_scrape`, `x_persona`, `x_analytics`, `x_system`). Calls are validated for required `action` (`XACT_4001`) and required arguments (`XACT_4002`) before forwarding to the existing underlying legacy handlers. All outputs are normalized into `ToolEnvelope` (`{ success: true, mode: 'direct', platform, meta, data, summary }`). 100% backward compatibility for direct legacy tool execution is preserved.
 
 ### Files Changed
 - `src/core/error-envelope.js`: Added `ErrorCodes` constant and extended `PlatformError` constructor & `toEnvelope()` to serialize `availableActions`, `missing`, and `example`.

@@ -52,7 +52,7 @@ This script provides the following capabilities:
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   const run = async () => {
-    console.log('⚙️ XActions Settings Auditor');
+    console.log('⚙️ Medirus Settings Auditor');
     console.log('============================');
 
     const settings = {
@@ -166,14 +166,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -209,4 +209,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

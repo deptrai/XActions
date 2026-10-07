@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Excel Plugin — xactions-plugin-excel
+ * Medirus Excel Plugin — medirus-plugin-excel
  *
  * Export any scraped X/Twitter data to native Excel (.xlsx) files with
  * auto-filters, column widths, styled headers, and multi-sheet workbooks.
@@ -8,7 +8,7 @@
  * Dependency: exceljs (peer dependency, npm install exceljs)
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  */
 
@@ -148,7 +148,7 @@ async function exportToExcel(data, options = {}) {
 
   // Create workbook and worksheet
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'XActions (xactions.app)';
+  workbook.creator = 'Medirus (medirus.online)';
   workbook.created = new Date();
 
   const worksheet = workbook.addWorksheet(sheetName);
@@ -253,7 +253,7 @@ async function exportMultiSheet(sheets, options = {}) {
   }
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'XActions (xactions.app)';
+  workbook.creator = 'Medirus (medirus.online)';
   workbook.created = new Date();
 
   const sheetSummaries = [];
@@ -369,7 +369,7 @@ async function readFromExcel(options = {}) {
 // Plugin Definition
 // ============================================================================
 
-export const name = 'xactions-plugin-excel';
+export const name = 'medirus-plugin-excel';
 export const version = '1.0.0';
 export const description = 'Export scraped X/Twitter data to Excel (.xlsx) files with styling and auto-filters';
 
@@ -521,10 +521,10 @@ export const routes = [
  */
 export const hooks = {
   onLoad() {
-    console.log('📗 xactions-plugin-excel loaded');
+    console.log('📗 medirus-plugin-excel loaded');
   },
   onUnload() {
-    console.log('📗 xactions-plugin-excel unloaded');
+    console.log('📗 medirus-plugin-excel unloaded');
   },
 };
 

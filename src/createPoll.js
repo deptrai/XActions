@@ -39,7 +39,7 @@
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   const run = async () => {
-    console.log('📊 CREATE POLL - XActions by nichxbt');
+    console.log('📊 CREATE POLL - Medirus by nichxbt');
 
     // Validate
     if (CONFIG.options.length < 2 || CONFIG.options.length > 4) {

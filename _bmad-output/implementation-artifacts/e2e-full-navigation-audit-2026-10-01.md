@@ -174,7 +174,7 @@ es.onopen = () => { setConnected(true); setSseStatus('connected'); };
 | 2 | `/fediverse` | Bluesky Hot + Bluesky Profile + Mastodon: feed live ATProto/ActivityPub với media và số liệu tương tác thật |
 | 3 | `/enterprise-vn` | MST `0013180180` → dossier thật; tab Nhãn hiệu tải 50 đơn từ ipvietnam.gov.vn |
 | 4 | `/jobs-vn` | 25 việc làm thật từ VietnamWorks (Techcombank, LG CNS, One Mount...) |
-| 5 | `/run` | `GET /api/health` → `{"status":"ok","service":"xactions-api"}` |
+| 5 | `/run` | `GET /api/health` → `{"status":"ok","service":"medirus-api"}` |
 | 6 | `/ai-api` | `POST /api/ai/generate` → model `gemini-3.8-flash-low` sinh text thật, 120 tokens |
 | 7 | `/playground` | `claude-haiku-4.5` sinh 1,012 tokens trong 20.89s |
 | 8 | `/optimizer` | `/api/optimizer/predict` phân tích text thật → score 55 + 4 suggestions |

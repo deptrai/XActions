@@ -20,7 +20,7 @@
   };
   // =============================================
 
-  const STORAGE_KEY = 'xactions_ab_tests';
+  const STORAGE_KEY = 'medirus_ab_tests';
 
   const download = (data, filename) => {
     const a = document.createElement('a');
@@ -89,11 +89,11 @@
     return m;
   };
 
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
-  window.XActions.createTest = (opts) => {
+  window.Medirus.createTest = (opts) => {
     if (!opts?.name || !opts?.variantA || !opts?.variantB) {
-      console.log('❌ Usage: XActions.createTest({ name, variantA, variantB })');
+      console.log('❌ Usage: Medirus.createTest({ name, variantA, variantB })');
       return;
     }
     const tests = loadTests();
@@ -108,11 +108,11 @@
     console.log(`\n🧪 Test "${opts.name}" created.`);
     console.log(`  A: "${opts.variantA.slice(0, 60)}..."`);
     console.log(`  B: "${opts.variantB.slice(0, 60)}..."`);
-    console.log(`\n📋 Next: Post both, then XActions.setUrl("${opts.name}", "A", url) + setUrl B`);
-    console.log(`   Then: XActions.measure("${opts.name}")`);
+    console.log(`\n📋 Next: Post both, then Medirus.setUrl("${opts.name}", "A", url) + setUrl B`);
+    console.log(`   Then: Medirus.measure("${opts.name}")`);
   };
 
-  window.XActions.setUrl = (name, variant, url) => {
+  window.Medirus.setUrl = (name, variant, url) => {
     const tests = loadTests();
     if (!tests[name]) { console.log(`❌ Test "${name}" not found.`); return; }
     const key = variant === 'A' ? 'variantA' : 'variantB';
@@ -122,7 +122,7 @@
     console.log(`✅ ${variant} URL set for "${name}".`);
   };
 
-  window.XActions.measure = async (name) => {
+  window.Medirus.measure = async (name) => {
     const tests = loadTests();
     if (!tests[name]) { console.log(`❌ Test "${name}" not found.`); return; }
     const test = tests[name];
@@ -151,7 +151,7 @@
     saveTests(tests);
   };
 
-  window.XActions.results = (name) => {
+  window.Medirus.results = (name) => {
     const tests = loadTests();
     if (!tests[name]) { console.log(`❌ Test "${name}" not found.`); return; }
     const t = tests[name];
@@ -168,17 +168,17 @@
     }
   };
 
-  window.XActions.listTests = () => {
+  window.Medirus.listTests = () => {
     const tests = loadTests();
     const names = Object.keys(tests);
     if (names.length === 0) { console.log('📭 No tests.'); return; }
     names.forEach(n => { const t = tests[n]; console.log(`  🧪 "${n}" — ${t.winner ? 'Winner: ' + t.winner : t.status}`); });
   };
 
-  window.XActions.deleteTest = (name) => { const t = loadTests(); delete t[name]; saveTests(t); console.log(`🗑️ Deleted "${name}".`); };
+  window.Medirus.deleteTest = (name) => { const t = loadTests(); delete t[name]; saveTests(t); console.log(`🗑️ Deleted "${name}".`); };
 
-  window.XActions.exportTests = () => {
-    download(loadTests(), `xactions-ab-tests-${new Date().toISOString().slice(0, 10)}.json`);
+  window.Medirus.exportTests = () => {
+    download(loadTests(), `medirus-ab-tests-${new Date().toISOString().slice(0, 10)}.json`);
   };
 
   // Init
@@ -186,10 +186,10 @@
   console.log('║  🧪 TWEET A/B TESTER                            ║');
   console.log('║  by nichxbt — v1.0                            ║');
   console.log('╚════════════════════════════════════════════════╝');
-  console.log('\n📋 XActions.createTest({ name, variantA, variantB })');
-  console.log('   XActions.setUrl(name, "A"|"B", url)');
-  console.log('   XActions.measure(name) → XActions.results(name)');
-  console.log('   XActions.listTests() / .deleteTest(name) / .exportTests()');
+  console.log('\n📋 Medirus.createTest({ name, variantA, variantB })');
+  console.log('   Medirus.setUrl(name, "A"|"B", url)');
+  console.log('   Medirus.measure(name) → Medirus.results(name)');
+  console.log('   Medirus.listTests() / .deleteTest(name) / .exportTests()');
 
   const count = Object.keys(loadTests()).length;
   if (count > 0) console.log(`\n📊 ${count} existing test(s) loaded.`);

@@ -37,7 +37,7 @@ baseline_commit: 'edc8d1c99eceb598bf5390a8ecaad8ae0c97958f'
 | Test import canonical | test import `social/facebook/limits.js` | resolve đến canonical module | N/A |
 | Barrel re-export | `import { rotateProxy } from 'social/facebook'` | export được từ barrel, không lỗi | N/A |
 | `graphql.js` chưa migrate | `facebook-live.test.js` cần `graphql.js` | vẫn import từ `src/scrapers/facebook/graphql.js` (chưa có trong social) | N/A — giữ nguyên import cũ cho symbol này |
-| actionNotAvailable | gọi `actionNotAvailable('fb','x',['a','b'])` | Error với `statusCode:400`, `code:'XACT_4001'`, `type:'invalid_args'`, `platform:'fb'`, `suggestedAction:'use_x_actions_list'` | throw Error chuẩn envelope |
+| actionNotAvailable | gọi `actionNotAvailable('fb','x',['a','b'])` | Error với `statusCode:400`, `code:'XACT_4001'`, `type:'invalid_args'`, `platform:'fb'`, `suggestedAction:'use_medirus_list'` | throw Error chuẩn envelope |
 
 </frozen-after-approval>
 
@@ -64,7 +64,7 @@ baseline_commit: 'edc8d1c99eceb598bf5390a8ecaad8ae0c97958f'
 **Acceptance Criteria:**
 - Given repo ở main, when chạy `npx vitest run tests/scrapers/`, then tất cả test pass và không còn test nào import `src/scrapers/facebook/{proxy,limits,messengerQueue,messengerShare}.js` (trừ `graphql.js`).
 - Given `import ... from 'src/scrapers/social/facebook/index.js'`, when lấy `rotateProxy`/`getActionLimit`/`buildCampaignQueue`/`messengerShareCampaign`, then chúng resolve được từ barrel.
-- Given gọi `actionNotAvailable('fb','x',['a'])`, when inspect error, then `statusCode===400`, `code==='XACT_4001'`, `type==='invalid_args'`, `platform==='fb'`, `suggestedAction==='use_x_actions_list'`.
+- Given gọi `actionNotAvailable('fb','x',['a'])`, when inspect error, then `statusCode===400`, `code==='XACT_4001'`, `type==='invalid_args'`, `platform==='fb'`, `suggestedAction==='use_medirus_list'`.
 
 ## Implementation Notes
 ## Implementation Notes

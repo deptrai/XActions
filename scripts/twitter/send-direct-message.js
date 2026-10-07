@@ -115,11 +115,11 @@ Best,
   // Storage for tracking sent messages
   const storage = {
     get: (key) => {
-      try { return JSON.parse(localStorage.getItem(`xactions_dm_${key}`) || 'null'); }
+      try { return JSON.parse(localStorage.getItem(`medirus_dm_${key}`) || 'null'); }
       catch { return null; }
     },
     set: (key, value) => {
-      localStorage.setItem(`xactions_dm_${key}`, JSON.stringify(value));
+      localStorage.setItem(`medirus_dm_${key}`, JSON.stringify(value));
     }
   };
   
@@ -133,9 +133,9 @@ Best,
     }
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.DM = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.DM = {
     config: CONFIG,
     state,
     
@@ -268,7 +268,7 @@ Best,
           break;
         }
 
-        await window.XActions.DM.sendTo(CONFIG.targetUsers[i]);
+        await window.Medirus.DM.sendTo(CONFIG.targetUsers[i]);
 
         // Use the loop index, not indexOf(), so a duplicate username in
         // targetUsers can't make this resolve to the wrong (earlier) entry
@@ -283,7 +283,7 @@ Best,
       console.log('╔════════════════════════════════════════════════════════════╗');
       console.log('║  🎉 DM SESSION COMPLETE!                                   ║');
       console.log('╚════════════════════════════════════════════════════════════╝');
-      window.XActions.DM.stats();
+      window.Medirus.DM.stats();
     },
     
     // Add user to target list
@@ -342,14 +342,14 @@ Best,
       console.log('');
       console.log('📋 DM COMMANDS:');
       console.log('');
-      console.log('   XActions.DM.addUser("username")');
-      console.log('   XActions.DM.setMessage("Your message {username}")');
-      console.log('   XActions.DM.sendTo("username")');
-      console.log('   XActions.DM.sendToAll()');
-      console.log('   XActions.DM.stop()');
-      console.log('   XActions.DM.stats()');
-      console.log('   XActions.DM.log()');
-      console.log('   XActions.DM.clearHistory()');
+      console.log('   Medirus.DM.addUser("username")');
+      console.log('   Medirus.DM.setMessage("Your message {username}")');
+      console.log('   Medirus.DM.sendTo("username")');
+      console.log('   Medirus.DM.sendToAll()');
+      console.log('   Medirus.DM.stop()');
+      console.log('   Medirus.DM.stats()');
+      console.log('   Medirus.DM.log()');
+      console.log('   Medirus.DM.clearHistory()');
       console.log('');
       console.log('💡 Use {username} in message template as placeholder.');
       console.log('⚠️ Always be respectful and don\'t spam!');
@@ -358,6 +358,6 @@ Best,
   };
   
   console.log('✅ Direct Message Helper loaded!');
-  console.log('   Run XActions.DM.help() for commands.');
+  console.log('   Run Medirus.DM.help() for commands.');
   console.log('');
 })();

@@ -4,7 +4,7 @@
 
 ## Overview
 
-XActions Portability is a complete data ownership toolkit:
+Medirus Portability is a complete data ownership toolkit:
 
 - **Export** — Download your entire account (profile, tweets, followers, following, bookmarks, likes) in JSON, CSV, and Markdown
 - **Archive Viewer** — Self-contained offline HTML file to browse your data with search, pagination, and dark theme

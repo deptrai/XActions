@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Twitter Auto-Liker, Auto-Follow & Engagement Bots | XActions</title>
+  <title>Twitter Auto-Liker, Auto-Follow & Engagement Bots | Medirus</title>
   <meta name="description" content="Automate X/Twitter engagement: auto-liker, auto-commenter, follow engagers, keyword-based following. Free browser scripts with full tutorials.">
   <meta name="keywords" content="twitter auto liker, auto like twitter, twitter engagement bot, auto follow twitter, twitter auto comment, twitter automation scripts, keyword follow twitter, twitter growth automation, auto engage twitter">
   <meta name="author" content="nich (@nichxbt)">
@@ -12,9 +12,9 @@
   <meta property="og:type" content="article">
   <meta property="og:title" content="Twitter Auto-Liker & Engagement Automation">
   <meta property="og:description" content="Auto-like, auto-comment, follow engagers on Twitter. Free, copy-paste browser scripts. No API needed.">
-  <meta property="og:url" content="https://xactions.app/tutorials/automation">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-tutorials.png">
+  <meta property="og:url" content="https://medirus.online/tutorials/automation">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-tutorials.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:locale" content="en_US">
@@ -22,11 +22,11 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
   <meta name="twitter:creator" content="@nichxbt">
-  <meta name="twitter:title" content="Twitter Auto-Liker & Engagement Scripts | XActions">
+  <meta name="twitter:title" content="Twitter Auto-Liker & Engagement Scripts | Medirus">
   <meta name="twitter:description" content="Free auto-liker, auto-comment, follow engagers scripts for Twitter.">
-  <meta name="twitter:image" content="https://xactions.app/og-tutorials.png">
+  <meta name="twitter:image" content="https://medirus.online/og-tutorials.png">
 
-  <link rel="canonical" href="https://xactions.app/tutorials/automation">
+  <link rel="canonical" href="https://medirus.online/tutorials/automation">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
   <link rel="manifest" href="/manifest.json">
 
@@ -35,9 +35,9 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Tutorials", "item": "https://xactions.app/tutorials" },
-      { "@type": "ListItem", "position": 3, "name": "Automation", "item": "https://xactions.app/tutorials/automation" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Tutorials", "item": "https://medirus.online/tutorials" },
+      { "@type": "ListItem", "position": 3, "name": "Automation", "item": "https://medirus.online/tutorials/automation" }
     ]
   }
   </script>
@@ -245,7 +245,7 @@
 
       <div class="content">
         <div class="free-banner">
-          <span>🎉 XActions is 100% Free & Open Source</span>
+          <span>🎉 Medirus is 100% Free & Open Source</span>
           <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener noreferrer">Star on GitHub ⭐</a>
         </div>
 
@@ -285,10 +285,10 @@
                 <span>core.js (paste this first)</span>
                 <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
               </div>
-              <pre><code>// XActions Core Module - Required for automation scripts
+              <pre><code>// Medirus Core Module - Required for automation scripts
 // https://github.com/nirholas/XActions
-window.XActions = window.XActions || {};
-window.XActions.Core = (() => {
+window.Medirus = window.Medirus || {};
+window.Medirus.Core = (() => {
   const SELECTORS = {
     tweet: 'article[data-testid="tweet"]',
     likeButton: '[data-testid="like"]',
@@ -301,7 +301,7 @@ window.XActions.Core = (() => {
 
   const log = (msg, type = 'info') => {
     const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌', action: '🎯' };
-    console.log(`${icons[type] || '•'} [XActions] ${msg}`);
+    console.log(`${icons[type] || '•'} [Medirus] ${msg}`);
   };
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -331,9 +331,9 @@ window.XActions.Core = (() => {
   };
 
   const storage = {
-    get: (key) => { try { return JSON.parse(localStorage.getItem(`xactions_${key}`)); } catch { return null; } },
-    set: (key, val) => localStorage.setItem(`xactions_${key}`, JSON.stringify(val)),
-    remove: (key) => localStorage.removeItem(`xactions_${key}`),
+    get: (key) => { try { return JSON.parse(localStorage.getItem(`medirus_${key}`)); } catch { return null; } },
+    set: (key, val) => localStorage.setItem(`medirus_${key}`, JSON.stringify(val)),
+    remove: (key) => localStorage.removeItem(`medirus_${key}`),
   };
 
   const rateLimit = {
@@ -362,17 +362,17 @@ window.XActions.Core = (() => {
                 <span>autoLiker.js</span>
                 <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
               </div>
-              <pre><code>// XActions Auto Liker - by nichxbt
+              <pre><code>// Medirus Auto Liker - by nichxbt
 // https://github.com/nirholas/XActions
 // Requires core.js to be loaded first!
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, sleep, randomDelay, scrollBy, clickElement, storage, SELECTORS } = window.XActions.Core;
+  const { log, sleep, randomDelay, scrollBy, clickElement, storage, SELECTORS } = window.Medirus.Core;
 
   // ============================================
   // CONFIGURATION - Edit these options!
@@ -485,18 +485,18 @@ window.XActions.Core = (() => {
                 <span>autoCommenter.js</span>
                 <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
               </div>
-              <pre><code>// XActions Auto Commenter - by nichxbt
+              <pre><code>// Medirus Auto Commenter - by nichxbt
 // https://github.com/nirholas/XActions
 // Monitors a profile and auto-comments on new posts
 // Requires core.js to be loaded first!
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, sleep, clickElement, waitForElement, storage, SELECTORS } = window.XActions.Core;
+  const { log, sleep, clickElement, waitForElement, storage, SELECTORS } = window.Medirus.Core;
 
   // ============================================
   // CONFIGURATION - Customize your comments!
@@ -639,18 +639,18 @@ window.XActions.Core = (() => {
                 <span>followEngagers.js</span>
                 <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
               </div>
-              <pre><code>// XActions Follow Engagers - by nichxbt
+              <pre><code>// Medirus Follow Engagers - by nichxbt
 // https://github.com/nirholas/XActions
 // Follow users who liked/retweeted a post
 // Requires core.js to be loaded first!
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, sleep, scrollBy, clickElement, storage, SELECTORS } = window.XActions.Core;
+  const { log, sleep, scrollBy, clickElement, storage, SELECTORS } = window.Medirus.Core;
 
   // ============================================
   // CONFIGURATION

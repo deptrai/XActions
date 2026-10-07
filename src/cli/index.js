@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions CLI
+ * Medirus CLI
  * Command-line interface for X/Twitter automation
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  */
 
@@ -77,8 +77,8 @@ const program = new Command();
 // ============================================================================
 
 program
-  .name('xactions')
-  .description(chalk.bold('⚡ XActions - The Complete X/Twitter Automation Toolkit'))
+  .name('medirus')
+  .description(chalk.bold('⚡ Medirus - The Complete X/Twitter Automation Toolkit'))
   .version(VERSION);
 
 // ============================================================================
@@ -156,8 +156,8 @@ program.configureHelp({
 });
 
 // Commander prints help and exits when it is given no arguments, so bare
-// `xactions` lands on the grouped screen above. That screen points at
-// `xactions quickstart` in three places, which is where a first-time user
+// `medirus` lands on the grouped screen above. That screen points at
+// `medirus quickstart` in three places, which is where a first-time user
 // should go; there is deliberately no redirect here, because an implicit jump
 // would hide the command list from someone who ran the binary to see it.
 const isDirectExecution = Boolean(

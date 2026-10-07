@@ -1,14 +1,14 @@
 ---
 title: "Host Spaces on X (Twitter) — Tutorial"
-description: "Create, configure, and schedule X Spaces using XActions browser scripts. Set titles, topics, recording, and more."
-keywords: ["twitter spaces host", "create x space", "xactions spaces", "host twitter space script", "schedule x space", "twitter spaces automation"]
+description: "Create, configure, and schedule X Spaces using Medirus browser scripts. Set titles, topics, recording, and more."
+keywords: ["twitter spaces host", "create x space", "medirus spaces", "host twitter space script", "schedule x space", "twitter spaces automation"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Host Spaces — Tutorial
 
-> Step-by-step guide to creating, configuring, and scheduling X Spaces using XActions browser scripts.
+> Step-by-step guide to creating, configuring, and scheduling X Spaces using Medirus browser scripts.
 
 **Works on:** Browser Console
 **Difficulty:** Intermediate
@@ -40,7 +40,7 @@ date: "2026-03-30"
 
 ```js
 const CONFIG = {
-  title: 'My XActions Space',
+  title: 'My Medirus Space',
   topic: '',                       // Optional topic/category
   enableRecording: false,          // Record the Space
   scheduled: false,                // Schedule instead of starting now
@@ -58,7 +58,7 @@ const CONFIG = {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `title` | `string` | `'My XActions Space'` | Title displayed to listeners |
+| `title` | `string` | `'My Medirus Space'` | Title displayed to listeners |
 | `topic` | `string` | `''` | Optional topic or category for discoverability |
 | `enableRecording` | `boolean` | `false` | Whether to record the Space for later playback |
 | `scheduled` | `boolean` | `false` | Schedule the Space instead of starting it immediately |
@@ -154,7 +154,7 @@ After scheduling, X will notify your followers about the upcoming Space.
 - **Set a descriptive title.** A clear title helps people discover your Space in search and browse.
 - **Use topics for discoverability.** Adding a topic helps X categorize and recommend your Space.
 - **Schedule in advance.** Scheduling gives your audience time to plan. X sends a notification to your followers when a scheduled Space is created.
-- **State is saved.** Progress is stored in `sessionStorage` under `xactions_hostSpace`.
+- **State is saved.** Progress is stored in `sessionStorage` under `medirus_hostSpace`.
 
 ---
 

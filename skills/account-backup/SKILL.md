@@ -63,7 +63,7 @@ const CONFIG = {
 
 ```json
 {
-  "meta": { "createdAt": "...", "source": "XActions Backup Tool", "version": "2.0.0" },
+  "meta": { "createdAt": "...", "source": "Medirus Backup Tool", "version": "2.0.0" },
   "profile": { ... },
   "tweets": [ ... ],
   "likes": [ ... ],

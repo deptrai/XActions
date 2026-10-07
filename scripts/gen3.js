@@ -1,6 +1,6 @@
 import { writeFileSync } from 'fs';
 import { join } from 'path';
-const OUT = '/workspaces/XActions/docs/seo-articles';
+const OUT = '/workspaces/Medirus/docs/seo-articles';
 
 const articles = [
   {

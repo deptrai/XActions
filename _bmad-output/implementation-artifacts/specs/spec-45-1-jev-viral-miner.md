@@ -17,8 +17,8 @@ So that I can discover which content patterns actually drive virality per platfo
 ## Acceptance Criteria
 
 ### AC1: Platform Detection & Scraper Selection
-- **Given** I have configured XActions scrapers and a niche keyword
-- **When** I run `xactions viral-mine --platform {platform} --niche {niche} --count {count}`
+- **Given** I have configured Medirus scrapers and a niche keyword
+- **When** I run `medirus viral-mine --platform {platform} --niche {niche} --count {count}`
 - **Then** the system detects platform category and uses appropriate scraper:
   - Social: `twitter`, `threads`, `facebook`, `tiktok`, `youtube`, `reddit`, `instagram`, `bluesky`, `mastodon`, `medium`, `zalo`
   - Recruitment: `linkedin`, `topcv`, `vietnamworks`
@@ -77,9 +77,9 @@ So that I can discover which content patterns actually drive virality per platfo
 
 ### CLI
 ```bash
-xactions viral-mine --platform twitter --niche web3 --count 1000
-xactions viral-mine --platform linkedin --niche saas --count 500
-xactions viral-mine --platform chotot --niche "apartment-hanoi" --count 200
+medirus viral-mine --platform twitter --niche web3 --count 1000
+medirus viral-mine --platform linkedin --niche saas --count 500
+medirus viral-mine --platform chotot --niche "apartment-hanoi" --count 200
 ```
 
 ## Test Plan
@@ -98,6 +98,6 @@ xactions viral-mine --platform chotot --niche "apartment-hanoi" --count 200
 - Verify file output path
 
 ### E2E Tests
-- `xactions viral-mine --platform twitter --niche test --count 10` (dry run)
+- `medirus viral-mine --platform twitter --niche test --count 10` (dry run)
 - Verify output file created
 - Verify cost estimation logged

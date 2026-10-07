@@ -30,7 +30,7 @@ import { PlatformError, ErrorCodes } from '../../src/core/error-envelope.js';
 
 describe('Story 52.1: Domain Dispatcher Schemas', () => {
   beforeAll(async () => {
-    process.env.XACTIONS_MODE = 'local';
+    process.env.MEDIRUS_MODE = 'local';
     await initializeBackend();
   });
 
@@ -295,7 +295,7 @@ describe('Story 52.1: Domain Dispatcher Error Handling', () => {
 
 describe('Story 52.1: Domain Dispatcher Routing & Execution', () => {
   beforeAll(async () => {
-    process.env.XACTIONS_MODE = 'local';
+    process.env.MEDIRUS_MODE = 'local';
     await initializeBackend();
   });
 
@@ -341,7 +341,7 @@ describe('Story 52.1: Domain Dispatcher Routing & Execution', () => {
       x_get_profile: async (args) => ({
         username: args.username,
         displayName: 'Nicholas',
-        bio: 'XActions Developer',
+        bio: 'Medirus Developer',
         followersCount: 1337,
       }),
     });

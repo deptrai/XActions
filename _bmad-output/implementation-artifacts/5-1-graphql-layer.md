@@ -6,11 +6,11 @@ baseline_commit: 67751889ce84cff64cf452be4628de419cf5026c
 
 Status: done
 
-<!-- Port from SST_TOOL_FB (C# WinForms) → XActions. Plan: facebook-messenger-port-plan.md (Epic 5, Story 5.1). -->
+<!-- Port from SST_TOOL_FB (C# WinForms) → Medirus. Plan: facebook-messenger-port-plan.md (Epic 5, Story 5.1). -->
 
 ## Story
 
-As a developer building Facebook GraphQL features in XActions,
+As a developer building Facebook GraphQL features in Medirus,
 I want a GraphQL/HTTP helper layer (token scraper + page-list + Messenger CTA check) in `src/scrapers/facebook/graphql.js`,
 so that the Messenger share campaign (Story 5.2) has the tokens, page list, and CTA-eligibility checks it depends on.
 
@@ -105,9 +105,9 @@ Tokens are sent as `fb_dtsg`/`lsd`/`x-fb-lsd` in GraphQL bodies/headers (Main.cs
 
 ### REUSE-FIRST (port mandate)
 
-- This is a NEW capability (XActions had no internal-GraphQL token layer) — but it must NOT duplicate HTTP infra. Use `axios` (already in package.json) or Node 18+ global `fetch`. No new dep.
+- This is a NEW capability (Medirus had no internal-GraphQL token layer) — but it must NOT duplicate HTTP infra. Use `axios` (already in package.json) or Node 18+ global `fetch`. No new dep.
 - Cookie string shape: the adapter elsewhere uses `{ c_user, xs }` for Playwright `setCookie`. Here the input is the FULL cookie string (many pairs) because token scraping needs the whole session. Accept a string; document it.
-- Pattern to mirror: `src/scrapers/twitter/http/` already does cookie-string → header HTTP scraping in XActions — look at `client.js`/`auth.js` there for the header/cookie pattern before inventing one.
+- Pattern to mirror: `src/scrapers/twitter/http/` already does cookie-string → header HTTP scraping in Medirus — look at `client.js`/`auth.js` there for the header/cookie pattern before inventing one.
 
 ### Lessons applied (from Facebook Extension reviews)
 

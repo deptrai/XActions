@@ -148,7 +148,7 @@
         bestDays: dayAvg, bestHours: hourAvg,
         bestCombos: combos.slice(0, 10),
         recommendation: { day: dayAvg[0]?.day, hour: hourAvg[0]?.hour },
-      }, `xactions-best-time-${username}-${new Date().toISOString().slice(0, 10)}.json`);
+      }, `medirus-best-time-${username}-${new Date().toISOString().slice(0, 10)}.json`);
       console.log('\n📥 Report exported as JSON.');
     }
   };

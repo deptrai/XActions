@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trending Monitor - XActions — Free X/Twitter Script | XActions</title>
+  <title>Trending Monitor - Medirus — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Capture the current X trends (name, post count, category), highlight watched keywords, and optionally re-scan on an interval.">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, trending, monitor, analytics">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, trending, monitor, analytics">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Trending Monitor - XActions — XActions">
+  <meta property="og:title" content="Trending Monitor - Medirus — Medirus">
   <meta property="og:description" content="Capture the current X trends (name, post count, category), highlight watched keywords, and optionally re-scan on an interval.">
-  <meta property="og:url" content="https://xactions.app/scripts/trending-monitor">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/trending-monitor">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Trending Monitor - XActions — XActions">
+  <meta name="twitter:title" content="Trending Monitor - Medirus — Medirus">
   <meta name="twitter:description" content="Capture the current X trends (name, post count, category), highlight watched keywords, and optionally re-scan on an interval.">
 
-  <link rel="canonical" href="https://xactions.app/scripts/trending-monitor">
+  <link rel="canonical" href="https://medirus.online/scripts/trending-monitor">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Trending Monitor - XActions — Free X/Twitter Script | XActions",
+    "headline": "Trending Monitor - Medirus — Free X/Twitter Script | Medirus",
     "description": "Capture the current X trends (name, post count, category), highlight watched keywords, and optionally re-scan on an interval.",
-    "url": "https://xactions.app/scripts/trending-monitor",
+    "url": "https://medirus.online/scripts/trending-monitor",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Analytics",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, trending, monitor, analytics"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, trending, monitor, analytics"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Analytics", "item": "https://xactions.app/scripts#analytics" },
-      { "@type": "ListItem", "position": 4, "name": "Trending Monitor - XActions", "item": "https://xactions.app/scripts/trending-monitor" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Analytics", "item": "https://medirus.online/scripts#analytics" },
+      { "@type": "ListItem", "position": 4, "name": "Trending Monitor - Medirus", "item": "https://medirus.online/scripts/trending-monitor" }
     ]
   }
   </script>
@@ -112,9 +112,9 @@
 
     <main class="main-content" id="main-content">
       <header class="main-header">
-        <h1>📈 Trending Monitor - XActions</h1>
+        <h1>📈 Trending Monitor - Medirus</h1>
         <div class="breadcrumb">
-          <a href="/">Home</a> › <a href="/scripts">Scripts</a> › <a href="/scripts#analytics">Analytics</a> › Trending Monitor - XActions
+          <a href="/">Home</a> › <a href="/scripts">Scripts</a> › <a href="/scripts#analytics">Analytics</a> › Trending Monitor - Medirus
         </div>
       </header>
 
@@ -174,7 +174,7 @@
             <pre><code>// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 📡 Trending Monitor - XActions
+ * 📡 Trending Monitor - Medirus
  * ============================================
  *
  * @name         trending-monitor
@@ -182,7 +182,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to x.com/explore/tabs/trending (or x.com/explore)
@@ -254,7 +254,7 @@
   // ============================================
   // 🛠️ HELPERS
   // ============================================
-  const STORAGE_KEY = 'xactions_trends_history';
+  const STORAGE_KEY = 'medirus_trends_history';
   const sleep = (ms) =&gt; new Promise((r) =&gt; setTimeout(r, ms));
 
   const log = {
@@ -444,18 +444,18 @@
     if (CONFIG.exportResults) {
       console.log('');
       const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      download(snapshot, `xactions-trends-${stamp}.json`);
+      download(snapshot, `medirus-trends-${stamp}.json`);
     }
 
-    window.xactionsTrends = snapshot;
+    window.medirusTrends = snapshot;
     return snapshot;
   };
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  📡 TRENDING MONITOR - XActions                         ║
+║  📡 TRENDING MONITOR - Medirus                         ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 
@@ -496,14 +496,14 @@
     log.info('Single scan complete. Set CONFIG.repeatIntervalMs &gt; 0 for continuous monitoring.');
   }
 
-  return window.xactionsTrends;
+  return window.medirusTrends;
 })();
 </code></pre>
           </div>
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

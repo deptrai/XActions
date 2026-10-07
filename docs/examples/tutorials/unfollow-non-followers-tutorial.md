@@ -1,8 +1,8 @@
 ---
 title: "Unfollow Non-Followers on X (Twitter) — Free Tool 2026"
 description: "Find and unfollow people who don't follow you back on X/Twitter. Free browser script, CLI, and MCP method. No API needed."
-keywords: ["unfollow non followers twitter", "who doesn't follow me back twitter", "remove non followers twitter 2026", "how to see who doesn't follow you back on X", "twitter unfollow non followers free", "bulk unfollow non followers twitter", "twitter follower ratio cleanup", "mass unfollow non mutuals X", "check who doesn't follow back twitter", "xactions unfollow non followers"]
-canonical: "https://xactions.app/examples/unfollow-non-followers"
+keywords: ["unfollow non followers twitter", "who doesn't follow me back twitter", "remove non followers twitter 2026", "how to see who doesn't follow you back on X", "twitter unfollow non followers free", "bulk unfollow non followers twitter", "twitter follower ratio cleanup", "mass unfollow non mutuals X", "check who doesn't follow back twitter", "medirus unfollow non followers"]
+canonical: "https://medirus.online/examples/unfollow-non-followers"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You've been on X for three years. You followed back anyone who followed you, hit "Follow" on people in your niche hoping they'd follow back, and binged through "suggested accounts." Now you follow **2,100 people** but only **890 follow you back**. Your follower-to-following ratio is 0.42 — and every growth guide says it should be above 1.0. You don't want to unfollow *everyone* (you like your mutuals) — you just want to remove the **1,210 accounts** that never followed you back.
 
-Doing this manually means clicking each profile, checking "Follows you," clicking unfollow, confirming — that's **4 clicks × 1,210 people = 4,840 clicks**. XActions does it with one paste.
+Doing this manually means clicking each profile, checking "Follows you," clicking unfollow, confirming — that's **4 clicks × 1,210 people = 4,840 clicks**. Medirus does it with one paste.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -47,7 +47,7 @@ Doing this manually means clicking each profile, checking "Follows you," clickin
 └─────────────────────────────────────────────────────┘
 ```
 
-**After XActions:**
+**After Medirus:**
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -163,8 +163,8 @@ Notice the small "Follows you" label — that's the `[data-testid="userFollowInd
 
 ```javascript
 // ============================================
-// XActions - Unfollow Non-Followers on X/Twitter
-// by nichxbt — https://xactions.app
+// Medirus - Unfollow Non-Followers on X/Twitter
+// by nichxbt — https://medirus.online
 // Go to: x.com/YOUR_USERNAME/following
 // Open console (F12 → Console), paste, Enter
 // ============================================
@@ -178,7 +178,7 @@ Notice the small "Follows you" label — that's the `[data-testid="userFollowInd
   const MAX_SCROLL_RETRIES = 15;      // Stop scrolling after this many retries
 
   console.log('');
-  console.log('🔍 XActions - UNFOLLOW NON-FOLLOWERS');
+  console.log('🔍 Medirus - UNFOLLOW NON-FOLLOWERS');
   console.log('════════════════════════════════════════');
   console.log(`⚙️  Max unfollows per run: ${MAX_UNFOLLOWS}`);
   console.log('');
@@ -374,7 +374,7 @@ Notice the small "Follows you" label — that's the `[data-testid="userFollowInd
 ### ✅ Expected Console Output
 
 ```
-🔍 XActions - UNFOLLOW NON-FOLLOWERS
+🔍 Medirus - UNFOLLOW NON-FOLLOWERS
 ════════════════════════════════════════
 ⚙️  Max unfollows per run: 100
 
@@ -439,14 +439,14 @@ Notice the small "Follows you" label — that's the `[data-testid="userFollowInd
 **Best for:** Power users, scheduled cleanups, larger accounts.
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Unfollow non-followers (interactive)
-npx xactions unfollow --non-followers
+npx medirus unfollow --non-followers
 
 # With explicit options
-npx xactions unfollow --non-followers \
+npx medirus unfollow --non-followers \
   --username nichxbt \
   --max 100 \
   --delay 4000 \
@@ -458,7 +458,7 @@ npx xactions unfollow --non-followers \
 ### ✅ CLI Output Preview
 
 ```
-⚡ XActions v3.5.0
+⚡ Medirus v3.5.0
 
 🔍 UNFOLLOW NON-FOLLOWERS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -512,14 +512,14 @@ npx xactions unfollow --non-followers \
 
 ### Setup
 
-Add XActions to your MCP config:
+Add Medirus to your MCP config:
 
 ```json
 {
   "mcpServers": {
-    "xactions": {
+    "medirus": {
       "command": "npx",
-      "args": ["-y", "xactions", "mcp"]
+      "args": ["-y", "medirus", "mcp"]
     }
   }
 }
@@ -701,7 +701,7 @@ username,name,bio
 ## ❓ FAQ
 
 ### Q: How do I see who doesn't follow me back on Twitter / X?
-**A:** Go to `x.com/YOUR_USERNAME/following`, open your browser console (F12 → Console), and paste the XActions non-followers script. It scans every account you follow, checks for the "Follows you" badge, and downloads a JSON list of every non-follower. No API key, no app, no sign-up required.
+**A:** Go to `x.com/YOUR_USERNAME/following`, open your browser console (F12 → Console), and paste the Medirus non-followers script. It scans every account you follow, checks for the "Follows you" badge, and downloads a JSON list of every non-follower. No API key, no app, no sign-up required.
 
 ### Q: Will unfollowing non-followers help my Twitter / X algorithm?
 **A:** Yes — X's algorithm favors accounts with a healthy follower-to-following ratio. If you follow 2,000 people but only 500 follow you back, your ratio is 0.25x. Removing 1,500 non-followers brings it to 1.0x, which signals authority and typically increases your impressions and reach.
@@ -718,5 +718,5 @@ username,name,bio
 ---
 
 <footer>
-Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+Built with ⚡ by <a href="https://x.com/nichxbt">@nichxbt</a> · <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </footer>

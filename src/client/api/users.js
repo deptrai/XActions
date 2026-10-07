@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Users API
+ * Medirus Client — Users API
  *
  * User-related API calls: profiles, followers, following, follow/unfollow.
  * All functions take an HTTP client as the first parameter.

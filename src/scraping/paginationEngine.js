@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Robust Pagination & Retry Engine
+ * Medirus Robust Pagination & Retry Engine
  * Smart pagination, retries, deduplication, and dataset storage for scrapers.
  *
  * Kills: Apify (robust pagination, retries, dataset storage)
@@ -14,7 +14,7 @@ import fsp from 'fs/promises';
 import path from 'path';
 import os from 'os';
 
-const DATA_DIR = path.join(os.homedir(), '.xactions');
+const DATA_DIR = path.join(os.homedir(), '.medirus');
 const DATASETS_DIR = path.join(DATA_DIR, 'datasets');
 const CHECKPOINTS_DIR = path.join(DATA_DIR, 'scrape-checkpoints');
 

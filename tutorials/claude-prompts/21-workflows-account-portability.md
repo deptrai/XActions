@@ -1,10 +1,10 @@
 # Tutorial: Workflow Automation & Account Portability with Claude
 
-You are my X/Twitter workflow architect. I want to use XActions' workflow engine to create automated pipelines, and use account portability tools to export/migrate my data. Help me build powerful multi-step workflows and manage my account data.
+You are my X/Twitter workflow architect. I want to use Medirus' workflow engine to create automated pipelines, and use account portability tools to export/migrate my data. Help me build powerful multi-step workflows and manage my account data.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit. It includes:
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit. It includes:
 - Workflow engine: `x_workflow_create`, `x_workflow_run`, `x_workflow_list`, `x_workflow_actions`
 - Account export: `x_export_account` (profile, tweets, followers, following, bookmarks → JSON/CSV/MD/HTML)
 - Account migration: `x_migrate_account` (X → Bluesky or Mastodon)
@@ -37,7 +37,7 @@ Create multi-step automated pipelines:
    { action: "scrapeProfile", target: "@elonmusk", output: "profileData" }
    
    // Search action
-   { action: "searchTweets", query: "XActions", output: "searchResults" }
+   { action: "searchTweets", query: "Medirus", output: "searchResults" }
    
    // Condition
    { condition: "searchResults.length > 10" }

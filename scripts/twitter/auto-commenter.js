@@ -118,7 +118,7 @@ var CONFIG = {
   const commentedTweets = new Set();
   
   // Load previously commented from storage
-  const STORAGE_KEY = `xactions_commented_${targetUser}`;
+  const STORAGE_KEY = `medirus_commented_${targetUser}`;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {

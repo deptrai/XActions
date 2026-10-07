@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions A2A — Push Notifications
+ * Medirus A2A — Push Notifications
  *
  * Webhook-based push notifications for async task completion between agents.
  * Supports HMAC verification, retry with backoff, and subscription management.
@@ -18,7 +18,7 @@ import crypto from 'crypto';
 export class PushNotificationServer {
   /**
    * @param {object} options
-   * @param {string} options.callbackBaseUrl - e.g. 'https://agent.xactions.app'
+   * @param {string} options.callbackBaseUrl - e.g. 'https://agent.medirus.online'
    * @param {string} [options.secret] - HMAC secret for token verification
    */
   constructor(options = {}) {
@@ -134,7 +134,7 @@ export class PushNotificationClient {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(signature && { 'X-XActions-Signature': signature }),
+            ...(signature && { 'X-Medirus-Signature': signature }),
           },
           body,
         });

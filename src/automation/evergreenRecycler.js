@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Evergreen Content Recycler
+ * Medirus Evergreen Content Recycler
  * Identifies top-performing tweets and automatically re-posts them on a schedule.
  *
  * Kills: Hypefury (evergreen queue)
@@ -14,7 +14,7 @@ import fsp from 'fs/promises';
 import path from 'path';
 import os from 'os';
 
-const CONFIG_DIR = path.join(os.homedir(), '.xactions');
+const CONFIG_DIR = path.join(os.homedir(), '.medirus');
 const QUEUE_FILE = path.join(CONFIG_DIR, 'evergreen-queue.json');
 
 // Words that indicate time-sensitive content

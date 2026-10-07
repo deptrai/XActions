@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Follower Stream
+ * Medirus Follower Stream
  * Watches follower count changes and emits follow/unfollow events.
  *
  * Features:

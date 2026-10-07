@@ -108,7 +108,7 @@ router.use(async (req, res, next) => {
       code: 'E_SESSION_MISSING',
       message: 'X/Twitter session cookie is required for actions',
       hint: 'Include sessionCookie in request body or X-Session-Cookie header',
-      docs: 'https://xactions.app/docs/ai-api#authentication',
+      docs: 'https://medirus.online/docs/ai-api#authentication',
     });
   }
   

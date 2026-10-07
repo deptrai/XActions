@@ -192,8 +192,8 @@
     console.log('\n💡 ' + recs.map((r, i) => `${i + 1}. ${r}`).join(' | '));
 
     const report = { username, timestamp: new Date().toISOString(), totalScore: total, grade, profile };
-    localStorage.setItem(`xactions_health_${username}`, JSON.stringify(report));
-    console.log(`\n💾 Saved. Retrieve: JSON.parse(localStorage.getItem("xactions_health_${username}"))`);
+    localStorage.setItem(`medirus_health_${username}`, JSON.stringify(report));
+    console.log(`\n💾 Saved. Retrieve: JSON.parse(localStorage.getItem("medirus_health_${username}"))`);
   };
 
   run();

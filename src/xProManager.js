@@ -14,7 +14,7 @@
     delayBetweenActions: 2000,   // ms between UI interactions
     scrollDelay: 1500,           // ms between scroll steps
     maxRetries: 3,               // retries for DOM element lookups
-    storagePrefix: 'xactions_xpro_mgr',
+    storagePrefix: 'medirus_xpro_mgr',
   };
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -680,7 +680,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions-deck-${deck.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-deck-${deck.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
 
@@ -904,7 +904,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `xactions-collection-${collection.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-collection-${collection.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
 
@@ -914,8 +914,8 @@
 
   /* ─── Public API ────────────────────────────────────────── */
 
-  window.XActions = window.XActions || {};
-  window.XActions.xProManager = {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.xProManager = {
     // Controls
     abort() { aborted = true; console.log('🛑 Aborting...'); },
     status() {
@@ -962,13 +962,13 @@
 
   const showMenu = () => {
     console.log('═══════════════════════════════════════════════════════');
-    console.log('📊 XActions — X Pro Manager');
+    console.log('📊 Medirus — X Pro Manager');
     console.log('   by nichxbt');
     console.log('═══════════════════════════════════════════════════════\n');
 
     console.log('🎮 CONTROLS:');
-    console.log('   window.XActions.xProManager.abort()   — stop running operations');
-    console.log('   window.XActions.xProManager.status()  — check stats\n');
+    console.log('   window.Medirus.xProManager.abort()   — stop running operations');
+    console.log('   window.Medirus.xProManager.status()  — check stats\n');
 
     console.log('📐 1. MULTI-COLUMN VIEW:');
     console.log('   .scanColumns()                        — list all current columns');
@@ -1005,7 +1005,7 @@
     console.log('   .deleteCollection("name")             — delete a collection');
     console.log('   .exportCollection("name")             — export collection as JSON\n');
 
-    console.log('💡 All methods: window.XActions.xProManager.<method>()');
+    console.log('💡 All methods: window.Medirus.xProManager.<method>()');
     console.log('═══════════════════════════════════════════════════════\n');
   };
 

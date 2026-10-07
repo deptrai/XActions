@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 🗂️ List Manager - XActions
+ * 🗂️ List Manager - Medirus
  * ============================================
  *
  * @name         list-manager
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to your Lists page: https://x.com/<your-handle>/lists
@@ -49,7 +49,7 @@
     newName: '',
 
     // For 'create' only: optional description and privacy
-    description: 'Created with XActions',
+    description: 'Created with Medirus',
     isPrivate: false,
 
     // Safety: preview the steps without changing anything. Set to false to execute.
@@ -265,9 +265,9 @@
   // ============================================
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🗂️ LIST MANAGER - XActions                              ║
+║  🗂️ LIST MANAGER - Medirus                              ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

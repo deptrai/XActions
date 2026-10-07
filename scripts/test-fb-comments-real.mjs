@@ -8,8 +8,8 @@ import { ProxyIpPool } from '../src/proxy/proxy-pool.js';
 import { FacebookClient } from '../src/scrapers/social/facebook/client.js';
 import { FacebookCrawler } from '../src/scrapers/social/facebook/crawler.js';
 
-const COOKIE_PATH = process.env.FB_COOKIE_PATH || '/Users/luisphan/.xactions/facebook-cookies.json';
-const PROXY_URL = process.env.PROXY_URL || JSON.parse(fs.readFileSync('/Users/luisphan/.xactions/proxy-config.json', 'utf8')).gatewayUrl;
+const COOKIE_PATH = process.env.FB_COOKIE_PATH || '/Users/luisphan/.medirus/facebook-cookies.json';
+const PROXY_URL = process.env.PROXY_URL || JSON.parse(fs.readFileSync('/Users/luisphan/.medirus/proxy-config.json', 'utf8')).gatewayUrl;
 const POST_URL = process.argv[2] || 'https://www.facebook.com/share/p/1EewJwQixN/';
 
 async function main() {

@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 💬 Bulk DM - XActions
+ * 💬 Bulk DM - Medirus
  * ============================================
  *
  * @name         bulk-dm
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Go to x.com/messages
@@ -108,9 +108,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  💬 BULK DM - XActions                                   ║
+║  💬 BULK DM - Medirus                                   ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
   log.warning('Use responsibly. Mass DMing can get your account restricted.');

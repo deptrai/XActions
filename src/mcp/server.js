@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions MCP Server
+ * Medirus MCP Server
  * Model Context Protocol server for AI agents (Claude, GPT, etc.)
  * 
  * This enables AI assistants to automate X/Twitter tasks directly.
@@ -12,14 +12,14 @@
  * - REMOTE: Optional cloud API (can self-host)
  * 
  * Environment Variables:
- * - XACTIONS_MODE: 'local' (default) or 'remote'
- * - XACTIONS_API_URL: API URL for remote mode (default: https://api.xactions.app)
- * - XACTIONS_SESSION_COOKIE: X/Twitter auth_token cookie
+ * - MEDIRUS_MODE: 'local' (default) or 'remote'
+ * - MEDIRUS_API_URL: API URL for remote mode (default: https://api.medirus.online)
+ * - MEDIRUS_SESSION_COOKIE: X/Twitter auth_token cookie
  * - X402_PRIVATE_KEY: (Optional) Wallet key for remote mode micropayments
  * - X402_NETWORK: (Optional) 'base-sepolia' or 'base'
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  */
 
@@ -101,12 +101,12 @@ async function getStreamAlertsEngine() {
 // Configuration
 // ============================================================================
 
-const MODE = process.env.XACTIONS_MODE || 'local';
-const API_URL = process.env.XACTIONS_API_URL || 'https://api.xactions.app';
-const API_TOKEN = process.env.XACTIONS_API_TOKEN;
+const MODE = process.env.MEDIRUS_MODE || 'local';
+const API_URL = process.env.MEDIRUS_API_URL || 'https://api.medirus.online';
+const API_TOKEN = process.env.MEDIRUS_API_TOKEN;
 const X402_PRIVATE_KEY = process.env.X402_PRIVATE_KEY;
 const X402_NETWORK = process.env.X402_NETWORK || 'base-sepolia';
-const SESSION_COOKIE = process.env.XACTIONS_SESSION_COOKIE;
+const SESSION_COOKIE = process.env.MEDIRUS_SESSION_COOKIE;
 
 // Dynamic backend (initialized at startup)
 let localTools = null;
@@ -2947,7 +2947,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'x_actions_list',
+    name: 'medirus_list',
     description: 'List all available crawler actions across supported platforms (each entry carries syncCapable + status fields — Story 50.5). Optionally filter by platform/category.',
     inputSchema: {
       type: 'object',
@@ -2970,17 +2970,17 @@ const TOOLS = [
   },
   {
     name: 'x_scrape',
-    description: 'Generic scrape dispatcher — calls scrape(platform, action, args). Use x_actions_list to discover available platforms/actions/args. Data flows through Redis Stream when REDIS_STREAM_ENABLED=true (returns preview only).',
+    description: 'Generic scrape dispatcher — calls scrape(platform, action, args). Use medirus_list to discover available platforms/actions/args. Data flows through Redis Stream when REDIS_STREAM_ENABLED=true (returns preview only).',
     inputSchema: {
       type: 'object',
       properties: {
         platform: {
           type: 'string',
-          description: 'Canonical platform key from DESCRIPTORS (e.g. masothue, chotot, shopee, facebook). Run x_actions_list to discover.',
+          description: 'Canonical platform key from DESCRIPTORS (e.g. masothue, chotot, shopee, facebook). Run medirus_list to discover.',
         },
         action: {
           type: 'string',
-          description: 'Canonical action name from ActionDescriptor. Run x_actions_list to discover.',
+          description: 'Canonical action name from ActionDescriptor. Run medirus_list to discover.',
         },
         args: {
           type: 'object',
@@ -3555,13 +3555,13 @@ const TOOLS = [
  */
 async function initializeBackend() {
   if (MODE === 'remote') {
-    console.error('🌐 XActions MCP Server: Remote mode');
+    console.error('🌐 Medirus MCP Server: Remote mode');
     console.error('   API: ' + API_URL);
 
     if (API_TOKEN) {
-      console.error('   Facebook tools: ✅ routed via REST API (XACTIONS_API_TOKEN set)');
+      console.error('   Facebook tools: ✅ routed via REST API (MEDIRUS_API_TOKEN set)');
     } else {
-      console.error('   Facebook tools: ⚠️  XACTIONS_API_TOKEN not set — Facebook tools will fail in remote mode');
+      console.error('   Facebook tools: ⚠️  MEDIRUS_API_TOKEN not set — Facebook tools will fail in remote mode');
     }
 
     if (!X402_PRIVATE_KEY) {
@@ -3577,7 +3577,7 @@ async function initializeBackend() {
     });
     
   } else {
-    console.error('💻 XActions MCP Server: Local mode (free)');
+    console.error('💻 Medirus MCP Server: Local mode (free)');
     console.error('   Using Puppeteer for browser automation');
     
     const tools = await import('./local-tools.js');
@@ -4685,7 +4685,7 @@ async function executeTool(name, args) {
   }
 
   // Generic cross-platform action discovery
-  if (name === 'x_actions_list') {
+  if (name === 'medirus_list') {
     return await executeMcpActionListTool(args);
   }
 
@@ -4786,7 +4786,7 @@ async function executeTool(name, args) {
   if (name === 'x_facebook_automate') {
     if (MODE === 'remote') {
       const { remoteAutomateTool, isRemoteSupported } = await import('./remoteFacebook.js');
-      if (!API_TOKEN) throw new Error('❌ XACTIONS_API_TOKEN is required in remote mode');
+      if (!API_TOKEN) throw new Error('❌ MEDIRUS_API_TOKEN is required in remote mode');
       return await remoteAutomateTool(API_URL, API_TOKEN, args);
     }
     return await executeFacebookAutomateTool(args);
@@ -4795,7 +4795,7 @@ async function executeTool(name, args) {
   // Handle Facebook account listing (DB-only, no browser)
   if (name === 'x_facebook_list_accounts') {
     if (MODE === 'remote') {
-      if (!API_TOKEN) throw new Error('❌ XACTIONS_API_TOKEN is required in remote mode');
+      if (!API_TOKEN) throw new Error('❌ MEDIRUS_API_TOKEN is required in remote mode');
       const { remoteListAccounts } = await import('./remoteFacebook.js');
       return await remoteListAccounts(API_URL, API_TOKEN);
     }
@@ -4816,7 +4816,7 @@ async function executeTool(name, args) {
   ]);
   if (EPIC7_SCRAPE_TOOLS.has(name)) {
     if (MODE === 'remote') {
-      if (!API_TOKEN) throw new Error('❌ XACTIONS_API_TOKEN is required in remote mode');
+      if (!API_TOKEN) throw new Error('❌ MEDIRUS_API_TOKEN is required in remote mode');
       const { remoteScrapeTool } = await import('./remoteFacebook.js');
       return await remoteScrapeTool(API_URL, API_TOKEN, name, args);
     }
@@ -4828,7 +4828,7 @@ async function executeTool(name, args) {
     if (MODE === 'remote') {
       return {
         isError: true,
-        content: [{ type: 'text', text: `❌ ${name} is not available in remote mode. Epic 4 growth tools (schedule, share, warmup, join, post, friend requests) require local browser automation. Use XACTIONS_MODE=local for these tools.` }],
+        content: [{ type: 'text', text: `❌ ${name} is not available in remote mode. Epic 4 growth tools (schedule, share, warmup, join, post, friend requests) require local browser automation. Use MEDIRUS_MODE=local for these tools.` }],
       };
     }
     return await executeFacebookEpic4Tool(name, args);
@@ -5159,7 +5159,7 @@ async function executeAdminTool(name, args) {
 }
 
 /**
- * Execute the x_actions_list tool.
+ * Execute the medirus_list tool.
  * Delegates to the shared action discovery module used by both MCP and CLI.
  *
  * @param {Record<string, unknown>} args
@@ -7327,7 +7327,7 @@ async function executePersonaTool(name, args) {
         searchTerms: persona.niche.searchTerms.length,
         targetAccounts: persona.niche.targetAccounts,
         savedTo: filePath,
-        message: `Persona "${persona.name}" created. Run with x_persona_run or CLI: xactions persona run ${persona.id}`,
+        message: `Persona "${persona.name}" created. Run with x_persona_run or CLI: medirus persona run ${persona.id}`,
       };
     }
 
@@ -7416,7 +7416,7 @@ async function executePersonaTool(name, args) {
     case 'x_persona_run': {
       if (!args.personaId) throw new Error('"personaId" is required');
       const authToken = SESSION_COOKIE;
-      if (!authToken) throw new Error('XACTIONS_SESSION_COOKIE is required to run algorithm builder');
+      if (!authToken) throw new Error('MEDIRUS_SESSION_COOKIE is required to run algorithm builder');
 
       const { startAlgorithmBuilder } = await import('../algorithmBuilder.js');
 
@@ -7578,8 +7578,8 @@ async function executeAITool(name, args) {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-            'HTTP-Referer': 'https://xactions.app',
-            'X-Title': 'XActions MCP',
+            'HTTP-Referer': 'https://medirus.online',
+            'X-Title': 'Medirus MCP',
           },
           body: JSON.stringify({
             model: 'meta-llama/llama-3-8b-instruct:free',
@@ -7738,7 +7738,7 @@ async function executeAITool(name, args) {
 function createMcpServer() {
   const srv = new Server(
     {
-      name: 'xactions-mcp',
+      name: 'medirus-mcp',
       version: VERSION,
     },
     {
@@ -7761,21 +7761,21 @@ function createMcpServer() {
     return {
       resources: [
         {
-          uri: 'xactions://platforms',
+          uri: 'medirus://platforms',
           name: 'Supported Social & Crawler Platforms',
           description: 'Full catalog of supported social networks, marketplaces, and crawlers with their capabilities',
           mimeType: 'application/json',
         },
         {
-          uri: 'xactions://actions',
+          uri: 'medirus://actions',
           name: 'Crawler Actions Catalog',
           description: 'Catalog of all discrete crawler actions across all supported platforms',
           mimeType: 'application/json',
         },
         {
-          uri: 'xactions://system/status',
-          name: 'XActions System Status',
-          description: 'Operational status of XActions MCP server, mode, and version',
+          uri: 'medirus://system/status',
+          name: 'Medirus System Status',
+          description: 'Operational status of Medirus MCP server, mode, and version',
           mimeType: 'application/json',
         },
       ],
@@ -7792,7 +7792,7 @@ function createMcpServer() {
         suggestedAction: SuggestedActions.CONTACT_SUPPORT,
       });
     }
-    if (uri === 'xactions://platforms') {
+    if (uri === 'medirus://platforms') {
       const { x_list_platforms } = await import('./local-tools.js');
       const data = await x_list_platforms();
       return {
@@ -7805,7 +7805,7 @@ function createMcpServer() {
         ],
       };
     }
-    if (uri === 'xactions://actions') {
+    if (uri === 'medirus://actions') {
       const { executeActionListTool: getActions } = await import('../scrapers/social/actions-list.js');
       const actions = await getActions();
       return {
@@ -7818,7 +7818,7 @@ function createMcpServer() {
         ],
       };
     }
-    if (uri === 'xactions://system/status') {
+    if (uri === 'medirus://system/status') {
       const { globalAdaptiveRateGovernor } = await getCoreModule();
       const governorStatus = typeof globalAdaptiveRateGovernor?.getStatus === 'function'
         ? globalAdaptiveRateGovernor.getStatus()
@@ -7901,7 +7901,7 @@ function createMcpServer() {
             role: 'user',
             content: {
               type: 'text',
-              text: `Please design a data-backed X/Twitter growth plan for the ${niche} niche with the goal of: ${goals}. Suggest 3 content pillars, optimal posting cadence, and high-impact engagement tactics using XActions automation.`,
+              text: `Please design a data-backed X/Twitter growth plan for the ${niche} niche with the goal of: ${goals}. Suggest 3 content pillars, optimal posting cadence, and high-impact engagement tactics using Medirus automation.`,
             },
           },
         ],
@@ -7972,7 +7972,7 @@ function createMcpServer() {
             statusCode: 429,
             suggestedAction: SuggestedActions.REDUCE_RATE,
             retryAfterMs: Math.max(1, retryAfterSeconds) * 1000,
-            platform: 'xactions',
+            platform: 'medirus',
             details: { consumerId, tool: name },
           });
         }
@@ -8013,7 +8013,7 @@ function createMcpServer() {
                 error: 'Payment required by remote API',
                 message: error.message,
                 hint: 'Use local mode (free) or configure X402_PRIVATE_KEY for remote mode',
-                localMode: 'Set XACTIONS_MODE=local to avoid payments entirely',
+                localMode: 'Set MEDIRUS_MODE=local to avoid payments entirely',
               }, null, 2),
             },
           ],
@@ -8089,25 +8089,25 @@ function printBanner(pluginCount, pluginToolCount) {
   const activeTools = getActiveTools(toolMode);
 
   console.error('');
-  console.error(`⚡ XActions MCP Server v${VERSION} [${toolMode.toUpperCase()} mode] — ${activeTools.length + pluginToolCount} tools`);
+  console.error(`⚡ Medirus MCP Server v${VERSION} [${toolMode.toUpperCase()} mode] — ${activeTools.length + pluginToolCount} tools`);
   console.error('   The free, open-source Twitter/X MCP server');
   console.error('   https://github.com/nirholas/XActions');
   console.error('');
 
   // ── Setup Wizard: Auth Detection ──
   if (SESSION_COOKIE) {
-    console.error('✅ Authenticated (XACTIONS_SESSION_COOKIE set)');
+    console.error('✅ Authenticated (MEDIRUS_SESSION_COOKIE set)');
   } else {
     console.error('⚠️  No auth_token configured. Some tools require authentication.');
     console.error('');
-    console.error('   To authenticate, set the XACTIONS_SESSION_COOKIE env var:');
+    console.error('   To authenticate, set the MEDIRUS_SESSION_COOKIE env var:');
     console.error('');
     console.error('   1. Go to x.com and log in');
     console.error('   2. Open DevTools (F12) → Application → Cookies → https://x.com');
     console.error('   3. Copy the value of the "auth_token" cookie');
     console.error('   4. Add to your MCP config:');
     console.error('');
-    console.error('      "env": { "XACTIONS_SESSION_COOKIE": "your_auth_token_here" }');
+    console.error('      "env": { "MEDIRUS_SESSION_COOKIE": "your_auth_token_here" }');
     console.error('');
   }
 
@@ -8213,7 +8213,7 @@ async function startHttpTransport() {
     // AD-20 consumer identification: extract X-Consumer-Id + Bearer token
     // before the MCP handler runs and attach it to the request context.
     const consumer = identifyConsumer(req);
-    req.xactionsConsumer = { consumerId: consumer.consumerId, apiKeyValid: consumer.apiKeyValid };
+    req.medirusConsumer = { consumerId: consumer.consumerId, apiKeyValid: consumer.apiKeyValid };
 
     if (consumer.apiKeyRequired && !consumer.apiKeyValid) {
       // XACT_4010 standard error envelope (AD-14).
@@ -8221,7 +8221,7 @@ async function startHttpTransport() {
       res.status(401).json({
         code: 'XACT_4010',
         type: 'auth_expired',
-        message: 'Invalid or missing Bearer token for XActions MCP API',
+        message: 'Invalid or missing Bearer token for Medirus MCP API',
         statusCode: 401,
         isRetryable: false,
         retryAfterMs: 0,
@@ -8330,12 +8330,12 @@ async function main() {
 /**
  * Is this module the process entry point?
  *
- * The `xactions-mcp` bin is a symlink npm creates into node_modules/.bin, so
+ * The `medirus-mcp` bin is a symlink npm creates into node_modules/.bin, so
  * `process.argv[1]` is the symlink path while `import.meta.url` is the real
  * one. Comparing them directly would never match under npx and the server
  * would refuse to start. Resolving argv[1] through realpath first makes the
  * comparison hold for `node src/mcp/server.js`, `npm run mcp` and
- * `npx -y xactions-mcp` alike.
+ * `npx -y medirus-mcp` alike.
  *
  * @returns {boolean}
  */
@@ -8348,7 +8348,7 @@ function isEntryPoint() {
   }
 }
 
-// Importing this module must not start a server. `xactions doctor`, the test
+// Importing this module must not start a server. `medirus doctor`, the test
 // suite and anything else that wants the tool list would otherwise open a
 // stdio transport as a side effect and then hang waiting for a client.
 if (isEntryPoint()) {

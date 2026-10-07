@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions benchmark` CLI command group.
+ * `medirus benchmark` CLI command group.
  * Story 34.5: Operator Scorecard CLI & Health Matrix.
  *
  * @author nich (@nichxbt)
@@ -275,7 +275,7 @@ export function formatAlertsTable(alerts = []) {
 }
 
 /**
- * Register `xactions benchmark` CLI command.
+ * Register `medirus benchmark` CLI command.
  * @param {import('commander').Command} program
  * @param {BenchmarkCommandDeps} [deps]
  */

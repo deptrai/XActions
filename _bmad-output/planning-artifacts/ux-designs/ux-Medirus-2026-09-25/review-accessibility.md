@@ -1,4 +1,4 @@
-# Accessibility Review — XActions UX Spine
+# Accessibility Review — Medirus UX Spine
 
 ## Overall verdict
 Accessibility Floor is present and hits the main beats (nav landmark, aria-expanded groups, aria-current, keyboard operability, reduced-motion). Gaps: focus-visible spec is assertive but unconstrained; collapsed-rail icon-only tooltips need an accessible-name rule; live status regions and ⌘K result announcements are underspecified; a few contrast claims are asserted but not token-verified for dark mode.

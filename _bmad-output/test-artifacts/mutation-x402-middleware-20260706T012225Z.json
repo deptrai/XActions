@@ -209,25 +209,25 @@
     {
       "priority": "P0",
       "action": "Fix @x402/express SDK route config issue or mock the SDK initialization to return a working middleware function. Then write test: 'should delegate to @x402/express middleware when initialized, returning 402 for unpaid requests'. This kills 4 P0 mutants (L266, L269, L280 BooleanLiteral, L280 ConditionalExpression).",
-      "skill": "bmad-xactions-integration-test",
+      "skill": "bmad-medirus-integration-test",
       "reason": "Pattern 6 — real-service not executed. Integration test needed with working SDK or controlled SDK initialization."
     },
     {
       "priority": "P0",
       "action": "Add assertion to onSettleFailureHook test: 'should include actual price value in settlement failure error log' — assert console.error output contains '$0.001' when maxAmountRequired is set. This kills L188 LogicalOperator mutant.",
-      "skill": "bmad-xactions-test-first-atdd",
+      "skill": "bmad-medirus-test-first-atdd",
       "reason": "Pattern 4 — arithmetic not asserted. Test description targets the exact price value in failure webhook."
     },
     {
       "priority": "P0",
       "action": "Add assertion to onVerifyFailureHook test: 'should include actual maxAmountRequired in verification failure webhook payload' — assert price field in notifyPaymentFailed call. This kills L211 LogicalOperator mutant.",
-      "skill": "bmad-xactions-test-first-atdd",
+      "skill": "bmad-medirus-test-first-atdd",
       "reason": "Pattern 4 — arithmetic not asserted."
     },
     {
       "priority": "P0",
       "action": "Strengthen isScriptsPath test: 'should NOT call next() as free pass-through for /api/scripts/foo' — assert next() was NOT called before payment processing, or assert res.status was called with 402/500/503. This kills L239 MethodExpression mutant.",
-      "skill": "bmad-xactions-test-first-atdd",
+      "skill": "bmad-medirus-test-first-atdd",
       "reason": "Pattern 3 — security bypass. Script path detection must be exact."
     },
     {
@@ -237,6 +237,6 @@
       "reason": "Log P1 as tech debt, proceed to traceability."
     }
   ],
-  "nextSkill": "bmad-xactions-integration-test",
+  "nextSkill": "bmad-medirus-integration-test",
   "nextSkillReason": "FAIL verdict with Pattern 6 survived — the @x402/express SDK real-service path is not executed. Integration tests with controlled SDK initialization are needed to kill the 4 P0 Pattern 6 mutants."
 }

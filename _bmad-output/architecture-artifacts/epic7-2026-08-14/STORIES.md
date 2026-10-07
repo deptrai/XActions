@@ -2,7 +2,7 @@
 
 - **Epic:** 7 — Facebook Advanced Scraping & Multi-Account Parallel Execution
 - **Architecture Spine:** `ARCHITECTURE-SPINE.md`
-- **PRD:** `_bmad-output/planning-artifacts/prds/prd-XActions-2026-08-14-epic7/prd.md`
+- **PRD:** `_bmad-output/planning-artifacts/prds/prd-Medirus-2026-08-14-epic7/prd.md`
 
 ## Story 7.1: Foundation — Health, Pool, Hydration & Schema
 

@@ -37,11 +37,11 @@ Browser console scripts and MCP tools for exploring trends, searching content, a
 Real-time trending topic scraper with niche classification.
 
 ### Controls
-- `XActions.scan()` -- Scrape current trends
-- `XActions.track()` -- Log trend snapshot with timestamp
-- `XActions.history()` -- Show all tracked snapshots
-- `XActions.forNiche(keyword)` -- Filter trends by niche keyword
-- `XActions.export()` -- Download trend data as JSON
+- `Medirus.scan()` -- Scrape current trends
+- `Medirus.track()` -- Log trend snapshot with timestamp
+- `Medirus.history()` -- Show all tracked snapshots
+- `Medirus.forNiche(keyword)` -- Filter trends by niche keyword
+- `Medirus.export()` -- Download trend data as JSON
 
 ### Features
 - Categorizes trends by niche (tech, politics, entertainment, sports, crypto, etc.)
@@ -56,17 +56,17 @@ Real-time trending topic scraper with niche classification.
 Monitors X for mentions of specific keywords with sentiment classification.
 
 ### Controls
-- `XActions.setKeywords(['keyword1', 'keyword2'])` -- Configure keywords
-- `XActions.scan()` -- Run one search cycle
-- `XActions.autoScan(intervalMs)` -- Continuous monitoring
-- `XActions.stop()` -- Stop auto-scanning
-- `XActions.report()` -- Show summary with sentiment breakdown
-- `XActions.export()` -- Download results as JSON
+- `Medirus.setKeywords(['keyword1', 'keyword2'])` -- Configure keywords
+- `Medirus.scan()` -- Run one search cycle
+- `Medirus.autoScan(intervalMs)` -- Continuous monitoring
+- `Medirus.stop()` -- Stop auto-scanning
+- `Medirus.report()` -- Show summary with sentiment breakdown
+- `Medirus.export()` -- Download results as JSON
 
 ## Strategy Guide
 
 ### Trend-jacking workflow
-1. Run `src/trendingTopicMonitor.js` -> `XActions.forNiche('your_niche')`
+1. Run `src/trendingTopicMonitor.js` -> `Medirus.forNiche('your_niche')`
 2. Identify relevant trends with momentum
 3. Craft timely content using `src/threadComposer.js` or `src/contentRepurposer.js`
 4. Post within the first 2 hours of trend emergence for maximum visibility
@@ -79,8 +79,8 @@ Monitors X for mentions of specific keywords with sentiment classification.
 4. Repurpose successful formats with `src/contentRepurposer.js`
 
 ### Building a discovery routine
-1. Daily: `src/trendingTopicMonitor.js` -> `XActions.track()` for trend log
-2. Weekly: Review `XActions.history()` for recurring themes
+1. Daily: `src/trendingTopicMonitor.js` -> `Medirus.track()` for trend log
+2. Weekly: Review `Medirus.history()` for recurring themes
 3. Set `src/keywordMonitor.js` for brand/topic monitoring
 
 ## Notes

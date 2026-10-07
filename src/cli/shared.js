@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Shared helpers for the XActions CLI.
+ * Shared helpers for the Medirus CLI.
  *
  * Anything extracted from src/cli/index.js as a reusable dependency lands here
  * so command modules can import it explicitly instead of reaching back into a
@@ -16,7 +16,7 @@ import os from 'os';
 import chalk from 'chalk';
 import scrapers from '../scrapers/index.js';
 
-export const CONFIG_DIR = path.join(os.homedir(), '.xactions');
+export const CONFIG_DIR = path.join(os.homedir(), '.medirus');
 export const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 export async function loadConfig() {
@@ -64,7 +64,7 @@ export async function createHttpScraper() {
     await scraper.loadCookies(path.join(CONFIG_DIR, 'cookies.json'));
     return scraper;
   } catch {
-    // No cookie jar saved; fall through to the values `xactions login` stores.
+    // No cookie jar saved; fall through to the values `medirus login` stores.
   }
 
   const config = await loadConfig();
@@ -99,7 +99,7 @@ export function assertNotEmpty(results, what, hint) {
 
 /** Suggested next step when an unauthenticated read comes back empty. */
 export const AUTH_HINT =
-  'Run `xactions login` with your auth_token cookie (DevTools > Application > Cookies > x.com), ' +
+  'Run `medirus login` with your auth_token cookie (DevTools > Application > Cookies > x.com), ' +
   'or retry in a minute if you are being rate limited.';
 
 /**
@@ -218,7 +218,7 @@ export function printGovernorStatus(status, options = {}) {
 
   const accounts = status.hibernatingAccounts || [];
 
-  console.log(`\n${chalk.bold.cyan('⚡ XActions System & Governor Status')}\n`);
+  console.log(`\n${chalk.bold.cyan('⚡ Medirus System & Governor Status')}\n`);
   console.log(`  ${chalk.bold('Throttle Level:')}       ${throttleColor(status.throttleLevel)}`);
   console.log(`  ${chalk.bold('Healthy Proxies:')}      ${status.healthyProxyCount} / ${status.totalProxyCount} (${(status.healthyProxyRatio * 100).toFixed(1)}%)`);
   console.log(`  ${chalk.bold('Current Req/Sec:')}      ${status.currentReqPerSecond}`);

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# XActions — Quick Deploy Script
+# Medirus — Quick Deploy Script
 # Detects available platforms and deploys accordingly
 # Usage: ./scripts/deploy.sh [platform]
 # Platforms: railway, cloudflare, fly, render, docker
@@ -19,7 +19,7 @@ log()  { echo -e "${GREEN}✅ $1${NC}"; }
 warn() { echo -e "${YELLOW}⚠️  $1${NC}"; }
 err()  { echo -e "${RED}❌ $1${NC}"; exit 1; }
 
-echo "🚀 XActions Deploy Script"
+echo "🚀 Medirus Deploy Script"
 echo "───────────────────────────"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ fi
 deploy_railway() {
   command -v railway &> /dev/null || err "Railway CLI not installed. Run: npm install -g @railway/cli"
   echo "📦 Deploying API to Railway..."
-  railway up --service xactions-api
+  railway up --service medirus-api
   log "Railway deploy complete!"
   echo ""
   echo "📝 Don't forget to set these in Railway dashboard:"
@@ -78,13 +78,13 @@ deploy_fly() {
   command -v fly &> /dev/null || err "Fly CLI not installed. See: https://fly.io/docs/hands-on/install-flyctl/"
   
   # Check if app exists
-  if ! fly apps list 2>/dev/null | grep -q "xactions"; then
+  if ! fly apps list 2>/dev/null | grep -q "medirus"; then
     echo "📦 Creating Fly.io app..."
-    fly launch --no-deploy --name xactions
+    fly launch --no-deploy --name medirus
     echo ""
     echo "📝 Setting up Fly Postgres..."
-    fly postgres create --name xactions-db || warn "Postgres may already exist"
-    fly postgres attach xactions-db || warn "Postgres may already be attached"
+    fly postgres create --name medirus-db || warn "Postgres may already exist"
+    fly postgres attach medirus-db || warn "Postgres may already be attached"
   fi
   
   echo "📦 Deploying to Fly.io..."
@@ -98,7 +98,7 @@ deploy_render() {
   echo "Steps:"
   echo "  1. Go to https://dashboard.render.com"
   echo "  2. Click 'New' → 'Blueprint'"
-  echo "  3. Connect your GitHub repo (nirholas/XActions)"
+  echo "  3. Connect your GitHub repo (nirholas/Medirus)"
   echo "  4. Render auto-detects render.yaml"
   echo "  5. Click 'Apply'"
   echo ""
@@ -115,7 +115,7 @@ deploy_docker() {
     exit 1
   fi
   
-  echo "📦 Building and starting XActions stack..."
+  echo "📦 Building and starting Medirus stack..."
   docker compose up -d --build
   
   echo ""
@@ -149,4 +149,4 @@ esac
 
 echo ""
 echo "───────────────────────────"
-echo "🎉 Done! XActions deployed via $PLATFORM"
+echo "🎉 Done! Medirus deployed via $PLATFORM"

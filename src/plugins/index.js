@@ -1,14 +1,14 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Plugin System
+ * Medirus Plugin System
  * 
- * Public API for the XActions plugin architecture.
- * Community members can create npm packages that extend XActions
+ * Public API for the Medirus plugin architecture.
+ * Community members can create npm packages that extend Medirus
  * with new scrapers, MCP tools, Express routes, browser actions, and lifecycle hooks.
  * 
  * Plugin Naming Convention:
- *   - npm packages: `xactions-plugin-*` or `@xactions/*`
- *   - Registered in: ~/.xactions/plugins.json
+ *   - npm packages: `medirus-plugin-*` or `@medirus/*`
+ *   - Registered in: ~/.medirus/plugins.json
  * 
  * Plugin Interface:
  *   export default {
@@ -28,7 +28,7 @@
  *   };
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  */
 

@@ -1,12 +1,12 @@
-# ⚡ XActions Command Center
+# ⚡ Medirus Command Center
 
-**The one script to run them all.** Paste a single file into your browser console and get a searchable menu of all 108 XActions tools: create, scrape, analyze, grow, engage, clean up, moderate, manage lists, and more. No hunting for the right file, no editing config by hand, no re-pasting.
+**The one script to run them all.** Paste a single file into your browser console and get a searchable menu of all 108 Medirus tools: create, scrape, analyze, grow, engage, clean up, moderate, manage lists, and more. No hunting for the right file, no editing config by hand, no re-pasting.
 
-Script: [`xactions-command-center.js`](./xactions-command-center.js)
+Script: [`medirus-command-center.js`](./medirus-command-center.js)
 
 ## Why this exists
 
-XActions ships 100+ browser-console tools, each in its own file. Finding the right one meant browsing the repo, opening a file, editing its `CONFIG`, and pasting it. The Command Center replaces that with one paste: a floating command palette lists every tool, grouped by category, with search, one-click run, and an options form so you never touch source code.
+Medirus ships 100+ browser-console tools, each in its own file. Finding the right one meant browsing the repo, opening a file, editing its `CONFIG`, and pasting it. The Command Center replaces that with one paste: a floating command palette lists every tool, grouped by category, with search, one-click run, and an options form so you never touch source code.
 
 It bundles every tool in `scripts/twitter/` directly into one script, so there are no extra network requests and nothing to install. It works on x.com's strict Content-Security-Policy because it never fetches or `eval`s remote code: everything it can run is already in the file you pasted.
 
@@ -15,7 +15,7 @@ It bundles every tool in `scripts/twitter/` directly into one script, so there a
 1. Open **x.com** and go to the page you want to work on (a profile, your timeline, search results, your Likes, etc.).
 2. Open DevTools: `F12`, or `Cmd+Option+I` on Mac, then click the **Console** tab.
 3. If the console warns about pasting, type `allow pasting` and press Enter.
-4. Paste the entire contents of [`xactions-command-center.js`](./xactions-command-center.js) and press Enter.
+4. Paste the entire contents of [`medirus-command-center.js`](./medirus-command-center.js) and press Enter.
 5. The **⚡ Command Center** palette appears (top-right). Search or pick a category, choose a tool, set any options, and press **Run**.
 
 Reopen the palette any time with the floating **⚡** button (bottom-right) or **Cmd/Ctrl + K**.
@@ -36,7 +36,7 @@ This file is **generated**, do not edit it by hand. Two sources produce it:
 - [`_command-center-shell.js`](./_command-center-shell.js): the palette UI.
 - [`../build-toolkit.mjs`](../build-toolkit.mjs): the curated tool catalog (titles, categories, danger levels, descriptions, where-to-run hints), plus the bundler.
 
-The build reads every `scripts/twitter/*.js` tool, extracts its `CONFIG` defaults (to render the options form), injects a small override hook so the palette can pass your settings into that run, wraps each tool in its own scope, and writes the result to `xactions-command-center.js`.
+The build reads every `scripts/twitter/*.js` tool, extracts its `CONFIG` defaults (to render the options form), injects a small override hook so the palette can pass your settings into that run, wraps each tool in its own scope, and writes the result to `medirus-command-center.js`.
 
 To regenerate after changing a tool, the UI, or the catalog:
 
@@ -52,4 +52,4 @@ The build validates the output with `node --check` and fails if any tool is miss
 - Individual tool files still work on their own if you prefer to paste just one, see the other READMEs in this folder.
 - Automating actions on X can hit rate limits or violate the platform's terms if pushed too hard. The action tools pace themselves; keep volumes reasonable and use the read-only tools freely.
 
-Part of [XActions](https://github.com/nirholas/XActions) · [xactions.app](https://xactions.app)
+Part of [Medirus](https://github.com/nirholas/XActions) · [medirus.online](https://medirus.online)

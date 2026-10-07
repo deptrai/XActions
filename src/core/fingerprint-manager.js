@@ -1,10 +1,10 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions — FingerprintManager (Story 27.1)
+ * Medirus — FingerprintManager (Story 27.1)
  *
  * Manages a pool of *complete*, internally-consistent browser fingerprints and
  * binds them to a geo-consistent proxy region so platforms cannot fingerprint
- * XActions via TLS/JA4 mismatches, inconsistent timezone/locale, or proxy-UA
+ * Medirus via TLS/JA4 mismatches, inconsistent timezone/locale, or proxy-UA
  * mismatch.
  *
  * A fingerprint is a stable, immutable value object assigned per

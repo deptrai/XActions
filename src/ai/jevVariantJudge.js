@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions — JevVariantJudge (Story 42.9)
+ * Medirus — JevVariantJudge (Story 42.9)
  *
  * Jev-as-a-Judge for AI-generated post variants. `generateTweet` and
  * `generateReply` get back a raw array of variants from the LLM — this module

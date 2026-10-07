@@ -37,7 +37,7 @@
 
   const pageType = isFollowers ? 'followers' : 'following';
   const targetUser = path.split('/')[1].toLowerCase();
-  const storageKey = `xactions_monitor_${targetUser}_${pageType}`;
+  const storageKey = `medirus_monitor_${targetUser}_${pageType}`;
 
   const scrapeUsers = async () => {
     const users = new Set();

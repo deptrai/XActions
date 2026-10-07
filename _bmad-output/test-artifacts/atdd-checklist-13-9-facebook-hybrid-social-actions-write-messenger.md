@@ -15,7 +15,7 @@ generatedTestFiles:
   - "tests/scrapers/social/facebook/crawler-social-actions.test.js"
 inputDocuments:
   - "_bmad-output/implementation-artifacts/13-9-facebook-hybrid-social-actions-write-messenger.md"
-  - "_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md"
+  - "_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md"
   - "src/scrapers/social/facebook/crawler.js"
   - "src/scrapers/social/facebook/client.js"
   - "src/scrapers/social/facebook/signer-bridge.js"

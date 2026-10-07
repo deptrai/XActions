@@ -248,7 +248,7 @@
     }
 
     console.log(`📋 Action: ${CONFIG.action}`);
-    const sessionKey = 'xactions_encryptedDM';
+    const sessionKey = 'medirus_encryptedDM';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     switch (CONFIG.action) {

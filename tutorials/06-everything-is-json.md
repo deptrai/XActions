@@ -1,17 +1,17 @@
 # 06: Everything is JSON
 
 **Time:** 20 minutes
-**You need:** XActions installed, plus [`jq`](https://jqlang.github.io/jq/). No login for most of this.
-**You end up with:** XActions as a component in your own pipelines rather than a thing you type at.
+**You need:** Medirus installed, plus [`jq`](https://jqlang.github.io/jq/). No login for most of this.
+**You end up with:** Medirus as a component in your own pipelines rather than a thing you type at.
 
 ---
 
 ## The idea
 
-XActions prints a formatted report because that is what you want when you are looking at it. Add `--json` and it prints data instead, and stdout carries nothing else. That single rule is what makes everything below possible: no spinner text, no colour codes, no "Fetching..." line to strip.
+Medirus prints a formatted report because that is what you want when you are looking at it. Add `--json` and it prints data instead, and stdout carries nothing else. That single rule is what makes everything below possible: no spinner text, no colour codes, no "Fetching..." line to strip.
 
 ```bash
-xactions profile NASA --json | jq -r .name
+medirus profile NASA --json | jq -r .name
 ```
 ```
 NASA
@@ -20,8 +20,8 @@ NASA
 Progress output goes to stderr, so a pipe never has to filter it. That also means you keep seeing progress while piping:
 
 ```bash
-xactions tweets NASA --limit 200 --json > tweets.json    # progress still shows on your terminal
-xactions tweets NASA --limit 200 --json 2>/dev/null      # silence it if you prefer
+medirus tweets NASA --limit 200 --json > tweets.json    # progress still shows on your terminal
+medirus tweets NASA --limit 200 --json 2>/dev/null      # silence it if you prefer
 ```
 
 ## 1. Tab completion first
@@ -30,21 +30,21 @@ Before writing anything, make the CLI type itself:
 
 ```bash
 # bash
-echo 'source <(xactions completion bash)' >> ~/.bashrc && exec bash
+echo 'source <(medirus completion bash)' >> ~/.bashrc && exec bash
 
 # zsh
-echo 'source <(xactions completion zsh)' >> ~/.zshrc && exec zsh
+echo 'source <(medirus completion zsh)' >> ~/.zshrc && exec zsh
 
 # fish
-xactions completion fish > ~/.config/fish/completions/xactions.fish
+medirus completion fish > ~/.config/fish/completions/medirus.fish
 ```
 
-Now `xactions <tab>` lists all fifty-plus commands, `xactions plugin <tab>` lists its sub-commands, and `xactions tweets --<tab>` lists that command's flags. The script is generated from the live command tree, so regenerate it after upgrading and it picks up whatever is new.
+Now `medirus <tab>` lists all fifty-plus commands, `medirus plugin <tab>` lists its sub-commands, and `medirus tweets --<tab>` lists that command's flags. The script is generated from the live command tree, so regenerate it after upgrading and it picks up whatever is new.
 
 ## 2. Reading a timeline
 
 ```bash
-xactions tweets NASA --limit 100 --json > tweets.json
+medirus tweets NASA --limit 100 --json > tweets.json
 
 # What does one post look like?
 jq '.[0]' tweets.json
@@ -102,31 +102,31 @@ jq -r 'map(select(.views > 0))
 Pipelines get interesting when one command feeds another. Find who an account talks about, then look each of them up:
 
 ```bash
-xactions analyze NASA --limit 200 --json \
+medirus analyze NASA --limit 200 --json \
   | jq -r '.topMentions[:5][] | .handle // .username // .' \
   | while read -r handle; do
-      xactions profile "$handle" --json 2>/dev/null \
+      medirus profile "$handle" --json 2>/dev/null \
         | jq -r '"\(.username)\t\(.followersCount // 0)\t\(.bio // "" | .[0:60])"'
     done \
   | column -t -s $'\t'
 ```
 
-Run `xactions analyze NASA --json | jq '.topMentions[0]'` first to see the exact shape; the `//` fallbacks above exist so the script survives either shape rather than dying on a missing key.
+Run `medirus analyze NASA --json | jq '.topMentions[0]'` first to see the exact shape; the `//` fallbacks above exist so the script survives either shape rather than dying on a missing key.
 
 ## 5. CSV and spreadsheets without jq
 
 For the common cases the CLI writes the file for you. The format follows the extension:
 
 ```bash
-xactions tweets NASA --limit 500 --output nasa.csv
-xactions tweets NASA --limit 500 --output nasa.xlsx
-xactions followers NASA --limit 1000 --output followers.csv     # needs a session
+medirus tweets NASA --limit 500 --output nasa.csv
+medirus tweets NASA --limit 500 --output nasa.xlsx
+medirus followers NASA --limit 1000 --output followers.csv     # needs a session
 ```
 
 Straight into Google Sheets:
 
 ```bash
-xactions tweets NASA --limit 500 \
+medirus tweets NASA --limit 500 \
   --google-sheets <spreadsheet-id> \
   --sheet-name "NASA" \
   --sheet-mode replace
@@ -139,23 +139,23 @@ xactions tweets NASA --limit 500 \
 Every command exits non-zero on failure, so `set -e` and `&&` behave:
 
 ```bash
-if xactions profile somehandle --json > /dev/null 2>&1; then
+if medirus profile somehandle --json > /dev/null 2>&1; then
   echo "account exists and is readable"
 else
   echo "not readable: private, suspended, or does not exist"
 fi
 ```
 
-`xactions doctor` is the one to reach for in CI: it exits non-zero when something is actually broken, so a scheduled job can check its own footing before doing work.
+`medirus doctor` is the one to reach for in CI: it exits non-zero when something is actually broken, so a scheduled job can check its own footing before doing work.
 
 ```bash
-xactions doctor || { echo "XActions is not healthy, skipping run"; exit 1; }
+medirus doctor || { echo "Medirus is not healthy, skipping run"; exit 1; }
 ```
 
-`xactions quickstart --json` reports the machine's setup state as data, which is the cheaper check when all you need to know is whether a session exists:
+`medirus quickstart --json` reports the machine's setup state as data, which is the cheaper check when all you need to know is whether a session exists:
 
 ```bash
-tier=$(xactions quickstart --json | jq -r .tier)
+tier=$(medirus quickstart --json | jq -r .tier)
 [ "$tier" = "session" ] || echo "guest tier: search and followers will not work"
 ```
 
@@ -172,7 +172,7 @@ ACCOUNTS=(NASA SpaceX)
 SINCE=$(date -u -d '24 hours ago' +%s 2>/dev/null || date -u -v-24H +%s)
 OUT="digest-$(date -u +%F).md"
 
-xactions doctor > /dev/null || { echo "xactions unhealthy"; exit 1; }
+medirus doctor > /dev/null || { echo "medirus unhealthy"; exit 1; }
 
 {
   echo "# Digest for $(date -u +%F)"
@@ -183,7 +183,7 @@ xactions doctor > /dev/null || { echo "xactions unhealthy"; exit 1; }
     echo
 
     # `timestamp` is milliseconds, so the cutoff is compared in milliseconds too.
-    xactions tweets "$handle" --limit 50 --json 2>/dev/null \
+    medirus tweets "$handle" --limit 50 --json 2>/dev/null \
       | jq -r --argjson since "$((SINCE * 1000))" '
           [ .[]
             | select(.timestamp != null and .timestamp > $since)
@@ -216,7 +216,7 @@ Then put it in cron:
 Once the shell script grows conditionals, move to Node. The same data, one import:
 
 ```javascript
-import { Scraper } from 'xactions/client';
+import { Scraper } from 'medirus/client';
 
 const scraper = new Scraper();
 const profile = await scraper.getProfile('NASA');
@@ -234,7 +234,7 @@ The HTTP client is the same one the CLI uses for guest-tier reads: no browser, n
 - `--json` puts data on stdout and nothing else, so pipes are always safe
 - Progress goes to stderr, so you keep it while redirecting
 - `jq` filters beat waiting for someone to add a flag
-- Exit codes make XActions safe inside `set -e` scripts and cron
+- Exit codes make Medirus safe inside `set -e` scripts and cron
 - `--output` handles CSV, XLSX, and Google Sheets without any jq at all
 
 ## Next

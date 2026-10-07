@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Team Management API Routes
+ * Medirus Team Management API Routes
  * @author nich (@nichxbt) - https://github.com/nirholas
  * @license MIT
  */

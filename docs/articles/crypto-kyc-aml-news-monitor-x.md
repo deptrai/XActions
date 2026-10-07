@@ -37,13 +37,13 @@ Before writing any code, define your signal sources.
 
 ## Setting Up the Stream
 
-Use the XActions Node.js library to stream filtered tweets without paying X API enterprise fees.
+Use the Medirus Node.js library to stream filtered tweets without paying X API enterprise fees.
 
 ```js
-import { TwitterStream } from 'xactions';
+import { TwitterStream } from 'medirus';
 
 const stream = new TwitterStream({
-  sessionCookie: process.env.XACTIONS_SESSION_COOKIE,
+  sessionCookie: process.env.MEDIRUS_SESSION_COOKIE,
 });
 
 const KYC_KEYWORDS = [

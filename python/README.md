@@ -4404,8 +4404,8 @@ def export_research_data(dataset: dict, base_filename: str):
 
 ## 🔗 Related Projects
 
-- [XActions](https://github.com/nirholas/xactions) - JavaScript/Node.js version
-- [xactions.app](https://xactions.app) - Web dashboard
+- [Medirus](https://github.com/nirholas/xactions) - JavaScript/Node.js version
+- [medirus.online](https://medirus.online) - Web dashboard
 
 ---
 

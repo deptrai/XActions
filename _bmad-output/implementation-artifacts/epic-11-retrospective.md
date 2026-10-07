@@ -5,7 +5,7 @@ Date: 2026-09-08
 
 ## Summary
 
-Epic 11 xây dựng **proxy pool management** và **rate-limit/governor system** — nền tảng networking cho toàn bộ XActions. Gồm 9 stories từ sticky round-robin proxy đến dual-pool consumer quota.
+Epic 11 xây dựng **proxy pool management** và **rate-limit/governor system** — nền tảng networking cho toàn bộ Medirus. Gồm 9 stories từ sticky round-robin proxy đến dual-pool consumer quota.
 
 Epic complete across nine stories:
 

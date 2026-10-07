@@ -5,7 +5,7 @@ workflowType: 'research'
 lastStep: 3
 research_type: 'domain'
 research_topic: 'Nghiên cứu thị trường & Đề xuất các Domain Scraper mới có giá trị thương mại cao tại Việt Nam'
-research_goals: 'Khám phá các domain/niche mới tại thị trường Việt Nam (ngoài Social, Ecom, BĐS, Tuyển dụng) có mật độ intent mua hàng, tìm kiếm đối tác và dữ liệu B2B cao để bổ sung scraper vào XActions phục vụ Nowing AI Lead Hub'
+research_goals: 'Khám phá các domain/niche mới tại thị trường Việt Nam (ngoài Social, Ecom, BĐS, Tuyển dụng) có mật độ intent mua hàng, tìm kiếm đối tác và dữ liệu B2B cao để bổ sung scraper vào Medirus phục vụ Nowing AI Lead Hub'
 user_name: 'Luis'
 date: '2026-08-21'
 web_research_enabled: true
@@ -28,7 +28,7 @@ source_verification: true
 **Domain Research Scope:**
 - **Industry & Market Structure**: Phân tích quy mô thị trường, cơ cấu ngành và nhu cầu khai thác dữ liệu số tại Việt Nam.
 - **Target Platform Discovery**: Định danh các cổng thông tin, sàn giao dịch và danh bạ có giá trị dữ liệu lớn nhất.
-- **Technical Feasibility & Anti-Bot Profile**: Thẩm định độ khó kỹ thuật, cơ chế WAF, Token/Captcha và mức độ tương thích với kiến trúc XActions Hybrid.
+- **Technical Feasibility & Anti-Bot Profile**: Thẩm định độ khó kỹ thuật, cơ chế WAF, Token/Captcha và mức độ tương thích với kiến trúc Medirus Hybrid.
 - **Commercial Value for Nowing**: Lượng hóa giá trị kinh doanh, tỷ lệ trích xuất số điện thoại (SĐT), mã số thuế (MST) và intent mua hàng.
 - **Architecture Mapping & Epics Expansion**: Đề xuất thiết kế Schema JSON, contract `AbstractCrawler` và lộ trình tích hợp vào Epics tiếp theo.
 
@@ -42,7 +42,7 @@ source_verification: true
 
 Thị trường kinh tế số Việt Nam đang chứng kiến sự bùng nổ mạnh mẽ với nhu cầu chuyển đổi số toàn diện trong hoạt động tiếp thị B2B (B2B Lead Generation), thẩm định tín dụng, giám sát chuỗi cung ứng và thu thập thông tin thị trường cạnh tranh (Market Intelligence).
 
-Dữ liệu công khai và bán công khai trên internet tại Việt Nam hiện đang bị phân mảnh ở nhiều lĩnh vực đặc thù mà các công cụ tìm kiếm truyền thống (Google/Bing) hoặc các scraper mạng xã hội thông thường không thể khai thác tối ưu. Việc xây dựng các scraper chuyên dụng (Domain-Specific Scrapers) cho XActions mang lại lợi thế độc quyền tuyệt đối cho Nowing AI.
+Dữ liệu công khai và bán công khai trên internet tại Việt Nam hiện đang bị phân mảnh ở nhiều lĩnh vực đặc thù mà các công cụ tìm kiếm truyền thống (Google/Bing) hoặc các scraper mạng xã hội thông thường không thể khai thác tối ưu. Việc xây dựng các scraper chuyên dụng (Domain-Specific Scrapers) cho Medirus mang lại lợi thế độc quyền tuyệt đối cho Nowing AI.
 
 ---
 
@@ -140,17 +140,17 @@ Dữ liệu công khai và bán công khai trên internet tại Việt Nam hiệ
 
 ---
 
-### 3.2. Lợi Thế Cạnh Tranh Tuyệt Đối Của XActions + Nowing AI
+### 3.2. Lợi Thế Cạnh Tranh Tuyệt Đối Của Medirus + Nowing AI
 1. **Tiết kiệm 100% chi phí mua Data/API bên ngoài:**
-   - Thay vì phải trả hàng chục triệu/tháng cho các gói subscription của DauThau.info hay mua data danh bạ doanh nghiệp phân mảnh, XActions cào trực tiếp từ nguồn mở và lưu vào PostgreSQL.
+   - Thay vì phải trả hàng chục triệu/tháng cho các gói subscription của DauThau.info hay mua data danh bạ doanh nghiệp phân mảnh, Medirus cào trực tiếp từ nguồn mở và lưu vào PostgreSQL.
 2. **Xử lý Thời Gian Thực (Near Real-Time Data Ingestion):**
-   - Các dịch vụ bên ngoài thường cập nhật data chậm 24–48 giờ. XActions với cơ chế `CrawlCheckpoint` và **Redis Thin Event Streams** có thể phát hiện doanh nghiệp mới thành lập hoặc gói thầu vừa mở chỉ sau vài phút.
+   - Các dịch vụ bên ngoài thường cập nhật data chậm 24–48 giờ. Medirus với cơ chế `CrawlCheckpoint` và **Redis Thin Event Streams** có thể phát hiện doanh nghiệp mới thành lập hoặc gói thầu vừa mở chỉ sau vài phút.
 3. **Trí tuệ Nhân tạo Định danh & Bóc tách Ý định (AI Intent Lead Scoring):**
-   - Dữ liệu thô sau khi XActions cào về được Nowing AI NLP phân tích tức thì: Nhận diện nhu cầu mua sắm, chấm điểm tiềm năng (Lead Score), tự động phân loại ngành nghề và làm sạch số điện thoại chính chủ.
+   - Dữ liệu thô sau khi Medirus cào về được Nowing AI NLP phân tích tức thì: Nhận diện nhu cầu mua sắm, chấm điểm tiềm năng (Lead Score), tự động phân loại ngành nghề và làm sạch số điện thoại chính chủ.
 
 ---
 
-### 3.3. Thiết Kế Đề Xuất Các Epic Mới Mở Rộng Cho XActions (Epic 21 & Epic 22)
+### 3.3. Thiết Kế Đề Xuất Các Epic Mới Mở Rộng Cho Medirus (Epic 21 & Epic 22)
 
 Để đưa các domain này vào lộ trình thực thi chuẩn BMad, đề xuất bổ sung 2 Epic mở rộng:
 

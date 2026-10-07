@@ -101,7 +101,7 @@
   {
     "id": "12",
     "location": "src/cli/commands/automate.js:48-56,179-205",
-    "trigger_condition": "xactions automate for any Facebook action",
+    "trigger_condition": "medirus automate for any Facebook action",
     "guard_snippet": "import { scrape } and dispatch scrape('facebook', action, {authCookie, dryRun, ...})",
     "potential_consequence": "CLI automation bypasses hybrid engine",
     "severity": "high",

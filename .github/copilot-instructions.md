@@ -1,10 +1,10 @@
-# XActions
+# Medirus
 
 > ⚡ The Complete X/Twitter Automation Toolkit — Scrapers, MCP server for AI agents (Claude/GPT), CLI, browser scripts. No API fees. Open source. By nichxbt.
 
 ### Architecture Overview
 
-XActions has **three runtime contexts** — know which one you're working in:
+Medirus has **three runtime contexts** — know which one you're working in:
 
 | Context | Where it runs | Entry point | Key constraint |
 |---|---|---|---|
@@ -70,7 +70,7 @@ npx prisma migrate dev   # Run database migrations
 
 ### Environment Variables
 
-Copy `.env.example` for the full list. Key variables: `DATABASE_URL`, `JWT_SECRET`, `REDIS_HOST`, `REDIS_PORT`, `XACTIONS_SESSION_COOKIE`, `PUPPETEER_HEADLESS`.
+Copy `.env.example` for the full list. Key variables: `DATABASE_URL`, `JWT_SECRET`, `REDIS_HOST`, `REDIS_PORT`, `MEDIRUS_SESSION_COOKIE`, `PUPPETEER_HEADLESS`.
 
 ### Testing Conventions
 

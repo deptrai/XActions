@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Social Graph Visualizer
+ * Medirus Social Graph Visualizer
  * Exports graph data for D3.js, Gephi (GEXF), and standalone HTML
  *
  * @author nich (@nichxbt) - https://github.com/nirholas
@@ -74,7 +74,7 @@ export function toGEXF(graph) {
   let gexf = `<?xml version="1.0" encoding="UTF-8"?>
 <gexf xmlns="http://gexf.net/1.3" version="1.3">
   <meta lastmodifieddate="${new Date().toISOString().split('T')[0]}">
-    <creator>XActions</creator>
+    <creator>Medirus</creator>
     <description>Social graph for @${escapeXml(graph.seed)}</description>
   </meta>
   <graph defaultedgetype="directed">
@@ -133,7 +133,7 @@ export function toHTML(graph) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Social Graph: @${graph.seed} — XActions</title>
+<title>Social Graph: @${graph.seed} — Medirus</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #000; color: #e7e9ea; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow: hidden; }

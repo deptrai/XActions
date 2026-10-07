@@ -44,7 +44,7 @@ This script provides the following capabilities:
 
 ```javascript
 /**
- * XActions Algorithm Builder
+ * Medirus Algorithm Builder
  * 
  * 24/7 automated account growth engine powered by Puppeteer + LLM.
  * Builds up your X/Twitter algorithm and persona by:
@@ -247,8 +247,8 @@ async function callLLM(messages, persona) {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://xactions.app',
-        'X-Title': 'XActions Algorithm Builder',
+        'HTTP-Referer': 'https://medirus.online',
+        'X-Title': 'Medirus Algorithm Builder',
       },
       body: JSON.stringify({
         model,
@@ -913,11 +913,11 @@ async function startAlgorithmBuilder(options = {}) {
   } = options;
 
   if (!personaId) throw new Error('personaId is required');
-  if (!authToken && !process.env.XACTIONS_SESSION_COOKIE) {
-    throw new Error('authToken or XACTIONS_SESSION_COOKIE env var required');
+  if (!authToken && !process.env.MEDIRUS_SESSION_COOKIE) {
+    throw new Error('authToken or MEDIRUS_SESSION_COOKIE env var required');
   }
 
-  const cookie = authToken || process.env.XACTIONS_SESSION_COOKIE;
+  const cookie = authToken || process.env.MEDIRUS_SESSION_COOKIE;
   let persona = loadPersona(personaId);
 
   log('🤖', `Algorithm Builder starting for persona: ${persona.name} (${persona.preset})`);
@@ -1103,14 +1103,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -1146,4 +1146,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

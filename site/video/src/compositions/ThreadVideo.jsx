@@ -81,10 +81,10 @@ export const ThreadVideo = ({
   tweets = [
     '🧵 Thread: How I built the #1 free Twitter automation toolkit\n\nNo API fees. Open source. 50K+ users.',
     '1/ I started with a simple problem:\n\nI wanted to unfollow everyone who doesn\'t follow me back.\n\nTwitter API costs $100/mo minimum. That\'s insane for a simple operation.',
-    '2/ So I built XActions — browser automation.\n\nPaste a script in DevTools → done.\n\nNo API keys, no OAuth, no billing.',
+    '2/ So I built Medirus — browser automation.\n\nPaste a script in DevTools → done.\n\nNo API keys, no OAuth, no billing.',
     '3/ It snowballed:\n\n• Profile scraper\n• Follower scraper\n• Tweet search\n• Thread unroller\n• Video downloader\n• 50+ MCP tools for AI agents',
     '4/ The secret sauce?\n\nAI voice analysis → scrape anyone\'s tweets → analyze their writing style → generate tweets in their voice.\n\nNobody else has this.',
-    '5/ Try it free:\n\ngithub.com/nirholas/XActions\n\nnpx xactions-mcp (for Claude/Cursor)',
+    '5/ Try it free:\n\ngithub.com/nirholas/XActions\n\nnpx medirus-mcp (for Claude/Cursor)',
   ],
 }) => {
   const frame = useCurrentFrame();

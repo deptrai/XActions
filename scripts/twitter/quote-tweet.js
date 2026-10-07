@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * ============================================
- * 🔁 Quote Tweet - XActions
+ * 🔁 Quote Tweet - Medirus
  * ============================================
  *
  * @name         quote-tweet
@@ -9,7 +9,7 @@
  * @author       nichxbt
  * @version      1.0.0
  * @date         2026-07-20
- * @website      https://xactions.app
+ * @website      https://medirus.online
  *
  * Usage:
  *   1. Open the tweet you want to quote (its status page, e.g.
@@ -105,9 +105,9 @@
 
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║  🔁 QUOTE TWEET - XActions                               ║
+║  🔁 QUOTE TWEET - Medirus                               ║
 ║  👤 Author: nichxbt                                      ║
-║  🌐 https://xactions.app                                 ║
+║  🌐 https://medirus.online                                 ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 

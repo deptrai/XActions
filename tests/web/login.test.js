@@ -75,14 +75,14 @@ describe('Story 48.2 — Session Login Flow (POST /session)', () => {
         });
         req.on('end', () => {
           const payload = JSON.parse(body || '{}');
-          if (payload.identifier === 'operator@xactions.app' && payload.password === 'correct-secret-123') {
+          if (payload.identifier === 'operator@medirus.online' && payload.password === 'correct-secret-123') {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(
               JSON.stringify({
                 success: true,
                 data: {
                   token: 'jwt.token.operator-valid-789',
-                  user: { id: 'u-operator-1', email: 'operator@xactions.app' },
+                  user: { id: 'u-operator-1', email: 'operator@medirus.online' },
                 },
               })
             );
@@ -121,7 +121,7 @@ describe('Story 48.2 — Session Login Flow (POST /session)', () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        email: 'operator@xactions.app',
+        email: 'operator@medirus.online',
         password: 'correct-secret-123',
       }),
     });
@@ -145,7 +145,7 @@ describe('Story 48.2 — Session Login Flow (POST /session)', () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        email: 'operator@xactions.app',
+        email: 'operator@medirus.online',
         password: 'wrong-password',
       }),
     });

@@ -1,6 +1,6 @@
 #!/bin/bash
-# Test all routes against production domain xactions.medirus.online
-BASE_URL="https://xactions.medirus.online"
+# Test all routes against production domain medirus.medirus.online
+BASE_URL="https://medirus.medirus.online"
 echo "=== Testing Production Routes at $BASE_URL ==="
 
 ROUTES=(

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions — Content Calendar
+ * Medirus — Content Calendar
  * Weekly content planning, review queue, auto-post, performance tracking
  *
  * @author nich (@nichxbt) - https://github.com/nirholas

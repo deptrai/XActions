@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * E2E CLI Tests — Story 10.4: CrawlCheckpoint Operational CLI.
- * Spawns the real `xactions checkpoints` binary and asserts stdout + DB state.
+ * Spawns the real `medirus checkpoints` binary and asserts stdout + DB state.
  * by nichxbt
  */
 
@@ -18,7 +18,7 @@ function runCli(args) {
   return execFileAsync('node', [CLI, 'checkpoints', ...args], {
     env: {
       ...process.env,
-      DATABASE_URL: process.env.DATABASE_URL || 'postgresql://luisphan@localhost:5432/xactions_test?schema=public',
+      DATABASE_URL: process.env.DATABASE_URL || 'postgresql://luisphan@localhost:5432/medirus_test?schema=public',
     },
     timeout: 30000,
   });
@@ -43,7 +43,7 @@ async function cleanupCheckpoints() {
   await cleanupTestDatabase();
 }
 
-describe('E2E CLI: xactions checkpoints (Story 10.4)', () => {
+describe('E2E CLI: medirus checkpoints (Story 10.4)', () => {
   beforeAll(async () => {
     await cleanupCheckpoints();
   });

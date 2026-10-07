@@ -162,7 +162,7 @@
         tweets: results,
         analyzedAt: new Date().toISOString(),
         page: window.location.href,
-      }, `xactions-sentiment-${new Date().toISOString().slice(0, 10)}.json`);
+      }, `medirus-sentiment-${new Date().toISOString().slice(0, 10)}.json`);
       console.log('\n📥 Results exported as JSON.');
     }
   };

@@ -33,6 +33,6 @@
 /analytics /analytics.html 200
 /calendar /calendar.html 200
 
-# API proxy to backend — Cloud Run service "xactions-api", mapped to
-# api.xactions.app (see deploy/gcp/provision-api.sh)
-/api/* https://api.xactions.app/api/:splat 200
+# API proxy to backend — Cloud Run service "medirus-api", mapped to
+# api.medirus.online (see deploy/gcp/provision-api.sh)
+/api/* https://api.medirus.online/api/:splat 200

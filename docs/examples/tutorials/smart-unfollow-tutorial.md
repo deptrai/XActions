@@ -1,8 +1,8 @@
 ---
 title: "Smart Unfollow Non-Followers on X (Twitter) — Free 2026"
 description: "Unfollow people who don't follow you back on X/Twitter with full logging, CSV export, whitelist, and dry run. Free script, no API."
-keywords: ["unfollow non followers twitter", "twitter unfollow script with log", "who doesn't follow me back twitter", "smart unfollow twitter 2026", "unfollow non followers X free", "twitter cleanup following list", "unfollow with csv export twitter", "xactions smart unfollow", "twitter mass unfollow safe", "unfollow people who dont follow back X"]
-canonical: "https://xactions.app/examples/smart-unfollow"
+keywords: ["unfollow non followers twitter", "twitter unfollow script with log", "who doesn't follow me back twitter", "smart unfollow twitter 2026", "unfollow non followers X free", "twitter cleanup following list", "unfollow with csv export twitter", "medirus smart unfollow", "twitter mass unfollow safe", "unfollow people who dont follow back X"]
+canonical: "https://medirus.online/examples/smart-unfollow"
 author: "nich (@nichxbt)"
 date: "2026-02-24"
 ---
@@ -24,9 +24,9 @@ date: "2026-02-24"
 
 You followed 2,000+ accounts over the past year while growing your X presence — competitors, niche influencers, potential collaborators. Now your following/follower ratio is terrible (following 2,100, followers 800), which makes your profile look spammy. You need to clean up — but you want to know **exactly who** you unfollowed and **why**, because some of those accounts might actually be valuable contacts you don't want to lose.
 
-XActions' Smart Unfollow scans your entire following list, identifies accounts that don't follow you back, and unfollows them — while logging every single action with username, display name, bio, follower count, and timestamp. At the end, it automatically downloads both JSON and CSV files so you have a complete audit trail. You can whitelist accounts you want to keep, and preview everything in dry-run mode first.
+Medirus' Smart Unfollow scans your entire following list, identifies accounts that don't follow you back, and unfollows them — while logging every single action with username, display name, bio, follower count, and timestamp. At the end, it automatically downloads both JSON and CSV files so you have a complete audit trail. You can whitelist accounts you want to keep, and preview everything in dry-run mode first.
 
-**Before XActions:**
+**Before Medirus:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -46,11 +46,11 @@ XActions' Smart Unfollow scans your entire following list, identifies accounts t
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**After XActions Smart Unfollow:**
+**After Medirus Smart Unfollow:**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Cleaning Your Following List (XActions)                     │
+│  Cleaning Your Following List (Medirus)                     │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  Step 1: Go to x.com/YOUR_USERNAME/following                 │
@@ -163,8 +163,8 @@ Copy the entire script below. **Important:** Start with `dryRun: true` to previe
 
 ```javascript
 // ============================================
-// XActions - Smart Unfollow with Full Log
-// by nichxbt — https://xactions.app
+// Medirus - Smart Unfollow with Full Log
+// by nichxbt — https://medirus.online
 // Go to: x.com/YOUR_USERNAME/following
 // Open console (F12 → Console), paste, Enter
 // ============================================
@@ -219,7 +219,7 @@ Copy the entire script below. **Important:** Start with `dryRun: true` to previe
   const whitelistSet = new Set(CONFIG.whitelist.map(u => u.toLowerCase().replace(/^@/, '')));
 
   // Restore from localStorage
-  const STORAGE_KEY = 'xactions_unfollowWDFBLog';
+  const STORAGE_KEY = 'medirus_unfollowWDFBLog';
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     if (saved.processed) saved.processed.forEach(u => processedUsers.add(u));
@@ -245,7 +245,7 @@ Copy the entire script below. **Important:** Start with `dryRun: true` to previe
     if (CONFIG.exportFormat === 'json' || CONFIG.exportFormat === 'both') {
       const data = { summary: { scanned, unfollowed, errors, dryRun: CONFIG.dryRun, exportedAt: new Date().toISOString() }, accounts: log };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `xactions-unfollowlog-${tag}-${ts}.json`;
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `medirus-unfollowlog-${tag}-${ts}.json`;
       document.body.appendChild(a); a.click(); a.remove();
     }
 
@@ -255,14 +255,14 @@ Copy the entire script below. **Important:** Start with `dryRun: true` to previe
         `"${r.username}","${(r.displayName || '').replace(/"/g, '""')}","${(r.bio || '').replace(/"/g, '""').replace(/\n/g, ' ')}",${r.followers || 0},${r.following || 0},"${r.timestamp}"`
       ).join('\n');
       const blob = new Blob([header + rows], { type: 'text/csv' });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `xactions-unfollowlog-${tag}-${ts}.csv`;
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `medirus-unfollowlog-${tag}-${ts}.csv`;
       document.body.appendChild(a); a.click(); a.remove();
     }
 
     console.log('📥 Exported.');
   };
 
-  window.XActions = {
+  window.Medirus = {
     pause()  { paused = true;  console.log('⏸️ Paused.'); },
     resume() { paused = false; console.log('▶️ Resumed.'); },
     abort()  { aborted = true; console.log('🛑 Aborting...'); },
@@ -444,11 +444,11 @@ Once you're satisfied with the preview, change `dryRun: false` and run again. Th
 
 | Command | Action |
 |---------|--------|
-| `XActions.pause()` | Pause the script |
-| `XActions.resume()` | Resume after pause |
-| `XActions.abort()` | Stop immediately |
-| `XActions.status()` | Show progress stats |
-| `XActions.export()` | Force export now |
+| `Medirus.pause()` | Pause the script |
+| `Medirus.resume()` | Resume after pause |
+| `Medirus.abort()` | Stop immediately |
+| `Medirus.status()` | Show progress stats |
+| `Medirus.export()` | Force export now |
 
 ---
 
@@ -504,7 +504,7 @@ username,displayName,bio,followers,following,unfollowedAt
 
 > **Rate limits:** X limits unfollow actions. The script uses Gaussian-distributed delays (1.5–4s) and auto-pauses on rate limit detection, but unfollowing 500+ accounts in one session may trigger a temporary block.
 
-> **Recovery:** Progress is saved to `localStorage`. If the page crashes, your previously processed users won't be re-processed. To clear saved state: `localStorage.removeItem('xactions_unfollowWDFBLog')`
+> **Recovery:** Progress is saved to `localStorage`. If the page crashes, your previously processed users won't be re-processed. To clear saved state: `localStorage.removeItem('medirus_unfollowWDFBLog')`
 
 > **"Follows you" detection:** The script looks for the `[data-testid="userFollowIndicator"]` badge. If X changes this selector, mutuals could be accidentally unfollowed. Always preview with dry run first.
 
@@ -543,5 +543,5 @@ Yes. The script saves progress to `localStorage`. When you re-paste and run the 
 
 <p align="center">
   <b>Built with ❤️ by <a href="https://x.com/nichxbt">@nichxbt</a></b><br>
-  <a href="https://xactions.app">xactions.app</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
+  <a href="https://medirus.online">medirus.online</a> · <a href="https://github.com/nichxbt/xactions">GitHub</a>
 </p>

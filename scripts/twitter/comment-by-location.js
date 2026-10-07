@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
  * =============================================================================
- * XActions - Comment By Location
+ * Medirus - Comment By Location
  * =============================================================================
  * 
  * @name        Comment By Location
@@ -10,7 +10,7 @@
  * @author      nichxbt
  * @version     1.0.0
  * @date        2026-01-26
- * @website     https://xactions.app
+ * @website     https://medirus.online
  * 
  * Usage:
  *   1. Go to x.com and make sure you're logged in
@@ -97,12 +97,12 @@
       error: 'color: #E0245E; font-weight: bold;',
       warn: 'color: #FFAD1F; font-weight: bold;'
     };
-    console.log(`%c[XActions] ${msg}`, styles[type] || styles.info);
+    console.log(`%c[Medirus] ${msg}`, styles[type] || styles.info);
   };
 
   const getProcessedTweets = () => {
     try {
-      return JSON.parse(sessionStorage.getItem('xactions_location_commented') || '[]');
+      return JSON.parse(sessionStorage.getItem('medirus_location_commented') || '[]');
     } catch {
       return [];
     }
@@ -112,7 +112,7 @@
     const tweets = getProcessedTweets();
     if (!tweets.includes(tweetId)) {
       tweets.push(tweetId);
-      sessionStorage.setItem('xactions_location_commented', JSON.stringify(tweets));
+      sessionStorage.setItem('medirus_location_commented', JSON.stringify(tweets));
     }
   };
 
@@ -324,7 +324,7 @@
   console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║   📍 XACTIONS - COMMENT BY LOCATION                          ║
+║   📍 MEDIRUS - COMMENT BY LOCATION                          ║
 ║                                                               ║
 ║   Automatically comment on tweets from specific locations     ║
 ║                                                               ║

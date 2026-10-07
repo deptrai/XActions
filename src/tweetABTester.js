@@ -22,22 +22,22 @@
  * 2. Paste this script
  * 3. Use the interactive API:
  *
- *   XActions.createTest({
+ *   Medirus.createTest({
  *     name: 'CTA test',
  *     variantA: 'Check out our new tool! 🔥',
  *     variantB: 'We just launched something amazing → link',
  *   })
  *
- *   XActions.measure('CTA test')  // Measure after both are posted
- *   XActions.results('CTA test')  // View results
- *   XActions.listTests()          // List all tests
- *   XActions.deleteTest('CTA test')
+ *   Medirus.measure('CTA test')  // Measure after both are posted
+ *   Medirus.results('CTA test')  // View results
+ *   Medirus.listTests()          // List all tests
+ *   Medirus.deleteTest('CTA test')
  * ============================================================
  */
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'xactions_ab_tests';
+  const STORAGE_KEY = 'medirus_ab_tests';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   const parseNum = (text) => {
@@ -57,12 +57,12 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tests));
   };
 
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
   // ── Create A/B test ────────────────────────────────────────
-  window.XActions.createTest = (opts) => {
+  window.Medirus.createTest = (opts) => {
     if (!opts || !opts.name || !opts.variantA || !opts.variantB) {
-      console.log('❌ Usage: XActions.createTest({ name: "test", variantA: "text A", variantB: "text B" })');
+      console.log('❌ Usage: Medirus.createTest({ name: "test", variantA: "text A", variantB: "text B" })');
       return;
     }
 
@@ -91,14 +91,14 @@
     console.log('\n  📋 Next steps:');
     console.log('  1. Post Variant A as a tweet');
     console.log('  2. Post Variant B at the same time of day (next day ideally)');
-    console.log(`  3. Run: XActions.setUrl("${opts.name}", "A", "https://x.com/you/status/123")`);
-    console.log(`  4. Run: XActions.setUrl("${opts.name}", "B", "https://x.com/you/status/456")`);
-    console.log(`  5. Wait 24-48h, then: XActions.measure("${opts.name}")`);
-    console.log(`  6. View: XActions.results("${opts.name}")`);
+    console.log(`  3. Run: Medirus.setUrl("${opts.name}", "A", "https://x.com/you/status/123")`);
+    console.log(`  4. Run: Medirus.setUrl("${opts.name}", "B", "https://x.com/you/status/456")`);
+    console.log(`  5. Wait 24-48h, then: Medirus.measure("${opts.name}")`);
+    console.log(`  6. View: Medirus.results("${opts.name}")`);
   };
 
   // ── Set tweet URL for a variant ────────────────────────────
-  window.XActions.setUrl = (testName, variant, url) => {
+  window.Medirus.setUrl = (testName, variant, url) => {
     const tests = loadTests();
     if (!tests[testName]) { console.log(`❌ Test "${testName}" not found.`); return; }
     if (variant !== 'A' && variant !== 'B') { console.log('❌ Variant must be "A" or "B".'); return; }
@@ -112,7 +112,7 @@
     console.log(`✅ Variant ${variant} URL set for "${testName}".`);
 
     if (tests[testName].variantA.posted && tests[testName].variantB.posted) {
-      console.log(`🎯 Both variants posted! Wait 24-48h then run: XActions.measure("${testName}")`);
+      console.log(`🎯 Both variants posted! Wait 24-48h then run: Medirus.measure("${testName}")`);
     }
   };
 
@@ -152,13 +152,13 @@
     return metrics;
   };
 
-  window.XActions.measure = async (testName) => {
+  window.Medirus.measure = async (testName) => {
     const tests = loadTests();
     if (!tests[testName]) { console.log(`❌ Test "${testName}" not found.`); return; }
 
     const test = tests[testName];
     if (!test.variantA.tweetUrl || !test.variantB.tweetUrl) {
-      console.log('❌ Both variants need URLs. Use XActions.setUrl() first.');
+      console.log('❌ Both variants need URLs. Use Medirus.setUrl() first.');
       return;
     }
 
@@ -200,11 +200,11 @@
     }
 
     saveTests(tests);
-    console.log(`\n💾 Measurement saved. Run XActions.results("${testName}") for details.`);
+    console.log(`\n💾 Measurement saved. Run Medirus.results("${testName}") for details.`);
   };
 
   // ── View results ───────────────────────────────────────────
-  window.XActions.results = (testName) => {
+  window.Medirus.results = (testName) => {
     const tests = loadTests();
     if (!tests[testName]) { console.log(`❌ Test "${testName}" not found.`); return; }
 
@@ -267,10 +267,10 @@
   };
 
   // ── List all tests ─────────────────────────────────────────
-  window.XActions.listTests = () => {
+  window.Medirus.listTests = () => {
     const tests = loadTests();
     const names = Object.keys(tests);
-    if (names.length === 0) { console.log('📭 No tests. Use XActions.createTest() to start.'); return; }
+    if (names.length === 0) { console.log('📭 No tests. Use Medirus.createTest() to start.'); return; }
 
     console.log(`\n📋 A/B TESTS (${names.length}):\n`);
     for (const name of names) {
@@ -282,7 +282,7 @@
   };
 
   // ── Delete test ────────────────────────────────────────────
-  window.XActions.deleteTest = (testName) => {
+  window.Medirus.deleteTest = (testName) => {
     const tests = loadTests();
     if (!tests[testName]) { console.log(`❌ Test "${testName}" not found.`); return; }
     delete tests[testName];
@@ -291,11 +291,11 @@
   };
 
   // ── Export all test data ───────────────────────────────────
-  window.XActions.exportTests = () => {
+  window.Medirus.exportTests = () => {
     const tests = loadTests();
     const blob = new Blob([JSON.stringify(tests, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `xactions-ab-tests-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medirus-ab-tests-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     console.log('📥 All test data exported.');
   };
@@ -307,13 +307,13 @@
   console.log('║  by nichxbt — v1.0' + ' '.repeat(W - 21) + '║');
   console.log('╚' + '═'.repeat(W) + '╝');
   console.log('\n📋 Commands:');
-  console.log('  XActions.createTest({ name, variantA, variantB })');
-  console.log('  XActions.setUrl(testName, "A"|"B", tweetUrl)');
-  console.log('  XActions.measure(testName)   // Navigate & measure');
-  console.log('  XActions.results(testName)   // View head-to-head');
-  console.log('  XActions.listTests()');
-  console.log('  XActions.deleteTest(testName)');
-  console.log('  XActions.exportTests()');
+  console.log('  Medirus.createTest({ name, variantA, variantB })');
+  console.log('  Medirus.setUrl(testName, "A"|"B", tweetUrl)');
+  console.log('  Medirus.measure(testName)   // Navigate & measure');
+  console.log('  Medirus.results(testName)   // View head-to-head');
+  console.log('  Medirus.listTests()');
+  console.log('  Medirus.deleteTest(testName)');
+  console.log('  Medirus.exportTests()');
 
   const tests = loadTests();
   const count = Object.keys(tests).length;

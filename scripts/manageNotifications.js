@@ -13,7 +13,7 @@
   };
 
   const run = async () => {
-    console.log('🔔 XActions Notification Scraper');
+    console.log('🔔 Medirus Notification Scraper');
     console.log('================================');
 
     const notifications = [];

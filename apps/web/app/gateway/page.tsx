@@ -46,7 +46,7 @@ const KIND_COLORS: Record<string, string> = {
   internal: '#64748b',
 };
 
-const HISTORY_KEY = 'xactions_gateway_history';
+const HISTORY_KEY = 'medirus_gateway_history';
 
 function readHistory(): CallRecord[] {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }

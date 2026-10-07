@@ -8,11 +8,11 @@ Status: done
 
 <!-- Code-review patches applied (5 fixed + 1 defer). Held at in-progress — NOT done — pending live-DOM verification of join/pending selectors (see Review Findings → Deferred + selectors-facebook.md verify-checklist). -->
 
-<!-- Epic 4 (Facebook Growth Automation, Cluster 1 — medium risk). Source: epics.md#Story 4.4 + PRD prd-XActions-2026-06-10-epic4 FR-18. FIRST Cluster-1 write story. -->
+<!-- Epic 4 (Facebook Growth Automation, Cluster 1 — medium risk). Source: epics.md#Story 4.4 + PRD prd-Medirus-2026-06-10-epic4 FR-18. FIRST Cluster-1 write story. -->
 
 ## Story
 
-As a multi-group operator using XActions,
+As a multi-group operator using Medirus,
 I want to join Facebook groups automatically by URL or keyword search,
 so that I can expand my group reach with safety controls.
 
@@ -149,7 +149,7 @@ This is the highest-risk story so far: it both touches a shared chokepoint (regr
 ### References
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 4.4: Join Facebook groups]
-- [Source: _bmad-output/planning-artifacts/prds/prd-XActions-2026-06-10-epic4/prd.md#FR-18, §7 NFR-6/NFR-7/NFR-8, §9 Open Question #1 (delayRange)]
+- [Source: _bmad-output/planning-artifacts/prds/prd-Medirus-2026-06-10-epic4/prd.md#FR-18, §7 NFR-6/NFR-7/NFR-8, §9 Open Question #1 (delayRange)]
 - [Source: api/services/facebookAutomation.js#runGuardedBatch (extend delay), #shareFacebookPosts (clone shape + URL guard + capture-Map)]
 - [Source: src/scrapers/viralTweets.js, src/scrapers/twitter/index.js — scroll-collect for keyword group search]
 - [Source: _bmad-output/implementation-artifacts/4-2-auto-share-post.md (capture-Map/pending pattern, UNVERIFIED-selector posture), 4-3-view-boost.md (assertFacebookUrl extraction, seam discipline)]

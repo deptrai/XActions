@@ -3,7 +3,7 @@
 # and the marketing landing page in site/. Run from the repo root:
 #   bash deploy/cloudflare/build.sh
 # Then deploy the result:
-#   npx wrangler pages deploy pages-out --project-name xactions
+#   npx wrangler pages deploy pages-out --project-name medirus
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 rm -rf pages-out

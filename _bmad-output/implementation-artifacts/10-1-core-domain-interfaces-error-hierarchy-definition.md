@@ -93,20 +93,20 @@ So that **every platform crawler and adapter in the future has a consistent, idi
 
 **Files already in place:**
 
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/index.js" />
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/base-crawler.js" />
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/base-client.js" />
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/base-login.js" />
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/base-store.js" />
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/error-envelope.js" />
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/action-registry.js" />
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/session-manager.js" />
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/account-pool.js" />
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/status-api.js" />
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/adaptive-governor.js" />
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/platform-validator.js" />
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/signer-pool.js" />
-- <ref_file file="/Users/luisphan/Documents/GitHub/XActions/src/core/types.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/index.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/base-crawler.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/base-client.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/base-login.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/base-store.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/error-envelope.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/action-registry.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/session-manager.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/account-pool.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/status-api.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/adaptive-governor.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/platform-validator.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/signer-pool.js" />
+- <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/src/core/types.js" />
 
 ### What must be preserved
 

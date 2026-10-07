@@ -25,14 +25,14 @@
     ],
     searchTerms: [                   // Search columns to add (when setupColumns = true)
       // 'from:nichxbt',
-      // '#xactions',
+      // '#medirus',
     ],
     showColumnInfo: true,            // Display info about existing columns
     delayBetweenActions: 2000,       // ms between UI actions
   };
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  const STORAGE_KEY = 'xactions_xpro';
+  const STORAGE_KEY = 'medirus_xpro';
 
   const SELECTORS = {
     proLink: 'a[href*="pro.x.com"]',
@@ -205,7 +205,7 @@
 
   const run = async () => {
     console.log('═══════════════════════════════════════════');
-    console.log('📊 XActions — X Pro (TweetDeck)');
+    console.log('📊 Medirus — X Pro (TweetDeck)');
     console.log('═══════════════════════════════════════════\n');
 
     const hasAccess = checkXProAccess();

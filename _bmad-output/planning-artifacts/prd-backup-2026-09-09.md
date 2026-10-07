@@ -1,37 +1,37 @@
 ---
-title: "PRD: Epics 10–20 + 23–26 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform"
+title: "PRD: Epics 10–20 + 23–26 — Medirus Universal Hybrid Scraping & Intelligence Microservice Platform"
 created: 2026-08-18
 updated: 2026-08-26
 status: approved
 canonical: true
 supersedes:
-  - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-06-08/prd.md
-  - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-06-10-epic4/prd.md
-  - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-08-14-epic7/prd.md
-  - _bmad-output/planning-artifacts/archive/prds/prd-XActions-2026-08-18-universal-scraping-engine/prd.md
+  - _bmad-output/planning-artifacts/archive/prds/prd-Medirus-2026-06-08/prd.md
+  - _bmad-output/planning-artifacts/archive/prds/prd-Medirus-2026-06-10-epic4/prd.md
+  - _bmad-output/planning-artifacts/archive/prds/prd-Medirus-2026-08-14-epic7/prd.md
+  - _bmad-output/planning-artifacts/archive/prds/prd-Medirus-2026-08-18-universal-scraping-engine/prd.md
 note: "Canonical PRD cho Epics 10–20, Phase 4 extension Epics 23–26 (Bluesky/Mastodon, utility/adapters consolidation, dispatcher unification, legacy decommission), và Vietnam Market Pivot Epics 21–22, 33 (B2B registry, automotive, F&B, healthcare, legal, Zalo, YouTube VN). Các PRD cũ trong `archive/prds/` được đánh dấu deprecated. FR-24..FR-54 xem `prd-facebook-epics-5-6-2026-08-21.md`. FR-62 xem `FUTURE-WORK.md`."
 author: "John (BMad Product Manager) & Winston (BMad System Architect)"
 epics: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 23, 24, 25, 26]
 prd_ref:
-  - prd-XActions-2026-06-08
-  - prd-XActions-2026-06-10-epic4
-  - prd-XActions-2026-08-14-epic7
+  - prd-Medirus-2026-06-08
+  - prd-Medirus-2026-06-10-epic4
+  - prd-Medirus-2026-08-14-epic7
 ---
 
-# PRD: Epics 10–20 + 23–26 — XActions Universal Hybrid Scraping & Intelligence Microservice Platform
+# PRD: Epics 10–20 + 23–26 — Medirus Universal Hybrid Scraping & Intelligence Microservice Platform
 
-*Chuyển đổi toàn diện XActions thành Nền tảng Động cơ Cào Dữ liệu Toàn Năng (Universal Scraping Microservice) đa ngành: Mạng Xã Hội (X, Facebook, Threads, TikTok, Instagram, **Bluesky, Mastodon**), Thương Mại Điện Tử (Shopee, TikTok Shop), Bất Động Sản (Chợ Tốt bóc tách SĐT, Batdongsan.com.vn), và Tuyển Dụng (TopCV, VietnamWorks, LinkedIn).*
+*Chuyển đổi toàn diện Medirus thành Nền tảng Động cơ Cào Dữ liệu Toàn Năng (Universal Scraping Microservice) đa ngành: Mạng Xã Hội (X, Facebook, Threads, TikTok, Instagram, **Bluesky, Mastodon**), Thương Mại Điện Tử (Shopee, TikTok Shop), Bất Động Sản (Chợ Tốt bóc tách SĐT, Batdongsan.com.vn), và Tuyển Dụng (TopCV, VietnamWorks, LinkedIn).*
 
 ---
 
 ## 0. Mục Đích & Bối Cảnh Tài Liệu
 
-Tài liệu PRD này là bước nhảy vọt chiến lược tiếp nối từ `prd-XActions-2026-08-14-epic7` (Epics 1–9). PRD này chính thức định nghĩa kiến trúc và yêu cầu sản phẩm cho **Epics 10 đến 20**, cùng **Phase 4 extension Epics 23–26**:
-1. **Chuyển dịch sang mô hình Microservice Engine:** XActions trở thành Động cơ Cào dữ liệu chuyên trách (Dedicated Scraping Microservice) cho hệ sinh thái **Nowing (AI Lead & Research Hub)** và nền tảng SaaS / CLI / AI MCP độc lập.
+Tài liệu PRD này là bước nhảy vọt chiến lược tiếp nối từ `prd-Medirus-2026-08-14-epic7` (Epics 1–9). PRD này chính thức định nghĩa kiến trúc và yêu cầu sản phẩm cho **Epics 10 đến 20**, cùng **Phase 4 extension Epics 23–26**:
+1. **Chuyển dịch sang mô hình Microservice Engine:** Medirus trở thành Động cơ Cào dữ liệu chuyên trách (Dedicated Scraping Microservice) cho hệ sinh thái **Nowing (AI Lead & Research Hub)** và nền tảng SaaS / CLI / AI MCP độc lập.
 2. **Áp dụng Đột Phá Kỹ Thuật "Tiered Hybrid Browser-Signer Engine":** Kết hợp Pre-Signed Token Ring Buffer O(1) và Signer Worker Page Pool giải mã chữ ký JS (`a_bogus`, `x-client-transaction-id`), chuyển 100% việc fetch dữ liệu sang Async HTTP Client (`got-scraping`/`undici`), giúp giảm **85% RAM**, tăng tốc độ **5–10x**, và tiết kiệm 90% tài nguyên server.
 3. **Hợp Nhất Cơ Sở Dữ Liệu trên PostgreSQL (Prisma ORM):** Loại bỏ hoàn toàn sự phân mảnh của SQLite, quy chuẩn hóa dữ liệu đa ngành vào PostgreSQL với quy ước Namespaced ID `${platform}:${externalId}` và cột `metadata Json?` có GIN Index.
 4. **Cơ Chế Khai Thác Dữ Liệu 3 Tầng (3-Tier Incremental Gap-Filling):** Chỉ cào bù khoảng trống dữ liệu mới (Delta Gap), triệt tiêu 100% việc cào trùng lặp và tiết kiệm 90% chi phí proxy.
-5. **Kế Hoạch Bàn Giao & Dọn Dẹp (Nowing Cutover & Decommissioning):** Thay thế toàn bộ 20+ scraper cũ bên Nowing bằng XActions MCP Client, giảm dung lượng Docker image của Nowing từ 4GB xuống còn <500MB.
+5. **Kế Hoạch Bàn Giao & Dọn Dẹp (Nowing Cutover & Decommissioning):** Thay thế toàn bộ 20+ scraper cũ bên Nowing bằng Medirus MCP Client, giảm dung lượng Docker image của Nowing từ 4GB xuống còn <500MB.
 6. **Hoàn thiện kiến trúc Universal AbstractCrawler (Epics 23–26):** Đưa Bluesky, Mastodon, utility scripts, adapter layer, và dispatcher về cùng một `AbstractCrawler` / `AbstractApiClient` / `CrawlerCommand`, sau đó xóa bỏ toàn bộ legacy scraper modules.
 
 ---
@@ -81,7 +81,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **FR-70 (Topological Comment Tree Extraction):** Trích xuất toàn bộ cây bình luận đa tầng (`maxDepth: 3`, `maxComments: 500`), chống tham chiếu vòng, và lưu vào DB theo thứ tự Topological Sort (Root trước, SubComments sau).
 * **FR-73 (MCP Daemon & CLI Integration + Streaming Dataset Exporter):** Cung cấp 80+ MCP tools trả về 3-Layer JSON Envelope có cơ chế Auto-Artifact khi payload >100 records. Hỗ trợ xuất dữ liệu ra định dạng JSONL/CSV stream với backpressure.
 * **FR-83 (Realtime Thin Event Redis Stream Ingest):** Phát luồng sự kiện tinh gọn (`{ id, platform, externalId, category, authorId, crawledAt, storageRef }`) vào Redis Stream `stream:social:raw_posts` (`MAXLEN ~ 1000000` hoặc `MINID`, configurable).
-* **FR-84 (Nowing Adapter Cutover & Legacy Scraper Decommissioning):** Nâng cấp adapter bên Nowing kết nối sang XActions MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
+* **FR-84 (Nowing Adapter Cutover & Legacy Scraper Decommissioning):** Nâng cấp adapter bên Nowing kết nối sang Medirus MCP/Redis Stream và gỡ bỏ hoàn toàn 20+ scraper cũ cùng browser dependencies khỏi Nowing backend.
 
 ### Nhóm 5: Mạng Xã Hội Trending (Epic 15)
 * **FR-74 (Threads Meta GraphQL Scraper):** Cào bài viết, timeline và replies trên Threads qua internal Meta GraphQL (LSD token + DocID).
@@ -121,7 +121,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 * **NFR-14 (Bảo Mật Phi Mật Khẩu):** Không lưu trữ plain-text password; đăng nhập an toàn qua Terminal ASCII QR Code và Chrome CDP Attach.
 * **NFR-15 (Kiến Trúc Sạch & Khả Năng Mở Rộng):** Lớp `src/core/` hoàn toàn phi phụ thuộc (Zero-Dependency); thêm nền tảng mới chỉ cần viết thêm Adapter.
 * **NFR-16 (Bản Quyền & Tương Thích Ngược):** Mã nguồn 100% tuân thủ MIT / Apache 2.0; bảo toàn 100% tương thích ngược với CLI `unfollowx` và 80+ MCP tools.
-* **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
+* **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong Medirus phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
 * **NFR-19 (Vietnam Geo-Consistent Proxy & Locale):** Tất cả request đến VN platforms (Zalo, VN e-commerce, VN government sites) phải sử dụng VN residential proxy hoặc VN-located server IP; timezone `Asia/Ho_Chi_Minh` và locale `vi-VN` phải consistent với proxy region. Áp dụng từ Epic 21 trở đi.
 
 ---
@@ -130,7 +130,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 
 ```
 ┌────────────────────────────────────────────────────────┬────────────────────────────────────────────────────────┐
-│ XACTIONS (Tầng Dữ Liệu Thô - Raw Data Lake)           │ NOWING (Tầng Dữ Liệu Tinh Chế - AI Knowledge Hub)      │
+│ MEDIRUS (Tầng Dữ Liệu Thô - Raw Data Lake)           │ NOWING (Tầng Dữ Liệu Tinh Chế - AI Knowledge Hub)      │
 ├────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
 │ • Lưu bài viết thô, raw JSON, headers, likes/shares gốc│ • Lưu Leads CRM, Số điện thoại/Email đã bóc tách       │
 │ • Lưu trữ tạm thời với Hot Cache TTL: **30 ngày**      │ • Lưu Vector Embeddings (1536d) và Intent Tags         │
@@ -181,9 +181,9 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 
 *Các yêu cầu dưới đây xuất hiện trong kiến trúc và epic nhưng chưa được gán số FR cho đến khi re-assessment hoàn tất.*
 
-* **FR-85 (Internal Operator Dashboard & Admin CLI):** Cung cấp giao diện vận hành nội bộ (web dashboard + CLI `xactions admin`) để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. Auth dùng internal admin API key hoặc A2A token, không phải multi-tenant SaaS auth.
-* **FR-86 (Metadata Schema Contract for Consumers):** Mỗi platform/category phải publish JSON Schema hoặc TypeScript type cho `Post.metadata`; consumer có thể lấy schema qua API `GET /schemas/:platform/:category`, MCP tool `x_schema_get`, và CLI `xactions schema get`. `PrismaStore` validate `metadata` against schema khi ghi.
-* **FR-87 (Data Retention Policy):** Dữ liệu raw crawl (bản gốc thu thập) lưu trong XActions với TTL 30 ngày; dữ liệu lead/processed output đẩy sang Nowing được giữ vĩnh viễn. Lịch sử checkpoints và audit logs giữ 90 ngày.
+* **FR-85 (Internal Operator Dashboard & Admin CLI):** Cung cấp giao diện vận hành nội bộ (web dashboard + CLI `medirus admin`) để giám sát jobs/checkpoints, proxy pool, account hibernation, stream metrics và alerts. Auth dùng internal admin API key hoặc A2A token, không phải multi-tenant SaaS auth.
+* **FR-86 (Metadata Schema Contract for Consumers):** Mỗi platform/category phải publish JSON Schema hoặc TypeScript type cho `Post.metadata`; consumer có thể lấy schema qua API `GET /schemas/:platform/:category`, MCP tool `x_schema_get`, và CLI `medirus schema get`. `PrismaStore` validate `metadata` against schema khi ghi.
+* **FR-87 (Data Retention Policy):** Dữ liệu raw crawl (bản gốc thu thập) lưu trong Medirus với TTL 30 ngày; dữ liệu lead/processed output đẩy sang Nowing được giữ vĩnh viễn. Lịch sử checkpoints và audit logs giữ 90 ngày.
 * **FR-88 (3-Tier Incremental Gap-Filling):** Cào theo mô hình 3 tầng: (1) full seed, (2) delta/gap fill theo `publishedAt`/`lastCrawledAt`, (3) on-demand refresh; loại bỏ 100% duplication và tiết kiệm 90% chi phí proxy so với full re-crawl.
 * **FR-89 (Bluesky AT Protocol Scraper):** Cào profile, followers, following, user feed, search, và custom feeds trên Bluesky qua public AT Protocol API (`https://public.api.bsky.app`) với `AbstractCrawler` + `AbstractApiClient`; hỗ trợ optional auth cho non-public data.
 * **FR-90 (Mastodon REST API Scraper):** Cào profile, followers, following, timeline, search, hashtag, và trending trên bất kỳ Mastodon instance nào qua public REST API với `AbstractCrawler` + `AbstractApiClient`; hỗ trợ optional `accessToken` cho authenticated endpoints.
@@ -194,7 +194,7 @@ Trở thành **Nền tảng Tự động hóa & Khai thác Dữ liệu Web Toàn
 ### 7.2. Yêu cầu phi chức năng bổ sung (NFR-17 ➔ NFR-18)
 
 * **NFR-17 (Operational Observability):** Hệ thống phải expose real-time metrics qua `GET /governor/status`, `GET /metrics/stream`, dashboard SSE/polling mỗi 5–30s, và alert khi `pendingMessages > 50,000` hoặc `lastAckTime > 60s`.
-* **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong XActions phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
+* **NFR-18 (Universal Architecture Compliance):** 100% nền tảng và crawler trong Medirus phải kế thừa `AbstractCrawler` và `AbstractApiClient`, được gọi thống nhất qua `CrawlerCommand`. Không còn module scraper nào sử dụng API surface riêng hoặc nằm ngoài `src/scrapers/social/<platform>/` sau khi Epic 26 hoàn thành.
 * **NFR-19 (Vietnam Geo-Consistent Proxy & Locale):** Tất cả request đến VN platforms (Zalo, VN e-commerce, VN government sites) phải sử dụng VN residential proxy hoặc VN-located server IP; timezone `Asia/Ho_Chi_Minh` và locale `vi-VN` phải consistent với proxy region. Áp dụng từ Epic 21 trở đi.
 
 ### 7.3. Lộ trình phân kỳ cập nhật

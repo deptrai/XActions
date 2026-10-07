@@ -83,12 +83,12 @@ var CONFIG = {
   const $confirmBtn = '[data-testid="confirmationSheetConfirm"]';
   const $followsYou = '[data-testid="userFollowIndicator"]';
   
-  const TRACKING_KEY = 'xactions_follow_tracking';
-  const FOLLOWERS_KEY = 'xactions_my_current_followers';
+  const TRACKING_KEY = 'medirus_follow_tracking';
+  const FOLLOWERS_KEY = 'medirus_my_current_followers';
   // Shared with protect-active-users.js and whitelist.js so a user marked
   // protected/whitelisted by either script is never touched here.
-  const PROTECTED_KEY = 'xactions_protected_users';
-  const WHITELIST_KEY = 'xactions_whitelist';
+  const PROTECTED_KEY = 'medirus_protected_users';
+  const WHITELIST_KEY = 'medirus_whitelist';
   
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║  🧠 SMART UNFOLLOW                                         ║');

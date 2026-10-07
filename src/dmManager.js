@@ -78,7 +78,7 @@ export async function sendDM(page, username, message) {
 /**
  * Get DM conversations list
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function getConversations(page, options = {}) {
@@ -104,7 +104,7 @@ export async function getConversations(page, options = {}) {
  * Export messages from a conversation
  * @param {import('puppeteer').Page} page
  * @param {string} conversationUrl - URL of the DM conversation
- * @param {import('./types/xactions.js').XActionsOptions} options
+ * @param {import('./types/medirus.js').MedirusOptions} options
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function exportConversation(page, conversationUrl, options = {}) {
@@ -175,7 +175,7 @@ export async function getMessageRequests(page) {
 /**
  * Update DM privacy settings
  * @param {import('puppeteer').Page} page
- * @param {import('./types/xactions.js').DMSettings} settings
+ * @param {import('./types/medirus.js').DMSettings} settings
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function updateDMSettings(page, settings = {}) {

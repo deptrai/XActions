@@ -1,19 +1,19 @@
 ---
-id: SPEC-xactions-public-scrape-gateway
+id: SPEC-medirus-public-scrape-gateway
 companions:
-  - ../planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md
+  - ../planning-artifacts/architecture/architecture-medirus-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md
   - ux-review.md
 sources:
-  - ../planning-artifacts/research/market-crypto-xactions-features-2026-09-26/research.md
+  - ../planning-artifacts/research/market-crypto-medirus-features-2026-09-26/research.md
 ---
 
 > **Canonical contract.** This SPEC and the files in `companions:` are the complete, preservation-validated contract for what to build, test, and validate. Source documents listed in frontmatter are for traceability — consult them only if you need narrative rationale or prose color this contract intentionally omits.
 
-# XActions Public Scrape Gateway
+# Medirus Public Scrape Gateway
 
 ## Why
 
-jev-trading forked `PumpFunCrawler` in-repo because no callable scrape surface existed for a backend service — every existing path was either user-JWT-gated REST (`POST /api/platform/:platform/scrape`) or queue+poll (`POST /api/ai/discovery/search` → 40s wait). The same gap blocks Nowing and ChainLens from using XActions as a stable scraping substrate, and leaves third-party integrators with no on-ramp. The fix is architectural, not feature: expose one versioned scrape contract that any machine consumer can hit, with auth and sync/async as cross-cutting seams — not per-caller branches. Spine (companion) pins the decisions; this SPEC names the deliverable contract.
+jev-trading forked `PumpFunCrawler` in-repo because no callable scrape surface existed for a backend service — every existing path was either user-JWT-gated REST (`POST /api/platform/:platform/scrape`) or queue+poll (`POST /api/ai/discovery/search` → 40s wait). The same gap blocks Nowing and ChainLens from using Medirus as a stable scraping substrate, and leaves third-party integrators with no on-ramp. The fix is architectural, not feature: expose one versioned scrape contract that any machine consumer can hit, with auth and sync/async as cross-cutting seams — not per-caller branches. Spine (companion) pins the decisions; this SPEC names the deliverable contract.
 
 ## Capabilities
 
@@ -42,16 +42,16 @@ jev-trading forked `PumpFunCrawler` in-repo because no callable scrape surface e
   - **success:** A single call to `platform:['x','reddit']` returns `{results: [{platform:'x',...},{platform:'reddit',...}]}` in one envelope — no per-platform fan-out in consumer code.
 
 - **CAP-7 — Self-discovery + interactive playground**
-  - **intent:** Consumers enumerate every `(platform, action, syncCapable, mode)` triple via `GET /api/actions` (REST introspection), `openapi.json`, `x_actions_list`, AND a browsable catalog + interactive playground UI.
+  - **intent:** Consumers enumerate every `(platform, action, syncCapable, mode)` triple via `GET /api/actions` (REST introspection), `openapi.json`, `medirus_list`, AND a browsable catalog + interactive playground UI.
   - **success:** `GET /api/actions` returns the manifest in <100ms unauthenticated; `/actions` catalog renders the same manifest publicly; `/gateway/` playground issues a live `POST /api/platform/reddit/scrape` from the browser with envelope rendered + "Copy as curl".
 
 ## Constraints
 
 - **C-1** — `consumer_id` is derived server-side from the Bearer credential. `X-Consumer-Id` header is a hint, never authoritative; spoofing it must not bypass quota (CAP-5).
 - **C-2** — Sync mode hard-ceils at 1.5s and degrades to `202`. Never extend the window — a longer sync window is what made jev fork in the first place.
-- **C-3** — XActions never proxies sub-second data. pumpportal WS mints, Solana RPC/Helius/Triton, trade tape, TP triggers stay consumer-owned. The gateway documents per-action latency so a caller can tell at call-time what's fast-lane-eligible.
+- **C-3** — Medirus never proxies sub-second data. pumpportal WS mints, Solana RPC/Helius/Triton, trade tape, TP triggers stay consumer-owned. The gateway documents per-action latency so a caller can tell at call-time what's fast-lane-eligible.
 - **C-4** — Domain-specific fields (`dev_paid_order`, `bonding_curve`, `realized_pnl`, etc.) live in the `data`/`context` payload only — never in ThinEvent or the envelope core. `category: 'crypto'` discriminates; the shared schema stays platform-agnostic.
-- **C-5** — `VALID_CONSUMER_IDS` stays frozen at `['nowing','chainlens','internal']`. New *named* consumers come from env config (`XACTIONS_MCP_API_KEY` + Bearer→consumer map), never a code change. `internal` is the unmetered trusted class.
+- **C-5** — `VALID_CONSUMER_IDS` stays frozen at `['nowing','chainlens','internal']`. New *named* consumers come from env config (`MEDIRUS_MCP_API_KEY` + Bearer→consumer map), never a code change. `internal` is the unmetered trusted class.
 - **C-6** — x402 route-config must explicitly cover `POST /api/platform/:platform/scrape`. Today's `buildRouteConfig` only maps `/api/ai/*` and `/api/scripts/*` — the gateway route needs to be added.
 - **C-7** — Batch dispatch (`platform:'all'|string[]`) runs platforms in parallel via `Promise.allSettled` (existing `UniversalActionDispatcher` semantics — `dispatcher.js:296`). The 1.5s sync ceiling applies **per-platform**; batch total is bounded by the slowest single platform, not the sum. Per-platform failure does not fail the batch — `results[]` carries per-platform status.
 - **C-8** — `serviceAuth` Bearer is **all-or-nothing per consumer**. Scoped tokens (`consumer=X&actions=Y`) add an authz matrix with no current need — every named consumer is trusted. Untrusted-scoped access, if ever needed, becomes a NEW consumer class via env config, not Bearer parsing.
@@ -63,7 +63,7 @@ jev-trading forked `PumpFunCrawler` in-repo because no callable scrape surface e
 
 ## Non-goals
 
-- **NG-1** — Sub-second real-time data plane (pumpportal WS mints, Helius/Triton gRPC, Solana RPC). Owned by consumers, not XActions.
+- **NG-1** — Sub-second real-time data plane (pumpportal WS mints, Helius/Triton gRPC, Solana RPC). Owned by consumers, not Medirus.
 - **NG-2** — Telegram MTProto vs Bot API transport choice. Deferred to the D4 spec; the gateway contract is transport-agnostic.
 - **NG-3** — Per-consumer SLA/billing tiers beyond x402 pay-per-call. Wait for real usage data.
 - **NG-4** — Forcing jev to migrate its in-repo `PumpFunCrawler`. That's a consumer-side choice; the gateway only has to make the sync path preferable.

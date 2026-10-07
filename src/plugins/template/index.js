@@ -1,18 +1,18 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Example Plugin — xactions-plugin-example
+ * Medirus Example Plugin — medirus-plugin-example
  * 
  * Demonstrates the plugin interface by adding:
  *   - A scraper that extracts trending topics
  *   - An MCP tool that exposes the scraper to AI agents
  *   - An Express route that serves the scraper via REST API
- *   - A browser action for window.XActions
+ *   - A browser action for window.Medirus
  *   - Lifecycle hooks
  * 
- * Use this as a template when building your own XActions plugin.
+ * Use this as a template when building your own Medirus plugin.
  * 
  * @author nich (@nichxbt) - https://github.com/nirholas
- * @see https://xactions.app
+ * @see https://medirus.online
  * @license MIT
  */
 
@@ -68,12 +68,12 @@ async function scrapeTrendingTopics(page, options = {}) {
 // Plugin Definition
 // ============================================================================
 
-export const name = 'xactions-plugin-example';
+export const name = 'medirus-plugin-example';
 export const version = '1.0.0';
-export const description = 'Example XActions plugin — trending topics scraper + MCP tool';
+export const description = 'Example Medirus plugin — trending topics scraper + MCP tool';
 
 /**
- * Browser console actions (added to window.XActions namespace)
+ * Browser console actions (added to window.Medirus namespace)
  */
 export const actions = [
   {
@@ -139,7 +139,7 @@ export const routes = [
     handler: (req, res) => {
       // In a real plugin, you'd use Puppeteer here or return cached data
       res.json({
-        message: 'Trending topics endpoint from xactions-plugin-example',
+        message: 'Trending topics endpoint from medirus-plugin-example',
         hint: 'This is a placeholder — real implementation would use Puppeteer.',
       });
     },
@@ -151,11 +151,11 @@ export const routes = [
  */
 export const hooks = {
   onLoad() {
-    console.log('📦 xactions-plugin-example loaded');
+    console.log('📦 medirus-plugin-example loaded');
   },
 
   onUnload() {
-    console.log('📦 xactions-plugin-example unloaded');
+    console.log('📦 medirus-plugin-example unloaded');
   },
 
   beforeAction(context) {

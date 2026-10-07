@@ -2,7 +2,7 @@
 /**
  * Browser Script Download Routes
  *
- * Serves XActions browser scripts (src/ and src/automation/) behind x402 micropayments.
+ * Serves Medirus browser scripts (src/ and src/automation/) behind x402 micropayments.
  * Payment is verified by the x402 middleware before these handlers run.
  *
  * Routes:

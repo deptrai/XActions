@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Profile Management — Free X/Twitter Account Management Tool | XActions</title>
+  <title>Profile Management — Free X/Twitter Account Management Tool | Medirus</title>
   <meta name="description" content="Edit and manage your X/Twitter profile — update bio, avatar, header, filter posts, and share QR codes.">
-  <meta name="keywords" content="xactions, twitter automation, x automation, free, profile, management, account management, profile management twitter, twitter profile management">
+  <meta name="keywords" content="medirus, twitter automation, x automation, free, profile, management, account management, profile management twitter, twitter profile management">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <!-- Open Graph -->
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Profile Management — XActions">
+  <meta property="og:title" content="Profile Management — Medirus">
   <meta property="og:description" content="Edit and manage your X/Twitter profile — update bio, avatar, header, filter posts, and share QR codes.">
-  <meta property="og:url" content="https://xactions.app/docs/profile-management">
-  <meta property="og:site_name" content="XActions">
+  <meta property="og:url" content="https://medirus.online/docs/profile-management">
+  <meta property="og:site_name" content="Medirus">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
@@ -22,7 +22,7 @@
   <meta name="twitter:title" content="Profile Management — Free X/Twitter Tool">
   <meta name="twitter:description" content="Edit and manage your X/Twitter profile — update bio, avatar, header, filter posts, and share QR codes.">
 
-  <link rel="canonical" href="https://xactions.app/docs/profile-management">
+  <link rel="canonical" href="https://medirus.online/docs/profile-management">
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
@@ -31,16 +31,16 @@
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Profile Management — Free X/Twitter Account Management Tool | XActions",
+    "headline": "Profile Management — Free X/Twitter Account Management Tool | Medirus",
     "description": "Edit and manage your X/Twitter profile — update bio, avatar, header, filter posts, and share QR codes.",
-    "url": "https://xactions.app/docs/profile-management",
+    "url": "https://medirus.online/docs/profile-management",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-02-24",
     "dateModified": "2026-02-24",
-    "mainEntityOfPage": "https://xactions.app/docs/profile-management",
+    "mainEntityOfPage": "https://medirus.online/docs/profile-management",
     "articleSection": "Account Management",
-    "keywords": "xactions, twitter automation, x automation, free, profile, management, account management, profile management twitter, twitter profile management"
+    "keywords": "medirus, twitter automation, x automation, free, profile, management, account management, profile management twitter, twitter profile management"
   }
   </script>
   <!-- Structured Data - BreadcrumbList -->
@@ -49,9 +49,9 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Documentation", "item": "https://xactions.app/docs" },
-      { "@type": "ListItem", "position": 3, "name": "Profile Management", "item": "https://xactions.app/docs/profile-management" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Documentation", "item": "https://medirus.online/docs" },
+      { "@type": "ListItem", "position": 3, "name": "Profile Management", "item": "https://medirus.online/docs/profile-management" }
     ]
   }
   </script>
@@ -65,10 +65,10 @@
     "step": [
       { "@type": "HowToStep", "name": "Open x.com", "text": "Navigate to x.com in your browser and log in to your account." },
       { "@type": "HowToStep", "name": "Open DevTools Console", "text": "Press F12 or Ctrl+Shift+J to open the browser developer console." },
-      { "@type": "HowToStep", "name": "Paste the script", "text": "Copy the XActions Profile Management script and paste it into the console." },
+      { "@type": "HowToStep", "name": "Paste the script", "text": "Copy the Medirus Profile Management script and paste it into the console." },
       { "@type": "HowToStep", "name": "Run and monitor", "text": "Press Enter to run. The script shows real-time progress with emoji logs." }
     ],
-    "tool": { "@type": "HowToTool", "name": "XActions" },
+    "tool": { "@type": "HowToTool", "name": "Medirus" },
     "totalTime": "PT2M"
   }
   </script>
@@ -176,7 +176,7 @@
   <div class="layout">
     <!-- Sidebar -->
     <aside class="sidebar">
-      <div class="logo"><a href="/">⚡ XActions</a></div>
+      <div class="logo"><a href="/">⚡ Medirus</a></div>
       <nav>
         <a href="/features" class="nav-item"><span class="nav-icon">⚡</span><span>All Scripts</span></a>
         <a href="/tutorials" class="nav-item"><span class="nav-icon">📚</span><span>Tutorials</span></a>
@@ -221,7 +221,7 @@
 })();
 </code></pre>
 <h2>📦 Node.js Module</h2>
-<pre><code class="language-javascript">import { getProfile, updateProfile, uploadAvatar } from &#39;xactions&#39;;
+<pre><code class="language-javascript">import { getProfile, updateProfile, uploadAvatar } from &#39;medirus&#39;;
 
 // Get profile info
 const profile = await getProfile(page, &#39;nichxbt&#39;);
@@ -231,7 +231,7 @@ await updateProfile(page, {
   name: &#39;New Display Name&#39;,
   bio: &#39;Building tools for the X ecosystem 🚀&#39;,
   location: &#39;Worldwide&#39;,
-  website: &#39;https://xactions.app&#39;,
+  website: &#39;https://medirus.online&#39;,
 });
 
 // Upload new avatar
@@ -310,7 +310,7 @@ Input: { &quot;name&quot;: &quot;Display Name&quot;, &quot;bio&quot;: &quot;New 
 
         <div class="cta-box">
           <h3>⚡ Ready to try Profile Management?</h3>
-          <p>XActions is 100% free and open-source. No API keys, no fees, no signup.</p>
+          <p>Medirus is 100% free and open-source. No API keys, no fees, no signup.</p>
           <a href="/features">Browse All Scripts</a>
         </div>
       </article>
@@ -342,7 +342,7 @@ Input: { &quot;name&quot;: &quot;Display Name&quot;, &quot;bio&quot;: &quot;New 
   <footer class="site-footer">
     <div class="footer-content">
       <div class="footer-section">
-        <h4>XActions</h4>
+        <h4>Medirus</h4>
         <p>100% Free & Open Source X/Twitter Automation</p>
         <p>Created by <a href="https://x.com/nichxbt" rel="noopener">@nichxbt</a></p>
       </div>
@@ -372,7 +372,7 @@ Input: { &quot;name&quot;: &quot;Display Name&quot;, &quot;bio&quot;: &quot;New 
       </div>
     </div>
     <div class="footer-bottom">
-      <p>© 2024-2026 XActions. MIT License. No API fees. No limits.</p>
+      <p>© 2024-2026 Medirus. MIT License. No API fees. No limits.</p>
     </div>
   </footer>
 </body>

@@ -38,7 +38,7 @@ function createFacebookCrawler(client, options = {}) {
 /**
  * Dispatch to FacebookCrawler hybrid engine (Story 13.10)
  * @param {string} action
- * @param {import('../../../types/xactions.d.ts').XActionsOptions & Record<string, any>} options
+ * @param {import('../../../types/medirus.d.ts').MedirusOptions & Record<string, any>} options
  * @returns {Promise<Record<string, any>>}
  */
 export async function dispatchFacebookHybrid(action, options = {}) {

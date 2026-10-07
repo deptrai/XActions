@@ -1,5 +1,5 @@
 /**
- * MCP Bridge for XActions REST Server (api/server.js).
+ * MCP Bridge for Medirus REST Server (api/server.js).
  *
  * Allows api/server.js to serve the Streamable-HTTP MCP endpoint at /mcp
  * alongside the web dashboard, enabling Nowing and other AI agents to connect
@@ -50,14 +50,14 @@ export function setupMcpRoutes(app) {
 
     // Consumer authentication / identification (AD-20)
     const consumer = identifyConsumer(req);
-    req.xactionsConsumer = { consumerId: consumer.consumerId, apiKeyValid: consumer.apiKeyValid };
+    req.medirusConsumer = { consumerId: consumer.consumerId, apiKeyValid: consumer.apiKeyValid };
 
     if (consumer.apiKeyRequired && !consumer.apiKeyValid) {
       res.setHeader('WWW-Authenticate', 'Bearer');
       return res.status(401).json({
         code: 'XACT_4010',
         type: 'auth_expired',
-        message: 'Invalid or missing Bearer token for XActions MCP API',
+        message: 'Invalid or missing Bearer token for Medirus MCP API',
         statusCode: 401,
         isRetryable: false,
         retryAfterMs: 0,

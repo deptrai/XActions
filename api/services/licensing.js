@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Licensing & Telemetry
+ * Medirus Licensing & Telemetry
  * 
  * Lightweight enforcement:
- * - Anonymous usage ping (opt-out with XACTIONS_NO_TELEMETRY=1)
+ * - Anonymous usage ping (opt-out with MEDIRUS_NO_TELEMETRY=1)
  * - License key validation for white-label
- * - "Powered by XActions" branding control
+ * - "Powered by Medirus" branding control
  */
 
 import crypto from 'crypto';
@@ -60,8 +60,8 @@ function getInstanceId() {
   if (instanceId) return instanceId;
   
   // Use env var if set, otherwise generate
-  if (process.env.XACTIONS_INSTANCE_ID) {
-    instanceId = process.env.XACTIONS_INSTANCE_ID;
+  if (process.env.MEDIRUS_INSTANCE_ID) {
+    instanceId = process.env.MEDIRUS_INSTANCE_ID;
   } else {
     // Generate from hostname + random
     const hostname = process.env.HOSTNAME || process.env.RAILWAY_SERVICE_NAME || 'unknown';
@@ -75,12 +75,12 @@ function getInstanceId() {
 }
 
 /**
- * Send anonymous usage ping (opt-out with XACTIONS_NO_TELEMETRY=1)
+ * Send anonymous usage ping (opt-out with MEDIRUS_NO_TELEMETRY=1)
  */
 async function sendTelemetryPing() {
   // Respect opt-out
-  if (process.env.XACTIONS_NO_TELEMETRY === '1') {
-    console.log('📊 Telemetry disabled (XACTIONS_NO_TELEMETRY=1)');
+  if (process.env.MEDIRUS_NO_TELEMETRY === '1') {
+    console.log('📊 Telemetry disabled (MEDIRUS_NO_TELEMETRY=1)');
     return;
   }
   
@@ -90,12 +90,12 @@ async function sendTelemetryPing() {
       version: process.env.npm_package_version || '1.0.0',
       nodeVersion: process.version,
       platform: process.platform,
-      hasLicense: !!process.env.XACTIONS_LICENSE_KEY,
+      hasLicense: !!process.env.MEDIRUS_LICENSE_KEY,
       timestamp: new Date().toISOString(),
     };
     
     // Fire and forget - don't block startup
-    fetch('https://telemetry.xactions.app/ping', {
+    fetch('https://telemetry.medirus.online/ping', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -104,7 +104,7 @@ async function sendTelemetryPing() {
       // Silently fail - telemetry should never break the app
     });
     
-    console.log('📊 Anonymous telemetry ping sent (opt-out: XACTIONS_NO_TELEMETRY=1)');
+    console.log('📊 Anonymous telemetry ping sent (opt-out: MEDIRUS_NO_TELEMETRY=1)');
   } catch (e) {
     // Silently fail
   }
@@ -174,7 +174,7 @@ async function validateLicense(licenseKey) {
 async function getLicenseStatus() {
   if (cachedLicense) return /** @type {LicenseStatus} */ (cachedLicense);
   
-  const licenseKey = process.env.XACTIONS_LICENSE_KEY;
+  const licenseKey = process.env.MEDIRUS_LICENSE_KEY;
   
   if (!licenseKey) {
     cachedLicense = {
@@ -218,7 +218,7 @@ async function getBrandingHtml() {
   }
   
   return `
-    <div id="xactions-branding" style="
+    <div id="medirus-branding" style="
       position: fixed;
       bottom: 12px;
       right: 12px;
@@ -231,10 +231,10 @@ async function getBrandingHtml() {
       z-index: 9999;
       pointer-events: auto;
     ">
-      <a href="https://xactions.app" target="_blank" rel="noopener" style="
+      <a href="https://medirus.online" target="_blank" rel="noopener" style="
         color: #1d9bf0;
         text-decoration: none;
-      ">⚡ Powered by XActions</a>
+      ">⚡ Powered by Medirus</a>
     </div>
   `;
 }
@@ -251,8 +251,8 @@ async function initializeLicensing() {
   console.log(`📜 License tier: ${license.tier}`);
   
   if (license.tier === 'free') {
-    console.log('💡 Running in free mode - "Powered by XActions" branding will be shown');
-    console.log('💡 Get a license at https://xactions.app/enterprise');
+    console.log('💡 Running in free mode - "Powered by Medirus" branding will be shown');
+    console.log('💡 Get a license at https://medirus.online/enterprise');
   }
   
   // Send telemetry ping

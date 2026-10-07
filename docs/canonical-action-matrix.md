@@ -23,10 +23,10 @@
 | twitter | social | spaces | — | query | limit, cursor, state | `{"query":"crypto","limit":20}` |
 | twitter | social | media | — | — | username, tweetId, type, limit, cursor | `{"username":"elonmusk","type":"video","limit":20}` |
 | twitter | social | download_video | — | tweetId | quality, destPath | `{"tweetId":"1234567890123456789","destPath":"/tmp/video.mp4"}` |
-| twitter | social | post | — | text | mediaIds, premium, sensitive, dryRun | `{"text":"Hello XActions","mediaIds":["123"],"dryRun":false}` |
+| twitter | social | post | — | text | mediaIds, premium, sensitive, dryRun | `{"text":"Hello Medirus","mediaIds":["123"],"dryRun":false}` |
 | twitter | social | reply | — | tweetId, text | mediaIds, premium, sensitive, dryRun | `{"tweetId":"1900000000000000000","text":"Nice","dryRun":false}` |
 | twitter | social | quote | — | tweetId, text | mediaIds, premium, sensitive, dryRun | `{"tweetId":"1900000000000000000","text":"Agree","dryRun":false}` |
-| twitter | social | schedule | — | text, publishAt | mediaIds, premium, sensitive, dryRun | `{"text":"Hello future XActions","publishAt":"2026-09-01T12:00:00Z","dryRun":false}` |
+| twitter | social | schedule | — | text, publishAt | mediaIds, premium, sensitive, dryRun | `{"text":"Hello future Medirus","publishAt":"2026-09-01T12:00:00Z","dryRun":false}` |
 | twitter | social | like | — | tweetId | dryRun | `{"tweetId":"1900000000000000000","dryRun":false}` |
 | twitter | social | unlike | — | tweetId | dryRun | `{"tweetId":"1900000000000000000","dryRun":false}` |
 | twitter | social | retweet | — | tweetId | dryRun | `{"tweetId":"1900000000000000000","dryRun":false}` |
@@ -54,7 +54,7 @@
 | bluesky | social | trending | — | — | limit, identifier, password | `{"limit":20}` |
 | bluesky | social | feed | — | feedUri | feed, uri, limit, cursor, identifier, password | `{"feedUri":"at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot"}` |
 | bluesky | social | post_detail | — | — | uri, url, postUrl, postId, depth, parentHeight, identifier, password | `{"postUrl":"https://bsky.app/profile/alice.bsky.social/post/3abc"}` |
-| bluesky | social | post | — | text | reply, dryRun, identifier, password | `{"text":"Hello Bluesky from XActions","dryRun":false}` |
+| bluesky | social | post | — | text | reply, dryRun, identifier, password | `{"text":"Hello Bluesky from Medirus","dryRun":false}` |
 | bluesky | social | reply | — | text, parentUri, parentCid | rootUri, rootCid, dryRun, identifier, password | `{"text":"Great point!","parentUri":"at://did:plc:.../app.bsky.feed.post/...","parentCid":"bafyre..."}` |
 | bluesky | social | like | — | uri, cid | dryRun, identifier, password | `{"uri":"at://did:plc:.../app.bsky.feed.post/...","cid":"bafyre..."}` |
 | bluesky | social | repost | — | uri, cid | dryRun, identifier, password | `{"uri":"at://did:plc:.../app.bsky.feed.post/...","cid":"bafyre..."}` |
@@ -70,7 +70,7 @@
 | mastodon | social | search | — | query | instance, type, limit, max_id, accessToken | `{"query":"open source","limit":20}` |
 | mastodon | social | hashtag | — | hashtag | instance, limit, max_id, accessToken | `{"hashtag":"technology","limit":20}` |
 | mastodon | social | trending | — | — | instance, limit, accessToken | `{"limit":20}` |
-| mastodon | social | post | — | text | status, media_ids, visibility, instance, dryRun, accessToken | `{"text":"Hello Mastodon from XActions","dryRun":false}` |
+| mastodon | social | post | — | text | status, media_ids, visibility, instance, dryRun, accessToken | `{"text":"Hello Mastodon from Medirus","dryRun":false}` |
 | mastodon | social | reply | — | text, in_reply_to_id | status, media_ids, instance, dryRun, accessToken | `{"text":"Great point!","in_reply_to_id":"123456789"}` |
 | mastodon | social | like | — | statusId | instance, dryRun, accessToken | `{"statusId":"123456789"}` |
 | mastodon | social | reblog | — | statusId | instance, dryRun, accessToken | `{"statusId":"123456789"}` |
@@ -92,7 +92,7 @@
 | facebook | social | marketplace | — | query | location, category, categoryId, minPrice, maxPrice, limit, cursor, after, radiusKm, latitude, longitude, dryRun, priceMin, priceMax, sortBy, condition | `{"query":"macbook pro 14","location":"Ho Chi Minh City","minPrice":800,"maxPrice":1200,"limit":20}` |
 | facebook | social | like | — | postUrl | postUrls, dryRun, delayMin, delayMax, maxBatch | `{"postUrl":"https://www.facebook.com/zuck/posts/1011565502"}` |
 | facebook | social | comment | — | postUrl, text | postUrls, dryRun, delayMin, delayMax, maxBatch | `{"postUrl":"https://www.facebook.com/zuck/posts/1011565502","text":"Great update!"}` |
-| facebook | social | post | — | text | mediaUrls, groupUrl, groupUrls, groupIds, profileUrl, profileUrls, dryRun, delayMin, delayMax, maxBatch | `{"text":"Hello Facebook from XActions Hybrid Crawler!"}` |
+| facebook | social | post | — | text | mediaUrls, groupUrl, groupUrls, groupIds, profileUrl, profileUrls, dryRun, delayMin, delayMax, maxBatch | `{"text":"Hello Facebook from Medirus Hybrid Crawler!"}` |
 | facebook | social | share | — | postUrl | postUrls, message, dryRun, delayMin, delayMax, maxBatch | `{"postUrl":"https://www.facebook.com/zuck/posts/1011565502"}` |
 | facebook | social | messenger_share | — | postUrl, recipientUids | recipientNames, message, dryRun, delayMin, delayMax, maxBatch | `{"postUrl":"https://www.facebook.com/zuck/posts/1011565502","recipientUids":["100001234567890"]}` |
 | facebook | social | share_link_uid | — | postUrl, recipientUid | message, dryRun, delayMin, delayMax | `{"postUrl":"https://www.facebook.com/zuck/posts/1011565502","recipientUid":"100001234567890"}` |
@@ -108,7 +108,7 @@
 | threads | social | profile | — | username | — | `{"username":"zuck"}` |
 | threads | social | followers | — | username | count, cursor | `{"username":"zuck","count":50}` |
 | threads | social | following | — | username | count, cursor | `{"username":"zuck","count":50}` |
-| threads | social | post | — | text | dryRun | `{"text":"Hello Threads from XActions","dryRun":false}` |
+| threads | social | post | — | text | dryRun | `{"text":"Hello Threads from Medirus","dryRun":false}` |
 | threads | social | reply | — | text, postId | dryRun | `{"text":"Great point!","postId":"12345","dryRun":false}` |
 | threads | social | like | — | postId | dryRun | `{"postId":"12345","dryRun":false}` |
 | threads | social | repost | — | postId | dryRun | `{"postId":"12345","dryRun":false}` |

@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Host / Start a Space — Free X/Twitter Script | XActions</title>
+  <title>Host / Start a Space — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Start a new X Space with title, topic, and">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, host, space, spaces &amp; live">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, host, space, spaces &amp; live">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Host / Start a Space — XActions">
+  <meta property="og:title" content="Host / Start a Space — Medirus">
   <meta property="og:description" content="Start a new X Space with title, topic, and">
-  <meta property="og:url" content="https://xactions.app/scripts/host-space">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/host-space">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Host / Start a Space — XActions">
+  <meta name="twitter:title" content="Host / Start a Space — Medirus">
   <meta name="twitter:description" content="Start a new X Space with title, topic, and">
 
-  <link rel="canonical" href="https://xactions.app/scripts/host-space">
+  <link rel="canonical" href="https://medirus.online/scripts/host-space">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Host / Start a Space — Free X/Twitter Script | XActions",
+    "headline": "Host / Start a Space — Free X/Twitter Script | Medirus",
     "description": "Start a new X Space with title, topic, and",
-    "url": "https://xactions.app/scripts/host-space",
+    "url": "https://medirus.online/scripts/host-space",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Spaces & Live",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, host, space, spaces & live"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, host, space, spaces & live"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Spaces & Live", "item": "https://xactions.app/scripts#spaces-live" },
-      { "@type": "ListItem", "position": 4, "name": "Host / Start a Space", "item": "https://xactions.app/scripts/host-space" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Spaces & Live", "item": "https://medirus.online/scripts#spaces-live" },
+      { "@type": "ListItem", "position": 4, "name": "Host / Start a Space", "item": "https://medirus.online/scripts/host-space" }
     ]
   }
   </script>
@@ -160,7 +160,7 @@
           <button class="copy-btn" onclick="navigator.clipboard.writeText(this.nextElementSibling.querySelector('code').textContent).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',2000)})">Copy</button>
           <pre><code>const CONFIG = {
     // ── Space Details ────────────────────────────────────────
-    title: 'My XActions Space 🎙️',
+    title: 'My Medirus Space 🎙️',
     topic: '',                       // Optional topic/category
     enableRecording: false,          // Record the Space
     scheduled: false,                // Schedule instead of starting now
@@ -213,7 +213,7 @@
 
   const CONFIG = {
     // ── Space Details ────────────────────────────────────────
-    title: 'My XActions Space 🎙️',
+    title: 'My Medirus Space 🎙️',
     topic: '',                       // Optional topic/category
     enableRecording: false,          // Record the Space
     scheduled: false,                // Schedule instead of starting now
@@ -284,7 +284,7 @@
     if (CONFIG.scheduled) console.log(`📅 Scheduled: ${CONFIG.scheduleDate || 'not set'}`);
     console.log(`🎙️ Recording: ${CONFIG.enableRecording}`);
 
-    const sessionKey = 'xactions_hostSpace';
+    const sessionKey = 'medirus_hostSpace';
     sessionStorage.setItem(sessionKey, JSON.stringify({ status: 'running', ...stats }));
 
     // Step 1: Open the compose menu to find Spaces option
@@ -445,7 +445,7 @@
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>

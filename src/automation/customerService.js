@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation - Customer Service Bot
+// Medirus Automation - Customer Service Bot
 // https://github.com/nirholas/XActions
 //
 // REQUIRES: Paste core.js first!
@@ -14,12 +14,12 @@
 // 4. Run and let it handle customer inquiries!
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
 
-  const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, SELECTORS } = window.XActions.Core;
+  const { log, sleep, randomDelay, scrollBy, clickElement, waitForElement, storage, SELECTORS } = window.Medirus.Core;
 
   // ============================================
   // ACCOUNT CONFIGURATION
@@ -393,7 +393,7 @@ business_account
   const run = async () => {
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  🎧 XActions Customer Service Bot                        ║
+║  🎧 Medirus Customer Service Bot                        ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Active Account: @${CONFIG.ACTIVE_ACCOUNT.padEnd(20)}                ║
 ║  Accounts Loaded: ${String(ACCOUNTS.length).padEnd(5)}                               ║
@@ -500,7 +500,7 @@ ${Object.entries(categories).map(([cat, count]) =>
     });
   };
 
-  window.XActions.CustomerService = {
+  window.Medirus.CustomerService = {
     state: () => state,
     config: CONFIG,
     templates: TEMPLATES,

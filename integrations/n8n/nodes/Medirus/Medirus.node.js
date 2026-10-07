@@ -1,30 +1,30 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions action node for n8n
+// Medirus action node for n8n
 // by nichxbt
 
 /**
- * XActions n8n node — exposes X/Twitter (and Bluesky, Mastodon, Threads)
+ * Medirus n8n node — exposes X/Twitter (and Bluesky, Mastodon, Threads)
  * scraping, posting, engagement, analytics, and streaming as n8n actions.
  *
  * Two execution modes:
- *   Local  — imports xactions scrapers / modules directly (Puppeteer, same machine)
- *   Remote — calls the XActions REST API via HTTP
+ *   Local  — imports medirus scrapers / modules directly (Puppeteer, same machine)
+ *   Remote — calls the Medirus REST API via HTTP
  */
-export class XActions {
+export class Medirus {
   description = {
-    displayName: 'XActions',
-    name: 'xActions',
-    icon: 'file:xactions.svg',
+    displayName: 'Medirus',
+    name: 'medirus',
+    icon: 'file:medirus.svg',
     group: ['transform'],
     version: 1,
     subtitle: '={{$parameter["operation"]}}',
     description: 'Automate X/Twitter, Bluesky, Mastodon & Threads — scrape, post, engage, analyze. No API fees.',
-    defaults: { name: 'XActions' },
+    defaults: { name: 'Medirus' },
     inputs: ['main'],
     outputs: ['main'],
     credentials: [
       {
-        name: 'xActionsApi',
+        name: 'medirusApi',
         required: false,
       },
     ],
@@ -437,7 +437,7 @@ export class XActions {
   async execute() {
     const items = this.getInputData();
     const returnData = [];
-    const credentials = await this.getCredentials('xActionsApi').catch(() => null);
+    const credentials = await this.getCredentials('medirusApi').catch(() => null);
     const mode = credentials?.mode || 'local';
 
     for (let i = 0; i < items.length; i++) {
@@ -477,7 +477,7 @@ export class XActions {
   }
 
   // ───────────────────────────────────────────────
-  //  Remote mode — calls XActions REST API
+  //  Remote mode — calls Medirus REST API
   // ───────────────────────────────────────────────
 
   async _executeRemote(resource, operation, idx, credentials) {
@@ -588,14 +588,14 @@ export class XActions {
   }
 
   // ───────────────────────────────────────────────
-  //  Local mode — imports XActions modules directly
+  //  Local mode — imports Medirus modules directly
   // ───────────────────────────────────────────────
 
   async _executeLocal(resource, operation, idx, platform, credentials) {
     const authToken = credentials?.authToken || '';
 
     // Lazy-import the unified scraper
-    const { scrape } = await import('xactions/scrapers');
+    const { scrape } = await import('medirus/scrapers');
 
     const username = this.getNodeParameter('username', idx, '');
     const limit = this.getNodeParameter('limit', idx, 20);
@@ -635,7 +635,7 @@ export class XActions {
 
       // ── Analytics ──
       case 'analytics:analyzeSentiment': {
-        const { analyzeSentiment } = await import('xactions/analytics');
+        const { analyzeSentiment } = await import('medirus/analytics');
         const text = this.getNodeParameter('text', idx, '');
         const mode = this.getNodeParameter('sentimentMode', idx, 'rules');
         return await analyzeSentiment(text, { mode });
@@ -643,34 +643,34 @@ export class XActions {
 
       // ── Streaming ──
       case 'streaming:startStream': {
-        const streaming = await import('xactions/streaming');
+        const streaming = await import('medirus/streaming');
         const type = this.getNodeParameter('streamType', idx, 'tweet');
         const interval = this.getNodeParameter('interval', idx, 60);
         return await streaming.createStream({ type, username, interval: interval * 1000, authToken });
       }
       case 'streaming:stopStream': {
-        const streaming = await import('xactions/streaming');
+        const streaming = await import('medirus/streaming');
         const id = this.getNodeParameter('streamId', idx, '');
         return await streaming.stopStream(id);
       }
       case 'streaming:listStreams': {
-        const streaming = await import('xactions/streaming');
+        const streaming = await import('medirus/streaming');
         const streams = await streaming.listStreams();
         const pool = streaming.getPoolStatus();
         return { streams, pool };
       }
       case 'streaming:pauseStream': {
-        const streaming = await import('xactions/streaming');
+        const streaming = await import('medirus/streaming');
         const id = this.getNodeParameter('streamId', idx, '');
         return await streaming.pauseStream(id);
       }
       case 'streaming:resumeStream': {
-        const streaming = await import('xactions/streaming');
+        const streaming = await import('medirus/streaming');
         const id = this.getNodeParameter('streamId', idx, '');
         return await streaming.resumeStream(id);
       }
       case 'streaming:getStreamHistory': {
-        const streaming = await import('xactions/streaming');
+        const streaming = await import('medirus/streaming');
         const id = this.getNodeParameter('streamId', idx, '');
         return await streaming.getStreamHistory(id, { limit });
       }

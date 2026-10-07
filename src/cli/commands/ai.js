@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions ai` command group.
+ * `medirus ai` command group.
  */
 import chalk from 'chalk';
 import ora from 'ora';
@@ -29,7 +29,7 @@ ai
     const config = await loadConfig();
     const token = config.authToken || process.env.TWITTER_AUTH_TOKEN;
     if (!token) {
-      console.error(chalk.red('✗ Auth token required. Run: xactions login (paste your auth_token cookie)'));
+      console.error(chalk.red('✗ Auth token required. Run: medirus login (paste your auth_token cookie)'));
       process.exit(1);
     }
     const spinner = ora(`Analyzing @${username}'s writing voice...`).start();
@@ -89,7 +89,7 @@ ai
     const token = config.authToken || process.env.TWITTER_AUTH_TOKEN;
     const apiKey = options.apiKey || config.openrouter_api_key || process.env.OPENROUTER_API_KEY;
     if (!token) {
-      console.error(chalk.red('✗ Auth token required. Run: xactions login (paste your auth_token cookie)'));
+      console.error(chalk.red('✗ Auth token required. Run: medirus login (paste your auth_token cookie)'));
       process.exit(1);
     }
     if (!apiKey) {
@@ -164,7 +164,7 @@ ai
     const token = config.authToken || process.env.TWITTER_AUTH_TOKEN;
     const apiKey = options.apiKey || config.openrouter_api_key || process.env.OPENROUTER_API_KEY;
     if (!token) {
-      console.error(chalk.red('✗ Auth token required. Run: xactions login (paste your auth_token cookie)'));
+      console.error(chalk.red('✗ Auth token required. Run: medirus login (paste your auth_token cookie)'));
       process.exit(1);
     }
     if (!apiKey) {
@@ -224,7 +224,7 @@ ai
     const token = config.authToken || process.env.TWITTER_AUTH_TOKEN;
     const apiKey = options.apiKey || config.openrouter_api_key || process.env.OPENROUTER_API_KEY;
     if (!token) {
-      console.error(chalk.red('✗ Auth token required. Run: xactions login (paste your auth_token cookie)'));
+      console.error(chalk.red('✗ Auth token required. Run: medirus login (paste your auth_token cookie)'));
       process.exit(1);
     }
     if (!apiKey) {
@@ -326,7 +326,7 @@ ai
         const config = await loadConfig();
         const authToken = config.authToken;
         if (!authToken) {
-          spinner.fail('No auth token saved. Run `xactions login` first, or pass --topic without --username for generic generation.');
+          spinner.fail('No auth token saved. Run `medirus login` first, or pass --topic without --username for generic generation.');
           process.exit(1);
         }
         const browser = await scrapers.createBrowser();

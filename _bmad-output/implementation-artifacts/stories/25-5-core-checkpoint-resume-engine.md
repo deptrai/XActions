@@ -12,14 +12,14 @@ context:
   - src/store/index.js
   - src/core/types.js
   - types/index.d.ts
-  - src/types/xactions.d.ts
+  - src/types/medirus.d.ts
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
 
 ## Intent
 
-**Problem:** Khi Nowing hoặc CLI gọi `scrape(platform, action, args)` mà không truyền `cursor`/`after`/`max_id`, XActions không tự động nạp `lastCursor` từ `CrawlCheckpoint` trong PostgreSQL. Kết quả là các crawler cào lại từ đầu, lãng phí proxy request và thời gian, dù `skipDuplicates` ở tầng DB đã chống trùng.
+**Problem:** Khi Nowing hoặc CLI gọi `scrape(platform, action, args)` mà không truyền `cursor`/`after`/`max_id`, Medirus không tự động nạp `lastCursor` từ `CrawlCheckpoint` trong PostgreSQL. Kết quả là các crawler cào lại từ đầu, lãng phí proxy request và thời gian, dù `skipDuplicates` ở tầng DB đã chống trùng.
 
 **Approach:**
 1. Thêm `checkpointResolver` optional vào `ActionDescriptor` trong `src/core/base-crawler.js` / `src/core/types.js`.
@@ -30,7 +30,7 @@ context:
 ## Boundaries & Constraints
 
 **Always:**
-- Chỉ sửa `src/core/base-crawler.js`, `src/core/base-store.js`, `src/store/prisma-store.js`, `src/store/index.js`, `src/core/types.js`, `types/xactions.d.ts`.
+- Chỉ sửa `src/core/base-crawler.js`, `src/core/base-store.js`, `src/store/prisma-store.js`, `src/store/index.js`, `src/core/types.js`, `types/medirus.d.ts`.
 - `checkpointResolver` phải là optional; nếu không đăng ký thì behavior hiện tại không thay đổi.
 - Caller-supplied `cursor`/`after`/`max_id` luôn được ưu tiên hơn checkpoint.
 - `args.resume === false` phải tắt auto checkpoint lookup.
@@ -65,7 +65,7 @@ context:
 - `src/store/prisma-store.js` — implement `findExistingIds()`, `storeBatch()` return `StoreBatchResult`.
 - `src/store/index.js` — `defaultStore` delegate đúng các method mới.
 - `src/core/types.js` — `ActionDescriptor` typedef với `checkpointResolver`.
-- `types/xactions.d.ts` — public type exports.
+- `types/medirus.d.ts` — public type exports.
 
 ## Tasks & Acceptance
 
@@ -137,8 +137,8 @@ context:
 | Architecture spine alignment | ✅ | AD-11 and AD-12 already updated with `checkpointResolver` and `getCheckpoint`/`storeBatch` metadata. |
 | Codebase analysis | ✅ | `AbstractCrawler.start()` does not auto-checkpoint; `PrismaStore.storeBatch()` returns `undefined`; `findExistingIds` not implemented. |
 | Code map files exist | ✅ | `src/core/base-crawler.js`, `src/core/base-store.js`, `src/store/prisma-store.js`, `src/store/index.js`, `src/core/types.js` all present. |
-| `types/xactions.d.ts` | ⚠️ | File does not exist in repo; will create if needed. |
+| `types/medirus.d.ts` | ⚠️ | File does not exist in repo; will create if needed. |
 | Test files | ⚠️ | `tests/core/base-crawler.checkpoint.test.js` and `tests/store/prisma-store.checkpoint.test.js` do not exist yet; will create during implementation. |
 | Regression risk | ✅ | Changes are additive to core contracts; no breaking changes to existing callers. |
 
-**Validation Verdict:** Story 25.5 is well-formed and ready for implementation. The only gaps are the missing test files and `types/xactions.d.ts` if not already generated. The story now has sufficient context for `bmad-dev-story` to implement without guesswork.
+**Validation Verdict:** Story 25.5 is well-formed and ready for implementation. The only gaps are the missing test files and `types/medirus.d.ts` if not already generated. The story now has sufficient context for `bmad-dev-story` to implement without guesswork.

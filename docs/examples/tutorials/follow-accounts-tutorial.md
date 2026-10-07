@@ -1,6 +1,6 @@
 # Follow Accounts -- Tutorial
 
-> Step-by-step guide to following accounts on X using XActions browser scripts.
+> Step-by-step guide to following accounts on X using Medirus browser scripts.
 
 ## Prerequisites
 - Logged into x.com in your browser
@@ -112,7 +112,7 @@ Summary:
   Already following: 1
 ```
 
-**Step 3:** Results are saved to sessionStorage under `xactions_followed`.
+**Step 3:** Results are saved to sessionStorage under `medirus_followed`.
 
 ### Follow Followers of Target Accounts
 

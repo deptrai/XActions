@@ -30,7 +30,7 @@ context: []
 
 **Always:**
 - Script đi qua production call path (`local-tools.js` / `dispatchScrape`) — không gọi trực tiếp internal scraper bypass governor.
-- Pattern theo `scripts/browser-pool-spike.mjs`: env-driven config, `scripts/spike-54-coverage-results/` output dir, không hardcode secrets; session qua `XACTIONS_SESSION_COOKIE` env nếu có.
+- Pattern theo `scripts/browser-pool-spike.mjs`: env-driven config, `scripts/spike-54-coverage-results/` output dir, không hardcode secrets; session qua `MEDIRUS_SESSION_COOKIE` env nếu có.
 - Report phải có verdict GO/REDESIGN **per story 54.1/54.2/54.3/54.4** + raw measurements + decision-fork recommendation.
 - Rate-ceiling probe phải graceful: dừng ramp khi phát hiện degrade (lần đầu trả rỗng/lỗi rate-limit), record điểm dừng — không brute-force ban session.
 
@@ -44,7 +44,7 @@ context: []
 | Scenario | Input / State | Expected Output / Behavior | Error Handling |
 |----------|--------------|---------------------------|----------------|
 | HAPPY_PATH | Session hợp lệ, 10 queries | Report với per-query metrics + verdict | N/A |
-| NO_SESSION | Thiếu `XACTIONS_SESSION_COOKIE` | Report ghi auth-path=guest, coverage có thể sparse → verdict có thể REDESIGN hoặc "blocked-needs-auth" | Detect + flag, không crash |
+| NO_SESSION | Thiếu `MEDIRUS_SESSION_COOKIE` | Report ghi auth-path=guest, coverage có thể sparse → verdict có thể REDESIGN hoặc "blocked-needs-auth" | Detect + flag, không crash |
 | RATE_LIMIT | Ceiling probe chạm limit | Ghi ceiling queries/10min tại điểm degrade đầu tiên | Dừng probe ngay, record |
 | DEX_MISSING | Token không có pair trên Dexscreener | Tính vào coverage %, không throw | Count miss |
 | EMPTY_SEARCH | Query trả [] | Record 0 + flag trong verdict calc | Không retry vô hạn |
@@ -58,7 +58,7 @@ context: []
 **Decisions & surprises:**
 - `descriptor.createSession(options)` reads `options.cookies|authCookie|authToken` — NOT `options.session`. Cookie rides on scrape() options directly (first draft passed `session:{cookies}` → auth silently absent; caught and fixed before first real run).
 - Dexscreener real response shape = `res.data.pairs[]` with flat `liquidity_usd`/`volume_24h`; liquidity anchor = max-liquidity pair. First draft guessed nested `liquidity.usd` → all-None results; fixed after inspecting live response.
-- `~/.xactions/cookies.json` fallback in descriptor means auth works with ZERO env vars — spike detected and reported this path (auth session active via file fallback).
+- `~/.medirus/cookies.json` fallback in descriptor means auth works with ZERO env vars — spike detected and reported this path (auth session active via file fallback).
 - Results accumulator now merge-loads existing `results.json` so partial-phase runs (search/dex/ceiling separately) accumulate — discovered when ceiling-only run overwrote M1/M2 data.
 - `from:aeyakovenko` returned 0 while `from:VitalikButerin` returned 20 — account may be inactive/renamed; treated as sparse-coverage data point, not error.
 - Ceiling probe: 12 queries/68s ≈ 106/10min with zero degrade — well above governor default (30/min); real ceiling is governor-side, not X-side at this volume.

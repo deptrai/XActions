@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Generate @xactions/api-client from committed api/openapi.json (Story 46.3).
+ * Generate @medirus/api-client from committed api/openapi.json (Story 46.3).
  *
  * Reads the committed spec (never a live server — deterministic, reviewable
  * in diffs, reproducible in CI), emits `schema.d.ts` via openapi-typescript,
@@ -174,7 +174,7 @@ ${headerLines || '      // no auth scheme declared'}
 
 const clientTs = `// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions typed API client — Story 46.3 (Epic 46).
+ * Medirus typed API client — Story 46.3 (Epic 46).
  *
  * Thin fetch wrapper around the OpenAPI 3.1 spec. Generated method stubs are
  * emitted per-operationId; the core \`request\` method is hand-written and
@@ -187,7 +187,7 @@ const clientTs = `// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the
  *
  * Helper: \`isPaymentRequired(res)\` narrows failure to PaymentRequiredPayload.
  *
- * @module @xactions/api-client
+ * @module @medirus/api-client
  */
 
 export interface ApiErrorPayload {
@@ -221,8 +221,8 @@ export function isPaymentRequired(res: ApiResult<unknown>): res is ApiPaymentReq
   return !res.ok && res.status === 402;
 }
 
-export interface XActionsClientOptions {
-  /** Base URL — defaults to https://xactions.app (production) or http://localhost:3001 when NODE_ENV=development */
+export interface MedirusClientOptions {
+  /** Base URL — defaults to https://medirus.online (production) or http://localhost:3001 when NODE_ENV=development */
   baseUrl?: string;
   /** bearerAuth — JWT for user-facing routes */
   bearerToken?: string;
@@ -240,7 +240,7 @@ export interface XActionsClientOptions {
   extraHeaders?: Record<string, string>;
 }
 
-export class XActionsClient {
+export class MedirusClient {
   baseUrl: string;
   bearerToken?: string;
   sessionCookie?: string;
@@ -250,12 +250,12 @@ export class XActionsClient {
   extraHeaders: Record<string, string>;
   private _fetch: typeof fetch;
 
-  constructor(opts: XActionsClientOptions = {}) {
+  constructor(opts: MedirusClientOptions = {}) {
     const rawUrl =
       opts.baseUrl ??
       (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development'
         ? 'http://localhost:3001'
-        : 'https://xactions.app');
+        : 'https://medirus.online');
     this.baseUrl = rawUrl.replace(/\\/+$/, '');
     this.bearerToken = opts.bearerToken;
     this.sessionCookie = opts.sessionCookie;
@@ -329,15 +329,15 @@ console.log(`✅ Wrote ${resolve(outDir, 'client.ts')} (${ops.length} methods)`)
 // ── Emit index.ts ──────────────────────────────────────────────────────────
 const indexTs = `// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * @xactions/api-client — typed client for the XActions API (Story 46.3).
+ * @medirus/api-client — typed client for the Medirus API (Story 46.3).
  *
  * Re-exports the client class, ApiResult union, type guards, error payload types,
  * and the generated \`paths\`/\`components\`/\`operations\` types from schema.d.ts.
  */
 
-export { XActionsClient, isPaymentRequired } from './client.js';
+export { MedirusClient, isPaymentRequired } from './client.js';
 export type {
-  XActionsClientOptions,
+  MedirusClientOptions,
   ApiResult,
   ApiSuccess,
   ApiPaymentRequired,
@@ -355,9 +355,9 @@ console.log(`✅ Wrote ${resolve(outDir, 'index.ts')}`);
 const pkgPath = resolve(outDir, 'package.json');
 if (!existsSync(pkgPath) || force) {
   const pkg = {
-    name: '@xactions/api-client',
+    name: '@medirus/api-client',
     version: '0.1.0',
-    description: 'Typed API client for XActions — generated from api/openapi.json (Story 46.3)',
+    description: 'Typed API client for Medirus — generated from api/openapi.json (Story 46.3)',
     type: 'module',
     main: './index.ts',
     types: './index.ts',
@@ -379,7 +379,7 @@ if (!existsSync(pkgPath) || force) {
       build: "echo 'no build step — ESM TS source'",
       typecheck: 'tsc --noEmit',
     },
-    keywords: ['xactions', 'api-client', 'openapi', 'typescript'],
+    keywords: ['medirus', 'api-client', 'openapi', 'typescript'],
     license: 'Apache-2.0',
     author: 'nichxbt',
     peerDependencies: {},
@@ -420,25 +420,25 @@ if (!existsSync(tsconfigPath) || force) {
 // ── Emit README.md (idempotent) ────────────────────────────────────────────
 const readmePath = resolve(outDir, 'README.md');
 if (!existsSync(readmePath) || force) {
-  const readme = `# @xactions/api-client
+  const readme = `# @medirus/api-client
 
-Typed TypeScript client for the [XActions](https://xactions.app) API — generated from the committed OpenAPI 3.1 spec (\`api/openapi.json\`).
+Typed TypeScript client for the [Medirus](https://medirus.online) API — generated from the committed OpenAPI 3.1 spec (\`api/openapi.json\`).
 
 ## Install
 
 \`\`\`bash
 # As a workspace/file dep
-npm install @xactions/api-client@file:packages/api-client
+npm install @medirus/api-client@file:packages/api-client
 \`\`\`
 
 ## Usage
 
 \`\`\`ts
-import { XActionsClient, isPaymentRequired } from '@xactions/api-client';
-import type { paths, operations } from '@xactions/api-client/schema';
+import { MedirusClient, isPaymentRequired } from '@medirus/api-client';
+import type { paths, operations } from '@medirus/api-client/schema';
 
-const client = new XActionsClient({
-  baseUrl: 'https://xactions.app',
+const client = new MedirusClient({
+  baseUrl: 'https://medirus.online',
   sessionCookie: process.env.X_SESSION_COOKIE,   // for /api/viral, /api/crm, ...
   bearerToken: process.env.JWT,                  // for /api/auth, /api/user, ...
   x402Payment: process.env.X402_PAYMENT_HEADER,  // for /api/ai/*
@@ -484,4 +484,4 @@ The generator is deterministic — same \`openapi.json\` produces byte-identical
   console.log(`⏭️  Skipped ${readmePath}`);
 }
 
-console.log(`\n✅ Generated @xactions/api-client — ${ops.length} ops, ${pathCount} paths`);
+console.log(`\n✅ Generated @medirus/api-client — ${ops.length} ops, ${pathCount} paths`);

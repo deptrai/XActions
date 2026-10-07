@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leave All Twitter Communities at Once — Free Script | XActions</title>
+  <title>Leave All Twitter Communities at Once — Free Script | Medirus</title>
   <meta name="description" content="Leave all X/Twitter communities at once with a single script. Mass leave communities, clean up your account. Free, no API needed.">
   <meta name="keywords" content="leave twitter communities, leave all x communities, mass leave communities twitter, twitter community management, bulk leave communities, twitter community script">
   <meta name="author" content="nich (@nichxbt)">
@@ -12,9 +12,9 @@
   <meta property="og:type" content="article">
   <meta property="og:title" content="Leave All Twitter Communities at Once">
   <meta property="og:description" content="Mass leave X/Twitter communities with one script. Free, paste-and-run in browser.">
-  <meta property="og:url" content="https://xactions.app/tutorials/communities">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-tutorials.png">
+  <meta property="og:url" content="https://medirus.online/tutorials/communities">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-tutorials.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:locale" content="en_US">
@@ -22,11 +22,11 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
   <meta name="twitter:creator" content="@nichxbt">
-  <meta name="twitter:title" content="Leave All Twitter Communities at Once | XActions">
+  <meta name="twitter:title" content="Leave All Twitter Communities at Once | Medirus">
   <meta name="twitter:description" content="Mass leave X/Twitter communities. Free browser script, runs in seconds.">
-  <meta name="twitter:image" content="https://xactions.app/og-tutorials.png">
+  <meta name="twitter:image" content="https://medirus.online/og-tutorials.png">
 
-  <link rel="canonical" href="https://xactions.app/tutorials/communities">
+  <link rel="canonical" href="https://medirus.online/tutorials/communities">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
   <link rel="manifest" href="/manifest.json">
 
@@ -35,9 +35,9 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Tutorials", "item": "https://xactions.app/tutorials" },
-      { "@type": "ListItem", "position": 3, "name": "Communities", "item": "https://xactions.app/tutorials/communities" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Tutorials", "item": "https://medirus.online/tutorials" },
+      { "@type": "ListItem", "position": 3, "name": "Communities", "item": "https://medirus.online/tutorials/communities" }
     ]
   }
   </script>
@@ -147,7 +147,7 @@
 
       <div class="content">
         <div class="free-banner">
-          <span>🎉 XActions is 100% Free & Open Source</span>
+          <span>🎉 Medirus is 100% Free & Open Source</span>
           <a href="https://github.com/nirholas/XActions" target="_blank" rel="noopener noreferrer">Star on GitHub ⭐</a>
         </div>
 
@@ -194,7 +194,7 @@
   // Track communities we've left (persists during page navigation)
   const getLeftCommunities = () => {
     try {
-      return JSON.parse(sessionStorage.getItem('xactions_left_ids') || '[]');
+      return JSON.parse(sessionStorage.getItem('medirus_left_ids') || '[]');
     } catch { return []; }
   };
   
@@ -202,7 +202,7 @@
     const left = getLeftCommunities();
     if (!left.includes(id)) {
       left.push(id);
-      sessionStorage.setItem('xactions_left_ids', JSON.stringify(left));
+      sessionStorage.setItem('medirus_left_ids', JSON.stringify(left));
     }
   };
 
@@ -277,7 +277,7 @@
       console.log(`\n🎉 DONE! Left ${total} communities total`);
       console.log(`So long, and thanks for all the communities! 🐬`);
       console.log(`IDs: ${getLeftCommunities().join(', ')}`);
-      sessionStorage.removeItem('xactions_left_ids');
+      sessionStorage.removeItem('medirus_left_ids');
     }
   };
 
@@ -359,7 +359,7 @@
                 <span>Reset tracking</span>
                 <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
               </div>
-              <pre><code>sessionStorage.removeItem('xactions_left_ids');</code></pre>
+              <pre><code>sessionStorage.removeItem('medirus_left_ids');</code></pre>
             </div>
           </div>
         </section>

@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interact By Users — Free X/Twitter Script | XActions</title>
+  <title>Interact By Users — Free X/Twitter Script | Medirus</title>
   <meta name="description" content="Full interaction suite for specific users on X/Twitter">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, interact, users, engagement">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, interact, users, engagement">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Interact By Users — XActions">
+  <meta property="og:title" content="Interact By Users — Medirus">
   <meta property="og:description" content="Full interaction suite for specific users on X/Twitter">
-  <meta property="og:url" content="https://xactions.app/scripts/interact-by-users">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:url" content="https://medirus.online/scripts/interact-by-users">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Interact By Users — XActions">
+  <meta name="twitter:title" content="Interact By Users — Medirus">
   <meta name="twitter:description" content="Full interaction suite for specific users on X/Twitter">
 
-  <link rel="canonical" href="https://xactions.app/scripts/interact-by-users">
+  <link rel="canonical" href="https://medirus.online/scripts/interact-by-users">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Interact By Users — Free X/Twitter Script | XActions",
+    "headline": "Interact By Users — Free X/Twitter Script | Medirus",
     "description": "Full interaction suite for specific users on X/Twitter",
-    "url": "https://xactions.app/scripts/interact-by-users",
+    "url": "https://medirus.online/scripts/interact-by-users",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Engagement",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, interact, users, engagement"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, interact, users, engagement"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://xactions.app/scripts#engagement" },
-      { "@type": "ListItem", "position": 4, "name": "Interact By Users", "item": "https://xactions.app/scripts/interact-by-users" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Engagement", "item": "https://medirus.online/scripts#engagement" },
+      { "@type": "ListItem", "position": 4, "name": "Interact By Users", "item": "https://medirus.online/scripts/interact-by-users" }
     ]
   }
   </script>
@@ -258,11 +258,11 @@ var CONFIG = {
   // Storage
   const storage = {
     get: (key) =&gt; {
-      try { return JSON.parse(localStorage.getItem(`xactions_interact_${key}`) || 'null'); }
+      try { return JSON.parse(localStorage.getItem(`medirus_interact_${key}`) || 'null'); }
       catch { return null; }
     },
     set: (key, value) =&gt; {
-      localStorage.setItem(`xactions_interact_${key}`, JSON.stringify(value));
+      localStorage.setItem(`medirus_interact_${key}`, JSON.stringify(value));
     }
   };
   
@@ -293,9 +293,9 @@ var CONFIG = {
     stats: { likes: 0, retweets: 0, replies: 0, follows: 0 },
   };
   
-  // Create XActions interface
-  window.XActions = window.XActions || {};
-  window.XActions.InteractUsers = {
+  // Create Medirus interface
+  window.Medirus = window.Medirus || {};
+  window.Medirus.InteractUsers = {
     config: CONFIG,
     state,
     history,
@@ -423,7 +423,7 @@ var CONFIG = {
       console.log('📋 For each user, open their profile and run:');
       CONFIG.targetUsers.forEach((username, i) =&gt; {
         console.log(`   ${i + 1}. https://x.com/${username}`);
-        console.log(`      Then: XActions.InteractUsers.interactWith(&quot;${username}&quot;)`);
+        console.log(`      Then: Medirus.InteractUsers.interactWith(&quot;${username}&quot;)`);
       });
       console.log('');
       console.log('💡 Re-paste this script after each page navigation.');
@@ -482,20 +482,20 @@ var CONFIG = {
       console.log('');
       console.log('📋 INTERACT BY USERS COMMANDS:');
       console.log('');
-      console.log('   XActions.InteractUsers.addUser(&quot;username&quot;)');
-      console.log('   XActions.InteractUsers.removeUser(&quot;username&quot;)');
-      console.log('   XActions.InteractUsers.interactWith(&quot;username&quot;)');
-      console.log('   XActions.InteractUsers.interactAll()');
-      console.log('   XActions.InteractUsers.stop()');
-      console.log('   XActions.InteractUsers.stats()');
-      console.log('   XActions.InteractUsers.showHistory()');
+      console.log('   Medirus.InteractUsers.addUser(&quot;username&quot;)');
+      console.log('   Medirus.InteractUsers.removeUser(&quot;username&quot;)');
+      console.log('   Medirus.InteractUsers.interactWith(&quot;username&quot;)');
+      console.log('   Medirus.InteractUsers.interactAll()');
+      console.log('   Medirus.InteractUsers.stop()');
+      console.log('   Medirus.InteractUsers.stats()');
+      console.log('   Medirus.InteractUsers.showHistory()');
       console.log('');
     }
   };
   
   console.log('✅ Interact By Users loaded!');
   console.log(`📋 Target users: ${CONFIG.targetUsers.length}`);
-  console.log('   Run XActions.InteractUsers.help() for commands.');
+  console.log('   Run Medirus.InteractUsers.help() for commands.');
   console.log('');
 })();
 </code></pre>
@@ -503,7 +503,7 @@ var CONFIG = {
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -516,7 +516,7 @@ var CONFIG = {
         <a href="/scripts/auto-commenter">💬 Auto Commenter</a>
 <a href="/scripts/auto-engage">⚡ Auto Engage</a>
 <a href="/scripts/auto-liker">❤️ Auto Liker</a>
-<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - XActions</a>
+<a href="/scripts/auto-reply-mentions">📨 Auto Reply Mentions - Medirus</a>
 <a href="/scripts/auto-repost">🔁 Auto Repost</a>
 <a href="/scripts/auto-plug-replies">🔌 Auto-Plug Replies</a>
 <a href="/scripts/auto-reply">💬 Auto-Reply / Auto-Respond</a>

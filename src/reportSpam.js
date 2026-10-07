@@ -91,7 +91,7 @@
   };
 
   const run = async () => {
-    console.log('🚩 REPORT SPAM - XActions by nichxbt');
+    console.log('🚩 REPORT SPAM - Medirus by nichxbt');
 
     if (CONFIG.usersToReport.length === 0) {
       console.error('❌ No users to report! Edit CONFIG.usersToReport.');

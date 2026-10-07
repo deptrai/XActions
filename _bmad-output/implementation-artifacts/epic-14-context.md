@@ -23,8 +23,8 @@ Chuyển đổi nền tảng cào dữ liệu dùng chung thành bề mặt micr
   - Chạy MCP server thường trực dạng HTTP/SSE daemon trên cổng 3001 (`http://localhost:3001/mcp`), tái sử dụng HTTP transport trong `src/mcp/server.js`, không tạo tiến trình daemon riêng; duy trì endpoint `GET /health` trả về 200.
   - Đóng gói response trong 3-Layer JSON Envelope: `{ success, platform, meta, data, summary, error? }` với `data` preview tối đa 20–30 records, độ trễ < 2ms.
   - Tự động xuất artifact: Khi tổng số records > 100, tự động stream xuất file dataset JSONL/CSV (loại bỏ ký tự xuống dòng `\r\n|\r|\n` trong `content`) và trả về `meta.datasetArtifactPath` để AI agent đọc chọn lọc.
-  - Action Discovery & Error Envelope: Tool `x_actions_list` và CLI `xactions actions list` trả về `ActionDescriptor[]`. Lỗi chuẩn hóa thành `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`.
-  - Quản lý lifecycle qua CLI `xactions daemon start/status/stop`; map lệnh `unfollowx` cũ sang `CrawlerCommand` hoặc trả về error envelope với `suggestedAction: 'use_x_actions_list'`.
+  - Action Discovery & Error Envelope: Tool `medirus_list` và CLI `medirus actions list` trả về `ActionDescriptor[]`. Lỗi chuẩn hóa thành `{ code, type, message, retryAfter, suggestedAction, accountId?, platform }`.
+  - Quản lý lifecycle qua CLI `medirus daemon start/status/stop`; map lệnh `unfollowx` cũ sang `CrawlerCommand` hoặc trả về error envelope với `suggestedAction: 'use_medirus_list'`.
 - **Realtime Thin Event Redis Stream (Story 14.3):**
   - Phát Thin Event Pointer vào Redis Stream `stream:social:raw_posts` ngay sau khi batch bài viết/bình luận được persist thành công vào PostgreSQL.
   - Payload tinh gọn: `{ id, platform, externalId, category, authorId, crawledAt, storageRef }` (kèm cờ `benchmark_health` nếu có), tuyệt đối không đưa raw JSON nặng vào Redis.
@@ -37,7 +37,7 @@ Chuyển đổi nền tảng cào dữ liệu dùng chung thành bề mặt micr
   - Chuẩn hóa Hashtag: Bỏ ký tự `#`, NFC-normalize, lowercase, lọc theo regex `#(?=[\p{L}])[\p{L}\p{N}_]+` (loại bỏ URL fragment và tag chỉ chứa số).
   - Return Shape: Trả về `{ unigrams: [{ term, count }], bigrams: [{ term, count }], hashtags: [{ tag, count }], totalTokens, lang }`, sắp xếp deterministic theo `count` giảm dần rồi `term` tăng dần.
   - Xử lý biên & Chi phí: `minLength` clamp `>= 1`; `topN = max(0, floor(topN ?? 10))`; items rỗng/null hoặc content không hợp lệ trả về zero-result thay vì throw. `includeBuzzwords` là opt-in (mặc định tắt) trong `AbstractCrawler`; khi bật phân tích tối đa 500 items đầu để chặn chi phí O(n), trả mảng rỗng nếu không có text.
-  - Giao diện gọi: MCP tool `x_analytics_buzzwords` và CLI `xactions analytics buzzwords` nhận `{ items? | scrapeId? | source }` (từ file, stdin, hoặc scrape đã lưu).
+  - Giao diện gọi: MCP tool `x_analytics_buzzwords` và CLI `medirus analytics buzzwords` nhận `{ items? | scrapeId? | source }` (từ file, stdin, hoặc scrape đã lưu).
 
 ## Technical Decisions
 
@@ -51,17 +51,17 @@ Chuyển đổi nền tảng cào dữ liệu dùng chung thành bề mặt micr
 
 ## UX & Interaction Patterns
 
-- **Agent Discovery & Execution:** AI agent dùng `x_actions_list` khám phá action và gọi `x_crawl_post`, `x_crawl_comments_tree` qua HTTP/SSE; kết quả lớn nhận `meta.datasetArtifactPath` để truy xuất artifact an toàn cho context window.
-- **Actionable Error Feedback:** Lỗi luôn đi kèm typed `suggestedAction` (`RETRY_WITH_DIFFERENT_ACCOUNT`, `ROTATE_PROXY`, `HIBERNATE`, `USE_X_ACTIONS_LIST`) cho phép agent tự động phục hồi.
-- **Daemon Lifecycle CLI:** Lệnh `xactions daemon start/status/stop` hiển thị trạng thái daemon, PID, port và endpoint URL.
-- **Stream Observability & Alerts CLI:** Lệnh `xactions admin stream metrics` hiển thị số liệu thời gian thực (`pendingMessages`, `consumerLag`, `lastAckTime`). Lệnh `xactions admin stream alerts` hiển thị cảnh báo và hỗ trợ kích hoạt test alert.
-- **Buzzwords CLI:** Lệnh `xactions analytics buzzwords --source <file|stdin|scrapeId> [--top 20] [--lang vi]` hiển thị bảng xếp hạng từ khóa và hashtag nổi bật trên terminal.
+- **Agent Discovery & Execution:** AI agent dùng `medirus_list` khám phá action và gọi `x_crawl_post`, `x_crawl_comments_tree` qua HTTP/SSE; kết quả lớn nhận `meta.datasetArtifactPath` để truy xuất artifact an toàn cho context window.
+- **Actionable Error Feedback:** Lỗi luôn đi kèm typed `suggestedAction` (`RETRY_WITH_DIFFERENT_ACCOUNT`, `ROTATE_PROXY`, `HIBERNATE`, `USE_MEDIRUS_LIST`) cho phép agent tự động phục hồi.
+- **Daemon Lifecycle CLI:** Lệnh `medirus daemon start/status/stop` hiển thị trạng thái daemon, PID, port và endpoint URL.
+- **Stream Observability & Alerts CLI:** Lệnh `medirus admin stream metrics` hiển thị số liệu thời gian thực (`pendingMessages`, `consumerLag`, `lastAckTime`). Lệnh `medirus admin stream alerts` hiển thị cảnh báo và hỗ trợ kích hoạt test alert.
+- **Buzzwords CLI:** Lệnh `medirus analytics buzzwords --source <file|stdin|scrapeId> [--top 20] [--lang vi]` hiển thị bảng xếp hạng từ khóa và hashtag nổi bật trên terminal.
 
 ## Cross-Story Dependencies
 
 - **Story 14.1 (Comment Tree):** Cung cấp `CommentItem[]` phân cấp cho Story 14.2 (tool `x_crawl_comments_tree`), Story 14.3 (thin event pointer cho comment), và Story 14.4 (phân tích buzzwords từ bình luận).
 - **Story 14.2 (MCP Daemon):** Cung cấp giao thức HTTP/SSE runtime cho các AI agent gọi action từ Story 14.1 (`get_comments`) và Story 14.4 (tool `x_analytics_buzzwords`).
 - **Story 14.3 (Redis Stream):** Phụ thuộc vào `PrismaStore` và `CrawlCheckpoint` để phát thin event sau khi batch ghi CSDL thành công; liên kết với `AdaptiveRateGovernor` để backpressure khi consumer lag.
-- **Story 14.4 (N-Gram Buzzwords):** Tích hợp vào `AbstractCrawler` (`includeBuzzwords`) làm giàu `summary` crawl, đồng thời đăng ký MCP tool `x_analytics_buzzwords` trong Story 14.2 và CLI `xactions analytics buzzwords`.
+- **Story 14.4 (N-Gram Buzzwords):** Tích hợp vào `AbstractCrawler` (`includeBuzzwords`) làm giàu `summary` crawl, đồng thời đăng ký MCP tool `x_analytics_buzzwords` trong Story 14.2 và CLI `medirus analytics buzzwords`.
 - **Upstream Dependencies:** Phụ thuộc vào Epic 10 (domain models `PostItem`/`CommentItem`, `ActionRegistry`, `PlatformError`), Epic 11 (proxy pool, `AdaptiveRateGovernor`), và Epic 13 (crawlers Facebook/Twitter hybrid).
 - **Downstream Consumers:** Phục vụ Epic 19 (Dashboard/CLI hiển thị stream metrics & daemon status), Epic 20 (Nowing cutover adapter), và các crawlers ở Epic 15–18.

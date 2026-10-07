@@ -20,7 +20,7 @@
   };
   // =============================================
 
-  const STORAGE_KEY = 'xactions_trend_history';
+  const STORAGE_KEY = 'medirus_trend_history';
 
   const download = (data, filename) => {
     const a = document.createElement('a');
@@ -167,25 +167,25 @@
     console.log('');
 
     if (CONFIG.exportResults) {
-      download({ trends, analyzedAt: new Date().toISOString() }, `xactions-trends-${new Date().toISOString().slice(0, 10)}.json`);
+      download({ trends, analyzedAt: new Date().toISOString() }, `medirus-trends-${new Date().toISOString().slice(0, 10)}.json`);
     }
   };
 
-  window.XActions = window.XActions || {};
-  window.XActions.watch = (kws) => { CONFIG.watchKeywords = kws; console.log(`👁️ Watching: ${kws.join(', ')}`); };
-  window.XActions.history = () => {
+  window.Medirus = window.Medirus || {};
+  window.Medirus.watch = (kws) => { CONFIG.watchKeywords = kws; console.log(`👁️ Watching: ${kws.join(', ')}`); };
+  window.Medirus.history = () => {
     const h = loadHistory();
     if (h.length === 0) { console.log('📭 No history.'); return; }
     h.slice(-10).forEach(s => console.log(`  ${new Date(s.timestamp).toLocaleString()} — ${s.trends.length} trends: ${s.trends.slice(0, 3).map(t => t.topic).join(', ')}`));
   };
-  window.XActions.compare = () => { const h = loadHistory(); if (h.length < 2) { console.log('Need 2+ snapshots.'); return; } compareWithLast(h[h.length - 1].trends); };
-  window.XActions.autoRefresh = (ms) => {
+  window.Medirus.compare = () => { const h = loadHistory(); if (h.length < 2) { console.log('Need 2+ snapshots.'); return; } compareWithLast(h[h.length - 1].trends); };
+  window.Medirus.autoRefresh = (ms) => {
     if (autoTimer) clearInterval(autoTimer);
     const interval = ms || CONFIG.checkInterval;
     console.log(`🔄 Auto-refresh every ${(interval / 60000).toFixed(1)} min.`);
     autoTimer = setInterval(() => { console.log('\n🔄 Refreshing...'); run(); }, interval);
   };
-  window.XActions.stop = () => { if (autoTimer) { clearInterval(autoTimer); autoTimer = null; } console.log('⏹️ Stopped.'); };
+  window.Medirus.stop = () => { if (autoTimer) { clearInterval(autoTimer); autoTimer = null; } console.log('⏹️ Stopped.'); };
 
   run();
 })();

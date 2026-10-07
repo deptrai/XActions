@@ -7,11 +7,11 @@ stepsCompleted:
   - epic-quality-review
   - final-assessment
 assessmentDate: 2026-08-14
-project: XActions
+project: Medirus
 includedFiles:
   prd:
-    - _bmad-output/planning-artifacts/prds/prd-XActions-2026-08-14-epic7/prd.md
-    - _bmad-output/planning-artifacts/prds/prd-XActions-2026-08-14-epic7/validation-report.md
+    - _bmad-output/planning-artifacts/prds/prd-Medirus-2026-08-14-epic7/prd.md
+    - _bmad-output/planning-artifacts/prds/prd-Medirus-2026-08-14-epic7/validation-report.md
   architecture:
     - _bmad-output/planning-artifacts/architecture.md
     - _bmad-output/architecture-artifacts/epic7-2026-08-14/ARCHITECTURE-SPINE.md
@@ -31,13 +31,13 @@ notes:
 # Implementation Readiness Assessment Report
 
 **Date:** 2026-08-14
-**Project:** XActions
+**Project:** Medirus
 
 ## Document Inventory
 
 ### PRD
-- `prds/prd-XActions-2026-08-14-epic7/prd.md` (16,220 bytes, 2026-08-14)
-- `prds/prd-XActions-2026-08-14-epic7/validation-report.md` (9,586 bytes, 2026-08-14)
+- `prds/prd-Medirus-2026-08-14-epic7/prd.md` (16,220 bytes, 2026-08-14)
+- `prds/prd-Medirus-2026-08-14-epic7/validation-report.md` (9,586 bytes, 2026-08-14)
 
 ### Architecture
 - `architecture.md` (46,292 bytes, 2026-08-12)

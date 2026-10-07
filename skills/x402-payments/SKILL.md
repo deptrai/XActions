@@ -1,6 +1,6 @@
 ---
 name: x402-payments
-description: Enable and integrate x402 crypto payment protocol for XActions API access. Supports multi-chain, multi-token payments for pay-per-use API calls. Use when users want to pay for XActions operations with crypto or integrate x402 into their own agent/app.
+description: Enable and integrate x402 crypto payment protocol for Medirus API access. Supports multi-chain, multi-token payments for pay-per-use API calls. Use when users want to pay for Medirus operations with crypto or integrate x402 into their own agent/app.
 license: Apache-2.0
 metadata:
   author: nichxbt
@@ -9,7 +9,7 @@ metadata:
 
 # x402 Payments
 
-XActions supports the [x402 payment protocol](https://x402.org) — an HTTP-native micropayment standard for pay-per-use API access with cryptocurrency.
+Medirus supports the [x402 payment protocol](https://x402.org) — an HTTP-native micropayment standard for pay-per-use API access with cryptocurrency.
 
 ## Entry Points
 
@@ -45,7 +45,7 @@ Config lives in `api/config/x402-config.js`. Key settings:
 Returns a JSON manifest describing all payable routes, supported networks, and token addresses:
 
 ```bash
-GET https://api.xactions.io/.well-known/x402
+GET https://api.medirus.online/.well-known/x402
 ```
 
 Response includes:
@@ -94,5 +94,5 @@ Any x402-compatible client works automatically:
 ## Related Skills
 
 - **billing-management** — Stripe subscription-based payment alternative
-- **xactions-mcp-server** — MCP server that uses x402 for AI agent access
+- **medirus-mcp-server** — MCP server that uses x402 for AI agent access
 - **a2a-multi-agent** — Agent-to-agent workflows that use x402 for payment

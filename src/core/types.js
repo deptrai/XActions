@@ -221,8 +221,8 @@
  * @typedef {Object} CloudEventEnvelope
  * @property {'1.0'} specversion - CloudEvents specification version (MUST be "1.0")
  * @property {string} id - Unique event identifier, e.g. "facebook:123"
- * @property {string} source - URI reference describing event context, e.g. "org.xactions.crawler.facebook"
- * @property {string} type - Reverse-DNS type, e.g. "org.xactions.scrape.completed"
+ * @property {string} source - URI reference describing event context, e.g. "org.medirus.crawler.facebook"
+ * @property {string} type - Reverse-DNS type, e.g. "org.medirus.scrape.completed"
  * @property {string} time - RFC 3339 timestamp string
  * @property {'application/json'} datacontenttype - Media type of the event data
  * @property {string} data - JSON string representation of the event payload
@@ -254,8 +254,8 @@
  * @property {'A' | 'B' | 'C' | 'UNKNOWN'} [benchmark_health] - Scraper benchmark tier
  * @property {boolean} [benchmark_alert] - Degraded health alert flag
  * @property {'1.0'} [specversion] - CloudEvents specification version ("1.0")
- * @property {string} [source] - Event source URI reference, e.g. "org.xactions.crawler.facebook"
- * @property {string} [type] - Event type, e.g. "org.xactions.scrape.completed"
+ * @property {string} [source] - Event source URI reference, e.g. "org.medirus.crawler.facebook"
+ * @property {string} [type] - Event type, e.g. "org.medirus.scrape.completed"
  * @property {string} [time] - RFC 3339 timestamp
  * @property {'application/json'} [datacontenttype] - Media type of event data
  * @property {string} [data] - JSON stringified data payload

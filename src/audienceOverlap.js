@@ -20,12 +20,12 @@
  *
  * 1. Go to: x.com/ACCOUNT_A/followers
  * 2. Paste script — it will scrape Account A's followers
- * 3. Run: XActions.switchTo('ACCOUNT_B')
+ * 3. Run: Medirus.switchTo('ACCOUNT_B')
  *    → navigates to Account B's followers and scrapes
- * 4. Run: XActions.compare() → see overlap analysis
+ * 4. Run: Medirus.compare() → see overlap analysis
  *
  * Or use the quick method:
- *   XActions.analyze('accountA', 'accountB')
+ *   Medirus.analyze('accountA', 'accountB')
  * ============================================================
  */
 (() => {
@@ -87,7 +87,7 @@
   // ── Compare two datasets ───────────────────────────────────
   const compareDatasets = () => {
     if (!datasets.a || !datasets.b) {
-      console.log('❌ Need both datasets. Use XActions.analyze("accountA", "accountB") or scrape each individually.');
+      console.log('❌ Need both datasets. Use Medirus.analyze("accountA", "accountB") or scrape each individually.');
       return;
     }
 
@@ -206,18 +206,18 @@
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-overlap-${datasets.a.account}-vs-${datasets.b.account}.json`;
+      a.download = `medirus-overlap-${datasets.a.account}-vs-${datasets.b.account}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Overlap analysis exported.');
     }
   };
 
   // ── Controls ───────────────────────────────────────────────
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
-  window.XActions.analyze = async (accountA, accountB) => {
+  window.Medirus.analyze = async (accountA, accountB) => {
     if (!accountA || !accountB) {
-      console.log('❌ Usage: XActions.analyze("accountA", "accountB")');
+      console.log('❌ Usage: Medirus.analyze("accountA", "accountB")');
       return;
     }
 
@@ -244,9 +244,9 @@
     compareDatasets();
   };
 
-  window.XActions.scrapeHere = async (label) => {
+  window.Medirus.scrapeHere = async (label) => {
     if (label !== 'a' && label !== 'b') {
-      console.log('❌ Usage: XActions.scrapeHere("a") or XActions.scrapeHere("b")');
+      console.log('❌ Usage: Medirus.scrapeHere("a") or Medirus.scrapeHere("b")');
       return;
     }
     const match = window.location.href.match(/x\.com\/([A-Za-z0-9_]+)\/followers/);
@@ -255,11 +255,11 @@
     datasets[label] = { account, followers: await scrapeFollowers(label.toUpperCase()) };
     console.log(`  ✅ @${account}: ${datasets[label].followers.size} followers scraped.`);
     if (datasets.a && datasets.b) {
-      console.log('  Both datasets ready! Run: XActions.compare()');
+      console.log('  Both datasets ready! Run: Medirus.compare()');
     }
   };
 
-  window.XActions.compare = compareDatasets;
+  window.Medirus.compare = compareDatasets;
 
   // ── Init ───────────────────────────────────────────────────
   console.log('╔════════════════════════════════════════════════════╗');
@@ -267,9 +267,9 @@
   console.log('║  by nichxbt — v1.0                                ║');
   console.log('╚════════════════════════════════════════════════════╝');
   console.log('\n📋 Quick method:');
-  console.log('  XActions.analyze("accountA", "accountB")');
+  console.log('  Medirus.analyze("accountA", "accountB")');
   console.log('\n📋 Manual method:');
-  console.log('  1. Go to x.com/accountA/followers → XActions.scrapeHere("a")');
-  console.log('  2. Go to x.com/accountB/followers → XActions.scrapeHere("b")');
-  console.log('  3. XActions.compare()');
+  console.log('  1. Go to x.com/accountA/followers → Medirus.scrapeHere("a")');
+  console.log('  2. Go to x.com/accountB/followers → Medirus.scrapeHere("b")');
+  console.log('  3. Medirus.compare()');
 })();

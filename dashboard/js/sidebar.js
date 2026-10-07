@@ -1,4 +1,4 @@
-// XActions Shared Sidebar — Comprehensive Multi-Platform Navigation
+// Medirus Shared Sidebar — Comprehensive Multi-Platform Navigation
 // by nichxbt
 
 (function () {
@@ -121,7 +121,7 @@
 
   sidebar.innerHTML = `
       <div class="logo">
-        <a href="/" aria-label="XActions Home">
+        <a href="/" aria-label="Medirus Home">
           <span class="logo-icon">⚡</span>
         </a>
       </div>
@@ -132,8 +132,8 @@
       <a href="/" class="user-menu" id="user-menu-link">
         <div class="user-avatar" id="user-avatar">⚡</div>
         <div class="user-info">
-          <div class="user-name" id="user-display-name">XActions</div>
-          <div class="user-handle" id="user-handle">@xactions</div>
+          <div class="user-name" id="user-display-name">Medirus</div>
+          <div class="user-handle" id="user-handle">@medirus</div>
         </div>
         <span class="user-menu-dots">···</span>
       </a>`;

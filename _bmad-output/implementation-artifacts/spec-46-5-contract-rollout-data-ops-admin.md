@@ -12,7 +12,7 @@ context:
   - _bmad-output/implementation-artifacts/spec-46-1-swagger-ui-openapi-3-1-json-endpoint.md
   - _bmad-output/implementation-artifacts/spec-46-3-cli-generator-typescript-api-client.md
   - _bmad-output/implementation-artifacts/spec-46-4-contract-rollout-social-user-facing.md
-  - _bmad-output/planning-artifacts/architecture/xactions-api-contract-epic46/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/medirus-api-contract-epic46/ARCHITECTURE-SPINE.md
 warnings: []
 deferred: []
 ---
@@ -45,7 +45,7 @@ deferred: []
 | GET /api/governor/status | No auth | 200 `{ success: true, data: { activeRequests: 0, ... } }` | Handled by governor middleware |
 | POST /api/agent/start | Body with persona + config | 200 `{ success: true, data: { agentId: '...', status: 'running' } }` | 400 validation error nếu config invalid |
 | GET /openapi.json | Inspection | Total paths > 380, all have unique operationId, securitySchemes complete | Contract test passes |
-| Client generation | `npm run generate:api-client` | All new admin/ops methods available in @xactions/api-client | tsc clean compile |
+| Client generation | `npm run generate:api-client` | All new admin/ops methods available in @medirus/api-client | tsc clean compile |
 
 </intent-contract>
 
@@ -64,7 +64,7 @@ deferred: []
 - Tạo 4 schema modules: `api/schemas/ops-admin.js`, `api/schemas/ops-engine.js`, `api/schemas/ops-infrastructure.js`, `api/schemas/ops-intelligence.js`
 - Export và nạp trong `api/schemas/index.js`
 - Chạy `npm run build:openapi` để cập nhật `api/openapi.json`
-- Chạy `npm run generate:api-client` để tái tạo `@xactions/api-client`
+- Chạy `npm run generate:api-client` để tái tạo `@medirus/api-client`
 - Viết test suite `tests/api/contract/ops-routes.test.js`
 - Cập nhật `sprint-status.yaml` đánh dấu Epic 46 hoàn tất
 
@@ -82,7 +82,7 @@ deferred: []
 ## Auto Run Result
 
 **Status:** done
-**Summary:** Rolled out Zod schemas and OpenAPI contract declarations for all 24 data, operations, and admin mounts. Created 4 domain schema modules (`ops-admin.js`, `ops-engine.js`, `ops-infrastructure.js`, `ops-intelligence.js`) in `api/schemas/` registering operations with security definitions and `x-tryitout: false` flags on agent/admin mutations. Rebuilt `api/openapi.json` (now 383 paths, 389 operations) and regenerated `@xactions/api-client` cleanly with 0 TypeScript errors. This completes full Route Inventory coverage for Epic 46.
+**Summary:** Rolled out Zod schemas and OpenAPI contract declarations for all 24 data, operations, and admin mounts. Created 4 domain schema modules (`ops-admin.js`, `ops-engine.js`, `ops-infrastructure.js`, `ops-intelligence.js`) in `api/schemas/` registering operations with security definitions and `x-tryitout: false` flags on agent/admin mutations. Rebuilt `api/openapi.json` (now 383 paths, 389 operations) and regenerated `@medirus/api-client` cleanly with 0 TypeScript errors. This completes full Route Inventory coverage for Epic 46.
 
 **Files changed:**
 - `api/schemas/ops-admin.js` *(new)* — admin stats, webhooks, license, billing plans

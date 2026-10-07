@@ -68,11 +68,11 @@ This script provides the following capabilities:
  * 3. Paste and run
  *
  * Controls:
- *   XActions.watch(['AI', 'crypto', 'startup'])  — set alert keywords
- *   XActions.history()                            — view trend history
- *   XActions.compare()                            — compare vs last snapshot
- *   XActions.autoRefresh(300000)                  — auto-refresh every 5min
- *   XActions.stop()                               — stop auto-refresh
+ *   Medirus.watch(['AI', 'crypto', 'startup'])  — set alert keywords
+ *   Medirus.history()                            — view trend history
+ *   Medirus.compare()                            — compare vs last snapshot
+ *   Medirus.autoRefresh(300000)                  — auto-refresh every 5min
+ *   Medirus.stop()                               — stop auto-refresh
  * ============================================================
  */
 (() => {
@@ -86,7 +86,7 @@ This script provides the following capabilities:
     maxHistory: 50,         // Keep last N snapshots
   };
 
-  const STORAGE_KEY = 'xactions_trend_history';
+  const STORAGE_KEY = 'medirus_trend_history';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   // ── Niche classification ───────────────────────────────────
@@ -255,18 +255,18 @@ This script provides the following capabilities:
   // ── Controls ───────────────────────────────────────────────
   let autoRefreshTimer = null;
 
-  window.XActions = window.XActions || {};
+  window.Medirus = window.Medirus || {};
 
-  window.XActions.watch = (keywords) => {
+  window.Medirus.watch = (keywords) => {
     if (!Array.isArray(keywords)) {
-      console.log('❌ Usage: XActions.watch(["keyword1", "keyword2"])');
+      console.log('❌ Usage: Medirus.watch(["keyword1", "keyword2"])');
       return;
     }
     CONFIG.watchKeywords = keywords;
     console.log(`👁️ Watching for: ${keywords.join(', ')}`);
   };
 
-  window.XActions.history = () => {
+  window.Medirus.history = () => {
     const history = loadHistory();
     if (history.length === 0) { console.log('📭 No history yet.'); return; }
     console.log(`\n📊 TREND HISTORY (${history.length} snapshots):\n`);
@@ -276,14 +276,14 @@ This script provides the following capabilities:
     }
   };
 
-  window.XActions.compare = () => {
+  window.Medirus.compare = () => {
     const history = loadHistory();
     if (history.length < 2) { console.log('📊 Need at least 2 snapshots.'); return; }
     const latest = history[history.length - 1];
     compareWithLast(latest.trends);
   };
 
-  window.XActions.autoRefresh = (intervalMs = 300000) => {
+  window.Medirus.autoRefresh = (intervalMs = 300000) => {
     if (autoRefreshTimer) clearInterval(autoRefreshTimer);
     console.log(`🔄 Auto-refreshing every ${(intervalMs / 60000).toFixed(1)} minutes.`);
     autoRefreshTimer = setInterval(() => {
@@ -292,7 +292,7 @@ This script provides the following capabilities:
     }, intervalMs);
   };
 
-  window.XActions.stop = () => {
+  window.Medirus.stop = () => {
     if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
     console.log('⏹️ Auto-refresh stopped.');
   };
@@ -366,18 +366,18 @@ This script provides the following capabilities:
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('  📋 CONTROLS');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('  XActions.watch(["keyword1", ...])  — set alert keywords');
-    console.log('  XActions.history()                  — view past snapshots');
-    console.log('  XActions.compare()                  — compare last 2 snapshots');
-    console.log('  XActions.autoRefresh(300000)        — refresh every 5min');
-    console.log('  XActions.stop()                     — stop auto-refresh');
+    console.log('  Medirus.watch(["keyword1", ...])  — set alert keywords');
+    console.log('  Medirus.history()                  — view past snapshots');
+    console.log('  Medirus.compare()                  — compare last 2 snapshots');
+    console.log('  Medirus.autoRefresh(300000)        — refresh every 5min');
+    console.log('  Medirus.stop()                     — stop auto-refresh');
     console.log('');
 
     // Export
     if (CONFIG.exportResults) {
       const blob = new Blob([JSON.stringify({ trends, analyzedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-trends-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-trends-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Trends exported.');
     }
@@ -444,14 +444,14 @@ Most scripts automatically download results as JSON/CSV when complete. Check you
 
 ## 🖥️ CLI Usage
 
-You can also run this via the XActions CLI:
+You can also run this via the Medirus CLI:
 
 ```bash
-# Install XActions globally
-npm install -g xactions
+# Install Medirus globally
+npm install -g medirus
 
 # Run via CLI
-xactions --help
+medirus --help
 ```
 
 ---
@@ -486,4 +486,4 @@ See the [MCP Setup Guide](../mcp-setup.md) for integration with Claude Desktop, 
 
 ---
 
-> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [XActions on GitHub](https://github.com/nirholas/XActions)
+> **Author:** nich ([@nichxbt](https://x.com/nichxbt)) — [Medirus on GitHub](https://github.com/nirholas/XActions)

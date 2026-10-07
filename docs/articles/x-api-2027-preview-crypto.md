@@ -22,7 +22,7 @@ Before projecting forward, understand the current baseline:
 - **Enterprise**: Custom pricing, full firehose access
 - **Authentication**: OAuth 1.0a and OAuth 2.0 (PKCE + Bearer Token)
 
-For most crypto developers, the official API tier pricing makes browser-automation approaches (like XActions) more practical for many use cases.
+For most crypto developers, the official API tier pricing makes browser-automation approaches (like Medirus) more practical for many use cases.
 
 ---
 
@@ -168,7 +168,7 @@ Given this trajectory, here's what to build today that will compose well with 20
 // Schema that survives API changes
 model XEvent {
   id              String   @id
-  sourceApi       String   // 'xactions', 'x_official', 'grok'
+  sourceApi       String   // 'medirus', 'x_official', 'grok'
   rawPayload      Json     // Store raw response, schema normalize in application
   normalizedText  String
   author          String
@@ -184,12 +184,12 @@ model XEvent {
 // Adapter pattern for API evolution
 class XDataAdapter {
   constructor(provider) {
-    this.provider = provider; // 'xactions' | 'official' | 'future'
+    this.provider = provider; // 'medirus' | 'official' | 'future'
   }
 
   async streamKeywords(keywords, handler) {
-    if (this.provider === 'xactions') {
-      return this.xactionsStream(keywords, handler);
+    if (this.provider === 'medirus') {
+      return this.medirusStream(keywords, handler);
     }
     // Swap in official API when pricing works
     if (this.provider === 'official') {

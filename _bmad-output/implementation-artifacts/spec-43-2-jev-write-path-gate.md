@@ -17,7 +17,7 @@ deferred: []
 
 ## Intent
 
-**Problem:** Trước mọi write (post/reply/DM), XActions hiện chỉ có `persona.validateContent` (rule-based) + `checkPersonaConsistency` (LLM call) + Story 42.2 `safeToSend` Noul (chỉ trong `_createContent`). Còn thiếu: (1) `api/routes/ai/optimizer.js /predict` — heuristic keyword scoring thô, không semantic; (2) `api/routes/ai/moderation.js` — block-bots chỉ dùng `threshold` numeric, không có Jev toxic gate; (3) `xspace moderation.ts isBlocked` — regex pattern thô.
+**Problem:** Trước mọi write (post/reply/DM), Medirus hiện chỉ có `persona.validateContent` (rule-based) + `checkPersonaConsistency` (LLM call) + Story 42.2 `safeToSend` Noul (chỉ trong `_createContent`). Còn thiếu: (1) `api/routes/ai/optimizer.js /predict` — heuristic keyword scoring thô, không semantic; (2) `api/routes/ai/moderation.js` — block-bots chỉ dùng `threshold` numeric, không có Jev toxic gate; (3) `xspace moderation.ts isBlocked` — regex pattern thô.
 
 **Approach:** Thêm `src/ai/jevWriteGate.js` — `writeGate(content, options)` trả `{verdict: 'send'|'block'|'review', scores: {virality, clarity, onBrand, safeToPost}, toxicNoul}`. Cắm vào: (1) `api/routes/ai/optimizer.js /predict` — Jev semantic scores thay heuristic; (2) `api/routes/ai/moderation.js` — thêm `POST /jev-check` sync endpoint cho content moderation; (3) `xspace moderation.ts` — inject `jevChecker` optional thay regex.
 

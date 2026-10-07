@@ -101,8 +101,8 @@ Rules:
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://xactions.app',
-        'X-Title': 'XActions Thread Summarizer',
+        'HTTP-Referer': 'https://medirus.online',
+        'X-Title': 'Medirus Thread Summarizer',
       },
       body: JSON.stringify({
         model: selectedModel,

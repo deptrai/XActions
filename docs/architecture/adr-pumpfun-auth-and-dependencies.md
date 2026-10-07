@@ -13,7 +13,7 @@
 Pump.fun uses Privy (`google_oauth` / embedded Solana wallet) protected by Cloudflare Turnstile and WAF. Re-implementing Sign-In With Solana (SIWS), Privy OAuth dance, and Turnstile challenge bypass in pure headless Node.js would require `@solana/web3.js` (~15MB bloat) and is highly brittle against Cloudflare bot mitigations.
 
 ### Decision
-Adopt the **Browser-as-Signer / CDP Session Bridge** pattern already proven in XActions (`FacebookBrowserBridge`, `TikTokSignerBridge`):
+Adopt the **Browser-as-Signer / CDP Session Bridge** pattern already proven in Medirus (`FacebookBrowserBridge`, `TikTokSignerBridge`):
 1. The user logs into pump.fun once via their normal browser (Chrome/Edge/Brave).
 2. `PumpFunBrowserBridge` connects via Chrome DevTools Protocol (CDP) or Chrome MCP to extract:
    - HTTP Cookies: `_cfuvid`, `__cf_bm` (Cloudflare bypass session).

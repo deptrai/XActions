@@ -78,7 +78,7 @@ Story 10.0 (blocker prep) đã hoàn thành: `src/core/`, `src/proxy/`, `src/sto
 * **Đề xuất:** Thêm `accountVelocity` Map vào `AdaptiveRateGovernor`, cho phép cập nhật từ `ProxyIpPool` qua sự kiện hoặc polling.
 
 ### P1.4 — `StatusApi` chỉ là stub, chưa có `GET /governor/status`
-* **Spine AD-14 Rule 3:** Governor Status API trả về shape đầy đủ qua `GET /governor/status` và CLI `xactions status`.
+* **Spine AD-14 Rule 3:** Governor Status API trả về shape đầy đủ qua `GET /governor/status` và CLI `medirus status`.
 * **Code:** `src/core/status-api.js` chỉ trả về default object; chưa kết nối `AdaptiveRateGovernor`.
 * **Đề xuất:** Truyền `AdaptiveRateGovernor` instance vào `StatusApi` và expose qua `api/routes/` hoặc `src/mcp/server.js` tool.
 

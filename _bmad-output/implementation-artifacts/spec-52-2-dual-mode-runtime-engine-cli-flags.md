@@ -103,13 +103,13 @@ _None._
 - verdicts: 15 findings — high 0, medium 4, low 11, false 0, maybe-false 0
 - findings:
   - `[medium]` `[patch]` In `resolveCliToolMode`, quoted values like `--mode="full"` failed — Added quote stripping `.replace(/^['"]|['"]$/g, '')`.
-  - `[medium]` `[patch]` `xactions://system/status` MCP resource omitted `toolMode` — Added `toolMode` and `activeToolCount` to status resource output.
+  - `[medium]` `[patch]` `medirus://system/status` MCP resource omitted `toolMode` — Added `toolMode` and `activeToolCount` to status resource output.
   - `[medium]` `[patch]` HTTP `/health` route lacked explicit mode keys — Added both `executionMode` and `toolMode` in health response.
   - `[medium]` `[patch]` Missing test coverage for quoted `--mode` and resource status — Added 2 tests in `tests/mcp/dual-mode-runtime.test.js`.
   - `[low]` `[reject]` MCP `listChanged` notification on dynamic switch — Primary use-case is startup configuration; clients re-query `tools/list` on restart.
   - `[low]` `[reject]` Exposing DOMAIN_TOOLS inside full mode — Intent specifies full mode advertises legacy tools (`TOOLS`) while compact mode advertises DOMAIN_TOOLS.
   - `[low]` `[reject]` Unrecognized `--mode` CLI argument throwing vs fallback — Falling back to compact mode with warning is standard non-crashing behavior.
-  - `[low]` `[reject]` CLI `--help` handling in server.js — Handled by root `xactions` CLI bin.
+  - `[low]` `[reject]` CLI `--help` handling in server.js — Handled by root `medirus` CLI bin.
   - `[low]` `[reject]` CLI wizard `mcp-config` mode customization — Can be configured via `MCP_TOOL_MODE=full` env var in client configs.
   - `[low]` `[reject]` Session isolation of `explicitToolMode` in HTTP mode — Server mode is process-level configuration; multi-tenant tool mode is out of scope.
   - `[low]` `[reject]` TypeScript definitions in `types/index.d.ts` — Type declarations update tracked under separate epic.
@@ -121,10 +121,10 @@ _None._
 ## Auto Run Result
 
 ### Summary of Implemented Change
-Story 52.2 implements the **Dual-Mode Runtime Engine & CLI Flags** for XActions MCP server (`src/mcp/server.js`). It allows toggling between **Compact Mode** (default, advertising 10 Domain Tools) and **Full Mode** (advertising 224 legacy tools) via CLI flags (`--mode=compact|full`, `--compact`, `--full`) and environment variable `MCP_TOOL_MODE`. The `createMcpServer()` instance dynamically calls `getActiveTools()` inside `ListToolsRequestSchema`, reducing schema size by ~95% for modern AI assistants while maintaining complete backward compatibility.
+Story 52.2 implements the **Dual-Mode Runtime Engine & CLI Flags** for Medirus MCP server (`src/mcp/server.js`). It allows toggling between **Compact Mode** (default, advertising 10 Domain Tools) and **Full Mode** (advertising 224 legacy tools) via CLI flags (`--mode=compact|full`, `--compact`, `--full`) and environment variable `MCP_TOOL_MODE`. The `createMcpServer()` instance dynamically calls `getActiveTools()` inside `ListToolsRequestSchema`, reducing schema size by ~95% for modern AI assistants while maintaining complete backward compatibility.
 
 ### Files Changed
-- `src/mcp/server.js`: Implemented `getToolMode`, `setToolMode`, `resetToolMode`, `getActiveTools`, `resolveCliToolMode`, `resolveEnvToolMode`. Wired `createMcpServer` `ListToolsRequestSchema` to `getActiveTools()`. Updated `printBanner`, `/health` route, and `xactions://system/status` resource.
+- `src/mcp/server.js`: Implemented `getToolMode`, `setToolMode`, `resetToolMode`, `getActiveTools`, `resolveCliToolMode`, `resolveEnvToolMode`. Wired `createMcpServer` `ListToolsRequestSchema` to `getActiveTools()`. Updated `printBanner`, `/health` route, and `medirus://system/status` resource.
 - `tests/mcp/dual-mode-runtime.test.js`: Created 31 unit tests verifying mode resolution hierarchy, CLI argument parsing with quotes, dynamic runtime mode switcher, MCP `ListToolsRequestSchema` advertisement, and resource status integration.
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`: Updated `52-2-dual-mode-runtime-engine-cli-flags` to `done`.
 

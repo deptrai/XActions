@@ -19,9 +19,9 @@ Train your X/Twitter algorithm for a specific niche. Three approaches:
 
 | Goal | Solution |
 |------|----------|
-| Create a persona (CLI) | `xactions persona create` |
-| Run 24/7 with LLM (CLI) | `xactions persona run <id>` |
-| Check persona status | `xactions persona status <id>` |
+| Create a persona (CLI) | `medirus persona create` |
+| Run 24/7 with LLM (CLI) | `medirus persona run <id>` |
+| Check persona status | `medirus persona status <id>` |
 | Browser console (with core.js) | `src/automation/algorithmBuilder.js` |
 | Browser console (standalone) | `scripts/thoughtLeaderCultivator.js` |
 | Browser console (algorithm trainer) | `src/automation/algorithmTrainer.js` |
@@ -82,7 +82,7 @@ Browser console script for manual training sessions. Requires `src/automation/co
 ## Strategy Guide
 
 ### Fresh account (week 1-2)
-1. Create a persona with `xactions persona create` or configure algorithmTrainer manually
+1. Create a persona with `medirus persona create` or configure algorithmTrainer manually
 2. Use conservative/chill intensity -- X flags aggressive new accounts
 3. Focus on phases 1-2 (search) and 7 (explore) to signal interests
 4. Follow 5-10 niche accounts per day manually
@@ -96,9 +96,9 @@ Browser console script for manual training sessions. Requires `src/automation/co
 
 ### Running 24/7 with LLM
 1. Set `OPENROUTER_API_KEY` for AI-generated replies
-2. `xactions persona create` -- configure niche, strategy, schedule
-3. `xactions persona run <id>` -- starts headless Puppeteer session
-4. Monitor: `xactions persona status <id>`
+2. `medirus persona create` -- configure niche, strategy, schedule
+3. `medirus persona run <id>` -- starts headless Puppeteer session
+4. Monitor: `medirus persona status <id>`
 5. Cost estimate: ~$0.50-2.00/day depending on model and activity level
 
 ## Environment Variables
@@ -106,7 +106,7 @@ Browser console script for manual training sessions. Requires `src/automation/co
 | Variable | Purpose |
 |----------|---------|
 | `OPENROUTER_API_KEY` | Required for LLM-generated comments and posts |
-| `XACTIONS_SESSION_COOKIE` | X auth token (alternative to `--token` flag) |
+| `MEDIRUS_SESSION_COOKIE` | X auth token (alternative to `--token` flag) |
 
 ## Detailed References
 

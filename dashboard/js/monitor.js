@@ -1,5 +1,5 @@
 /**
- * XActions — Real-Time Monitor JS
+ * Medirus — Real-Time Monitor JS
  * Live activity feed, Chart.js charts, account health, active automations sidebar
  */
 

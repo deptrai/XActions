@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Automation - Algorithm Trainer
+// Medirus Automation - Algorithm Trainer
 // https://github.com/nirholas/XActions
 // by nichxbt
 //
@@ -22,7 +22,7 @@
 // ⚠️ Use responsibly — aggressive automation can get accounts limited.
 
 (() => {
-  if (!window.XActions?.Core) {
+  if (!window.Medirus?.Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return;
   }
@@ -31,7 +31,7 @@
     log, sleep, randomDelay, scrollBy, scrollToTop, scrollToBottom,
     clickElement, waitForElement, waitForElements, typeText,
     storage, rateLimit, SELECTORS, extractTweetInfo,
-  } = window.XActions.Core;
+  } = window.Medirus.Core;
 
   // ============================================
   // 🎯 CONFIGURATION — EDIT THIS
@@ -795,7 +795,7 @@
   // ============================================
 
   const run = async () => {
-    log('🧠 XActions Algorithm Trainer starting...', 'info');
+    log('🧠 Medirus Algorithm Trainer starting...', 'info');
     log(`📋 ${NICHES.topics.length} niche(s) configured`, 'info');
     log(`⚡ Intensity: ${PERSONA.INTENSITY}`, 'info');
     log(`⏱️  Cycle duration: ${BEHAVIOR.CYCLE_DURATION_MINUTES} min`, 'info');

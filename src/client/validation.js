@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Client — Input Validation
+ * Medirus Client — Input Validation
  * Validators for usernames, tweet IDs, URLs, etc.
  *
  * @author nich (@nichxbt) - https://github.com/nirholas

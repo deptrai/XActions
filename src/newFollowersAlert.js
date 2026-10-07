@@ -9,7 +9,7 @@
 // 4. Run periodically to see your new followers!
 
 (() => {
-  const STORAGE_KEY = 'xactions_new_followers';
+  const STORAGE_KEY = 'medirus_new_followers';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   if (!window.location.pathname.includes('/followers')) {
@@ -73,7 +73,7 @@
   };
 
   const run = async () => {
-    console.log(`\n🎉 XActions — New Followers Tracker for @${username}\n`);
+    console.log(`\n🎉 Medirus — New Followers Tracker for @${username}\n`);
 
     const currentFollowers = await scrapeFollowers();
     console.log(`\n✅ Total followers: ${currentFollowers.size}\n`);

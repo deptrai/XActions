@@ -33,7 +33,7 @@ This script automates leaving every X Community you're a member of:
 
 ```javascript
 // ============================================
-// XActions - Leave All Communities
+// Medirus - Leave All Communities
 // Author: nichxbt (@nichxbt)
 // Go to: x.com/YOUR_USERNAME/communities
 // Open console (F12), paste this
@@ -48,7 +48,7 @@ This script automates leaving every X Community you're a member of:
   // Track communities we've already left
   const getLeftCommunities = () => {
     try {
-      return JSON.parse(sessionStorage.getItem('xactions_left_ids') || '[]');
+      return JSON.parse(sessionStorage.getItem('medirus_left_ids') || '[]');
     } catch { return []; }
   };
   
@@ -56,7 +56,7 @@ This script automates leaving every X Community you're a member of:
     const left = getLeftCommunities();
     if (!left.includes(id)) {
       left.push(id);
-      sessionStorage.setItem('xactions_left_ids', JSON.stringify(left));
+      sessionStorage.setItem('medirus_left_ids', JSON.stringify(left));
     }
   };
 
@@ -131,7 +131,7 @@ This script automates leaving every X Community you're a member of:
       const total = getLeftCommunities().length;
       console.log(`🎉 DONE! LEFT ${total} COMMUNITIES TOTAL`);
       console.log(`IDs: ${getLeftCommunities().join(', ')}`);
-      sessionStorage.removeItem('xactions_left_ids');
+      sessionStorage.removeItem('medirus_left_ids');
     }
   };
 

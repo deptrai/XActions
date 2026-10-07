@@ -94,10 +94,10 @@
   let paused = false;
   const results = [];
 
-  window.XActions = window.XActions || {};
-  window.XActions.pause = () => { paused = true; console.log('⏸️ Paused.'); };
-  window.XActions.resume = () => { paused = false; console.log('▶️ Resumed.'); };
-  window.XActions.abort = () => { aborted = true; console.log('🛑 Aborting...'); };
+  window.Medirus = window.Medirus || {};
+  window.Medirus.pause = () => { paused = true; console.log('⏸️ Paused.'); };
+  window.Medirus.resume = () => { paused = false; console.log('▶️ Resumed.'); };
+  window.Medirus.abort = () => { aborted = true; console.log('🛑 Aborting...'); };
 
   const waitForUnpause = async () => {
     while (paused && !aborted) await sleep(500);
@@ -263,7 +263,7 @@
       console.log('   Set CONFIG.dryRun = false to post for real.\n');
     } else {
       console.log('\n⚠️  LIVE MODE — tweets will actually be posted!');
-      console.log('   Use XActions.abort() to stop at any time.\n');
+      console.log('   Use Medirus.abort() to stop at any time.\n');
     }
 
     console.log('🔍 Collecting target tweets...\n');
@@ -319,7 +319,7 @@
     if (results.length > 0) {
       const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `xactions-quote-tweets-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `medirus-quote-tweets-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       console.log('📥 Results exported.');
     }

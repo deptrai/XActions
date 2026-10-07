@@ -70,7 +70,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🔇 XActions — Mute By Keywords                              ║
+║  🔇 Medirus — Mute By Keywords                              ║
 ║  Mute users with specific bio keywords                       ║
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be muted               ║' : '║  🔴 LIVE MODE - Accounts WILL be muted                      ║'}
 ╚══════════════════════════════════════════════════════════════╝
@@ -200,7 +200,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be muted        
   }
 
   // Save log
-  const storageKey = 'xactions_keyword_mutes';
+  const storageKey = 'medirus_keyword_mutes';
   const log = matches.map(m => ({
     username: m.username,
     keywords: m.keywords,

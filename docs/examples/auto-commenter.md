@@ -71,7 +71,7 @@ This feature helps you engage with content automatically by posting relevant com
 
 ```javascript
 // ============================================
-// XActions - Auto-Commenter (Browser Console)
+// Medirus - Auto-Commenter (Browser Console)
 // Author: nich (@nichxbt)
 // Go to: x.com/username or x.com/search
 // Open console (F12), paste this
@@ -121,7 +121,7 @@ This feature helps you engage with content automatically by posting relevant com
   // SCRIPT - Don't modify below this line
   // ==========================================
   
-  console.log('💬 XActions - Auto-Commenter');
+  console.log('💬 Medirus - Auto-Commenter');
   console.log('='.repeat(50));
   console.log('⚙️  Settings:');
   console.log(`   • Comment templates: ${CONFIG.COMMENTS.length} variations`);
@@ -149,7 +149,7 @@ This feature helps you engage with content automatically by posting relevant com
   const processedTweets = new Set();
 
   // Load previously commented tweets from localStorage
-  const storageKey = 'xactions_commented_tweets';
+  const storageKey = 'medirus_commented_tweets';
   try {
     const saved = localStorage.getItem(storageKey);
     if (saved) {
@@ -408,7 +408,7 @@ This feature helps you engage with content automatically by posting relevant com
 
 **Output example:**
 ```
-💬 XActions - Auto-Commenter
+💬 Medirus - Auto-Commenter
 ==================================================
 ⚙️  Settings:
    • Comment templates: 10 variations
@@ -487,7 +487,7 @@ touch auto-commenter.js
 
 ```javascript
 // ============================================
-// XActions - Auto-Commenter (Node.js + Puppeteer)
+// Medirus - Auto-Commenter (Node.js + Puppeteer)
 // Author: nich (@nichxbt)
 //
 // Monitors a user's profile and comments on new tweets
@@ -562,7 +562,7 @@ const targetUsername = args[0]?.replace('@', '');
 if (!targetUsername || targetUsername.startsWith('--')) {
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
-║  💬 XActions Auto-Commenter                               ║
+║  💬 Medirus Auto-Commenter                               ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Usage:                                                   ║
 ║    node auto-commenter.js <username> [options]            ║
@@ -1024,7 +1024,7 @@ async function main() {
 
   // Session header
   console.log('\n' + '='.repeat(60));
-  console.log('💬 XACTIONS AUTO-COMMENTER');
+  console.log('💬 MEDIRUS AUTO-COMMENTER');
   console.log('='.repeat(60));
   
   logger.info(`Session ID: ${sessionId}`);
@@ -1249,7 +1249,7 @@ node auto-commenter.js balajis --watch
 **Output example:**
 ```
 ============================================================
-💬 XACTIONS AUTO-COMMENTER
+💬 MEDIRUS AUTO-COMMENTER
 ============================================================
 [2026-01-01T14:30:00.000Z] [INFO] Session ID: abc123xyz
 [2026-01-01T14:30:00.001Z] [INFO] Target user: @elonmusk
@@ -1350,11 +1350,11 @@ X actively looks for these patterns:
 
 ## 🌐 Website Alternative
 
-### Use XActions.app
+### Use Medirus.app
 
 Don't want to run scripts? Use our web dashboard instead!
 
-**[👉 xactions.app](https://xactions.app)**
+**[👉 medirus.online](https://medirus.online)**
 
 **Features:**
 - ✅ No coding required
@@ -1369,7 +1369,7 @@ Don't want to run scripts? Use our web dashboard instead!
 - ✅ User watchlist monitoring
 
 **How it works:**
-1. Sign in with your X account at [xactions.app](https://xactions.app)
+1. Sign in with your X account at [medirus.online](https://medirus.online)
 2. Navigate to **Automation** → **Auto-Commenter**
 3. Add your comment templates (varied and genuine!)
 4. Set up your target users or keywords

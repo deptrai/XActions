@@ -17,7 +17,7 @@ context:
 
 **Problem:** When `SelectorCanary` (Story 28.2) flags a DOM drift, a developer still has to open DevTools and hand-inspect the changed page to find a replacement selector. There is no automated way to map "the element that used to match `tweet_text`" onto the current live DOM.
 
-**Approach:** `AutoSelectorFallback` (`src/core/auto-selector-fallback.js`) loads a live page snapshot via `createStealthPage` (Obscura primary, Chrome fallback — same pattern as 28.2), walks the DOM for elements whose text/attribute/child structure matches a declared `expectedShape`, ranks candidate selectors by stability heuristic (`data-testid` → `role`/`aria-*` → semantic tag+structure, rejecting hash-only classnames), and returns a ranked list with `confidenceScore` ∈ [0,1]. Exposed via `xactions tools suggest-selector --platform <p> --url <u> --field <f>`.
+**Approach:** `AutoSelectorFallback` (`src/core/auto-selector-fallback.js`) loads a live page snapshot via `createStealthPage` (Obscura primary, Chrome fallback — same pattern as 28.2), walks the DOM for elements whose text/attribute/child structure matches a declared `expectedShape`, ranks candidate selectors by stability heuristic (`data-testid` → `role`/`aria-*` → semantic tag+structure, rejecting hash-only classnames), and returns a ranked list with `confidenceScore` ∈ [0,1]. Exposed via `medirus tools suggest-selector --platform <p> --url <u> --field <f>`.
 
 ## Boundaries & Constraints
 
@@ -66,7 +66,7 @@ context:
 
 - `src/core/auto-selector-fallback.js` **(new)** — `AutoSelectorFallback` class + `globalAutoSelectorFallback`. `investigate(platform, pageUrl, expectedShape, opts?)` → `SelectorCandidate[]`. Accepts `{ browserFactory, createPage, closeBrowser, delayMs }` DI harnesses (precedent: `SelectorCanary`). Exports `FIELD_SHAPES` map + `suggestSelectors(platform, pageUrl, shapeOrFieldName, opts)` convenience wrapper — resolves a string `shapeOrFieldName` via `FIELD_SHAPES[platform]` (or literal `data-testid` fallback) then delegates to `globalAutoSelectorFallback.investigate(platform, pageUrl, shape, opts)`.
 - `src/scraping/stealthBrowser.js` — **reuse** `launchStealthBrowser` (line ~57), `createStealthPage` (line ~212), `closeStealthBrowser` (line ~198). Do NOT modify.
-- `src/cli/commands/schema.js` **or new** `src/cli/commands/tools.js` — register `xactions tools suggest-selector --platform <p> --url <u> --field <f> [--backend obscura|chrome] [--json]`. Wire in `src/cli/index.js` (precedent: `registerSchemaCommand`, `registerBenchmarkCommand`). Use `printCliError` from `src/cli/shared.js`.
+- `src/cli/commands/schema.js` **or new** `src/cli/commands/tools.js` — register `medirus tools suggest-selector --platform <p> --url <u> --field <f> [--backend obscura|chrome] [--json]`. Wire in `src/cli/index.js` (precedent: `registerSchemaCommand`, `registerBenchmarkCommand`). Use `printCliError` from `src/cli/shared.js`.
 - `src/core/index.js` — export `AutoSelectorFallback` + `globalAutoSelectorFallback` + `FIELD_SHAPES` (precedent: `SelectorCanary` export at line 50).
 - `types/core.d.ts` — add `SelectorCandidate`, `SelectorStrategy`, `ExpectedShape`, `AutoSelectorFallback`, `globalAutoSelectorFallback`, `FIELD_SHAPES`, `suggestSelectors` declarations.
 - `tests/core/auto-selector-fallback.test.js` **(new)** — DI-harness unit tests: happy path, testid>aria preference, aria strategy, semantic strategy, hash-class rejection, no-match, browser-launch-fail, page-goto-fail cleanup (page.close + closeStealthBrowser both called), invalid-shape throw (sync, before browserFactory), empty-shape `{}` throw, multi-predicate filter (text/tagName/minChildren/childSelectors), dedupe+cap-10, CLI registration smoke test, CLI required-option rejection, FIELD_SHAPES field resolution, suggestSelectors wrapper delegation.
@@ -83,14 +83,14 @@ context:
 - [x] `src/cli/index.js` — `registerToolsCommand(program)` — wiring
 - [x] `tests/core/auto-selector-fallback.test.js` — DI-harness unit tests — coverage
 - [x] `tests/core/index.test.js` — export assertions — prevent regression
-- [x] `docs/agents/selectors.md` — document `xactions tools suggest-selector` — DoD docs
+- [x] `docs/agents/selectors.md` — document `medirus tools suggest-selector` — DoD docs
 
 **Acceptance Criteria:**
 - Given a live page where an element carries `data-testid="tweetText"`, when `investigate('twitter', url, { attributes:{'data-testid':'tweetText'} })` runs, then a `SelectorCandidate` with `selector='[data-testid="tweetText"]'`, `strategy='data-testid'`, `confidenceScore ≥ 0.9` is returned first.
 - Given a candidate element only identifiable by `class="css-1x2y3z4"` (hash), when candidate generation runs, then that element yields NO selector candidate.
 - Given `expectedShape` matches zero elements, when `investigate()` completes, then it returns `[]` without throwing.
 - Given `launchStealthBrowser` throws for both backends, when `investigate()` is called, then the error propagates AND `page.close()`/`closeStealthBrowser()` are not leaked.
-- Given `--field tweet_text` passed to `xactions tools suggest-selector`, when CLI parses it, then `FIELD_SHAPES['twitter']['tweet_text']` (or a `data-testid` fallback) is used as `expectedShape`.
+- Given `--field tweet_text` passed to `medirus tools suggest-selector`, when CLI parses it, then `FIELD_SHAPES['twitter']['tweet_text']` (or a `data-testid` fallback) is used as `expectedShape`.
 - Given ≥ 10 distinct matching elements, when candidates are emitted, then at most 10 are returned, deduped, sorted by `confidenceScore` descending.
 - Given an element with both `data-testid` and `role`, when candidates are ranked, then the `data-testid` candidate sorts above the `role` candidate (TESTID_PREFERRED).
 - Given an element matching `role="main"` or `aria-label`, when candidates are emitted, then `strategy: 'aria'` with base confidence ~0.80 is produced.
@@ -151,8 +151,8 @@ context:
 - `npx vitest run tests/core/auto-selector-fallback.test.js` — expected: all pass
 - `npx vitest run tests/core/index.test.js` — expected: export assertions pass
 - `npm run typecheck` — expected: 0 NEW errors beyond baseline (57 pre-existing in `signer-bridge.js`)
-- `xactions tools suggest-selector --platform twitter --url https://x.com/nasa --field tweet_text` — expected: prints ranked `SelectorCandidate[]` (live run; requires reachable x.com)
+- `medirus tools suggest-selector --platform twitter --url https://x.com/nasa --field tweet_text` — expected: prints ranked `SelectorCandidate[]` (live run; requires reachable x.com)
 
 **Manual checks:**
-- `xactions tools suggest-selector --help` shows `suggest-selector` with required `--platform`/`--url`/`--field`.
+- `medirus tools suggest-selector --help` shows `suggest-selector` with required `--platform`/`--url`/`--field`.
 - Live run on `https://x.com/nasa` returns ≥1 candidate for `tweet_text` with `data-testid` strategy.

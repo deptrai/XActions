@@ -2,12 +2,12 @@
 status: final
 created: 2026-08-27
 canonical: true
-purpose: canonical index for UX design documents in XActions
+purpose: canonical index for UX design documents in Medirus
 ---
 
-# XActions UX Document Index
+# Medirus UX Document Index
 
-This folder contains the user-experience design artifacts for the XActions Internal Operator Dashboard and CLI surfaces.
+This folder contains the user-experience design artifacts for the Medirus Internal Operator Dashboard and CLI surfaces.
 
 ## Canonical UX Documents
 
@@ -21,12 +21,12 @@ This folder contains the user-experience design artifacts for the XActions Inter
 
 - **UI implementers** start with `DESIGN.md` for tokens and components, then read `EXPERIENCE.md` for flows.
 - **UX reviewers** focus on `EXPERIENCE.md` as the canonical flow document; use `EXPERIENCE-UNIVERSAL-2026-08-21.md` only when a flow explicitly references it.
-- **CLI authors** refer to `EXPERIENCE.md` for admin CLI command flows and wireframes for `xactions admin` (status, proxies, accounts, checkpoints, stream) under Epic 19.
+- **CLI authors** refer to `EXPERIENCE.md` for admin CLI command flows and wireframes for `medirus admin` (status, proxies, accounts, checkpoints, stream) under Epic 19.
 
 ## Boundaries
 
 - Dashboard UI is in `dashboard/`.
-- Admin CLI is `xactions admin ...` (Epic 19).
+- Admin CLI is `medirus admin ...` (Epic 19).
 - MCP/AI Agent surfaces are documented in `epics.md` Story 19.10 and `src/mcp/`.
 
 ## Canonical Pointer

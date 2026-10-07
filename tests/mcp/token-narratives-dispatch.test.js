@@ -25,7 +25,7 @@ import {
   initializeBackend,
 } from '../../src/mcp/server.js';
 
-const DB_PATH = path.join(os.homedir(), '.xactions', 'analytics.db');
+const DB_PATH = path.join(os.homedir(), '.medirus', 'analytics.db');
 
 /**
  * Ensure token_mentions (+ content column) and narrative tables exist in the
@@ -71,7 +71,7 @@ function ensureSchema(db) {
 
 describe('Story 54.5: x_analytics token_narratives dispatch', () => {
   beforeAll(async () => {
-    process.env.XACTIONS_MODE = 'local';
+    process.env.MEDIRUS_MODE = 'local';
     await initializeBackend();
 
     fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });

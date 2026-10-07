@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions — LLM Brain Tests
+// Medirus — LLM Brain Tests
 // by nichxbt
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
@@ -246,8 +246,8 @@ describe('LLMBrain', () => {
       await brain.scoreRelevance('test', ['test']);
 
       const call = mockFetch.mock.calls[0];
-      expect(call[1].headers['HTTP-Referer']).toBe('https://xactions.app');
-      expect(call[1].headers['X-Title']).toBe('XActions Agent');
+      expect(call[1].headers['HTTP-Referer']).toBe('https://medirus.online');
+      expect(call[1].headers['X-Title']).toBe('Medirus Agent');
     });
 
     it('should POST to the correct URL', async () => {

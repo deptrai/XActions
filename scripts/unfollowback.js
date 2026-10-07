@@ -130,7 +130,7 @@
     if (CONFIG.exportOnComplete && unfollowedList.length > 0) {
       download(
         { summary: { scanned, unfollowed, skippedBack, dryRun: CONFIG.dryRun }, accounts: unfollowedList, exportedAt: new Date().toISOString() },
-        `xactions-unfollowback-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`
+        `medirus-unfollowback-${CONFIG.dryRun ? 'preview' : 'results'}-${new Date().toISOString().slice(0, 10)}.json`
       );
     }
 

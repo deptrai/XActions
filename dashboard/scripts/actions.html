@@ -3,40 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Actions — Free X/Twitter Script | XActions</title>
-  <meta name="description" content="XActions Actions Library - Complete X/Twitter Actions">
-  <meta name="keywords" content="xactions, twitter automation, x automation, browser script, devtools console, free, open source, actions, automation">
+  <title>Actions — Free X/Twitter Script | Medirus</title>
+  <meta name="description" content="Medirus Actions Library - Complete X/Twitter Actions">
+  <meta name="keywords" content="medirus, twitter automation, x automation, browser script, devtools console, free, open source, actions, automation">
   <meta name="author" content="nich (@nichxbt)">
   <meta name="robots" content="index, follow">
 
   <meta property="og:type" content="article">
-  <meta property="og:title" content="Actions — XActions">
-  <meta property="og:description" content="XActions Actions Library - Complete X/Twitter Actions">
-  <meta property="og:url" content="https://xactions.app/scripts/actions">
-  <meta property="og:site_name" content="XActions">
-  <meta property="og:image" content="https://xactions.app/og-image.png">
+  <meta property="og:title" content="Actions — Medirus">
+  <meta property="og:description" content="Medirus Actions Library - Complete X/Twitter Actions">
+  <meta property="og:url" content="https://medirus.online/scripts/actions">
+  <meta property="og:site_name" content="Medirus">
+  <meta property="og:image" content="https://medirus.online/og-image.png">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@nichxbt">
-  <meta name="twitter:title" content="Actions — XActions">
-  <meta name="twitter:description" content="XActions Actions Library - Complete X/Twitter Actions">
+  <meta name="twitter:title" content="Actions — Medirus">
+  <meta name="twitter:description" content="Medirus Actions Library - Complete X/Twitter Actions">
 
-  <link rel="canonical" href="https://xactions.app/scripts/actions">
+  <link rel="canonical" href="https://medirus.online/scripts/actions">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": "Actions — Free X/Twitter Script | XActions",
-    "description": "XActions Actions Library - Complete X/Twitter Actions",
-    "url": "https://xactions.app/scripts/actions",
+    "headline": "Actions — Free X/Twitter Script | Medirus",
+    "description": "Medirus Actions Library - Complete X/Twitter Actions",
+    "url": "https://medirus.online/scripts/actions",
     "author": { "@type": "Person", "name": "nich", "url": "https://x.com/nichxbt" },
-    "publisher": { "@type": "Organization", "name": "XActions", "url": "https://xactions.app" },
+    "publisher": { "@type": "Organization", "name": "Medirus", "url": "https://medirus.online" },
     "datePublished": "2026-03-30",
     "dateModified": "2026-03-30",
     "articleSection": "Automation",
-    "keywords": "xactions, twitter automation, x automation, browser script, devtools console, free, open source, actions, automation"
+    "keywords": "medirus, twitter automation, x automation, browser script, devtools console, free, open source, actions, automation"
   }
   </script>
   <script type="application/ld+json">
@@ -44,10 +44,10 @@
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://xactions.app" },
-      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://xactions.app/scripts" },
-      { "@type": "ListItem", "position": 3, "name": "Automation", "item": "https://xactions.app/scripts#automation" },
-      { "@type": "ListItem", "position": 4, "name": "Actions", "item": "https://xactions.app/scripts/actions" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://medirus.online" },
+      { "@type": "ListItem", "position": 2, "name": "Scripts", "item": "https://medirus.online/scripts" },
+      { "@type": "ListItem", "position": 3, "name": "Automation", "item": "https://medirus.online/scripts#automation" },
+      { "@type": "ListItem", "position": 4, "name": "Actions", "item": "https://medirus.online/scripts/actions" }
     ]
   }
   </script>
@@ -129,7 +129,7 @@
           <span>by <a href="https://x.com/nichxbt" rel="noopener">@nichxbt</a></span>
         </div>
 
-        <p>XActions Actions Library - Complete X/Twitter Actions</p>
+        <p>Medirus Actions Library - Complete X/Twitter Actions</p>
 
         
 
@@ -152,20 +152,20 @@
           <div class="code-block">
             <button class="copy-btn" onclick="navigator.clipboard.writeText(this.nextElementSibling.querySelector('code').textContent).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Script',2000)})">Copy Script</button>
             <pre><code>// Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions Actions Library - Complete X/Twitter Actions
+// Medirus Actions Library - Complete X/Twitter Actions
 // https://github.com/nirholas/XActions
 //
 // This module contains ALL available X/Twitter actions - visible, hidden, and undocumented.
-// Paste core.js FIRST, then this file. Other scripts can use window.XActions.
+// Paste core.js FIRST, then this file. Other scripts can use window.Medirus.
 //
-// Usage: XActions.tweet.post(&quot;Hello world!&quot;)
-//        XActions.user.follow(&quot;username&quot;)
-//        XActions.dm.send(&quot;username&quot;, &quot;Hi there!&quot;)
+// Usage: Medirus.tweet.post(&quot;Hello world!&quot;)
+//        Medirus.user.follow(&quot;username&quot;)
+//        Medirus.dm.send(&quot;username&quot;, &quot;Hi there!&quot;)
 
-window.XActions = window.XActions || {};
+window.Medirus = window.Medirus || {};
 
-window.XActions = (() =&gt; {
-  const Core = window.XActions?.Core;
+window.Medirus = (() =&gt; {
+  const Core = window.Medirus?.Core;
   if (!Core) {
     console.error('❌ Core module not loaded! Paste core.js first.');
     return null;
@@ -1940,7 +1940,7 @@ window.XActions = (() =&gt; {
     // Clear all X data from localStorage
     clearXData: () =&gt; {
       Object.keys(localStorage)
-        .filter(k =&gt; k.includes('twitter') || k.includes('x.com') || k.startsWith('xactions_'))
+        .filter(k =&gt; k.includes('twitter') || k.includes('x.com') || k.startsWith('medirus_'))
         .forEach(k =&gt; localStorage.removeItem(k));
       log('X data cleared from localStorage', 'success');
     },
@@ -2226,7 +2226,7 @@ window.XActions = (() =&gt; {
   };
 
   // Expose ALL sections
-  log('XActions FULL library loaded!', 'success');
+  log('Medirus FULL library loaded!', 'success');
   
   return {
     SEL,
@@ -2247,24 +2247,24 @@ window.XActions = (() =&gt; {
 
 console.log(`
 ╔══════════════════════════════════════════════════════════════════════╗
-║  📦 XActions Library - COMPLETE (All 9 Sections)                     ║
+║  📦 Medirus Library - COMPLETE (All 9 Sections)                     ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  ✅ XActions.tweet       - Post, reply, quote, delete, pin, thread   ║
-║  ✅ XActions.engage      - Like, RT, bookmark, share, highlight      ║
-║  ✅ XActions.user        - Follow, block, mute, lists, restrict      ║
-║  ✅ XActions.dm          - Send, group, react, GIFs, delete          ║
-║  ✅ XActions.search      - Query, filters, advanced operators        ║
-║  ✅ XActions.nav         - Navigation, tabs, scroll, timeline        ║
-║  ✅ XActions.lists       - Create, edit, delete, follow, pin         ║
-║  ✅ XActions.settings    - Account, privacy, muted words             ║
-║  ✅ XActions.profile     - Edit name, bio, location, avatar          ║
-║  ✅ XActions.utils       - Tokens, export, dev mode, clipboard       ║
-║  ✅ XActions.spaces      - Join, leave, request speaker, share       ║
-║  ✅ XActions.communities - Browse, join, leave, post                 ║
+║  ✅ Medirus.tweet       - Post, reply, quote, delete, pin, thread   ║
+║  ✅ Medirus.engage      - Like, RT, bookmark, share, highlight      ║
+║  ✅ Medirus.user        - Follow, block, mute, lists, restrict      ║
+║  ✅ Medirus.dm          - Send, group, react, GIFs, delete          ║
+║  ✅ Medirus.search      - Query, filters, advanced operators        ║
+║  ✅ Medirus.nav         - Navigation, tabs, scroll, timeline        ║
+║  ✅ Medirus.lists       - Create, edit, delete, follow, pin         ║
+║  ✅ Medirus.settings    - Account, privacy, muted words             ║
+║  ✅ Medirus.profile     - Edit name, bio, location, avatar          ║
+║  ✅ Medirus.utils       - Tokens, export, dev mode, clipboard       ║
+║  ✅ Medirus.spaces      - Join, leave, request speaker, share       ║
+║  ✅ Medirus.communities - Browse, join, leave, post                 ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  💡 Example: XActions.tweet.post(&quot;Hello!&quot;)                           ║
-║  💡 Example: XActions.user.follow(&quot;elonmusk&quot;)                        ║
-║  💡 Example: XActions.search.advanced({from:&quot;user&quot;, minFaves:100})   ║
+║  💡 Example: Medirus.tweet.post(&quot;Hello!&quot;)                           ║
+║  💡 Example: Medirus.user.follow(&quot;elonmusk&quot;)                        ║
+║  💡 Example: Medirus.search.advanced({from:&quot;user&quot;, minFaves:100})   ║
 ╚══════════════════════════════════════════════════════════════════════╝
 `);
 </code></pre>
@@ -2272,7 +2272,7 @@ console.log(`
         </section>
 
         <div class="cta-box">
-          <h3>⚡ More XActions Scripts</h3>
+          <h3>⚡ More Medirus Scripts</h3>
           <p>Browse 300+ free browser scripts for X/Twitter automation. No API keys, no fees.</p>
           <a href="/scripts">Browse All Scripts</a>
         </div>
@@ -2289,7 +2289,7 @@ console.log(`
 <a href="/scripts/quota-supervisor">⚠️ Quota Supervisor</a>
 <a href="/scripts/rate-limiter">⏱️ Rate Limiter</a>
 <a href="/scripts/session-logger">📋 Session Logger</a>
-<a href="/scripts/rss-monitor">📡 XActions RSS &amp; Webhook Content Ingestion</a>
+<a href="/scripts/rss-monitor">📡 Medirus RSS &amp; Webhook Content Ingestion</a>
       </div>
       <div class="sidebar-card">
         <h3>🔗 Quick Links</h3>

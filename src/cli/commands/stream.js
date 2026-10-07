@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * `xactions stream` — real-time event streaming.
+ * `medirus stream` — real-time event streaming.
  *
  * @author nich (@nichxbt)
  * @license MIT
@@ -73,7 +73,7 @@ export function registerStreamCommand(program) {
 
         if (streams.length === 0) {
           console.log(chalk.gray('\n  No active streams.'));
-          console.log(chalk.gray('  Start one with: xactions stream start <type> <username>\n'));
+          console.log(chalk.gray('  Start one with: medirus stream start <type> <username>\n'));
           return;
         }
 
@@ -135,7 +135,7 @@ export function registerStreamCommand(program) {
         const { pauseStream } = await import('../../streaming/index.js');
         await pauseStream(streamId);
         spinner.succeed(`Stream paused: ${streamId}`);
-        console.log(chalk.gray('  Resume with: xactions stream resume ' + streamId));
+        console.log(chalk.gray('  Resume with: medirus stream resume ' + streamId));
       } catch (error) {
         spinner.fail('Failed to pause stream');
         console.error(chalk.red(error.message));

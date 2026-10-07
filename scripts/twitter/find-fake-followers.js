@@ -90,7 +90,7 @@ var CONFIG = {
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║  🕵️ XActions — Find Fake Followers                          ║
+║  🕵️ Medirus — Find Fake Followers                          ║
 ║  Identify likely fake/bot accounts in your audience         ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
@@ -344,7 +344,7 @@ var CONFIG = {
     });
 
   // Save results
-  const storageKey = 'xactions_fake_followers';
+  const storageKey = 'medirus_fake_followers';
   const data = {
     timestamp: new Date().toISOString(),
     totalScanned: allFollowers.length,

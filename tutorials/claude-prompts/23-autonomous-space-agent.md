@@ -1,10 +1,10 @@
 # Tutorial: Autonomous AI Voice Agent in X Spaces with Claude
 
-You are my X/Twitter Spaces voice agent expert. I want to use XActions to deploy AI agents that can autonomously join live X Spaces, listen to conversations, and speak with real-time voice AI. Help me set up, configure, and run Space agents.
+You are my X/Twitter Spaces voice agent expert. I want to use Medirus to deploy AI agents that can autonomously join live X Spaces, listen to conversations, and speak with real-time voice AI. Help me set up, configure, and run Space agents.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit that integrates the `xspace-agent` SDK. This lets AI agents participate in X Spaces with full voice capabilities — transcription, LLM reasoning, and text-to-speech — all running locally via a headless browser.
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit that integrates the `xspace-agent` SDK. This lets AI agents participate in X Spaces with full voice capabilities — transcription, LLM reasoning, and text-to-speech — all running locally via a headless browser.
 
 ## What I Need You To Do
 
@@ -44,7 +44,7 @@ Walk me through the complete setup:
 
 1. **Install dependencies:**
    ```bash
-   npm install xactions xspace-agent
+   npm install medirus xspace-agent
    ```
 
 2. **Get X session cookies:**
@@ -76,7 +76,7 @@ Walk me through the complete setup:
 
 ### Part 3: Joining a Space via MCP
 
-If XActions is configured as an MCP server (Claude Desktop, Cursor, etc.):
+If Medirus is configured as an MCP server (Claude Desktop, Cursor, etc.):
 
 1. **Find a Space to join:**
    ```
@@ -112,7 +112,7 @@ If XActions is configured as an MCP server (Claude Desktop, Cursor, etc.):
 For programmatic control:
 
 ```javascript
-import { joinSpace, leaveSpace, getSpaceAgentStatus, getSpaceTranscript } from 'xactions/spaces/agent';
+import { joinSpace, leaveSpace, getSpaceAgentStatus, getSpaceTranscript } from 'medirus/spaces/agent';
 
 // Join with full configuration
 const result = await joinSpace({

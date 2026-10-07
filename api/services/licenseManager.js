@@ -4,7 +4,7 @@ import prisma from '../lib/prisma.js';
 /**
  * License Key Management
  * 
- * Generate, validate, and manage license keys for XActions
+ * Generate, validate, and manage license keys for Medirus
  */
 
 import crypto from 'crypto';
@@ -73,7 +73,7 @@ function generateLicenseKey(tier) {
   
   // Create signature from tier + segments
   const signature = crypto.createHash('sha256')
-    .update(`${tierCode}${segment1}${segment2}${process.env.JWT_SECRET || 'xactions'}`)
+    .update(`${tierCode}${segment1}${segment2}${process.env.JWT_SECRET || 'medirus'}`)
     .digest('hex')
     .substring(0, 4)
     .toUpperCase();
@@ -93,7 +93,7 @@ function verifyKeySignature(key) {
   const [, tierCode, segment1, segment2, signature] = parts;
   
   const expectedSignature = crypto.createHash('sha256')
-    .update(`${tierCode}${segment1}${segment2}${process.env.JWT_SECRET || 'xactions'}`)
+    .update(`${tierCode}${segment1}${segment2}${process.env.JWT_SECRET || 'medirus'}`)
     .digest('hex')
     .substring(0, 4)
     .toUpperCase();

@@ -1,6 +1,6 @@
 # Track 11 — CORS Proxy & Browser Embedding
 
-> XActions' Scraper class runs in Node.js, but many developers want to use it from browser-based apps (React, Vue, Next.js dashboards) or Edge/Cloudflare Workers. Twitter's API blocks browser requests due to CORS. This track builds a lightweight proxy server and a fetch-compatible browser client that routes through it.
+> Medirus' Scraper class runs in Node.js, but many developers want to use it from browser-based apps (React, Vue, Next.js dashboards) or Edge/Cloudflare Workers. Twitter's API blocks browser requests due to CORS. This track builds a lightweight proxy server and a fetch-compatible browser client that routes through it.
 
 ---
 
@@ -40,7 +40,7 @@ const app = express();
 
 1. CORS configuration:
    - Default: allow all origins (development mode)
-   - Production: XACTIONS_ALLOWED_ORIGINS env var (comma-separated list)
+   - Production: MEDIRUS_ALLOWED_ORIGINS env var (comma-separated list)
    - Preflight: allow GET, POST, OPTIONS
    - Expose headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
    - Max age: 86400 (24h preflight cache)
@@ -54,19 +54,19 @@ const app = express();
 
 4. Auth middleware:
    - Optional API key via X-API-Key header or ?api_key= query param
-   - If XACTIONS_API_KEY env var set, require matching key
+   - If MEDIRUS_API_KEY env var set, require matching key
    - If not set, proxy runs open (development mode)
    - Rate limit per API key (or per IP if no key)
 
 5. Scraper singleton:
    - Create one Scraper instance on startup
-   - Load cookies from XACTIONS_COOKIE_FILE or XACTIONS_COOKIES env var
+   - Load cookies from MEDIRUS_COOKIE_FILE or MEDIRUS_COOKIES env var
    - Reconnect if session expires
    - Expose isAuthenticated status on /health
 
 6. Server startup:
    const PORT = process.env.PORT || 3001;
-   app.listen(PORT, () => console.log(`🌐 XActions CORS Proxy running on port ${PORT}`));
+   app.listen(PORT, () => console.log(`🌐 Medirus CORS Proxy running on port ${PORT}`));
 
 Export app for testing and for mounting as sub-app in the main api/server.js.
 ```
@@ -210,14 +210,14 @@ Also add request logging middleware:
 ### Prompt 5: Browser Client SDK
 
 ```
-Create src/proxy/client/xactions-browser.js — fetch-based SDK for browsers.
+Create src/proxy/client/medirus-browser.js — fetch-based SDK for browsers.
 
 /**
- * XActions Browser Client
+ * Medirus Browser Client
  * Use in React, Vue, Next.js, or any browser environment.
- * Routes requests through the XActions CORS Proxy.
+ * Routes requests through the Medirus CORS Proxy.
  */
-class XActionsClient {
+class MedirusClient {
   constructor(options = {}) {
     this.baseUrl = options.baseUrl || 'http://localhost:3001';
     this.apiKey = options.apiKey || null;
@@ -271,7 +271,7 @@ class XActionsClient {
       });
       
       const data = await res.json();
-      if (!res.ok) throw new XActionsError(data.error.message, data.error);
+      if (!res.ok) throw new MedirusError(data.error.message, data.error);
       return data;
     } finally {
       clearTimeout(timer);
@@ -279,13 +279,13 @@ class XActionsClient {
   }
 }
 
-class XActionsError extends Error {
+class MedirusError extends Error {
   constructor(message, { code, status, retry_after } = {}) { ... }
 }
 
 // UMD export for CDN usage + ES module export
-export { XActionsClient, XActionsError };
-if (typeof window !== 'undefined') window.XActionsClient = XActionsClient;
+export { MedirusClient, MedirusError };
+if (typeof window !== 'undefined') window.MedirusClient = MedirusClient;
 ```
 
 ### Prompt 6: Browser Client — npm Package Build
@@ -295,18 +295,18 @@ Create build tooling to publish the browser client as a separate lightweight pac
 
 1. Create src/proxy/client/package.json:
    {
-     "name": "@xactions/browser",
+     "name": "@medirus/browser",
      "version": "0.1.0",
-     "description": "XActions browser client — X/Twitter data in any web app",
-     "main": "dist/xactions-browser.cjs.js",
-     "module": "dist/xactions-browser.esm.js",
-     "browser": "dist/xactions-browser.umd.js",
-     "types": "dist/xactions-browser.d.ts",
+     "description": "Medirus browser client — X/Twitter data in any web app",
+     "main": "dist/medirus-browser.cjs.js",
+     "module": "dist/medirus-browser.esm.js",
+     "browser": "dist/medirus-browser.umd.js",
+     "types": "dist/medirus-browser.d.ts",
      "exports": {
        ".": {
-         "import": "./dist/xactions-browser.esm.js",
-         "require": "./dist/xactions-browser.cjs.js",
-         "browser": "./dist/xactions-browser.umd.js"
+         "import": "./dist/medirus-browser.esm.js",
+         "require": "./dist/medirus-browser.cjs.js",
+         "browser": "./dist/medirus-browser.umd.js"
        }
      },
      "files": ["dist/"],
@@ -319,21 +319,21 @@ Create build tooling to publish the browser client as a separate lightweight pac
    }
 
 2. Create src/proxy/client/rollup.config.js:
-   - Input: xactions-browser.js
-   - Output formats: ESM, CJS, UMD (global name: XActions)
+   - Input: medirus-browser.js
+   - Output formats: ESM, CJS, UMD (global name: Medirus)
    - Minified UMD for CDN (~5KB gzipped target)
    - Source maps
 
-3. Create src/proxy/client/xactions-browser.d.ts — full TypeScript declarations:
+3. Create src/proxy/client/medirus-browser.d.ts — full TypeScript declarations:
    export interface Profile { id: string; username: string; ... }
    export interface Tweet { id: string; text: string; ... }
-   export class XActionsClient { ... }
-   export class XActionsError extends Error { ... }
+   export class MedirusClient { ... }
+   export class MedirusError extends Error { ... }
 
 4. Create CDN-ready HTML snippet for docs:
-   <script src="https://unpkg.com/@xactions/browser/dist/xactions-browser.umd.js"></script>
+   <script src="https://unpkg.com/@medirus/browser/dist/medirus-browser.umd.js"></script>
    <script>
-     const client = new XActions.XActionsClient({ baseUrl: 'https://your-proxy.com' });
+     const client = new Medirus.MedirusClient({ baseUrl: 'https://your-proxy.com' });
      client.getProfile('elonmusk').then(console.log);
    </script>
 ```
@@ -469,7 +469,7 @@ class RealtimeServer {
   }
 }
 
-Browser client addition — add to XActionsClient:
+Browser client addition — add to MedirusClient:
   connectWebSocket() → returns WebSocket with typed event handlers
   subscribe(type, params) → returns subscription handle
   unsubscribe(subscriptionId)
@@ -510,12 +510,12 @@ async function handleApi(request, env, path) {
   // Parse route: /api/v1/profile/:username
   // Build Twitter GraphQL request
   // Forward with proper headers (bearer token, cookies from KV)
-  // Transform response to XActions format
+  // Transform response to Medirus format
   // Cache with Cache API
 }
 
 Update wrangler.toml:
-  name = "xactions-proxy"
+  name = "medirus-proxy"
   main = "src/proxy/workers/worker.js"
   [vars]
   ALLOWED_ORIGINS = "*"
@@ -536,7 +536,7 @@ Create src/proxy/workers/twitter-api.js:
 Create deployment configurations for the CORS proxy.
 
 1. Update Dockerfile to include proxy mode:
-   Add build arg XACTIONS_MODE=full|proxy|api
+   Add build arg MEDIRUS_MODE=full|proxy|api
    If proxy: only install proxy dependencies, expose port 3001
    CMD ["node", "src/proxy/server.js"]
 
@@ -544,12 +544,12 @@ Create deployment configurations for the CORS proxy.
    services:
      proxy:
        build:
-         args: { XACTIONS_MODE: proxy }
+         args: { MEDIRUS_MODE: proxy }
        ports: ["3001:3001"]
        environment:
-         - XACTIONS_COOKIE_FILE=/data/cookies.json
-         - XACTIONS_API_KEY=${XACTIONS_API_KEY}
-         - XACTIONS_ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+         - MEDIRUS_COOKIE_FILE=/data/cookies.json
+         - MEDIRUS_API_KEY=${MEDIRUS_API_KEY}
+         - MEDIRUS_ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
        volumes:
          - ./data:/data
        restart: unless-stopped
@@ -563,7 +563,7 @@ Create deployment configurations for the CORS proxy.
    [build]
    dockerfile = "Dockerfile"
    [build.args]
-   XACTIONS_MODE = "proxy"
+   MEDIRUS_MODE = "proxy"
    [[services]]
    internal_port = 3001
    protocol = "tcp"
@@ -641,7 +641,7 @@ Create src/proxy/openapi.yaml — full OpenAPI 3.1 specification for the proxy A
 
 openapi: "3.1.0"
 info:
-  title: XActions CORS Proxy API
+  title: Medirus CORS Proxy API
   version: "1.0.0"
   description: "REST API for X/Twitter data. No Twitter API key required."
   license: { name: MIT }
@@ -650,7 +650,7 @@ info:
 servers:
   - url: http://localhost:3001
     description: Local development
-  - url: https://proxy.xactions.dev
+  - url: https://proxy.medirus.dev
     description: Production
 
 Document every endpoint:
@@ -694,12 +694,12 @@ Mount the CORS proxy as a sub-module of the existing Express API server.
 
 2. Create src/proxy/index.js — clean export:
    export { createProxyApp } from './server.js';
-   export { XActionsClient } from './client/xactions-browser.js';
+   export { MedirusClient } from './client/medirus-browser.js';
    export { RealtimeServer } from './realtime/ws.js';
 
 3. Update package.json exports:
    "./proxy": "./src/proxy/index.js",
-   "./proxy/client": "./src/proxy/client/xactions-browser.js"
+   "./proxy/client": "./src/proxy/client/medirus-browser.js"
 
 4. Update src/index.js to include proxy exports:
    export * from './proxy/index.js';
@@ -712,7 +712,7 @@ Mount the CORS proxy as a sub-module of the existing Express API server.
    - API reference (link to /docs)
 
 6. Update dashboard to use browser client:
-   - dashboard/js/api.js — replace any direct API calls with XActionsClient
+   - dashboard/js/api.js — replace any direct API calls with MedirusClient
    - Add proxy URL configuration in dashboard settings
 ```
 
@@ -738,22 +738,22 @@ MCP Tools (add to src/mcp/server.js):
 
 CLI Commands (add to src/cli/proxy.js):
 
-xactions proxy start [--port 3001] [--origins "*"] [--no-cache]
+medirus proxy start [--port 3001] [--origins "*"] [--no-cache]
   Start the CORS proxy server
 
-xactions proxy status
+medirus proxy status
   Show proxy health, cache stats, connections
 
-xactions proxy config --origins "https://myapp.com,https://staging.myapp.com"
+medirus proxy config --origins "https://myapp.com,https://staging.myapp.com"
   Update allowed origins
 
-xactions proxy cache clear [--pattern "profile:*"]
+medirus proxy cache clear [--pattern "profile:*"]
   Clear cache entries
 
-xactions proxy logs [--tail 100] [--follow]
+medirus proxy logs [--tail 100] [--follow]
   View proxy request logs
 
-xactions proxy deploy [--target fly|railway|cloudflare]
+medirus proxy deploy [--target fly|railway|cloudflare]
   Deploy proxy to cloud (interactive setup)
 ```
 
@@ -789,11 +789,11 @@ tests/proxy/security.test.js (5 tests):
 5. CORS blocked for non-allowed origin in production mode
 
 tests/proxy/client.test.js (5 tests):
-1. XActionsClient.getProfile fetches correctly
-2. XActionsClient.searchTweets paginates
-3. XActionsClient handles errors
-4. XActionsClient timeout works
-5. XActionsClient auto-pagination yields all results
+1. MedirusClient.getProfile fetches correctly
+2. MedirusClient.searchTweets paginates
+3. MedirusClient handles errors
+4. MedirusClient timeout works
+5. MedirusClient auto-pagination yields all results
 
 tests/proxy/websocket.test.js (5 tests):
 1. WebSocket connects and receives pong
@@ -821,7 +821,7 @@ curl http://localhost:3001/api/v1/trends
 curl http://localhost:3001/docs
 
 # Test browser client
-node -e "import('./src/proxy/client/xactions-browser.js').then(m => new m.XActionsClient().getProfile('x').then(console.log))"
+node -e "import('./src/proxy/client/medirus-browser.js').then(m => new m.MedirusClient().getProfile('x').then(console.log))"
 
 # Run tests
 npx vitest run tests/proxy/

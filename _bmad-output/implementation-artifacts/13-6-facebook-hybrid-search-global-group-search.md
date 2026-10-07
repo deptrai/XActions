@@ -26,7 +26,7 @@ so that **tôi có thể thu thập nhiều loại đối tượng với cùng m
 
 - `_bmad-output/planning-artifacts/epics.md` — Epic 13, Story 13.6 [dòng 561-572]
 - `_bmad-output/planning-artifacts/prd.md` — FR-72 (Facebook Crawler Refactor) [dòng 80]
-- `_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2, AD-3, AD-4, AD-8, AD-9, AD-10, AD-11, AD-12, AD-14, AD-15
+- `_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/ARCHITECTURE-SPINE.md` — AD-2, AD-3, AD-4, AD-8, AD-9, AD-10, AD-11, AD-12, AD-14, AD-15
 - `_bmad-output/implementation-artifacts/13-3-refactor-facebook-scraper-to-hybrid-architecture.md` — FacebookClient, FacebookCrawler, DEFAULT_FB_DOC_IDS, token cache
 - `_bmad-output/implementation-artifacts/13-4-facebook-browser-as-signer-bridge.md` — FacebookBrowserBridge, Playwright default, token extraction
 - `_bmad-output/implementation-artifacts/13-5-facebook-hybrid-profile-followers-group-members.md` — ProfileItem mapping, saveCheckpoint, resolveCookies, normalizeCount, resolveGroupId

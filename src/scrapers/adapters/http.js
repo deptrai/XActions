@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Scraper Adapter — HTTP (GraphQL)
+ * Medirus Scraper Adapter — HTTP (GraphQL)
  *
  * Adapter that wraps the Twitter HTTP/GraphQL scraper into the adapter
  * interface, so users can switch between Puppeteer and HTTP with a single

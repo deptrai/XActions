@@ -92,9 +92,9 @@ Current `sprint-status.yaml`:
 
 ## 6. Open Questions — Resolved
 
-Resolved by checking `prd.md` data-retention section, `src/a2a/auth.js` permission model, `ARCHITECTURE-SPINE.md` AD-18, and taxonomy. Full rationale in <ref_file file="/Users/luisphan/Documents/GitHub/XActions/_bmad-output/planning-artifacts/architecture/xactions-hybrid-scraping-spine/EPIC10-DECISION-LOG-2026-08-18.md" />.
+Resolved by checking `prd.md` data-retention section, `src/a2a/auth.js` permission model, `ARCHITECTURE-SPINE.md` AD-18, and taxonomy. Full rationale in <ref_file file="/Users/luisphan/Documents/GitHub/Medirus/_bmad-output/planning-artifacts/architecture/medirus-hybrid-scraping-spine/EPIC10-DECISION-LOG-2026-08-18.md" />.
 
-1. ✅ **Metadata schema ownership:** XActions owns and publishes all `metadata` JSON schemas; Nowing consumes via `GET /schemas/:platform/:category`.
+1. ✅ **Metadata schema ownership:** Medirus owns and publishes all `metadata` JSON schemas; Nowing consumes via `GET /schemas/:platform/:category`.
 2. ✅ **Checkpoint authorization:** Any identity with `checkpoint:manage` permission or `admin`. Added `'checkpoint:manage'` to `src/a2a/auth.js`.
 3. ✅ **30-day retention policy:** Cost optimization to keep DB < 5GB, not legal/compliance. No audit logging required.
 4. ✅ **Category taxonomy:** `b2b` is a separate category for B2B leads (LinkedIn), not a sub-class of `recruitment`. Public-procurement B2B remains deferred per spine.

@@ -7,10 +7,10 @@ async function main() {
 
   // Create demo user with free tier
   const demoUser = await prisma.user.upsert({
-    where: { email: 'demo@xactions.app' },
+    where: { email: 'demo@medirus.online' },
     update: {},
     create: {
-      email: 'demo@xactions.app',
+      email: 'demo@medirus.online',
       username: 'demo_user',
       password: '$2a$10$rYZ3V4LqYJ8vLYZ3V4LqYOqYZ3V4LqYJ8vLYZ3V4LqYOqYZ3V4Lq', // hashed 'demo1234'
       credits: 50,

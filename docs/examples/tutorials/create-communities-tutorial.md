@@ -1,14 +1,14 @@
 ---
 title: "Create Communities on X (Twitter) — Tutorial"
-description: "Create X Communities with custom name, description, rules, and privacy settings using XActions browser scripts."
-keywords: ["twitter create community", "x community setup", "xactions community", "create twitter community script", "x community automation"]
+description: "Create X Communities with custom name, description, rules, and privacy settings using Medirus browser scripts."
+keywords: ["twitter create community", "x community setup", "medirus community", "create twitter community script", "x community automation"]
 author: "nich (@nichxbt)"
 date: "2026-03-30"
 ---
 
 # Create Communities — Tutorial
 
-> Step-by-step guide to creating X Communities with name, description, rules, and privacy settings using XActions browser scripts.
+> Step-by-step guide to creating X Communities with name, description, rules, and privacy settings using Medirus browser scripts.
 
 **Works on:** Browser Console
 **Difficulty:** Beginner
@@ -39,8 +39,8 @@ date: "2026-03-30"
 
 ```js
 const CONFIG = {
-  name: 'My XActions Community',
-  description: 'A community for X automation enthusiasts. Built with XActions.',
+  name: 'My Medirus Community',
+  description: 'A community for X automation enthusiasts. Built with Medirus.',
   rules: [
     'Be respectful to all members',
     'No spam or self-promotion without value',
@@ -60,7 +60,7 @@ const CONFIG = {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `name` | `string` | `'My XActions Community'` | Community display name |
+| `name` | `string` | `'My Medirus Community'` | Community display name |
 | `description` | `string` | `'A community for...'` | Community description shown to visitors |
 | `rules` | `string[]` | `[...]` | Array of community rules. Each string is one rule |
 | `isPrivate` | `boolean` | `false` | If `true`, users must be approved to join |
@@ -126,8 +126,8 @@ Set `isPrivate: true` to require approval for new members:
 
 ```js
 const CONFIG = {
-  name: 'XActions Beta Testers',
-  description: 'Private group for testing new XActions features before release.',
+  name: 'Medirus Beta Testers',
+  description: 'Private group for testing new Medirus features before release.',
   rules: [
     'Report bugs with reproduction steps',
     'Do not share beta features publicly',
@@ -148,7 +148,7 @@ When `isPrivate` is true, the script will toggle the privacy setting, requiring 
 - **Write a compelling description.** This is what people see before joining. Explain what the community is about and who it is for.
 - **Start public, go private later.** Public communities grow faster. You can always change to private after building an initial membership.
 - **The script handles multi-step flows.** Some community creation dialogs have multiple screens (name -> description -> rules -> confirm). The script clicks "Next" between steps.
-- **State is saved.** Progress is stored in `sessionStorage` under `xactions_createCommunity`.
+- **State is saved.** Progress is stored in `sessionStorage` under `medirus_createCommunity`.
 
 ---
 

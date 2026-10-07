@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Account Exporter
+ * Medirus Account Exporter
  * Orchestrates full account export: profile, tweets, followers, following, bookmarks, likes
  *
  * Output goes to exports/<username>_<YYYY-MM-DD>/
@@ -46,7 +46,7 @@ function toCSV(data) {
  * Convert tweets array to readable Markdown
  */
 function tweetsToMarkdown(tweets, username) {
-  let md = `# Tweets by @${username}\n\nExported ${today()} via XActions\n\n---\n\n`;
+  let md = `# Tweets by @${username}\n\nExported ${today()} via Medirus\n\n---\n\n`;
   for (const t of tweets) {
     md += `### ${t.timestamp || 'Unknown date'}\n\n`;
     md += `${t.text || ''}\n\n`;
@@ -65,7 +65,7 @@ function tweetsToMarkdown(tweets, username) {
  * Convert followers/following to Markdown
  */
 function usersToMarkdown(users, title) {
-  let md = `# ${title}\n\nExported ${today()} via XActions\n\nTotal: ${users.length}\n\n---\n\n`;
+  let md = `# ${title}\n\nExported ${today()} via Medirus\n\nTotal: ${users.length}\n\n---\n\n`;
   for (const u of users) {
     md += `### @${u.username || u.handle || 'unknown'}`;
     if (u.name) md += ` — ${u.name}`;
@@ -90,7 +90,7 @@ function profileToMarkdown(profile) {
   if (profile.location) md += `| Location | ${profile.location} |\n`;
   if (profile.website) md += `| Website | ${profile.website} |\n`;
   if (profile.joined) md += `| Joined | ${profile.joined} |\n`;
-  md += `\nExported ${today()} via XActions\n`;
+  md += `\nExported ${today()} via Medirus\n`;
   return md;
 }
 
@@ -98,7 +98,7 @@ function profileToMarkdown(profile) {
  * Convert bookmarks to Markdown
  */
 function bookmarksToMarkdown(bookmarks) {
-  let md = `# Bookmarks\n\nExported ${today()} via XActions\n\nTotal: ${bookmarks.length}\n\n---\n\n`;
+  let md = `# Bookmarks\n\nExported ${today()} via Medirus\n\nTotal: ${bookmarks.length}\n\n---\n\n`;
   for (const b of bookmarks) {
     if (b.author) md += `**@${b.author}**\n\n`;
     md += `${b.text || ''}\n\n`;

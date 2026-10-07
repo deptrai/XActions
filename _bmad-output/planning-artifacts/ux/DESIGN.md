@@ -90,11 +90,11 @@ components:
     mastodon: "bg: {colors.accent-mastodon}; color: #fff; border-radius: {rounded.sm}"
 ---
 
-# DESIGN.md — XActions Unified Dashboard
+# DESIGN.md — Medirus Unified Dashboard
 
 ## Brand & Style
 
-XActions is a developer/power-user tool for social media automation. The visual identity is:
+Medirus is a developer/power-user tool for social media automation. The visual identity is:
 - **Clean and functional** — no decorative elements, information density over whitespace
 - **Trust through clarity** — dry-run indicators, clear status colors, explicit state labels
 - **Platform-neutral** — unified layout that doesn't favor X or Facebook visually
@@ -212,7 +212,7 @@ The primary interaction unit. One card per automation feature.
 
 ```
 ┌─────────────────────────┐
-│ ⚡ XActions             │  ← brand, text-primary, h2
+│ ⚡ Medirus             │  ← brand, text-primary, h2
 │─────────────────────────│
 │ 🏠 Home                 │  ← nav items: icon + label
 │ 📱 Platforms        ▾   │  ← expandable, bold when section active
@@ -332,7 +332,7 @@ The primary interaction unit. One card per automation feature.
 ### M4: Terminal QR Login (TTY)
 
 ```
-$ xactions login --qr --platform facebook
+$ medirus login --qr --platform facebook
 
 Scan this QR code with your phone:
 █████████████████████████████
@@ -367,14 +367,14 @@ Scan this QR code with your phone:
 ### M6: CDP Remote Attach Helper
 
 ```
-$ xactions auth --launch-chrome
+$ medirus auth --launch-chrome
 
 Chrome launched on --remote-debugging-port=9222
 Please log in to LinkedIn manually.
 
 [✓] CDP attached  [✓] Cookie captured  [✓] Jitter 3–7s active
 
-Run: xactions crawl --platform linkedin --action search_jobs ...
+Run: medirus crawl --platform linkedin --action search_jobs ...
 ```
 
 ### M7: MCP / AI Agent Response Envelope
@@ -390,7 +390,7 @@ Run: xactions crawl --platform linkedin --action search_jobs ...
 ### M8: Non-TTY / CI Output
 
 ```
-$ xactions status --json | jq .
+$ medirus status --json | jq .
 {
   "healthyProxyCount": 12,
   "totalProxyCount": 15,

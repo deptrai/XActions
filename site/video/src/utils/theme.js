@@ -1,5 +1,5 @@
 /**
- * XActions Video Theme
+ * Medirus Video Theme
  * Shared design tokens for all video compositions.
  * @author nich (@nichxbt)
  */

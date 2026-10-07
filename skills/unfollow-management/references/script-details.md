@@ -19,9 +19,9 @@ Bulk unfollows every account you follow. Processes in batches with scroll-and-cl
 **Algorithm:** Find all `[data-testid$="-unfollow"]` buttons → click each → confirm in dialog → scroll down for more → repeat. Includes retry logic (3 attempts when no buttons found), progress tracking with ETA, sessionStorage persistence across page refreshes, auto JSON export of unfollowed accounts.
 
 **Controls:**
-- `window.XActions.pause()` — Pause execution
-- `window.XActions.resume()` — Resume
-- `window.XActions.abort()` — Stop and export results
+- `window.Medirus.pause()` — Pause execution
+- `window.Medirus.resume()` — Resume
+- `window.Medirus.abort()` — Stop and export results
 
 ## unfollowback.js
 
@@ -57,13 +57,13 @@ Monitors and manages your follower/following ratio with actionable improvement p
 - Three improvement paths: unfollow accounts, gain followers, or combination
 - Weekly growth projections
 - localStorage history with trend tracking
-- Cross-references other XActions scripts in recommendations
+- Cross-references other Medirus scripts in recommendations
 
 **Controls:**
-- `XActions.setTarget(ratio)` — Set goal ratio (e.g., 2.0)
-- `XActions.track()` — Record current snapshot
-- `XActions.history()` — View trend over time
-- `XActions.plan()` — Generate actionable plan
+- `Medirus.setTarget(ratio)` — Set goal ratio (e.g., 2.0)
+- `Medirus.track()` — Record current snapshot
+- `Medirus.history()` — View trend over time
+- `Medirus.plan()` — Generate actionable plan
 
 ## detectUnfollowers.js
 

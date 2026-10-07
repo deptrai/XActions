@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * Tests for xactions admin status command (Story 19.4.1)
+ * Tests for medirus admin status command (Story 19.4.1)
  * @author nich (@nichxbt)
  * @license MIT
  */
@@ -15,7 +15,7 @@ function stripAnsi(str) {
   return str.replace(/\[[0-9;]*m/g, '');
 }
 
-describe('Story 19.4.1: xactions admin status', () => {
+describe('Story 19.4.1: medirus admin status', () => {
   it('registers admin status subcommand under the admin group', () => {
     const program = new Command();
     registerAdminCommand(program);
@@ -97,7 +97,7 @@ describe('Story 19.4.1: xactions admin status', () => {
     }
 
     const output = stripAnsi(logs.join('\n'));
-    expect(output).toContain('XActions System & Governor Status');
+    expect(output).toContain('Medirus System & Governor Status');
     expect(output).toContain('normal');
     expect(output).toContain('5 / 10');
     expect(output).toContain('42');

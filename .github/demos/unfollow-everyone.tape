@@ -1,4 +1,4 @@
-# XActions - Unfollow Everyone Demo
+# Medirus - Unfollow Everyone Demo
 # Run with: vhs unfollow-everyone.tape
 
 Output unfollow-everyone.gif
@@ -13,7 +13,7 @@ Set Padding 20
 Set Framerate 30
 
 # Title
-Type "# 🧹 XActions - Unfollow Everyone"
+Type "# 🧹 Medirus - Unfollow Everyone"
 Enter
 Sleep 500ms
 
@@ -26,7 +26,7 @@ Enter
 Type "(() => {"
 Enter
 Sleep 200ms
-Type "  console.log('🧹 XActions: Unfollow Everyone');"
+Type "  console.log('🧹 Medirus: Unfollow Everyone');"
 Enter
 Sleep 200ms
 Type "  const unfollowBtn = '[data-testid$=\"-unfollow\"]';"
@@ -43,7 +43,7 @@ Enter
 Sleep 1s
 
 # Simulated output
-Type "🧹 XActions: Unfollow Everyone"
+Type "🧹 Medirus: Unfollow Everyone"
 Enter
 Sleep 500ms
 Type "⏳ Unfollowed 1 of ~2,847"

@@ -1,12 +1,12 @@
 # Examples
 
-Runnable Node.js programs built on the XActions library. Every one of these
+Runnable Node.js programs built on the Medirus library. Every one of these
 runs against the live X, Bluesky, and Mastodon APIs, prints real data, and was
 verified before it landed. Nothing here is a sketch.
 
 ```bash
 git clone https://github.com/nirholas/XActions.git
-cd XActions
+cd Medirus
 npm install
 node examples/01-profile-lookup.js
 ```
@@ -44,7 +44,7 @@ To authenticate:
    or save them once with the CLI:
 
    ```bash
-   npx xactions login
+   npx medirus login
    ```
 
 Both cookies matter. `auth_token` proves who you are; `ct0` is the CSRF token X
@@ -117,16 +117,16 @@ Mastodon  @Gargron                  381.7K      731         82.0K
 
 ---
 
-## Using XActions in your own project
+## Using Medirus in your own project
 
 Install from npm and import the same modules the examples use:
 
 ```bash
-npm install xactions
+npm install medirus
 ```
 
 ```js
-import { Scraper } from 'xactions/client';
+import { Scraper } from 'medirus/client';
 
 const scraper = new Scraper();
 
@@ -167,7 +167,7 @@ try {
 
 ## Browser console scripts
 
-The examples above are Node.js programs. XActions also ships 100+ scripts you
+The examples above are Node.js programs. Medirus also ships 100+ scripts you
 paste straight into DevTools on x.com with nothing installed at all. The
 best-known one unfollows everybody who does not follow you back:
 
@@ -183,9 +183,9 @@ want a downloadable log of who was unfollowed. The full catalog is in
 
 ## Other surfaces
 
-These examples cover the Node.js library. XActions has four more entry points:
+These examples cover the Node.js library. Medirus has four more entry points:
 
-- **CLI** — `npx xactions profile nasa`. See [docs/cli-reference.md](../docs/cli-reference.md).
+- **CLI** — `npx medirus profile nasa`. See [docs/cli-reference.md](../docs/cli-reference.md).
 - **MCP server** — 145 tools for Claude, Cursor, and Windsurf. See [docs/mcp-setup.md](../docs/mcp-setup.md).
 - **Browser scripts** — paste into DevTools, no install. See [docs/browser-scripts.md](../docs/browser-scripts.md).
 - **REST API** — self-hosted. See [docs/rest-api.md](../docs/rest-api.md).

@@ -107,7 +107,7 @@ export class BasePushAdapter extends EventEmitter {
    * @returns {string}
    */
   get cursorKey() {
-    return `xactions:adapter_cursor:${this.streamId}`;
+    return `medirus:adapter_cursor:${this.streamId}`;
   }
 
   /**

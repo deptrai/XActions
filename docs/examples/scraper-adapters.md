@@ -1,6 +1,6 @@
 # Scraper Framework Adapters
 
-XActions scrapers support multiple scraping frameworks via a pluggable adapter system.
+Medirus scrapers support multiple scraping frameworks via a pluggable adapter system.
 
 ## Available Adapters
 
@@ -20,7 +20,7 @@ XActions scrapers support multiple scraping frameworks via a pluggable adapter s
 ### Default (Puppeteer) — no changes needed
 
 ```js
-import { createBrowser, createPage, scrapeProfile } from 'xactions/scrapers';
+import { createBrowser, createPage, scrapeProfile } from 'medirus/scrapers';
 
 const browser = await createBrowser();
 const page = await createPage(browser);
@@ -38,7 +38,7 @@ npx playwright install chromium
 ```
 
 ```js
-import { createBrowser, createPage, scrapeProfile } from 'xactions/scrapers';
+import { createBrowser, createPage, scrapeProfile } from 'medirus/scrapers';
 
 const browser = await createBrowser({ adapter: 'playwright' });
 const page = await createPage(browser);
@@ -59,7 +59,7 @@ npm install cheerio
 ```
 
 ```js
-import { getAdapter } from 'xactions/scrapers';
+import { getAdapter } from 'medirus/scrapers';
 
 const adapter = await getAdapter('cheerio');
 const browser = await adapter.launch();
@@ -85,7 +85,7 @@ npm install crawlee puppeteer  # or: npm install crawlee playwright
 ```
 
 ```js
-import { getAdapter } from 'xactions/scrapers';
+import { getAdapter } from 'medirus/scrapers';
 
 // Simple adapter usage (like other adapters)
 const adapter = await getAdapter('crawlee');
@@ -123,7 +123,7 @@ npm install got-scraping jsdom
 ```
 
 ```js
-import { getAdapter } from 'xactions/scrapers';
+import { getAdapter } from 'medirus/scrapers';
 
 const adapter = await getAdapter('got-jsdom');
 const browser = await adapter.launch({
@@ -165,7 +165,7 @@ npm install selenium-webdriver chromedriver
 ```
 
 ```js
-import { getAdapter } from 'xactions/scrapers';
+import { getAdapter } from 'medirus/scrapers';
 
 const adapter = await getAdapter('selenium');
 const browser = await adapter.launch({
@@ -204,13 +204,13 @@ Selenium benefits:
 ### Environment Variable
 
 ```bash
-export XACTIONS_SCRAPER_ADAPTER=playwright
+export MEDIRUS_SCRAPER_ADAPTER=playwright
 ```
 
 ### Programmatic
 
 ```js
-import { setDefaultAdapter } from 'xactions/scrapers';
+import { setDefaultAdapter } from 'medirus/scrapers';
 
 setDefaultAdapter('playwright');
 
@@ -245,7 +245,7 @@ await adapter.waitForSelector(page, '[data-testid="tweet"]');
 ## Checking Availability
 
 ```js
-import { checkAvailability, getAdapterInfo } from 'xactions/scrapers';
+import { checkAvailability, getAdapterInfo } from 'medirus/scrapers';
 
 // Quick check
 const status = await checkAvailability();
@@ -259,7 +259,7 @@ const info = await getAdapterInfo();
 ## Auto-Fallback
 
 ```js
-import { getAvailableAdapter } from 'xactions/scrapers';
+import { getAvailableAdapter } from 'medirus/scrapers';
 
 // Tries: preferred → default → puppeteer → playwright → crawlee → got-jsdom → selenium → cheerio
 const adapter = await getAvailableAdapter('playwright');
@@ -270,7 +270,7 @@ const adapter = await getAvailableAdapter('playwright');
 Create your own adapter by extending `BaseAdapter`:
 
 ```js
-import { BaseAdapter, registerAdapter } from 'xactions/scrapers';
+import { BaseAdapter, registerAdapter } from 'medirus/scrapers';
 
 class MyCustomAdapter extends BaseAdapter {
   name = 'my-custom';
@@ -305,7 +305,7 @@ registerAdapter('my-custom', MyCustomAdapter);
 ### Puppeteer (Default)
 
 - ✅ Best anti-detection with stealth plugin
-- ✅ Mature ecosystem, most XActions code tested with it
+- ✅ Mature ecosystem, most Medirus code tested with it
 - ✅ Already installed as a dependency
 - ❌ Chromium only
 - ❌ Heavier than HTTP-based scraping

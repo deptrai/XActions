@@ -1,9 +1,9 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
-// XActions trigger node for n8n — fires on new tweets, follower changes, mentions
+// Medirus trigger node for n8n — fires on new tweets, follower changes, mentions
 // by nichxbt
 
 /**
- * XActions Trigger — polls XActions streaming system or REST API and emits
+ * Medirus Trigger — polls Medirus streaming system or REST API and emits
  * new events as n8n workflow triggers.
  *
  * Supports:
@@ -11,24 +11,24 @@
  *   - Follower changes (new followers, lost followers)
  *   - New mentions of a username
  *
- * Uses polling internally (n8n scheduler), calling XActions streaming or
+ * Uses polling internally (n8n scheduler), calling Medirus streaming or
  * direct scraper APIs each interval.
  */
-export class XActionsTrigger {
+export class MedirusTrigger {
   description = {
-    displayName: 'XActions Trigger',
-    name: 'xActionsTrigger',
-    icon: 'file:xactions.svg',
+    displayName: 'Medirus Trigger',
+    name: 'medirusTrigger',
+    icon: 'file:medirus.svg',
     group: ['trigger'],
     version: 1,
     subtitle: '={{$parameter["event"]}}',
     description: 'Trigger workflows on X/Twitter events — new tweets, follower changes, mentions. No API fees.',
-    defaults: { name: 'XActions Trigger' },
+    defaults: { name: 'Medirus Trigger' },
     inputs: [],
     outputs: ['main'],
     credentials: [
       {
-        name: 'xActionsApi',
+        name: 'medirusApi',
         required: false,
       },
     ],
@@ -112,7 +112,7 @@ export class XActionsTrigger {
     const username = this.getNodeParameter('username');
     const platform = this.getNodeParameter('platform', 'twitter');
     const limit = this.getNodeParameter('limit', 10);
-    const credentials = await this.getCredentials('xActionsApi').catch(() => null);
+    const credentials = await this.getCredentials('medirusApi').catch(() => null);
     const mode = credentials?.mode || 'local';
 
     // Get previous state from n8n's static data
@@ -128,7 +128,7 @@ export class XActionsTrigger {
       }
     } catch (error) {
       // Log but don't crash — n8n will retry on next interval
-      console.error(`[XActionsTrigger] Poll error (${event}/${username}):`, error.message);
+      console.error(`[MedirusTrigger] Poll error (${event}/${username}):`, error.message);
       return null;
     }
 
@@ -140,7 +140,7 @@ export class XActionsTrigger {
   }
 
   // ───────────────────────────────────────────────
-  //  Remote polling — via XActions REST API
+  //  Remote polling — via Medirus REST API
   // ───────────────────────────────────────────────
 
   async _pollRemote(event, username, limit, credentials, staticData) {
@@ -199,7 +199,7 @@ export class XActionsTrigger {
 
   async _pollLocal(event, username, platform, limit, credentials, staticData) {
     const authToken = credentials?.authToken || '';
-    const { scrape } = await import('xactions/scrapers');
+    const { scrape } = await import('medirus/scrapers');
 
     switch (event) {
       case 'newTweet': {
@@ -226,7 +226,7 @@ export class XActionsTrigger {
       }
 
       case 'sentimentAlert': {
-        const { analyzeSentiment } = await import('xactions/analytics');
+        const { analyzeSentiment } = await import('medirus/analytics');
         // Analyze recent mentions for sentiment
         const mentions = await scrape(platform, 'search', {
           query: `@${username}`,
@@ -238,7 +238,7 @@ export class XActionsTrigger {
         if (arr.length === 0) return [];
 
         const texts = arr.map((m) => m.text || m.full_text || '').filter(Boolean);
-        const { analyzeBatch, aggregateResults } = await import('xactions/analytics');
+        const { analyzeBatch, aggregateResults } = await import('medirus/analytics');
         const results = await analyzeBatch(texts, { mode: 'rules' });
         const agg = aggregateResults(results);
 

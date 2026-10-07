@@ -2,7 +2,7 @@
 /**
  * Single source of truth for the package version.
  *
- * Read from package.json at runtime so `xactions --version`, the MCP server
+ * Read from package.json at runtime so `medirus --version`, the MCP server
  * handshake, and the A2A agent card can never drift from the published
  * version again (they were pinned at 3.0.0 / 3.1.0 / 3.1.0 while npm served
  * 3.4.0). package.json is always present in the published tarball.

@@ -35,14 +35,14 @@
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   const getSentHistory = () => {
-    try { return JSON.parse(localStorage.getItem('xactions_dm_sent') || '[]'); }
+    try { return JSON.parse(localStorage.getItem('medirus_dm_sent') || '[]'); }
     catch { return []; }
   };
   const markAsSent = (username) => {
     const history = getSentHistory();
     if (!history.includes(username)) {
       history.push(username);
-      localStorage.setItem('xactions_dm_sent', JSON.stringify(history));
+      localStorage.setItem('medirus_dm_sent', JSON.stringify(history));
     }
   };
 
@@ -141,7 +141,7 @@
   };
 
   const run = async () => {
-    console.log('💬 SEND DIRECT MESSAGES - XActions by nichxbt');
+    console.log('💬 SEND DIRECT MESSAGES - Medirus by nichxbt');
     console.log('⚠️ Use responsibly! Mass DMing can get you restricted.\n');
 
     if (CONFIG.targetUsers.length === 0) {

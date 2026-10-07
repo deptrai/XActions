@@ -30,7 +30,7 @@
 var CONFIG = {
   // Your new bio text (max 160 characters)
   newBio: `🚀 Building cool stuff with code
-🐦 Automating X with @XActions
+🐦 Automating X with @Medirus
 💡 Open source enthusiast
 🔗 github.com/nirholas/XActions`,
   

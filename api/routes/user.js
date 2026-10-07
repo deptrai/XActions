@@ -7,7 +7,7 @@ import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
-// Payment routes archived - XActions is now 100% free and open-source
+// Payment routes archived - Medirus is now 100% free and open-source
 // All credit and subscription endpoints have been removed
 
 // All routes require authentication
@@ -50,7 +50,7 @@ router.get('/profile', async (req, res) => {
       id: user.id,
       email: user.email,
       username: user.username,
-      // XActions is now free - unlimited access for all users
+      // Medirus is now free - unlimited access for all users
       plan: 'free_unlimited',
       twitterConnected: !!user.twitterAccessToken,
       recentOperations: user.operations

@@ -68,7 +68,7 @@
 
     if (CONFIG.exportFormat === 'json' || CONFIG.exportFormat === 'both') {
       const data = { summary: { total: log.length, dryRun: CONFIG.dryRun, exportedAt: new Date().toISOString() }, accounts: log };
-      download(JSON.stringify(data, null, 2), `xactions-unfollowlog-${tag}-${ts}.json`);
+      download(JSON.stringify(data, null, 2), `medirus-unfollowlog-${tag}-${ts}.json`);
     }
 
     if (CONFIG.exportFormat === 'csv' || CONFIG.exportFormat === 'both') {
@@ -76,7 +76,7 @@
       const rows = log.map(r =>
         `"${r.username}","${(r.displayName || '').replace(/"/g, '""')}","${(r.bio || '').replace(/"/g, '""').replace(/\n/g, ' ')}",${r.hasAvatar},${r.followerCount || 0},"${r.timestamp}"`
       ).join('\n');
-      download(header + rows, `xactions-unfollowlog-${tag}-${ts}.csv`, 'text/csv');
+      download(header + rows, `medirus-unfollowlog-${tag}-${ts}.csv`, 'text/csv');
     }
   };
 

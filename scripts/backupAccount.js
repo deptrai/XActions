@@ -74,7 +74,7 @@
   };
 
   const run = async () => {
-    console.log('💾 BACKUP ACCOUNT — XActions by nichxbt');
+    console.log('💾 BACKUP ACCOUNT — Medirus by nichxbt');
     console.log('━'.repeat(45));
 
     const pathMatch = window.location.pathname.match(/^\/([A-Za-z0-9_]+)/);
@@ -128,7 +128,7 @@
     // Build backup object
     const backup = {
       meta: {
-        tool: 'XActions Backup',
+        tool: 'Medirus Backup',
         version: '1.0.0',
         createdAt: new Date().toISOString(),
         url: window.location.href,
@@ -148,12 +148,12 @@
     console.log(`   📊 Tweets: ${backup.stats.tweetCount}`);
 
     if (CONFIG.autoDownload) {
-      download(backup, `xactions-backup-${username}-${new Date().toISOString().slice(0, 10)}.json`);
+      download(backup, `medirus-backup-${username}-${new Date().toISOString().slice(0, 10)}.json`);
       console.log('📥 Backup downloaded as JSON');
     }
 
-    window.__xactions_backup = backup;
-    console.log('💡 Access data: window.__xactions_backup');
+    window.__medirus_backup = backup;
+    console.log('💡 Access data: window.__medirus_backup');
     console.log('');
   };
 

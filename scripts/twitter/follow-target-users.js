@@ -101,7 +101,7 @@ var CONFIG = {
   console.log(`📊 Max follows: ${CONFIG.maxFollows}`);
   console.log('');
   
-  const STORAGE_KEY = 'xactions_followed_targets';
+  const STORAGE_KEY = 'medirus_followed_targets';
   const followedUsers = new Set();
   
   try {

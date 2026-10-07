@@ -1,6 +1,6 @@
 {
-  "name": "XActions",
-  "short_name": "XActions",
+  "name": "Medirus",
+  "short_name": "Medirus",
   "description": "Free, open-source X/Twitter automation toolkit. Mass unfollow, scrapers, MCP server for AI agents, CLI tools. No API fees.",
   "start_url": "/",
   "display": "standalone",

@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions Scheduler API Routes
+ * Medirus Scheduler API Routes
  * Cron job management for recurring crawls / CLI commands.
  * Admin-only: every route requires a JWT for a user with isAdmin = true.
  * @author nich (@nichxbt) - https://github.com/nirholas

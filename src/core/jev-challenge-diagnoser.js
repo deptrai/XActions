@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Licensed under the Apache License, Version 2.0.
 /**
- * XActions — JevChallengeDiagnoser (Story 42.4)
+ * Medirus — JevChallengeDiagnoser (Story 42.4)
  *
  * Semantic second opinion for suspicious HTTP 2xx responses and empty scrapes.
  * The static `ChallengeSignatureDetector` stays first-line on every response;

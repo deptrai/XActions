@@ -1,6 +1,6 @@
 # Browser Script Patterns
 
-XActions browser scripts run in DevTools console on x.com. They are NOT Node.js scripts.
+Medirus browser scripts run in DevTools console on x.com. They are NOT Node.js scripts.
 
 ## Standard IIFE Pattern
 
@@ -23,7 +23,7 @@ Scripts stop on page navigation. Use `sessionStorage` to track progress across r
 
 ```javascript
 const getProcessed = () => {
-  try { return JSON.parse(sessionStorage.getItem('xactions_key') || '[]'); }
+  try { return JSON.parse(sessionStorage.getItem('medirus_key') || '[]'); }
   catch { return []; }
 };
 
@@ -31,7 +31,7 @@ const markProcessed = (id) => {
   const items = getProcessed();
   if (!items.includes(id)) {
     items.push(id);
-    sessionStorage.setItem('xactions_key', JSON.stringify(items));
+    sessionStorage.setItem('medirus_key', JSON.stringify(items));
   }
 };
 ```

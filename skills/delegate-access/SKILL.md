@@ -48,17 +48,17 @@ const CONFIG = {
 ## Available Functions
 
 ```js
-XActions.delegates.list()                    // List all current delegates
-XActions.delegates.add('username', perms)    // Add a delegate with permissions
-XActions.delegates.remove('username')        // Remove a delegate
-XActions.delegates.setPermissions('username', perms) // Update permissions
+Medirus.delegates.list()                    // List all current delegates
+Medirus.delegates.add('username', perms)    // Add a delegate with permissions
+Medirus.delegates.remove('username')        // Remove a delegate
+Medirus.delegates.setPermissions('username', perms) // Update permissions
 ```
 
 ## Notes
 
 - Delegate access requires X Premium
 - Delegates navigate to your profile and can act on your behalf within granted permissions
-- Data is cached in `sessionStorage` under `xactions_delegates`
+- Data is cached in `sessionStorage` under `medirus_delegates`
 - Navigate to `x.com/settings/delegate` to view X's native delegate management UI
 
 ## Related Skills

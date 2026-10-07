@@ -288,7 +288,7 @@ export function getChromeExecutablePath(platform = process.platform, customPath 
  * @returns {string}
  */
 export function getDefaultUserDataDir(platform = process.platform) {
-  const dir = path.join(os.homedir(), '.xactions', 'chrome-profile');
+  const dir = path.join(os.homedir(), '.medirus', 'chrome-profile');
   try {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true, mode: 0o700 });

@@ -26,7 +26,7 @@ let following = 3200;
 let tweets = 540;
 
 const sampleTweets = [
-  { text: 'Shipped the new XActions dashboard. 45 pages, zero API fees. 🚀', baseLikes: 450, baseRTs: 180, baseReplies: 65 },
+  { text: 'Shipped the new Medirus dashboard. 45 pages, zero API fees. 🚀', baseLikes: 450, baseRTs: 180, baseReplies: 65 },
   { text: 'Hot take: AI agents are the new browser extensions.', baseLikes: 820, baseRTs: 340, baseReplies: 120 },
   { text: 'How I grew from 0 to 14k followers without paid ads (thread) 🧵', baseLikes: 1200, baseRTs: 560, baseReplies: 210 },
   { text: 'MCP servers are about to change how every desktop app works.', baseLikes: 340, baseRTs: 120, baseReplies: 40 },

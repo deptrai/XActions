@@ -1,10 +1,10 @@
 # Tutorial: Session Logging, Quota Tracking & Safety with Claude
 
-You are my X/Twitter automation safety expert. I want to use XActions' session logging and quota management tools to track all my automation activity, stay within rate limits, and generate analytics reports. Help me set up comprehensive tracking so I never get rate-limited or suspended.
+You are my X/Twitter automation safety expert. I want to use Medirus' session logging and quota management tools to track all my automation activity, stay within rate limits, and generate analytics reports. Help me set up comprehensive tracking so I never get rate-limited or suspended.
 
 ## Context
 
-I'm using XActions (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit. It includes:
+I'm using Medirus (https://github.com/nirholas/XActions), an open-source X/Twitter toolkit. It includes:
 - `src/automation/sessionLogger.js` — Track all actions with reports
 - `src/automation/quotaSupervisor.js` — Monitor and enforce rate limits
 - `src/automation/protectActiveUsers.js` — Safety guardrails for unfollowing
@@ -66,7 +66,7 @@ Track every action your automation performs:
 6. **Report output:**
    ```
    ╔═══════════════════════════════════════════════╗
-   ║  📊 XActions Analytics - All Time              ║
+   ║  📊 Medirus Analytics - All Time              ║
    ╠═══════════════════════════════════════════════╣
    ║  Sessions: 42                                  ║
    ║  Total Duration: 18h 30m                       ║
@@ -96,7 +96,7 @@ Track every action your automation performs:
 
 1. **Export as JSON:**
    ```javascript
-   exportLogs('all')    // Downloads xactions-logs-all-{timestamp}.json
+   exportLogs('all')    // Downloads medirus-logs-all-{timestamp}.json
    exportLogs('today')  // Just today
    exportLogs('week')   // Last 7 days
    ```
@@ -121,14 +121,14 @@ Track every action your automation performs:
 2. **Export as CSV:**
    ```javascript
    // Call from console
-   XActions.Logger.exportCSV()
+   Medirus.Logger.exportCSV()
    ```
    Downloads a CSV with columns: `timestamp, action, target, page`
 
 3. **Analyze exported data:**
    After exporting, ask Claude:
    ```
-   "Here's my XActions log export [paste JSON]. Analyze my activity:
+   "Here's my Medirus log export [paste JSON]. Analyze my activity:
    - Am I approaching any rate limits?
    - What's my follow-to-unfollow ratio?
    - What time of day am I most active?
@@ -139,7 +139,7 @@ Track every action your automation performs:
 
 X/Twitter's rate limits (approximate — they change):
 
-| Action | Safe Limit | Risky | XActions Default |
+| Action | Safe Limit | Risky | Medirus Default |
 |--------|-----------|-------|-----------------|
 | Follows/day | 100 | >200 | 100 |
 | Unfollows/day | 100 | >200 | 100 |
@@ -148,7 +148,7 @@ X/Twitter's rate limits (approximate — they change):
 | DMs/day | 50 | >100 | 50 |
 | Follows/hour | 15-20 | >30 | 50/hr |
 
-**XActions built-in limits** (from `core.js`):
+**Medirus built-in limits** (from `core.js`):
 ```javascript
 CONFIG.RATE_LIMITS = {
   ACTIONS_PER_HOUR: 50,      // Any action type
@@ -159,7 +159,7 @@ CONFIG.RATE_LIMITS = {
 
 **Best practices:**
 1. **Start slow** — Begin with 50% of limits for new accounts
-2. **Vary timing** — Use `randomDelay()` between actions (built into XActions)
+2. **Vary timing** — Use `randomDelay()` between actions (built into Medirus)
 3. **Take breaks** — Don't run automation 24/7
 4. **Mix actions** — Don't just follow; like, comment, and engage naturally
 5. **Monitor for warnings** — If you see CAPTCHAs or temporary locks, stop immediately
@@ -224,14 +224,14 @@ Complete safety workflow combining all tools:
 1. Run stats() for final count
 2. Run dailyStats() to see the full picture
 3. Export logs: exportLogs('today')
-4. End session: XActions.Logger.endSession()
+4. End session: Medirus.Logger.endSession()
 ```
 
 **Regular audits (weekly):**
 ```
 1. Export week's logs
 2. Review in Claude:
-   "Analyze this week's XActions activity. 
+   "Analyze this week's Medirus activity. 
     Am I within safe limits?
     Any patterns that could trigger X's anti-spam?"
 3. Adjust CONFIG values if needed
@@ -239,7 +239,7 @@ Complete safety workflow combining all tools:
 
 ### Phase 7: MCP-Based Monitoring
 
-If using XActions via MCP instead of browser scripts:
+If using Medirus via MCP instead of browser scripts:
 
 1. **Check analytics:**
    ```

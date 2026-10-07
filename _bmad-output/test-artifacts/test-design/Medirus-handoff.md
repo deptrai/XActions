@@ -1,8 +1,8 @@
-# XActions — Test Design Handoff for Epic/Story Workflow
+# Medirus — Test Design Handoff for Epic/Story Workflow
 
 **Purpose:** Bridge between system-level test design and epic/story implementation. Provides risk context, critical test scenarios, and quality gates for downstream BMAD workflows.
 
-**Project:** XActions | **Date:** 2026-08-12 | **Source:** `test-design-architecture.md` + `test-design-qa.md`
+**Project:** Medirus | **Date:** 2026-08-12 | **Source:** `test-design-architecture.md` + `test-design-qa.md`
 
 ---
 

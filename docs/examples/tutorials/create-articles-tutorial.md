@@ -1,12 +1,12 @@
 # Create Articles -- Tutorial
 
-> Step-by-step guide to publishing long-form articles on X/Twitter using XActions Node.js/Puppeteer automation.
+> Step-by-step guide to publishing long-form articles on X/Twitter using Medirus Node.js/Puppeteer automation.
 
 ## Prerequisites
 - Logged into x.com in your browser
 - Browser DevTools console (F12 -> Console tab)
 - **X Premium+ subscription** (articles are a Premium+-only feature)
-- For Node.js usage: `npm install xactions` and a valid session cookie
+- For Node.js usage: `npm install medirus` and a valid session cookie
 
 ## Quick Start
 1. Set up a Puppeteer session with your X login

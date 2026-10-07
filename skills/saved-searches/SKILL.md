@@ -35,10 +35,10 @@ Browser console scripts for managing saved searches on X/Twitter.
 ## Available Functions (`savedSearchManager.js`)
 
 ```js
-XActions.list()            // List all saved searches
-XActions.run('query')      // Run a saved search (navigates to results)
-XActions.delete('query')   // Delete a saved search by name
-XActions.export()          // Export all saved searches as JSON
+Medirus.list()            // List all saved searches
+Medirus.run('query')      // Run a saved search (navigates to results)
+Medirus.delete('query')   // Delete a saved search by name
+Medirus.export()          // Export all saved searches as JSON
 ```
 
 ## Configuration

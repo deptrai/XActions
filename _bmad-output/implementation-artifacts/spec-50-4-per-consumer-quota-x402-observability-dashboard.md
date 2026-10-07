@@ -15,7 +15,7 @@ warnings: []
 context:
   - _bmad-output/implementation-artifacts/epic-50-context.md
   - _bmad-output/planning-artifacts/epics.md
-  - _bmad-output/planning-artifacts/architecture/architecture-xactions-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md
+  - _bmad-output/planning-artifacts/architecture/architecture-medirus-public-scrape-gateway-2026-09-26/ARCHITECTURE-SPINE.md
   - _bmad-output/implementation-artifacts/spec-50-3-unified-envelope-request-id-error-envelope.md
   - src/core/distributed-token-bucket.js
   - api/middleware/x402.js
@@ -34,7 +34,7 @@ context:
 1. **Backend Quota Engine:**
    - Xây dựng middleware `api/middleware/gatewayQuota.js` tích hợp `globalDistributedTokenBucket` (`src/core/distributed-token-bucket.js`).
    - Bucket key format: `{derived_consumer_id}:{platform}:{action}` cho named consumers, và `anonymous:{client_ip}:{platform}:{action}` cho anonymous callers.
-   - Parse env `XACTIONS_CONSUMER_QUOTAS` (JSON định dạng: `{"jev":{"reddit:search":"100/min"},"default":"60/min"}`).
+   - Parse env `MEDIRUS_CONSUMER_QUOTAS` (JSON định dạng: `{"jev":{"reddit:search":"100/min"},"default":"60/min"}`).
    - Consumer `internal` (hoặc JWT admin) được unmetered.
    - Anonymous free tier: default 10 requests/min per IP + platform + action.
    - Khi quota cạn: Nếu x402 được cấu hình và caller gửi payment header hoặc action là `premium` → chuyển tiếp qua x402 payment gate; nếu không → trả về HTTP `429` với unified `ErrorEnvelope`:
@@ -97,7 +97,7 @@ context:
 
 ## Code Map
 
-- `api/middleware/gatewayQuota.js` — **NEW**: Quota enforcement middleware using `DistributedTokenBucket`, reads `XACTIONS_CONSUMER_QUOTAS`, tracks IP for anonymous, handles 429 ErrorEnvelope, delegates to x402 when quota exhausted.
+- `api/middleware/gatewayQuota.js` — **NEW**: Quota enforcement middleware using `DistributedTokenBucket`, reads `MEDIRUS_CONSUMER_QUOTAS`, tracks IP for anonymous, handles 429 ErrorEnvelope, delegates to x402 when quota exhausted.
 - `api/services/gatewayMetrics.js` — **NEW**: In-memory ring buffer (1000 items), calculates aggregated stats (p50/p95/p99, degrade breakdown, quota usage, trace lookup).
 - `api/routes/admin.js` (hoặc mount route mới) — **PATCH/EXTEND**: Endpoint `GET /api/admin/gateway/metrics` protected by admin auth.
 - `api/middleware/x402.js` — **PATCH**: Add gateway scrape route family to `buildRouteConfig()`, support dynamic per-platform action prices.
@@ -119,7 +119,7 @@ context:
 - [x] `tests/gateway/gateway-metrics.test.js` -- CREATE -- Test ring buffer metrics & admin endpoint
 
 **Acceptance Criteria:**
-- Given a valid Bearer token for `jev`, when requests exceed `XACTIONS_CONSUMER_QUOTAS` rate, then gateway returns `429` with `kind: 'consumer_quota'` and `Retry-After`.
+- Given a valid Bearer token for `jev`, when requests exceed `MEDIRUS_CONSUMER_QUOTAS` rate, then gateway returns `429` with `kind: 'consumer_quota'` and `Retry-After`.
 - Given an anonymous caller with no token, when they send `X-Consumer-Id: jev`, then their quota is strictly IP-bucketed under the anonymous free tier (anti-spoofing passed).
 - Given internal consumers (dashboard JWT), when scraping, then requests are never throttled by the gateway quota.
 - Given `GET /api/admin/gateway/metrics`, when requested by admin, then returns real-time aggregated metrics including degrade reasons and trace logs.
