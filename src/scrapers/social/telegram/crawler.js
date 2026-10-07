@@ -129,11 +129,28 @@ export class TelegramCrawler extends AbstractCrawler {
 
   async fetchChannelMessages(args, session = {}) {
     const channel = this.#requireHandle(args?.channel, 'channel');
-    return this.client.getChannelMessages(channel, { accountId: session?.accountId || null, session });
+    if (args?.dryRun) {
+      return {
+        dryRun: true,
+        channel,
+        limit: args?.limit ?? 20,
+        messages: [],
+      };
+    }
+    return this.client.getChannelMessages(channel, {
+      limit: args?.limit,
+      before: args?.before,
+      after: args?.after,
+      accountId: session?.accountId || null,
+      session,
+    });
   }
 
   async fetchChannelInfo(args, session = {}) {
     const channel = this.#requireHandle(args?.channel, 'channel');
+    if (args?.dryRun) {
+      return { dryRun: true, channel };
+    }
     return this.client.getChannelInfo(channel, { accountId: session?.accountId || null, session });
   }
 
@@ -149,11 +166,26 @@ export class TelegramCrawler extends AbstractCrawler {
         platform: this.platform,
       });
     }
-    return this.client.searchChannels(query, { accountId: session?.accountId || null, session });
+    if (args?.dryRun) {
+      return {
+        dryRun: true,
+        query,
+        limit: args?.limit ?? 10,
+        channels: [],
+      };
+    }
+    return this.client.searchChannels(query, {
+      limit: args?.limit,
+      accountId: session?.accountId || null,
+      session,
+    });
   }
 
   async fetchUserResolve(args, session = {}) {
     const username = this.#requireHandle(args?.username, 'username');
+    if (args?.dryRun) {
+      return { dryRun: true, username };
+    }
     return this.client.resolveUser(username, { accountId: session?.accountId || null, session });
   }
 

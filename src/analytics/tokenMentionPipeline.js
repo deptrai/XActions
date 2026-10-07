@@ -425,9 +425,11 @@ export function createTokenMentionPipeline(opts = {}) {
       const entities = extractFn(content, { aliasMap });
       if (!entities || entities.length === 0) { skipped++; continue; }
 
-      const tweetId = post.externalId || post.metadata?.tweetId || post.id;
-      if (tweetId == null || tweetId === '') { skipped++; continue; }
-      const sourceId = `x:${tweetId}`;
+      const platform = post?.platform === 'telegram' ? 'telegram' : 'twitter';
+      const nsPrefix = platform === 'telegram' ? 'tg:' : 'x:';
+      const rawId = post.externalId || post.metadata?.tweetId || post.id;
+      if (rawId == null || rawId === '') { skipped++; continue; }
+      const sourceId = String(rawId).startsWith(nsPrefix) ? String(rawId) : `${nsPrefix}${rawId}`;
       const rawTs = post.publishedAt ? new Date(post.publishedAt).getTime() : NaN;
       const ts = Number.isFinite(rawTs) ? rawTs : seenAt;
       const engagement = engagementOf(post);
@@ -461,7 +463,7 @@ export function createTokenMentionPipeline(opts = {}) {
         const mention = {
           tokenId,
           sourceId,
-          platform: 'twitter',
+          platform,
           author: authorName,
           followers,
           engagement,

@@ -1,0 +1,39 @@
+{
+  "channels": [
+    {
+      "channelId": "whale_alert_io",
+      "handle": "whale_alert_io",
+      "topicTags": ["whale", "large_transactions", "alerts"],
+      "tier": 1,
+      "memberCount": 350000
+    },
+    {
+      "channelId": "solana_ecosystem",
+      "handle": "solana_ecosystem",
+      "topicTags": ["solana", "defi", "ecosystem"],
+      "tier": 1,
+      "memberCount": 120000
+    },
+    {
+      "channelId": "ethereum_world_news",
+      "handle": "ethereum_world_news",
+      "topicTags": ["ethereum", "evm", "news"],
+      "tier": 2,
+      "memberCount": 85000
+    },
+    {
+      "channelId": "binance_announcements",
+      "handle": "binance_announcements",
+      "topicTags": ["listings", "exchange", "announcements"],
+      "tier": 1,
+      "memberCount": 1500000
+    },
+    {
+      "channelId": "crypto_calls_alpha",
+      "handle": "crypto_calls_alpha",
+      "topicTags": ["alpha", "calls", "signals"],
+      "tier": 2,
+      "memberCount": 50000
+    }
+  ]
+}

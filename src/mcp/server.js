@@ -3201,6 +3201,35 @@ const TOOLS = [
       required: ['mintAddress'],
     },
   },
+  // ── Dedicated Telegram Tools (Story 54.6 / Epic 54) ──────────────────────
+  {
+    name: 'x_telegram_channels',
+    description: 'Fetch recent messages from a public Telegram channel',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        channel: { type: 'string', description: 'Telegram channel handle or username (without @)' },
+        limit: { type: 'number', description: 'Max messages to return (default: 20)' },
+        before: { type: 'number', description: 'Fetch messages before this message ID' },
+        after: { type: 'number', description: 'Fetch messages after this message ID' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: ['channel'],
+    },
+  },
+  {
+    name: 'x_telegram_search',
+    description: 'Search public Telegram channels by keyword',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search keyword' },
+        limit: { type: 'number', description: 'Max channels to return (default: 10)' },
+        dryRun: { type: 'boolean', description: 'Preview without executing network requests (default: false)' },
+      },
+      required: ['query'],
+    },
+  },
   {
     name: 'x_social_find_profiles',
     description:
@@ -4441,6 +4470,8 @@ const DEDICATED_SCRAPE_TOOLS = {
   x_pumpfun_livestream_clips:    { platform: 'pumpfun', action: 'fetch_livestream_clips' },
   x_pumpfun_post_reply:          { platform: 'pumpfun', action: 'post_mint_reply' },
   x_pumpfun_mint_comments:       { platform: 'pumpfun', action: 'fetch_mint_comments' },
+  x_telegram_channels:           { platform: 'telegram', action: 'channel_messages' },
+  x_telegram_search:             { platform: 'telegram', action: 'search_channels' },
 };
 
 /**

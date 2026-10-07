@@ -88,22 +88,71 @@ export function normalizeChannelSearchResult(raw) {
 }
 
 /**
- * Normalize a resolved user profile.
- * @param {unknown} raw
- * @returns {Record<string, unknown>}
+ * Normalize a raw Telegram message from relay into standard PostItem shape for TokenMentionPipeline.
+ * @param {Record<string, any>} msg
+ * @param {string} channelId
+ * @returns {Record<string, any>}
  */
-export function normalizeTelegramUser(raw) {
-  const u = asObj(raw);
+export function normalizeTelegramPostItem(msg, channelId) {
+  const m = asObj(msg);
+  const rawId = m.id != null ? String(m.id) : '';
+  const resolvedChannelId = String(channelId || m.channelId || m.channel || 'unknown');
+  const externalId = `${resolvedChannelId}:${rawId}`;
+
+  // Date parsing: Telegram timestamps are epoch seconds
+  let publishedAt = null;
+  let ts = Date.now();
+  if (m.date != null) {
+    const epochSec = Number(m.date);
+    if (Number.isFinite(epochSec) && epochSec > 0) {
+      const epochMs = epochSec > 1e11 ? epochSec : epochSec * 1000;
+      ts = epochMs;
+      publishedAt = new Date(epochMs).toISOString();
+    }
+  } else if (m.postedAt != null) {
+    const epochSec = Number(m.postedAt);
+    if (Number.isFinite(epochSec) && epochSec > 0) {
+      const epochMs = epochSec > 1e11 ? epochSec : epochSec * 1000;
+      ts = epochMs;
+      publishedAt = new Date(epochMs).toISOString();
+    }
+  }
+
+  const text = typeof m.text === 'string' ? m.text : (typeof m.message === 'string' ? m.message : '');
+  const authorName = typeof m.postAuthor === 'string' && m.postAuthor.trim()
+    ? m.postAuthor.trim()
+    : resolvedChannelId;
+
   return {
+    id: externalId,
+    externalId,
     platform: 'telegram',
-    category: 'social',
-    type: 'telegram_user',
-    data: {
-      username: typeof u.username === 'string' ? u.username : null,
-      user_id: u.userId != null ? String(u.userId) : null,
-      display_name: typeof u.displayName === 'string' ? u.displayName : null,
-      bio: typeof u.bio === 'string' ? u.bio : null,
-      is_bot: Boolean(u.isBot),
+    content: text,
+    text,
+    channelId: resolvedChannelId,
+    author: {
+      id: resolvedChannelId,
+      username: resolvedChannelId,
+      name: authorName,
+      followers: null,
+      followers_count: null,
+    },
+    authorName,
+    publishedAt,
+    ts,
+    forwardFrom: m.fwdFrom || null,
+    metadata: {
+      views: m.views ?? null,
+      forwards: m.forwards ?? null,
+      groupedId: m.groupedId ?? null,
+      channelId: resolvedChannelId,
+    },
+    engagement: {
+      likes: 0,
+      views: Number(m.views) || 0,
+      retweets: Number(m.forwards) || 0,
+      replies: 0,
     },
   };
 }
+

@@ -207,6 +207,45 @@ describe('processBatch — NO_ENTITIES', () => {
 });
 
 // ============================================================================
+// TELEGRAM PLATFORM SEAM (Story 54.6 — matrix row PostItem→pipeline)
+// ============================================================================
+
+describe('processBatch — TELEGRAM_PLATFORM', () => {
+  it('telegram PostItem gets tg: source_id namespace and platform=telegram', async () => {
+    const db = makeDb();
+    const pipe = makePipeline({ db });
+    const { mentions } = await pipe.processBatch([
+      makePost({
+        id: 'whale_alert_io:42',
+        platform: 'telegram',
+        externalId: 'whale_alert_io:42',
+        authorName: 'whale_alert_io',
+        content: '$BONK whale alert 🐋',
+        metadata: { tweetId: null, quoteCount: 0 },
+      }),
+    ]);
+    const m = mentions.find((/** @type {Mention} */ x) => x.tokenId === `token:solana:${SOL_CONTRACT}`);
+    expect(m).toBeDefined();
+    expect(m.sourceId).toBe('tg:whale_alert_io:42');
+    expect(m.platform).toBe('telegram');
+    // persisted row carries telegram platform + tg: namespace
+    const row = /** @type {Record<string, unknown>|undefined} */ (
+      db.prepare('SELECT * FROM token_mentions WHERE source_id = ?').get('tg:whale_alert_io:42')
+    );
+    expect(row).toBeDefined();
+    expect(row?.platform).toBe('telegram');
+  });
+
+  it('telegram post with no resolvable id is skipped', async () => {
+    const { mentions, skipped } = await makePipeline().processBatch([
+      makePost({ platform: 'telegram', externalId: '', id: '', metadata: { tweetId: null } }),
+    ]);
+    expect(mentions).toEqual([]);
+    expect(skipped).toBe(1);
+  });
+});
+
+// ============================================================================
 // EMPTY_BATCH + DEGRADED_RECOVERY
 // ============================================================================
 

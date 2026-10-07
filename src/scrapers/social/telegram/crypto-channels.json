@@ -1,0 +1,7 @@
+[
+  { "id": "whale_alert_io", "category": "whale_movements", "chains": ["all"], "minSignal": 0.8 },
+  { "id": "solana_ecosystem", "category": "solana_ecosystem", "chains": ["solana"], "minSignal": 0.6 },
+  { "id": "ethereum_world_news", "category": "evm_news", "chains": ["ethereum", "base", "arbitrum"], "minSignal": 0.5 },
+  { "id": "binance_announcements", "category": "listings_news", "chains": ["all"], "minSignal": 0.7 },
+  { "id": "crypto_calls_alpha", "category": "signals", "chains": ["all"], "minSignal": 0.5 }
+]

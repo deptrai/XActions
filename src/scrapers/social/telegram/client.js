@@ -60,9 +60,25 @@ export class TelegramClient extends AbstractApiClient {
    */
   transport;
 
+  /** @type {string} */
+  relayUrl;
+
+  /** @type {string} */
+  relayToken;
+
+  /** @type {typeof globalThis.fetch} */
+  #fetchFn;
+
   constructor(options = {}) {
     super(options);
     this.transport = this.#resolveTransport(options.transport);
+    this.relayUrl = (
+      options.relayUrl ||
+      process.env.TELEGRAM_RELAY_URL ||
+      'http://127.0.0.1:3800'
+    ).replace(/\/+$/, '');
+    this.relayToken = options.relayToken || process.env.TELEGRAM_RELAY_TOKEN || '';
+    this.#fetchFn = options.fetchFn || globalThis.fetch;
   }
 
   /**
@@ -78,53 +94,176 @@ export class TelegramClient extends AbstractApiClient {
 
   /**
    * Guard — throws XACT_4001 when transport is unset or no impl is wired.
-   * Every upstream method calls this first.
    * @returns {Promise<string>} resolved transport
    */
   async #requireTransport() {
-    // Even when a transport IS picked, no impl is wired in 50.8 — surface
-    // the explicit XACT_4001 either way so consumers see a stable contract.
+    if (this.transport === 'mtproto') {
+      return this.transport;
+    }
     throw transportNotImplemented(this.transport);
   }
 
   /**
-   * Fetch recent posts from a public channel. STUB — throws XACT_4001.
+   * Send HTTP POST request to standalone telegram-relay service.
+   * @param {string} endpoint
+   * @param {Record<string, any>} payload
+   * @returns {Promise<any>}
+   */
+  async #callRelay(endpoint, payload) {
+    await this.#requireTransport();
+    const url = `${this.relayUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+    const headers = {
+      'content-type': 'application/json',
+    };
+    if (this.relayToken) {
+      headers.authorization = `Bearer ${this.relayToken}`;
+      headers['x-relay-token'] = this.relayToken;
+    }
+
+    let res;
+    try {
+      res = await this.#fetchFn(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      throw new PlatformError({
+        type: ErrorTypes.INTERNAL,
+        code: 'XACT_5031',
+        message: `Failed to connect to telegram-relay at ${url}: ${err instanceof Error ? err.message : String(err)}`,
+        statusCode: 503,
+        isRetryable: true,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: 'telegram',
+      });
+    }
+
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      data = { error: `HTTP ${res.status} response was not JSON` };
+    }
+
+    if (!res.ok) {
+      const errMsg = String(data?.error || `Relay HTTP error ${res.status}`);
+
+      if (res.status === 401) {
+        throw new PlatformError({
+          type: ErrorTypes.AUTH_EXPIRED,
+          code: 'XACT_4011',
+          message: `Telegram relay unauthorized: ${errMsg}`,
+          statusCode: 401,
+          isRetryable: false,
+          suggestedAction: SuggestedActions.RELOGIN,
+          platform: 'telegram',
+        });
+      }
+
+      if (res.status === 503) {
+        const floodMatch = errMsg.match(/FLOOD_WAIT_(\d+)/i);
+        if (floodMatch) {
+          const cooldownSec = parseInt(floodMatch[1], 10);
+          throw new PlatformError({
+            type: ErrorTypes.RATE_LIMIT,
+            code: 'XACT_4291',
+            message: `Telegram flood wait active (${cooldownSec}s): ${errMsg}`,
+            statusCode: 429,
+            isRetryable: true,
+            suggestedAction: SuggestedActions.RATE_LIMIT_BACKOFF,
+            platform: 'telegram',
+            details: { cooldownSec, cooldownMs: (cooldownSec + 5) * 1000 },
+          });
+        }
+
+        if (errMsg === 'SESSION_BANNED') {
+          throw new PlatformError({
+            type: ErrorTypes.AUTH_EXPIRED,
+            code: 'XACT_4011',
+            message: 'Telegram session has been revoked or banned upstream',
+            statusCode: 503,
+            isRetryable: false,
+            suggestedAction: SuggestedActions.RELOGIN,
+            platform: 'telegram',
+          });
+        }
+
+        throw new PlatformError({
+          type: ErrorTypes.INTERNAL,
+          code: 'XACT_5031',
+          message: `Telegram relay service unavailable: ${errMsg}`,
+          statusCode: 503,
+          isRetryable: true,
+          suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+          platform: 'telegram',
+        });
+      }
+
+      throw new PlatformError({
+        type: ErrorTypes.INTERNAL,
+        code: 'XACT_5001',
+        message: `Telegram relay error: ${errMsg}`,
+        statusCode: res.status,
+        isRetryable: res.status >= 500,
+        suggestedAction: SuggestedActions.RETRY_AFTER_DELAY,
+        platform: 'telegram',
+      });
+    }
+
+    return data;
+  }
+
+  /**
+   * Fetch recent posts from a public channel.
    * @param {string} channel - t.me/<channel> username
    * @param {Record<string, unknown>} [options]
    * @returns {Promise<Record<string, unknown>[]>}
    */
   async getChannelMessages(channel, options = {}) {
-    void channel;
-    void options;
-    await this.#requireTransport();
-    return [];
+    if (this.transport !== 'mtproto') {
+      await this.#requireTransport();
+      return [];
+    }
+    const limit = Number(options.limit) || 20;
+    const res = await this.#callRelay('/channel/messages', {
+      channel,
+      limit,
+      minId: options.minId,
+      maxId: options.maxId,
+    });
+    return Array.isArray(res?.messages) ? res.messages : [];
   }
 
   /**
    * Fetch channel metadata: title, member_count, description, linked_chat_id.
-   * STUB — throws XACT_4001.
    * @param {string} channel
    * @param {Record<string, unknown>} [options]
    * @returns {Promise<Record<string, unknown>>}
    */
   async getChannelInfo(channel, options = {}) {
-    void channel;
-    void options;
-    await this.#requireTransport();
-    return {};
+    if (this.transport !== 'mtproto') {
+      await this.#requireTransport();
+      return {};
+    }
+    const res = await this.#callRelay('/channel/info', { channel });
+    return res?.channel || {};
   }
 
   /**
-   * Search public channels by keyword. STUB — throws XACT_4001.
+   * Search public channels by keyword.
    * @param {string} query
    * @param {Record<string, unknown>} [options]
    * @returns {Promise<Record<string, unknown>[]>}
    */
   async searchChannels(query, options = {}) {
-    void query;
-    void options;
-    await this.#requireTransport();
-    return [];
+    if (this.transport !== 'mtproto') {
+      await this.#requireTransport();
+      return [];
+    }
+    const limit = Number(options.limit) || 10;
+    const res = await this.#callRelay('/channel/search', { query, limit });
+    return Array.isArray(res?.results) ? res.results : [];
   }
 
   /**
