@@ -3,14 +3,14 @@ title: 'Multi-platform account vault with CLI + MCP management'
 type: feature
 ticket: 'story-multiplatform-account-vault'
 created: '2026-11-19'
-status: in-progress
+status: built
 baseline_revision: '61f24dddf69ffc59ee2bb9881400db56bb758b3e'
 route: full
 route_source: auto
 risk: medium
-review: ''
-review_source: ''
-lenses_ran: []
+review: 'quick'
+review_source: 'pinned'
+lenses_ran: [quick]
 review_loop_iteration: 0
 context: []
 ---
@@ -75,10 +75,10 @@ context: []
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/vault/accountVault.js` -- implement vault (schema above; `use(twitter)` writes cookies.json; `test` does a light authed call per platform — twitter: any authed op other than `UserByRestId` (currently 403-blocked upstream); bluesky: login; mastodon: verify_credentials) -- core store
-- [ ] `src/cli/commands/accounts.js` + `src/cli/index.js` -- `accounts add|list|remove|use|test` with `--platform` (required on all but `list`), `--cookies-file`, `--cookies`, `--proxy`, `--identifier`, `--password`, `--service`, `--instance`, `--access-token` -- user/agent CLI surface
-- [ ] `src/mcp/server.js` + `src/mcp/local-tools.js` + `src/mcp/tool-groups.js` -- 5 `x_accounts_*` tools, `accounts` group, handlers delegate to vault -- agent self-management surface
-- [ ] `test/accountVault.test.js` -- cover I/O matrix: upsert, mask, remove-miss, use writes cookies.json, threads rejection, per-platform required-field errors -- edge-case coverage
+- [x] `src/vault/accountVault.js` -- implement vault (schema above; `use(twitter)` writes cookies.json; `test` does a light authed call per platform — twitter: any authed op other than `UserByRestId` (currently 403-blocked upstream); bluesky: login; mastodon: verify_credentials) -- core store
+- [x] `src/cli/commands/accounts.js` + `src/cli/index.js` -- `accounts add|list|remove|use|test` with `--platform` (required on all but `list`), `--cookies-file`, `--cookies`, `--proxy`, `--identifier`, `--password`, `--service`, `--instance`, `--access-token` -- user/agent CLI surface
+- [x] `src/mcp/server.js` + `src/mcp/local-tools.js` + `src/mcp/tool-groups.js` -- 5 `x_accounts_*` tools, `accounts` group, handlers delegate to vault -- agent self-management surface
+- [x] `test/accountVault.test.js` (implemented at `tests/accountVault.test.js` — vitest only includes `tests/**`) -- cover I/O matrix: upsert, mask, remove-miss, use writes cookies.json, threads rejection, per-platform required-field errors -- edge-case coverage
 
 **Acceptance Criteria:**
 - Given an X cookies file, when `xactions accounts add --platform twitter --name a1 --cookies-file f.json --proxy http://p:8080`, then `accounts list` shows `a1` with proxy host and no secrets, and `accounts use a1` activates that session.
@@ -89,7 +89,23 @@ context: []
 
 ## Plan Change Log
 
+- 2026-11-19 (implementation): Tasks 1-4 complete. Deviations from plan text, all deliberate:
+  - Test file lives at `tests/accountVault.test.js` (plan said `test/`); `vitest.config.js` only includes `tests/**/*.test.js`, so the plan path would never run.
+  - `--platform` is optional on `use`/`remove`/`test` (plan said "required on all but list"): the plan's own verification command `accounts use t1` carries no `--platform`. When omitted, the name is resolved across platforms; an ambiguous name errors listing the candidates. `add` and bare-name-less calls still require it.
+  - `accounts add` accepts the name both positionally (`accounts add t1`) and via `--name` (plan's acceptance syntax); `--cookies <string>` added alongside `--cookies-file`.
+  - MCP `x_accounts_add` accepts `credentials_file`/`cookies_file` path params in addition to inline fields — the file-path form keeps secrets out of tool args (coordinator security requirement).
+  - CLI `use` writes `cookies.json` under `resolveCacheDir()` (honours `$XACTIONS_HOME`, default `~/.xactions`), matching the rest of the stack; the CLI's own `COOKIE_FILE` constant is hardcoded to `~/.xactions` and was left untouched.
+
 ## Review Triage Log
+
+- quick lens — `src/mcp/server.js` remote mode advertises `x_accounts_*` but never dispatches them (localTools only populated in local mode; falls to `remoteClient.execute` → error). Verified at server.js:2489-2490,2726. **medium → patch**
+- quick lens — `use` writes `cookies.json` to `resolveCacheDir()` but CLI reads `os.homedir()/.xactions` (cli/index.js:41,66); under `$XACTIONS_HOME` activation silently doesn't reach reads. **medium → patch** (grouped with next row: `use` diverges from canonical session-write path)
+- quick lens — `use` doesn't mirror `auth_token`/`ct0` into `config.json` like `saveImportedSession` (cli/index.js:70-72); `loadSavedSession` falls back to stale `config.json` tokens (savedSession.js:69-75) → mixed-session risk if jar removed. **low → patch** (same root cause as row above)
+- quick lens — `accounts.db-wal`/`-shm` sidecars not chmod 0600; credentials sit in WAL until checkpoint, world-readable on multi-user machines. Verified: only main db file chmod'd in vault open. **low → patch**
+- quick lens — `test` calls `touch()` before connectivity outcome → `last_used` lies on failed checks. **low → patch**
+- quick lens — `AGENTS.md` "152 tools / 60 KB" now stale. Fix edits agent-context file. **defer**
+- quick lens — `tests/accountVault.test.js` sets `process.env.HOME` without restore → env leak across same-worker tests. **low → patch**
+- quick lens — `src/cli/commands/accounts.js` header says `~/.xactions/accounts.db`, actual default is `resolveCacheDir()/accounts.db`. Cosmetic comment fix. **low → patch**
 
 ## Design Notes
 
