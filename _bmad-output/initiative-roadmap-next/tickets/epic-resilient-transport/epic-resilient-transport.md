@@ -9,7 +9,7 @@ companions:
   - prompts/builds/08-TLS-BYPASS.md
 after: []
 assignee:
-refined: false
+refined: true
 hitl: false
 risk: high
 ---
@@ -30,6 +30,16 @@ the real read paths daily and opens an issue on its own when one breaks.
 A breakage at x.com surfaces as an issue the project filed itself, before a
 user's automation fails. Accounts X rate-limits harder get a TLS fingerprint
 impersonation option.
+
+## Requirements
+
+- R1 (parent R1): reads and writes agree with whatever method X currently
+  wants per endpoint, verified by a scheduled job against the live site
+  rather than by a user's bug report.
+- R2 (parent R2): a scheduled canary runs the real read paths against x.com
+  daily and opens an issue on its own when one breaks.
+- R3 (parent R3): TLS fingerprint impersonation is available as an option
+  for accounts X rate-limits harder.
 
 ## Done when
 
@@ -54,6 +64,9 @@ impersonation option.
 
 - `parent — _bmad-output/initiative-roadmap-next/initiative-roadmap-next.md` — R1, R2, R3.
 - `architecture — docs/architecture.md` — transport module layout.
+- `prompts/builds/08-TLS-BYPASS.md` — adopted companion: the TLS
+  impersonation design (adapter on the `options.fetch` seam, JA3 profiles,
+  CycleTLS/NativeTls options).
 - GitHub issue #42 — the canary tracking issue.
 
 ## Notes
@@ -67,7 +80,24 @@ impersonation option.
   targets.
 - Verified (2026-11-19): zero TLS-impersonation code, but a detailed plan
   exists at `prompts/builds/08-TLS-BYPASS.md` (CycleTLS/NativeTls adapter
-  behind the existing `options.fetch` + undici-dispatcher seam) — adopt or
-  re-derive at refinement.
+  behind the existing `options.fetch` + undici-dispatcher seam).
 - Decision (2026-11-19): opens the initiative as the platform-baseline epic —
   epics 2–5 share its code (`src/scrapers/twitter/http/`) and declare `after`.
+- Decision (2026-11-19, refinement): the scheduler is a GitHub Actions
+  `schedule:` workflow — the repo already runs Actions; no new infra.
+- Decision (2026-11-19, refinement): method-mismatch detection extends
+  `check-endpoints.mjs` to flag non-404 method failures instead of building
+  a second prober — it already exercises every tracked op live.
+- Decision (2026-11-19, refinement): two-tier canary — a guest-token tier
+  that always runs, and an authenticated tier enabled only when a session
+  secret exists (POST reads such as SearchTimeline/Followers likely need
+  auth; which ops run guest-only is a story-level finding).
+- Decision (2026-11-19, refinement): TLS adopts Track 08 — an optional
+  adapter on the `options.fetch` seam, opt-in per account, never the
+  default lane. Binary choice and packaging stay at story level.
+- Decision (2026-11-19, refinement): on breakage the job opens an issue —
+  auto-repair of `POST_QUERY_OPERATIONS`/the methods table is deferred
+  scope, not this epic.
+- Open question (needs the user, not a story): an authenticated canary tier
+  wants a session cookie in repo secrets — only the user can add it; the
+  workflow must skip the auth tier cleanly when absent.
