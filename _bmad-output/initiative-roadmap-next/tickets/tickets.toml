@@ -1,0 +1,55 @@
+# Epics of initiative-roadmap-next, in build order (roadmap's impact order).
+# covers = initiative Requirement ids; after = real prerequisites, not order.
+
+[[epic]]
+id = 1
+slug = "epic-resilient-transport"
+title = "Survive X changing its mind"
+description = "Reads and writes use whatever method x.com currently requires per endpoint, proven daily by a scheduled canary — the layer every later epic builds on."
+covers = [1, 2, 3]
+
+[[epic]]
+id = 2
+slug = "epic-one-rate-ledger"
+title = "Make an account last"
+description = "One on-disk rate ledger shared by the HTTP pool, action-caps and the browser-side supervisor; every destructive bulk action dry-runs by default."
+covers = [4, 5]
+after = [{ epic = 1, needs = "settled request layer in the HTTP pool the ledger hooks into" }]
+
+[[epic]]
+id = 3
+slug = "epic-scheduling-queue"
+title = "A real scheduling queue"
+description = "Durable drafts with timezone and thread scheduling, fanning out to the existing Bluesky and Mastodon clients — no Premium, no browser."
+covers = [6]
+after = [{ epic = 1, needs = "hardened write-path methods the queue calls" }]
+
+[[epic]]
+id = 4
+slug = "epic-xchat-export"
+title = "XChat read and export"
+description = "Read and export your own encrypted DM conversations before the legacy DM endpoints go dark; sending is out of scope."
+covers = [7]
+after = [{ epic = 1, needs = "method dispatch for the new XChat endpoints" }]
+
+[[epic]]
+id = 5
+slug = "epic-follower-audit"
+title = "Whole-list follower audit"
+description = "Score an entire follower list (real, inactive, automated) and export the segments — beyond x_detect_bots' per-page heuristic."
+covers = [8]
+after = [{ epic = 1, needs = "hardened GraphQL pagination the full-list scan relies on" }]
+
+[[epic]]
+id = 6
+slug = "epic-distribution"
+title = "Meet people where they are"
+description = "Chrome Web Store and Edge Add-ons listings plus a Homebrew tap and release binaries — install without Node or load-unpacked."
+covers = [9, 10]
+
+[[epic]]
+id = 7
+slug = "epic-official-api-lane"
+title = "Optional official-API lane"
+description = "An OAuth2 PKCE lane over the official API for users who prefer paying X — never the default, never required."
+covers = [11]
