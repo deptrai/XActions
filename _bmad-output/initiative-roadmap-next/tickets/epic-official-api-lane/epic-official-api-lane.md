@@ -19,7 +19,10 @@ risk: medium
 
 For users who would rather pay X than risk a suspension: an OAuth2 PKCE lane
 over the official API, alongside — never replacing — the no-key scraping lane
-that is the project's reason to exist.
+that is the project's reason to exist. A working lane already exists behind
+the dashboard API (`dualEngine` prefers the session cookie, falls back to
+OAuth) — this epic widens its scopes and reaches the CLI/extension/MCP
+surfaces, it does not build it from zero.
 
 ## Outcome
 
@@ -52,3 +55,9 @@ official API, with docs that make clear it is opt-in and stays that way.
 
 - Independent of epics 1–5: the official transport shares nothing with the
   scraping transport. Runs last only because the source ranks it last.
+- Verified (2026-11-19): OAuth PKCE is real and functional for a subset —
+  granted scopes cover reads/follows but not `tweet.write`/`dm.write`/
+  `bookmark.write`/`like.write`; it is wired into the dashboard API only
+  (`api/routes/twitter.js` `buildOAuthUrl`, `dualEngine`), not CLI,
+  extension or MCP. Done-when stays the same; the scope of work is smaller
+  than the requirement implies.

@@ -46,3 +46,10 @@ A full-list score with exportable segments, not a per-page heuristic.
 
 - Waits on epic-resilient-transport: whole-list pagination is exactly the
   surface that breaks when X changes a method.
+- Verified (2026-11-19): bigger foundation than expected — `followerCRM`
+  already syncs the full follower list (~5000) into SQLite with
+  tags/segments/`exportSegment` machinery, but segment create/export is
+  unreachable (no CLI/MCP callers). `autoScore` measures engagement quality,
+  not bot/inactive; `auditFollowers.js` is a 200-cap DOM paste-script. The
+  work is a bulk classifier over `crm_contacts` plus wiring the existing
+  export — not a new subsystem.

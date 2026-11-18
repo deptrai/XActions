@@ -54,3 +54,14 @@ runs without the operator seeing the plan first.
 - Waits on epic-resilient-transport: both touch the HTTP pool's request layer.
 - Small epic — two requirements; keep it that way rather than folding it into
   epic 1 (different outcome, different verification).
+- Source conflict (2026-11-19): the roadmap says the browser-side supervisor
+  "restarts at zero" — actually `quotaSupervisor.js` persists in
+  `localStorage` and survives browser restarts; it resets only on a new
+  profile/cleared storage. The real gap is wider, not wrong: there are *three*
+  browser-side counters (`xactions_quota_state`, `xactions_ratelimit`, the
+  extension service-worker flag) and no fs→page bridge — browser JS cannot
+  read `~/.xactions/`. The Node side already has two on-disk ledgers
+  (`accounts.db` rate_limits, `action-ledger.json`).
+- Verified (2026-11-19): `x_unfollow_all` and `x_clear_bookmarks` have no
+  `dryRun` parameter; mass block/unlike/delete exist *only* as console
+  scripts — R5 first needs CLI/MCP surfaces for actions that have none.

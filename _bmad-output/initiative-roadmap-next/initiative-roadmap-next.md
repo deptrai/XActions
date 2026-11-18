@@ -128,10 +128,19 @@ and installs it without a terminal.
   source's impact order; the request named no subset.
 - Assumption (2026-11-19): SECURITY.md is a source — its credential and
   hosting rules land as Constraints, not Requirements.
-- Open question: TLS fingerprinting approach (dedicated client vs patching the
-  existing stack) — settle when epic-resilient-transport is refined.
+- Open question: TLS fingerprinting approach — a detailed unimplemented plan
+  exists at `prompts/builds/08-TLS-BYPASS.md` (CycleTLS/NativeTls adapter on
+  the `options.fetch` seam); adopt or re-derive when epic-resilient-transport
+  is refined.
 - Open question: the XChat protocol is undocumented — expect a spike as
-  epic-xchat-export's first entry.
+  epic-xchat-export's first entry. Audit confirms: zero crypto in repo,
+  encrypted conversations explicitly excluded (`dm_secret_conversations_
+  enabled: 'false'`).
+- Verified (2026-11-19, 7-agent codebase audit): all eleven capabilities are
+  partial — foundations exist, none shipped as described. Per-item evidence
+  in each epic's Notes; one roadmap inaccuracy recorded as `Source conflict:`
+  in epic-one-rate-ledger; audit also surfaced a live bug filed to backlog as
+  `bug-x-schedule-add-broken`.
 - Decision (2026-11-19): the account vault is adopted as standalone backlog
   ticket `story-multiplatform-account-vault`, not an epic entry — it is
   already fully planned, ships alone, and feeds two epics.

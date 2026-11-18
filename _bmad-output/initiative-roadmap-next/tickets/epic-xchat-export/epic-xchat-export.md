@@ -50,3 +50,9 @@ before the legacy endpoints disappear.
 
 - Waits on epic-resilient-transport: new endpoints land on the hardened
   dispatch, not beside it.
+- Verified (2026-11-19): zero crypto in the repo for XChat — no key exchange,
+  enrollment or ratchet; encrypted conversations are explicitly excluded
+  today (`INBOX_PARAMS` sends `dm_secret_conversations_enabled: 'false'`).
+  Three DM stacks all ride the legacy/DOM surface (`http/dm.js` +
+  `client/api/dms.js` on `/1.1/dm/*`, MCP DOM scrapers, console scripts) —
+  the spike must answer protocol, not just endpoints.

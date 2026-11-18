@@ -52,3 +52,10 @@ and Mastodon, unattended, without a browser.
 
 - Waits on epic-resilient-transport: the queue invokes the write paths it
   hardens.
+- Verified (2026-11-19): `src/scheduler/scheduler.js` is already a durable
+  job store (`~/.xactions/scheduler.json`, retry/history/webhooks) but
+  schedules shell commands, not posts — and its entry points are broken
+  today (see backlog `bug-x-schedule-add-broken`). Bluesky `createAgent`
+  authenticates but has no `post()`; Mastodon `createClient` holds a token
+  with GETs only — both are small additions. `http/actions.js schedulePost`
+  is an HTTP (non-browser) X scheduling path worth checking for callers.

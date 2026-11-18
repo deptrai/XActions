@@ -5,7 +5,8 @@ title: Survive X changing its mind
 parent: initiative-roadmap-next
 covers: [1, 2, 3]
 sources: []
-companions: []
+companions:
+  - prompts/builds/08-TLS-BYPASS.md
 after: []
 assignee:
 refined: false
@@ -57,8 +58,16 @@ impersonation option.
 
 ## Notes
 
-- Open question (from initiative): TLS fingerprinting approach — dedicated
-  impersonation client vs patching the existing fetch stack. Settle at
-  refinement.
+- Verified (2026-11-19, codebase audit): `verify-live.mjs` exists but is not
+  scheduled anywhere (no cron workflow, no npm script, badge JSONs only — no
+  issue creation) and was last run 2026-08-27; it covers 2 read paths.
+  `check-endpoints.mjs` treats any non-404 as valid, so a wrong HTTP method
+  passes silently. `POST_QUERY_OPERATIONS` in `endpoints.js` is hand-maintained
+  and was last touched by a bug-fix commit — the exact failure mode R1
+  targets.
+- Verified (2026-11-19): zero TLS-impersonation code, but a detailed plan
+  exists at `prompts/builds/08-TLS-BYPASS.md` (CycleTLS/NativeTls adapter
+  behind the existing `options.fetch` + undici-dispatcher seam) — adopt or
+  re-derive at refinement.
 - Decision (2026-11-19): opens the initiative as the platform-baseline epic —
   epics 2–5 share its code (`src/scrapers/twitter/http/`) and declare `after`.

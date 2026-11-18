@@ -49,4 +49,8 @@ and the extension from a store listing. No Node, no developer mode.
 ## Notes
 
 - hitl expectation: store submissions need human-owned developer accounts —
-  entries carrying that step should be marked `hitl` at planning.
+  entries carrying that step should be marked `hitl` at planning. Store
+  listings are gated on third-party review timelines.
+- Verified (2026-11-19): nothing exists for either item — no store assets,
+  submissions or publish automation; no bundler/formula; the `.mcpb` bundle
+  still launches `node`, so it does not satisfy "no Node toolchain".
