@@ -118,3 +118,21 @@ One store, two roles: `vault_accounts` (new, all platforms, credential JSON) liv
 - `node src/cli/index.js accounts add --platform twitter --name t1 --cookies-file <cookies.json> && node src/cli/index.js accounts list` -- expected: `t1` listed, no cookie values printed
 - `node src/cli/index.js accounts use t1 && node src/cli/index.js profile nasa` -- expected: profile returned using activated session
 - `node src/cli/index.js accounts add --platform threads --name z --cookies x` -- expected: error naming supported platforms
+
+## Code Review
+
+### 2026-11-19 — thorough review (4 lenses) — 1 decision-needed, 9 patch, 1 deferred, 1 rejected
+
+- [x] [Review][Decision] Approval-gate scope for `x_accounts_use`/`x_accounts_remove` — both bypass the `WRITE_TOOLS` approval gate by design, yet `use` replaces the live session and `remove` irreversibly deletes credentials; under `XACTIONS_MCP_REQUIRE_APPROVAL=1` an agent could still do both silently. Options: (a) add `use`/`remove` to `WRITE_TOOLS` so the gate holds them; (b) document the exception in the tool descriptions. Recommended: (a) — destructive local ops deserve the same gate as remote writes.
+- [x] [Review][Patch] `use()` writes the session jar only to `os.homedir()/.xactions`, missing `resolveCacheDir()` readers under `$XACTIONS_HOME` (savedSessionCookie/sessionFetch) — activated account silently doesn't reach the HTTP-scraper lane [src/vault/accountVault.js:215]
+- [x] [Review][Patch] No validation at credential boundaries — service/instance accepts explicit `http://`, proxy string never parsed at add, array-form cookies skip `parseCookieInput` domain/charset checks (name injection into outbound Cookie header), `test()` returns raw `error.message` that can embed URLs/hosts [src/vault/accountVault.js]
+- [x] [Review][Patch] `test()` ignores the stored proxy on all three platforms — `defaultTwitterTest` discards its `_proxy` arg; bsky/masto fns take no proxy [src/vault/accountVault.js]
+- [x] [Review][Patch] File-permission coverage gaps — vault dir mkdir without mode 0700, `-journal` sidecar not chmod'd, `cookies.json.bak` inherits the old file's (possibly lax) mode, no mode assertions in tests [src/vault/accountVault.js]
+- [x] [Review][Patch] `use()` ordering/atomicity — `mirrorSessionTokens` runs after the jar swap (throw → half-applied session), corrupt `config.json` gets clobbered to just token keys, `.bak` is single-generation and the jar write is non-atomic [src/vault/accountVault.js:540]
+- [x] [Review][Patch] Secrets through CLI argv — `--cookies`/`--identifier`/`--password`/`--access-token` land in `ps` and shell history; add `--credentials-file` for all platforms and mark inline flags non-preferred [src/cli/commands/accounts.js]
+- [x] [Review][Patch] Behavior-assertion coverage gaps — `last_used` untouched on failed test, `added_at` preserved on upsert, CLI exit-code-1 on failed `test`, `csrfToken`-delete branch — all unverified [tests/accountVault.test.js]
+- [x] [Review][Patch] Surface-coverage gaps — remote-mode `x_accounts_` dispatch, reverse-check of the 5 TOOLS declarations, `use`/`remove`/`test` MCP handlers, authed-op leg (manual-only) untested [tests/]
+- [x] [Review][Patch] Small guards — `':memory:'` dbPath uncaught, stale `~/.xactions/accounts.db` string in an MCP tool description, dead `locked` column never set, unvalidated account name (control chars), `JSON.parse(row.credentials)` outside try → raw SyntaxError [src/vault/accountVault.js, src/mcp/server.js]
+- [x] [Review][Defer] AGENTS.md stale tool counts — deferred: already logged in deferred-work.md (edits agent-context file)
+
+Rejected: R17 — `test()` "can hang forever" is false; `withTestTimeout` races the whole call at 20s regardless of inner fetch state.
