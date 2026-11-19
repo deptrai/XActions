@@ -1,0 +1,103 @@
+# Stories of epic-resilient-transport, in build order.
+# Two lanes: canary/detection (1-5) and TLS opt-in (6-8), closing with a
+# refactor sweep (9). Tracer bullet = entries 1+2: a scheduled canary that
+# files its own issue.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Scheduled canary workflow"
+description = "A GitHub Actions `schedule:` workflow (daily cron plus `workflow_dispatch`) runs the existing `scripts/verify-live.mjs` guest probes against live x.com and commits the badge JSONs — the scheduled job R2 hangs off."
+verify = "A manually dispatched run finishes green and updates `public/badges/live.json`."
+covers = ["R2"]
+after = []
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 2
+type = "story"
+title = "Canary files its own issue"
+description = "On a failed probe the workflow opens exactly one deduplicated GitHub issue (label/marker search; comments on the open issue instead of duplicating). The breakage now surfaces as an issue the project filed itself."
+verify = "A simulated failure on dispatch opens one issue; a second failing run comments on it instead of opening another."
+covers = ["R2"]
+after = [1]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 3
+type = "story"
+title = "Method-mismatch probe"
+description = "Extend `scripts/check-endpoints.mjs` so each tracked op — reads and writes alike — gets a method verdict: ok, stale-404, or method-mismatch, found by probing a wrong method non-destructively instead of trusting the hand-maintained `POST_QUERY_OPERATIONS` table in `src/scrapers/twitter/http/endpoints.js`. Wired as a step in the canary workflow; carries the write half of R1, which no canary can exercise for real."
+verify = "Running the script reports a per-op method verdict, and a deliberately flipped method is flagged as mismatch."
+covers = ["R1"]
+after = [1]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 4
+type = "story"
+title = "Guest-tier read-path coverage"
+description = "The canary iterates the tracked read-ops table guest-side (profile, search, followers, detail) and reports a per-op verdict — write-ops method verification rides on entry 3's probe; ops that need auth classify as auth-required and skip rather than fail."
+verify = "The canary report lists a verdict for every tracked read op, including a classified SearchTimeline/Followers attempt."
+covers = ["R1", "R2"]
+after = [3]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 5
+type = "story"
+title = "Authenticated canary tier"
+description = "An optional second tier reads a session cookie from a repo secret (`XACTIONS_SESSION` or chosen name): when absent the workflow skips the tier cleanly and reports it; when present it exercises the authed read paths (SearchTimeline, Followers) for real."
+verify = "With no secret the run passes and reports 'auth tier skipped'; docs tell the user how to add the secret."
+covers = ["R2"]
+after = [4]
+hitl = true
+risk = "medium"
+
+[[entry]]
+id = 6
+type = "story"
+title = "Transport adapter seam"
+description = "An adapter interface on the existing `options.fetch` + undici-dispatcher seam: transport selection via env (`XACTIONS_TLS_IMPERSONATE=1`) and a per-account opt-in flag, with a passthrough default adapter that is today's behavior."
+verify = "Unit tests show adapter selection and that the default path is byte-identical to current client behavior."
+covers = ["R3"]
+after = []
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 7
+type = "story"
+title = "TLS-impersonation adapter"
+description = "The impersonating adapter per `prompts/builds/08-TLS-BYPASS.md` (Track 08): external-binary discovery, JA3 profile selection, and capability detection — a missing binary errors clearly at opt-in and never falls back silently into harder rate-limiting."
+verify = "An opted-in request goes through the impersonating transport with the configured JA3 profile in a dev harness."
+covers = ["R3"]
+after = [6]
+hitl = false
+risk = "high"
+
+[[entry]]
+id = 8
+type = "story"
+title = "TLS opt-in integration"
+description = "Wire the opt-in through `accountPool.js` and the `xactions` config surface, document installing the binary and when to enable it, and add a canary flag that exercises one op over the impersonated path when the binary exists."
+verify = "An account flagged for impersonation uses the adapter end-to-end; docs cover install and enable."
+covers = ["R3"]
+after = [7]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 9
+type = "story"
+title = "Refactor sweep"
+description = "One live-probe entry point — merge the `verify-live.mjs`/`check-endpoints.mjs` overlap into a single script the workflow calls — and one method table instead of hand-maintained and generated copies."
+verify = "The check suite is green and the workflow invokes a single probe entry point."
+covers = []
+after = [5, 8]
+hitl = false
+risk = "low"

@@ -101,3 +101,8 @@ impersonation option.
 - Open question (needs the user, not a story): an authenticated canary tier
   wants a session cookie in repo secrets — only the user can add it; the
   workflow must skip the auth tier cleanly when absent.
+- Decision (2026-11-19, breakdown): tracer bullet = entries 1+2 — a scheduled
+  canary that files its own issue is the thinnest end-to-end through the
+  detection loop. TLS (entries 6–8) is an independent lane that can start
+  immediately; entry 5 carries `hitl` because only the user can add the repo
+  secret; entry 9 sweeps once both lanes land.
