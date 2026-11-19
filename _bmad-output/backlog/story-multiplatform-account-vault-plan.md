@@ -136,3 +136,18 @@ One store, two roles: `vault_accounts` (new, all platforms, credential JSON) liv
 - [x] [Review][Defer] AGENTS.md stale tool counts — deferred: already logged in deferred-work.md (edits agent-context file)
 
 Rejected: R17 — `test()` "can hang forever" is false; `withTestTimeout` races the whole call at 20s regardless of inner fetch state.
+
+### 2026-11-19 (round 2 — re-review, workflow 4 lenses + adversarial verify) — 0 decision-needed, 8 patch groups, 0 deferred, 2 rejected
+
+26/28 raw findings confirmed; deduplicated to 8 root causes (multi-lens overlaps). All patched in round 3.
+
+- [x] [Review][Patch] `normalizeProxy` stored raw value — bare `host:port` passes validation but `undici.ProxyAgent` cannot use it; non-http(s)/socks schemes accepted → canonicalize to URL, scheme allowlist http/https/socks5/socks5h [src/vault/accountVault.js]
+- [x] [Review][Patch] Bluesky https-enforcement bypassable via WHATWG URL quirks (`http:host`, `http:\\host`, `HTTP:HOST`, `ftp://`) — cleartext app-password POST verified live → `normalizeHttpsUrl` parses `new URL` + requires `protocol === 'https:'` for service/instance [src/vault/accountVault.js]
+- [x] [Review][Patch] Cookie validation gaps — name check only on array branch; object-map names and all values bypass → unified validation: name rejects `[;=\s]`, value rejects `;` + control chars [src/vault/accountVault.js]
+- [x] [Review][Patch] `use()` not atomic across session dirs — all mirrors before all jars → mid-loop failure = new config + old jar (split-brain) → pre-validate all configs, per-dir interleave [src/vault/accountVault.js]
+- [x] [Review][Patch] `mirrorSessionTokens` assumes config.json is an object — non-object JSON crashes/drops tokens → `readSessionConfig` shape guard [src/vault/accountVault.js]
+- [x] [Review][Patch] CLI `--credentials-file` precedence inverted vs docs/MCP lane → file > cookies-file > inline flags, first-source-wins [src/cli/commands/accounts.js]
+- [x] [Review][Patch] Small guards — stale `locked` in tool description, stale "no approval gate" comment, `~` not expanded in CLI file flags, dir dedup via resolve not realpath, ProxyAgent never closed [src/mcp/server.js, src/mcp/local-tools.js, src/cli/commands/accounts.js, src/vault/accountVault.js]
+- [x] [Review][Patch] WRITE_TOOLS membership for `x_accounts_use`/`remove` unpinned → regression test in tests/mcp/action-caps.test.js [tests/]
+
+Rejected: pre-existing vault rows are not retro-validated (cannot fix stored data); `sanitizeReason` strips only http(s) URLs — socks5 userinfo edge too narrow.
