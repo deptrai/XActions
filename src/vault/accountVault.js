@@ -43,6 +43,8 @@ import { parseCookieInput } from '../client/auth/cookieImport.js';
 const DB_FILENAME = 'accounts.db';
 const DEFAULT_BSKY_SERVICE = 'https://public.api.bsky.app';
 const TEST_TIMEOUT_MS = 20_000;
+/** Timestamped session backups kept per session dir (alongside cookies.json.bak). */
+const MAX_SESSION_BACKUPS = 5;
 
 /** Platforms the vault stores credentials for, in display order. */
 export const SUPPORTED_PLATFORMS = Object.freeze(['twitter', 'bluesky', 'mastodon']);
@@ -727,7 +729,9 @@ export function createAccountVault(options = {}) {
      * written atomically (tmp+rename, mode 0600) to BOTH session dirs —
      * `~/.xactions/` (the CLI's hardcoded path) and `resolveCacheDir()`
      * when it differs — with each existing `cookies.json` backed up to
-     * `cookies.json.bak` (0600). `config.json` token mirrors are written
+     * `cookies.json.bak` (0600) plus a rotating timestamped copy (newest
+     * five kept) so a bad activation is recoverable past one hop.
+     * `config.json` token mirrors are written
      * FIRST, so a mirror failure aborts before any jar is touched. Other
      * platforms throw — they have no live-session concept yet.
      *
@@ -782,6 +786,24 @@ export function createAccountVault(options = {}) {
         if (fs.existsSync(cookiePath)) {
           fs.copyFileSync(cookiePath, `${cookiePath}.bak`);
           fs.chmodSync(`${cookiePath}.bak`, 0o600);
+          // Timestamped copies survive repeated `use` calls — the single
+          // .bak generation can only roll back one hop, which already lost
+          // a real session to a stale vault row once. Keep the newest few.
+          const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const stampedPath = `${cookiePath}.${stamp}.bak`;
+          fs.copyFileSync(cookiePath, stampedPath);
+          fs.chmodSync(stampedPath, 0o600);
+          const stale = fs
+            .readdirSync(dir)
+            .filter((f) => f.startsWith('cookies.json.') && f.endsWith('.bak') && f !== 'cookies.json.bak')
+            .sort()
+            .reverse()
+            .slice(MAX_SESSION_BACKUPS);
+          for (const f of stale) {
+            try {
+              fs.unlinkSync(path.join(dir, f));
+            } catch {}
+          }
           backup = true;
         }
         // tmp+rename: a crash mid-write must never leave a truncated jar.
