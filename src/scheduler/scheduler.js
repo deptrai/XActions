@@ -209,6 +209,9 @@ export class Scheduler extends EventEmitter {
   _registerJob(config) {
     // createTask, not schedule: node-cron 4 starts a scheduled task
     // immediately, and jobs here must stay idle until start() is called.
+    const existing = this.jobs.get(config.name);
+    if (existing?.cronTask) existing.cronTask.stop();
+
     const task = cron.createTask(config.cron, () => {
       this._executeJob(this.jobs.get(config.name));
     });
