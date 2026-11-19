@@ -1,0 +1,22 @@
+=== xactions accounts — demo (temp HOME, secrets masked) ===
+$ accounts add main --platform twitter --cookies "auth_token=AAAsecret123; ct0=BBBcsrf456" --proxy http://203.0.113.9:8080
+  Added twitter account "main" via 203.0.113.9:8080
+$ accounts add bsky-main --platform bluesky --identifier demo.bsky.social --password 'hunter2'
+  Added bluesky account "bsky-main"
+$ accounts add fedi --platform mastodon --instance mastodon.social --access-token 'tok-xyz'
+  Added mastodon account "fedi"
+$ accounts list
+  PLATFORM  NAME       PROXY            LAST USED
+  bluesky   bsky-main  direct           never
+  mastodon  fedi       direct           never
+  twitter   main       203.0.113.9:8080 never
+$ accounts test main
+  failed twitter/main: Cookie session invalid: verify_credentials returned HTTP 401   (exit 1)
+$ accounts use main
+  X session now uses twitter account "main" (2 cookies)
+  jar: [auth_token, ct0]; config mirror: authToken=AAAsec… csrfToken=BBBc…
+  -rw------- accounts.db / config.json / cookies.json
+$ accounts add th --platform threads --cookies "x=1"
+  Threads has no stored credentials — its scraper is anonymous by design.   (exit 1)
+$ accounts remove bsky-main
+  Removed bluesky account "bsky-main"
