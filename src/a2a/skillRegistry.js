@@ -50,7 +50,7 @@ const BASE_MCP_TOOLS = [
   { name: 'x_follow_engagers', description: 'Follow users who engaged with a specific tweet.', inputSchema: { type: 'object', properties: { tweetId: { type: 'string' } }, required: ['tweetId'] } },
   { name: 'x_unfollow_all', description: 'Mass unfollow all accounts you follow.', inputSchema: { type: 'object', properties: { limit: { type: 'number' } } } },
   { name: 'x_smart_unfollow', description: 'Smart unfollow based on engagement and activity.', inputSchema: { type: 'object', properties: { strategy: { type: 'string' }, limit: { type: 'number' } } } },
-  { name: 'x_post_tweet', description: 'Post a tweet on X/Twitter.', inputSchema: { type: 'object', properties: { text: { type: 'string' }, mediaPath: { type: 'string' } }, required: ['text'] } },
+  { name: 'x_post_tweet', description: 'Post a tweet on X/Twitter.', inputSchema: { type: 'object', properties: { text: { type: 'string' }, mediaPath: { anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' }, maxItems: 4 }] }, altText: { type: 'string' } }, required: ['text'] } },
   { name: 'x_like', description: 'Like a tweet.', inputSchema: { type: 'object', properties: { tweetId: { type: 'string' } }, required: ['tweetId'] } },
   { name: 'x_retweet', description: 'Retweet a tweet.', inputSchema: { type: 'object', properties: { tweetId: { type: 'string' } }, required: ['tweetId'] } },
   { name: 'x_reply', description: 'Reply to a tweet.', inputSchema: { type: 'object', properties: { tweetId: { type: 'string' }, text: { type: 'string' } }, required: ['tweetId', 'text'] } },
