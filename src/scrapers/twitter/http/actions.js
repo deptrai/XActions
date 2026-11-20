@@ -135,9 +135,10 @@ export async function postTweet(client, text, options = {}) {
     };
   }
 
-  // Quote tweet
+  // Quote tweet — X rejects the legacy /i/web/status/ form with
+  // "attachment_url parameter is invalid (44)"; /i/status/ is accepted.
   if (quoteTweetId) {
-    variables.attachment_url = `https://x.com/i/web/status/${quoteTweetId}`;
+    variables.attachment_url = `https://x.com/i/status/${quoteTweetId}`;
   }
 
   const json = await client.graphql(queryId, operationName, variables, {
